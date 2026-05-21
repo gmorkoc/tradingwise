@@ -21,7 +21,7 @@ export default async function middleware(req: Request): Promise<Response> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY ?? ''}`,
+        'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? ''}`,
       },
       body,
     });
