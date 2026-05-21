@@ -2116,6 +2116,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       className={isFullscreen ? "price-chart-fs-scroll" : undefined}
       onScroll={isFullscreen ? updateFsThumb : undefined}
     >
+      <div className="chart-fs-header-group">
       <div className="chart-header">
         <div className="chart-header-left">
           <div className="chart-title-row">
@@ -2413,7 +2414,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <line x1="15" y1="14" x2="6" y2="14"/>
               <line x1="12" y1="18" x2="6" y2="18"/>
             </svg>
-            <span className="chart-icon-label">Depth</span>
+            <span className="chart-icon-label">Order Depth</span>
           </button>
           <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2435,6 +2436,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <span className="chart-icon-label">{isFullscreen ? "Exit" : "Expand"}</span>
           </button>
         </div>
+      </div>
       </div>
 
       {banner && (

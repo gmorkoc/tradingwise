@@ -116,15 +116,27 @@ html[data-theme="light"]
   display: none;
 }
 
-/* Sticky header in fullscreen */
-.price-chart-container--fs .chart-header,
-.price-chart-container:fullscreen .chart-header {
+/* Sticky header group in fullscreen (desktop) */
+.price-chart-container--fs .chart-fs-header-group,
+.price-chart-container:fullscreen .chart-fs-header-group {
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--color-card-bg);
   padding-top: 12px;
   margin-top: -12px;
+}
+html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
+html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-group {
+  background: #f8fafc;
+}
+
+/* Remove individual sticky from chart-header (now handled by group) */
+.price-chart-container--fs .chart-header,
+.price-chart-container:fullscreen .chart-header {
+  position: static;
+  padding-top: 0;
+  margin-top: 0;
 }
 html[data-theme="light"] .price-chart-container--fs .chart-header,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
@@ -717,8 +729,8 @@ html[data-theme="light"] .chart-loading-overlay {
     padding-top: 0;
   }
 
-  .price-chart-container--fs .chart-header,
-  .price-chart-container:fullscreen .chart-header {
+  .price-chart-container--fs .chart-fs-header-group,
+  .price-chart-container:fullscreen .chart-fs-header-group {
     padding-top: 0;
     margin-top: 0;
     margin-bottom: 6px;
