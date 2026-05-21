@@ -712,6 +712,17 @@ html[data-theme="light"] .chart-loading-overlay {
     width: 100%;
   }
 
+  .price-chart-container--fs .price-chart-fs-scroll,
+  .price-chart-container:fullscreen .price-chart-fs-scroll {
+    padding-top: 0;
+  }
+
+  .price-chart-container--fs .chart-header,
+  .price-chart-container:fullscreen .chart-header {
+    padding-top: 0;
+    margin-top: 0;
+  }
+
   .price-chart-container--fs .chart-legend-actions .chart-screenshot-btn,
   .price-chart-container--fs .chart-legend-actions .chart-fullscreen-btn,
   .price-chart-container:fullscreen .chart-legend-actions .chart-screenshot-btn,
