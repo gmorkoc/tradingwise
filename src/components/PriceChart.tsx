@@ -2135,6 +2135,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {zone.signal === "strong-sell"  && t("chart.strongSell")}
               </span>
             )}
+            {isFullscreen && (
+              <div className="chart-title-actions">
+                <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  <span className="chart-icon-label">Save</span>
+                </button>
+                <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title="Exit fullscreen">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
+                  </svg>
+                  <span className="chart-icon-label">Exit</span>
+                </button>
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {dayHigh !== null && dayLow !== null && (
@@ -2179,13 +2196,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
         <div className="chart-header-right">
-          {isFullscreen && (
-            <button className="chart-fs-close-btn" onClick={toggleFullscreen} title="Exit fullscreen">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          )}
           <div className="chart-header-controls">
           <div className="indicators-menu-wrapper" ref={menuRef}>
             <button
@@ -2403,12 +2413,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <line x1="15" y1="14" x2="6" y2="14"/>
               <line x1="12" y1="18" x2="6" y2="18"/>
             </svg>
+            <span className="chart-icon-label">Depth</span>
           </button>
           <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
+            <span className="chart-icon-label">Save</span>
           </button>
           <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
             {isFullscreen ? (
@@ -2420,6 +2432,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/>
               </svg>
             )}
+            <span className="chart-icon-label">{isFullscreen ? "Exit" : "Expand"}</span>
           </button>
         </div>
       </div>
