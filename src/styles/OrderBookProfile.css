@@ -28,6 +28,16 @@
   flex-direction: column;
   overflow: hidden;
   animation: obp-slide-in 0.2s ease;
+  position: relative;
+}
+
+@media (min-width: 769px) {
+  .obp-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+  }
 }
 
 @keyframes obp-slide-in {
@@ -101,7 +111,7 @@ html[data-theme="light"] .obp-title { color: #1e293b; }
   color: #475569;
   display: flex;
   align-items: center;
-  padding: 5px;
+  padding: 10px;
   border-radius: 7px;
   transition: color 0.15s, background 0.15s;
 }

@@ -51,10 +51,18 @@ html[data-theme="light"] .chart-fs-close-btn:hover { color: #1e293b; background:
   top: 14px;
   right: 18px;
   z-index: 1010;
-  padding: 7px;
+  padding: 10px;
   color: #94a3b8;
   background: transparent;
   border-radius: 8px;
+}
+
+@media (min-width: 769px) {
+  .price-chart-container--fs .chart-fs-close-btn,
+  .price-chart-container:fullscreen .chart-fs-close-btn {
+    top: 0;
+    right: 0;
+  }
 }
 
 .price-chart-container--fs .chart-fs-close-btn:hover,
@@ -367,6 +375,13 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-close-btn:h
   align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+@media (min-width: 769px) {
+  .chart-legend-actions {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
 }
 
 .legend-item {

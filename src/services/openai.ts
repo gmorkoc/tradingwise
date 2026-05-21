@@ -1,9 +1,5 @@
-import axios from 'axios';
 import { BTCData } from './coinglass';
 import { FearGreedData } from './feargreed';
-
-const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -47,32 +43,27 @@ export interface ScenarioItem {
   trigger: string;
 }
 
-const axiosInstance = axios.create({
-  baseURL: OPENAI_BASE_URL,
-  headers: {
-    Authorization: `Bearer ${API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+async function callOpenAI(body: object): Promise<any> {
+  const res = await fetch("/api/openai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `OpenAI proxy error ${res.status}`);
+  }
+  return res.json();
+}
 
 export const openai = {
-  // Send message to ChatGPT with context about BTC data (supports vision)
   chat: async (
     userMessage: string,
     btcData?: Partial<BTCData> | null,
     previousMessages: ChatMessage[] = [],
-    images?: string[]   // base64 data URLs
+    images?: string[]
   ): Promise<ChatResponse> => {
     try {
-      if (!API_KEY) {
-        return {
-          success: false,
-          message: '',
-          error: 'OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to .env',
-        };
-      }
-
-      // Build system message with BTC context
       let systemMessage = 'You are a helpful AI assistant analyzing cryptocurrency market data and charts. When images are provided, perform detailed technical analysis on them. ';
       if (btcData) {
         systemMessage += `Current BTC Data: Price: $${btcData.price?.toFixed(2)}, `;
@@ -86,7 +77,6 @@ export const openai = {
       }
       systemMessage += ' Provide analysis and predictions based on this data.';
 
-      // Build user content — plain string or vision array when images are attached
       const userContent = images?.length
         ? [
             { type: 'text', text: userMessage || 'Please analyse this image.' },
@@ -101,40 +91,15 @@ export const openai = {
         { role: 'user', content: userContent },
       ];
 
-      const response = await axiosInstance.post('/chat/completions', {
-        model: 'gpt-4o',
-        messages,
-        temperature: 0.7,
-        max_tokens: 1500,
-      });
-
-      const assistantMessage = response.data?.choices?.[0]?.message?.content || '';
-
-      return {
-        success: true,
-        message: assistantMessage,
-      };
+      const data = await callOpenAI({ model: 'gpt-4o', messages, temperature: 0.7, max_tokens: 1500 });
+      return { success: true, message: data?.choices?.[0]?.message?.content || '' };
     } catch (error: any) {
-      console.error('Error calling OpenAI API:', error);
-      const errorMessage =
-        error.response?.data?.error?.message ||
-        error.message ||
-        'Failed to get response from ChatGPT';
-      return {
-        success: false,
-        message: '',
-        error: errorMessage,
-      };
+      return { success: false, message: '', error: error.message || 'Failed to get response from ChatGPT' };
     }
   },
 
-  // Get price prediction based on market data
   getPricePrediction: async (btcData: Partial<BTCData>, fearGreed?: FearGreedData): Promise<PredictionResponse> => {
     try {
-      if (!API_KEY) {
-        return { success: false, message: "", error: "OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to .env" };
-      }
-
       const liqMid = btcData.liquidationAbove != null && btcData.liquidationBelow != null
         ? ((btcData.liquidationAbove + btcData.liquidationBelow) / 2).toFixed(2)
         : null;
@@ -182,7 +147,7 @@ Respond ONLY with valid JSON (no markdown):
   ]
 }`;
 
-      const response = await axiosInstance.post('/chat/completions', {
+      const data = await callOpenAI({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: "json_object" },
@@ -190,9 +155,7 @@ Respond ONLY with valid JSON (no markdown):
         max_tokens: 900,
       });
 
-      const raw = response.data?.choices?.[0]?.message?.content || "{}";
-      const parsed = JSON.parse(raw);
-
+      const parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}");
       const isRange = (v: unknown): v is TimeframeRange =>
         typeof (v as TimeframeRange)?.low === "number" && typeof (v as TimeframeRange)?.high === "number";
 
@@ -218,12 +181,7 @@ Respond ONLY with valid JSON (no markdown):
           : undefined,
       };
     } catch (error: any) {
-      console.error('Error calling OpenAI API:', error);
-      return {
-        success: false,
-        message: "",
-        error: error.response?.data?.error?.message || error.message || "Failed to get prediction",
-      };
+      return { success: false, message: "", error: error.message || "Failed to get prediction" };
     }
   },
 };
@@ -253,9 +211,6 @@ export async function getOnChainAIAnalysis(data: {
   marketCapUSD: number;
 }): Promise<OnChainAIResult | null> {
   try {
-    const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!API_KEY) return null;
-
     const ehs = (data.hashrateGHs / 1e9).toFixed(1);
     const prompt = `You are a Bitcoin on-chain analyst. Analyze these live Bitcoin network metrics and provide a structured assessment.
 
@@ -282,7 +237,7 @@ Respond ONLY with valid JSON (no markdown):
   "action": "accumulate" | "hold" | "caution"
 }`;
 
-    const res = await axiosInstance.post('/chat/completions', {
+    const res = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: "json_object" },
@@ -290,7 +245,7 @@ Respond ONLY with valid JSON (no markdown):
       max_tokens: 600,
     });
 
-    const parsed = JSON.parse(res.data?.choices?.[0]?.message?.content || "{}");
+    const parsed = JSON.parse(res?.choices?.[0]?.message?.content || "{}");
     if (!parsed.summary) return null;
     return parsed as OnChainAIResult;
   } catch {
@@ -317,9 +272,6 @@ export async function getPremiumAIAnalysis(data: {
   btcPrice: number;
 }): Promise<PremiumAIResult | null> {
   try {
-    const API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!API_KEY) return null;
-
     const prompt = `You are a crypto market analyst specialising in exchange premium indicators. Analyse the Coinbase Premium Index data below and provide a structured interpretation.
 
 Coinbase Premium Index (BTC/USD Coinbase vs BTC/USDT ${data.refSource}):
@@ -343,7 +295,7 @@ Respond ONLY with valid JSON (no markdown):
   "outlook": "<2 sentences: what traders should watch for given this premium reading — potential price implications if premium expands or contracts>"
 }`;
 
-    const res = await axiosInstance.post('/chat/completions', {
+    const res = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: "json_object" },
@@ -351,7 +303,7 @@ Respond ONLY with valid JSON (no markdown):
       max_tokens: 550,
     });
 
-    const parsed = JSON.parse(res.data?.choices?.[0]?.message?.content || "{}");
+    const parsed = JSON.parse(res?.choices?.[0]?.message?.content || "{}");
     if (!parsed.summary) return null;
     return parsed as PremiumAIResult;
   } catch { return null; }
@@ -380,8 +332,6 @@ export interface GannAIResult {
 }
 
 export const getGannAnalysis = async (data: GannAnalysisInput): Promise<{ success: boolean; result?: GannAIResult; error?: string }> => {
-  if (!API_KEY) return { success: false, error: "OpenAI API key not configured." };
-
   const prompt = `You are an expert W.D. Gann analyst with deep knowledge of Gann Square of 9, Gann angles, and time cycles. Analyze the following Gann data for ${data.coin} and provide a structured prediction.
 
 CURRENT PRICE: $${data.currentPrice.toLocaleString()}
@@ -419,15 +369,14 @@ Based strictly on Gann methodology, respond ONLY with valid JSON — no markdown
 }`;
 
   try {
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.4,
       max_tokens: 600,
     });
-    const raw = response.data?.choices?.[0]?.message?.content || "{}";
-    // Strip markdown fences and sanitize comma-formatted numbers inside JSON
+    const raw = response?.choices?.[0]?.message?.content || "{}";
     const cleaned = raw
       .replace(/```json\s*/gi, "").replace(/```\s*/g, "")
       .replace(/:\s*(\d{1,3})(,\d{3})+(?=[,\}\]\s])/g, (_: string, first: string, rest: string) =>
@@ -435,7 +384,7 @@ Based strictly on Gann methodology, respond ONLY with valid JSON — no markdown
     const parsed = JSON.parse(cleaned) as GannAIResult;
     return { success: true, result: parsed };
   } catch (err: any) {
-    return { success: false, error: err.response?.data?.error?.message || err.message || "Failed to get Gann AI analysis" };
+    return { success: false, error: err.message || "Failed to get Gann AI analysis" };
   }
 };
 
@@ -455,8 +404,6 @@ export async function getCandlePatternAnalysis(
   candles: { open: number; high: number; low: number; close: number; time: number }[]
 ): Promise<{ success: boolean; result?: CandlePatternResult; error?: string }> {
   try {
-    if (!API_KEY) return { success: false, error: "No API key" };
-
     const recent = candles.slice(-10).map(c => ({
       o: c.open.toFixed(2), h: c.high.toFixed(2),
       l: c.low.toFixed(2),  cl: c.close.toFixed(2),
@@ -475,7 +422,7 @@ Focus on the most recent 1-3 candles. Respond ONLY with valid JSON:
   "nextMove": "2-3 sentences: what price is likely to do next and key levels to watch"
 }`;
 
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
@@ -483,7 +430,7 @@ Focus on the most recent 1-3 candles. Respond ONLY with valid JSON:
       response_format: { type: "json_object" },
     });
 
-    const raw = response.data?.choices?.[0]?.message?.content ?? "";
+    const raw = response?.choices?.[0]?.message?.content ?? "";
     const result = JSON.parse(raw) as CandlePatternResult;
     return { success: true, result };
   } catch (err: any) {
@@ -539,7 +486,7 @@ Based on this data, respond ONLY with valid JSON:
   "ourTakeAction": "buy" | "sell" | "hold" | "watch"
 }`;
 
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
@@ -547,8 +494,7 @@ Based on this data, respond ONLY with valid JSON:
       response_format: { type: "json_object" },
     });
 
-    const raw = response.data?.choices?.[0]?.message?.content ?? "";
-    const result = JSON.parse(raw);
+    const result = JSON.parse(response?.choices?.[0]?.message?.content ?? "{}");
     return { success: true, ...result };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to get liquidation analysis" };
@@ -611,7 +557,7 @@ Respond ONLY with valid JSON:
   "ourTakeAction": "buy" | "accumulate" | "hold" | "sell" | "watch"
 }`;
 
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
@@ -619,8 +565,7 @@ Respond ONLY with valid JSON:
       response_format: { type: "json_object" },
     });
 
-    const raw = response.data?.choices?.[0]?.message?.content ?? "";
-    const result = JSON.parse(raw);
+    const result = JSON.parse(response?.choices?.[0]?.message?.content ?? "{}");
     return { success: true, ...result };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to get HTF analysis" };
@@ -667,13 +612,13 @@ export async function getTabInsight(input: TabInsightInput): Promise<{ success: 
   const prompt = buildPrompt(input);
   if (!prompt) return { success: false, error: "No prompt" };
   try {
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.45,
       max_tokens: 120,
     });
-    const text = response.data?.choices?.[0]?.message?.content?.trim() ?? "";
+    const text = response?.choices?.[0]?.message?.content?.trim() ?? "";
     return { success: true, text };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed" };
@@ -732,8 +677,6 @@ export async function getChartPrediction(
   tech?: TechnicalContext,
 ): Promise<{ success: boolean; result?: ChartPrediction; error?: string }> {
   try {
-    if (!API_KEY) return { success: false, error: "No API key" };
-
     const recent = candles.slice(-50);
     const last = recent[recent.length - 1];
     const currentPrice = last.close;
@@ -854,7 +797,7 @@ OUTPUT FORMAT (valid JSON only, no markdown)
   "suggestedLeverage": <integer 2-20, conservative safe leverage based on stop distance and volatility>
 }`;
 
-    const response = await axiosInstance.post('/chat/completions', {
+    const response = await callOpenAI({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.4,
@@ -862,7 +805,7 @@ OUTPUT FORMAT (valid JSON only, no markdown)
       response_format: { type: "json_object" },
     });
 
-    const raw = response.data?.choices?.[0]?.message?.content ?? "{}";
+    const raw = response?.choices?.[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as ChartPrediction;
     if (!parsed.waypoints?.length || !parsed.direction) {
       return { success: false, error: "Invalid prediction format" };

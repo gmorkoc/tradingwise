@@ -977,7 +977,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showMA50, setShowMA50] = useState(false);
   const [showMA200, setShowMA200] = useState(false);
   const [showGann, setShowGann] = useState(false);
-  const [showFib, setShowFib] = useState(false);
+  const [showFib, setShowFib] = useState(true);
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCME, setShowCME] = useState(true);
@@ -1134,7 +1134,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Fibonacci retracement price line refs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fibLineRefs = useRef<any[]>([]);
-  const showFibRef = useRef(false);
+  const showFibRef = useRef(true);
 
   // EMA / MA overlay refs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2167,7 +2167,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <div className="chart-header-right">
           {isFullscreen && (
             <button className="chart-fs-close-btn" onClick={toggleFullscreen} title="Exit fullscreen">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
