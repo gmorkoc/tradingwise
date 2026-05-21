@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/bybit-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        '/api/openai': {
+          target: 'https://api.openai.com',
+          changeOrigin: true,
+          rewrite: () => '/v1/chat/completions',
+          headers: { 'Authorization': `Bearer ${env.VITE_OPENAI_API_KEY}` },
+        },
       },
     },
   }

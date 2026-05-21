@@ -20,7 +20,10 @@
       "WebFetch(domain:open-api-v4.coinglass.com)",
       "Bash(curl -sI \"https://api.kraken.com/0/public/Depth?pair=XBTUSD&count=5\")",
       "Bash(curl -s \"https://api.kraken.com/0/public/Depth?pair=XBTUSD&count=5\" -H \"Origin: http://localhost:5174\" -w \"\\\\n--- HEADERS ---\\\\n%{header_json}\")",
-      "Bash(vercel --prod)"
+      "Bash(vercel --prod)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

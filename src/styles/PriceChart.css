@@ -123,7 +123,8 @@ html[data-theme="light"]
   top: 0;
   z-index: 10;
   background: var(--color-card-bg);
-  padding: 10px 0 12px;
+  padding-top: 12px;
+  margin-top: -12px;
 }
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-group {
