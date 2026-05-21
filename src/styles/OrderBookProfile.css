@@ -8,6 +8,8 @@
   align-items: stretch;
   justify-content: stretch;
   animation: obp-fade-in 0.18s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes obp-fade-in {
@@ -21,12 +23,11 @@
   border: none;
   border-radius: 0;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   max-width: none;
-  max-height: none;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   animation: obp-slide-in 0.2s ease;
   position: relative;
 }
@@ -59,6 +60,7 @@ html[data-theme="light"] .obp-backdrop {
   width: 100%;
   height: 100%;
   border-radius: 0;
+  overflow-y: auto;
 }
 
 html[data-theme="light"] .obp-panel:fullscreen {
@@ -123,6 +125,24 @@ html[data-theme="light"] .obp-title { color: #1e293b; }
 
 html[data-theme="light"] .obp-close { color: #94a3b8; }
 html[data-theme="light"] .obp-close:hover { color: #1e293b; background: rgba(0,0,0,0.06); }
+
+.obp-exit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #475569;
+  padding: 4px 8px;
+  border-radius: 7px;
+  transition: color 0.15s, background 0.15s;
+}
+.obp-exit:hover { color: #e2e8f0; background: rgba(255, 255, 255, 0.08); }
+.obp-exit-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.03em; color: inherit; }
+html[data-theme="light"] .obp-exit { color: #94a3b8; }
+html[data-theme="light"] .obp-exit:hover { color: #1e293b; background: rgba(0,0,0,0.06); }
 
 /* ── Stats strip ───────────────────────────────────────────────────────────── */
 .obp-stats {
@@ -215,7 +235,7 @@ html[data-theme="light"] .obp-stat-value--ask { color: #dc2626; }
   flex: 1;
   width: 100%;
   display: block;
-  min-height: 0;
+  min-height: 280px;
 }
 
 /* ── Footer legend ─────────────────────────────────────────────────────────── */
@@ -240,7 +260,9 @@ html[data-theme="light"] .obp-legend-ask { color: #dc2626; }
 
 /* ── Mobile ────────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .obp-stat--ratio { display: none; }
-  .obp-stat { padding: 8px 12px; }
+  .obp-stats { flex-wrap: wrap; }
+  .obp-stat { padding: 8px 10px; flex: 1 1 45%; }
   .obp-stat-value { font-size: 12px; }
+  .obp-stat--ratio { flex: 1 1 100%; border-right: none; border-top: 1px solid rgba(30, 41, 59, 0.6); }
+  html[data-theme="light"] .obp-stat--ratio { border-top-color: #e2e8f0; }
 }
