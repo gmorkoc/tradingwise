@@ -8,21 +8,35 @@ function playWhaleSound() {
   try {
     const ctx = new AudioContext();
     const now = ctx.currentTime;
-    [880, 1100].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      const t = now + i * 0.13;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.25, t + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-      osc.start(t);
-      osc.stop(t + 0.2);
-    });
-    setTimeout(() => ctx.close(), 700);
+
+    // Fundamental: slow descending moan 380 Hz → 140 Hz → 190 Hz
+    const osc1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    osc1.connect(g1); g1.connect(ctx.destination);
+    osc1.type = "sine";
+    osc1.frequency.setValueAtTime(380, now);
+    osc1.frequency.exponentialRampToValueAtTime(140, now + 1.4);
+    osc1.frequency.exponentialRampToValueAtTime(190, now + 2.0);
+    g1.gain.setValueAtTime(0, now);
+    g1.gain.linearRampToValueAtTime(0.28, now + 0.4);
+    g1.gain.setValueAtTime(0.28, now + 1.4);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+    osc1.start(now); osc1.stop(now + 2.2);
+
+    // Second harmonic for body
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(760, now);
+    osc2.frequency.exponentialRampToValueAtTime(280, now + 1.4);
+    osc2.frequency.exponentialRampToValueAtTime(380, now + 2.0);
+    g2.gain.setValueAtTime(0, now);
+    g2.gain.linearRampToValueAtTime(0.08, now + 0.4);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+    osc2.start(now); osc2.stop(now + 2.0);
+
+    setTimeout(() => ctx.close(), 2600);
   } catch { /* audio blocked — ignore */ }
 }
 
