@@ -586,7 +586,7 @@ html[data-theme="light"] .chart-loading-overlay {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 10px;
   }
 
   .chart-header-left {
@@ -656,7 +656,7 @@ html[data-theme="light"] .chart-loading-overlay {
   }
 
   .chart-legend {
-    margin-bottom: 0;
+    margin-bottom: 6px;
     min-height: 24px;
   }
 }
@@ -721,6 +721,13 @@ html[data-theme="light"] .chart-loading-overlay {
   .price-chart-container:fullscreen .chart-header {
     padding-top: 0;
     margin-top: 0;
+    margin-bottom: 6px;
+  }
+
+  .price-chart-container--fs .chart-legend,
+  .price-chart-container:fullscreen .chart-legend {
+    margin-bottom: 0;
+    min-height: 0;
   }
 
   .price-chart-container--fs .chart-legend-actions .chart-screenshot-btn,
