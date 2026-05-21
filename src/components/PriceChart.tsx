@@ -8,6 +8,7 @@ import {
   IChartApi,
   createSeriesMarkers,
   SeriesMarker,
+  UTCTimestamp,
 } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol } from "../services/coinglass";
 import { ZoneResult, ZoneSignal } from "./PriceChart.types";
@@ -1571,9 +1572,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             macdSignalRef.current.setData(signalLine);
           }
 
-          // Fit after ALL series data is set so sub-chart sync callbacks
-          // don't override the fitted range with stale data
-          chartRef.current?.timeScale().fitContent();
+          // Set visible range per interval, falling back to fitContent
+          const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
+            "1min":  6 * 60 * 60,
+            "5min":  2 * 24 * 60 * 60,
+            "15min": 4 * 24 * 60 * 60,
+            "1h":    14 * 24 * 60 * 60,
+            "4h":    28 * 24 * 60 * 60,
+            "6h":    56 * 24 * 60 * 60,
+          };
+          const window = INTERVAL_WINDOW[interval];
+          if (window && data.length > 0) {
+            const to = data[data.length - 1].time as number;
+            chartRef.current?.timeScale().setVisibleRange({ from: (to - window) as UTCTimestamp, to: to as UTCTimestamp });
+          } else {
+            chartRef.current?.timeScale().fitContent();
+          }
         }
       } catch {
         if (!cancelled) setError("Failed to fetch chart data");
