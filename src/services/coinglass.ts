@@ -1,10 +1,22 @@
-import axios from 'axios';
+import axios, { type AxiosInstance } from 'axios';
+
+function addRetry(instance: AxiosInstance, retries = 2) {
+  instance.interceptors.response.use(undefined, async (err) => {
+    const cfg = err.config;
+    if (!cfg) return Promise.reject(err);
+    cfg._retry = (cfg._retry ?? 0) + 1;
+    if (cfg._retry > retries) return Promise.reject(err);
+    await new Promise(r => setTimeout(r, cfg._retry * 1500));
+    return instance(cfg);
+  });
+}
 
 const api = axios.create({
   baseURL: '/cg-api',
-  timeout: 10000,
+  timeout: 15000,
   headers: { accept: 'application/json' },
 });
+addRetry(api);
 
 // CryptoCompare free API — used for monthly/CME-gap historical data
 const ccApi = axios.create({

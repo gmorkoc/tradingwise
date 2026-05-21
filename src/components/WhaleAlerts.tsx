@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
 import "../styles/WhaleAlerts.css";
 
@@ -56,6 +56,17 @@ interface Props {
 
 export function WhaleAlerts({ btcPrice }: Props) {
   const [alerts, setAlerts] = useState<WhaleTx[]>([]);
+  const [muted, setMuted] = useState(() => localStorage.getItem("whale-muted") === "1");
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  const toggleMute = useCallback(() => {
+    setMuted(m => {
+      const next = !m;
+      localStorage.setItem("whale-muted", next ? "1" : "0");
+      return next;
+    });
+  }, []);
 
   const dismiss = useCallback((id: string) => {
     setAlerts(prev => prev.filter(a => a.id !== id));
@@ -63,7 +74,7 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
   useEffect(() => {
     return subscribeWhaleAlerts(tx => {
-      playWhaleSound();
+      if (!mutedRef.current) playWhaleSound();
       setAlerts(prev => [tx, ...prev].slice(0, 3));
       setTimeout(() => dismiss(tx.id), DISMISS_MS);
     });
@@ -73,6 +84,25 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
   return (
     <div className="whale-alerts" role="status" aria-live="polite">
+      <button
+        className={`whale-mute${muted ? " whale-mute--off" : ""}`}
+        onClick={toggleMute}
+        aria-label={muted ? "Unmute whale alerts" : "Mute whale alerts"}
+        title={muted ? "Sound off" : "Sound on"}
+      >
+        {muted ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        )}
+      </button>
       {alerts.map(alert => {
         const usd = btcPrice && btcPrice > 0 ? alert.amount * btcPrice : null;
         return (

@@ -364,6 +364,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
   const [candles,  setCandles]  = useState<CandleDataPoint[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let dead = false;
@@ -393,7 +394,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
     }, 5 * 60_000);
 
     return () => { dead = true; clearInterval(id); };
-  }, [coin]);
+  }, [coin, retryKey]);
 
   if (loading) {
     return (
@@ -410,6 +411,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
       <div className="pf-wrap">
         <div className="pf-state pf-state--error">
           {error || "No position data available for this pair."}
+          {error && <button className="pf-retry" onClick={() => setRetryKey(k => k + 1)}>Retry</button>}
         </div>
       </div>
     );

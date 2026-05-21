@@ -1,4 +1,15 @@
-import axios from "axios";
+import axios, { type AxiosInstance } from "axios";
+
+function addRetry(instance: AxiosInstance, retries = 2) {
+  instance.interceptors.response.use(undefined, async (err) => {
+    const cfg = err.config;
+    if (!cfg) return Promise.reject(err);
+    cfg._retry = (cfg._retry ?? 0) + 1;
+    if (cfg._retry > retries) return Promise.reject(err);
+    await new Promise(r => setTimeout(r, cfg._retry * 1500));
+    return instance(cfg);
+  });
+}
 
 export interface ETFRow {
   ticker: string;
@@ -24,7 +35,8 @@ export interface ETFData {
   latestDate: string;      // trading date of most recent history entry
 }
 
-const api = axios.create({ baseURL: "/cg-api", timeout: 12000 });
+const api = axios.create({ baseURL: "/cg-api", timeout: 15000 });
+addRetry(api);
 
 export async function getETFData(): Promise<ETFData> {
   const [listRes, histRes] = await Promise.all([

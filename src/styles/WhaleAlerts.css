@@ -170,6 +170,27 @@
   background: var(--color-input-bg);
 }
 
+.whale-mute {
+  pointer-events: auto;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-surface);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: color 0.15s, border-color 0.15s;
+}
+.whale-mute:hover { color: var(--color-text); border-color: rgba(56, 189, 248, 0.5); }
+.whale-mute--off { color: #ef4444; border-color: rgba(239, 68, 68, 0.35); }
+.whale-mute--off:hover { color: #f87171; border-color: rgba(239, 68, 68, 0.6); }
+
 /* Shrinking progress bar at bottom */
 .whale-alert-progress {
   position: absolute;

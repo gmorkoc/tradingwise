@@ -176,6 +176,7 @@ export function ETFInflows() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState("");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [retryKey,     setRetryKey]     = useState(0);
 
   useEffect(() => {
     let dead = false;
@@ -191,7 +192,7 @@ export function ETFInflows() {
     }, 5 * 60 * 1000);
 
     return () => { dead = true; clearInterval(id); };
-  }, []);
+  }, [retryKey]);
 
   if (loading) {
     return (
@@ -204,7 +205,10 @@ export function ETFInflows() {
   if (error || !data || data.rows.length === 0) {
     return (
       <div className="etf-wrap">
-        <div className="etf-error">{error || "No data available."}</div>
+        <div className="etf-error">
+          {error || "No data available."}
+          {error && <button className="etf-retry" onClick={() => setRetryKey(k => k + 1)}>Retry</button>}
+        </div>
       </div>
     );
   }
