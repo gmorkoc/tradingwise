@@ -147,6 +147,11 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   .price-chart-fs-scroll {
     padding: 0;
   }
+
+  .price-chart-container--fs .interval-banner,
+  .price-chart-container:fullscreen .interval-banner {
+    margin: 20px 0;
+  }
 }
 
 /* Custom always-visible scrollbar */
