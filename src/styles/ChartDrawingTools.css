@@ -1,31 +1,24 @@
-/* ── Drawing canvas overlay ─────────────────────────────────────────────── */
+/* ── Drawing canvas overlay — fixed over chart area ────────────────────── */
 
 .cdt-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 5;
+  position: fixed;
+  z-index: 1001;
   touch-action: none;
 }
 
-/* ── Vertical toolbar ───────────────────────────────────────────────────── */
+/* ── Vertical toolbar — fixed over chart area ───────────────────────────── */
 
 .cdt-toolbar {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 10;
+  position: fixed;
+  z-index: 1002;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 8px;
   padding: 6px 5px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .cdt-btn {
@@ -34,47 +27,65 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: none;
+  border: none !important;
   border-radius: 5px;
-  background: transparent;
-  color: #94a3b8;
+  background: transparent !important;
+  color: #cbd5e1 !important;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
+  padding: 0 !important;
+}
+
+.cdt-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.cdt-btn svg path,
+.cdt-btn svg line,
+.cdt-btn svg circle,
+.cdt-btn svg rect,
+.cdt-btn svg polyline,
+.cdt-btn svg polygon {
+  vector-effect: non-scaling-stroke;
 }
 
 .cdt-btn:hover {
-  background: rgba(148, 163, 184, 0.12);
-  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #ffffff !important;
 }
 
 .cdt-btn--active {
-  background: rgba(56, 189, 248, 0.18);
-  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18) !important;
+  color: #38bdf8 !important;
 }
 
 .cdt-btn--active:hover {
-  background: rgba(56, 189, 248, 0.26);
-  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.26) !important;
+  color: #7dd3fc !important;
 }
 
 .cdt-btn--magnet.cdt-btn--active {
-  background: rgba(251, 191, 36, 0.18);
-  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.18) !important;
+  color: #fbbf24 !important;
 }
 
 .cdt-btn--magnet.cdt-btn--active:hover {
-  background: rgba(251, 191, 36, 0.28);
-  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.28) !important;
+  color: #fcd34d !important;
 }
 
 .cdt-btn--danger {
-  color: #f87171;
+  color: #f87171 !important;
 }
 
 .cdt-btn--danger:hover {
-  background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
 }
 
 .cdt-separator {
@@ -84,13 +95,11 @@
   margin: 3px auto;
 }
 
-/* ── Magnet badge ───────────────────────────────────────────────────────── */
+/* ── Magnet badge — fixed ───────────────────────────────────────────────── */
 
 .cdt-magnet-badge {
-  position: absolute;
-  top: 8px;
-  left: 50px;
-  z-index: 10;
+  position: fixed;
+  z-index: 1002;
   background: rgba(251, 191, 36, 0.15);
   border: 1px solid rgba(251, 191, 36, 0.4);
   color: #fbbf24;
