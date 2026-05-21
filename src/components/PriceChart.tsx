@@ -25,6 +25,7 @@ import {
 } from "./DrawingOverlay";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
+import { ChartDrawingTools } from "./ChartDrawingTools";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { useAuth } from "../contexts/AuthContext";
@@ -2469,6 +2470,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           chartRef={chartRef}
           seriesRef={candleRef}
           prediction={predictionPath}
+        />
+        <ChartDrawingTools
+          chartRef={chartRef}
+          seriesRef={candleRef}
+          containerRef={containerRef}
+          candlesRef={lastCandlesRef}
+          visible={isFullscreen}
         />
       </div>
 
