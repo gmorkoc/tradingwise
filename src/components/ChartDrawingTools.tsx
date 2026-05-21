@@ -14,6 +14,8 @@ interface Drawing {
   id: string;
   type: DrawingTool;
   pts: ChartPt[];
+  // brush strokes also cache screen coords (rebuilt on zoom/pan)
+  screenCache?: ScreenPt[];
   text?: string;
   color: string;
 }
@@ -32,6 +34,8 @@ const TOOL_CLICKS: Record<DrawingTool, number> = {
   rect: 2, fib: 2, text: 1, eraser: 0,
 };
 
+const MIN_BRUSH_PX = 4; // skip points closer than this — keeps stroke counts sane
+
 const FIB_LEVELS = [
   { r: 0,     l: '0',     c: 'rgba(251,191,36,0.9)'  },
   { r: 0.236, l: '0.236', c: 'rgba(167,139,250,0.9)' },
@@ -42,7 +46,7 @@ const FIB_LEVELS = [
   { r: 1,     l: '1',     c: 'rgba(251,191,36,0.9)'  },
 ];
 
-// ── SVG icon helpers ─────────────────────────────────────────────────────────
+// ── Icons ────────────────────────────────────────────────────────────────────
 
 function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
   return (
@@ -57,7 +61,6 @@ function Icon({ d, stroke = false }: { d: string; stroke?: boolean }) {
     </svg>
   );
 }
-
 function IconMulti({ children }: { children: React.ReactNode }) {
   return (
     <svg viewBox="0 0 24 24" width="16" height="16"
@@ -71,7 +74,7 @@ function IconMulti({ children }: { children: React.ReactNode }) {
 }
 
 const TOOL_LIST: { id: DrawingTool; label: string; icon: JSX.Element }[] = [
-  { id: 'cursor',    label: 'Cursor',          icon: <Icon d="M4 2l16 10-7.5 2L9 22z" /> },
+  { id: 'cursor',    label: 'Cursor',       icon: <Icon d="M4 2l16 10-7.5 2L9 22z" /> },
   { id: 'brush',     label: 'Free Brush',
     icon: <IconMulti>
       <path d="M12 19c0 1.1-.9 2-2 2s-2-.9-2-2 2-4 2-4 2 2.9 2 4z" fill="currentColor" stroke="none"/>
@@ -85,20 +88,14 @@ const TOOL_LIST: { id: DrawingTool; label: string; icon: JSX.Element }[] = [
       <circle cx="20" cy="4" r="2" fill="currentColor" stroke="none"/>
     </IconMulti>,
   },
-  { id: 'hline', label: 'Horizontal Line',
-    icon: <IconMulti>
-      <line x1="2" y1="12" x2="22" y2="12"/>
-      <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
-    </IconMulti>,
+  { id: 'hline',  label: 'Horizontal Line',
+    icon: <IconMulti><line x1="2" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></IconMulti>,
   },
-  { id: 'vline', label: 'Vertical Line',
-    icon: <IconMulti>
-      <line x1="12" y1="2" x2="12" y2="22"/>
-      <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
-    </IconMulti>,
+  { id: 'vline',  label: 'Vertical Line',
+    icon: <IconMulti><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></IconMulti>,
   },
-  { id: 'rect', label: 'Rectangle',   icon: <IconMulti><rect x="3" y="6" width="18" height="12" rx="1"/></IconMulti> },
-  { id: 'fib',  label: 'Fibonacci',
+  { id: 'rect',   label: 'Rectangle',   icon: <IconMulti><rect x="3" y="6" width="18" height="12" rx="1"/></IconMulti> },
+  { id: 'fib',    label: 'Fibonacci',
     icon: <IconMulti>
       <line x1="2" y1="4"  x2="22" y2="4"/>
       <line x1="2" y1="9"  x2="22" y2="9"/>
@@ -107,21 +104,15 @@ const TOOL_LIST: { id: DrawingTool; label: string; icon: JSX.Element }[] = [
       <line x1="2" y1="20" x2="22" y2="20"/>
     </IconMulti>,
   },
-  { id: 'text',   label: 'Text',   icon: <Icon d="M5 4v3h5.5v12h3V7H19V4z" /> },
+  { id: 'text',   label: 'Text',    icon: <Icon d="M5 4v3h5.5v12h3V7H19V4z" /> },
   { id: 'eraser', label: 'Eraser',
-    icon: <IconMulti>
-      <path d="M20 20H7L3 16l11-11 7 7-1 8z"/>
-      <line x1="6" y1="14" x2="14" y2="6"/>
-    </IconMulti>,
+    icon: <IconMulti><path d="M20 20H7L3 16l11-11 7 7-1 8z"/><line x1="6" y1="14" x2="14" y2="6"/></IconMulti>,
   },
 ];
 
 const MAGNET_ICON = <IconMulti>
-  <path d="M6 2v8a6 6 0 0012 0V2"/>
-  <line x1="3" y1="2" x2="9" y2="2"/>
-  <line x1="15" y1="2" x2="21" y2="2"/>
+  <path d="M6 2v8a6 6 0 0012 0V2"/><line x1="3" y1="2" x2="9" y2="2"/><line x1="15" y1="2" x2="21" y2="2"/>
 </IconMulti>;
-
 const TRASH_ICON = <IconMulti>
   <polyline points="3 6 5 6 21 6"/>
   <path d="M19 6l-1 14H6L5 6"/>
@@ -139,49 +130,55 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
   const [pendingPts, setPendingPts] = useState<ChartPt[]>([]);
   const [chartRect, setChartRect]   = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
-  const canvasRef      = useRef<HTMLCanvasElement>(null);
-  const drawingsRef    = useRef<Drawing[]>([]);
-  const pendingRef     = useRef<ChartPt[]>([]);
-  const mousePosRef    = useRef<ScreenPt | null>(null);
-  const toolRef        = useRef<DrawingTool>('cursor');
-  const magnetRef      = useRef(false);
-  const rafRef         = useRef<number>(0);
-  const chartRectRef   = useRef<typeof chartRect>(null);
-  const brushActiveRef = useRef(false);
-  const brushPtsRef    = useRef<ChartPt[]>([]);
-  // Ref to latest tap/click handler — shared between mouse and touch
-  const handlePointRef = useRef<((sx: number, sy: number) => void) | null>(null);
+  const canvasRef        = useRef<HTMLCanvasElement>(null);
+  const drawingsRef      = useRef<Drawing[]>([]);
+  const pendingRef       = useRef<ChartPt[]>([]);
+  const mousePosRef      = useRef<ScreenPt | null>(null);
+  const toolRef          = useRef<DrawingTool>('cursor');
+  const magnetRef        = useRef(false);
+  const rafRef           = useRef<number>(0);
+  const chartRectRef     = useRef<typeof chartRect>(null);
+  const rectRafRef       = useRef<number>(0);
+  // Brush: accumulate raw screen pixels during drag — no chart API calls per frame
+  const brushActiveRef   = useRef(false);
+  const brushScreenRef   = useRef<ScreenPt[]>([]); // screen-space live buffer
+  const handlePointRef   = useRef<((sx: number, sy: number) => void) | null>(null);
 
   useEffect(() => { drawingsRef.current = drawings;  }, [drawings]);
   useEffect(() => { pendingRef.current  = pendingPts; }, [pendingPts]);
   useEffect(() => { toolRef.current     = tool;       }, [tool]);
   useEffect(() => { magnetRef.current   = magnet;     }, [magnet]);
 
-  // ── Track chart rect for fixed positioning ────────────────────────────────
+  // ── Track chart rect (RAF-throttled) ─────────────────────────────────────
 
   const updateRect = useCallback(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const el = containerRef.current; if (!el) return;
     const r = el.getBoundingClientRect();
     const next = { top: r.top, left: r.left, width: r.width, height: r.height };
     chartRectRef.current = next;
     setChartRect(next);
   }, [containerRef]);
 
+  const scheduleRectUpdate = useCallback(() => {
+    cancelAnimationFrame(rectRafRef.current);
+    rectRafRef.current = requestAnimationFrame(updateRect);
+  }, [updateRect]);
+
   useEffect(() => {
     if (!visible) return;
     updateRect();
-    const ro = new ResizeObserver(updateRect);
+    const ro = new ResizeObserver(scheduleRectUpdate);
     const el = containerRef.current;
     if (el) ro.observe(el);
-    window.addEventListener('scroll', updateRect, true);
-    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', scheduleRectUpdate, true);
+    window.addEventListener('resize', scheduleRectUpdate);
     return () => {
       ro.disconnect();
-      window.removeEventListener('scroll', updateRect, true);
-      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', scheduleRectUpdate, true);
+      window.removeEventListener('resize', scheduleRectUpdate);
+      cancelAnimationFrame(rectRafRef.current);
     };
-  }, [containerRef, updateRect, visible]);
+  }, [containerRef, updateRect, scheduleRectUpdate, visible]);
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
@@ -207,7 +204,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
   const magnetSnap = useCallback((pt: ChartPt): ChartPt => {
     if (!magnetRef.current) return pt;
     const candles = candlesRef.current;
-    if (!candles || !candles.length) return pt;
+    if (!candles?.length) return pt;
     let nearest = candles[0];
     let minD = Math.abs((candles[0].time as number) - pt.time);
     for (const c of candles) {
@@ -219,6 +216,29 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     for (const p of ohlc) { const d = Math.abs(p - pt.price); if (d < minPD) { minPD = d; snap = p; } }
     return { price: snap, time: nearest.time as number };
   }, [candlesRef]);
+
+  // ── Commit brush: convert throttled screen pts → chart coords once ───────
+
+  const commitBrush = useCallback(() => {
+    brushActiveRef.current = false;
+    const raw = brushScreenRef.current;
+    brushScreenRef.current = [];
+    if (raw.length < 2) return;
+
+    // Distance-throttle: keep only points ≥ MIN_BRUSH_PX apart
+    const kept: ScreenPt[] = [raw[0]];
+    for (let i = 1; i < raw.length; i++) {
+      const prev = kept[kept.length - 1];
+      if (Math.hypot(raw[i].x - prev.x, raw[i].y - prev.y) >= MIN_BRUSH_PX) kept.push(raw[i]);
+    }
+    if (kept.length < 2) return;
+
+    // Single bulk conversion from screen → chart coords
+    const chartPts = kept.map(p => toChart(p.x, p.y)).filter(Boolean) as ChartPt[];
+    if (chartPts.length >= 2) {
+      setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', pts: chartPts, color: '#38bdf8' }]);
+    }
+  }, [toChart]);
 
   // ── Canvas render ────────────────────────────────────────────────────────
 
@@ -252,7 +272,9 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
           ctx.beginPath();
           const f = toScreen(d.pts[0]); if (!f) break;
           ctx.moveTo(f.x, f.y);
-          for (let i = 1; i < d.pts.length; i++) { const s = toScreen(d.pts[i]); if (s) ctx.lineTo(s.x, s.y); }
+          for (let i = 1; i < d.pts.length; i++) {
+            const s = toScreen(d.pts[i]); if (s) ctx.lineTo(s.x, s.y);
+          }
           ctx.stroke(); break;
         }
         case 'trendline': {
@@ -316,21 +338,15 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
 
     for (const d of drawingsRef.current) drawShape(d);
 
-    // Live brush preview
-    if (brushActiveRef.current && brushPtsRef.current.length > 1) {
+    // Live brush: draw from raw screen coords — zero chart API calls
+    if (brushActiveRef.current && brushScreenRef.current.length > 1) {
+      const pts = brushScreenRef.current;
       ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]);
-      ctx.globalAlpha = 0.75;
-      ctx.beginPath();
-      const first = toScreen(brushPtsRef.current[0]);
-      if (first) {
-        ctx.moveTo(first.x, first.y);
-        for (let i = 1; i < brushPtsRef.current.length; i++) {
-          const s = toScreen(brushPtsRef.current[i]); if (s) ctx.lineTo(s.x, s.y);
-        }
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke(); ctx.globalAlpha = 1;
     }
 
     // Preview for click-based tools
@@ -363,9 +379,8 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     return () => { chart.timeScale().unsubscribeVisibleLogicalRangeChange(h); cancelAnimationFrame(rafRef.current); };
   }, [chartRef, scheduleRender]);
 
-  // ── Shared tap/click handler (called by both mouse and touch) ────────────
+  // ── Shared tap/click handler ──────────────────────────────────────────────
 
-  // Always kept up to date — avoids stale closure in touch useEffect
   handlePointRef.current = (sx: number, sy: number) => {
     const curTool = toolRef.current;
     if (curTool === 'cursor' || curTool === 'brush') return;
@@ -404,7 +419,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     }
   };
 
-  // ── Touch events — registered with passive:false so preventDefault works ─
+  // ── Touch event listeners (passive:false → preventDefault works on iOS) ──
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -416,50 +431,41 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
       return { x: t.clientX - r.left, y: t.clientY - r.top };
     };
 
+    const addBrushPt = (pos: ScreenPt) => {
+      const buf = brushScreenRef.current;
+      if (!buf.length) { buf.push(pos); return; }
+      const last = buf[buf.length - 1];
+      if (Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
+    };
+
     const onTouchStart = (e: TouchEvent) => {
       if (toolRef.current === 'cursor') return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       const pos = getPos(e);
       mousePosRef.current = pos;
       if (toolRef.current === 'brush') {
-        const pt = toChart(pos.x, pos.y);
-        if (pt) { brushActiveRef.current = true; brushPtsRef.current = [pt]; }
+        brushActiveRef.current = true;
+        brushScreenRef.current = [pos];
       }
       scheduleRender();
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (toolRef.current === 'cursor') return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       const pos = getPos(e);
       mousePosRef.current = pos;
-      if (brushActiveRef.current && toolRef.current === 'brush') {
-        const pt = toChart(pos.x, pos.y);
-        if (pt) brushPtsRef.current.push(pt);
-      }
+      if (brushActiveRef.current && toolRef.current === 'brush') addBrushPt(pos);
       scheduleRender();
     };
 
     const onTouchEnd = (e: TouchEvent) => {
       if (toolRef.current === 'cursor') return;
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       mousePosRef.current = null;
-
       if (toolRef.current === 'brush') {
-        brushActiveRef.current = false;
-        const pts = brushPtsRef.current;
-        if (pts.length >= 2) {
-          setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', pts: [...pts], color: '#38bdf8' }]);
-        }
-        brushPtsRef.current = [];
-        scheduleRender();
-        return;
+        commitBrush(); scheduleRender(); return;
       }
-
-      // Tap = point placement for all other tools
       const t = e.changedTouches[0];
       const r = canvas.getBoundingClientRect();
       handlePointRef.current?.(t.clientX - r.left, t.clientY - r.top);
@@ -469,13 +475,12 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     canvas.addEventListener('touchstart', onTouchStart, { passive: false });
     canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
     canvas.addEventListener('touchend',   onTouchEnd,   { passive: false });
-
     return () => {
       canvas.removeEventListener('touchstart', onTouchStart);
       canvas.removeEventListener('touchmove',  onTouchMove);
       canvas.removeEventListener('touchend',   onTouchEnd);
     };
-  }, [visible, chartRect, toChart, scheduleRender]);
+  }, [visible, chartRect, commitBrush, scheduleRender]);
 
   // ── Mouse handlers (desktop) ─────────────────────────────────────────────
 
@@ -486,33 +491,28 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     if (toolRef.current !== 'brush') return;
-    const { x, y } = canvasCoords(e);
-    const pt = toChart(x, y); if (!pt) return;
-    brushActiveRef.current = true; brushPtsRef.current = [pt];
-  }, [toChart]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const { x, y } = canvasCoords(e);
-    mousePosRef.current = { x, y };
-    if (brushActiveRef.current && toolRef.current === 'brush') {
-      const pt = toChart(x, y); if (pt) brushPtsRef.current.push(pt);
-    }
-    scheduleRender();
-  }, [toChart, scheduleRender]);
-
-  const handleMouseUp = useCallback(() => {
-    if (!brushActiveRef.current) return;
-    brushActiveRef.current = false;
-    const pts = brushPtsRef.current;
-    if (pts.length >= 2) setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', pts, color: '#38bdf8' }]);
-    brushPtsRef.current = [];
+    const pos = canvasCoords(e);
+    brushActiveRef.current = true;
+    brushScreenRef.current = [pos];
   }, []);
 
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pos = canvasCoords(e);
+    mousePosRef.current = pos;
+    if (brushActiveRef.current && toolRef.current === 'brush') {
+      const buf = brushScreenRef.current;
+      const last = buf[buf.length - 1];
+      if (!last || Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
+    }
+    scheduleRender();
+  }, [scheduleRender]);
+
+  const handleMouseUp    = useCallback(() => { if (brushActiveRef.current) commitBrush(); }, [commitBrush]);
   const handleMouseLeave = useCallback(() => {
     mousePosRef.current = null;
-    if (brushActiveRef.current) handleMouseUp();
+    if (brushActiveRef.current) commitBrush();
     scheduleRender();
-  }, [handleMouseUp, scheduleRender]);
+  }, [commitBrush, scheduleRender]);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasCoords(e);
@@ -520,8 +520,6 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
   }, []);
 
   if (!visible || !chartRect) return null;
-
-  const isCursor = tool === 'cursor';
 
   return (
     <>
@@ -568,8 +566,8 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
           left:         chartRect.left,
           width:        chartRect.width,
           height:       chartRect.height,
-          cursor:       isCursor ? 'default' : 'crosshair',
-          pointerEvents: isCursor ? 'none' : 'all',
+          cursor:       tool === 'cursor' ? 'default' : 'crosshair',
+          pointerEvents: tool === 'cursor' ? 'none' : 'all',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
