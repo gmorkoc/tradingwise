@@ -1,0 +1,232 @@
+{
+  "common": {
+    "bullish": "Rialzista",
+    "bearish": "Ribassista",
+    "neutral": "Neutrale",
+    "na": "N/D",
+    "close": "Chiudi",
+    "clear": "Cancella",
+    "refresh": "Aggiorna",
+    "updated": "Aggiornato",
+    "version": "Versione",
+    "loading": "Caricamento..."
+  },
+  "header": {
+    "subtitle": "Dati di mercato in tempo reale con previsioni basate su IA",
+    "costBasis": "Costo Base",
+    "currentValue": "Valore Attuale",
+    "pnl": "G/P",
+    "clickToRefresh": "Clicca per aggiornare",
+    "openCalculator": "Apri Calcolatore Attivi"
+  },
+  "assetCalc": {
+    "title": "💼 Calcolatore Attivi",
+    "amountLabel": "Quantità di {{coin}}",
+    "costLabel": "Costo per {{coin}}",
+    "totalLabel": "Valore Totale degli Attivi",
+    "basedOn": "Basato sul prezzo attuale di {{coin}}: {{price}}",
+    "costBasis": "Costo base: {{amount}}"
+  },
+  "alert": {
+    "signalLabel": "Segnale di Prezzo",
+    "currentlyBullish": "⬆ Attualmente Rialzista",
+    "currentlyBearish": "⬇ Attualmente Ribassista",
+    "turnedBullish": "⬆ Il prezzo è diventato Rialzista",
+    "turnedBearish": "⬇ Il prezzo è diventato Ribassista"
+  },
+  "main": {
+    "marketData": "Dati di Mercato",
+    "error": "Errore"
+  },
+  "dataDisplay": {
+    "loading": "Caricamento dati di mercato...",
+    "failed": "Caricamento dati di mercato fallito. Controlla la tua chiave API.",
+    "refreshing": "Aggiornamento dati di mercato...",
+    "coinPrice": "Prezzo {{coin}}",
+    "liquidationAbove": "Liquidazione Superiore",
+    "liquidationBelow": "Liquidazione Inferiore",
+    "openInterest": "Interesse Aperto",
+    "fundingRate": "Tasso di Finanziamento",
+    "rsi": "RSI (14)",
+    "macd": "MACD",
+    "longShortRatio": "Rapporto Long/Short",
+    "tooltipPrice": "Prezzo attuale di {{coin}} relativo all'intervallo di liquidazione stimato. Il prezzo sopra il punto medio è rialzista; sotto è ribassista.",
+    "tooltipLiqAbove": "Livello di liquidazione al rialzo stimato. Un divario più ampio sopra il prezzo attuale suggerisce più spazio rialzista.",
+    "tooltipLiqBelow": "Livello di liquidazione al ribasso stimato. Un cuscinetto inferiore maggiore mostra più buffer di rischio ribassista.",
+    "tooltipOI": "Posizioni aperte totali. Un interesse aperto maggiore indica partecipazione al mercato più forte e maggiore slancio.",
+    "tooltipFunding": "Il finanziamento positivo significa che i long pagano gli short, indicando un sentiment rialzista. Quello negativo indica una tendenza ribassista.",
+    "tooltipRSI": "Indice di Forza Relativa. Sopra 70 è ipercomprato (avviso ribassista); sotto 30 è ipervenduto (opportunità rialzista).",
+    "tooltipMACD": "Il MACD misura lo slancio. I valori positivi sono rialzisti; quelli negativi sono ribassisti.",
+    "tooltipLS": "Un rapporto superiore a 1 significa più long che short (rialzista); sotto 1 significa più short che long (ribassista)."
+  },
+  "aiPanel": {
+    "title": "Previsione IA",
+    "dirUp": "▲ Rialzista",
+    "dirDown": "▼ Ribassista",
+    "dirNeutral": "● Neutrale",
+    "analyzing": "Analisi dei dati di mercato…",
+    "fetching": "Recupero analisi IA…",
+    "updatedAt": "Aggiornato {{time}}",
+    "refreshTitle": "Aggiorna previsione",
+    "range8h": "Intervallo 8H",
+    "confHigh": "alta confidenza",
+    "confMedium": "media confidenza",
+    "confLow": "bassa confidenza",
+    "waitingData": "In attesa dei dati di mercato…",
+    "unableToFetch": "Impossibile recuperare i dati di mercato."
+  },
+  "chat": {
+    "title": "💬 Chat IA",
+    "clear": "Cancella",
+    "placeholder": "Chiedi del prezzo, tendenze, segnali…",
+    "defaultMessage": "Ciao! Posso aiutarti ad analizzare i dati di mercato di {{coin}} e rispondere a domande sulle tendenze delle criptovalute. Chiedimi qualsiasi cosa sulla situazione attuale del mercato!"
+  },
+  "chart": {
+    "title": "📈 Grafico Prezzo {{coin}}",
+    "live": "● LIVE",
+    "loading": "Caricamento dati grafico...",
+    "noData": "Nessun dato del grafico disponibile",
+    "failed": "Recupero dati grafico fallito",
+    "indicators": "Indicatori",
+    "overlays": "Sovrapposizioni",
+    "subcharts": "Sotto-grafici",
+    "bollingerBands": "Bande di Bollinger",
+    "ema20": "EMA 20",
+    "ema50": "EMA 50",
+    "ema200": "EMA 200",
+    "ma20": "MA 20",
+    "ma50": "MA 50",
+    "ma200": "MA 200",
+    "rsi14": "RSI (14)",
+    "macd1269": "MACD (12, 26, 9)",
+    "cmeGaps": "Gap CME",
+    "bbUpperLegend": "── Banda Superiore",
+    "bbMiddleLegend": "- - Media (SMA 20)",
+    "bbLowerLegend": "── Banda Inferiore",
+    "cmeLegend": "── Gap CME (non colmati)",
+    "strongBuy": "Acquisto Forte",
+    "buy": "Zona di Acquisto",
+    "neutralZone": "Neutrale",
+    "sell": "Zona di Vendita",
+    "strongSell": "Vendita Forte",
+    "currentPattern": "Pattern Attuale",
+    "nextMove": "Prossima mossa probabile",
+    "rsiLegend": "RSI",
+    "macdLegend": "MACD",
+    "signalLegend": "Segnale",
+    "rsiOB": "SA 70",
+    "rsiOS": "SV 30"
+  },
+  "heatmap": {
+    "title": "🔥 Mappa di Calore Liquidazioni",
+    "sub": "Cluster di liquidazione stimati · {{range}} · {{coin}}/USD · leva 3×–100×",
+    "high": "Alto",
+    "low": "Basso",
+    "loading": "Caricamento mappa di calore…",
+    "disclaimer": "Simulato da dati OHLC usando livelli di leva comuni. Non sono dati reali di interesse aperto degli exchange.",
+    "clusterAnalysis": "📊 Analisi Cluster di Liquidazione",
+    "longZones": "Zone Liq. Long",
+    "longBelow": "↓ sotto il prezzo",
+    "shortZones": "Zone Liq. Short",
+    "shortAbove": "↑ sopra il prezzo",
+    "noClusters": "Nessun cluster significativo nell'intervallo"
+  },
+  "leverage": {
+    "title": "⚡ Suggerimento Ingresso con Leva",
+    "disclaimer": "Non è una consulenza finanziaria",
+    "long": "▲ Long",
+    "short": "▼ Short",
+    "leverage": "Leva",
+    "custom": "Personalizzato",
+    "waitingZone": "In attesa del caricamento dei dati di zona…",
+    "waitNotice": "⏳ Il prezzo non è ancora all'ingresso ideale — attendi che {{coin}} raggiunga la zona di {{dir}}",
+    "entry": "Ingresso",
+    "stopLoss": "Stop Loss",
+    "takeProfit1": "Prendi Profitto 1",
+    "takeProfit2": "Prendi Profitto 2",
+    "liquidation": "Liquidazione",
+    "riskReward": "Rischio / Rendimento",
+    "waitDown": "↓ Attendi",
+    "waitUp": "↑ Attendi",
+    "now": "Ora",
+    "buy": "acquisto",
+    "sell": "vendita",
+    "warningHigh": "⚠️ {{lev}}x comporta un rischio di liquidazione significativo. Usa un dimensionamento della posizione attento.",
+    "warningCritical": "⛔ {{lev}}x è un rischio estremamente elevato. Un movimento del {{pct}}% liquida la tua posizione."
+  },
+  "drawer": {
+    "logo": "📊 TradingWise.AI",
+    "settings": "⚙️ Impostazioni",
+    "profile": "Profilo",
+    "tools": "🛠 Strumenti",
+    "theme": "Tema",
+    "lightMode": "☀️ Modalità chiara",
+    "darkMode": "🌙 Modalità scura",
+    "autoRefresh": "Aggiornamento automatico",
+    "coin": "Moneta",
+    "language": "Lingua",
+    "leverageBtn": "⚡ Suggerimento Ingresso con Leva",
+    "patternsBtn": "📚 Guida ai Pattern Candlestick",
+    "appInfo": "ℹ️ Info App",
+    "priceData": "Dati prezzi",
+    "charts": "Grafici",
+    "ai": "IA",
+    "reportIssue": "🐛 Segnala un problema",
+    "dataSource": "📡 Fonte dati",
+    "tradingGuide": "📚 Guida al Trading",
+    "disclaimer": "Non è una consulenza finanziaria. Fai trading con responsabilità.",
+    "docs": {
+      "candlesticks": {
+        "title": "📊 Grafici Candlestick",
+        "body": "Ogni candela mostra il prezzo di apertura, massimo, minimo e chiusura per un periodo. Una candela verde (rialzista) significa che il prezzo è chiuso più in alto rispetto all'apertura. Una candela rossa (ribassista) significa che è chiuso più in basso. Le ombre mostrano il prezzo più alto e più basso raggiunto durante quel periodo."
+      },
+      "bollingerBands": {
+        "title": "📉 Bande di Bollinger",
+        "body": "Tre linee tracciate intorno al prezzo: una media mobile semplice a 20 periodi (centrale) e bande superiore/inferiore a 2 deviazioni standard. Quando il prezzo si avvicina alla banda superiore, l'asset potrebbe essere ipercomprato. Vicino alla banda inferiore suggerisce condizioni di ipervenduto."
+      },
+      "rsi": {
+        "title": "💪 RSI — Indice di Forza Relativa",
+        "body": "L'RSI misura lo slancio su una scala da 0 a 100. Sopra 70 = ipercomprato (possibile segnale di vendita). Sotto 30 = ipervenduto (possibile segnale di acquisto). Tra 30 e 70 è territorio neutrale. La divergenza RSI può segnalare un'inversione."
+      },
+      "macd": {
+        "title": "📈 MACD",
+        "body": "Il MACD traccia lo slancio usando due EMA (periodi 12 e 26). Quando la linea MACD supera la linea di segnale, è un segnale rialzista. Sotto = ribassista. L'istogramma mostra la differenza tra le due linee."
+      },
+      "supportResistance": {
+        "title": "🧱 Supporto e Resistenza",
+        "body": "Il supporto è un livello di prezzo dove l'interesse all'acquisto è abbastanza forte da fermare un calo. La resistenza è un tetto dove la pressione di vendita impedisce al prezzo di salire. Una volta rotti, questi livelli spesso invertono i loro ruoli."
+      },
+      "openInterest": {
+        "title": "📂 Interesse Aperto",
+        "body": "L'Interesse Aperto (IA) è il numero totale di contratti futures/opzioni in sospeso. IA in aumento con prezzo in aumento = forte trend rialzista. IA in aumento con prezzo in calo = forte trend ribassista. IA in calo segnala indebolimento del trend."
+      },
+      "fundingRate": {
+        "title": "💰 Tasso di Finanziamento",
+        "body": "Nei futures perpetui, il tasso di finanziamento è un pagamento periodico tra long e short. Positivo = i long pagano gli short (mercato rialzista). Negativo = gli short pagano i long (sentiment ribassista). Tassi estremi spesso precedono le inversioni."
+      },
+      "longShort": {
+        "title": "⚖️ Rapporto Long/Short",
+        "body": "Mostra il rapporto di trader che detengono posizioni long vs short. Superiore a 1 = sentiment rialzista. Sotto 1 = sentiment ribassista. Rapporti estremi possono segnalare un'inversione poiché il mercato spesso si muove contro la folla."
+      },
+      "liquidations": {
+        "title": "💥 Liquidazioni",
+        "body": "Una liquidazione avviene quando la posizione di un trader con leva viene chiusa forzatamente perché il suo margine è insufficiente. Le liquidazioni di massa causano rapidi picchi di prezzo. La mappa di calore mostra i cluster di liquidazione stimati."
+      },
+      "leverage": {
+        "title": "⚡ Leva e Rischio",
+        "body": "La leva amplifica sia i guadagni che le perdite. Con una leva 10×, un movimento del 10% azzera l'intera posizione. Usa sempre stop-loss, dimensiona le posizioni in modo conservativo e non rischiare mai più di quanto puoi permetterti di perdere."
+      },
+      "buySell": {
+        "title": "Zone di Acquisto/Vendita",
+        "body": "Le zone di acquisto sono vicino a supporti forti o alla banda inferiore di Bollinger. Le zone di vendita sono vicino alla resistenza o alla banda superiore. Sono aree di confluenza — più indicatori concordano, più forte è il segnale."
+      },
+      "riskReward": {
+        "title": "📐 Rapporto Rischio/Rendimento",
+        "body": "R/R = (distanza Take Profit) ÷ (distanza Stop Loss). Un rapporto 1:2 significa rischiare $1 per guadagnare $2. La maggior parte dei trader professionisti mira ad almeno 1:2. Non entrare mai in un'operazione con un R/R inferiore a 1:1."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} TradingWise.AI. Tutti i diritti riservati."
+  }
+}

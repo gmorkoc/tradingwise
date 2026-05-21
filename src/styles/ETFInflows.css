@@ -1,0 +1,401 @@
+.etf-wrap {
+  padding: 20px 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.etf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.etf-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.etf-date {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+/* ── Date picker calendar ────────────────────────────────────────────────── */
+.etf-cal-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.etf-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.etf-cal-wrap.open .etf-cal-head {
+  margin-bottom: 10px;
+}
+
+.etf-cal-chevron {
+  font-size: 0.6rem;
+  opacity: 0.5;
+  margin-left: 4px;
+}
+
+.etf-cal-month {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.etf-cal-nav {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.etf-cal-nav:hover:not(:disabled) { background: var(--color-surface-strong); color: var(--color-text); }
+.etf-cal-nav:disabled { opacity: 0.25; cursor: default; }
+
+.etf-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.etf-cal-wd {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding-bottom: 6px;
+}
+
+.etf-cal-day {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  padding: 0;
+  width: 100%;
+}
+
+.etf-cal-day.inflow { color: #22c55e; font-weight: 600; }
+.etf-cal-day.inflow:hover { background: rgba(34,197,94,0.15); border-radius: 6px; }
+.etf-cal-day.outflow { color: #ef4444; font-weight: 600; }
+.etf-cal-day.outflow:hover { background: rgba(239,68,68,0.15); border-radius: 6px; }
+.etf-cal-day:hover:not(:disabled):not(.selected):not(.muted) { border-radius: 6px; }
+.etf-cal-day.muted { opacity: 0.25; cursor: default; background: transparent !important; border: none !important; }
+.etf-cal-day.today { border: 1px solid var(--color-text-muted); }
+.etf-cal-day.selected { background: var(--color-primary, #6366f1) !important; color: #fff !important; font-weight: 700; border-radius: 6px !important; }
+
+.etf-cal-month-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.etf-cal-month-item {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 4px;
+  font-size: 0.78rem;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s, border-color 0.12s;
+}
+.etf-cal-month-item:hover { background: var(--color-surface-strong); }
+.etf-cal-month-item.active { border-color: var(--color-primary, #6366f1); color: var(--color-primary, #6366f1); font-weight: 600; }
+
+.etf-cal-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.etf-cal-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--color-primary, #6366f1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.etf-cal-action:hover { background: var(--color-surface-strong); }
+.etf-cal-action.accent { font-weight: 600; }
+
+/* ── Summary cards ───────────────────────────────────────────────────────── */
+.etf-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.etf-summary-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.etf-summary-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.etf-summary-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.etf-summary-value.positive { color: #22c55e; }
+.etf-summary-value.negative { color: #ef4444; }
+
+/* ── Bar chart ───────────────────────────────────────────────────────────── */
+.etf-chart-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.etf-chart-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+/* History chart — bars grow from centre midline */
+.etf-hist-bars {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  height: 100px;
+}
+
+.etf-hist-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+.etf-hist-col:hover { background: rgba(148,163,184,0.08); }
+.etf-hist-col.selected { background: rgba(56,189,248,0.12); }
+
+.etf-hist-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+html[data-theme="light"] .etf-hist-bar-wrap { border-bottom-color: rgba(0,0,0,0.1); }
+
+.etf-hist-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: opacity 0.15s;
+}
+
+.etf-hist-bar.pos { background: #22c55e; }
+.etf-hist-bar.neg {
+  background: #ef4444;
+  border-radius: 0 0 2px 2px;
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.etf-bar-label {
+  font-size: 0.52rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+.etf-table-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.etf-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.etf-table th {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-header-bg);
+}
+
+.etf-table th:not(:first-child):not(:last-child) { text-align: right; }
+.etf-table th:last-child { text-align: left; min-width: 88px; }
+
+.etf-table td {
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: var(--color-text);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: middle;
+}
+
+html[data-theme="light"] .etf-table td {
+  border-bottom-color: rgba(0,0,0,0.04);
+}
+
+.etf-table tr:last-child td { border-bottom: none; }
+.etf-table tr:hover td { background: rgba(255,255,255,0.03); }
+html[data-theme="light"] .etf-table tr:hover td { background: rgba(0,0,0,0.02); }
+
+.etf-ticker {
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.etf-name-sub {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+.etf-flow-cell {
+  text-align: right;
+}
+
+.etf-flow-val {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.etf-flow-val.positive { color: #22c55e; }
+.etf-flow-val.negative { color: #ef4444; }
+.etf-flow-val.zero     { color: var(--color-text-muted); }
+
+.etf-flow-bar-wrap {
+  width: 80px;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  margin-top: 4px;
+  margin-left: auto;
+  overflow: hidden;
+}
+
+html[data-theme="light"] .etf-flow-bar-wrap { background: rgba(0,0,0,0.06); }
+
+.etf-flow-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.etf-flow-bar-fill.positive { background: #22c55e; }
+.etf-flow-bar-fill.negative { background: #ef4444; }
+
+.etf-aum {
+  text-align: right;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Total row ───────────────────────────────────────────────────────────── */
+.etf-total-row td {
+  border-top: 1px solid var(--color-border) !important;
+  border-bottom: none !important;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--color-text) !important;
+  background: var(--color-header-bg);
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+.etf-loading,
+.etf-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  gap: 8px;
+}
+
+.etf-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(99,102,241,0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: etf-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes etf-spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .etf-wrap { padding: 14px 12px; gap: 14px; }
+  .etf-summary-row { grid-template-columns: repeat(2, 1fr); }
+  .etf-aum { display: none; }
+  .etf-table th:last-child,
+  .etf-table td:last-child { display: none; }
+}

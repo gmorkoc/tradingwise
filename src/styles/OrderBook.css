@@ -1,0 +1,265 @@
+.ob-card {
+  background: var(--color-card-bg);
+  border-radius: 0;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  height: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ob-header {
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.ob-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ── Exchange row ────────────────────────────────────────────────────────── */
+
+.ob-exchange-row {
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.ob-ex-select {
+  width: 100%;
+  padding: 5px 24px 5px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface, #1a1a1a);
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ob-ex-select:focus {
+  border-color: var(--color-accent, #3b82f6);
+}
+
+/* ── Size filter pills ───────────────────────────────────────────────────── */
+
+.ob-filter-row {
+  display: flex;
+  gap: 0;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.ob-filter-btn {
+  padding: 3px 5px;
+  font-size: 0.61rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ob-filter-btn:hover {
+  color: var(--color-text);
+}
+
+.ob-filter-btn.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--color-accent, #3b82f6);
+}
+
+.ob-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+/* ── Body fills remaining height ─────────────────────────────────────────── */
+
+.ob-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  clip-path: inset(0);
+}
+
+.ob-col-headers {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.75fr;
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 2px;
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.ob-col-headers span:last-child {
+  text-align: right;
+}
+
+/* Asks: take all remaining space after bids */
+.ob-section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Bids: shrink to content, capped at half the body — no fixed height so
+   filtered results don't leave empty space at the top */
+.ob-section--bids {
+  flex: 0 0 auto;
+  max-height: 50%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.ob-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.75fr;
+  padding: 2px 4px;
+  overflow: hidden;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.ob-row:hover .ob-fill {
+  opacity: 0.2;
+}
+
+/* Depth fill bar */
+.ob-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  opacity: 0.1;
+  pointer-events: none;
+  transition: width 0.35s ease;
+}
+
+.ob-fill--bid { background: #22c55e; }
+.ob-fill--ask { background: #ef4444; }
+
+/* Cells */
+.ob-cell {
+  position: relative;
+  z-index: 1;
+  font-size: 0.76rem;
+  line-height: 1.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ob-price { font-weight: 600; }
+.ob-price--bid { color: #22c55e; }
+.ob-price--ask { color: #ef4444; }
+.ob-size { color: var(--color-text-muted); text-align: right; }
+.ob-usd  { color: var(--color-text-muted); text-align: right; font-size: 0.68rem; }
+
+/* ── Pinned mid / spread row ─────────────────────────────────────────────── */
+
+.ob-mid-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px;
+  margin: 2px 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  gap: 6px;
+}
+
+.ob-mid-price {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ob-spread-label {
+  font-size: 0.63rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .ob-card { padding: 12px 10px; }
+  .ob-filter-btn { padding: 2px 4px; font-size: 0.58rem; }
+}
+
+.ob-hide-btn {
+  display: none;
+  position: absolute;
+  left: -22px;
+  top: 0;
+  bottom: 0;
+  background: var(--color-surface);
+  border: none;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  width: 22px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text);
+  padding: 0;
+  z-index: 10;
+}
+.ob-hide-btn:hover { background: var(--color-surface-2, rgba(255,255,255,0.08)); color: var(--color-accent); }
+
+.ob-show-btn {
+  display: none;
+  align-self: stretch;
+  width: 24px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: none;
+  border-left: 1px solid var(--color-border);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.ob-show-btn:hover { background: var(--color-surface-2, rgba(255,255,255,0.05)); color: var(--color-text); }
+
+@media (max-width: 640px) {
+  .ob-hide-btn { display: flex; }
+  .ob-show-btn { display: flex; }
+}

@@ -1,0 +1,144 @@
+import { useState, useEffect, useCallback } from "react";
+import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
+import "../styles/WhaleAlerts.css";
+
+const DISMISS_MS = 12_000;
+
+function playWhaleSound() {
+  try {
+    const ctx = new AudioContext();
+    const now = ctx.currentTime;
+    [880, 1100].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const t = now + i * 0.13;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+    setTimeout(() => ctx.close(), 700);
+  } catch { /* audio blocked — ignore */ }
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${n.toLocaleString()}`;
+}
+
+function isKnown(label: string): boolean {
+  return !label.includes("…");
+}
+
+interface Props {
+  btcPrice?: number;
+}
+
+export function WhaleAlerts({ btcPrice }: Props) {
+  const [alerts, setAlerts] = useState<WhaleTx[]>([]);
+
+  const dismiss = useCallback((id: string) => {
+    setAlerts(prev => prev.filter(a => a.id !== id));
+  }, []);
+
+  useEffect(() => {
+    return subscribeWhaleAlerts(tx => {
+      playWhaleSound();
+      setAlerts(prev => [tx, ...prev].slice(0, 3));
+      setTimeout(() => dismiss(tx.id), DISMISS_MS);
+    });
+  }, [dismiss]);
+
+  if (!alerts.length) return null;
+
+  return (
+    <div className="whale-alerts" role="status" aria-live="polite">
+      {alerts.map(alert => {
+        const usd = btcPrice && btcPrice > 0 ? alert.amount * btcPrice : null;
+        return (
+          <div key={alert.id} className="whale-alert">
+            <div className="whale-alert-icon">🐋</div>
+
+            <div className="whale-alert-body">
+              <div className="whale-alert-label">
+                Whale Alert · BTC
+                {alert.sentiment !== "neutral" && (
+                  <span className={`whale-sentiment whale-sentiment--${alert.sentiment}`}>
+                    {alert.sentiment === "bullish" ? "▲ Bullish" : "▼ Bearish"}
+                  </span>
+                )}
+              </div>
+
+              <div className="whale-alert-row">
+                <span className="whale-alert-btc">
+                  {alert.amount >= 1000
+                    ? `${(alert.amount / 1000).toFixed(2)}K`
+                    : alert.amount.toFixed(1)}{" "}BTC
+                </span>
+                {usd && (
+                  <span className="whale-alert-usd">≈ {fmtUsd(usd)}</span>
+                )}
+              </div>
+
+              <div className="whale-alert-transfer">
+                <span
+                  className={`whale-alert-entity${isKnown(alert.from) ? " known" : ""}`}
+                  title={alert.fromRaw || alert.from}
+                >
+                  {alert.from}
+                </span>
+                <svg className="whale-alert-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+                <span
+                  className={`whale-alert-entity${isKnown(alert.to) ? " known" : ""}`}
+                  title={alert.toRaw || alert.to}
+                >
+                  {alert.to}
+                </span>
+              </div>
+            </div>
+
+            <div className="whale-alert-actions">
+              <a
+                href={`https://mempool.space/tx/${alert.hash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whale-alert-view"
+                title="View transaction"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                  <polyline points="15 3 21 3 21 9"/>
+                  <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+              </a>
+              <button
+                className="whale-alert-close"
+                onClick={() => dismiss(alert.id)}
+                aria-label="Dismiss"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            <div
+              className="whale-alert-progress"
+              style={{ "--dismiss-ms": `${DISMISS_MS}ms` } as React.CSSProperties}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}

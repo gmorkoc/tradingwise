@@ -1,0 +1,344 @@
+/* ── Overlay ─────────────────────────────────────────────────────────────── */
+.onb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.onb-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--color-card-bg);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--color-border);
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.onb-progress {
+  height: 3px;
+  background: var(--color-border);
+}
+
+.onb-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  transition: width 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+/* ── Animated body ───────────────────────────────────────────────────────── */
+.onb-body {
+  padding: 48px 48px 52px;
+}
+
+@media (max-width: 480px) {
+  .onb-body { padding: 36px 28px 40px; }
+}
+
+/* Slide-in animation triggered by React key change */
+.onb-anim {
+  animation: onb-enter 0.38s cubic-bezier(0.34, 1.1, 0.64, 1) both;
+}
+
+@keyframes onb-enter {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Intro screen ────────────────────────────────────────────────────────── */
+.onb-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.onb-intro-glyph {
+  font-size: 2.8rem;
+  background: linear-gradient(135deg, #6366f1, #818cf8, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.onb-intro-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--color-text);
+}
+
+.onb-intro-sub {
+  margin: 0;
+  font-size: 0.96rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  max-width: 380px;
+}
+
+/* ── Step pips ───────────────────────────────────────────────────────────── */
+.onb-step-pip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+
+.onb-pip {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 0.3s ease, width 0.3s ease;
+}
+
+.onb-pip--done   { background: rgba(99, 102, 241, 0.4); }
+.onb-pip--active { background: #6366f1; width: 36px; }
+
+/* ── Question screen ─────────────────────────────────────────────────────── */
+.onb-question {
+  display: flex;
+  flex-direction: column;
+}
+
+.onb-q-emoji {
+  font-size: 2rem;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.onb-q-title {
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.onb-q-sub {
+  margin: 0 0 24px;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Options ─────────────────────────────────────────────────────────────── */
+.onb-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.onb-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-input-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease;
+  width: 100%;
+}
+
+.onb-option:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.06);
+  transform: translateX(3px);
+}
+
+.onb-option:active {
+  transform: translateX(3px) scale(0.98);
+}
+
+.onb-option--on {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.onb-opt-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card-bg);
+  border-radius: 10px;
+}
+
+.onb-opt-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.onb-opt-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.onb-opt-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+/* Multi-select checkmark */
+.onb-opt-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: transparent;
+  flex-shrink: 0;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.onb-opt-check--on {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+/* ── Continue button (multi) ─────────────────────────────────────────────── */
+.onb-btn-continue {
+  margin-top: 18px;
+  align-self: flex-end;
+}
+
+/* ── Primary button ──────────────────────────────────────────────────────── */
+.onb-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.15s ease;
+  margin-top: 28px;
+}
+
+.onb-btn-primary:hover  { opacity: 0.88; transform: translateY(-1px); }
+.onb-btn-primary:active { transform: scale(0.97); }
+.onb-btn-primary:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+.onb-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.onb-btn-primary:hover .onb-arrow {
+  transform: translateX(4px);
+}
+
+/* ── Result screen ───────────────────────────────────────────────────────── */
+.onb-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.onb-result-rings {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.onb-result-rings::before,
+.onb-result-rings::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.2;
+  animation: onb-ring-pulse 2s ease-in-out infinite;
+}
+
+.onb-result-rings::before {
+  width: 80px; height: 80px;
+  animation-delay: 0s;
+}
+
+.onb-result-rings::after {
+  width: 100px; height: 100px;
+  animation-delay: 0.4s;
+}
+
+@keyframes onb-ring-pulse {
+  0%, 100% { opacity: 0.12; transform: scale(1); }
+  50%       { opacity: 0.28; transform: scale(1.05); }
+}
+
+.onb-result-glyph {
+  font-size: 3rem;
+  z-index: 1;
+  animation: onb-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.15s;
+}
+
+@keyframes onb-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.onb-result-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1.5px solid;
+}
+
+.onb-result-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.onb-result-desc {
+  margin: 0;
+  font-size: 0.93rem;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+  max-width: 380px;
+}

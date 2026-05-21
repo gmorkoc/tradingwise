@@ -1,0 +1,232 @@
+{
+  "common": {
+    "bullish": "Alcista",
+    "bearish": "Bajista",
+    "neutral": "Neutral",
+    "na": "N/D",
+    "close": "Cerrar",
+    "clear": "Borrar",
+    "refresh": "Actualizar",
+    "updated": "Actualizado",
+    "version": "Versión",
+    "loading": "Cargando..."
+  },
+  "header": {
+    "subtitle": "Datos de mercado en tiempo real con predicciones impulsadas por IA",
+    "costBasis": "Costo Base",
+    "currentValue": "Valor Actual",
+    "pnl": "G/P",
+    "clickToRefresh": "Haz clic para actualizar",
+    "openCalculator": "Abrir Calculadora de Activos"
+  },
+  "assetCalc": {
+    "title": "💼 Calculadora de Activos",
+    "amountLabel": "Cantidad de {{coin}}",
+    "costLabel": "Costo por {{coin}}",
+    "totalLabel": "Valor Total del Activo",
+    "basedOn": "Basado en el precio actual de {{coin}}: {{price}}",
+    "costBasis": "Costo base: {{amount}}"
+  },
+  "alert": {
+    "signalLabel": "Señal de Precio",
+    "currentlyBullish": "⬆ Actualmente Alcista",
+    "currentlyBearish": "⬇ Actualmente Bajista",
+    "turnedBullish": "⬆ El precio se volvió Alcista",
+    "turnedBearish": "⬇ El precio se volvió Bajista"
+  },
+  "main": {
+    "marketData": "Datos del Mercado",
+    "error": "Error"
+  },
+  "dataDisplay": {
+    "loading": "Cargando datos del mercado...",
+    "failed": "Error al cargar datos del mercado. Verifica tu clave API.",
+    "refreshing": "Actualizando datos del mercado...",
+    "coinPrice": "Precio de {{coin}}",
+    "liquidationAbove": "Liquidación Superior",
+    "liquidationBelow": "Liquidación Inferior",
+    "openInterest": "Interés Abierto",
+    "fundingRate": "Tasa de Financiamiento",
+    "rsi": "RSI (14)",
+    "macd": "MACD",
+    "longShortRatio": "Ratio Largo/Corto",
+    "tooltipPrice": "Precio actual de {{coin}} relativo al rango estimado de liquidación. El precio por encima del punto medio es alcista; por debajo es bajista.",
+    "tooltipLiqAbove": "Nivel de liquidación al alza estimado. Una brecha más amplia sobre el precio actual sugiere más espacio alcista.",
+    "tooltipLiqBelow": "Nivel de liquidación a la baja estimado. Un mayor amortiguador inferior muestra más margen bajista.",
+    "tooltipOI": "Total de posiciones abiertas. Un mayor interés abierto indica mayor participación y momentum del mercado.",
+    "tooltipFunding": "El financiamiento positivo significa que los largos pagan a los cortos, indicando sentimiento alcista. El negativo indica sesgo bajista.",
+    "tooltipRSI": "Índice de Fuerza Relativa. Por encima de 70 está sobrecomprado (advertencia bajista); por debajo de 30 está sobrevendido (oportunidad alcista).",
+    "tooltipMACD": "El MACD mide el momentum. Los valores positivos son alcistas; los negativos son bajistas.",
+    "tooltipLS": "Un ratio superior a 1 significa más largos que cortos (alcista); inferior a 1 significa más cortos que largos (bajista)."
+  },
+  "aiPanel": {
+    "title": "Predicción IA",
+    "dirUp": "▲ Alcista",
+    "dirDown": "▼ Bajista",
+    "dirNeutral": "● Neutral",
+    "analyzing": "Analizando datos del mercado…",
+    "fetching": "Obteniendo análisis de IA…",
+    "updatedAt": "Actualizado {{time}}",
+    "refreshTitle": "Actualizar predicción",
+    "range8h": "Rango 8H",
+    "confHigh": "alta confianza",
+    "confMedium": "confianza media",
+    "confLow": "baja confianza",
+    "waitingData": "Esperando datos del mercado…",
+    "unableToFetch": "No se pueden obtener datos del mercado."
+  },
+  "chat": {
+    "title": "💬 Chat IA",
+    "clear": "Borrar",
+    "placeholder": "Pregunta sobre precio, tendencias, señales…",
+    "defaultMessage": "¡Hola! Puedo ayudarte a analizar los datos del mercado de {{coin}} y responder preguntas sobre tendencias de criptomonedas. ¡Pregúntame cualquier cosa sobre la situación actual del mercado!"
+  },
+  "chart": {
+    "title": "📈 Gráfico de Precio {{coin}}",
+    "live": "● EN VIVO",
+    "loading": "Cargando datos del gráfico...",
+    "noData": "No hay datos del gráfico disponibles",
+    "failed": "Error al obtener datos del gráfico",
+    "indicators": "Indicadores",
+    "overlays": "Superposiciones",
+    "subcharts": "Sub-gráficos",
+    "bollingerBands": "Bandas de Bollinger",
+    "ema20": "EMA 20",
+    "ema50": "EMA 50",
+    "ema200": "EMA 200",
+    "ma20": "MA 20",
+    "ma50": "MA 50",
+    "ma200": "MA 200",
+    "rsi14": "RSI (14)",
+    "macd1269": "MACD (12, 26, 9)",
+    "cmeGaps": "Brechas CME",
+    "bbUpperLegend": "── Banda Superior",
+    "bbMiddleLegend": "- - Media (SMA 20)",
+    "bbLowerLegend": "── Banda Inferior",
+    "cmeLegend": "── Brechas CME (sin llenar)",
+    "strongBuy": "Compra Fuerte",
+    "buy": "Zona de Compra",
+    "neutralZone": "Neutral",
+    "sell": "Zona de Venta",
+    "strongSell": "Venta Fuerte",
+    "currentPattern": "Patrón Actual",
+    "nextMove": "Próximo movimiento probable",
+    "rsiLegend": "RSI",
+    "macdLegend": "MACD",
+    "signalLegend": "Señal",
+    "rsiOB": "SC 70",
+    "rsiOS": "SV 30"
+  },
+  "heatmap": {
+    "title": "🔥 Mapa de Calor de Liquidaciones",
+    "sub": "Clusters de liquidación estimados · {{range}} · {{coin}}/USD · apalancamiento 3×–100×",
+    "high": "Alto",
+    "low": "Bajo",
+    "loading": "Cargando mapa de calor…",
+    "disclaimer": "Simulado a partir de datos OHLC usando niveles de apalancamiento comunes. No son datos reales de interés abierto de exchanges.",
+    "clusterAnalysis": "📊 Análisis de Clusters de Liquidación",
+    "longZones": "Zonas Liq. Largos",
+    "longBelow": "↓ bajo el precio",
+    "shortZones": "Zonas Liq. Cortos",
+    "shortAbove": "↑ sobre el precio",
+    "noClusters": "No hay clusters significativos en el rango"
+  },
+  "leverage": {
+    "title": "⚡ Sugerencia de Entrada con Apalancamiento",
+    "disclaimer": "No es asesoramiento financiero",
+    "long": "▲ Largo",
+    "short": "▼ Corto",
+    "leverage": "Apalancamiento",
+    "custom": "Personalizado",
+    "waitingZone": "Esperando datos de zona para cargar…",
+    "waitNotice": "⏳ El precio aún no está en la entrada ideal — espera que {{coin}} llegue a la zona de {{dir}}",
+    "entry": "Entrada",
+    "stopLoss": "Stop Loss",
+    "takeProfit1": "Tomar Ganancias 1",
+    "takeProfit2": "Tomar Ganancias 2",
+    "liquidation": "Liquidación",
+    "riskReward": "Riesgo / Recompensa",
+    "waitDown": "↓ Esperar",
+    "waitUp": "↑ Esperar",
+    "now": "Ahora",
+    "buy": "compra",
+    "sell": "venta",
+    "warningHigh": "⚠️ {{lev}}x conlleva un riesgo de liquidación significativo. Usa un tamaño de posición cuidadoso.",
+    "warningCritical": "⛔ {{lev}}x es un riesgo extremadamente alto. Un movimiento del {{pct}}% liquida tu posición."
+  },
+  "drawer": {
+    "logo": "📊 TradingWise.AI",
+    "settings": "⚙️ Configuración",
+    "profile": "Perfil",
+    "tools": "🛠 Herramientas",
+    "theme": "Tema",
+    "lightMode": "☀️ Modo claro",
+    "darkMode": "🌙 Modo oscuro",
+    "autoRefresh": "Actualización automática",
+    "coin": "Moneda",
+    "language": "Idioma",
+    "leverageBtn": "⚡ Sugerencia de Entrada con Apalancamiento",
+    "patternsBtn": "📚 Guía de Patrones de Velas",
+    "appInfo": "ℹ️ Información de la App",
+    "priceData": "Datos de precio",
+    "charts": "Gráficos",
+    "ai": "IA",
+    "reportIssue": "🐛 Reportar un problema",
+    "dataSource": "📡 Fuente de datos",
+    "tradingGuide": "📚 Guía de Trading",
+    "disclaimer": "No es asesoramiento financiero. Opera con responsabilidad.",
+    "docs": {
+      "candlesticks": {
+        "title": "📊 Gráficos de Velas",
+        "body": "Cada vela muestra el precio de apertura, máximo, mínimo y cierre para un período. Una vela verde (alcista) significa que el precio cerró más alto que cuando abrió. Una vela roja (bajista) significa que cerró más bajo. Las mechas (líneas delgadas) muestran el precio más alto y más bajo alcanzado durante ese período."
+      },
+      "bollingerBands": {
+        "title": "📉 Bandas de Bollinger",
+        "body": "Tres líneas trazadas alrededor del precio: una media móvil simple de 20 períodos (media), y bandas superior/inferior a 2 desviaciones estándar. Cuando el precio se acerca a la banda superior, el activo puede estar sobrecomprado. Cerca de la banda inferior sugiere condiciones de sobreventa. Bandas estrechas señalan baja volatilidad; amplias señalan alta volatilidad."
+      },
+      "rsi": {
+        "title": "💪 RSI — Índice de Fuerza Relativa",
+        "body": "El RSI mide el momentum en una escala de 0–100. Por encima de 70 = sobrecomprado (posible señal de venta). Por debajo de 30 = sobrevendido (posible señal de compra). Entre 30–70 es zona neutral. La divergencia del RSI — cuando el precio marca un nuevo máximo pero el RSI no — puede señalar una reversión."
+      },
+      "macd": {
+        "title": "📈 MACD",
+        "body": "El MACD rastrea el momentum usando dos EMAs (períodos 12 y 26). Cuando la línea MACD cruza por encima de la línea de señal, es una señal alcista. Por debajo = bajista. El histograma muestra la diferencia entre las dos líneas. Positivo = momentum alcista, negativo = bajista."
+      },
+      "supportResistance": {
+        "title": "🧱 Soporte y Resistencia",
+        "body": "El soporte es un nivel de precio donde el interés comprador es suficientemente fuerte para detener una caída — el precio tiende a 'rebotar' en él. La resistencia es lo contrario: un techo donde la presión vendedora impide que el precio suba. Una vez rotos, estos niveles suelen invertir sus roles."
+      },
+      "openInterest": {
+        "title": "📂 Interés Abierto",
+        "body": "El Interés Abierto (IA) es el número total de contratos de futuros/opciones pendientes no liquidados. OI creciente con precio creciente = tendencia alcista fuerte. OI creciente con precio decreciente = tendencia bajista fuerte. OI decreciente generalmente significa que las posiciones se están cerrando (debilitamiento de la tendencia)."
+      },
+      "fundingRate": {
+        "title": "💰 Tasa de Financiamiento",
+        "body": "En futuros perpetuos, la tasa de financiamiento es un pago periódico entre largos y cortos para mantener el precio del contrato cerca del precio spot. Financiamiento positivo = los largos pagan a los cortos (mercado alcista). Negativo = los cortos pagan a los largos (sentimiento bajista). Tasas extremas suelen preceder reversiones."
+      },
+      "longShort": {
+        "title": "⚖️ Ratio Largo/Corto",
+        "body": "Muestra el ratio de traders con posiciones largas vs cortas. Un ratio superior a 1 significa más largos que cortos — sentimiento alcista. Inferior a 1 = sentimiento bajista. Paradójicamente, ratios extremos (ej. 3:1 largos) pueden señalar una reversión ya que el mercado suele moverse contra la multitud."
+      },
+      "liquidations": {
+        "title": "💥 Liquidaciones",
+        "body": "Una liquidación ocurre cuando la posición de un trader apalancado se cierra forzosamente porque su margen es insuficiente para cubrir las pérdidas. Las liquidaciones masivas causan picos de precio rápidos. El mapa de calor muestra los clusters de liquidación estimados."
+      },
+      "leverage": {
+        "title": "⚡ Apalancamiento y Riesgo",
+        "body": "El apalancamiento amplifica tanto las ganancias como las pérdidas. Con 10× de apalancamiento, un movimiento del 10% elimina toda tu posición. El precio de liquidación es aproximadamente: Entrada × (1 − 1/Apalancamiento) para largos. Usa siempre stop-loss y nunca arriesgues más de lo que puedes permitirte perder."
+      },
+      "buySell": {
+        "title": "Zonas de Compra/Venta",
+        "body": "Las zonas de compra son áreas de precio cerca de soporte fuerte o la banda inferior de Bollinger donde es probable que el precio encuentre compradores. Las zonas de venta están cerca de la resistencia. Son áreas de confluencia — cuantos más indicadores coincidan, más fuerte es la señal."
+      },
+      "riskReward": {
+        "title": "📐 Ratio Riesgo/Recompensa",
+        "body": "R/R = (distancia al Take Profit) ÷ (distancia al Stop Loss). Un ratio de 1:2 significa que arriesgas $1 para ganar $2. La mayoría de los traders profesionales apuntan al menos a 1:2. Nunca entres en una operación con un R/R inferior a 1:1."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} TradingWise.AI. Todos los derechos reservados."
+  }
+}

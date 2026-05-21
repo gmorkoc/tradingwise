@@ -1,0 +1,196 @@
+/* ── Modal overlay ─────────────────────────────────────────────────────── */
+.learn-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: learn-fade-in 0.2s ease;
+}
+
+@keyframes learn-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.learn-modal {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: learn-slide-up 0.22s ease;
+}
+
+@keyframes learn-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.learn-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.learn-modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.learn-modal-close {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.learn-modal-close:hover { background: var(--color-border); color: var(--color-text); }
+
+.learn-modal-body {
+  overflow-y: auto;
+  padding: 20px;
+  flex: 1;
+}
+
+.learn-modal-body::-webkit-scrollbar       { width: 5px; }
+.learn-modal-body::-webkit-scrollbar-track { background: transparent; }
+.learn-modal-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 4px; }
+
+/* ── Two-panel layout ──────────────────────────────────────────────────── */
+.learn-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────── */
+.learn-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.learn-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.learn-panel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.learn-panel-header--bullish {
+  background: rgba(34, 197, 94, 0.08);
+  border-bottom: 1px solid rgba(34, 197, 94, 0.18);
+  color: #22c55e;
+}
+.learn-panel-header--bullish .learn-panel-dot { background: #22c55e; }
+
+.learn-panel-header--bearish {
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+.learn-panel-header--bearish .learn-panel-dot { background: #ef4444; }
+
+/* ── Pattern list ──────────────────────────────────────────────────────── */
+.learn-pattern-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Pattern card ──────────────────────────────────────────────────────── */
+.learn-card {
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.learn-card:last-child { border-bottom: none; }
+
+.learn-card--bullish:hover { background: rgba(34, 197, 94, 0.04); }
+.learn-card--bearish:hover { background: rgba(239, 68, 68, 0.04); }
+
+.learn-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.learn-card-chart {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.learn-mini-chart {
+  display: block;
+  border-radius: 6px;
+  background: var(--color-input-bg, rgba(255,255,255,0.04));
+  padding: 4px;
+}
+
+.learn-card-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.learn-card-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.learn-card-chevron {
+  font-size: 0.6rem;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.learn-card-desc {
+  margin: 0;
+  padding: 0 14px 12px 14px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .learn-panels { grid-template-columns: 1fr; }
+  .learn-modal  { max-height: 95vh; border-radius: 16px; }
+}

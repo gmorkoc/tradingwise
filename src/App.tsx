@@ -1,0 +1,828 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
+import { coinglass, BTCData, CoinSymbol, clearCandleCache, COINS } from "./services/coinglass";
+import { AIPredictionPanel } from "./components/AIPredictionPanel";
+import { ChatInterface } from "./components/ChatInterface";
+import { PriceChart } from "./components/PriceChart";
+import { Drawer } from "./components/Drawer";
+import { AccountMenu } from "./components/AccountMenu";
+import { LiquidationHeatmap } from "./components/LiquidationHeatmap";
+import { LearnSection } from "./components/LearnSection";
+import { NewsTicker } from "./components/NewsTicker";
+import { LeveragePopup } from "./components/LeveragePopup";
+import { TradingWiseLogo } from "./components/SimplyTradeLogo";
+import { PriceAlerts } from "./components/PriceAlerts";
+import { ProfilePage } from "./components/ProfilePage";
+import { GannAnalysis } from "./components/GannAnalysis";
+import { HTFAnalysis } from "./components/HTFAnalysis";
+import { FearGreedGauge } from "./components/FearGreedGauge";
+import { OnChainMetrics } from "./components/OnChainMetrics";
+import { AlertsBuilder } from "./components/AlertsBuilder";
+import { OrderBook } from "./components/OrderBook";
+import { ETFInflows } from "./components/ETFInflows";
+import { PositionFlows } from "./components/PositionFlows";
+import { Watchlist } from "./components/Watchlist";
+import { OnboardingWizard } from "./components/OnboardingWizard";
+import { FlashNewsBanner } from "./components/FlashNewsBanner";
+import { WhaleAlerts } from "./components/WhaleAlerts";
+import { AuthModal } from "./components/AuthModal";
+import { BlurGate } from "./components/MembershipGate";
+import { UpgradeModal } from "./components/UpgradeModal";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LandingPage } from "./components/LandingPage";
+import { ZoneResult } from "./components/PriceChart.types";
+import { hasAccess, Tier } from "./services/supabase";
+import "./App.css";
+
+type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions";
+
+const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
+  { id: "chart", label: "Chart", d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
+  {
+    id: "ai", label: "AI Analysis",
+    d: [
+      "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z",
+      "M20 3v4M22 5h-4",
+      "M4 17v2M5 18H3",
+    ],
+  },
+  {
+    id: "feargreed", label: "Sentiment",
+    d: ["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"],
+  },
+  { id: "heatmap", label: "Heatmap", d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
+  { id: "onchain", label: "On-Chain", d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
+  { id: "gann", label: "Gann", d: "M22 12h-4l-3 9L9 3l-3 9H2", requiredTier: "elite", hidden: true },
+  { id: "alerts", label: "Alerts", d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
+  { id: "etf", label: "ETF Flows", d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
+  { id: "positions", label: "Traders", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
+  { id: "htf", label: "HTF Analysis", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
+];
+
+function NavIcon({ d }: { d: string | string[] }) {
+  const paths = Array.isArray(d) ? d : [d];
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round">
+      {paths.map((p, i) => <path key={i} d={p} />)}
+    </svg>
+  );
+}
+
+const COIN_ICONS: Record<string, string> = {
+  BTC: "₿", ETH: "Ξ", XRP: "◈", SOL: "◎", BNB: "⬡", SUI: "⬟", DOGE: "Ð", ADA: "₳",
+};
+
+/* ── Authenticated dashboard — only mounts when user is logged in ── */
+interface DashboardProps {
+  onOpenAuth: () => void;
+  onOpenUpgrade: () => void;
+  theme: "dark" | "light";
+  setTheme: (t: "dark" | "light") => void;
+}
+
+function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardProps) {
+  const { t } = useTranslation();
+  const [activeSection, setActiveSection] = useState<SectionId>("chart");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const onboardingCheckedRef = useRef(false);
+  const [showWatchlist, setShowWatchlist] = useState(() => localStorage.getItem("watchlist-visible") !== "false");
+  useEffect(() => { localStorage.setItem("watchlist-visible", String(showWatchlist)); }, [showWatchlist]);
+
+  const [coin, setCoin] = useState<CoinSymbol>(() =>
+    (localStorage.getItem("coin") as CoinSymbol) || "BTC"
+  );
+
+  useEffect(() => { localStorage.setItem("coin", coin); }, [coin]);
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  const [btcData, setBtcData] = useState<Partial<BTCData> | null>(() => {
+    try {
+      const storedCoin = (localStorage.getItem("coin") as CoinSymbol) || "BTC";
+      const raw = localStorage.getItem(`btcData_${storedCoin}`);
+      return raw ? (JSON.parse(raw) as Partial<BTCData>) : null;
+    } catch { return null; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const storedCoin = (localStorage.getItem("coin") as CoinSymbol) || "BTC";
+      return !localStorage.getItem(`btcData_${storedCoin}`);
+    } catch { return true; }
+  });
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [btcAmount, setBtcAmount] = useState(() => localStorage.getItem("btcAmount") || "0");
+  const [btcCost, setBtcCost] = useState(() => localStorage.getItem("btcCost") || "0");
+  const btcDataRef = useRef<Partial<BTCData> | null>(null);
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+
+  useEffect(() => { btcDataRef.current = btcData; }, [btcData]);
+
+  // 1-second live price from Binance public ticker
+  useEffect(() => {
+    const BINANCE_SYM: Record<string, string> = {
+      BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
+      DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
+    };
+    const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${sym}`);
+        if (!res.ok || cancelled) return;
+        const d = await res.json();
+        if (!cancelled) setLivePrice(parseFloat(d.price));
+      } catch { /* ignore */ }
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [coin]);
+  useEffect(() => { localStorage.setItem("btcAmount", btcAmount); }, [btcAmount]);
+  useEffect(() => { localStorage.setItem("btcCost", btcCost); }, [btcCost]);
+
+  const btcAmountValue = Number(btcAmount) || 0;
+  const btcCostValue   = Number(btcCost)   || 0;
+  const [totalAssetValue, setTotalAssetValue] = useState(0);
+  const [totalCostBasis,  setTotalCostBasis]  = useState(0);
+  const [profitLoss,      setProfitLoss]      = useState(0);
+
+  const { tier, user, profile, signOut } = useAuth();
+  useEffect(() => {
+    if (profile && !onboardingCheckedRef.current) {
+      onboardingCheckedRef.current = true;
+      if (!profile.trader_level) setShowOnboarding(true);
+    }
+  }, [profile]);
+
+  const [assetPanelOpen,  setAssetPanelOpen]  = useState(false);
+  const [drawerOpen,      setDrawerOpen]      = useState(false);
+  const [profileOpen,     setProfileOpen]     = useState(false);
+  const [coinPickerOpen,  setCoinPickerOpen]  = useState(false);
+  const [mobileNavOpen,   setMobileNavOpen]   = useState(false);
+  const [obSize,          setObSize]          = useState({ h: 380, w: 135 });
+  const chartWrapRef  = useRef<HTMLDivElement>(null);
+  const dragState     = useRef({ active: false, axis: "col" as "col" | "row", startPos: 0, startSize: 0 });
+  const [swipeHint,       setSwipeHint]       = useState(false);
+  const mobileNavOpenRef  = useRef(false);
+  mobileNavOpenRef.current = mobileNavOpen;
+  const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
+  const [coinPickerPos, setCoinPickerPos]   = useState({ top: 0, right: 0 });
+
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const wrap = chartWrapRef.current;
+    const axis = wrap && getComputedStyle(wrap).flexDirection === "row" ? "row" : "col";
+    dragState.current = {
+      active: true,
+      axis,
+      startPos:  axis === "row" ? e.clientX : e.clientY,
+      startSize: axis === "row" ? obSize.w   : obSize.h,
+    };
+  }, [obSize]);
+
+  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.active) return;
+    const { axis, startPos, startSize } = dragState.current;
+    const delta   = (axis === "row" ? e.clientX : e.clientY) - startPos;
+    const newSize = Math.max(80, Math.min(600, startSize - delta));
+    setObSize(prev => axis === "row" ? { ...prev, w: newSize } : { ...prev, h: newSize });
+  }, []);
+
+  const onResizePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    dragState.current.active = false;
+  }, []);
+
+  const openCoinPicker = () => {
+    if (coinPickerBtnRef.current) {
+      const rect = coinPickerBtnRef.current.getBoundingClientRect();
+      setCoinPickerPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    setCoinPickerOpen(v => !v);
+  };
+
+  const [leverageOpen, setLeverageOpen] = useState(false);
+  const [learnOpen,    setLearnOpen]    = useState(false);
+  const [chartZone,    setChartZone]    = useState<ZoneResult | null>(null);
+  const [chartPrice,   setChartPrice]   = useState(0);
+
+  const [priceAlert, setPriceAlert] = useState<{
+    message: string; type: "bullish" | "bearish"; key: number;
+  } | null>(null);
+  const prevPriceStatusRef = useRef<"bullish" | "bearish" | null>(null);
+
+  const zoneStatus = (zone: typeof chartZone): "bullish" | "bearish" | null => {
+    if (!zone) return null;
+    const s = zone.signal;
+    if (s === "strong-buy" || s === "buy" || s === "oversold")    return "bullish";
+    if (s === "strong-sell" || s === "sell" || s === "overbought") return "bearish";
+    return null;
+  };
+
+  useEffect(() => { if (btcData) setError(""); }, [btcData]);
+
+  // Close mobile nav when section changes
+  useEffect(() => { setMobileNavOpen(false); }, [activeSection]);
+
+  // First-visit swipe intro
+  useEffect(() => {
+    if (window.innerWidth > 640) return;
+    if (localStorage.getItem("swipe-hint-seen")) return;
+    const t1 = setTimeout(() => { setMobileNavOpen(true);  setSwipeHint(true);  }, 800);
+    const t2 = setTimeout(() => { setMobileNavOpen(false); }, 2200);
+    const t3 = setTimeout(() => { setSwipeHint(false); localStorage.setItem("swipe-hint-seen", "1"); }, 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  // Swipe gesture — open on right-swipe from left edge, close on left-swipe
+  useEffect(() => {
+    const EDGE = 40;
+    const THRESHOLD = 50;
+    let startX = 0, startY = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = Math.abs(e.changedTouches[0].clientY - startY);
+      if (dy > 80) return; // vertical scroll, ignore
+      if (!mobileNavOpenRef.current && startX < EDGE && dx > THRESHOLD) setMobileNavOpen(true);
+      else if (mobileNavOpenRef.current && dx < -THRESHOLD) setMobileNavOpen(false);
+    };
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend",   onTouchEnd);
+    };
+  }, []);
+
+  useEffect(() => {
+    const current = zoneStatus(chartZone);
+    if (current === null) return;
+    const prev = prevPriceStatusRef.current;
+    if (prev !== current) {
+      setPriceAlert({
+        message:
+          prev === null
+            ? current === "bullish" ? t("alert.currentlyBullish") : t("alert.currentlyBearish")
+            : current === "bullish" ? t("alert.turnedBullish")    : t("alert.turnedBearish"),
+        type: current,
+        key: Date.now(),
+      });
+      prevPriceStatusRef.current = current;
+    }
+  }, [chartZone]);
+
+  useEffect(() => {
+    const assetValue = btcData?.price ? btcAmountValue * btcData.price : 0;
+    const costBasis  = btcAmountValue * btcCostValue;
+    setTotalAssetValue(assetValue);
+    setTotalCostBasis(costBasis);
+    setProfitLoss(assetValue - costBasis);
+  }, [btcAmountValue, btcCostValue, btcData?.price]);
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const fetchBTCData = async () => {
+    const isInitialLoad = !btcDataRef.current;
+    if (isInitialLoad) { setLoading(true); } else { clearCandleCache(); setRefreshing(true); }
+    setError("");
+    const data = await coinglass.getAllBTCData(coin);
+    if (data) {
+      setBtcData(data);
+      try { localStorage.setItem(`btcData_${coin}`, JSON.stringify(data)); } catch { /* quota */ }
+      setRefreshTrigger(prev => prev + 1);
+      setError("");
+    } else if (!btcDataRef.current) {
+      setError("Failed to fetch data. Please check your API connection.");
+    }
+    setLoading(false);
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    let cached: Partial<BTCData> | null = null;
+    try {
+      const raw = localStorage.getItem(`btcData_${coin}`);
+      if (raw) cached = JSON.parse(raw) as Partial<BTCData>;
+    } catch { /* ignore */ }
+    btcDataRef.current = cached;
+    setBtcData(cached);
+    setLoading(!cached);
+    fetchBTCData();
+    if (autoRefresh) {
+      const interval = setInterval(fetchBTCData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, coin]);
+
+  return (
+    <div className="app-shell">
+      {showOnboarding && (
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+      )}
+      <div className="app-shell-news"><NewsTicker /></div>
+
+      <div className={`app-shell-body${mobileNavOpen ? " mobile-nav-open" : ""}`}>
+
+      <Drawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        theme={theme}
+        setTheme={setTheme}
+        autoRefresh={autoRefresh}
+        setAutoRefresh={setAutoRefresh}
+        onOpenLeverage={() => setLeverageOpen(true)}
+        onOpenLearn={() => setLearnOpen(true)}
+        onOpenProfile={() => { setDrawerOpen(false); setProfileOpen(true); }}
+        onOpenWizard={() => setShowOnboarding(true)}
+        traderLevel={profile?.trader_level ?? null}
+      />
+      <ProfilePage isOpen={profileOpen} onClose={() => setProfileOpen(false)} onOpenUpgrade={() => { setProfileOpen(false); onOpenUpgrade(); }} />
+      <LearnSection isOpen={learnOpen} onClose={() => setLearnOpen(false)} />
+      <LeveragePopup
+        isOpen={leverageOpen}
+        onClose={() => setLeverageOpen(false)}
+        zone={chartZone}
+        currentPrice={chartPrice}
+        coin={coin}
+      />
+
+      {mobileNavOpen && (
+        <div className="mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />
+      )}
+      <nav className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}`}>
+        <button className="icon-strip-logo" onClick={fetchBTCData} title={t("header.clickToRefresh")}>
+          <TradingWiseLogo loading={loading || refreshing} />
+        </button>
+
+        {/* Mobile-only profile header */}
+        <div className="mob-nav-profile">
+          <div className="mob-nav-avatar">
+            {profile?.full_name
+              ? profile.full_name.trim().split(/\s+/).map(w => w[0]).slice(0,2).join("").toUpperCase()
+              : (user?.email?.[0] ?? "?").toUpperCase()
+            }
+          </div>
+          <div className="mob-nav-userinfo">
+            <span className="mob-nav-name">{profile?.full_name || user?.email?.split("@")[0] || "Account"}</span>
+            {user?.email && <span className="mob-nav-email">{user.email}</span>}
+          </div>
+        </div>
+
+        <div className="icon-strip-nav">
+          {NAV_ITEMS.filter(item => !item.hidden).map(item => {
+            const locked = !!item.requiredTier && !hasAccess(tier, item.requiredTier);
+            return (
+              <button
+                key={item.id}
+                className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
+                onClick={() => setActiveSection(item.id)}
+                title={item.label}
+              >
+                <NavIcon d={item.d} />
+                {locked && (
+                  <span className="icon-strip-lock">
+                    <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
+                    </svg>
+                  </span>
+                )}
+                <span className="icon-strip-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="icon-strip-bottom">
+          <div className="icon-strip-acct">
+            <AccountMenu onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} onOpenProfile={() => setProfileOpen(true)} />
+          </div>
+
+          <button className="icon-strip-btn" onClick={() => { setDrawerOpen(true); setMobileNavOpen(false); }} title={t("drawer.settings")}>
+            <NavIcon d={[
+              "M12 15a3 3 0 100-6 3 3 0 000 6z",
+              "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+            ]} />
+            <span className="icon-strip-label">Settings</span>
+          </button>
+
+          <button className="icon-strip-btn" onClick={() => { signOut(); setMobileNavOpen(false); }} title="Sign out">
+            <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+            <span className="icon-strip-label">Sign Out</span>
+          </button>
+
+          <button
+            className={`icon-strip-theme-pill${theme === "light" ? " light" : ""}`}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label="Toggle theme"
+          >
+            <div className="theme-pill-track">
+              <div className="theme-pill-knob">
+                {theme === "dark"
+                  ? <NavIcon d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                  : <NavIcon d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 5a7 7 0 100 14A7 7 0 0012 5z" />
+                }
+              </div>
+            </div>
+          </button>
+        </div>
+      </nav>
+
+      <div className="main-panel">
+
+        <div className="main-coin-header">
+          <div className="mch-left">
+            <button
+              className="mch-menu-btn"
+              onClick={() => setMobileNavOpen(v => !v)}
+              aria-label="Open menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6"  x2="21" y2="6"  />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <button className="mch-coin-btn" ref={coinPickerBtnRef} onClick={openCoinPicker}>
+              <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
+              <div className="mch-coin-info">
+                <span className="mch-coin-pair">
+                  {coin}<span className="mch-coin-quote">/USD</span>
+                </span>
+                {(livePrice ?? btcData?.price) && (
+                  <span className="mch-coin-price">${(livePrice ?? btcData!.price!).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                )}
+              </div>
+              <span className="mch-coin-chevron">▾</span>
+            </button>
+          </div>
+
+          <div className="mch-stats">
+            {btcData && (() => {
+              const fr   = btcData.fundingRate ?? 0;
+              const rsi  = btcData.rsi ?? 50;
+              const macd = btcData.macd ?? 0;
+              const ls   = btcData.longShortRatio ?? 1;
+              const frSignal   = fr > 0.0005 ? "bear" : fr < -0.0001 ? "bull" : "neutral";
+              const rsiSignal  = rsi > 70 ? "bear" : rsi < 30 ? "bull" : rsi < 50 ? "bear" : "bull";
+              const macdSignal = macd > 0 ? "bull" : "bear";
+              const lsSignal   = ls >= 1 ? "bull" : "bear";
+              return (
+                <>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">Liq Above</span>
+                    <span className="mch-stat-value negative">
+                      {btcData.liquidationAbove ? `$${btcData.liquidationAbove.toLocaleString()}` : "—"}
+                    </span>
+                    <span className="mch-stat-signal mch-stat-signal--bear">▲ Risk</span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">Liq Below</span>
+                    <span className="mch-stat-value positive">
+                      {btcData.liquidationBelow ? `$${btcData.liquidationBelow.toLocaleString()}` : "—"}
+                    </span>
+                    <span className="mch-stat-signal mch-stat-signal--bull">▼ Support</span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">Open Interest</span>
+                    <span className="mch-stat-value">
+                      {btcData.openInterest ? `$${(btcData.openInterest / 1e9).toFixed(2)}B` : "—"}
+                    </span>
+                    <span className="mch-stat-signal mch-stat-signal--neutral">● Neutral</span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">Funding Rate</span>
+                    <span className={`mch-stat-value${fr < 0 ? " negative" : ""}`}>
+                      {`${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%`}
+                    </span>
+                    <span className={`mch-stat-signal mch-stat-signal--${frSignal}`}>
+                      {frSignal === "bull" ? "▲ Bullish" : frSignal === "bear" ? "▼ Crowded" : "● Neutral"}
+                    </span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">RSI (14)</span>
+                    <span className={`mch-stat-value${rsi > 70 ? " negative" : rsi < 30 ? " positive" : ""}`}>
+                      {rsi.toFixed(1)}
+                    </span>
+                    <span className={`mch-stat-signal mch-stat-signal--${rsiSignal}`}>
+                      {rsi > 70 ? "▼ Overbought" : rsi < 30 ? "▲ Oversold" : rsi < 50 ? "▼ Bearish" : "▲ Bullish"}
+                    </span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">MACD</span>
+                    <span className={`mch-stat-value${macd < 0 ? " negative" : ""}`}>
+                      {macd.toFixed(2)}
+                    </span>
+                    <span className={`mch-stat-signal mch-stat-signal--${macdSignal}`}>
+                      {macd > 0 ? "▲ Bullish" : "▼ Bearish"}
+                    </span>
+                  </div>
+                  <div className="mch-stat">
+                    <span className="mch-stat-label">L/S Ratio</span>
+                    <span className={`mch-stat-value${ls >= 1 ? " positive" : " negative"}`}>
+                      {ls.toFixed(2)}
+                    </span>
+                    <span className={`mch-stat-signal mch-stat-signal--${lsSignal}`}>
+                      {ls >= 1 ? "▲ Longs Lead" : "▼ Shorts Lead"}
+                    </span>
+                  </div>
+                  {(() => {
+                    const g = btcData.cmeGap;
+                    const fmt = (v: number) => `$${(v/1000).toFixed(1)}K`;
+                    return (
+                      <>
+                        <div className="mch-stat">
+                          <span className="mch-stat-label">CME Gap ▲</span>
+                          <span className="mch-stat-value" style={{ fontSize: "0.7rem" }}>
+                            {g?.above ? `${fmt(g.above.low)}–${fmt(g.above.high)}` : "—"}
+                          </span>
+                          <span className="mch-stat-signal mch-stat-signal--bull">
+                            {g?.above ? "▲ Above" : "● None"}
+                          </span>
+                        </div>
+                        <div className="mch-stat">
+                          <span className="mch-stat-label">CME Gap ▼</span>
+                          <span className="mch-stat-value" style={{ fontSize: "0.7rem" }}>
+                            {g?.below ? `${fmt(g.below.low)}–${fmt(g.below.high)}` : "—"}
+                          </span>
+                          <span className="mch-stat-signal mch-stat-signal--bear">
+                            {g?.below ? "▼ Below" : "● None"}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
+              );
+            })()}
+          </div>
+
+          <div className="mch-right">
+            <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
+            <div className="mch-portfolio" onClick={() => setAssetPanelOpen(v => !v)} title={t("header.openCalculator")}>
+              <span className="mch-portfolio-label">{t("header.pnl")}</span>
+              <span className={`mch-portfolio-value${profitLoss >= 0 ? " positive" : " negative"}`}>
+                {btcAmountValue > 0 ? `${profitLoss >= 0 ? "+" : ""}${formatCurrency(profitLoss)}` : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`main-content${activeSection === "chart" ? " chart-active" : ""}`}>
+          {error && (
+            <div className="error-banner">
+              <strong>⚠️ {t("main.error")}:</strong> {error}
+            </div>
+          )}
+
+          {activeSection === "chart" && (
+            <>
+              <FlashNewsBanner />
+              <div
+                className="chart-section-wrap"
+                ref={chartWrapRef}
+                style={{ "--ob-h": `${obSize.h}px`, "--ob-w": `${obSize.w}px` } as React.CSSProperties}
+              >
+                <PriceChart
+                  refreshTrigger={refreshTrigger}
+                  theme={theme}
+                  coin={coin}
+                  onZoneChange={(zone, price) => { setChartZone(zone); setChartPrice(price); }}
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                />
+                <div
+                  className="chart-resize-handle"
+                  onPointerDown={onResizePointerDown}
+                  onPointerMove={onResizePointerMove}
+                  onPointerUp={onResizePointerUp}
+                >
+                  <svg className="chart-resize-icon" width="42" height="42" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {/* Hand / pointer finger */}
+                    <path d="M28 30V14a3 3 0 0 1 6 0v16"/>
+                    <path d="M34 20a3 3 0 0 1 6 0v10"/>
+                    <path d="M40 23a3 3 0 0 1 6 0v10"/>
+                    <path d="M22 32a3 3 0 0 1 6 0v-2"/>
+                    <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9"/>
+                    {/* Left arrow */}
+                    <line x1="12" y1="24" x2="2" y2="24"/>
+                    <polyline points="6,20 2,24 6,28"/>
+                    {/* Right arrow */}
+                    <line x1="52" y1="24" x2="62" y2="24"/>
+                    <polyline points="58,20 62,24 58,28"/>
+                  </svg>
+                </div>
+                <OrderBook coin={coin} />
+              </div>
+            </>
+          )}
+          {activeSection === "ai" && (
+            <AIPredictionPanel btcData={btcData} coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+          )}
+          {activeSection === "heatmap"   && <LiquidationHeatmap coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
+          {activeSection === "feargreed" && <FearGreedGauge />}
+          {activeSection === "onchain"   && <OnChainMetrics onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
+          {activeSection === "alerts"    && <AlertsBuilder btcData={btcData} />}
+          {activeSection === "gann"      && (
+            <BlurGate requiredTier="elite" featureName="Gann Analysis" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade}>
+              <GannAnalysis coin={coin} currentPrice={btcData?.price} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+            </BlurGate>
+          )}
+          {activeSection === "htf" && (
+            <HTFAnalysis coin={coin} currentPrice={btcData?.price} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+          )}
+          {activeSection === "etf" && <ETFInflows />}
+          {activeSection === "positions" && <PositionFlows coin={coin} />}
+        </div>
+
+      </div>
+
+      <button
+        className={`watchlist-reveal-btn${showWatchlist ? " watchlist-reveal-btn--open" : ""}`}
+        onClick={() => setShowWatchlist(v => !v)}
+        title={showWatchlist ? "Hide watchlist" : "Show watchlist"}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          {showWatchlist ? (
+            <><polyline points="15 18 9 12 15 6" /><polyline points="9 18 3 12 9 6" /></>
+          ) : (
+            <><polyline points="9 18 15 12 9 6" /><polyline points="15 18 21 12 15 6" /></>
+          )}
+        </svg>
+      </button>
+      {showWatchlist && (
+        <aside className="side-panel">
+          <Watchlist />
+        </aside>
+      )}
+
+      <ChatInterface btcData={btcData} />
+
+      {coinPickerOpen && ReactDOM.createPortal(
+        <>
+          <div className="coin-picker-backdrop" onClick={() => setCoinPickerOpen(false)} />
+          <ul className="coin-picker-menu" style={{ top: coinPickerPos.top, right: coinPickerPos.right }}>
+            {COINS.map(c => (
+              <li
+                key={c.symbol}
+                className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
+                onClick={() => { setCoin(c.symbol); clearCandleCache(); setCoinPickerOpen(false); }}
+              >
+                <span className="coin-picker-item-icon">{COIN_ICONS[c.symbol] ?? c.symbol}</span>
+                <span className="coin-picker-item-name">{c.name}</span>
+                <span className="coin-picker-item-sym">{c.symbol}</span>
+              </li>
+            ))}
+          </ul>
+        </>,
+        document.body
+      )}
+
+      {assetPanelOpen && (
+        <div className="asset-modal-overlay" onClick={() => setAssetPanelOpen(false)}>
+          <div className="asset-modal-panel" onClick={e => e.stopPropagation()}>
+            <div className="asset-panel-header">
+              <h2>{t("assetCalc.title")}</h2>
+              <button className="asset-close-btn" onClick={() => setAssetPanelOpen(false)} title="Close">✕</button>
+            </div>
+            <div className="asset-modal-content">
+              <div className="asset-summary">
+                <div className="asset-input-group">
+                  <label htmlFor="btc-amount">{t("assetCalc.amountLabel", { coin })}</label>
+                  <input id="btc-amount" type="number" min="0" step="0.0001"
+                    value={btcAmount}
+                    onFocus={() => btcAmount === "0" && setBtcAmount("")}
+                    onChange={e => setBtcAmount(e.target.value)}
+                    placeholder="0.00" />
+                </div>
+                <div className="asset-input-group">
+                  <label htmlFor="btc-cost">{t("assetCalc.costLabel", { coin })}</label>
+                  <input id="btc-cost" type="number" min="0" step="0.01"
+                    value={btcCost}
+                    onFocus={() => btcCost === "0" && setBtcCost("")}
+                    onChange={e => setBtcCost(e.target.value)}
+                    placeholder="0.00" />
+                </div>
+                <div className="asset-value-card">
+                  <span>{t("assetCalc.totalLabel")}</span>
+                  <strong>{formatCurrency(totalAssetValue)}</strong>
+                  <p>{t("assetCalc.basedOn", { coin, price: btcData?.price ? formatCurrency(btcData.price) : "-" })}</p>
+                  <p className="asset-cost">{t("assetCalc.costBasis", { amount: formatCurrency(totalCostBasis) })}</p>
+                  <p className={`asset-pnl ${profitLoss >= 0 ? "positive" : "negative"}`}>
+                    {profitLoss >= 0 ? "+" : ""}{formatCurrency(profitLoss)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {priceAlert && (
+        <div key={priceAlert.key} className={`price-alert price-alert--${priceAlert.type}`}>
+          <div className="price-alert-label">{t("alert.signalLabel")}</div>
+          <div className="price-alert-message">{priceAlert.message}</div>
+        </div>
+      )}
+
+      <WhaleAlerts btcPrice={btcData?.price} />
+
+      {swipeHint && (
+        <div className="swipe-hint">
+          <div className="swipe-hint-hand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+          <span>Swipe to open menu</span>
+        </div>
+      )}
+
+      </div>{/* end app-shell-body */}
+    </div>
+  );
+}
+
+/* ── Auth gate — decides what to render based on auth state ── */
+function AppGate() {
+  const { user, loading: authLoading, refreshProfile } = useAuth();
+  const [showAuth,    setShowAuth]    = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    (localStorage.getItem("theme") as "dark" | "light") || "dark"
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  // Handle Stripe return — poll until tier changes (webhook is async)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "cancelled") {
+      window.history.replaceState({}, "", "/");
+      return;
+    }
+    if (params.get("payment") !== "success" || !user) return;
+    window.history.replaceState({}, "", "/");
+
+    let attempts = 0;
+    const poll = async () => {
+      await refreshProfile();
+      attempts++;
+      if (attempts < 10) setTimeout(poll, 2000); // retry every 2s for up to 20s
+    };
+    poll();
+  }, [user]);
+
+  // Blank screen while Supabase resolves the session — prevents any flicker
+  if (authLoading) return <div className="app-boot-screen" />;
+
+  if (!user) {
+    return (
+      <>
+        <LandingPage
+          onSignIn={() => setShowAuth(true)}
+          onSignUp={() => setShowAuth(true)}
+          theme={theme}
+          onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+        />
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AppDashboard
+        onOpenAuth={() => setShowAuth(true)}
+        onOpenUpgrade={() => setShowUpgrade(true)}
+        theme={theme}
+        setTheme={setTheme}
+      />
+      {showAuth    && <AuthModal    onClose={() => setShowAuth(false)} />}
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} onOpenAuth={() => { setShowUpgrade(false); setShowAuth(true); }} />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppGate />
+    </AuthProvider>
+  );
+}
+
+export default App;

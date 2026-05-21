@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:coinglass.readme.io)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(/usr/bin/curl -sv 'https://open-api.coinglass.com/api/v1/futures/liquidation/heatmap?symbol=BTC&interval=h1' -H 'CG-API-KEY: cc0a54f72d724910a51fa8542f2e4606')",
+      "Bash(/usr/bin/curl -s 'https://open-api-v4.coinglass.com/api/futures/liquidation/heatmap?symbol=BTC&interval=1h' -H 'accept: application/json' -H 'CG-API-KEY: 35b15651f0e744cb835ab10da31acc24')",
+      "Bash(/usr/bin/curl -s 'https://open-api-v4.coinglass.com/api/futures/candles?symbol=BTC&interval=1h&limit=10' -H 'accept: application/json' -H 'CG-API-KEY: 35b15651f0e744cb835ab10da31acc24')",
+      "WebFetch(domain:docs.coinglass.com)",
+      "Bash(/usr/bin/curl -s \"http://localhost:5173/cg-api/api/futures/price/history?symbol=BTCUSDT&interval=4h&limit=2&exchange=Binance\")",
+      "Bash(/usr/bin/python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('OK - price:', d['data'][-1]['close'] if d.get\\('code'\\)=='0' else d\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "common": {
+    "bullish": "Yükseliş",
+    "bearish": "Düşüş",
+    "neutral": "Nötr",
+    "na": "N/A",
+    "close": "Kapat",
+    "clear": "Temizle",
+    "refresh": "Yenile",
+    "updated": "Güncellendi",
+    "version": "Sürüm",
+    "loading": "Yükleniyor..."
+  },
+  "header": {
+    "subtitle": "Yapay zeka destekli tahminlerle gerçek zamanlı piyasa verileri",
+    "costBasis": "Maliyet Bazı",
+    "currentValue": "Güncel Değer",
+    "pnl": "K/Z",
+    "clickToRefresh": "Yenilemek için tıkla",
+    "openCalculator": "Varlık Hesaplayıcısını Aç"
+  },
+  "assetCalc": {
+    "title": "💼 Varlık Hesaplayıcı",
+    "amountLabel": "{{coin}} Miktarı",
+    "costLabel": "{{coin}} Başına Maliyet",
+    "totalLabel": "Toplam Varlık Değeri",
+    "basedOn": "Güncel {{coin}} fiyatı {{price}} baz alınarak",
+    "costBasis": "Maliyet bazı: {{amount}}"
+  },
+  "alert": {
+    "signalLabel": "Fiyat Sinyali",
+    "currentlyBullish": "⬆ Şu An Yükseliş",
+    "currentlyBearish": "⬇ Şu An Düşüş",
+    "turnedBullish": "⬆ Fiyat Yükselişe Döndü",
+    "turnedBearish": "⬇ Fiyat Düşüşe Döndü"
+  },
+  "main": {
+    "marketData": "Piyasa Verileri",
+    "error": "Hata"
+  },
+  "dataDisplay": {
+    "loading": "Piyasa verileri yükleniyor...",
+    "failed": "Piyasa verileri yüklenemedi. API anahtarınızı kontrol edin.",
+    "refreshing": "Piyasa verileri güncelleniyor...",
+    "coinPrice": "{{coin}} Fiyatı",
+    "liquidationAbove": "Üst Tasfiye",
+    "liquidationBelow": "Alt Tasfiye",
+    "openInterest": "Açık Pozisyon",
+    "fundingRate": "Fonlama Oranı",
+    "rsi": "RSI (14)",
+    "macd": "MACD",
+    "longShortRatio": "Long/Short Oranı",
+    "tooltipPrice": "Tahmini tasfiye aralığına göre güncel {{coin}} fiyatı. Orta noktanın üzerindeki fiyat yükselişe; aşağısı düşüşe işaret eder.",
+    "tooltipLiqAbove": "Tahmini yukarı yönlü tasfiye seviyesi. Güncel fiyatın üzerindeki daha geniş boşluk, daha fazla yükseliş alanı olduğunu gösterir.",
+    "tooltipLiqBelow": "Tahmini aşağı yönlü tasfiye seviyesi. Daha büyük alt tampon, daha fazla düşüş riski tamponunu gösterir.",
+    "tooltipOI": "Toplam açık pozisyon sayısı. Yüksek açık pozisyon, güçlü piyasa katılımı ve momentumu gösterir.",
+    "tooltipFunding": "Pozitif fonlama, longların shortlara ödeme yaptığı anlamına gelir; yükseliş eğilimini gösterir. Negatif ise düşüş eğilimini gösterir.",
+    "tooltipRSI": "Göreceli Güç Endeksi. 70 üzeri aşırı alım (düşüş uyarısı); 30 altı aşırı satım (yükseliş fırsatı).",
+    "tooltipMACD": "MACD momentumu ölçer. Pozitif değerler yükselişi; negatif değerler düşüşü gösterir.",
+    "tooltipLS": "1'in üzerindeki oran, shortlardan fazla long olduğunu (yükseliş); 1'in altı ise longlardan fazla short olduğunu (düşüş) gösterir."
+  },
+  "aiPanel": {
+    "title": "Yapay Zeka Tahmini",
+    "dirUp": "▲ Yükseliş",
+    "dirDown": "▼ Düşüş",
+    "dirNeutral": "● Nötr",
+    "analyzing": "Piyasa verileri analiz ediliyor…",
+    "fetching": "Yapay zeka analizi alınıyor…",
+    "updatedAt": "Güncellendi {{time}}",
+    "refreshTitle": "Tahmini yenile",
+    "range8h": "8 Saatlik Aralık",
+    "confHigh": "yüksek güven",
+    "confMedium": "orta güven",
+    "confLow": "düşük güven",
+    "waitingData": "Piyasa verileri bekleniyor…",
+    "unableToFetch": "Piyasa verileri alınamıyor."
+  },
+  "chat": {
+    "title": "💬 YZ Sohbet",
+    "clear": "Temizle",
+    "placeholder": "Fiyat, trend, sinyal hakkında sorun…",
+    "defaultMessage": "Merhaba! {{coin}} piyasa verilerini analiz etmenize ve kripto para trendleri hakkında sorularınızı yanıtlamanıza yardımcı olabilirim. Mevcut piyasa durumu hakkında her şeyi sorabilirsiniz!"
+  },
+  "chart": {
+    "title": "📈 {{coin}} Fiyat Grafiği",
+    "live": "● CANLI",
+    "loading": "Grafik verileri yükleniyor...",
+    "noData": "Grafik verisi mevcut değil",
+    "failed": "Grafik verileri alınamadı",
+    "indicators": "Göstergeler",
+    "overlays": "Katmanlar",
+    "subcharts": "Alt Grafikler",
+    "bollingerBands": "Bollinger Bantları",
+    "ema20": "EMA 20",
+    "ema50": "EMA 50",
+    "ema200": "EMA 200",
+    "ma20": "MA 20",
+    "ma50": "MA 50",
+    "ma200": "MA 200",
+    "rsi14": "RSI (14)",
+    "macd1269": "MACD (12, 26, 9)",
+    "cmeGaps": "CME Boşlukları",
+    "bbUpperLegend": "── Üst Bant",
+    "bbMiddleLegend": "- - Orta (SMA 20)",
+    "bbLowerLegend": "── Alt Bant",
+    "cmeLegend": "── CME Boşlukları (doldurulmamış)",
+    "strongBuy": "Güçlü Al",
+    "buy": "Alım Bölgesi",
+    "neutralZone": "Nötr",
+    "sell": "Satım Bölgesi",
+    "strongSell": "Güçlü Sat",
+    "currentPattern": "Mevcut Formasyon",
+    "nextMove": "Olası sonraki hareket",
+    "rsiLegend": "RSI",
+    "macdLegend": "MACD",
+    "signalLegend": "Sinyal",
+    "rsiOB": "AŞ 70",
+    "rsiOS": "AS 30"
+  },
+  "heatmap": {
+    "title": "🔥 Tasfiye Isı Haritası",
+    "sub": "Tahmini tasfiye kümeleri · {{range}} · {{coin}}/USD · kaldıraç 3×–100×",
+    "high": "Yüksek",
+    "low": "Düşük",
+    "loading": "Isı haritası yükleniyor…",
+    "disclaimer": "OHLC verileri kullanılarak yaygın kaldıraç seviyeleriyle simüle edilmiştir. Gerçek borsa açık pozisyon verisi değildir.",
+    "clusterAnalysis": "📊 Tasfiye Kümesi Analizi",
+    "longZones": "Long Tasfiye Bölgeleri",
+    "longBelow": "↓ fiyatın altı",
+    "shortZones": "Short Tasfiye Bölgeleri",
+    "shortAbove": "↑ fiyatın üstü",
+    "noClusters": "Aralıkta önemli küme yok"
+  },
+  "leverage": {
+    "title": "⚡ Kaldıraçlı Giriş Önerisi",
+    "disclaimer": "Yatırım tavsiyesi değildir",
+    "long": "▲ Long",
+    "short": "▼ Short",
+    "leverage": "Kaldıraç",
+    "custom": "Özel",
+    "waitingZone": "Bölge verisi yükleniyor…",
+    "waitNotice": "⏳ Fiyat henüz ideal girişte değil — {{coin}}'in {{dir}} bölgesine ulaşmasını bekle",
+    "entry": "Giriş",
+    "stopLoss": "Stop Loss",
+    "takeProfit1": "Kâr Al 1",
+    "takeProfit2": "Kâr Al 2",
+    "liquidation": "Tasfiye",
+    "riskReward": "Risk / Getiri",
+    "waitDown": "↓ Bekle",
+    "waitUp": "↑ Bekle",
+    "now": "Şimdi",
+    "buy": "alım",
+    "sell": "satım",
+    "warningHigh": "⚠️ {{lev}}x önemli tasfiye riski taşır. Pozisyon boyutlandırmasını dikkatli kullanın.",
+    "warningCritical": "⛔ {{lev}}x son derece yüksek risk. %{{pct}}'lik bir hareket pozisyonunuzu tasfiye eder."
+  },
+  "drawer": {
+    "logo": "📊 TradingWise.AI",
+    "settings": "⚙️ Ayarlar",
+    "profile": "Profil",
+    "tools": "🛠 Araçlar",
+    "theme": "Tema",
+    "lightMode": "☀️ Açık mod",
+    "darkMode": "🌙 Koyu mod",
+    "autoRefresh": "Otomatik yenileme",
+    "coin": "Coin",
+    "language": "Dil",
+    "leverageBtn": "⚡ Kaldıraçlı Giriş Önerisi",
+    "patternsBtn": "📚 Mum Formasyonları Rehberi",
+    "appInfo": "ℹ️ Uygulama Bilgisi",
+    "priceData": "Fiyat verisi",
+    "charts": "Grafikler",
+    "ai": "Yapay Zeka",
+    "reportIssue": "🐛 Sorun bildir",
+    "dataSource": "📡 Veri kaynağı",
+    "tradingGuide": "📚 İşlem Rehberi",
+    "disclaimer": "Yatırım tavsiyesi değildir. Sorumlu işlem yapın.",
+    "docs": {
+      "candlesticks": {
+        "title": "📊 Mum Çizelgeleri",
+        "body": "Her mum, bir zaman dilimi için açılış, yüksek, düşük ve kapanış fiyatlarını gösterir. Yeşil (yükseliş) mum, fiyatın açılıştan daha yüksek kapandığı anlamına gelir. Kırmızı (düşüş) mum daha düşük kapandığı anlamına gelir. Fitiller (ince çizgiler), o dönemde ulaşılan en yüksek ve en düşük fiyatı gösterir."
+      },
+      "bollingerBands": {
+        "title": "📉 Bollinger Bantları",
+        "body": "Fiyatın etrafına çizilen üç çizgi: 20 periyotluk basit hareketli ortalama (orta), ve 2 standart sapma uzaktaki üst/alt bantlar. Fiyat üst banda yaklaştığında varlık aşırı alınmış olabilir. Alt bant yakınları aşırı satılmış koşulları gösterir. Dar bantlar düşük volatiliteyi; geniş bantlar yüksek volatiliteyi işaret eder."
+      },
+      "rsi": {
+        "title": "💪 RSI — Göreceli Güç Endeksi",
+        "body": "RSI, momentumu 0–100 ölçeğinde ölçer. 70 üzeri = aşırı alım (olası satış sinyali). 30 altı = aşırı satım (olası alış sinyali). 30–70 arası nötr bölgedir. RSI uyumsuzluğu — fiyat yeni bir zirve yaparken RSI yapmazsa — bir dönüşü işaret edebilir."
+      },
+      "macd": {
+        "title": "📈 MACD",
+        "body": "Hareketli Ortalama Yakınsama/Iraksama, iki EMA (12 ve 26 periyot) kullanarak momentumu takip eder. MACD çizgisi sinyal çizgisinin üzerine çıktığında yükseliş sinyali verir. Altında = düşüş. Histogram iki çizgi arasındaki farkı gösterir."
+      },
+      "supportResistance": {
+        "title": "🧱 Destek ve Direnç",
+        "body": "Destek, alım ilgisinin düşüşü durduracak kadar güçlü olduğu fiyat seviyesidir. Direnç ise satış baskısının fiyatın yükselmesini engellediği bir tavandır. Bir kez kırıldıklarında bu seviyeler genellikle rollerini değiştirir."
+      },
+      "openInterest": {
+        "title": "📂 Açık Pozisyon",
+        "body": "Açık Pozisyon (AP), henüz kapatılmamış vadeli işlem/opsiyon sözleşmelerinin toplam sayısıdır. Yükselen fiyatla artan AP = güçlü yükseliş trendi. Düşen fiyatla artan AP = güçlü düşüş trendi. Azalan AP genellikle pozisyonların kapatıldığı anlamına gelir."
+      },
+      "fundingRate": {
+        "title": "💰 Fonlama Oranı",
+        "body": "Sürekli vadeli işlemlerde fonlama oranı, sözleşme fiyatını spot fiyata yakın tutmak için longlar ve shortlar arasındaki periyodik ödemedir. Pozitif fonlama = longlar shortlara öder (piyasa yükselişte). Negatif = shortlar longlara öder (düşüş eğilimi)."
+      },
+      "longShort": {
+        "title": "⚖️ Long/Short Oranı",
+        "body": "Uzun ve kısa pozisyon tutan yatırımcıların oranını gösterir. 1'in üzerindeki oran yükseliş eğilimini gösterir. 1 altı düşüş eğilimini gösterir. Aşırı oranlar bir dönüşün sinyali olabilir."
+      },
+      "liquidations": {
+        "title": "💥 Tasfiyeler",
+        "body": "Tasfiye, kaldıraçlı bir yatırımcının pozisyonu, marjının kayıpları karşılamaya yetmemesi nedeniyle zorla kapatıldığında gerçekleşir. Toplu tasfiyeler hızlı fiyat dalgalanmalarına neden olur. Isı haritası tahmini tasfiye kümelerini gösterir."
+      },
+      "leverage": {
+        "title": "⚡ Kaldıraç ve Risk",
+        "body": "Kaldıraç hem kazançları hem de kayıpları büyütür. 10× kaldıraçta, %10'luk bir fiyat hareketi tüm pozisyonunuzu siler. Her zaman stop-loss kullanın ve kaybetmeyi göze alamayacağınızdan fazlasını riske atmayın."
+      },
+      "buySell": {
+        "title": "Alım/Satım Bölgeleri",
+        "body": "Alım bölgeleri, güçlü destek veya alt Bollinger Bandı yakınında fiyatın alıcı bulması muhtemel alanlardır. Satım bölgeleri direnç veya üst bant yakınındadır. Konfluans alanlarıdır — ne kadar çok gösterge aynı fikirde olursa sinyal o kadar güçlüdür."
+      },
+      "riskReward": {
+        "title": "📐 Risk/Getiri Oranı",
+        "body": "R/G = (Kâr Al mesafesi) ÷ (Stop Loss mesafesi). 1:2 oranı, $2 kazanmak için $1 riske attığınız anlamına gelir. Profesyonel yatırımcıların çoğu en az 1:2 hedefler. Hiçbir zaman R/G oranı 1:1'in altında olan bir işleme girmeyin."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} TradingWise.AI. Tüm hakları saklıdır."
+  }
+}

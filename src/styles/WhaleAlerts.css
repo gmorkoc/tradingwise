@@ -1,0 +1,199 @@
+.whale-alerts {
+  position: fixed;
+  bottom: 28px;
+  left: 28px;
+  z-index: 998;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.whale-alert {
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 12px;
+  background: var(--color-surface);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
+  min-width: 280px;
+  max-width: 340px;
+  animation: whale-slide-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes whale-slide-in {
+  from { opacity: 0; transform: translateX(-18px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)      scale(1);   }
+}
+
+.whale-alert-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.35));
+}
+
+.whale-alert-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.whale-alert-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.whale-sentiment {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.whale-sentiment--bullish {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.whale-sentiment--bearish {
+  background: rgba(251, 113, 133, 0.15);
+  color: #fb7185;
+}
+
+.whale-alert-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.whale-alert-btc {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.whale-alert-usd {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* From → To row */
+.whale-alert-transfer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  flex-wrap: wrap;
+}
+
+.whale-alert-entity {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  cursor: default;
+}
+
+.whale-alert-entity.known {
+  color: var(--color-text-secondary);
+  font-weight: 700;
+}
+
+.whale-alert-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* Action buttons */
+.whale-alert-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.whale-alert-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-primary);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.whale-alert-view:hover { background: var(--color-primary-soft); }
+
+.whale-alert-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+}
+.whale-alert-close:hover {
+  color: var(--color-text);
+  background: var(--color-input-bg);
+}
+
+/* Shrinking progress bar at bottom */
+.whale-alert-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 0 0 16px 16px;
+  background: var(--color-primary);
+  opacity: 0.45;
+  animation: whale-progress var(--dismiss-ms, 12000ms) linear forwards;
+}
+@keyframes whale-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+@media (max-width: 640px) {
+  .whale-alerts {
+    bottom: 14px;
+    left: 10px;
+    right: 10px;
+  }
+  .whale-alert {
+    min-width: 0;
+    max-width: none;
+  }
+}

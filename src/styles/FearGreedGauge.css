@@ -1,0 +1,151 @@
+/* ── Card ─────────────────────────────────────────────────────────────────── */
+.fng-card {
+  background: var(--color-card-bg);
+  border-radius: 0;
+  padding: 24px;
+}
+
+.fng-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.fng-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.fng-source {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+.fng-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ── Gauge ────────────────────────────────────────────────────────────────── */
+.fng-gauge-wrap {
+  width: 100%;
+  max-width: 340px;
+  position: relative;
+}
+
+.fng-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Center value (below svg via flex, not absolute) ─────────────────────── */
+.fng-value-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -18px;
+  gap: 4px;
+}
+
+.fng-number {
+  font-size: 3rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.fng-classification {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ── Comparison row ───────────────────────────────────────────────────────── */
+.fng-compare {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.fng-compare-item {
+  flex: 1;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fng-compare-item:first-child {
+  border-right: 1px solid var(--color-border);
+}
+
+.fng-compare-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+}
+
+.fng-compare-val {
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.fng-compare-class {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-left: 4px;
+}
+
+/* ── History sparkline row ────────────────────────────────────────────────── */
+.fng-history {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  width: 100%;
+  height: 40px;
+}
+
+.fng-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  transition: opacity 0.2s;
+  cursor: default;
+}
+
+.fng-bar:hover { opacity: 0.85; }
+
+/* ── Loading ──────────────────────────────────────────────────────────────── */
+.fng-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 600px) {
+  .fng-number { font-size: 2.2rem; }
+}

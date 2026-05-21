@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Snap fractional devicePixelRatio to the nearest integer BEFORE any
+      // library runs.  fancy-canvas (inside lightweight-charts v5) calculates
+      // the initial canvas bitmap using DPR directly (before its async
+      // device-pixel-content-box observer fires).  Math.ceil(1.25)=2 overshoots
+      // by 60 % and the OS-reported physical-pixel correction arrives too late,
+      // leaving the canvas blank.  Math.round(1.25)=1 keeps the initial bitmap
+      // at exact CSS-pixel size so the first frame always renders; the observer
+      // then sharpens it to the true 1.25× resolution asynchronously.
+      try {
+        var _dpr = window.devicePixelRatio;
+        if (_dpr % 1 !== 0) {
+          var _snapped = Math.round(_dpr);
+          if (_snapped === 0) _snapped = 1; // guard against 0 if DPR < 0.5
+          var _getter = function () { return _snapped; };
+          // Try Window.prototype first (Chrome/Safari — configurable getter)
+          var _proto = Object.getPrototypeOf(window);
+          var _desc  = Object.getOwnPropertyDescriptor(_proto, 'devicePixelRatio');
+          if (_desc && _desc.configurable) {
+            Object.defineProperty(_proto, 'devicePixelRatio',
+              { get: _getter, configurable: true, enumerable: true });
+          } else {
+            // Fallback: shadow on the window instance itself
+            Object.defineProperty(window, 'devicePixelRatio',
+              { get: _getter, configurable: true, enumerable: true });
+          }
+        }
+      } catch (e) { /* ignore — non-configurable in this sandbox */ }
+    </script>
+    <title>SimplyTrade | Welcome to Trading</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

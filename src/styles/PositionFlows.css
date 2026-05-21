@@ -1,0 +1,172 @@
+.pf-wrap {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.pf-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pf-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.pf-subtitle {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+}
+
+.pf-coin-badge {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+.pf-panel {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.pf-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 8px;
+}
+
+.pf-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pf-dot--red   { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+.pf-dot--pink  { background: #ec4899; box-shadow: 0 0 6px rgba(236,72,153,0.5); }
+.pf-dot--green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+.pf-dot--amber { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+
+.pf-panel-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.pf-panel-val {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-panel-val.pos { color: #22c55e; }
+.pf-panel-val.neg { color: #ef4444; }
+
+/* ── Chart row ───────────────────────────────────────────────────────────── */
+.pf-chart-wrap {
+  padding: 0 0 6px;
+}
+
+.pf-chart-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.pf-chart-svg {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  height: 110px;
+}
+
+.pf-chart-empty {
+  flex: 1;
+  height: 110px;
+  background: var(--color-surface);
+}
+
+/* ── Y-axis labels ───────────────────────────────────────────────────────── */
+.pf-y-axis {
+  position: relative;
+  width: 52px;
+  height: 110px;
+  flex-shrink: 0;
+}
+
+/* Wider column for 5-digit price labels */
+.pf-y-axis--price {
+  width: 66px;
+  height: 200px;
+}
+
+.pf-ytick {
+  position: absolute;
+  right: 6px;
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.3);
+  white-space: nowrap;
+}
+
+.pf-ytick--cur {
+  right: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.62rem;
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+.pf-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 10px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.pf-state--error { color: #ef4444; }
+
+.pf-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(99,102,241,0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: pf-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pf-spin { to { transform: rotate(360deg); } }
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .pf-wrap { padding: 14px 12px; }
+}

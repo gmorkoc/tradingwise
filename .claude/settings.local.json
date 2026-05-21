@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e \"const lc = require\\('/Users/mst3r/Desktop/coinglass/node_modules/lightweight-charts'\\); console.log\\(Object.keys\\(lc\\).filter\\(k => k.toLowerCase\\(\\).includes\\('time'\\) || k.toLowerCase\\(\\).includes\\('local'\\)\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s 'https://open-api.coinglass.com/public/v3/futures/liquidation/heatmap?symbol=BTC&timeType=h1&exchangeName=Binance' -H 'CG-API-KEY: cc0a54f72d724910a51fa8542f2e4606')",
+      "Bash(curl -s 'https://open-api.coinglass.com/public/v3/futures/liquidation-heatmap?symbol=BTC&timeType=h1' -H 'CG-API-KEY: cc0a54f72d724910a51fa8542f2e4606')",
+      "Bash(curl -s 'https://open-api.coinglass.com/api/pro/v1/liquidation/heatmap?symbol=BTC&timeType=h1' -H 'coinglassSecret: cc0a54f72d724910a51fa8542f2e4606')",
+      "WebFetch(domain:coinglass.com)",
+      "Bash(curl -s 'https://open-api.coinglass.com/public/v3/futures/liquidation/chart?symbol=BTC&timeType=h1' -H 'CG-API-KEY: cc0a54f72d724910a51fa8542f2e4606')",
+      "Bash(vercel logs *)",
+      "Bash(vercel inspect *)",
+      "Bash(curl -s \"https://coinglass-ten.vercel.app/api/cg/api/futures/price/history?symbol=BTCUSDT&interval=4h&limit=1&exchange=Binance\")",
+      "Bash(curl -s \"https://coinglass-ten.vercel.app/cg-api/api/futures/price/history?symbol=BTCUSDT&interval=4h&limit=1&exchange=Binance\")",
+      "Bash(vercel deploy *)",
+      "WebFetch(domain:api-vip.coinglass.com)",
+      "WebFetch(domain:api.coinglass.com)",
+      "WebFetch(domain:open-api-v4.coinglass.com)",
+      "Bash(curl -sI \"https://api.kraken.com/0/public/Depth?pair=XBTUSD&count=5\")",
+      "Bash(curl -s \"https://api.kraken.com/0/public/Depth?pair=XBTUSD&count=5\" -H \"Origin: http://localhost:5174\" -w \"\\\\n--- HEADERS ---\\\\n%{header_json}\")",
+      "Bash(vercel --prod)"
+    ]
+  }
+}

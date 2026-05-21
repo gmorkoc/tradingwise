@@ -1,0 +1,232 @@
+{
+  "common": {
+    "bullish": "Bullish",
+    "bearish": "Bearish",
+    "neutral": "Neutral",
+    "na": "N/A",
+    "close": "Close",
+    "clear": "Clear",
+    "refresh": "Refresh",
+    "updated": "Updated",
+    "version": "Version",
+    "loading": "Loading..."
+  },
+  "header": {
+    "subtitle": "Real-time market data with AI-powered predictions",
+    "costBasis": "Cost Basis",
+    "currentValue": "Current Value",
+    "pnl": "P&L",
+    "clickToRefresh": "Click to refresh",
+    "openCalculator": "Open Asset Calculator"
+  },
+  "assetCalc": {
+    "title": "💼 Asset Calculator",
+    "amountLabel": "{{coin}} Amount",
+    "costLabel": "Cost per {{coin}}",
+    "totalLabel": "Total Asset Value",
+    "basedOn": "Based on current {{coin}} price of {{price}}",
+    "costBasis": "Cost basis: {{amount}}"
+  },
+  "alert": {
+    "signalLabel": "Price Signal",
+    "currentlyBullish": "⬆ Currently Bullish",
+    "currentlyBearish": "⬇ Currently Bearish",
+    "turnedBullish": "⬆ Price turned Bullish",
+    "turnedBearish": "⬇ Price turned Bearish"
+  },
+  "main": {
+    "marketData": "Market Data",
+    "error": "Error"
+  },
+  "dataDisplay": {
+    "loading": "Loading market data...",
+    "failed": "Failed to load market data. Check your API key.",
+    "refreshing": "Refreshing market data...",
+    "coinPrice": "{{coin}} Price",
+    "liquidationAbove": "Liquidation Above",
+    "liquidationBelow": "Liquidation Below",
+    "openInterest": "Open Interest",
+    "fundingRate": "Funding Rate",
+    "rsi": "RSI (14)",
+    "macd": "MACD",
+    "longShortRatio": "Long/Short Ratio",
+    "tooltipPrice": "Current {{coin}} price relative to the estimated liquidation range. Price above the midpoint leans bullish; below it leans bearish.",
+    "tooltipLiqAbove": "Estimated upside liquidation level. A wider gap above current price suggests more bullish room to run.",
+    "tooltipLiqBelow": "Estimated downside liquidation level. A larger cushion below shows more bearish risk buffer.",
+    "tooltipOI": "Total open positions. Higher open interest indicates stronger market participation and momentum.",
+    "tooltipFunding": "Positive funding means longs pay shorts, usually indicating bullish sentiment. Negative means shorts pay longs, signaling bearish bias.",
+    "tooltipRSI": "Relative Strength Index. Above 70 is overbought (bearish warning); below 30 is oversold (bullish opportunity).",
+    "tooltipMACD": "MACD measures momentum. Positive values are bullish; negative values are bearish.",
+    "tooltipLS": "Ratio above 1 means more longs than shorts (bullish); below 1 means more shorts than longs (bearish)."
+  },
+  "aiPanel": {
+    "title": "AI Prediction",
+    "dirUp": "▲ Bullish",
+    "dirDown": "▼ Bearish",
+    "dirNeutral": "● Neutral",
+    "analyzing": "Analyzing market data…",
+    "fetching": "Fetching AI analysis…",
+    "updatedAt": "Updated {{time}}",
+    "refreshTitle": "Refresh prediction",
+    "range8h": "8H Range",
+    "confHigh": "high confidence",
+    "confMedium": "medium confidence",
+    "confLow": "low confidence",
+    "waitingData": "Waiting for market data…",
+    "unableToFetch": "Unable to fetch market data."
+  },
+  "chat": {
+    "title": "💬 AI Chat",
+    "clear": "Clear",
+    "placeholder": "Ask about price, trends, signals…",
+    "defaultMessage": "Hello! I can help you analyze {{coin}} market data and answer questions about cryptocurrency trends. Ask me anything about the current market situation!"
+  },
+  "chart": {
+    "title": "📈 {{coin}} Price Chart",
+    "live": "● LIVE",
+    "loading": "Loading chart data...",
+    "noData": "No chart data available",
+    "failed": "Failed to fetch chart data",
+    "indicators": "Indicators",
+    "overlays": "Overlays",
+    "subcharts": "Sub-charts",
+    "bollingerBands": "Bollinger Bands",
+    "ema20": "EMA 20",
+    "ema50": "EMA 50",
+    "ema200": "EMA 200",
+    "ma20": "MA 20",
+    "ma50": "MA 50",
+    "ma200": "MA 200",
+    "rsi14": "RSI (14)",
+    "macd1269": "MACD (12, 26, 9)",
+    "cmeGaps": "CME Gaps",
+    "bbUpperLegend": "── Upper Band",
+    "bbMiddleLegend": "- - Middle (SMA 20)",
+    "bbLowerLegend": "── Lower Band",
+    "cmeLegend": "── CME Gaps (unfilled)",
+    "strongBuy": "Strong Buy",
+    "buy": "Buy Zone",
+    "neutralZone": "Neutral",
+    "sell": "Sell Zone",
+    "strongSell": "Strong Sell",
+    "currentPattern": "Current Pattern",
+    "nextMove": "Next probable move",
+    "rsiLegend": "RSI",
+    "macdLegend": "MACD",
+    "signalLegend": "Signal",
+    "rsiOB": "OB 70",
+    "rsiOS": "OS 30"
+  },
+  "heatmap": {
+    "title": "🔥 Liquidation Heatmap",
+    "sub": "Estimated liquidation clusters · {{range}} · {{coin}}/USD · leverage 3×–100×",
+    "high": "High",
+    "low": "Low",
+    "loading": "Loading heatmap…",
+    "disclaimer": "Simulated from OHLC data using common leverage tiers. Not real exchange open-interest data.",
+    "clusterAnalysis": "📊 Liquidation Cluster Analysis",
+    "longZones": "Long Liq Zones",
+    "longBelow": "↓ below price",
+    "shortZones": "Short Liq Zones",
+    "shortAbove": "↑ above price",
+    "noClusters": "No significant clusters in range"
+  },
+  "leverage": {
+    "title": "⚡ Leverage Entry Suggestion",
+    "disclaimer": "Not financial advice",
+    "long": "▲ Long",
+    "short": "▼ Short",
+    "leverage": "Leverage",
+    "custom": "Custom",
+    "waitingZone": "Waiting for zone data to load…",
+    "waitNotice": "⏳ Price not yet at ideal entry — wait for {{coin}} to reach the {{dir}} zone",
+    "entry": "Entry",
+    "stopLoss": "Stop Loss",
+    "takeProfit1": "Take Profit 1",
+    "takeProfit2": "Take Profit 2",
+    "liquidation": "Liquidation",
+    "riskReward": "Risk / Reward",
+    "waitDown": "↓ Wait",
+    "waitUp": "↑ Wait",
+    "now": "Now",
+    "buy": "buy",
+    "sell": "sell",
+    "warningHigh": "⚠️ {{lev}}x carries significant liquidation risk. Use position sizing carefully.",
+    "warningCritical": "⛔ {{lev}}x is extremely high risk. A {{pct}}% move liquidates your position."
+  },
+  "drawer": {
+    "logo": "📊 TradingWise.AI",
+    "settings": "⚙️ Settings",
+    "profile": "Profile",
+    "tools": "🛠 Tools",
+    "theme": "Theme",
+    "lightMode": "☀️ Light mode",
+    "darkMode": "🌙 Dark mode",
+    "autoRefresh": "Auto-refresh",
+    "coin": "Coin",
+    "language": "Language",
+    "leverageBtn": "⚡ Leverage Entry Suggestion",
+    "patternsBtn": "📚 Candlestick Patterns Guide",
+    "appInfo": "ℹ️ App Info",
+    "priceData": "Price data",
+    "charts": "Charts",
+    "ai": "AI",
+    "reportIssue": "🐛 Report an issue",
+    "dataSource": "📡 Data source",
+    "tradingGuide": "📚 Trading Guide",
+    "disclaimer": "Not financial advice. Trade responsibly.",
+    "docs": {
+      "candlesticks": {
+        "title": "📊 Candlestick Charts",
+        "body": "Each candle shows the open, high, low, and close price for a time period. A green (bullish) candle means price closed higher than it opened. A red (bearish) candle means price closed lower. The wicks (thin lines) show the highest and lowest price reached during that period."
+      },
+      "bollingerBands": {
+        "title": "📉 Bollinger Bands",
+        "body": "Three lines plotted around price: a 20-period simple moving average (middle), and upper/lower bands 2 standard deviations away. When price approaches the upper band, the asset may be overbought. Near the lower band suggests oversold conditions. Narrow bands signal low volatility; wide bands signal high volatility."
+      },
+      "rsi": {
+        "title": "💪 RSI — Relative Strength Index",
+        "body": "RSI measures momentum on a 0–100 scale. Above 70 = overbought (potential sell signal). Below 30 = oversold (potential buy signal). Between 30–70 is neutral territory. RSI divergence — when price makes a new high but RSI doesn't — can signal a reversal."
+      },
+      "macd": {
+        "title": "📈 MACD",
+        "body": "Moving Average Convergence Divergence tracks momentum using two EMAs (12 and 26 period). When the MACD line crosses above the signal line, it's a bullish signal. Below = bearish. The histogram shows the difference between the two lines. Positive = bullish momentum, negative = bearish."
+      },
+      "supportResistance": {
+        "title": "🧱 Support & Resistance",
+        "body": "Support is a price level where buying interest is strong enough to stop a decline — price tends to 'bounce' off it. Resistance is the opposite: a ceiling where selling pressure stops price from rising. Once broken, these levels often flip roles (support becomes resistance and vice versa)."
+      },
+      "openInterest": {
+        "title": "📂 Open Interest",
+        "body": "Open Interest (OI) is the total number of outstanding futures/options contracts that haven't been settled. Rising OI with rising price = strong bullish trend. Rising OI with falling price = strong bearish trend. Falling OI usually means positions are being closed (trend weakening)."
+      },
+      "fundingRate": {
+        "title": "💰 Funding Rate",
+        "body": "In perpetual futures, the funding rate is a periodic payment between longs and shorts to keep the contract price close to the spot price. Positive funding = longs pay shorts (market is bullish, longs are dominant). Negative = shorts pay longs (bearish sentiment). Extreme funding rates often precede reversals."
+      },
+      "longShort": {
+        "title": "⚖️ Long / Short Ratio",
+        "body": "Shows the ratio of traders holding long vs short positions. A ratio above 1 means more longs than shorts — bullish sentiment. Below 1 = bearish sentiment. Counter-intuitively, extreme ratios (e.g. 3:1 longs) can signal a reversal as the market often moves against the crowd."
+      },
+      "liquidations": {
+        "title": "💥 Liquidations",
+        "body": "A liquidation happens when a leveraged trader's position is forcibly closed because their margin is insufficient to cover losses. Mass liquidations cause rapid price spikes — a cascade of long liquidations pushes price sharply down; short liquidations push it sharply up. The heatmap shows estimated liquidation clusters."
+      },
+      "leverage": {
+        "title": "⚡ Leverage & Risk",
+        "body": "Leverage amplifies both gains and losses. At 10× leverage, a 10% price move wipes your entire position. The liquidation price is approximately: Entry × (1 − 1/Leverage) for longs, Entry × (1 + 1/Leverage) for shorts. Always use stop-losses, size positions conservatively, and never risk more than you can afford to lose."
+      },
+      "buySell": {
+        "title": "Buy / Sell Zones",
+        "body": "Buy zones are price areas near strong support or the lower Bollinger Band where price is likely to find buyers. Sell zones are near resistance or the upper band where sellers tend to step in. These are confluence areas — the more indicators agree (support + oversold RSI + lower BB), the stronger the signal."
+      },
+      "riskReward": {
+        "title": "📐 Risk / Reward Ratio",
+        "body": "R/R = (Take Profit distance) ÷ (Stop Loss distance). A 1:2 ratio means you risk $1 to make $2. Most professional traders aim for at least 1:2. Even with a 40% win rate, a consistent 1:2 R/R is profitable over time. Never enter a trade with an R/R below 1:1."
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} TradingWise.AI. All rights reserved."
+  }
+}
