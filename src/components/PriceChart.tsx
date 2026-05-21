@@ -57,7 +57,7 @@ const INTERVALS: TimeInterval[] = [
 
 const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "1sec":  "1s  (last 30 min)",
-  "1min":  "1m  (last 60 min)",
+  "1min":  "1m  (last 6 hours)",
   "5min":  "5m  (last 24 hours)",
   "15min": "15m (last 48 hours)",
   "1h":    "1H  (~7 days)",
