@@ -188,7 +188,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     if (!dragState.current.active) return;
     const { axis, startPos, startSize } = dragState.current;
     const delta   = (axis === "row" ? e.clientX : e.clientY) - startPos;
-    const newSize = Math.max(80, Math.min(600, startSize - delta));
+    const minSize = axis === "row" ? 4 : 80;
+    const newSize = Math.max(minSize, Math.min(600, startSize - delta));
     setObSize(prev => axis === "row" ? { ...prev, w: newSize } : { ...prev, h: newSize });
   }, []);
 
