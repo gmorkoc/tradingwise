@@ -1388,6 +1388,12 @@ html[data-theme="light"] .icon-strip-quota-bar {
   position: relative;
 }
 
+.side-panel--hidden {
+  width: 0;
+  overflow: hidden;
+  border-left: none;
+}
+
 .wl-toggle-btn {
   display: flex;
   align-items: center;

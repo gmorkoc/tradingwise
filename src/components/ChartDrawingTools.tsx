@@ -14,11 +14,13 @@ interface Drawing {
   id: string;
   type: DrawingTool;
   pts: ChartPt[];
-  // brush strokes also cache screen coords (rebuilt on zoom/pan)
-  screenCache?: ScreenPt[];
+  // brush: pts stores normalized {time:nx, price:ny} — no chart API conversion
+  isBrushNorm?: boolean;
   text?: string;
   color: string;
 }
+
+export type { Drawing };
 
 interface Props {
   chartRef: React.RefObject<IChartApi | null>;
@@ -27,6 +29,8 @@ interface Props {
   containerRef: React.RefObject<HTMLDivElement | null>;
   candlesRef: React.RefObject<CandleDataPoint[]>;
   visible: boolean;
+  /** Persist drawings across fullscreen toggle — pass a stable ref from parent */
+  persistRef?: React.MutableRefObject<Drawing[]>;
 }
 
 const TOOL_CLICKS: Record<DrawingTool, number> = {
@@ -123,10 +127,10 @@ const TRASH_ICON = <IconMulti>
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRef, visible }: Props) {
+export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRef, visible, persistRef }: Props) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
   const [magnet, setMagnet]     = useState(false);
-  const [drawings, setDrawings] = useState<Drawing[]>([]);
+  const [drawings, setDrawings] = useState<Drawing[]>(() => persistRef?.current ?? []);
   const [pendingPts, setPendingPts] = useState<ChartPt[]>([]);
   const [chartRect, setChartRect]   = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
@@ -144,7 +148,10 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
   const brushScreenRef   = useRef<ScreenPt[]>([]); // screen-space live buffer
   const handlePointRef   = useRef<((sx: number, sy: number) => void) | null>(null);
 
-  useEffect(() => { drawingsRef.current = drawings;  }, [drawings]);
+  useEffect(() => {
+    drawingsRef.current = drawings;
+    if (persistRef) persistRef.current = drawings;
+  }, [drawings, persistRef]);
   useEffect(() => { pendingRef.current  = pendingPts; }, [pendingPts]);
   useEffect(() => { toolRef.current     = tool;       }, [tool]);
   useEffect(() => { magnetRef.current   = magnet;     }, [magnet]);
@@ -217,7 +224,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     return { price: snap, time: nearest.time as number };
   }, [candlesRef]);
 
-  // ── Commit brush: convert throttled screen pts → chart coords once ───────
+  // ── Commit brush: store as normalized 0-1 coords — no chart API calls ───
 
   const commitBrush = useCallback(() => {
     brushActiveRef.current = false;
@@ -225,7 +232,11 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     brushScreenRef.current = [];
     if (raw.length < 2) return;
 
-    // Distance-throttle: keep only points ≥ MIN_BRUSH_PX apart
+    const rect = chartRectRef.current;
+    const w = rect?.width  || 1;
+    const h = rect?.height || 1;
+
+    // Distance-throttle
     const kept: ScreenPt[] = [raw[0]];
     for (let i = 1; i < raw.length; i++) {
       const prev = kept[kept.length - 1];
@@ -233,12 +244,10 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     }
     if (kept.length < 2) return;
 
-    // Single bulk conversion from screen → chart coords
-    const chartPts = kept.map(p => toChart(p.x, p.y)).filter(Boolean) as ChartPt[];
-    if (chartPts.length >= 2) {
-      setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', pts: chartPts, color: '#38bdf8' }]);
-    }
-  }, [toChart]);
+    // Store as normalized {time: nx, price: ny} — always succeeds, no chart API needed
+    const pts = kept.map(p => ({ time: p.x / w, price: p.y / h }));
+    setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', isBrushNorm: true, pts, color: '#38bdf8' }]);
+  }, []);
 
   // ── Canvas render ────────────────────────────────────────────────────────
 
@@ -270,11 +279,9 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
           ctx.strokeStyle = d.color; ctx.lineWidth = 2;
           ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([]);
           ctx.beginPath();
-          const f = toScreen(d.pts[0]); if (!f) break;
-          ctx.moveTo(f.x, f.y);
-          for (let i = 1; i < d.pts.length; i++) {
-            const s = toScreen(d.pts[i]); if (s) ctx.lineTo(s.x, s.y);
-          }
+          // pts store normalized {time:nx, price:ny} — scale to current canvas size
+          ctx.moveTo(d.pts[0].time * w, d.pts[0].price * h);
+          for (let i = 1; i < d.pts.length; i++) ctx.lineTo(d.pts[i].time * w, d.pts[i].price * h);
           ctx.stroke(); break;
         }
         case 'trendline': {
@@ -419,68 +426,91 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     }
   };
 
-  // ── Touch event listeners (passive:false → preventDefault works on iOS) ──
+  // ── Touch events — ref-based handlers so listeners never re-attach mid-gesture
+
+  // Keep latest callbacks in refs — touch effect only depends on [visible]
+  const commitBrushRef   = useRef(commitBrush);
+  const scheduleRenderRef = useRef(scheduleRender);
+  useEffect(() => { commitBrushRef.current   = commitBrush;   }, [commitBrush]);
+  useEffect(() => { scheduleRenderRef.current = scheduleRender; }, [scheduleRender]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !visible || !chartRect) return;
+    if (!visible) return;
 
-    const getPos = (e: TouchEvent): ScreenPt => {
-      const t = e.touches[0] || e.changedTouches[0];
-      const r = canvas.getBoundingClientRect();
-      return { x: t.clientX - r.left, y: t.clientY - r.top };
+    // Poll until the canvas mounts (it mounts after chartRect is first set)
+    let canvas = canvasRef.current;
+    let pollId = 0;
+    const attach = () => {
+      canvas = canvasRef.current;
+      if (!canvas) { pollId = window.setTimeout(attach, 50); return; }
+
+      const getPos = (e: TouchEvent): ScreenPt => {
+        const t = e.touches[0] || e.changedTouches[0];
+        const r = canvas!.getBoundingClientRect();
+        return { x: t.clientX - r.left, y: t.clientY - r.top };
+      };
+
+      const addBrushPt = (pos: ScreenPt) => {
+        const buf = brushScreenRef.current;
+        if (!buf.length) { buf.push(pos); return; }
+        const last = buf[buf.length - 1];
+        if (Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
+      };
+
+      const onTouchStart = (e: TouchEvent) => {
+        if (toolRef.current === 'cursor') return;
+        e.preventDefault(); e.stopPropagation();
+        const pos = getPos(e);
+        mousePosRef.current = pos;
+        if (toolRef.current === 'brush') {
+          brushActiveRef.current = true;
+          brushScreenRef.current = [pos];
+        }
+        scheduleRenderRef.current();
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        if (toolRef.current === 'cursor') return;
+        e.preventDefault(); e.stopPropagation();
+        const pos = getPos(e);
+        mousePosRef.current = pos;
+        if (brushActiveRef.current && toolRef.current === 'brush') addBrushPt(pos);
+        scheduleRenderRef.current();
+      };
+
+      const onTouchEndOrCancel = (e: TouchEvent) => {
+        if (toolRef.current === 'cursor') return;
+        e.preventDefault(); e.stopPropagation();
+        mousePosRef.current = null;
+        if (toolRef.current === 'brush') {
+          commitBrushRef.current();
+          scheduleRenderRef.current();
+          return;
+        }
+        const t = e.changedTouches[0];
+        const r = canvas!.getBoundingClientRect();
+        handlePointRef.current?.(t.clientX - r.left, t.clientY - r.top);
+        scheduleRenderRef.current();
+      };
+
+      canvas!.addEventListener('touchstart',  onTouchStart,      { passive: false });
+      canvas!.addEventListener('touchmove',   onTouchMove,       { passive: false });
+      canvas!.addEventListener('touchend',    onTouchEndOrCancel, { passive: false });
+      canvas!.addEventListener('touchcancel', onTouchEndOrCancel, { passive: false });
+
+      cleanup = () => {
+        canvas!.removeEventListener('touchstart',  onTouchStart);
+        canvas!.removeEventListener('touchmove',   onTouchMove);
+        canvas!.removeEventListener('touchend',    onTouchEndOrCancel);
+        canvas!.removeEventListener('touchcancel', onTouchEndOrCancel);
+      };
     };
 
-    const addBrushPt = (pos: ScreenPt) => {
-      const buf = brushScreenRef.current;
-      if (!buf.length) { buf.push(pos); return; }
-      const last = buf[buf.length - 1];
-      if (Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
-    };
+    let cleanup = () => {};
+    attach();
 
-    const onTouchStart = (e: TouchEvent) => {
-      if (toolRef.current === 'cursor') return;
-      e.preventDefault(); e.stopPropagation();
-      const pos = getPos(e);
-      mousePosRef.current = pos;
-      if (toolRef.current === 'brush') {
-        brushActiveRef.current = true;
-        brushScreenRef.current = [pos];
-      }
-      scheduleRender();
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (toolRef.current === 'cursor') return;
-      e.preventDefault(); e.stopPropagation();
-      const pos = getPos(e);
-      mousePosRef.current = pos;
-      if (brushActiveRef.current && toolRef.current === 'brush') addBrushPt(pos);
-      scheduleRender();
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (toolRef.current === 'cursor') return;
-      e.preventDefault(); e.stopPropagation();
-      mousePosRef.current = null;
-      if (toolRef.current === 'brush') {
-        commitBrush(); scheduleRender(); return;
-      }
-      const t = e.changedTouches[0];
-      const r = canvas.getBoundingClientRect();
-      handlePointRef.current?.(t.clientX - r.left, t.clientY - r.top);
-      scheduleRender();
-    };
-
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
-    canvas.addEventListener('touchend',   onTouchEnd,   { passive: false });
-    return () => {
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove',  onTouchMove);
-      canvas.removeEventListener('touchend',   onTouchEnd);
-    };
-  }, [visible, chartRect, commitBrush, scheduleRender]);
+    return () => { clearTimeout(pollId); cleanup(); };
+  }, [visible]); // intentionally minimal — chartRect changes must NOT re-attach mid-gesture
 
   // ── Mouse handlers (desktop) ─────────────────────────────────────────────
 

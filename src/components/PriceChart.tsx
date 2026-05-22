@@ -1117,6 +1117,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const macdHistRef = useRef<any>(null);
   const syncingRef = useRef(false);
 
+  // Persists drawings across fullscreen toggle (component unmount/remount)
+  const drawingsPersistRef = useRef<import('./ChartDrawingTools').Drawing[]>([]);
+
   // Drawing tools state
   const [predictionPath, setPredictionPath] = useState<PredictionPath | null>(null);
   const [predictionLoading, setPredictionLoading] = useState(false);
@@ -2098,7 +2101,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
     // Draw chart canvases
     let y = HEADER_H;
-    ctx.drawImage(mainCanvas, 0, y); y += mainCanvas.height;
+    ctx.drawImage(mainCanvas, 0, y);
+
+    // Composite drawing overlay on top of main chart (same position/size)
+    const drawingCanvas = document.querySelector('.cdt-canvas') as HTMLCanvasElement | null;
+    if (drawingCanvas && drawingCanvas.width > 0 && drawingCanvas.height > 0) {
+      ctx.drawImage(drawingCanvas, 0, y, mainCanvas.width, mainCanvas.height);
+    }
+
+    y += mainCanvas.height;
     if (rsiCanvas)  { ctx.drawImage(rsiCanvas,  0, y); y += rsiCanvas.height;  }
     if (macdCanvas) { ctx.drawImage(macdCanvas, 0, y); }
 
@@ -2477,6 +2488,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           containerRef={containerRef}
           candlesRef={lastCandlesRef}
           visible={isFullscreen}
+          persistRef={drawingsPersistRef}
         />
       </div>
 
