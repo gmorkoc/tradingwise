@@ -329,6 +329,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
       {showOnboarding && (
         <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
       )}
+      <ProfilePage isOpen={profileOpen} onClose={() => setProfileOpen(false)} onOpenUpgrade={() => { setProfileOpen(false); onOpenUpgrade(); }} />
       <div className="app-shell-news"><NewsTicker /></div>
 
       <div className={`app-shell-body${mobileNavOpen ? " mobile-nav-open" : ""}`}>
@@ -346,7 +347,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         onOpenWizard={() => setShowOnboarding(true)}
         traderLevel={profile?.trader_level ?? null}
       />
-      <ProfilePage isOpen={profileOpen} onClose={() => setProfileOpen(false)} onOpenUpgrade={() => { setProfileOpen(false); onOpenUpgrade(); }} />
       <LearnSection isOpen={learnOpen} onClose={() => setLearnOpen(false)} />
       <LeveragePopup
         isOpen={leverageOpen}

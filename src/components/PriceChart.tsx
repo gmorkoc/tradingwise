@@ -1116,6 +1116,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const macdHistRef = useRef<any>(null);
   const syncingRef = useRef(false);
+  const viewInitializedForRef = useRef<string | null>(null);
 
   // Persists drawings across fullscreen toggle (component unmount/remount)
   const drawingsPersistRef = useRef<import('./ChartDrawingTools').Drawing[]>([]);
@@ -1576,21 +1577,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             macdSignalRef.current.setData(signalLine);
           }
 
-          // Set visible range per interval, falling back to fitContent
-          const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
-            "1min":  6 * 60 * 60,
-            "5min":  2 * 24 * 60 * 60,
-            "15min": 4 * 24 * 60 * 60,
-            "1h":    14 * 24 * 60 * 60,
-            "4h":    28 * 24 * 60 * 60,
-            "6h":    56 * 24 * 60 * 60,
-          };
-          const window = INTERVAL_WINDOW[interval];
-          if (window && data.length > 0) {
-            const to = data[data.length - 1].time as number;
-            chartRef.current?.timeScale().setVisibleRange({ from: (to - window) as UTCTimestamp, to: to as UTCTimestamp });
-          } else {
-            chartRef.current?.timeScale().fitContent();
+          // Set visible range only on first load for this coin+interval — preserves zoom on refresh
+          const viewKey = `${coin}-${interval}`;
+          if (viewInitializedForRef.current !== viewKey) {
+            viewInitializedForRef.current = viewKey;
+            const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
+              "1min":  6 * 60 * 60,
+              "5min":  2 * 24 * 60 * 60,
+              "15min": 4 * 24 * 60 * 60,
+              "1h":    14 * 24 * 60 * 60,
+              "4h":    28 * 24 * 60 * 60,
+              "6h":    56 * 24 * 60 * 60,
+            };
+            const window = INTERVAL_WINDOW[interval];
+            if (window && data.length > 0) {
+              const to = data[data.length - 1].time as number;
+              chartRef.current?.timeScale().setVisibleRange({ from: (to - window) as UTCTimestamp, to: to as UTCTimestamp });
+            } else {
+              chartRef.current?.timeScale().fitContent();
+            }
           }
         }
       } catch {

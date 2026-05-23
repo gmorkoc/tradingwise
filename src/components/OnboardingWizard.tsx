@@ -123,6 +123,8 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
   const [scores, setScores]           = useState<number[]>([]);
   const [multiSel, setMultiSel]       = useState<number[]>([]);
   const [animKey, setAnimKey]         = useState(0);
+  // Per-step history so back button can undo exactly what was added
+  const [stepHistory, setStepHistory] = useState<{ scores: number[]; sel: number[] }[]>([]);
 
   const isDone = step === QUESTIONS.length;
   const q      = step >= 0 && !isDone ? QUESTIONS[step] : null;
@@ -131,10 +133,21 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
   const pct    = step < 0 ? 0 : (step / QUESTIONS.length) * 100;
 
   const goTo = (nextStep: number, addScores: number[] = []) => {
+    setStepHistory(prev => [...prev, { scores: addScores, sel: multiSel }]);
     setScores(prev => [...prev, ...addScores]);
     setMultiSel([]);
     setAnimKey(k => k + 1);
     setStep(nextStep);
+  };
+
+  const goBack = () => {
+    const prev = stepHistory[stepHistory.length - 1];
+    if (!prev) return;
+    setStepHistory(h => h.slice(0, -1));
+    setScores(s => s.slice(0, s.length - prev.scores.length));
+    setMultiSel(prev.sel);
+    setAnimKey(k => k + 1);
+    setStep(s => s - 1);
   };
 
   const handleSingle = (score: number) => {
@@ -177,6 +190,9 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
           {q && (
             <div className="onb-question">
               <div className="onb-step-pip">
+                <button className="onb-btn-back" onClick={goBack}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back
+                </button>
                 {QUESTIONS.map((_, i) => (
                   <span key={i} className={`onb-pip${i === step ? " onb-pip--active" : i < step ? " onb-pip--done" : ""}`} />
                 ))}

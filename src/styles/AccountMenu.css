@@ -24,17 +24,6 @@
   justify-content: center;
   padding: 6px 0;
 }
-/* Let icon-strip-bottom (position:relative) be the positioning context */
-.icon-strip-acct .acct-wrap {
-  position: static;
-}
-.icon-strip-acct .acct-dropdown {
-  top: auto;
-  bottom: 0;
-  left: calc(100% + 12px);
-  right: auto;
-  z-index: 600;
-}
 .icon-strip-acct .acct-avatar,
 .icon-strip-acct .acct-signin-btn {
   width: 36px;
@@ -90,6 +79,14 @@
   z-index: 400;
   overflow: hidden;
   animation: acct-pop 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.acct-dropdown--portal {
+  position: fixed;
+  top: 0;
+  right: auto;
+  bottom: auto;
+  z-index: 99999;
 }
 
 @keyframes acct-pop {

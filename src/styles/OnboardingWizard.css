@@ -92,20 +92,46 @@
 /* ── Step pips ───────────────────────────────────────────────────────────── */
 .onb-step-pip {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-bottom: 28px;
 }
 
+.onb-btn-back {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-right: auto;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.onb-btn-back:hover {
+  color: var(--color-text);
+}
+
+.onb-btn-back--result {
+  display: block;
+  margin-bottom: 12px;
+}
+
 .onb-pip {
-  width: 24px;
+  flex: 1;
   height: 4px;
   border-radius: 2px;
   background: var(--color-border);
-  transition: background 0.3s ease, width 0.3s ease;
+  transition: background 0.3s ease;
 }
 
 .onb-pip--done   { background: rgba(99, 102, 241, 0.4); }
-.onb-pip--active { background: #6366f1; width: 36px; }
+.onb-pip--active { background: #6366f1; }
 
 /* ── Question screen ─────────────────────────────────────────────────────── */
 .onb-question {

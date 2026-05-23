@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/AccountMenu.css";
@@ -19,11 +20,24 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
   const { user, profile, tier, signOut } = useAuth();
   const { used, limit, exceeded, isPaid } = useAIQuota();
   const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLButtonElement>(null);
+
+  const openMenu = () => {
+    if (avatarRef.current) {
+      const r = avatarRef.current.getBoundingClientRect();
+      setDropPos({ top: r.top, left: r.right + 12 });
+    }
+    setOpen(v => !v);
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -51,13 +65,14 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
   const quotaPct = isPaid ? 100 : Math.min(100, (used / limit) * 100);
 
   return (
-    <div className="acct-wrap" ref={menuRef}>
-      <button className="acct-avatar" onClick={() => setOpen(v => !v)}>
+    <div className="acct-wrap">
+      <button className="acct-avatar" ref={avatarRef} onClick={openMenu}>
         <span className="acct-initials">{initials}</span>
       </button>
 
-      {open && (
-        <div className="acct-dropdown">
+      {open && createPortal(
+        <div className="acct-dropdown acct-dropdown--portal" ref={menuRef}
+          style={{ top: dropPos.top, left: dropPos.left }}>
           {/* User info header */}
           <div className="acct-dd-header">
             <div className="acct-dd-name">{profile?.full_name || "My Account"}</div>
@@ -118,7 +133,8 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
           <button className="acct-dd-item acct-dd-item--danger" onClick={() => { setOpen(false); signOut(); }}>
             Sign Out
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
