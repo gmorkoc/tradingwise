@@ -62,7 +62,7 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "5min":  "5m  (last 24 hours)",
   "15min": "15m (last 48 hours)",
   "1h":    "1H  (~7 days)",
-  "4h":    "4H  (~7 days)",
+  "4h":    "4H  (~4 weeks)",
   "6h":    "6H  (~15 days)",
   "1day":  "1D  (90 days)",
   "1week": "1W  (52 weeks)",

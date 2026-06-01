@@ -99,7 +99,7 @@ const HEATMAP_RANGE: Record<HeatmapRange, { interval: string; limit: number }> =
 
 type CgInterval = Exclude<TimeInterval, '1sec' | '1min' | '5min' | '15min' | '1h'>;
 const CG_INTERVAL: Record<CgInterval, { interval: string; limit: number }> = {
-  '4h':    { interval: '4h', limit: 42  },
+  '4h':    { interval: '4h', limit: 168 },
   '6h':    { interval: '6h', limit: 60  },
   '1day':  { interval: '1d', limit: 90  },
   '1week': { interval: '1w', limit: 52  },
