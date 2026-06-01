@@ -2377,7 +2377,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
 }
 
 .pticker-insight-wrap {
-  width: min(680px, 92vw);
+  max-width: 92vw;
   border-radius: 14px;
   padding: 16px 20px 16px 20px;
   display: flex;
@@ -2434,6 +2434,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
   font-weight: 600;
   color: currentColor;
   line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.35s ease, transform 0.35s ease;
@@ -2514,7 +2517,7 @@ html[data-theme="light"] .pticker-price {
   .pticker-live-label { font-size: 0.75rem; }
   .pticker-live-dot span:first-child { width: 10px; height: 10px; }
   .pticker-insight-wrap {
-    width: 92vw;
+    max-width: 92vw;
     padding: 12px 14px;
     gap: 10px;
   }

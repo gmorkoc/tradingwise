@@ -56,7 +56,7 @@ interface Props {
 
 export function WhaleAlerts({ btcPrice }: Props) {
   const [alerts, setAlerts] = useState<WhaleTx[]>([]);
-  const [muted, setMuted] = useState(() => localStorage.getItem("whale-muted") === "1");
+  const [muted, setMuted] = useState(() => localStorage.getItem("whale-muted") !== "0");
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
