@@ -29,20 +29,32 @@ export function OrderFlowTape({ coin }: Props) {
     setConnected(false);
 
     const symbol = `${coin.toLowerCase()}usdt`;
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@aggTrade`);
+    let ws: WebSocket;
+    let dead = false;
+    let retryTimer = 0;
 
-    ws.onopen  = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onerror = () => ws.close();
-    ws.onmessage = (e) => {
-      const d = JSON.parse(e.data);
-      const price = parseFloat(d.p);
-      const qty   = parseFloat(d.q);
-      pendingRef.current.push({
-        id: d.a, price, qty, usd: price * qty,
-        isBuy: !d.m, time: d.T,
-      });
+    const connect = () => {
+      if (dead) return;
+      // Use port 443 — port 9443 is blocked on many networks
+      ws = new WebSocket(`wss://stream.binance.com:443/ws/${symbol}@aggTrade`);
+      ws.onopen  = () => setConnected(true);
+      ws.onclose = () => {
+        setConnected(false);
+        if (!dead) retryTimer = window.setTimeout(connect, 3000);
+      };
+      ws.onerror = () => ws.close();
+      ws.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        const price = parseFloat(d.p);
+        const qty   = parseFloat(d.q);
+        pendingRef.current.push({
+          id: d.a, price, qty, usd: price * qty,
+          isBuy: !d.m, time: d.T,
+        });
+      };
     };
+
+    connect();
 
     const flush = () => {
       if (pendingRef.current.length > 0) {
@@ -56,7 +68,12 @@ export function OrderFlowTape({ coin }: Props) {
     };
     rafRef.current = requestAnimationFrame(flush);
 
-    return () => { cancelAnimationFrame(rafRef.current); ws.close(); };
+    return () => {
+      dead = true;
+      clearTimeout(retryTimer);
+      cancelAnimationFrame(rafRef.current);
+      ws?.close();
+    };
   }, [coin]);
 
   useEffect(() => {
