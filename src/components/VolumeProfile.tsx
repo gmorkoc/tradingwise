@@ -80,9 +80,9 @@ export function VolumeProfile({ coin }: Props) {
           ))}
         </div>
         <div className="vp-key-levels">
-          <span className="vp-kl vp-vah">VAH <strong>${fp(vah)}</strong></span>
-          <span className="vp-kl vp-poc">POC <strong>${fp(poc)}</strong></span>
-          <span className="vp-kl vp-val">VAL <strong>${fp(val)}</strong></span>
+          <span className="vp-kl vp-vah" data-tip="Value Area High — upper boundary of the 70% volume zone">VAH <strong>${fp(vah)}</strong></span>
+          <span className="vp-kl vp-poc" data-tip="Point of Control — price level with the highest traded volume">POC <strong>${fp(poc)}</strong></span>
+          <span className="vp-kl vp-val" data-tip="Value Area Low — lower boundary of the 70% volume zone">VAL <strong>${fp(val)}</strong></span>
         </div>
       </div>
 
