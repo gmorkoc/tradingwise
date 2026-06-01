@@ -2428,19 +2428,27 @@ html[data-theme="light"] .pticker-insight-wrap--down { color: #dc2626; }
 html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0.4); }
 
 .pticker-close {
-  margin-top: 12px;
-  background: var(--pticker-close-bg, rgba(255,255,255,0.06));
-  border: 1px solid var(--pticker-close-border, rgba(255,255,255,0.12));
-  color: var(--pticker-close-text, rgba(255,255,255,0.4));
-  font-size: 0.78rem;
-  padding: 8px 24px;
-  border-radius: 99px;
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  background: none;
+  border: none;
+  color: var(--pticker-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s, transform 0.15s;
+  z-index: 100001;
+  padding: 0;
 }
+.pticker-close:hover { color: var(--pticker-text); transform: scale(1.08); }
+.pticker-close-x { font-size: 28px; line-height: 1; }
+.pticker-close-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; }
 .pticker-close:hover {
-  background: var(--pticker-close-bg-hover, rgba(255,255,255,0.12));
-  color: var(--pticker-text, #fff);
+  background: rgba(255,255,255,0.22);
+  transform: scale(1.08);
 }
 
 /* ── Light theme overrides ── */
@@ -2498,8 +2506,10 @@ html[data-theme="light"] .pticker-price {
   .pticker-insight { font-size: 0.82rem; }
   .pticker-insight-label { font-size: 0.6rem; }
   .pticker-close {
-    padding: 9px 28px;
-    font-size: 0.8rem;
+    top: 14px;
+    right: 14px;
+    width: 36px;
+    height: 36px;
   }
   .pticker-bg-symbol { font-size: 85vw; }
 }
