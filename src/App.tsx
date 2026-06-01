@@ -120,6 +120,9 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [btcCost, setBtcCost] = useState(() => localStorage.getItem("btcCost") || "0");
   const btcDataRef = useRef<Partial<BTCData> | null>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [priceTicker, setPriceTicker] = useState(false);
+  const [tickerFlash, setTickerFlash] = useState<"up" | "down" | null>(null);
+  const prevTickerPrice = useRef<number | null>(null);
 
   useEffect(() => { btcDataRef.current = btcData; }, [btcData]);
 
@@ -143,6 +146,17 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     const id = setInterval(poll, 1000);
     return () => { cancelled = true; clearInterval(id); };
   }, [coin]);
+  useEffect(() => {
+    if (!priceTicker || livePrice === null) return;
+    const prev = prevTickerPrice.current;
+    if (prev !== null && prev !== livePrice) {
+      setTickerFlash(livePrice > prev ? "up" : "down");
+      const t = setTimeout(() => setTickerFlash(null), 600);
+      return () => clearTimeout(t);
+    }
+    prevTickerPrice.current = livePrice;
+  }, [livePrice, priceTicker]);
+
   useEffect(() => { localStorage.setItem("btcAmount", btcAmount); }, [btcAmount]);
   useEffect(() => { localStorage.setItem("btcCost", btcCost); }, [btcCost]);
 
@@ -455,7 +469,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <button className="mch-coin-btn" ref={coinPickerBtnRef} onClick={openCoinPicker}>
+            <button className="mch-coin-btn" ref={coinPickerBtnRef} onClick={openCoinPicker}
+              onDoubleClick={e => { e.stopPropagation(); prevTickerPrice.current = livePrice; setPriceTicker(true); }}>
               <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
               <div className="mch-coin-info">
                 <span className="mch-coin-pair">
@@ -750,6 +765,21 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
       )}
 
       </div>{/* end app-shell-body */}
+
+      {priceTicker && (
+        <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
+          onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
+          <div className="pticker-inner" onClick={e => e.stopPropagation()}>
+            <div className="pticker-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</div>
+            <div className="pticker-coin-name">{coin}<span className="pticker-coin-quote">/USD</span></div>
+            <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
+              ${(livePrice ?? btcData?.price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
+            <button className="pticker-close" onClick={() => setPriceTicker(false)}>✕ Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

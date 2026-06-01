@@ -2240,3 +2240,87 @@ html[data-theme="light"] .icon-strip-quota-bar {
     padding: 2px;
   }
 }
+
+/* ── Price Ticker Fullscreen ─────────────────────────────────────────────── */
+.pticker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pticker-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  user-select: none;
+}
+.pticker-coin-icon {
+  font-size: 5rem;
+  line-height: 1;
+}
+.pticker-coin-name {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.pticker-coin-quote {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  margin-left: 4px;
+}
+.pticker-price {
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+.pticker-flash-up   { color: #22c55e !important; }
+.pticker-flash-down { color: #ef4444 !important; }
+.pticker-live-dot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pticker-live-dot span:first-child {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pticker-pulse 1.4s ease-in-out infinite;
+}
+.pticker-live-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: #22c55e;
+}
+@keyframes pticker-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+.pticker-close {
+  margin-top: 24px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pticker-close:hover {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+}
