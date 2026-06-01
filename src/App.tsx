@@ -75,6 +75,10 @@ function NavIcon({ d }: { d: string | string[] }) {
 const COIN_ICONS: Record<string, string> = {
   BTC: "₿", ETH: "Ξ", XRP: "◈", SOL: "◎", BNB: "⬡", SUI: "⬟", DOGE: "Ð", ADA: "₳",
 };
+const COIN_COLORS: Record<string, string> = {
+  BTC: "#f7931a", ETH: "#627eea", XRP: "#346aa9", SOL: "#9945ff",
+  BNB: "#f3ba2f", SUI: "#4da2ff", DOGE: "#c2a633", ADA: "#0033ad",
+};
 
 /* ── Authenticated dashboard — only mounts when user is logged in ── */
 interface DashboardProps {
@@ -779,20 +783,27 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
       </div>{/* end app-shell-body */}
 
-      {priceTicker && (
-        <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
-          onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
-          <div className="pticker-inner" onClick={e => e.stopPropagation()}>
-            <div className="pticker-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</div>
-            <div className="pticker-coin-name">{coin}<span className="pticker-coin-quote">/USD</span></div>
-            <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
-              ${(livePrice ?? btcData?.price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      {priceTicker && (() => {
+        const coinColor = COIN_COLORS[coin] ?? "#38bdf8";
+        return (
+          <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
+            style={{ "--pticker-color": coinColor } as React.CSSProperties}
+            onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
+            <div className="pticker-bg-symbol">{COIN_ICONS[coin] ?? coin[0]}</div>
+            <div className="pticker-inner" onClick={e => e.stopPropagation()}>
+              <div className="pticker-coin-name">
+                <span className="pticker-coin-sym">{COIN_ICONS[coin] ?? coin[0]}</span>
+                {coin}<span className="pticker-coin-quote">/USD</span>
+              </div>
+              <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
+                ${(livePrice ?? btcData?.price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
+              <button className="pticker-close" onClick={() => setPriceTicker(false)}>✕ Close</button>
             </div>
-            <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
-            <button className="pticker-close" onClick={() => setPriceTicker(false)}>✕ Close</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
