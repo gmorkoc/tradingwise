@@ -590,7 +590,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                       {rsi.toFixed(1)}
                     </span>
                     <span className={`mch-stat-signal mch-stat-signal--${rsiSignal}`}>
-                      {rsi > 70 ? "▼ Overbought" : rsi < 30 ? "▲ Oversold" : rsi < 50 ? "▼ Bearish" : "▲ Bullish"}
+                      {rsi > 70 ? "▼ Overbought" : rsi < 30 ? "▲ Oversold" : rsi < 50 ? "▼ Weak" : "▲ Neutral"}
                     </span>
                   </div>
                   <div className="mch-stat">
@@ -839,7 +839,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             : `${coin} is down ${deltaAbs.toFixed(3)}% since open — sellers applying pressure at current levels.`;
 
         return (
-          <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
+          <div className="pticker-overlay"
             style={{ "--pticker-color": coinColor } as React.CSSProperties}
             onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
             <div className="pticker-bg-symbol">{COIN_ICONS[coin] ?? coin[0]}</div>
@@ -849,7 +849,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               </svg>
               <span className="pticker-close-label">Exit</span>
             </button>
-            <div className="pticker-inner" onClick={e => e.stopPropagation()}>
+            <div className="pticker-inner">
               <div className="pticker-coin-name">
                 <span className="pticker-coin-sym">{COIN_ICONS[coin] ?? coin[0]}</span>
                 {coin}<span className="pticker-coin-quote">/USD</span>
