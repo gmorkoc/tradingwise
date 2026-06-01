@@ -883,7 +883,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               )}
               <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
 
-              <div className="pticker-insight-wrap">
+<div className="pticker-insight-wrap">
                 <div className={`pticker-insight${tickerInsightVisible ? " pticker-insight--visible" : ""}`}>
                   {insight}
                 </div>

@@ -454,6 +454,10 @@ export const coinglass = {
     return fetchPriceCandles(coin, cgInterval, limit);
   },
 
+  get24hMinuteCandles: async (coin: CoinSymbol | string = 'BTC', limit = 1440): Promise<CandleDataPoint[]> => {
+    return fetchBinanceKlines(coin, '1m', limit);
+  },
+
   getLiveSecondCandle: async (coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint | null> => {
     try {
       const res = await bnApi.get('/api/v3/klines', {

@@ -2279,90 +2279,100 @@ html[data-theme="light"] .icon-strip-quota-bar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
   user-select: none;
   z-index: 1;
+  padding: 0 24px;
+  width: 100%;
 }
 .pticker-coin-name {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 2.4rem;
+  gap: 16px;
+  font-size: clamp(2.4rem, 5vw, 4rem);
   font-weight: 900;
   color: var(--pticker-text, #fff);
   letter-spacing: -0.02em;
 }
 .pticker-coin-sym {
+  font-size: 1.1em;
   color: var(--pticker-color);
-  filter: drop-shadow(0 0 20px var(--pticker-color));
+  filter: drop-shadow(0 0 24px var(--pticker-color));
 }
 .pticker-coin-quote {
-  font-size: 1.3rem;
+  font-size: 0.5em;
   font-weight: 500;
   color: var(--pticker-muted, rgba(255,255,255,0.35));
   margin-left: 2px;
 }
 .pticker-price {
-  font-size: clamp(3.5rem, 12vw, 8.5rem);
+  font-size: clamp(5rem, 18vw, 13rem);
   font-weight: 900;
   letter-spacing: -0.04em;
   color: var(--pticker-text, #fff);
   font-variant-numeric: tabular-nums;
   transition: color 0.25s;
-  text-shadow: 0 0 60px color-mix(in srgb, var(--pticker-color) 40%, transparent);
+  text-shadow: 0 0 80px color-mix(in srgb, var(--pticker-color) 45%, transparent);
+  line-height: 1;
 }
-.pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 40px #22c55e88 !important; }
-.pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 40px #ef444488 !important; }
+.pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 60px #22c55e88 !important; }
+.pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
 .pticker-live-dot {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .pticker-live-dot span:first-child {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: #22c55e;
-  box-shadow: 0 0 8px #22c55e;
+  box-shadow: 0 0 10px #22c55e;
   animation: pticker-pulse 1.4s ease-in-out infinite;
 }
 .pticker-live-label {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.25em;
   color: #22c55e;
 }
 @keyframes pticker-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px #22c55e; }
-  50%       { opacity: 0.5; transform: scale(0.7); box-shadow: 0 0 2px #22c55e; }
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px #22c55e; }
+  50%       { opacity: 0.5; transform: scale(0.7); box-shadow: 0 0 3px #22c55e; }
 }
 .pticker-delta {
-  font-size: 1.1rem;
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 .pticker-delta--up   { color: #22c55e; }
 .pticker-delta--down { color: #ef4444; }
 
+.pticker-chart-wrap {
+  width: min(760px, 94vw);
+  height: clamp(110px, 16vh, 160px);
+  overflow: hidden;
+}
+
 .pticker-insight-wrap {
-  margin-top: 8px;
-  width: min(560px, 90vw);
+  margin-top: 4px;
+  width: min(700px, 92vw);
   background: var(--pticker-card-bg, rgba(255,255,255,0.04));
   border: 1px solid var(--pticker-card-border, rgba(255,255,255,0.1));
-  border-radius: 14px;
-  padding: 18px 24px;
-  min-height: 64px;
+  border-radius: 16px;
+  padding: 22px 32px;
+  min-height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 .pticker-insight {
-  font-size: 1rem;
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
   font-weight: 500;
   color: var(--pticker-insight-text, rgba(255,255,255,0.75));
-  line-height: 1.55;
+  line-height: 1.6;
   opacity: 0;
   transform: translateY(6px);
   transition: opacity 0.4s ease, transform 0.4s ease;
