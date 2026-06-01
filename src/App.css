@@ -2252,7 +2252,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 0;
   --pticker-text: #fff;
   --pticker-muted: rgba(255,255,255,0.35);
   --pticker-card-bg: rgba(255,255,255,0.04);
@@ -2356,31 +2358,74 @@ html[data-theme="light"] .icon-strip-quota-bar {
 }
 
 .pticker-insight-wrap {
-  margin-top: 4px;
-  width: min(700px, 92vw);
-  background: var(--pticker-card-bg, rgba(255,255,255,0.04));
-  border: 1px solid var(--pticker-card-border, rgba(255,255,255,0.1));
-  border-radius: 16px;
-  padding: 22px 32px;
-  min-height: 72px;
+  width: min(680px, 92vw);
+  border-radius: 14px;
+  padding: 16px 20px 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: transparent;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+.pticker-insight-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: currentColor;
+  opacity: 0.07;
+  pointer-events: none;
+}
+.pticker-insight-wrap--up  { color: #22c55e; }
+.pticker-insight-wrap--down { color: #ef4444; }
+.pticker-insight-wrap--neutral { color: rgba(255,255,255,0.5); }
+
+.pticker-insight-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
+  position: relative;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.pticker-insight-icon svg {
+  color: currentColor;
+}
+.pticker-insight-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.pticker-insight-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: currentColor;
+  opacity: 0.7;
 }
 .pticker-insight {
-  font-size: clamp(1rem, 1.8vw, 1.25rem);
-  font-weight: 500;
-  color: var(--pticker-insight-text, rgba(255,255,255,0.75));
-  line-height: 1.6;
+  font-size: clamp(0.88rem, 1.5vw, 1.05rem);
+  font-weight: 600;
+  color: currentColor;
+  line-height: 1.5;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transform: translateY(4px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 .pticker-insight--visible {
   opacity: 1;
   transform: translateY(0);
 }
+html[data-theme="light"] .pticker-insight-wrap--up   { color: #16a34a; }
+html[data-theme="light"] .pticker-insight-wrap--down { color: #dc2626; }
+html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0.4); }
 
 .pticker-close {
   margin-top: 12px;
@@ -2418,4 +2463,43 @@ html[data-theme="light"] .pticker-bg-symbol {
 }
 html[data-theme="light"] .pticker-price {
   text-shadow: 0 0 40px color-mix(in srgb, var(--pticker-color) 30%, transparent);
+}
+
+/* ── Price ticker mobile ── */
+@media (max-width: 600px) {
+  .pticker-inner {
+    gap: 18px;
+    padding: 0 16px;
+    justify-content: center;
+    height: 100%;
+  }
+  .pticker-coin-name {
+    font-size: clamp(1.6rem, 7vw, 2.2rem);
+    gap: 10px;
+  }
+  .pticker-price {
+    font-size: clamp(3.2rem, 16vw, 5rem);
+  }
+  .pticker-delta {
+    font-size: 1rem;
+  }
+  .pticker-live-label { font-size: 0.75rem; }
+  .pticker-live-dot span:first-child { width: 10px; height: 10px; }
+  .pticker-insight-wrap {
+    width: 92vw;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .pticker-insight-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .pticker-insight-icon svg { width: 15px; height: 15px; }
+  .pticker-insight { font-size: 0.82rem; }
+  .pticker-insight-label { font-size: 0.6rem; }
+  .pticker-close {
+    padding: 9px 28px;
+    font-size: 0.8rem;
+  }
+  .pticker-bg-symbol { font-size: 85vw; }
 }

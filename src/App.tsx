@@ -129,8 +129,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const prevTickerPrice = useRef<number | null>(null);
   const coinBtnClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickerOpenPrice = useRef<number | null>(null);
-  const [tickerInsightIdx, setTickerInsightIdx] = useState(0);
-  const [tickerInsightVisible, setTickerInsightVisible] = useState(true);
   const tickerLastMilestone = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -167,14 +165,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     prevTickerPrice.current = livePrice;
   }, [livePrice, priceTicker]);
 
-  useEffect(() => {
-    if (!priceTicker) return;
-    const id = setInterval(() => {
-      setTickerInsightVisible(false);
-      setTimeout(() => { setTickerInsightIdx(i => i + 1); setTickerInsightVisible(true); }, 400);
-    }, 4000);
-    return () => clearInterval(id);
-  }, [priceTicker]);
 
   useEffect(() => {
     if (!priceTicker || livePrice === null) return;
@@ -531,8 +521,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                   prevTickerPrice.current = livePrice;
                   tickerOpenPrice.current = livePrice;
                   tickerLastMilestone.current = livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
-                  setTickerInsightIdx(0);
-                  setTickerInsightVisible(true);
                   setPriceTicker(true);
                 } else {
                   coinBtnClickTimer.current = setTimeout(() => {
@@ -844,24 +832,11 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         const deltaAbs = Math.abs(delta);
         const up = delta >= 0;
 
-        const insights = [
-          delta === 0
-            ? `${coin} is holding steady — no movement since you opened this view.`
-            : `${coin} is ${up ? "up" : "down"} ${deltaAbs.toFixed(3)}% since you opened this screen.`,
-          up
-            ? `Buyers are in control — price is pushing higher with positive momentum.`
-            : `Sellers are applying pressure — watch for key support levels to hold.`,
-          tickerFlash === "up"
-            ? `Latest tick is bullish — aggressive buying hitting the ask.`
-            : tickerFlash === "down"
-            ? `Latest tick is bearish — sellers are absorbing demand at current levels.`
-            : `Price is consolidating — market is searching for its next directional move.`,
-          up
-            ? `Bullish price action: each tick higher signals continued demand above current price.`
-            : `Bearish flow detected: sellers are stepping in to cap the rally at this level.`,
-          `${coin} is trading at $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })} — stay focused on the tape.`,
-        ];
-        const insight = insights[tickerInsightIdx % insights.length];
+        const insight = delta === 0
+          ? `${coin} is holding steady — no movement since you opened this view.`
+          : up
+            ? `${coin} is up ${deltaAbs.toFixed(3)}% since open — buyers in control, price pushing higher.`
+            : `${coin} is down ${deltaAbs.toFixed(3)}% since open — sellers applying pressure at current levels.`;
 
         return (
           <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
@@ -883,9 +858,19 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               )}
               <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
 
-<div className="pticker-insight-wrap">
-                <div className={`pticker-insight${tickerInsightVisible ? " pticker-insight--visible" : ""}`}>
-                  {insight}
+              <div className={`pticker-insight-wrap ${delta === 0 ? "pticker-insight-wrap--neutral" : up ? "pticker-insight-wrap--up" : "pticker-insight-wrap--down"}`}>
+                <div className="pticker-insight-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {delta === 0
+                      ? <path d="M5 12h14" />
+                      : up
+                        ? <><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></>
+                        : <><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></>}
+                  </svg>
+                </div>
+                <div className="pticker-insight-body">
+                  <span className="pticker-insight-label">{delta === 0 ? "Neutral" : up ? "Bullish Signal" : "Bearish Signal"}</span>
+                  <div className="pticker-insight pticker-insight--visible">{insight}</div>
                 </div>
               </div>
 
