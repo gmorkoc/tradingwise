@@ -126,6 +126,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceTicker, setPriceTicker] = useState(false);
   const [tickerFlash, setTickerFlash] = useState<"up" | "down" | null>(null);
+  const [rockets, setRockets] = useState<{ id: number; dir: "up" | "down"; x: number }[]>([]);
   const prevTickerPrice = useRef<number | null>(null);
   const coinBtnClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickerOpenPrice = useRef<number | null>(null);
@@ -168,12 +169,17 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
   useEffect(() => {
     if (!priceTicker || livePrice === null) return;
-    const milestone = Math.floor(livePrice / 100) * 100;
+    const milestone = Math.floor(livePrice / 10) * 10;
     const last = tickerLastMilestone.current;
     if (last === null) { tickerLastMilestone.current = milestone; return; }
     if (milestone === last) return;
     tickerLastMilestone.current = milestone;
     const up = milestone > last;
+
+    const id = Date.now();
+    const x = 10 + Math.random() * 80;
+    setRockets(prev => [...prev, { id, dir: up ? "up" : "down", x }]);
+    setTimeout(() => setRockets(prev => prev.filter(r => r.id !== id)), 1400);
 
     try {
       if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
@@ -843,6 +849,11 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             style={{ "--pticker-color": coinColor } as React.CSSProperties}
             onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
             <div className="pticker-bg-symbol">{COIN_ICONS[coin] ?? coin[0]}</div>
+            {rockets.map(r => (
+              <span key={r.id} className={`pticker-rocket pticker-rocket--${r.dir}`} style={{ left: `${r.x}%` }}>
+                🚀
+              </span>
+            ))}
             <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Exit">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>

@@ -2275,6 +2275,26 @@ html[data-theme="light"] .icon-strip-quota-bar {
   filter: blur(2px);
   transform: rotate(-10deg);
 }
+@keyframes pticker-fly-up {
+  0%   { transform: translateY(0)     rotate(-45deg); opacity: 1;   }
+  80%  { opacity: 1; }
+  100% { transform: translateY(-70vh) rotate(-45deg); opacity: 0;   }
+}
+@keyframes pticker-fly-down {
+  0%   { transform: translateY(0)    rotate(135deg); opacity: 1;   }
+  80%  { opacity: 1; }
+  100% { transform: translateY(70vh) rotate(135deg); opacity: 0;   }
+}
+.pticker-rocket {
+  position: absolute;
+  font-size: 5rem;
+  pointer-events: none;
+  z-index: 2;
+  line-height: 1;
+}
+.pticker-rocket--up   { bottom: 38%; animation: pticker-fly-up   1.3s ease-out forwards; }
+.pticker-rocket--down { top:    38%; animation: pticker-fly-down 1.3s ease-in  forwards; }
+
 .pticker-inner {
   position: relative;
   display: flex;
