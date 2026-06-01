@@ -843,9 +843,11 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             style={{ "--pticker-color": coinColor } as React.CSSProperties}
             onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
             <div className="pticker-bg-symbol">{COIN_ICONS[coin] ?? coin[0]}</div>
-            <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Close">
-              <span className="pticker-close-x">✕</span>
-              <span className="pticker-close-label">close</span>
+            <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Exit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
+              </svg>
+              <span className="pticker-close-label">Exit</span>
             </button>
             <div className="pticker-inner" onClick={e => e.stopPropagation()}>
               <div className="pticker-coin-name">

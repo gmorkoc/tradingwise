@@ -2252,9 +2252,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 24px 0;
+  overflow: hidden;
+  padding: 0;
   --pticker-text: #fff;
   --pticker-muted: rgba(255,255,255,0.35);
   --pticker-card-bg: rgba(255,255,255,0.04);
@@ -2429,27 +2428,28 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
 
 .pticker-close {
   position: fixed;
-  top: 20px;
-  right: 24px;
-  background: none;
-  border: none;
-  color: var(--pticker-muted);
+  top: 16px;
+  right: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--pticker-muted);
   cursor: pointer;
-  transition: color 0.15s, transform 0.15s;
+  transition: color 0.15s, background 0.15s;
   z-index: 100001;
-  padding: 0;
 }
-.pticker-close:hover { color: var(--pticker-text); transform: scale(1.08); }
-.pticker-close-x { font-size: 28px; line-height: 1; }
-.pticker-close-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; }
+.pticker-close svg { width: 26px; height: 26px; }
 .pticker-close:hover {
-  background: rgba(255,255,255,0.22);
-  transform: scale(1.08);
+  color: var(--pticker-text);
+  background: var(--pticker-card-bg);
 }
+.pticker-close-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; line-height: 1; color: inherit; }
 
 /* ── Light theme overrides ── */
 html[data-theme="light"] .pticker-overlay {
@@ -2506,10 +2506,10 @@ html[data-theme="light"] .pticker-price {
   .pticker-insight { font-size: 0.82rem; }
   .pticker-insight-label { font-size: 0.6rem; }
   .pticker-close {
-    top: 14px;
-    right: 14px;
-    width: 36px;
-    height: 36px;
+    top: 12px;
+    right: 12px;
+    padding: 8px 10px;
   }
+  .pticker-close svg { width: 18px; height: 18px; }
   .pticker-bg-symbol { font-size: 85vw; }
 }
