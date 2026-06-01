@@ -74,6 +74,7 @@
   color: var(--color-text);
   background: var(--color-hover, rgba(255,255,255,0.05));
 }
+.off-tab:focus { outline: none; }
 .off-tab--active {
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
