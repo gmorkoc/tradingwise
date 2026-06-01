@@ -2328,6 +2328,41 @@ html[data-theme="light"] .icon-strip-quota-bar {
   0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 8px #22c55e; }
   50%       { opacity: 0.5; transform: scale(0.7); box-shadow: 0 0 2px #22c55e; }
 }
+.pticker-delta {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.pticker-delta--up   { color: #22c55e; }
+.pticker-delta--down { color: #ef4444; }
+
+.pticker-insight-wrap {
+  margin-top: 8px;
+  width: min(560px, 90vw);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 18px 24px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.pticker-insight {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.55;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.pticker-insight--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .pticker-close {
   margin-top: 12px;
   background: rgba(255,255,255,0.06);

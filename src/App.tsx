@@ -128,6 +128,9 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [tickerFlash, setTickerFlash] = useState<"up" | "down" | null>(null);
   const prevTickerPrice = useRef<number | null>(null);
   const coinBtnClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickerOpenPrice = useRef<number | null>(null);
+  const [tickerInsightIdx, setTickerInsightIdx] = useState(0);
+  const [tickerInsightVisible, setTickerInsightVisible] = useState(true);
 
   useEffect(() => { btcDataRef.current = btcData; }, [btcData]);
 
@@ -161,6 +164,15 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     }
     prevTickerPrice.current = livePrice;
   }, [livePrice, priceTicker]);
+
+  useEffect(() => {
+    if (!priceTicker) return;
+    const id = setInterval(() => {
+      setTickerInsightVisible(false);
+      setTimeout(() => { setTickerInsightIdx(i => i + 1); setTickerInsightVisible(true); }, 400);
+    }, 4000);
+    return () => clearInterval(id);
+  }, [priceTicker]);
 
   useEffect(() => { localStorage.setItem("btcAmount", btcAmount); }, [btcAmount]);
   useEffect(() => { localStorage.setItem("btcCost", btcCost); }, [btcCost]);
@@ -480,6 +492,9 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                   clearTimeout(coinBtnClickTimer.current);
                   coinBtnClickTimer.current = null;
                   prevTickerPrice.current = livePrice;
+                  tickerOpenPrice.current = livePrice;
+                  setTickerInsightIdx(0);
+                  setTickerInsightVisible(true);
                   setPriceTicker(true);
                 } else {
                   coinBtnClickTimer.current = setTimeout(() => {
@@ -785,6 +800,31 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
       {priceTicker && (() => {
         const coinColor = COIN_COLORS[coin] ?? "#38bdf8";
+        const price = livePrice ?? btcData?.price ?? 0;
+        const openP = tickerOpenPrice.current ?? price;
+        const delta = openP > 0 ? ((price - openP) / openP) * 100 : 0;
+        const deltaAbs = Math.abs(delta);
+        const up = delta >= 0;
+
+        const insights = [
+          delta === 0
+            ? `${coin} is holding steady — no movement since you opened this view.`
+            : `${coin} is ${up ? "up" : "down"} ${deltaAbs.toFixed(3)}% since you opened this screen.`,
+          up
+            ? `Buyers are in control — price is pushing higher with positive momentum.`
+            : `Sellers are applying pressure — watch for key support levels to hold.`,
+          tickerFlash === "up"
+            ? `Latest tick is bullish — aggressive buying hitting the ask.`
+            : tickerFlash === "down"
+            ? `Latest tick is bearish — sellers are absorbing demand at current levels.`
+            : `Price is consolidating — market is searching for its next directional move.`,
+          up
+            ? `Bullish price action: each tick higher signals continued demand above current price.`
+            : `Bearish flow detected: sellers are stepping in to cap the rally at this level.`,
+          `${coin} is trading at $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })} — stay focused on the tape.`,
+        ];
+        const insight = insights[tickerInsightIdx % insights.length];
+
         return (
           <div className="pticker-overlay" onClick={() => setPriceTicker(false)}
             style={{ "--pticker-color": coinColor } as React.CSSProperties}
@@ -796,9 +836,21 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 {coin}<span className="pticker-coin-quote">/USD</span>
               </div>
               <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
-                ${(livePrice ?? btcData?.price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
+              {openP > 0 && (
+                <div className={`pticker-delta ${up ? "pticker-delta--up" : "pticker-delta--down"}`}>
+                  {up ? "▲" : "▼"} {deltaAbs.toFixed(3)}% since open
+                </div>
+              )}
               <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
+
+              <div className="pticker-insight-wrap">
+                <div className={`pticker-insight${tickerInsightVisible ? " pticker-insight--visible" : ""}`}>
+                  {insight}
+                </div>
+              </div>
+
               <button className="pticker-close" onClick={() => setPriceTicker(false)}>✕ Close</button>
             </div>
           </div>
