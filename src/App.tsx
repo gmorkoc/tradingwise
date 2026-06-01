@@ -123,6 +123,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [priceTicker, setPriceTicker] = useState(false);
   const [tickerFlash, setTickerFlash] = useState<"up" | "down" | null>(null);
   const prevTickerPrice = useRef<number | null>(null);
+  const coinBtnClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { btcDataRef.current = btcData; }, [btcData]);
 
@@ -469,8 +470,20 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <button className="mch-coin-btn" ref={coinPickerBtnRef} onClick={openCoinPicker}
-              onDoubleClick={e => { e.stopPropagation(); prevTickerPrice.current = livePrice; setPriceTicker(true); }}>
+            <button className="mch-coin-btn" ref={coinPickerBtnRef}
+              onClick={() => {
+                if (coinBtnClickTimer.current) {
+                  clearTimeout(coinBtnClickTimer.current);
+                  coinBtnClickTimer.current = null;
+                  prevTickerPrice.current = livePrice;
+                  setPriceTicker(true);
+                } else {
+                  coinBtnClickTimer.current = setTimeout(() => {
+                    coinBtnClickTimer.current = null;
+                    openCoinPicker();
+                  }, 250);
+                }
+              }}>
               <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
               <div className="mch-coin-info">
                 <span className="mch-coin-pair">
