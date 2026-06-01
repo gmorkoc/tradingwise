@@ -28,29 +28,40 @@ export function OrderFlowTape({ coin }: Props) {
     setTrades([]); setBuyVol(0); setSellVol(0); setDelta(0);
     setConnected(false);
 
-    const symbol = `${coin.toLowerCase()}usdt`;
+    const krakenSymbol = `${coin.toUpperCase()}/USD`;
     let ws: WebSocket;
     let dead = false;
     let retryTimer = 0;
+    let tradeCounter = 0;
 
     const connect = () => {
       if (dead) return;
-      // Use port 443 — port 9443 is blocked on many networks
-      ws = new WebSocket(`wss://stream.binance.com:443/ws/${symbol}@aggTrade`);
-      ws.onopen  = () => setConnected(true);
+      ws = new WebSocket("wss://ws.kraken.com/v2");
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          method: "subscribe",
+          params: { channel: "trade", symbol: [krakenSymbol] },
+        }));
+      };
       ws.onclose = () => {
         setConnected(false);
         if (!dead) retryTimer = window.setTimeout(connect, 3000);
       };
       ws.onerror = () => ws.close();
       ws.onmessage = (e) => {
-        const d = JSON.parse(e.data);
-        const price = parseFloat(d.p);
-        const qty   = parseFloat(d.q);
-        pendingRef.current.push({
-          id: d.a, price, qty, usd: price * qty,
-          isBuy: !d.m, time: d.T,
-        });
+        const msg = JSON.parse(e.data);
+        if (msg.channel !== "trade") return;
+        setConnected(true);
+        for (const t of (msg.data ?? [])) {
+          pendingRef.current.push({
+            id: tradeCounter++,
+            price: t.price,
+            qty: t.qty,
+            usd: t.price * t.qty,
+            isBuy: t.side === "buy",
+            time: new Date(t.timestamp).getTime(),
+          });
+        }
       };
     };
 
