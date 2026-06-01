@@ -2253,6 +2253,15 @@ html[data-theme="light"] .icon-strip-quota-bar {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  --pticker-text: #fff;
+  --pticker-muted: rgba(255,255,255,0.35);
+  --pticker-card-bg: rgba(255,255,255,0.04);
+  --pticker-card-border: rgba(255,255,255,0.1);
+  --pticker-insight-text: rgba(255,255,255,0.75);
+  --pticker-close-bg: rgba(255,255,255,0.06);
+  --pticker-close-border: rgba(255,255,255,0.12);
+  --pticker-close-text: rgba(255,255,255,0.4);
+  --pticker-close-bg-hover: rgba(255,255,255,0.12);
 }
 .pticker-bg-symbol {
   position: absolute;
@@ -2280,7 +2289,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
   gap: 12px;
   font-size: 2.4rem;
   font-weight: 900;
-  color: #fff;
+  color: var(--pticker-text, #fff);
   letter-spacing: -0.02em;
 }
 .pticker-coin-sym {
@@ -2290,14 +2299,14 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-coin-quote {
   font-size: 1.3rem;
   font-weight: 500;
-  color: rgba(255,255,255,0.35);
+  color: var(--pticker-muted, rgba(255,255,255,0.35));
   margin-left: 2px;
 }
 .pticker-price {
   font-size: clamp(3.5rem, 12vw, 8.5rem);
   font-weight: 900;
   letter-spacing: -0.04em;
-  color: #fff;
+  color: var(--pticker-text, #fff);
   font-variant-numeric: tabular-nums;
   transition: color 0.25s;
   text-shadow: 0 0 60px color-mix(in srgb, var(--pticker-color) 40%, transparent);
@@ -2339,8 +2348,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-insight-wrap {
   margin-top: 8px;
   width: min(560px, 90vw);
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--pticker-card-bg, rgba(255,255,255,0.04));
+  border: 1px solid var(--pticker-card-border, rgba(255,255,255,0.1));
   border-radius: 14px;
   padding: 18px 24px;
   min-height: 64px;
@@ -2352,7 +2361,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-insight {
   font-size: 1rem;
   font-weight: 500;
-  color: rgba(255,255,255,0.75);
+  color: var(--pticker-insight-text, rgba(255,255,255,0.75));
   line-height: 1.55;
   opacity: 0;
   transform: translateY(6px);
@@ -2365,9 +2374,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
 
 .pticker-close {
   margin-top: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.4);
+  background: var(--pticker-close-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--pticker-close-border, rgba(255,255,255,0.12));
+  color: var(--pticker-close-text, rgba(255,255,255,0.4));
   font-size: 0.78rem;
   padding: 8px 24px;
   border-radius: 99px;
@@ -2375,6 +2384,28 @@ html[data-theme="light"] .icon-strip-quota-bar {
   transition: all 0.15s;
 }
 .pticker-close:hover {
-  background: rgba(255,255,255,0.12);
-  color: #fff;
+  background: var(--pticker-close-bg-hover, rgba(255,255,255,0.12));
+  color: var(--pticker-text, #fff);
+}
+
+/* ── Light theme overrides ── */
+html[data-theme="light"] .pticker-overlay {
+  background: radial-gradient(ellipse at center,
+    color-mix(in srgb, var(--pticker-color) 18%, #f8fafc) 0%,
+    #f1f5f9 70%);
+  --pticker-text: #0f172a;
+  --pticker-muted: rgba(15,23,42,0.4);
+  --pticker-card-bg: rgba(15,23,42,0.05);
+  --pticker-card-border: rgba(15,23,42,0.12);
+  --pticker-insight-text: rgba(15,23,42,0.7);
+  --pticker-close-bg: rgba(15,23,42,0.06);
+  --pticker-close-border: rgba(15,23,42,0.15);
+  --pticker-close-text: rgba(15,23,42,0.45);
+  --pticker-close-bg-hover: rgba(15,23,42,0.12);
+}
+html[data-theme="light"] .pticker-bg-symbol {
+  opacity: 0.07;
+}
+html[data-theme="light"] .pticker-price {
+  text-shadow: 0 0 40px color-mix(in srgb, var(--pticker-color) 30%, transparent);
 }
