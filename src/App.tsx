@@ -22,6 +22,7 @@ import { AlertsBuilder } from "./components/AlertsBuilder";
 import { OrderBook } from "./components/OrderBook";
 import { ETFInflows } from "./components/ETFInflows";
 import { PositionFlows } from "./components/PositionFlows";
+import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
@@ -35,7 +36,7 @@ import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier } from "./services/supabase";
 import "./App.css";
 
-type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions";
+type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow";
 
 const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
   { id: "chart", label: "Chart", d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
@@ -58,6 +59,7 @@ const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredT
   { id: "etf", label: "ETF Flows", d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
   { id: "positions", label: "Traders", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
   { id: "htf", label: "HTF Analysis", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
+  { id: "orderflow", label: "Order Flow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -643,6 +645,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           )}
           {activeSection === "etf" && <ETFInflows />}
           {activeSection === "positions" && <PositionFlows coin={coin} />}
+          {activeSection === "orderflow" && <OrderFlowFramework coin={coin} />}
         </div>
 
       </div>
