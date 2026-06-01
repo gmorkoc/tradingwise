@@ -131,6 +131,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const tickerOpenPrice = useRef<number | null>(null);
   const [tickerInsightIdx, setTickerInsightIdx] = useState(0);
   const [tickerInsightVisible, setTickerInsightVisible] = useState(true);
+  const tickerLastMilestone = useRef<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => { btcDataRef.current = btcData; }, [btcData]);
 
@@ -173,6 +175,41 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     }, 4000);
     return () => clearInterval(id);
   }, [priceTicker]);
+
+  useEffect(() => {
+    if (!priceTicker || livePrice === null) return;
+    const milestone = Math.floor(livePrice / 100) * 100;
+    const last = tickerLastMilestone.current;
+    if (last === null) { tickerLastMilestone.current = milestone; return; }
+    if (milestone === last) return;
+    tickerLastMilestone.current = milestone;
+    const up = milestone > last;
+
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      const play = (freq: number, type: OscillatorType, start: number, dur: number, gainVal: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type; osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(gainVal, ctx.currentTime + start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur);
+      };
+      if (up) {
+        play(523, "sine",     0,    0.18, 0.18);
+        play(659, "sine",     0.1,  0.18, 0.18);
+        play(784, "sine",     0.2,  0.25, 0.22);
+      } else {
+        play(523, "sine",     0,    0.18, 0.18);
+        play(415, "sine",     0.1,  0.18, 0.18);
+        play(311, "triangle", 0.2,  0.3,  0.2);
+      }
+    } catch { /* AudioContext blocked — ignore */ }
+  }, [livePrice, priceTicker]);
 
   useEffect(() => { localStorage.setItem("btcAmount", btcAmount); }, [btcAmount]);
   useEffect(() => { localStorage.setItem("btcCost", btcCost); }, [btcCost]);
@@ -493,6 +530,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                   coinBtnClickTimer.current = null;
                   prevTickerPrice.current = livePrice;
                   tickerOpenPrice.current = livePrice;
+                  tickerLastMilestone.current = livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
                   setTickerInsightIdx(0);
                   setTickerInsightVisible(true);
                   setPriceTicker(true);
