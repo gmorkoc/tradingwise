@@ -436,7 +436,8 @@
    VOLUME PROFILE
    ══════════════════════════════════════════════════════════════════════════ */
 .vp-root { padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
-.vp-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.vp-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; overflow: visible; }
+.vp-key-levels { overflow: visible; }
 .vp-iv-tabs { display: flex; gap: 4px; }
 .vp-tab {
   padding: 6px 16px; border-radius: 8px;
@@ -461,7 +462,7 @@
 .vp-kl::after {
   content: attr(data-tip);
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-surface, #1a1a2e);
@@ -476,7 +477,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
-  z-index: 100;
+  z-index: 9999;
 }
 .vp-kl:hover::after { opacity: 1; }
 
