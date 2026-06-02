@@ -77,8 +77,11 @@ export const COINS = [
   { symbol: 'SOL',  name: 'Solana'   },
   { symbol: 'BNB',  name: 'BNB'      },
   { symbol: 'SUI',  name: 'Sui'      },
-  { symbol: 'DOGE', name: 'Dogecoin' },
-  { symbol: 'ADA',  name: 'Cardano'  },
+  { symbol: 'DOGE',   name: 'Dogecoin' },
+  { symbol: 'ADA',    name: 'Cardano'  },
+  { symbol: 'NEAR',   name: 'NEAR'     },
+  { symbol: 'RENDER', name: 'Render'   },
+  { symbol: 'ZEC',    name: 'Zcash'    },
 ] as const;
 
 export type CoinSymbol = typeof COINS[number]['symbol'];

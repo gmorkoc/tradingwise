@@ -74,10 +74,12 @@ function NavIcon({ d }: { d: string | string[] }) {
 
 const COIN_ICONS: Record<string, string> = {
   BTC: "₿", ETH: "Ξ", XRP: "◈", SOL: "◎", BNB: "⬡", SUI: "⬟", DOGE: "Ð", ADA: "₳",
+  NEAR: "Ⓝ", RENDER: "⬡", ZEC: "ⓩ",
 };
 const COIN_COLORS: Record<string, string> = {
   BTC: "#f7931a", ETH: "#627eea", XRP: "#346aa9", SOL: "#9945ff",
   BNB: "#f3ba2f", SUI: "#4da2ff", DOGE: "#c2a633", ADA: "#0033ad",
+  NEAR: "#00c08b", RENDER: "#ff3c6e", ZEC: "#f4b728",
 };
 
 /* ── Authenticated dashboard — only mounts when user is logged in ── */
@@ -140,6 +142,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     const BINANCE_SYM: Record<string, string> = {
       BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
       DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
+      NEAR: "NEARUSDT", RENDER: "RENDERUSDT", ZEC: "ZECUSDT",
     };
     const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
     let cancelled = false;
