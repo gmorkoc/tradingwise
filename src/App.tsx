@@ -32,6 +32,7 @@ import { BlurGate } from "./components/MembershipGate";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
+import { PTickerBgChart } from "./components/PTickerBgChart";
 import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier } from "./services/supabase";
 import "./App.css";
@@ -852,6 +853,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             style={{ "--pticker-color": coinColor } as React.CSSProperties}
             onKeyDown={e => e.key === "Escape" && setPriceTicker(false)} tabIndex={-1}>
             <div className="pticker-bg-symbol">{COIN_ICONS[coin] ?? coin[0]}</div>
+            <PTickerBgChart coin={coin} isDark={theme === "dark"} />
             {rockets.map(r => (
               <span key={r.id} className={`pticker-rocket pticker-rocket--${r.dir}`} style={{ left: `${r.x}%` }}>
                 🚀
