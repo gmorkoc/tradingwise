@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { coinglass, CoinSymbol } from "../services/coinglass";
+import { coinglass, CoinSymbol, ExchangeActivity } from "../services/coinglass";
 import "../styles/PredictionEngine.css";
 
 interface Props {
@@ -112,13 +112,30 @@ function calcPOC(candles: { high: number; low: number; volume?: number }[]): num
 }
 
 export function PredictionEngine({ btcData, coin, livePrice }: Props) {
-  const [fearGreed, setFearGreed]   = useState<FearGreed | null>(null);
-  const [atr4h,     setAtr4h]       = useState(0);
-  const [poc4h,     setPoc4h]       = useState(0);
-  const [loading,   setLoading]     = useState(true);
-  const lastFetch = useRef(0);
+  const [fearGreed,       setFearGreed]       = useState<FearGreed | null>(null);
+  const [atr4h,           setAtr4h]           = useState(0);
+  const [poc4h,           setPoc4h]           = useState(0);
+  const [loading,         setLoading]         = useState(true);
+  const [exchangeData,    setExchangeData]    = useState<ExchangeActivity[]>([]);
+  const [exchLoading,     setExchLoading]     = useState(true);
+  const lastFetch    = useRef(0);
+  const lastExchFetch = useRef(0);
 
   const price = livePrice ?? btcData?.price ?? 0;
+
+  // Exchange activity — refresh every 5 minutes
+  useEffect(() => {
+    let cancelled = false;
+    const loadExch = async () => {
+      if (Date.now() - lastExchFetch.current < 300_000) return;
+      lastExchFetch.current = Date.now();
+      setExchLoading(true);
+      const data = await coinglass.getExchangeActivity(coin).catch(() => []);
+      if (!cancelled) { setExchangeData(data); setExchLoading(false); }
+    };
+    loadExch();
+    return () => { cancelled = true; };
+  }, [coin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -262,9 +279,11 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
         {/* Left col: Price targets */}
         <div className="pe-targets-col">
           <div className="pe-targets-label">Price Targets</div>
-          {targets.map(t => (
-            <div key={t.label} className="pe-target-card">
-              <div className="pe-target-info">
+          {targets.map(t => {
+            const bullPct = price > 0 ? ((t.bull - price) / price * 100).toFixed(1) : "0";
+            const bearPct = price > 0 ? ((t.bear - price) / price * 100).toFixed(1) : "0";
+            return (
+              <div key={t.label} className="pe-target-card">
                 <div className="pe-target-label">{t.label}</div>
                 <div className="pe-target-values">
                   <div className="pe-target-bull">
@@ -276,47 +295,106 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
                     {fmtPrice(t.bear)}
                   </div>
                 </div>
+                <div className="pe-target-pct">
+                  <span className="pe-target-pct-bull">+{bullPct}%</span>
+                  <span className="pe-target-pct-bear">{bearPct}%</span>
+                </div>
                 <div className="pe-target-atr">ATR {fmtPrice(t.atr)}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Right col: Signal breakdown */}
         <div className="pe-signals-card">
-        <div className="pe-signals-title">Signal Breakdown</div>
-        {signals.map(sig => {
-          const pip = Math.round(sig.score);
-          const dotClass = sig.score >= 1 ? "bull" : sig.score <= -1 ? "bear" : "neutral";
-          return (
-            <div key={sig.name} className="pe-signal-row">
-              <span className="pe-signal-icon">{sig.icon}</span>
-              <div className="pe-signal-main">
-                <div className="pe-signal-top">
-                  <span className="pe-signal-name">{sig.name}</span>
-                  <span className="pe-signal-value">{sig.value}</span>
+          <div className="pe-signals-title">Signal Breakdown</div>
+          {signals.map(sig => {
+            const dotClass = sig.score >= 1 ? "bull" : sig.score <= -1 ? "bear" : "neutral";
+            // map score -2..+2 → 0%..100% for bar marker
+            const markerPct = ((sig.score + 2) / 4) * 100;
+            return (
+              <div key={sig.name} className={`pe-signal-row pe-signal-row--${dotClass}`}>
+                <div className={`pe-signal-icon-wrap pe-signal-icon-wrap--${dotClass}`}>
+                  {sig.icon}
                 </div>
-                <div className="pe-signal-detail">{sig.detail}</div>
-              </div>
-              <div className="pe-signal-score">
-                <div className="pe-pips">
-                  {[-2, -1, 0, 1, 2].map(v => (
-                    <div
-                      key={v}
-                      className={`pe-pip pe-pip--${v < 0 ? "bear" : v > 0 ? "bull" : "neutral"}${
-                        (v < 0 && pip <= v) || (v > 0 && pip >= v) || (v === 0 && pip === 0) ? " pe-pip--active" : ""
-                      }`}
-                    />
-                  ))}
+                <div className="pe-signal-main">
+                  <div className="pe-signal-top">
+                    <span className="pe-signal-name">{sig.name}</span>
+                    <span className="pe-signal-value">{sig.value}</span>
+                  </div>
+                  <div className="pe-signal-detail">{sig.detail}</div>
                 </div>
-                <div className={`pe-signal-dot pe-signal-dot--${dotClass}`} />
+                <div className="pe-signal-bar-wrap">
+                  <div className={`pe-signal-bar-track pe-signal-bar-track--${dotClass}`}
+                       style={{ "--bar-pos": `${markerPct}%` } as React.CSSProperties} />
+                  <div className="pe-signal-bar-labels">
+                    <span>Bear</span>
+                    <span>Bull</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
 
       </div>{/* end pe-body */}
+
+      {/* Exchange Activity */}
+      <div className="pe-exch-card">
+        <div className="pe-exch-header">
+          <span className="pe-exch-title">Exchange Activity</span>
+          <span className="pe-exch-sub">Funding rate per exchange · positive = longs crowded</span>
+          {exchLoading && <span className="pe-loading-badge" style={{ marginLeft: "auto" }}>Loading…</span>}
+        </div>
+        <div className="pe-exch-rows">
+          {(exchLoading && exchangeData.length === 0
+            ? ["Binance","Bybit","OKX","Bitget"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
+            : exchangeData
+          ).map(ex => {
+            const cfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {
+              buying:  { label: "Buying",  cls: "bull",    icon: "▲" },
+              selling: { label: "Selling", cls: "bear",    icon: "▼" },
+              neutral: { label: "Neutral", cls: "neutral", icon: "—" },
+            };
+            const c = cfg[ex.signal];
+            // Funding rate bar: centre=50%, scale ±0.05% FR → full width
+            const frScaled = (ex.fundingRate / 0.0005) * 50;
+            const barPos = Math.min(100, Math.max(0, 50 + frScaled));
+            return (
+              <div key={ex.exchange} className={`pe-exch-row pe-exch-row--${c.cls}`}>
+                <div className="pe-exch-row-name">{ex.exchange}</div>
+                <div className={`pe-exch-row-badge pe-exch-badge--${c.cls}`}>
+                  <span>{c.icon}</span>{c.label}
+                </div>
+                <div className="pe-exch-row-bar-wrap">
+                  <div className="pe-exch-row-bar-track">
+                    <div className="pe-exch-row-bar-center" />
+                    <div
+                      className={`pe-exch-row-bar-fill pe-exch-row-bar-fill--${ex.fundingRate >= 0 ? "pos" : "neg"}`}
+                      style={ex.fundingRate >= 0
+                        ? { left: "50%", width: `${Math.min(50, Math.abs(frScaled))}%` }
+                        : { right: "50%", width: `${Math.min(50, Math.abs(frScaled))}%` }
+                      }
+                    />
+                    <div className="pe-exch-row-bar-thumb" style={{ left: `${barPos}%` }} />
+                  </div>
+                  <div className="pe-exch-row-bar-labels">
+                    <span>Short bias</span><span>Long bias</span>
+                  </div>
+                </div>
+                <div className="pe-exch-row-stats">
+                  <span className={`pe-exch-row-stat ${ex.fundingRate >= 0 ? "pos" : "neg"}`}>
+                    FR {ex.fundingPct}
+                  </span>
+                  <span className={`pe-exch-row-stat ${ex.priceChange >= 0 ? "pos" : "neg"}`}>
+                    Px {ex.priceChange >= 0 ? "+" : ""}{ex.priceChange.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <p className="pe-disclaimer">
         For informational purposes only. Not financial advice. Past signal correlations do not guarantee future results.

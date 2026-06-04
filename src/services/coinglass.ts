@@ -41,6 +41,14 @@ interface CMEGap {
   below: CMEGapZone | null;
 }
 
+export interface ExchangeActivity {
+  exchange: string;
+  fundingRate: number;   // raw, e.g. 0.0001
+  fundingPct: string;    // formatted, e.g. "+0.0100%"
+  priceChange: number;   // 4h price change %
+  signal: 'buying' | 'selling' | 'neutral';
+}
+
 interface BTCData {
   price: number;
   liquidationAbove: number;
@@ -580,6 +588,80 @@ export const coinglass = {
 
     monthlyCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
     return result;
+  },
+
+  getExchangeActivity: async (coin: CoinSymbol | string = 'BTC'): Promise<ExchangeActivity[]> => {
+    const sym = `${coin}USDT`;
+
+    // 4H price change from Binance Vision (always reliable, open CORS)
+    const priceCandles = await fetchBinanceKlines(coin, '4h', 3).catch(() => [] as CandleDataPoint[]);
+    const priceChange = priceCandles.length >= 2
+      ? ((priceCandles[priceCandles.length - 1].close - priceCandles[priceCandles.length - 2].close)
+          / priceCandles[priceCandles.length - 2].close) * 100
+      : 0;
+
+    const classify = (fr: number): ExchangeActivity['signal'] => {
+      if (fr > 0.00005)  return 'buying';
+      if (fr < -0.00005) return 'selling';
+      return 'neutral';
+    };
+
+    const fmt = (fr: number): string => {
+      const pct = fr * 100;
+      return `${pct >= 0 ? '+' : ''}${pct.toFixed(4)}%`;
+    };
+
+    const mkNeutral = (exchange: string): ExchangeActivity =>
+      ({ exchange, fundingRate: 0, fundingPct: '0.0000%', priceChange, signal: 'neutral' });
+
+    // ── Binance: Binance Futures public API (open CORS) ──────────────────────
+    const binanceP = fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`)
+      .then(r => r.json()).catch(() => null);
+
+    // ── Bybit: /bybit-api rewrite → api.bybit.com ────────────────────────────
+    const bybitP = fetch(`/bybit-api/v5/market/tickers?category=linear&symbol=${sym}`)
+      .then(r => r.json()).catch(() => null);
+
+    // ── OKX: /okx-api rewrite → www.okx.com ─────────────────────────────────
+    const okxP = fetch(`/okx-api/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`)
+      .then(r => r.json()).catch(() => null);
+
+    // ── Bitget: direct public API (open CORS) ────────────────────────────────
+    const bitgetP = fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${sym}&productType=USDT-FUTURES`)
+      .then(r => r.json()).catch(() => null);
+
+    const [bnRes, bybitRes, okxRes, bitgetRes] = await Promise.all([binanceP, bybitP, okxP, bitgetP]);
+
+    // ── Parse Binance ────────────────────────────────────────────────────────
+    let binance = mkNeutral('Binance');
+    const bnFR = parseFloat(bnRes?.lastFundingRate ?? '');
+    if (isFinite(bnFR)) {
+      binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR) };
+    }
+
+    // ── Parse Bybit ──────────────────────────────────────────────────────────
+    let bybit = mkNeutral('Bybit');
+    const bybitTicker = bybitRes?.result?.list?.[0];
+    const bybitFR = parseFloat(bybitTicker?.fundingRate ?? '');
+    if (isFinite(bybitFR)) {
+      bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR) };
+    }
+
+    // ── Parse OKX ────────────────────────────────────────────────────────────
+    let okx = mkNeutral('OKX');
+    const okxFR = parseFloat(okxRes?.data?.[0]?.fundingRate ?? '');
+    if (isFinite(okxFR)) {
+      okx = { exchange: 'OKX', fundingRate: okxFR, fundingPct: fmt(okxFR), priceChange, signal: classify(okxFR) };
+    }
+
+    // ── Parse Bitget ─────────────────────────────────────────────────────────
+    let bitget = mkNeutral('Bitget');
+    const bitgetFR = parseFloat(bitgetRes?.data?.fundingRate ?? '');
+    if (isFinite(bitgetFR)) {
+      bitget = { exchange: 'Bitget', fundingRate: bitgetFR, fundingPct: fmt(bitgetFR), priceChange, signal: classify(bitgetFR) };
+    }
+
+    return [binance, bybit, okx, bitget];
   },
 
   getHistoricalPrices: async (interval: TimeInterval): Promise<PriceDataPoint[]> => {
