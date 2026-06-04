@@ -129,6 +129,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceTicker, setPriceTicker] = useState(false);
   const [tickerFlash, setTickerFlash] = useState<"up" | "down" | null>(null);
+  const [tickerMuted, setTickerMuted] = useState(true);
   const [rockets, setRockets] = useState<{ id: number; dir: "up" | "down"; x: number }[]>([]);
   const prevTickerPrice = useRef<number | null>(null);
   const coinBtnClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -173,18 +174,27 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
   useEffect(() => {
     if (!priceTicker || livePrice === null) return;
-    const milestone = Math.floor(livePrice / 10) * 10;
-    const last = tickerLastMilestone.current;
-    if (last === null) { tickerLastMilestone.current = milestone; return; }
-    if (milestone === last) return;
-    tickerLastMilestone.current = milestone;
-    const up = milestone > last;
 
-    const id = Date.now();
-    const x = 10 + Math.random() * 80;
-    setRockets(prev => [...prev, { id, dir: up ? "up" : "down", x }]);
-    setTimeout(() => setRockets(prev => prev.filter(r => r.id !== id)), 1400);
+    // Rockets every $10
+    const milestone10 = Math.floor(livePrice / 10) * 10;
+    const last10 = tickerLastMilestone.current;
+    if (last10 === null) { tickerLastMilestone.current = milestone10; return; }
+    if (milestone10 !== last10) {
+      const up10 = milestone10 > last10;
+      tickerLastMilestone.current = milestone10;
+      const id = Date.now();
+      const x = 10 + Math.random() * 80;
+      setRockets(prev => [...prev, { id, dir: up10 ? "up" : "down", x }]);
+      setTimeout(() => setRockets(prev => prev.filter(r => r.id !== id)), 1400);
+    }
 
+    // Sound every $100
+    const milestone100 = Math.floor(livePrice / 100) * 100;
+    const last100 = Math.floor((last10 ?? livePrice) / 100) * 100;
+    const up = milestone100 > last100;
+    if (milestone100 === last100) return;
+
+    if (tickerMuted) return;
     try {
       if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
       const ctx = audioCtxRef.current;
@@ -209,7 +219,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         play(311, "triangle", 0.2,  0.3,  0.2);
       }
     } catch { /* AudioContext blocked — ignore */ }
-  }, [livePrice, priceTicker]);
+  }, [livePrice, priceTicker, tickerMuted]);
 
   useEffect(() => { localStorage.setItem("btcAmount", btcAmount); }, [btcAmount]);
   useEffect(() => { localStorage.setItem("btcCost", btcCost); }, [btcCost]);
@@ -859,12 +869,28 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 🚀
               </span>
             ))}
-            <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Exit">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
-              </svg>
-              <span className="pticker-close-label">Exit</span>
-            </button>
+            <div className="pticker-top-actions">
+              <button className={`pticker-sound-btn${tickerMuted ? "" : " pticker-sound-btn--on"}`} onClick={() => setTickerMuted(v => !v)} aria-label="Toggle sound">
+                {tickerMuted ? (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+                  </svg>
+                ) : (
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/>
+                  </svg>
+                )}
+                <span className="pticker-close-label">{tickerMuted ? "Muted" : "Sound"}</span>
+              </button>
+              <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Exit">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
+                </svg>
+                <span className="pticker-close-label">Exit</span>
+              </button>
+            </div>
             <div className="pticker-inner">
               <div className="pticker-coin-name">
                 <span className="pticker-coin-sym">{COIN_ICONS[coin] ?? coin[0]}</span>

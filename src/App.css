@@ -2449,10 +2449,16 @@ html[data-theme="light"] .pticker-insight-wrap--up   { color: #16a34a; }
 html[data-theme="light"] .pticker-insight-wrap--down { color: #dc2626; }
 html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0.4); }
 
-.pticker-close {
+.pticker-top-actions {
   position: fixed;
   top: 16px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 100001;
+}
+.pticker-sound-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2465,7 +2471,23 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
   color: var(--pticker-muted);
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
-  z-index: 100001;
+}
+.pticker-sound-btn:hover { color: var(--pticker-text); background: var(--pticker-card-bg); }
+.pticker-sound-btn--on { color: var(--pticker-text); }
+.pticker-close {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--pticker-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
 }
 .pticker-close svg { width: 26px; height: 26px; }
 .pticker-close:hover {
