@@ -95,7 +95,10 @@ interface DashboardProps {
 
 function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardProps) {
   const { t } = useTranslation();
-  const [activeSection, setActiveSection] = useState<SectionId>("chart");
+  const [activeSection, setActiveSection] = useState<SectionId>(() => {
+    const hash = window.location.hash.slice(1) as SectionId;
+    return NAV_ITEMS.some(n => n.id === hash) ? hash : "chart";
+  });
   const [showOnboarding, setShowOnboarding] = useState(false);
   const onboardingCheckedRef = useRef(false);
   const [showWatchlist, setShowWatchlist] = useState(() => localStorage.getItem("watchlist-visible") !== "false");
@@ -307,6 +310,21 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   };
 
   useEffect(() => { if (btcData) setError(""); }, [btcData]);
+
+  // Sync URL hash with active section
+  useEffect(() => {
+    window.history.replaceState(null, "", `#${activeSection}`);
+  }, [activeSection]);
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.slice(1) as SectionId;
+      if (NAV_ITEMS.some(n => n.id === hash)) setActiveSection(hash);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // Close mobile nav when section changes
   useEffect(() => { setMobileNavOpen(false); }, [activeSection]);

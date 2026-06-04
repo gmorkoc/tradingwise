@@ -52,6 +52,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/coinbase-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        '/gecko-api': {
+          target: 'https://api.coingecko.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/gecko-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
         '/api/openai': {
           target: 'https://api.openai.com',
           changeOrigin: true,

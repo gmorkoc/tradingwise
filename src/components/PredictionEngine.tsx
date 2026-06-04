@@ -2,6 +2,25 @@ import { useState, useEffect, useRef } from "react";
 import { coinglass, CoinSymbol, ExchangeActivity } from "../services/coinglass";
 import "../styles/PredictionEngine.css";
 
+const EXCH_WEIGHTS: Record<string, number> = { Binance: 54, OKX: 27, Bybit: 8, Bitget: 5, Coinbase: 6 };
+
+function polarToCart(cx: number, cy: number, r: number, deg: number): [number, number] {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+}
+
+function donutSlice(cx: number, cy: number, or_: number, ir: number, a0: number, a1: number): string {
+  const g = Math.min(1.8, (a1 - a0) * 0.1);
+  const [x1, y1] = polarToCart(cx, cy, or_, a0 + g);
+  const [x2, y2] = polarToCart(cx, cy, or_, a1 - g);
+  const [x3, y3] = polarToCart(cx, cy, ir,  a1 - g);
+  const [x4, y4] = polarToCart(cx, cy, ir,  a0 + g);
+  const large = a1 - a0 > 180 ? 1 : 0;
+  const f = (n: number) => n.toFixed(2);
+  return `M${f(x1)},${f(y1)} A${or_},${or_} 0 ${large} 1 ${f(x2)},${f(y2)} L${f(x3)},${f(y3)} A${ir},${ir} 0 ${large} 0 ${f(x4)},${f(y4)}Z`;
+}
+
+
 interface Props {
   btcData: Partial<{ rsi: number; macd: number; macdSignal: number; fundingRate: number; longShortRatio: number; price: number }> | null;
   coin: CoinSymbol;
@@ -118,23 +137,25 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
   const [loading,         setLoading]         = useState(true);
   const [exchangeData,    setExchangeData]    = useState<ExchangeActivity[]>([]);
   const [exchLoading,     setExchLoading]     = useState(true);
+  const [exchUpdatedAt,   setExchUpdatedAt]   = useState<Date | null>(null);
   const lastFetch    = useRef(0);
   const lastExchFetch = useRef(0);
 
   const price = livePrice ?? btcData?.price ?? 0;
 
-  // Exchange activity — refresh every 5 minutes
+  // Exchange activity — refresh every minute
   useEffect(() => {
     let cancelled = false;
     const loadExch = async () => {
-      if (Date.now() - lastExchFetch.current < 300_000) return;
+      if (Date.now() - lastExchFetch.current < 60_000) return;
       lastExchFetch.current = Date.now();
       setExchLoading(true);
       const data = await coinglass.getExchangeActivity(coin).catch(() => []);
-      if (!cancelled) { setExchangeData(data); setExchLoading(false); }
+      if (!cancelled) { setExchangeData(data); setExchLoading(false); setExchUpdatedAt(new Date()); }
     };
     loadExch();
-    return () => { cancelled = true; lastExchFetch.current = 0; };
+    const id = setInterval(loadExch, 60_000);
+    return () => { cancelled = true; clearInterval(id); lastExchFetch.current = 0; };
   }, [coin]);
 
   useEffect(() => {
@@ -172,6 +193,8 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
   const fgValue     = fearGreed?.value ?? 50;
   const poc         = poc4h || price;
 
+  const fmtK = (p: number) => p >= 1000 ? `$${(p / 1000).toFixed(1)}k` : `$${p.toFixed(0)}`;
+
   const s1 = scoreRSI(rsi);
   const s2 = scoreMACDCross(macd, macdSig);
   const s3 = scoreFundingRate(fundingRate);
@@ -199,42 +222,80 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
       value: rsi.toFixed(1),
       score: s1,
       icon: "📊",
-      detail: rsi > 70 ? "Overbought — pullback risk" : rsi < 30 ? "Oversold — bounce potential" : rsi < 50 ? "Weakening momentum" : "Healthy momentum",
+      detail: rsi > 70
+        ? `RSI ${rsi.toFixed(1)} — overbought, ${fmtK(price)} may be near a local top`
+        : rsi < 30
+        ? `RSI ${rsi.toFixed(1)} — deeply oversold at ${fmtK(price)}, high bounce probability`
+        : rsi < 50
+        ? `RSI ${rsi.toFixed(1)} — weakening momentum, ${fmtK(price)} faces selling pressure`
+        : `RSI ${rsi.toFixed(1)} — healthy momentum supports current ${fmtK(price)} level`,
     },
     {
       name: "MACD Cross",
       value: `${macd >= 0 ? "+" : ""}${macd.toFixed(2)}`,
       score: s2,
       icon: "📈",
-      detail: s2 >= 1 ? "Bullish crossover with positive histogram" : s2 <= -1 ? "Bearish crossover — downward pressure" : "Neutral — watch for crossover",
+      detail: s2 >= 2
+        ? `Bullish crossover above zero — trend likely to push ${fmtK(price)} higher`
+        : s2 >= 1
+        ? `Bullish crossover in negative territory — ${fmtK(price)} recovering but still below baseline`
+        : s2 <= -2
+        ? `Bearish crossover below zero — ${fmtK(price)} under sustained downward pressure`
+        : s2 <= -1
+        ? `Bearish crossover above zero — momentum fading, ${fmtK(price)} may stall`
+        : `MACD near zero — no clear direction, ${fmtK(price)} in consolidation`,
     },
     {
       name: "Funding Rate",
       value: `${(fundingRate * 100).toFixed(4)}%`,
       score: s3,
       icon: "💸",
-      detail: fundingRate > 0.001 ? "Longs paying — crowded trade" : fundingRate < -0.001 ? "Shorts paying — contrarian bullish" : "Balanced — no clear bias",
+      detail: fundingRate > 0.001
+        ? `Longs paying ${(fundingRate * 100).toFixed(4)}% — overheated, ${fmtK(price)} could see a flush`
+        : fundingRate < -0.001
+        ? `Shorts paying ${(Math.abs(fundingRate) * 100).toFixed(4)}% — short squeeze possible toward ${fmtK(price)}`
+        : `Near-zero funding at ${fmtK(price)} — balanced positioning, no directional bias`,
     },
     {
       name: "Long/Short Ratio",
       value: lsRatio.toFixed(2),
       score: s4,
       icon: "⚖️",
-      detail: lsRatio > 1.5 ? "Heavily long — squeeze risk" : lsRatio > 1.1 ? "Slight long bias — healthy" : lsRatio < 0.9 ? "Short bias — contrarian buy" : "Balanced positioning",
+      detail: lsRatio > 1.5
+        ? `${lsRatio.toFixed(2)}x more longs than shorts — crowded at ${fmtK(price)}, squeeze risk if it dips`
+        : lsRatio > 1.1
+        ? `Slight long bias (${lsRatio.toFixed(2)}) — healthy trend support for ${fmtK(price)}`
+        : lsRatio < 0.9
+        ? `${lsRatio.toFixed(2)} — short-heavy positioning, contrarian buy signal at ${fmtK(price)}`
+        : `Balanced at ${lsRatio.toFixed(2)} — no crowding, ${fmtK(price)} driven by spot demand`,
     },
     {
       name: "Fear & Greed",
       value: fearGreed ? `${fgValue} · ${fearGreed.label}` : "—",
       score: s5,
       icon: "🧠",
-      detail: fgValue >= 75 ? "Extreme greed — top caution" : fgValue <= 25 ? "Extreme fear — dip opportunity" : fgValue >= 55 ? "Greed phase — momentum continues" : "Fear zone — risk/reward improving",
+      detail: fearGreed
+        ? fgValue >= 75
+          ? `Score ${fgValue} — extreme greed, ${fmtK(price)} may be overextended near-term`
+          : fgValue <= 25
+          ? `Score ${fgValue} — extreme fear at ${fmtK(price)}, historically a strong buy zone`
+          : fgValue >= 55
+          ? `Score ${fgValue} — greed phase, momentum likely to carry ${fmtK(price)} further`
+          : `Score ${fgValue} — fear zone, risk/reward at ${fmtK(price)} is improving`
+        : "Loading sentiment data…",
     },
     {
       name: "Volume Profile POC",
       value: poc4h ? `$${poc4h.toLocaleString()}` : "—",
       score: s6,
       icon: "📦",
-      detail: poc4h ? (price > poc4h * 1.03 ? "Above POC — extended, watch support" : price < poc4h * 0.97 ? "Below POC — potential mean reversion" : "Price at POC — high acceptance zone") : "Computing…",
+      detail: poc4h
+        ? price > poc4h * 1.03
+          ? `${fmtK(price)} is ${((price / poc4h - 1) * 100).toFixed(1)}% above POC ${fmtK(poc4h)} — extended, support below`
+          : price < poc4h * 0.97
+          ? `${fmtK(price)} is ${((poc4h / price - 1) * 100).toFixed(1)}% below POC ${fmtK(poc4h)} — mean reversion target`
+          : `${fmtK(price)} at POC ${fmtK(poc4h)} — high-volume acceptance, strong base`
+        : "Computing 4H volume profile…",
     },
   ];
 
@@ -344,56 +405,100 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
         <div className="pe-exch-header">
           <span className="pe-exch-title">Exchange Activity</span>
           <span className="pe-exch-sub">Funding rate per exchange · positive = longs crowded</span>
-          {exchLoading && <span className="pe-loading-badge" style={{ marginLeft: "auto" }}>Loading…</span>}
+          <span className="pe-exch-updated">
+            {exchLoading
+              ? "Updating…"
+              : exchUpdatedAt
+              ? `Updated ${exchUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+              : ""}
+          </span>
         </div>
-        <div className="pe-exch-rows">
-          {(exchLoading && exchangeData.length === 0
-            ? ["Binance","Bybit","OKX","Bitget","Coinbase"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
-            : exchangeData
-          ).map(ex => {
-            const cfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {
-              buying:  { label: "Buying",  cls: "bull",    icon: "▲" },
-              selling: { label: "Selling", cls: "bear",    icon: "▼" },
-              neutral: { label: "Neutral", cls: "neutral", icon: "—" },
-            };
-            const c = cfg[ex.signal];
-            // Funding rate bar: centre=50%, scale ±0.05% FR → full width
-            const frScaled = (ex.fundingRate / 0.0005) * 50;
-            const barPos = Math.min(100, Math.max(0, 50 + frScaled));
-            return (
-              <div key={ex.exchange} className={`pe-exch-row pe-exch-row--${c.cls}`}>
-                <div className="pe-exch-row-name">{ex.exchange}</div>
-                <div className={`pe-exch-row-badge pe-exch-badge--${c.cls}`}>
-                  <span>{c.icon}</span>{c.label}
+        {(() => {
+          const exchList = exchLoading && exchangeData.length === 0
+            ? ["Binance","OKX","Bybit","Bitget","Coinbase"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
+            : exchangeData;
+
+          const sigCfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {
+            buying:  { label: "Buying",  cls: "bull",    icon: "▲" },
+            selling: { label: "Selling", cls: "bear",    icon: "▼" },
+            neutral: { label: "Neutral", cls: "neutral", icon: "—" },
+          };
+
+          const sigPalette: Record<ExchangeActivity["signal"], string[]> = {
+            buying:  ['#4ade80','#22c55e','#86efac','#16a34a','#34d399'],
+            selling: ['#f87171','#ef4444','#fca5a5','#dc2626','#fb923c'],
+            neutral: ['#64748b','#94a3b8','#475569','#78909c','#334155'],
+          };
+          const sigIdx: Partial<Record<string, number>> = {};
+
+          const CX = 200, CY = 200, OR = 186, IR = 108;
+          const total = exchList.reduce((s, e) => s + (EXCH_WEIGHTS[e.exchange] ?? 10), 0);
+          let ang = 0;
+          const slices = exchList.map(ex => {
+            const w = EXCH_WEIGHTS[ex.exchange] ?? 10;
+            const a0 = ang; ang += (w / total) * 360;
+            const i = sigIdx[ex.signal] ?? 0; sigIdx[ex.signal] = i + 1;
+            return { ...ex, a0, a1: ang, color: sigPalette[ex.signal][i % sigPalette[ex.signal].length] };
+          });
+
+          const maxFR = Math.max(0.00005, ...exchList.map(e => Math.abs(e.fundingRate)));
+
+          return (
+            <div className="pe-exch-pie-heat-wrap">
+              {/* Donut */}
+              <svg className="pe-exch-svg" viewBox="0 0 400 400">
+                {slices.map(s => (
+                  <path key={s.exchange} d={donutSlice(CX, CY, OR, IR, s.a0, s.a1)} fill={s.color} />
+                ))}
+                {slices.map(s => {
+                  const span = s.a1 - s.a0;
+                  const mid = (s.a0 + s.a1) / 2;
+                  const [tx, ty] = polarToCart(CX, CY, (OR + IR) / 2, mid);
+                  const pct = Math.round((EXCH_WEIGHTS[s.exchange] ?? 10) / total * 100);
+                  if (span < 12) return null;
+                  if (span >= 30) return (
+                    <g key={`t-${s.exchange}`} style={{ pointerEvents: 'none' }}>
+                      <text x={tx} y={ty - 9} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="13" fontWeight="800">{s.exchange}</text>
+                      <text x={tx} y={ty + 9} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.72)" fontSize="11">{pct}%</text>
+                    </g>
+                  );
+                  return <text key={`t-${s.exchange}`} x={tx} y={ty} textAnchor="middle" dominantBaseline="middle" fill="#fff" fontSize="11" fontWeight="700" style={{ pointerEvents: 'none' }}>{pct}%</text>;
+                })}
+              </svg>
+
+              {/* Heat rows */}
+              <div className="pe-exch-heatgrid">
+                <div className="pe-exch-heat-axis">
+                  <span>◄ Selling</span>
+                  <span className="pe-exch-heat-axis-center">Funding Rate Bias</span>
+                  <span>Buying ►</span>
                 </div>
-                <div className="pe-exch-row-bar-wrap">
-                  <div className="pe-exch-row-bar-track">
-                    <div className="pe-exch-row-bar-center" />
-                    <div
-                      className={`pe-exch-row-bar-fill pe-exch-row-bar-fill--${ex.fundingRate >= 0 ? "pos" : "neg"}`}
-                      style={ex.fundingRate >= 0
-                        ? { left: "50%", width: `${Math.min(50, Math.abs(frScaled))}%` }
-                        : { right: "50%", width: `${Math.min(50, Math.abs(frScaled))}%` }
-                      }
-                    />
-                    <div className="pe-exch-row-bar-thumb" style={{ left: `${barPos}%` }} />
-                  </div>
-                  <div className="pe-exch-row-bar-labels">
-                    <span>Short bias</span><span>Long bias</span>
-                  </div>
-                </div>
-                <div className="pe-exch-row-stats">
-                  <span className={`pe-exch-row-stat ${ex.fundingRate >= 0 ? "pos" : "neg"}`}>
-                    FR {ex.fundingPct}
-                  </span>
-                  <span className={`pe-exch-row-stat ${ex.priceChange >= 0 ? "pos" : "neg"}`}>
-                    Px {ex.priceChange >= 0 ? "+" : ""}{ex.priceChange.toFixed(2)}%
-                  </span>
-                </div>
+                {slices.map(ex => {
+                  const c = sigCfg[ex.signal];
+                  const intensity = Math.abs(ex.fundingRate) / maxFR;
+                  const alpha = (0.08 + intensity * 0.3).toFixed(3);
+                  const rowBg = ex.fundingRate > 0
+                    ? `linear-gradient(90deg, transparent 20%, rgba(74,222,128,${alpha}) 100%)`
+                    : ex.fundingRate < 0
+                    ? `linear-gradient(270deg, transparent 20%, rgba(248,113,113,${alpha}) 100%)`
+                    : 'linear-gradient(90deg, transparent 0%, rgba(100,116,139,0.25) 50%, transparent 100%)';
+                  return (
+                    <div key={ex.exchange} className="pe-exch-heat-row" style={{ background: rowBg }}>
+                      <div className="pe-exch-heat-name-wrap">
+                        <span className="pe-exch-heat-dot" style={{ background: ex.color }} />
+                        <span className="pe-exch-heat-name">{ex.exchange}</span>
+                      </div>
+                      <div className="pe-exch-heat-stats">
+                        <span className={`pe-exch-heat-fr ${ex.fundingRate >= 0 ? "pos" : "neg"}`}>{ex.fundingPct}</span>
+                        <span className={`pe-exch-heat-badge pe-exch-badge--${c.cls}`}>{c.icon} {c.label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })()}
       </div>
 
       <p className="pe-disclaimer">
