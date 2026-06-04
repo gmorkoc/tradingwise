@@ -6,13 +6,13 @@ import { AIQuotaWall } from "./AIQuotaWall";
 import "../styles/LiquidationHeatmap.css";
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
-const PRICE_ROWS  = 500;
+const PRICE_ROWS  = 700;
 const CANVAS_H    = 480;
 const PAD_RIGHT   = 90;   // price axis
 const TOTAL_PAD_R = PAD_RIGHT;
 const PAD_BOTTOM  = 30;
-const DECAY       = 0.985;  // slow decay → persistent bands
-const BLUR_R      = 3;      // narrow Gaussian → thin layers
+const DECAY       = 0.93;   // faster decay → finer, less persistent bands
+const BLUR_R      = 1;      // minimal blur → thin CoinGlass-style lines
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -21,19 +21,19 @@ type ColorStop = [number, [number, number, number]];
 
 const PALETTES: { stops: ColorStop[]; css: string }[] = [
   {
-    // CoinGlass-style: deep purple bg → dark teal → cyan → green → yellow
-    css: "linear-gradient(135deg,#080616 0%,#003060 25%,#007070 45%,#00AA50 65%,#80D000 85%,#FFE000 100%)",
+    // CoinGlass-style: near-black → deep purple → violet → magenta → hot pink → white
+    css: "linear-gradient(135deg,#08060f 0%,#2a006a 30%,#7700cc 55%,#dd00aa 75%,#ff44cc 90%,#ffffff 100%)",
     stops: [
-      [0.00, [  8,   6,  22]],  // deep purple — matches canvas background
-      [0.06, [ 12,  10,  45]],
-      [0.14, [  5,  30,  80]],
-      [0.25, [  0,  70, 110]],
-      [0.38, [  0, 110, 130]],
-      [0.52, [  0, 160, 120]],
-      [0.65, [  0, 200,  70]],
-      [0.80, [100, 220,   0]],
-      [0.92, [200, 230,   0]],
-      [1.00, [255, 240,   0]],
+      [0.00, [  8,   6,  15]],
+      [0.05, [ 14,   8,  35]],
+      [0.14, [ 30,   0,  80]],
+      [0.28, [ 70,   0, 160]],
+      [0.44, [140,   0, 200]],
+      [0.58, [200,   0, 160]],
+      [0.70, [230,  30, 130]],
+      [0.82, [255,  80, 180]],
+      [0.92, [255, 160, 210]],
+      [1.00, [255, 230, 245]],
     ],
   },
   {
@@ -78,6 +78,7 @@ const RANGES: { key: HeatmapRange; label: string }[] = [
   { key: "3d",  label: "3D"  },
   { key: "1w",  label: "1W"  },
   { key: "1m",  label: "1M"  },
+  { key: "3m",  label: "3M"  },
 ];
 
 const LEVERAGES_ALL = [10, 25, 50, 100, 125, 200] as const;
@@ -168,7 +169,7 @@ function buildMatrix(candles: CandleDataPoint[], activeLevs: Lev[]) {
     for (let r = 0; r < PRICE_ROWS; r++) acc[r] *= DECAY;
 
     for (const lev of activeLevs) {
-      const w = LEV_WEIGHTS[lev] * vol * 18;
+      const w = LEV_WEIGHTS[lev] * vol * 28;
       addHeat(toRow(c.high * (1 - 1 / lev)), w * 1.2);
       addHeat(toRow(mid   * (1 - 1 / lev)), w * 0.8);
       addHeat(toRow(c.low  * (1 + 1 / lev)), w * 1.2);
@@ -280,8 +281,8 @@ function renderCanvas(
 
   if (storeRef) storeRef.current = { pMin, pMax, maxVal, matrix, visibleCandles: candles };
 
-  // Background — deep purple matching the palette's zero-heat colour
-  const BG = isDark ? "#080616" : "#ffffff";
+  // Background — near-black with purple tint, matching CoinGlass
+  const BG = isDark ? "#08060f" : "#ffffff";
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -292,7 +293,7 @@ function renderCanvas(
     const data    = imgData.data;
     if (isDark) {
       for (let i = 0; i < data.length; i += 4) {
-        data[i] = 8; data[i + 1] = 6; data[i + 2] = 22; data[i + 3] = 255;
+        data[i] = 8; data[i + 1] = 6; data[i + 2] = 15; data[i + 3] = 255;
       }
     } else {
       for (let i = 0; i < data.length; i += 4) {
@@ -311,11 +312,11 @@ function renderCanvas(
         const raw = matrix[base + row] / maxVal;
         if (raw < minDisplay) continue;
 
-        const v         = Math.pow(raw, 0.50);
+        const v         = Math.pow(raw, 0.38);
         const [r, g, b] = heatRgb(v, stops);
 
         const yTop    = Math.floor(H - ((row + 1) / PRICE_ROWS) * H);
-        const yBottom = Math.floor(H - (row / PRICE_ROWS) * H);
+        const yBottom = Math.max(yTop + 1, Math.floor(H - (row / PRICE_ROWS) * H));
 
         for (let y = yTop; y < yBottom; y++) {
           for (let x = xStart; x < xEnd; x++) {
@@ -347,19 +348,23 @@ function renderCanvas(
     const c    = candles[i];
     const cx   = (i + 0.5) * cw;
     const bull = c.close >= c.open;
-    const col  = bull ? "rgba(74,222,128,0.9)" : "rgba(248,113,113,0.9)";
+    const bodyColor = bull ? "rgba(38,166,154,0.95)" : "rgba(239,83,80,0.95)";
+    const wickColor = bull ? "rgba(38,166,154,0.7)"  : "rgba(239,83,80,0.7)";
 
-    ctx.strokeStyle = col;
-    ctx.lineWidth   = Math.max(0.7, cw * 0.10);
+    // Wick — always 1px, CoinGlass style
+    ctx.strokeStyle = wickColor;
+    ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(cx, pToY(c.high));
-    ctx.lineTo(cx, pToY(c.low));
+    ctx.moveTo(Math.round(cx), pToY(c.high));
+    ctx.lineTo(Math.round(cx), pToY(c.low));
     ctx.stroke();
 
+    // Body — narrow, ~35% of column width
     const bodyTop = Math.min(pToY(c.open), pToY(c.close));
-    const bodyH   = Math.max(Math.abs(pToY(c.close) - pToY(c.open)), 1.5);
-    ctx.fillStyle = col;
-    ctx.fillRect(cx - cw * 0.30, bodyTop, cw * 0.60, bodyH);
+    const bodyH   = Math.max(Math.abs(pToY(c.close) - pToY(c.open)), 1);
+    const halfW   = Math.max(0.5, cw * 0.175);
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(Math.round(cx - halfW), bodyTop, Math.round(halfW * 2), bodyH);
   }
 
   /* ── Current price dashed line ─────────────────────────────────────────── */
@@ -374,7 +379,7 @@ function renderCanvas(
 
   /* ── Price axis ─────────────────────────────────────────────────────────── */
   const axisX = W;
-  ctx.fillStyle = isDark ? "#080616" : "#fff";
+  ctx.fillStyle = isDark ? "#08060f" : "#fff";
   ctx.fillRect(axisX, 0, PAD_RIGHT, H + PAD_BOTTOM);
   ctx.strokeStyle = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)";
   ctx.lineWidth   = 1;
@@ -452,7 +457,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
 
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState("");
-  const [rangeIdx,   setRangeIdx]   = useState(2); // default "3D"
+  const [rangeIdx,   setRangeIdx]   = useState(6); // default "3M"
   const [activeLevs, setActiveLevs] = useState<Lev[]>([10, 25, 50, 100, 125, 200]);
   const [zoomLevel,  setZoomLevel]  = useState(1);
   const [analysis,   setAnalysis]   = useState<LiqAnalysis | null>(null);

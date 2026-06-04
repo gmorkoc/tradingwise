@@ -89,7 +89,7 @@ export type CoinSymbol = typeof COINS[number]['symbol'];
 // HOBBYIST plan supports: 4h, 6h, 8h, 12h, 1d, 1w — 1min/1h use CryptoCompare, 1sec uses OKX public API
 type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week';
 
-export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m';
+export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m' | '3m';
 
 const HEATMAP_RANGE: Record<HeatmapRange, { interval: string; limit: number }> = {
   '12h': { interval: '4h', limit: 3  },
@@ -98,6 +98,7 @@ const HEATMAP_RANGE: Record<HeatmapRange, { interval: string; limit: number }> =
   '3d':  { interval: '4h', limit: 18 },
   '1w':  { interval: '4h', limit: 42 },
   '1m':  { interval: '1d', limit: 30 },
+  '3m':  { interval: '1d', limit: 90 },
 };
 
 type CgInterval = Exclude<TimeInterval, '1sec' | '1min' | '5min' | '15min' | '1h'>;
