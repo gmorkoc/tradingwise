@@ -134,7 +134,7 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
       if (!cancelled) { setExchangeData(data); setExchLoading(false); }
     };
     loadExch();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; lastExchFetch.current = 0; };
   }, [coin]);
 
   useEffect(() => {
@@ -348,7 +348,7 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
         </div>
         <div className="pe-exch-rows">
           {(exchLoading && exchangeData.length === 0
-            ? ["Binance","Bybit","OKX","Bitget"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
+            ? ["Binance","Bybit","OKX","Bitget","Coinbase"].map(e => ({ exchange: e, signal: "neutral" as const, fundingRate: 0, fundingPct: "0.0000%", priceChange: 0 }))
             : exchangeData
           ).map(ex => {
             const cfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {

@@ -40,6 +40,18 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/bybit-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        '/bnf-api': {
+          target: 'https://fapi.binance.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bnf-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
+        '/coinbase-api': {
+          target: 'https://api.international.coinbase.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/coinbase-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
         '/api/openai': {
           target: 'https://api.openai.com',
           changeOrigin: true,

@@ -614,54 +614,52 @@ export const coinglass = {
     const mkNeutral = (exchange: string): ExchangeActivity =>
       ({ exchange, fundingRate: 0, fundingPct: '0.0000%', priceChange, signal: 'neutral' });
 
-    // ── Binance: Binance Futures public API (open CORS) ──────────────────────
-    const binanceP = fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`)
-      .then(r => r.json()).catch(() => null);
+    // CoinGlass funding-rate/history: works for Binance on hobbyist plan, try Bybit too
+    const parseCgFR = (res: { data?: { code?: string; data?: { close?: string }[] } } | null): number => {
+      if (res?.data?.code !== '0') return NaN;
+      return parseFloat(res.data.data?.[0]?.close ?? '');
+    };
 
-    // ── Bybit: /bybit-api rewrite → api.bybit.com ────────────────────────────
-    const bybitP = fetch(`/bybit-api/v5/market/tickers?category=linear&symbol=${sym}`)
-      .then(r => r.json()).catch(() => null);
+    const [bnRes, bybitCgRes, okxRes, bitgetRes, cbCgRes, cbIntxRes] = await Promise.all([
+      api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Binance' } }).catch(() => null),
+      api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Bybit' }   }).catch(() => null),
+      fetch(`/okx-api/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
+      fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${sym}&productType=USDT-FUTURES`).then(r => r.json()).catch(() => null),
+      api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Coinbase' } }).catch(() => null),
+      fetch(`/coinbase-api/api/v1/instruments/${coin}-PERP/quote`).then(r => r.json()).catch(() => null),
+    ]);
 
-    // ── OKX: /okx-api rewrite → www.okx.com ─────────────────────────────────
-    const okxP = fetch(`/okx-api/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`)
-      .then(r => r.json()).catch(() => null);
-
-    // ── Bitget: direct public API (open CORS) ────────────────────────────────
-    const bitgetP = fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${sym}&productType=USDT-FUTURES`)
-      .then(r => r.json()).catch(() => null);
-
-    const [bnRes, bybitRes, okxRes, bitgetRes] = await Promise.all([binanceP, bybitP, okxP, bitgetP]);
-
-    // ── Parse Binance ────────────────────────────────────────────────────────
+    // ── Binance via CoinGlass ────────────────────────────────────────────────
     let binance = mkNeutral('Binance');
-    const bnFR = parseFloat(bnRes?.lastFundingRate ?? '');
-    if (isFinite(bnFR)) {
-      binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR) };
-    }
+    const bnFR = parseCgFR(bnRes);
+    if (isFinite(bnFR)) binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR) };
 
-    // ── Parse Bybit ──────────────────────────────────────────────────────────
+    // ── Bybit via CoinGlass (falls back to neutral if hobbyist plan blocks) ──
     let bybit = mkNeutral('Bybit');
-    const bybitTicker = bybitRes?.result?.list?.[0];
-    const bybitFR = parseFloat(bybitTicker?.fundingRate ?? '');
-    if (isFinite(bybitFR)) {
-      bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR) };
-    }
+    const bybitFR = parseCgFR(bybitCgRes);
+    if (isFinite(bybitFR)) bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR) };
 
-    // ── Parse OKX ────────────────────────────────────────────────────────────
+    // ── OKX via /okx-api proxy ───────────────────────────────────────────────
     let okx = mkNeutral('OKX');
     const okxFR = parseFloat(okxRes?.data?.[0]?.fundingRate ?? '');
-    if (isFinite(okxFR)) {
-      okx = { exchange: 'OKX', fundingRate: okxFR, fundingPct: fmt(okxFR), priceChange, signal: classify(okxFR) };
-    }
+    if (isFinite(okxFR)) okx = { exchange: 'OKX', fundingRate: okxFR, fundingPct: fmt(okxFR), priceChange, signal: classify(okxFR) };
 
-    // ── Parse Bitget ─────────────────────────────────────────────────────────
+    // ── Bitget direct (data may be object or array) ──────────────────────────
     let bitget = mkNeutral('Bitget');
-    const bitgetFR = parseFloat(bitgetRes?.data?.fundingRate ?? '');
-    if (isFinite(bitgetFR)) {
-      bitget = { exchange: 'Bitget', fundingRate: bitgetFR, fundingPct: fmt(bitgetFR), priceChange, signal: classify(bitgetFR) };
-    }
+    const bgData = bitgetRes?.data;
+    const bitgetFR = parseFloat(
+      (Array.isArray(bgData) ? bgData[0]?.fundingRate : bgData?.fundingRate) ?? ''
+    );
+    if (isFinite(bitgetFR)) bitget = { exchange: 'Bitget', fundingRate: bitgetFR, fundingPct: fmt(bitgetFR), priceChange, signal: classify(bitgetFR) };
 
-    return [binance, bybit, okx, bitget];
+    // ── Coinbase: CoinGlass first, fallback to INTX instrument endpoint ──────
+    let coinbase = mkNeutral('Coinbase');
+    const cbFRcg = parseCgFR(cbCgRes);
+    const cbFRintx = parseFloat(cbIntxRes?.predicted_funding ?? cbIntxRes?.funding_rate ?? '');
+    const cbFR = isFinite(cbFRcg) ? cbFRcg : cbFRintx;
+    if (isFinite(cbFR)) coinbase = { exchange: 'Coinbase', fundingRate: cbFR, fundingPct: fmt(cbFR), priceChange, signal: classify(cbFR) };
+
+    return [binance, bybit, okx, bitget, coinbase];
   },
 
   getHistoricalPrices: async (interval: TimeInterval): Promise<PriceDataPoint[]> => {
