@@ -1,7 +1,7 @@
 .pe-wrap {
-  padding: 20px 20px 40px;
-  max-width: 860px;
-  margin: 0 auto;
+  padding: 20px 24px 40px;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -38,15 +38,15 @@
   flex-shrink: 0;
 }
 
-/* ── Gauge card ── */
+/* ── Gauge card — full width ── */
 .pe-gauge-card {
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  padding: 22px 24px 18px;
+  padding: 24px 32px 20px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 40px;
 }
 
 .pe-gauge-bar-wrap {
@@ -55,10 +55,10 @@
 
 .pe-gauge-track {
   position: relative;
-  height: 14px;
-  border-radius: 8px;
+  height: 18px;
+  border-radius: 9px;
   background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #facc15 50%, #4ade80 75%, #22c55e 100%);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .pe-gauge-fill {
@@ -67,10 +67,10 @@
 
 .pe-gauge-pointer {
   position: absolute;
-  top: -5px;
+  top: -6px;
   transform: translateX(-50%);
   width: 6px;
-  height: 24px;
+  height: 30px;
   background: var(--color-text);
   border-radius: 3px;
   box-shadow: 0 0 0 2px var(--color-card-bg);
@@ -80,57 +80,77 @@
 .pe-gauge-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .pe-score-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 90px;
+  gap: 4px;
+  min-width: 110px;
 }
 
 .pe-score-num {
-  font-size: 2.4rem;
+  font-size: 3rem;
   font-weight: 900;
   color: var(--color-text);
   line-height: 1;
 }
 
 .pe-score-slash {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   color: var(--color-text-muted);
 }
 
 .pe-score-label {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 700;
   border-radius: 20px;
-  padding: 3px 10px;
-  margin-top: 2px;
+  padding: 4px 14px;
+  margin-top: 4px;
 }
 .pe-score-label--bull    { background: rgba(74,222,128,0.15); color: #4ade80; }
 .pe-score-label--neutral { background: rgba(148,163,184,0.15); color: var(--color-text-muted); }
 .pe-score-label--bear    { background: rgba(239,68,68,0.15); color: #f87171; }
 
-/* ── Price targets ── */
-.pe-targets-row {
+/* ── Two-column body ── */
+.pe-body {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Price targets ── */
+.pe-targets-col {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+
+.pe-targets-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .pe-target-card {
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 16px 20px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 16px;
+}
+
+.pe-target-info {
+  flex: 1;
 }
 
 .pe-target-label {
@@ -139,16 +159,16 @@
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  margin-bottom: 6px;
 }
 
 .pe-target-values {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 16px;
 }
 
 .pe-target-bull {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #4ade80;
   display: flex;
@@ -157,7 +177,7 @@
 }
 
 .pe-target-bear {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #f87171;
   display: flex;
@@ -172,7 +192,7 @@
 .pe-target-atr {
   font-size: 0.68rem;
   color: var(--color-text-muted);
-  margin-top: 2px;
+  margin-top: 6px;
 }
 
 /* ── Signal breakdown ── */
@@ -180,7 +200,7 @@
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  padding: 16px 20px;
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -198,15 +218,15 @@
 .pe-signal-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 0;
+  gap: 14px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--color-border);
 }
 .pe-signal-row:last-child { border-bottom: none; }
 
 .pe-signal-icon {
-  font-size: 1.25rem;
-  width: 28px;
+  font-size: 1.3rem;
+  width: 30px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -224,51 +244,51 @@
 }
 
 .pe-signal-name {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--color-text);
 }
 
 .pe-signal-value {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .pe-signal-detail {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   color: var(--color-text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .pe-signal-score {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .pe-pips {
   display: flex;
-  gap: 3px;
+  gap: 4px;
 }
 
 .pe-pip {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  opacity: 0.2;
+  opacity: 0.18;
   transition: opacity 0.2s;
 }
-.pe-pip--bull  { background: #4ade80; }
-.pe-pip--bear  { background: #f87171; }
+.pe-pip--bull    { background: #4ade80; }
+.pe-pip--bear    { background: #f87171; }
 .pe-pip--neutral { background: var(--color-text-muted); }
-.pe-pip--active { opacity: 1; }
+.pe-pip--active  { opacity: 1; }
 
 .pe-signal-dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -280,19 +300,23 @@
 .pe-disclaimer {
   font-size: 0.68rem;
   color: var(--color-text-muted);
-  opacity: 0.7;
+  opacity: 0.65;
   text-align: center;
   margin: 0;
   padding: 0 8px;
 }
 
-/* ── Mobile ── */
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .pe-body { grid-template-columns: 1fr; }
+  .pe-target-card { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
 @media (max-width: 640px) {
   .pe-wrap { padding: 14px 12px 32px; }
-  .pe-gauge-card { flex-direction: column; gap: 16px; align-items: stretch; }
-  .pe-score-box { flex-direction: row; align-items: center; justify-content: center; gap: 10px; }
-  .pe-score-num { font-size: 1.8rem; }
-  .pe-targets-row { grid-template-columns: 1fr; }
+  .pe-gauge-card { flex-direction: column; gap: 16px; align-items: stretch; padding: 18px 16px; }
+  .pe-score-box { flex-direction: row; align-items: center; justify-content: center; gap: 12px; }
+  .pe-score-num { font-size: 2rem; }
   .pe-signal-row { gap: 8px; }
   .pe-pips { display: none; }
 }

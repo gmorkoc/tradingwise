@@ -256,28 +256,34 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
         </div>
       </div>
 
-      {/* Price targets */}
-      <div className="pe-targets-row">
-        {targets.map(t => (
-          <div key={t.label} className="pe-target-card">
-            <div className="pe-target-label">{t.label}</div>
-            <div className="pe-target-values">
-              <div className="pe-target-bull">
-                <span className="pe-target-arrow">▲</span>
-                {fmtPrice(t.bull)}
-              </div>
-              <div className="pe-target-bear">
-                <span className="pe-target-arrow">▼</span>
-                {fmtPrice(t.bear)}
+      {/* Two-column body */}
+      <div className="pe-body">
+
+        {/* Left col: Price targets */}
+        <div className="pe-targets-col">
+          <div className="pe-targets-label">Price Targets</div>
+          {targets.map(t => (
+            <div key={t.label} className="pe-target-card">
+              <div className="pe-target-info">
+                <div className="pe-target-label">{t.label}</div>
+                <div className="pe-target-values">
+                  <div className="pe-target-bull">
+                    <span className="pe-target-arrow">▲</span>
+                    {fmtPrice(t.bull)}
+                  </div>
+                  <div className="pe-target-bear">
+                    <span className="pe-target-arrow">▼</span>
+                    {fmtPrice(t.bear)}
+                  </div>
+                </div>
+                <div className="pe-target-atr">ATR {fmtPrice(t.atr)}</div>
               </div>
             </div>
-            <div className="pe-target-atr">ATR {fmtPrice(t.atr)}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Signal breakdown */}
-      <div className="pe-signals-card">
+        {/* Right col: Signal breakdown */}
+        <div className="pe-signals-card">
         <div className="pe-signals-title">Signal Breakdown</div>
         {signals.map(sig => {
           const pip = Math.round(sig.score);
@@ -308,7 +314,9 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
             </div>
           );
         })}
-      </div>
+        </div>
+
+      </div>{/* end pe-body */}
 
       <p className="pe-disclaimer">
         For informational purposes only. Not financial advice. Past signal correlations do not guarantee future results.
