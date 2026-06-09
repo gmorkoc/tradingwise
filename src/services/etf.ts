@@ -1,21 +1,28 @@
-import axios, { type AxiosInstance } from "axios";
+import axios from "axios";
 
-function addRetry(instance: AxiosInstance, retries = 2) {
-  instance.interceptors.response.use(undefined, async (err) => {
-    const cfg = err.config;
-    if (!cfg) return Promise.reject(err);
-    cfg._retry = (cfg._retry ?? 0) + 1;
-    if (cfg._retry > retries) return Promise.reject(err);
-    await new Promise(r => setTimeout(r, cfg._retry * 1500));
-    return instance(cfg);
-  });
-}
+const YF_TICKERS = ['IBIT', 'FBTC', 'GBTC', 'ARKB', 'BITB', 'BRRR', 'HODL', 'EZBC', 'BTCO', 'BTCW'];
+
+const YF_NAMES: Record<string, string> = {
+  IBIT:  'iShares Bitcoin Trust',
+  FBTC:  'Fidelity Wise Origin Bitcoin',
+  GBTC:  'Grayscale Bitcoin Trust',
+  ARKB:  'ARK 21Shares Bitcoin ETF',
+  BITB:  'Bitwise Bitcoin ETF',
+  BRRR:  'Valkyrie Bitcoin Fund',
+  HODL:  'VanEck Bitcoin ETF',
+  EZBC:  'Franklin Bitcoin ETF',
+  BTCO:  'Invesco Galaxy Bitcoin ETF',
+  BTCW:  'WisdomTree Bitcoin Fund',
+};
+
+// IBIT shares ≈ 0.00094 BTC each; invert to get approx BTC spot price from IBIT price
+const IBIT_TO_BTC = 1 / 0.00094;
 
 export interface ETFRow {
   ticker: string;
   name: string;
-  dailyFlowUsd: number;    // USD — positive = inflow, negative = outflow
-  aumUsd: number;          // USD
+  dailyFlowUsd: number;   // daily trading volume in USD (proxy for activity)
+  aumUsd: number;
   priceUsd: number;
   priceChangePct: number;
   volumeUsd: number;
@@ -23,74 +30,66 @@ export interface ETFRow {
 }
 
 export interface ETFDayTotal {
-  date: string;            // "YYYY-MM-DD"
-  flowUsd: number;         // USD total net flow (positive = inflow)
-  priceUsd: number;        // BTC price that day
+  date: string;
+  flowUsd: number;    // IBIT daily USD volume (proxy for market activity)
+  priceUsd: number;   // estimated BTC spot price
   perFund: { etf_ticker: string; flow_usd: number }[];
 }
 
 export interface ETFData {
-  rows: ETFRow[];          // latest fund snapshot
-  history: ETFDayTotal[];  // 30-day daily totals
-  latestDate: string;      // trading date of most recent history entry
+  rows: ETFRow[];
+  history: ETFDayTotal[];
+  latestDate: string;
+  source: 'yahoo';
 }
 
-const api = axios.create({ baseURL: "/cg-api", timeout: 15000 });
-addRetry(api);
-
 export async function getETFData(): Promise<ETFData> {
-  const [listRes, histRes] = await Promise.all([
-    api.get("/etf/bitcoin/list"),
-    api.get("/etf/bitcoin/flow-history", { params: { days: 30 } }),
+  const symbols = YF_TICKERS.join(',');
+
+  const [quoteRes, histRes] = await Promise.all([
+    axios.get(`/yf-api/v7/finance/quote`, {
+      params: { symbols, fields: 'shortName,regularMarketPrice,regularMarketChangePercent,regularMarketVolume,marketCap,sharesOutstanding' },
+      timeout: 12000,
+    }),
+    axios.get(`/yf-api/v8/finance/chart/IBIT`, {
+      params: { interval: '1d', range: '1mo' },
+      timeout: 12000,
+    }),
   ]);
 
-  // ── Fund list ──────────────────────────────────────────────────────────
-  interface CgFund {
-    ticker: string;
-    fund_name: string;
-    aum_usd: string | number;
-    volume_usd: string | number;
-    price_usd: string | number;
-    price_change_percent: string | number;
-    shares_outstanding: string | number;
-  }
-  const fundArr: CgFund[] = listRes.data?.data ?? [];
+  // ── Fund rows ──────────────────────────────────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const quotes: any[] = quoteRes.data?.quoteResponse?.result ?? [];
+  const rows: ETFRow[] = quotes.map(q => {
+    const volUsd = (q.regularMarketVolume ?? 0) * (q.regularMarketPrice ?? 0);
+    return {
+      ticker:           q.symbol,
+      name:             q.shortName ?? YF_NAMES[q.symbol as string] ?? q.symbol,
+      dailyFlowUsd:     volUsd,
+      aumUsd:           q.marketCap ?? 0,
+      priceUsd:         q.regularMarketPrice ?? 0,
+      priceChangePct:   q.regularMarketChangePercent ?? 0,
+      volumeUsd:        volUsd,
+      sharesOutstanding: q.sharesOutstanding ?? 0,
+    };
+  });
 
-  // ── Flow history ───────────────────────────────────────────────────────
-  interface CgHistEntry {
-    timestamp: number;
-    flow_usd: number;
-    price_usd: number;
-    etf_flows: { etf_ticker: string; flow_usd: number }[];
-  }
-  const histArr: CgHistEntry[] = histRes.data?.data ?? [];
+  // ── 30-day IBIT history → proxy for market activity ───────────────────
+  const chart  = histRes.data?.chart?.result?.[0];
+  const tsList: number[]  = chart?.timestamp ?? [];
+  const closes: number[]  = chart?.indicators?.quote?.[0]?.close  ?? [];
+  const vols:   number[]  = chart?.indicators?.quote?.[0]?.volume ?? [];
 
-  // Latest trading day's per-fund flows for the table
-  const latestEntry = histArr[histArr.length - 1];
-  const latestFlowMap: Record<string, number> = {};
-  if (latestEntry?.etf_flows) {
-    latestEntry.etf_flows.forEach(f => { latestFlowMap[f.etf_ticker] = f.flow_usd; });
-  }
-
-  const rows: ETFRow[] = fundArr.map(f => ({
-    ticker: f.ticker,
-    name: f.fund_name,
-    dailyFlowUsd: latestFlowMap[f.ticker] ?? 0,
-    aumUsd: Number(f.aum_usd) || 0,
-    priceUsd: Number(f.price_usd) || 0,
-    priceChangePct: Number(f.price_change_percent) || 0,
-    volumeUsd: Number(f.volume_usd) || 0,
-    sharesOutstanding: Number(f.shares_outstanding) || 0,
-  }));
-
-  const history: ETFDayTotal[] = histArr.map(entry => ({
-    date: new Date(entry.timestamp).toISOString().slice(0, 10),
-    flowUsd: entry.flow_usd,
-    priceUsd: entry.price_usd,
-    perFund: entry.etf_flows ?? [],
-  }));
+  const history: ETFDayTotal[] = tsList
+    .map((ts, i) => ({
+      date:     new Date(ts * 1000).toISOString().slice(0, 10),
+      flowUsd:  (vols[i] ?? 0) * (closes[i] ?? 0),
+      priceUsd: Math.round((closes[i] ?? 0) * IBIT_TO_BTC),
+      perFund:  [],
+    }))
+    .filter(d => d.flowUsd > 0);
 
   const latestDate = history[history.length - 1]?.date ?? new Date().toISOString().slice(0, 10);
 
-  return { rows, history, latestDate };
+  return { rows, history, latestDate, source: 'yahoo' };
 }

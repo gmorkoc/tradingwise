@@ -577,6 +577,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 {(livePrice ?? btcData?.price) && (
                   <span className="mch-coin-price">${(livePrice ?? btcData!.price!).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
                 )}
+                <span className="price-source">via Binance</span>
               </div>
               <span className="mch-coin-chevron">▾</span>
             </button>
@@ -681,6 +682,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               );
             })()}
           </div>
+
+          {btcData && <span className="price-source-badge">via CoinGlass</span>}
 
           <div className="mch-right">
             <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
@@ -919,6 +922,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               </div>
               <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
                 ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="pticker-price-source">via Binance</span>
               </div>
               {openP > 0 && (
                 <div className={`pticker-delta ${up ? "pticker-delta--up" : "pticker-delta--down"}`}>

@@ -1589,6 +1589,31 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .mch-coin-chevron {
   display: none;
 }
+.price-source {
+  font-size: 0.58rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  display: block;
+}
+.price-source-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 3px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  margin: 0 8px;
+}
 
 /* Scrollable stats strip */
 .mch-stats {
@@ -2153,8 +2178,14 @@ html[data-theme="light"] .icon-strip-quota-bar {
     order: 2;
   }
 
-  .mch-stats {
+  .price-source-badge {
     order: 3;
+    align-self: center;
+    margin: 2px 0 2px 4px;
+  }
+
+  .mch-stats {
+    order: 4;
     flex: 0 0 100%;
     width: 100%;
     height: auto;
@@ -2338,6 +2369,15 @@ html[data-theme="light"] .icon-strip-quota-bar {
 }
 .pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 60px #22c55e88 !important; }
 .pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
+.pticker-price-source {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.35);
+  text-shadow: none;
+  margin-top: 2px;
+}
 .pticker-live-dot {
   display: flex;
   align-items: center;

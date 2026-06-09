@@ -259,7 +259,12 @@ export function Watchlist() {
     <div className="wl-card">
       <div className="wl-header">
         <h3 className="wl-title">Watchlist</h3>
-        <span className="wl-subtitle">Updated every minute · CoinGecko</span>
+        <span className="wl-subtitle">
+          Updated every minute ·{" "}
+          <a className="wl-source-badge" href="https://www.coingecko.com" target="_blank" rel="noopener noreferrer">
+            Powered by CoinGecko
+          </a>
+        </span>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
             + Add Coin

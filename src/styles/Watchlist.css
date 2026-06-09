@@ -28,6 +28,17 @@
   border: 1px solid var(--color-border);
   border-radius: 20px;
 }
+.wl-source-badge {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+.wl-source-badge:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
 
 /* ── Search / add ───────────────────────────────────────────────────────── */
 .wl-search-wrap {

@@ -33,7 +33,7 @@ function HistoryChart({ history, selectedDate, onSelect }: {
   const maxAbs = Math.max(...recent.map(d => Math.abs(d.flowUsd)), 1);
   return (
     <div className="etf-chart-card">
-      <div className="etf-chart-title">Daily Net Inflow — 30 Days (USD)</div>
+      <div className="etf-chart-title">IBIT Daily Volume — 30 Days</div>
       <div className="etf-hist-bars">
         {recent.map((day, i) => {
           const pct = (Math.abs(day.flowUsd) / maxAbs) * 96;
@@ -218,24 +218,12 @@ export function ETFInflows() {
     ? data.history.find(d => d.date === selectedDate) ?? null
     : null;
 
-  const flowMap: Record<string, number> = {};
-  if (historyDay) {
-    historyDay.perFund.forEach(f => { flowMap[f.etf_ticker] = f.flow_usd; });
-  }
-
-  const sorted = [...data.rows].sort((a, b) => b.aumUsd - a.aumUsd).map(r => ({
-    ...r,
-    dailyFlowUsd: historyDay ? (flowMap[r.ticker] ?? 0) : r.dailyFlowUsd,
-  }));
+  const sorted = [...data.rows].sort((a, b) => b.aumUsd - a.aumUsd);
 
   const totalFlow = sorted.reduce((s, r) => s + r.dailyFlowUsd, 0);
   const totalAum  = data.rows.reduce((s, r) => s + r.aumUsd, 0);
   const totalVol  = data.rows.reduce((s, r) => s + r.volumeUsd, 0);
   const maxAbsFlow = Math.max(...sorted.map(r => Math.abs(r.dailyFlowUsd)), 1);
-
-  const latest30 = data.history.slice(-30);
-  const inDays  = latest30.filter(d => d.flowUsd > 0).length;
-  const outDays = latest30.filter(d => d.flowUsd < 0).length;
 
   const displayDate = historyDay ? historyDay.date : data.latestDate;
 
@@ -245,7 +233,7 @@ export function ETFInflows() {
         <div>
           <h2 className="etf-title">Bitcoin Spot ETF Tracker</h2>
           <div className="etf-date">
-            Data from Coinglass · {displayDate} · {inDays} inflow days / {outDays} outflow days (30d)
+            via Yahoo Finance · {displayDate} · 30d IBIT volume history
           </div>
         </div>
       </div>
@@ -260,8 +248,8 @@ export function ETFInflows() {
       {/* Summary cards */}
       <div className="etf-summary-row">
         <div className="etf-summary-card">
-          <div className="etf-summary-label">Net Flow{historyDay ? ` · ${historyDay.date}` : ""}</div>
-          <div className={`etf-summary-value ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
+          <div className="etf-summary-label">Total Volume{historyDay ? ` · ${historyDay.date}` : ""}</div>
+          <div className="etf-summary-value">{fmtUsd(totalFlow)}</div>
         </div>
         <div className="etf-summary-card">
           <div className="etf-summary-label">Total AUM</div>
@@ -286,7 +274,7 @@ export function ETFInflows() {
           <thead>
             <tr>
               <th>Fund</th>
-              <th>Daily Flow</th>
+              <th>Daily Vol.</th>
               <th>Price</th>
               <th>Day %</th>
               <th>AUM</th>
@@ -301,7 +289,7 @@ export function ETFInflows() {
                   <div className="etf-name-sub">{row.name}</div>
                 </td>
                 <td className="etf-flow-cell">
-                  <div className={`etf-flow-val ${cls(row.dailyFlowUsd)}`}>
+                  <div className="etf-flow-val">
                     {row.dailyFlowUsd === 0 ? "–" : fmtUsd(row.dailyFlowUsd)}
                   </div>
                   <FlowBar value={row.dailyFlowUsd} max={maxAbsFlow} />
@@ -323,7 +311,7 @@ export function ETFInflows() {
             <tr className="etf-total-row">
               <td>Total ({data.rows.length} funds)</td>
               <td className="etf-flow-cell">
-                <div className={`etf-flow-val ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
+                <div className="etf-flow-val">{fmtUsd(totalFlow)}</div>
               </td>
               <td></td>
               <td></td>

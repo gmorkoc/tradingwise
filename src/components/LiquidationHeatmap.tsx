@@ -11,7 +11,7 @@ const CANVAS_H    = 480;
 const PAD_RIGHT   = 90;   // price axis
 const TOTAL_PAD_R = PAD_RIGHT;
 const PAD_BOTTOM  = 30;
-const DECAY       = 0.93;   // faster decay → finer, less persistent bands
+const DECAY       = 0.968;  // slow decay → long persistent bands like CoinGlass
 const BLUR_R      = 1;      // minimal blur → thin CoinGlass-style lines
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -21,19 +21,20 @@ type ColorStop = [number, [number, number, number]];
 
 const PALETTES: { stops: ColorStop[]; css: string }[] = [
   {
-    // CoinGlass-style: near-black → deep purple → violet → magenta → hot pink → white
-    css: "linear-gradient(135deg,#08060f 0%,#2a006a 30%,#7700cc 55%,#dd00aa 75%,#ff44cc 90%,#ffffff 100%)",
+    // CoinGlass exact: near-black purple → dark purple → blue-teal → teal → green → lime → yellow
+    css: "linear-gradient(135deg,#0d0221 0%,#1a0050 20%,#004480 38%,#007890 52%,#00b060 68%,#80d800 84%,#ffff00 100%)",
     stops: [
-      [0.00, [  8,   6,  15]],
-      [0.05, [ 14,   8,  35]],
-      [0.14, [ 30,   0,  80]],
-      [0.28, [ 70,   0, 160]],
-      [0.44, [140,   0, 200]],
-      [0.58, [200,   0, 160]],
-      [0.70, [230,  30, 130]],
-      [0.82, [255,  80, 180]],
-      [0.92, [255, 160, 210]],
-      [1.00, [255, 230, 245]],
+      [0.00, [ 13,   2,  33]],
+      [0.07, [ 22,   4,  65]],
+      [0.16, [ 30,   0, 100]],
+      [0.26, [  0,  40, 110]],
+      [0.37, [  0,  90, 130]],
+      [0.49, [  0, 140, 120]],
+      [0.60, [  0, 185,  80]],
+      [0.72, [ 60, 210,  20]],
+      [0.83, [140, 225,   0]],
+      [0.92, [220, 235,   0]],
+      [1.00, [255, 245,   0]],
     ],
   },
   {
@@ -281,8 +282,8 @@ function renderCanvas(
 
   if (storeRef) storeRef.current = { pMin, pMax, maxVal, matrix, visibleCandles: candles };
 
-  // Background — near-black with purple tint, matching CoinGlass
-  const BG = isDark ? "#08060f" : "#ffffff";
+  // Background — dark purple matching CoinGlass
+  const BG = isDark ? "#0d0221" : "#ffffff";
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -293,7 +294,7 @@ function renderCanvas(
     const data    = imgData.data;
     if (isDark) {
       for (let i = 0; i < data.length; i += 4) {
-        data[i] = 8; data[i + 1] = 6; data[i + 2] = 15; data[i + 3] = 255;
+        data[i] = 13; data[i + 1] = 2; data[i + 2] = 33; data[i + 3] = 255;
       }
     } else {
       for (let i = 0; i < data.length; i += 4) {
@@ -362,7 +363,7 @@ function renderCanvas(
     // Body — narrow, ~35% of column width
     const bodyTop = Math.min(pToY(c.open), pToY(c.close));
     const bodyH   = Math.max(Math.abs(pToY(c.close) - pToY(c.open)), 1);
-    const halfW   = Math.max(0.5, cw * 0.175);
+    const halfW   = Math.min(3, Math.max(0.5, cw * 0.175));
     ctx.fillStyle = bodyColor;
     ctx.fillRect(Math.round(cx - halfW), bodyTop, Math.round(halfW * 2), bodyH);
   }
@@ -379,7 +380,7 @@ function renderCanvas(
 
   /* ── Price axis ─────────────────────────────────────────────────────────── */
   const axisX = W;
-  ctx.fillStyle = isDark ? "#08060f" : "#fff";
+  ctx.fillStyle = isDark ? "#0d0221" : "#fff";
   ctx.fillRect(axisX, 0, PAD_RIGHT, H + PAD_BOTTOM);
   ctx.strokeStyle = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)";
   ctx.lineWidth   = 1;

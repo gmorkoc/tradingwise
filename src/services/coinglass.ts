@@ -109,21 +109,6 @@ const HEATMAP_RANGE: Record<HeatmapRange, { interval: string; limit: number }> =
   '3m':  { interval: '1d', limit: 90 },
 };
 
-type CgInterval = Exclude<TimeInterval, '1sec' | '1min' | '5min' | '15min' | '1h'>;
-const CG_INTERVAL: Record<CgInterval, { interval: string; limit: number }> = {
-  '4h':    { interval: '4h', limit: 168 },
-  '6h':    { interval: '6h', limit: 60  },
-  '1day':  { interval: '1d', limit: 90  },
-  '1week': { interval: '1w', limit: 52  },
-};
-
-// Unique CG intervals used by getIntervalTrends — avoids duplicate requests
-const UNIQUE_CG_INTERVALS = [
-  { interval: '4h', limit: 42 },
-  { interval: '6h', limit: 60 },
-  { interval: '1d', limit: 30 },
-  { interval: '1w', limit: 52 },
-] as const;
 
 function toCgSymbol(coin: CoinSymbol | string): string {
   return `${coin}USDT`;
@@ -406,7 +391,7 @@ export const coinglass = {
       const symbol = toCgSymbol(coin);
 
       const [candlesRes, oiRes, frRes, cmeRes] = await Promise.all([
-        fetchPriceCandles(coin, '4h', 42),
+        fetchBinanceKlines(coin, '4h', 42),
         api.get('futures/open-interest/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
@@ -462,8 +447,11 @@ export const coinglass = {
     if (interval === '5min')  return fetchBinanceKlines(coin, '5m',  288);
     if (interval === '15min') return fetchBinanceKlines(coin, '15m', 192);
     if (interval === '1h')    return fetchBinanceKlines(coin, '1h',  168);
-    const { interval: cgInterval, limit } = CG_INTERVAL[interval as CgInterval];
-    return fetchPriceCandles(coin, cgInterval, limit);
+    if (interval === '4h')    return fetchBinanceKlines(coin, '4h',  168);
+    if (interval === '6h')    return fetchBinanceKlines(coin, '6h',  60);
+    if (interval === '1day')  return fetchBinanceKlines(coin, '1d',  90);
+    if (interval === '1week') return fetchBinanceKlines(coin, '1w',  52);
+    return fetchBinanceKlines(coin, '4h', 168);
   },
 
   get24hMinuteCandles: async (coin: CoinSymbol | string = 'BTC', limit = 1440): Promise<CandleDataPoint[]> => {
@@ -514,7 +502,7 @@ export const coinglass = {
 
   getHeatmapCandles: async (range: HeatmapRange, coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint[]> => {
     const { interval, limit } = HEATMAP_RANGE[range];
-    return fetchPriceCandles(coin, interval, limit);
+    return fetchBinanceKlines(coin, interval, limit);
   },
 
   getIntervalTrends: async (coin: CoinSymbol | string = 'BTC'): Promise<Record<TimeInterval, 'bullish' | 'bearish' | null>> => {
@@ -523,27 +511,28 @@ export const coinglass = {
       return candles[candles.length - 1].close >= candles[0].close ? 'bullish' : 'bearish';
     };
 
-    const [cgFetched, minCandles] = await Promise.all([
-      Promise.all(
-        UNIQUE_CG_INTERVALS.map(({ interval, limit }) =>
-          fetchPriceCandles(coin, interval, limit).then(candles => ({ interval, candles }))
-        )
-      ),
-      fetchBinanceKlines(coin, '1m', 60),
+    const [m1, m4, m6, m1d, m1w] = await Promise.all([
+      fetchBinanceKlines(coin, '1m',  60),
+      fetchBinanceKlines(coin, '4h',  42),
+      fetchBinanceKlines(coin, '6h',  60),
+      fetchBinanceKlines(coin, '1d',  30),
+      fetchBinanceKlines(coin, '1w',  52),
     ]);
 
-    const candleMap = Object.fromEntries(
-      cgFetched.map((f: { interval: string; candles: CandleDataPoint[] }) => [f.interval, f.candles])
-    );
-    const cgTrends = Object.fromEntries(
-      (Object.keys(CG_INTERVAL) as CgInterval[]).map(iv => [iv, trend(candleMap[CG_INTERVAL[iv].interval] ?? [])])
-    );
-
-    return { '1min': trend(minCandles), ...cgTrends } as Record<TimeInterval, 'bullish' | 'bearish' | null>;
+    return {
+      '1min':  trend(m1),
+      '4h':    trend(m4),
+      '6h':    trend(m6),
+      '1day':  trend(m1d),
+      '1week': trend(m1w),
+      '5min':  trend(m1),
+      '15min': trend(m1),
+      '1h':    trend(m4),
+    } as Record<TimeInterval, 'bullish' | 'bearish' | null>;
   },
 
   getHTFCandles: async (coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint[]> => {
-    return fetchPriceCandles(coin, '1w', 260);
+    return fetchBinanceKlines(coin, '1w', 260);
   },
 
   getMonthlyReturns: async (coin: CoinSymbol | string = 'BTC'): Promise<MonthlyReturn[]> => {
