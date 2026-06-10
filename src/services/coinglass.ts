@@ -228,36 +228,6 @@ async function fetchBinanceKlines(
 }
 
 
-async function fetchCryptoCompareHourlyCandles(
-  coin: CoinSymbol | string,
-  limit: number,
-): Promise<CandleDataPoint[]> {
-  const key = `cc:${coin}:1h:${limit}`;
-  const cached = candleCache.get(key);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return cached.data;
-  const flying = candleInFlight.get(key);
-  if (flying) return flying;
-
-  const doFetch = async (): Promise<CandleDataPoint[]> => {
-    const res = await ccApi.get('/data/histohour', {
-      params: { fsym: coin, tsym: 'USD', limit },
-    });
-    if (res.data?.Response !== 'Success') return cached?.data ?? [];
-    const data = (res.data.Data as { time: number; open: number; high: number; low: number; close: number; volumeto: number }[])
-      .map(c => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volumeto }));
-    candleCache.set(key, { data, fetchedAt: Date.now() });
-    return data;
-  };
-
-  const promise = (async (): Promise<CandleDataPoint[]> => {
-    try { return await doFetch(); }
-    catch { return cached?.data ?? []; }
-    finally { candleInFlight.delete(key); }
-  })();
-
-  candleInFlight.set(key, promise);
-  return promise;
-}
 
 function computeCMEGap(spotCandles: CandleDataPoint[], currentPrice: number): CMEGap {
   // CME BTC futures close Friday ~21:00 UTC and reopen Sunday ~22:00 UTC.
@@ -398,7 +368,7 @@ export const coinglass = {
         api.get('futures/funding-rate/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
-        fetchCryptoCompareHourlyCandles(coin, 1440).catch(() => [] as CandleDataPoint[]),
+        fetchBinanceKlines(coin, '1h', 1440).catch(() => [] as CandleDataPoint[]),
       ]);
 
       const candles = candlesRes;

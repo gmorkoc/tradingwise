@@ -1,16 +1,61 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    plugins: [react()],
+    plugins: [react(), nodePolyfills()],
+    resolve: {
+      alias: {
+        '@api/coinglass-api': new URL('.api/apis/coinglass-api/index.ts', import.meta.url).pathname,
+      },
+    },
+    optimizeDeps: {
+      esbuildOptions: {
+        plugins: [
+          {
+            name: 'datauri-mock',
+            setup(build) {
+              const stub = new URL('src/stubs/datauri-parser.ts', import.meta.url).pathname;
+              build.onResolve({ filter: /^datauri(\/|$)/ }, () => ({ path: stub }));
+            },
+          },
+        ],
+      },
+    },
     server: {
       proxy: {
+        '/bold-api': {
+          target: 'https://bold.report/api/v1',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bold-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
+        '/nasdaq-api': {
+          target: 'https://api.nasdaq.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/nasdaq-api/, ''),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Origin': 'https://www.nasdaq.com',
+            'Referer': 'https://www.nasdaq.com/',
+          },
+        },
         '/cg-api': {
           target: 'https://open-api-v4.coinglass.com',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/cg-api/, '/api'),
+          headers: {
+            'accept': 'application/json',
+            'CG-API-KEY': env.VITE_COINGLASS_API_KEY,
+          },
+        },
+        '/cg-sdk': {
+          target: 'https://open-api-v4.coinglass.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cg-sdk/, ''),
           headers: {
             'accept': 'application/json',
             'CG-API-KEY': env.VITE_COINGLASS_API_KEY,
