@@ -2,7 +2,6 @@
   "rewrites": [
     { "source": "/cc-api/:path*",      "destination": "https://min-api.cryptocompare.com/:path*" },
     { "source": "/okx-api/:path*",     "destination": "https://www.okx.com/:path*" },
-    { "source": "/yf-api/:path*",      "destination": "https://query2.finance.yahoo.com/:path*" },
     { "source": "/bybit-api/:path*",   "destination": "https://api.bybit.com/:path*" },
     { "source": "/bnf-api/:path*",     "destination": "https://fapi.binance.com/:path*" },
     { "source": "/coinbase-api/:path*","destination": "https://api.international.coinbase.com/:path*" },

@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/api/openai'] };
+export const config = { matcher: ['/cg-api/:path*', '/yf-api/:path*', '/api/openai'] };
 
 export default async function middleware(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
@@ -32,6 +32,27 @@ export default async function middleware(req: Request): Promise<Response> {
         'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
+    });
+  }
+
+  // ── Yahoo Finance proxy ──────────────────────────────────────────────────
+  if (url.pathname.startsWith('/yf-api/')) {
+    const yfPath = url.pathname.replace(/^\/yf-api\//, '');
+    const upstream = new URL(`https://query2.finance.yahoo.com/${yfPath}`);
+    upstream.search = url.search;
+    const response = await fetch(upstream.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': 'https://finance.yahoo.com',
+        'Referer': 'https://finance.yahoo.com/',
+      },
+    });
+    const text = await response.text();
+    return new Response(text, {
+      status: response.status,
+      headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
 
