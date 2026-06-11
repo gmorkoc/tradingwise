@@ -26,23 +26,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        '/bold-api': {
-          target: 'https://bold.report/api/v1',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/bold-api/, ''),
-          headers: { 'accept': 'application/json' },
-        },
-        '/nasdaq-api': {
-          target: 'https://api.nasdaq.com',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/nasdaq-api/, ''),
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Origin': 'https://www.nasdaq.com',
-            'Referer': 'https://www.nasdaq.com/',
-          },
-        },
         '/cg-api': {
           target: 'https://open-api-v4.coinglass.com',
           changeOrigin: true,
@@ -66,12 +49,6 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/okx-api/, ''),
           headers: { 'accept': 'application/json' },
-        },
-        '/yf-api': {
-          target: 'https://query2.finance.yahoo.com',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/yf-api/, ''),
-          headers: { 'accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
         },
         '/bybit-api': {
           target: 'https://api.bybit.com',
