@@ -234,7 +234,7 @@ export function ETFInflows() {
         <div>
           <h2 className="etf-title">Bitcoin Spot ETF Tracker</h2>
           <div className="etf-date">
-            BOLD Report · Nasdaq · {displayDate}
+            via CoinGlass · {displayDate}
           </div>
         </div>
       </div>
@@ -275,7 +275,7 @@ export function ETFInflows() {
           <thead>
             <tr>
               <th>Fund</th>
-              <th>Daily Flow *</th>
+              <th>Daily Flow</th>
               <th>Price</th>
               <th>Day %</th>
               <th>AUM</th>

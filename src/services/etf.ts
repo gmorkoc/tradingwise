@@ -1,16 +1,3 @@
-const US_BTC_ETFS: { ticker: string; name: string }[] = [
-  { ticker: 'IBIT',  name: 'iShares Bitcoin Trust' },
-  { ticker: 'FBTC',  name: 'Fidelity Wise Origin Bitcoin Fund' },
-  { ticker: 'GBTC',  name: 'Grayscale Bitcoin Trust' },
-  { ticker: 'BITB',  name: 'Bitwise Bitcoin ETF' },
-  { ticker: 'ARKB',  name: 'ARK 21Shares Bitcoin ETF' },
-  { ticker: 'HODL',  name: 'VanEck Bitcoin ETF' },
-  { ticker: 'BTCO',  name: 'Invesco Galaxy Bitcoin ETF' },
-  { ticker: 'BRRR',  name: 'Valkyrie Bitcoin Fund' },
-  { ticker: 'EZBC',  name: 'Franklin Bitcoin ETF' },
-  { ticker: 'BTCW',  name: 'WisdomTree Bitcoin Fund' },
-];
-
 export interface ETFRow {
   ticker: string;
   name: string;
@@ -33,73 +20,43 @@ export interface ETFData {
   rows: ETFRow[];
   history: ETFDayTotal[];
   latestDate: string;
-  source: 'bold';
-}
-
-function parseUsd(s: string | null | undefined): number {
-  if (!s) return 0;
-  return Number(String(s).replace(/[$,%]/g, '').replace(/,/g, '')) || 0;
-}
-
-function parsePct(s: string | null | undefined): number {
-  if (!s) return 0;
-  return Number(String(s).replace(/[%+]/g, '')) || 0;
-}
-
-async function fetchNasdaqQuote(ticker: string): Promise<ETFRow> {
-  const base = US_BTC_ETFS.find(e => e.ticker === ticker)!;
-  try {
-    const [infoRes, summaryRes] = await Promise.all([
-      fetch(`/nasdaq-api/api/quote/${ticker}/info?assetclass=etf`).then(r => r.json()),
-      fetch(`/nasdaq-api/api/quote/${ticker}/summary?assetclass=etf`).then(r => r.json()),
-    ]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p: any = infoRes?.data?.primaryData ?? {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const s: any = summaryRes?.data?.summaryData ?? {};
-
-    const priceUsd = parseUsd(p.lastSalePrice);
-    const shareVolume = parseUsd(p.volume);
-    const marketCap = parseUsd(s.MarketCap?.value);
-
-    return {
-      ticker,
-      name: base.name,
-      dailyFlowUsd: 0,
-      aumUsd: marketCap,
-      priceUsd,
-      priceChangePct: parsePct(p.percentageChange),
-      volumeUsd: shareVolume * priceUsd,
-      sharesOutstanding: marketCap > 0 && priceUsd > 0 ? Math.round(marketCap / priceUsd) : 0,
-    };
-  } catch {
-    return { ticker, name: base.name, dailyFlowUsd: 0, aumUsd: 0, priceUsd: 0, priceChangePct: 0, volumeUsd: 0, sharesOutstanding: 0 };
-  }
+  source: 'coinglass';
 }
 
 export async function getETFData(): Promise<ETFData> {
-  const [unitsResult, rowResults] = await Promise.all([
-    fetch('/bold-api/bitcoin/funds/units.json').then(r => r.json()).catch(() => null),
-    Promise.all(US_BTC_ETFS.map(e => fetchNasdaqQuote(e.ticker))),
+  const [flowsRes, listRes] = await Promise.all([
+    fetch('/cg-api/etf/bitcoin/flow-history').then(r => r.json()),
+    fetch('/cg-api/etf/bitcoin/list').then(r => r.json()),
   ]);
 
-  // Build history from BOLD daily unit-change × price
-  const unitsRaw: { date: string; units: number; price: number }[] =
-    (unitsResult?.data ?? []).filter((d: { units?: number }) => d.units != null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const flowData: any[] = flowsRes?.data ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const listData: any[] = listRes?.data ?? [];
 
-  const history: ETFDayTotal[] = [];
-  for (let i = 1; i < unitsRaw.length; i++) {
-    const prev = unitsRaw[i - 1];
-    const cur  = unitsRaw[i];
-    history.push({
-      date:     cur.date,
-      flowUsd:  (cur.units - prev.units) * cur.price,
-      priceUsd: cur.price,
-      perFund:  [],
-    });
-  }
+  const rows: ETFRow[] = listData.map(f => {
+    const price    = Number(f.price_usd ?? 0);
+    const btcDelta = Number(f.asset_details?.change_quantity_24h ?? 0);
+    return {
+      ticker:            f.ticker ?? '',
+      name:              f.fund_name ?? f.ticker ?? '',
+      dailyFlowUsd:      btcDelta * price,
+      aumUsd:            Number(f.aum_usd ?? 0),
+      priceUsd:          price,
+      priceChangePct:    Number(f.price_change_percent ?? 0),
+      volumeUsd:         Number(f.volume_usd ?? 0),
+      sharesOutstanding: Number(f.shares_outstanding ?? 0),
+    };
+  });
+
+  const history: ETFDayTotal[] = flowData.map(d => ({
+    date:     new Date(d.timestamp).toISOString().slice(0, 10),
+    flowUsd:  Number(d.flow_usd ?? 0),
+    priceUsd: Number(d.price_usd ?? 0),
+    perFund:  Array.isArray(d.etf_flows) ? d.etf_flows : [],
+  }));
 
   const latestDate = history[history.length - 1]?.date ?? new Date().toISOString().slice(0, 10);
 
-  return { rows: rowResults, history, latestDate, source: 'bold' };
+  return { rows, history, latestDate, source: 'coinglass' };
 }
