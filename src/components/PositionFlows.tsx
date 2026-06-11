@@ -141,6 +141,10 @@ function SummaryBar({ signal, text }: PFSummary) {
         {signal.toUpperCase()}
       </span>
       <span className="pf-summary-text">{text}</span>
+      <span className="pf-summary-live">
+        <span className="pf-summary-live-dot" />
+        Updated hourly
+      </span>
     </div>
   );
 }
