@@ -221,7 +221,18 @@ export function ETFInflows() {
   const latestHistoryFlow = data.history[data.history.length - 1]?.flowUsd ?? 0;
   const totalFlow = historyDay ? historyDay.flowUsd : latestHistoryFlow;
 
-  const sorted = [...data.rows].sort((a, b) => b.aumUsd - a.aumUsd);
+  // When a date is selected, override each row's dailyFlowUsd with that day's per-fund data
+  const perFundMap = historyDay
+    ? Object.fromEntries(historyDay.perFund.map(f => [f.etf_ticker, f.flow_usd]))
+    : null;
+
+  const sorted = [...data.rows]
+    .map(r => ({
+      ...r,
+      dailyFlowUsd: perFundMap ? (perFundMap[r.ticker] ?? 0) : r.dailyFlowUsd,
+    }))
+    .sort((a, b) => b.aumUsd - a.aumUsd);
+
   const totalAum  = data.rows.reduce((s, r) => s + r.aumUsd, 0);
   const totalVol  = data.rows.reduce((s, r) => s + r.volumeUsd, 0);
   const maxAbsFlow = Math.max(...sorted.map(r => Math.abs(r.dailyFlowUsd)), 1);
