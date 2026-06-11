@@ -213,14 +213,15 @@ export function ETFInflows() {
     );
   }
 
-  // Resolve which day's per-fund data to show
+  // Resolve which day's aggregate flow to show
   const historyDay = selectedDate
     ? data.history.find(d => d.date === selectedDate) ?? null
     : null;
 
-  const sorted = [...data.rows].sort((a, b) => b.aumUsd - a.aumUsd);
+  const latestHistoryFlow = data.history[data.history.length - 1]?.flowUsd ?? 0;
+  const totalFlow = historyDay ? historyDay.flowUsd : latestHistoryFlow;
 
-  const totalFlow = sorted.reduce((s, r) => s + r.dailyFlowUsd, 0);
+  const sorted = [...data.rows].sort((a, b) => b.aumUsd - a.aumUsd);
   const totalAum  = data.rows.reduce((s, r) => s + r.aumUsd, 0);
   const totalVol  = data.rows.reduce((s, r) => s + r.volumeUsd, 0);
   const maxAbsFlow = Math.max(...sorted.map(r => Math.abs(r.dailyFlowUsd)), 1);
