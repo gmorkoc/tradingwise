@@ -9,6 +9,142 @@ import "../styles/PositionFlows.css";
 
 const W = 900;
 
+// ── Summary computation ───────────────────────────────────────────────────────
+
+type Signal = "bullish" | "bearish" | "neutral";
+interface PFSummary { signal: Signal; text: string }
+
+function buildPriceSummary(
+  candles: CandleDataPoint[],
+  supports: number[],
+  resistances: number[],
+): PFSummary {
+  const recent = candles.slice(-90);
+  const cur    = recent[recent.length - 1].close;
+  const hi     = Math.max(...recent.map(c => c.high));
+
+  const slice10   = recent.slice(-10);
+  const trendUp   = slice10[slice10.length - 1].close > slice10[0].close;
+  const trendPct  = Math.abs((slice10[slice10.length - 1].close / slice10[0].close - 1) * 100).toFixed(1);
+  const trendText = trendUp
+    ? `Short-term momentum is bullish, up ${trendPct}% over the last 10 candles.`
+    : `Short-term momentum is bearish, down ${trendPct}% over the last 10 candles.`;
+
+  const s = supports[0];
+  const r = resistances[0];
+  const levelText = s && r
+    ? `Consolidating between support ${Math.round(s).toLocaleString()} and resistance ${Math.round(r).toLocaleString()}.`
+    : s  ? `Holding above key support at ${Math.round(s).toLocaleString()}.`
+    : r  ? `Approaching resistance at ${Math.round(r).toLocaleString()}.`
+    : "";
+
+  const dropPct = ((cur / hi - 1) * 100).toFixed(1);
+  return {
+    signal: trendUp ? "bullish" : "bearish",
+    text:   `${trendText} ${levelText} ${dropPct}% from the recent high of ${Math.round(hi).toLocaleString()}.`.trim(),
+  };
+}
+
+function buildRetailSummary(lastNet: number, data: number[]): PFSummary {
+  const recent = data.slice(-20);
+  const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
+  const abs    = Math.abs(lastNet).toFixed(0);
+
+  if (lastNet > 150) return {
+    signal: "bearish",
+    text: `Retail is heavily net long (${abs} net bias). Extreme retail longs historically precede pullbacks — contrarian bearish signal. Exposure is ${trend}.`,
+  };
+  if (lastNet > 30) return {
+    signal: "neutral",
+    text: `Retail holds a moderate net long position (${abs} net bias). Mild bullish retail sentiment trending ${trend}.`,
+  };
+  if (lastNet > -30) return {
+    signal: "neutral",
+    text: `Retail positioning is broadly neutral (${abs} net bias). No strong directional conviction from the crowd.`,
+  };
+  if (lastNet > -150) return {
+    signal: "bullish",
+    text: `Retail is moderately net short (${abs} net bias). A mild contrarian bullish setup — positioning is ${trend}.`,
+  };
+  return {
+    signal: "bullish",
+    text: `Retail is heavily net short (${abs} net bias). Strong contrarian bullish setup — retail capitulation typically precedes recoveries.`,
+  };
+}
+
+function buildSentimentSummary(lastPct: number, data: number[]): PFSummary {
+  const recent = data.slice(-20);
+  const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "declining";
+  const pct    = lastPct.toFixed(1);
+
+  if (lastPct > 65) return {
+    signal: "bullish",
+    text: `Smart money is strongly bullish at ${pct}% long — well above the 50% neutral line. Institutional bias clearly long and ${trend}.`,
+  };
+  if (lastPct > 55) return {
+    signal: "bullish",
+    text: `Smart money leans bullish at ${pct}% long. Mild institutional preference for the long side, sentiment ${trend}.`,
+  };
+  if (lastPct > 45) return {
+    signal: "neutral",
+    text: `Smart money is near-neutral at ${pct}% long. No strong directional conviction — institutional positioning is balanced, trending ${trend}.`,
+  };
+  if (lastPct > 35) return {
+    signal: "bearish",
+    text: `Smart money has a mild bearish lean at ${pct}% long. Institutions slightly net short, sentiment is ${trend}.`,
+  };
+  return {
+    signal: "bearish",
+    text: `Smart money is predominantly bearish at ${pct}% long. Institutional traders clearly net short — significant downside bias.`,
+  };
+}
+
+function buildSmartNetSummary(
+  lastSmartNet: number,
+  lastRetailNet: number,
+  data: number[],
+): PFSummary {
+  const recent  = data.slice(-20);
+  const trend   = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
+  const aligned = (lastSmartNet > 0) === (lastRetailNet > 0);
+  const abs     = Math.abs(lastSmartNet).toFixed(0);
+  const dir     = lastSmartNet > 0 ? "net long" : "net short";
+
+  if (aligned && lastSmartNet > 100) return {
+    signal: "bullish",
+    text: `Smart money is firmly ${dir} (${abs}), aligned with retail. Broad market consensus bullish — position is ${trend}.`,
+  };
+  if (aligned && lastSmartNet < -100) return {
+    signal: "bearish",
+    text: `Smart money is firmly ${dir} (${abs}), aligned with retail short. Broad consensus bearish — caution warranted. Trend is ${trend}.`,
+  };
+  if (!aligned && lastSmartNet > 0) return {
+    signal: "bullish",
+    text: `Divergence: smart money is ${dir} (${abs}) while retail leans opposite. Institutional positioning typically leads price — ${trend} trend.`,
+  };
+  if (!aligned && lastSmartNet < 0) return {
+    signal: "bearish",
+    text: `Divergence: retail is long while smart money is ${dir} (${abs}). Smart money fading retail euphoria — watch for a reversal. Trend is ${trend}.`,
+  };
+  return {
+    signal: "neutral",
+    text: `Smart money net position is close to neutral (${abs} bias). No strong institutional directional bet, trending ${trend}.`,
+  };
+}
+
+// ── Summary footer ────────────────────────────────────────────────────────────
+
+function SummaryBar({ signal, text }: PFSummary) {
+  return (
+    <div className="pf-summary">
+      <span className={`pf-summary-badge pf-summary-badge--${signal}`}>
+        {signal.toUpperCase()}
+      </span>
+      <span className="pf-summary-text">{text}</span>
+    </div>
+  );
+}
+
 // ── Price chart ───────────────────────────────────────────────────────────────
 
 const HP = 200; // price chart height (px = SVG units, 1:1)
@@ -59,6 +195,7 @@ function computeSR(candles: CandleDataPoint[]): { supports: number[]; resistance
 
 function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: string }) {
   if (candles.length < 10) return null;
+  // compute summary early so we can pass it down
 
   const recent  = candles.slice(-90);
   const dataMin = Math.min(...recent.map(c => c.low));
@@ -76,6 +213,7 @@ function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: strin
   const curY = toY(cur);
 
   const { supports, resistances } = computeSR(recent);
+  const summary = buildPriceSummary(recent, supports, resistances);
 
   // Only show S&R within the visible range
   const visS = supports.filter(v => v > yMin && v < yMax);
@@ -110,6 +248,7 @@ function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: strin
       </div>
       <div className="pf-chart-wrap">
         <div className="pf-chart-row">
+
           <svg
             viewBox={`0 0 ${W} ${HP}`}
             style={{ display: "block", flex: 1, minWidth: 0, height: HP }}
@@ -181,6 +320,7 @@ function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: strin
           </div>
         </div>
       </div>
+      <SummaryBar {...summary} />
     </div>
   );
 }
@@ -324,12 +464,13 @@ function SentimentArea({ data }: { data: number[] }) {
 // ── Panel wrapper ─────────────────────────────────────────────────────────────
 
 function Panel({
-  dot, label, value, unit = "", children,
+  dot, label, value, unit = "", summary, children,
 }: {
   dot: "red" | "pink" | "green";
   label: string;
   value: number;
   unit?: string;
+  summary: PFSummary;
   children: React.ReactNode;
 }) {
   const fmt = (v: number) => {
@@ -349,6 +490,7 @@ function Panel({
         </span>
       </div>
       <div className="pf-chart-wrap">{children}</div>
+      <SummaryBar {...summary} />
     </div>
   );
 }
@@ -427,6 +569,10 @@ export function PositionFlows({ coin = "BTC" }: Props) {
   const lastSmartNet  = smartNet[smartNet.length - 1] ?? 0;
   const lastSentiment = smartSentiment[smartSentiment.length - 1] ?? 0;
 
+  const retailSummary    = buildRetailSummary(lastRetailNet, retailNet);
+  const sentimentSummary = buildSentimentSummary(lastSentiment, smartSentiment);
+  const smartNetSummary  = buildSmartNetSummary(lastSmartNet, lastRetailNet, smartNet);
+
   return (
     <div className="pf-wrap">
       <div className="pf-header">
@@ -441,15 +587,15 @@ export function PositionFlows({ coin = "BTC" }: Props) {
 
       <PriceChart candles={candles} coin={String(coin)} />
 
-      <Panel dot="red" label="Retail NET OPEN POSITION" value={lastRetailNet}>
+      <Panel dot="red" label="Retail NET OPEN POSITION" value={lastRetailNet} summary={retailSummary}>
         <NetHistogram data={retailNet} color="red-green" />
       </Panel>
 
-      <Panel dot="pink" label="Smart Money SENTIMENT" value={lastSentiment} unit="%">
+      <Panel dot="pink" label="Smart Money SENTIMENT" value={lastSentiment} unit="%" summary={sentimentSummary}>
         <SentimentArea data={smartSentiment} />
       </Panel>
 
-      <Panel dot="green" label="Smart Money NET OPEN POSITION" value={lastSmartNet}>
+      <Panel dot="green" label="Smart Money NET OPEN POSITION" value={lastSmartNet} summary={smartNetSummary}>
         <NetHistogram data={smartNet} color="pink-red" />
       </Panel>
     </div>
