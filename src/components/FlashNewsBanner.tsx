@@ -15,7 +15,7 @@ async function fetchCryptoNews(): Promise<NewsItem[]> {
     FEEDS.map(async ({ url, label }) => {
       try {
         const res = await fetch(
-          `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=10`
+          `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`
         );
         const data = await res.json();
         if (data.status === "ok") {
