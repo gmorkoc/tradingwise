@@ -2370,13 +2370,16 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 60px #22c55e88 !important; }
 .pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
 .pticker-price-source {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.35);
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
   text-shadow: none;
-  margin-top: 2px;
+  opacity: 0.6;
 }
 .pticker-live-dot {
   display: flex;

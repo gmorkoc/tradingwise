@@ -18,12 +18,6 @@ const api = axios.create({
 });
 addRetry(api);
 
-// CryptoCompare free API — used for monthly/CME-gap historical data
-const ccApi = axios.create({
-  baseURL: '/cc-api',
-  timeout: 10000,
-  headers: { accept: 'application/json' },
-});
 
 
 // Binance public market data CDN — geo-unrestricted, open CORS
@@ -510,28 +504,12 @@ export const coinglass = {
     const cached = monthlyCache.get(cacheKey);
     if (cached && Date.now() - cached.fetchedAt < 3_600_000) return cached.data;
 
-    const fetchChunk = async (toTs?: number): Promise<{ time: number; open: number; close: number }[]> => {
-      try {
-        const params: Record<string, string | number> = { fsym: coin, tsym: 'USD', limit: 2000 };
-        if (toTs) params.toTs = toTs;
-        const res = await ccApi.get('/data/histoday', { params });
-        if (res.data?.Response !== 'Success') return [];
-        return (res.data.Data as { time: number; open: number; close: number }[])
-          .filter(c => c.time > 0 && c.open > 0 && c.close > 0);
-      } catch { return []; }
-    };
-
-    const chunk1 = await fetchChunk();
-    if (chunk1.length === 0) return [];
-    const chunk2 = await fetchChunk(chunk1[0].time - 1);
-    const chunk3 = chunk2.length > 0 ? await fetchChunk(chunk2[0].time - 1) : [];
-
-    const allDays = [...chunk3, ...chunk2, ...chunk1]
-      .filter((c, i, arr) => i === 0 || arr[i - 1].time !== c.time)
-      .sort((a, b) => a.time - b.time);
+    // Binance daily klines — covers full history back to Aug 2017 (~3300 days)
+    const candles = await fetchBinanceKlines(coin, '1d', 3500);
+    if (!candles.length) return [];
 
     const monthMap = new Map<string, { year: number; month: number; open: number; close: number }>();
-    for (const c of allDays) {
+    for (const c of candles) {
       const d = new Date(c.time * 1000);
       const year = d.getUTCFullYear();
       const month = d.getUTCMonth();

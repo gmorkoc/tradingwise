@@ -61,12 +61,6 @@ export default defineConfig(({ mode }) => {
             'CG-API-KEY': env.VITE_COINGLASS_API_KEY,
           },
         },
-        '/cc-api': {
-          target: 'https://min-api.cryptocompare.com',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/cc-api/, ''),
-          headers: { 'accept': 'application/json' },
-        },
         '/okx-api': {
           target: 'https://www.okx.com',
           changeOrigin: true,

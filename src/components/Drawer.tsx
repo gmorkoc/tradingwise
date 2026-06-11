@@ -148,7 +148,7 @@ export const Drawer: React.FC<DrawerProps> = ({
               <span className="info-label">{t("common.version")}</span>
               <span className="info-value">0.1.0</span>
               <span className="info-label">{t("drawer.priceData")}</span>
-              <span className="info-value">CryptoCompare (free)</span>
+              <span className="info-value">Binance · CoinGlass</span>
               <span className="info-label">{t("drawer.charts")}</span>
               <span className="info-value">TradingView Lightweight</span>
               <span className="info-label">{t("drawer.ai")}</span>
@@ -164,7 +164,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                 {t("drawer.reportIssue")}
               </a>
               <a
-                href="https://min-api.cryptocompare.com/"
+                href="https://www.binance.com/en/binance-api"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="drawer-link"

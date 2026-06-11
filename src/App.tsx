@@ -916,13 +916,13 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               </button>
             </div>
             <div className="pticker-inner">
+              <span className="pticker-price-source">via Binance</span>
               <div className="pticker-coin-name">
                 <span className="pticker-coin-sym">{COIN_ICONS[coin] ?? coin[0]}</span>
                 {coin}<span className="pticker-coin-quote">/USD</span>
               </div>
               <div className={`pticker-price${tickerFlash === "up" ? " pticker-flash-up" : tickerFlash === "down" ? " pticker-flash-down" : ""}`}>
                 ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                <span className="pticker-price-source">via Binance</span>
               </div>
               {openP > 0 && (
                 <div className={`pticker-delta ${up ? "pticker-delta--up" : "pticker-delta--down"}`}>
