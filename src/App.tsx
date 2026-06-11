@@ -61,7 +61,7 @@ const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredT
   { id: "etf", label: "ETF Flows", d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
   { id: "positions", label: "Traders", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
   { id: "htf", label: "HTF Analysis", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
-  { id: "orderflow", label: "Order Flow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
+  { id: "orderflow", label: "Smart Money", d: ["M2 12h4l3-9 4 18 3-9h6"] },
   { id: "signals",   label: "Confluence", d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
 ];
 

@@ -36,7 +36,7 @@ export function OrderFlowFramework({ coin }: Props) {
       <div className="off-header">
         <div className="off-header-top">
           <div>
-            <h1 className="off-title">Order Flow <span className="off-title-amp">&amp;</span> Institutional Framework</h1>
+            <h1 className="off-title">Smart Money Desk</h1>
             <p className="off-subtitle">Institutional-grade execution tools for entries, management, and exits</p>
           </div>
           <span className="off-coin-badge">{coin}/USDT</span>
