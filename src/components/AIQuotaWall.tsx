@@ -36,6 +36,7 @@ const PLANS = [
 export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const isFreeBlock = limit === 0;
 
   const handleUpgrade = async (plan: typeof PLANS[number]) => {
     if (!user) { onOpenAuth(); return; }
@@ -58,20 +59,33 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
             </svg>
           </div>
           <div className="aiqw-text">
-            <h3 className="aiqw-title">Weekly AI limit reached</h3>
-            <p className="aiqw-desc">
-              You've used <strong>{used}/{limit}</strong> free AI requests. Unlock unlimited AI across every section.
-            </p>
+            {isFreeBlock ? (
+              <>
+                <h3 className="aiqw-title">AI features require a paid plan</h3>
+                <p className="aiqw-desc">
+                  Upgrade to unlock AI-powered market analysis, predictions, and insights across every section.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="aiqw-title">Weekly AI limit reached</h3>
+                <p className="aiqw-desc">
+                  You've used <strong>{used}/{limit}</strong> AI requests this week. Upgrade for unlimited access.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Usage pips */}
-        <div className="aiqw-usage">
-          {Array.from({ length: limit }).map((_, i) => (
-            <span key={i} className={`aiqw-pip ${i < used ? "aiqw-pip--used" : ""}`} />
-          ))}
-          <span className="aiqw-usage-label">{used}/{limit} used · resets Monday</span>
-        </div>
+        {/* Usage pips — only shown for paid tiers that hit their cap */}
+        {!isFreeBlock && (
+          <div className="aiqw-usage">
+            {Array.from({ length: limit }).map((_, i) => (
+              <span key={i} className={`aiqw-pip ${i < used ? "aiqw-pip--used" : ""}`} />
+            ))}
+            <span className="aiqw-usage-label">{used}/{limit} used · resets Monday</span>
+          </div>
+        )}
 
         {/* Plan cards */}
         <div className="aiqw-plans">
