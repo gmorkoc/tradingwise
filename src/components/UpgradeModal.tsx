@@ -46,7 +46,7 @@ const PLANS = [
   {
     id:      "pro",
     label:   "Pro",
-    price:   "$9",
+    price:   "$10.99",
     per:     "/mo",
     color:   "#38bdf8",
     popular: true,
@@ -56,22 +56,22 @@ const PLANS = [
       "AI Market Intelligence",
       "On-Chain AI Analysis",
       "Price Prediction Chart",
-      "Scenario arrows",
-      "Liquidation Heatmap",
+      "Liquidation Heatmap AI",
+      "35 AI requests / week",
     ],
   },
   {
     id:    "elite",
     label: "Elite",
-    price: "$29",
+    price: "$29.99",
     per:   "/mo",
     color: "#a78bfa",
     priceId: () => PRICE_IDS.elite,
     features: [
-      "Everything in Pro",
-      "AI Powered Prediction",
-      "Gann Analysis",
-      "Unlimited AI requests",
+      "Everything in Pro — unlimited",
+      "Gann Analysis AI",
+      "HTF Multi-Timeframe AI",
+      "Coinbase Premium AI",
       "Early access to new features",
     ],
   },
@@ -79,8 +79,8 @@ const PLANS = [
 
 // Features exclusive to each tier (not inherited)
 const EXCLUSIVE_FEATURES: Record<string, string[]> = {
-  elite: ["AI Powered Prediction", "Gann Analysis", "Unlimited AI requests", "Early access to new features"],
-  pro:   ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Scenario arrows", "Liquidation Heatmap"],
+  elite: ["Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI", "Everything in Pro — unlimited", "Early access to new features"],
+  pro:   ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"],
 };
 
 function lostFeaturesFor(currentTier: string, targetTier: string): string[] {

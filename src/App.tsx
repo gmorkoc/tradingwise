@@ -757,7 +757,9 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             </BlurGate>
           )}
           {activeSection === "htf" && (
-            <HTFAnalysis coin={coin} currentPrice={btcData?.price} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+            <BlurGate requiredTier="elite" featureName="HTF Analysis" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade}>
+              <HTFAnalysis coin={coin} currentPrice={btcData?.price} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+            </BlurGate>
           )}
           {activeSection === "etf" && <ETFInflows />}
           {activeSection === "positions" && <PositionFlows coin={coin} />}

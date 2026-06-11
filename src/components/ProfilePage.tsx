@@ -262,7 +262,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <button className="profile-ai-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>
                       Upgrade to Pro
                     </button>
-                    {" "}for 50 requests/week, or Elite for unlimited.
+                    {" "}for 35 AI requests/week, or Elite for unlimited.
                   </p>
                 )}
                 {isPaid && tier === "pro" && (

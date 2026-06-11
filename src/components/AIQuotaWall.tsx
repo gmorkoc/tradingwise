@@ -14,22 +14,22 @@ const PLANS = [
   {
     id: "pro",
     label: "Pro",
-    price: "$9",
+    price: "$10.99",
     per: "/mo",
     color: "#38bdf8",
     popular: true,
     priceId: () => PRICE_IDS.pro,
-    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap"],
+    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"],
   },
   {
     id: "elite",
     label: "Elite",
-    price: "$29",
+    price: "$29.99",
     per: "/mo",
     color: "#a78bfa",
     popular: false,
     priceId: () => PRICE_IDS.elite,
-    features: ["Everything in Pro", "Gann Analysis", "Priority AI responses", "Advanced scenario planning"],
+    features: ["Everything in Pro — unlimited", "Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI", "Early access to features"],
   },
 ];
 

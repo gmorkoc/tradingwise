@@ -63,9 +63,9 @@ const FEATURES = [
 ];
 
 const PLANS = [
-  { label: "Free",  price: "$0",  color: "#94a3b8", per: undefined, primary: false, cta: "Get Started Free", features: ["Live charts & order book","Watchlist","Fear & Greed gauge","5 AI requests / week"] },
-  { label: "Pro",   price: "$9",  color: "#38bdf8", per: "/mo",     primary: true,  cta: "Start Pro",        features: ["Everything in Free","Unlimited AI requests","On-Chain AI Analysis","Prediction chart with scenarios","Liquidation Heatmap"] },
-  { label: "Elite", price: "$29", color: "#a78bfa", per: "/mo",     primary: false, cta: "Go Elite",         features: ["Everything in Pro","Gann Analysis","Priority AI","Early access to features"] },
+  { label: "Free",  price: "$0",     color: "#94a3b8", per: undefined, primary: false, cta: "Get Started Free", features: ["Live charts & order book","Watchlist","Fear & Greed gauge","ETF flows dashboard"] },
+  { label: "Pro",   price: "$10.99", color: "#38bdf8", per: "/mo",     primary: true,  cta: "Start Pro",        features: ["Everything in Free","AI Market Intelligence","On-Chain AI Analysis","Price Prediction with scenarios","Liquidation Heatmap AI","35 AI requests / week"] },
+  { label: "Elite", price: "$29.99", color: "#a78bfa", per: "/mo",     primary: false, cta: "Go Elite",         features: ["Everything in Pro — unlimited","Gann Analysis AI","HTF Multi-Timeframe AI","Coinbase Premium AI","Early access to features"] },
 ];
 
 // ── Sub-components ──────────────────────────────────────────────────────

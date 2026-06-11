@@ -38,22 +38,22 @@ const TIER_COPY: Record<Tier, {
       { icon: "📈", title: "AI Price Predictions",     desc: "Multi-scenario forecasts with confidence levels updated every interval." },
       { icon: "💬", title: "AI Trading Assistant",     desc: "Ask anything — strategy, setups, risk — and get institutional-grade answers." },
     ],
-    cta: "Unlock Pro — $9/mo",
-    price: "$9/mo",
-    trust: "Cancel anytime · No commitment · Instant access",
+    cta: "Unlock Pro — $10.99/mo",
+    price: "$10.99/mo",
+    trust: "35 AI requests/week · Cancel anytime · Instant access",
   },
   elite: {
     headline: "The Edge Professionals Use",
-    sub: "AI Powered Prediction, Gann Analysis, and unlimited AI — the full toolkit used by hedge funds and prop desks worldwide.",
+    sub: "Gann Analysis, HTF Multi-Timeframe AI, and unlimited AI — the full institutional toolkit, no caps.",
     features: [
-      { icon: "✦", title: "AI Powered Prediction",    desc: "GPT-4o generates a full price path with entry, target, stop loss, R:R ratio, and liquidation levels — exclusive to Elite." },
-      { icon: "📐", title: "Gann Square of Nine",      desc: "Pinpoint price levels and time cycles with geometric precision." },
-      { icon: "🔄", title: "Cycle & Time Analysis",    desc: "Identify when the market is most likely to turn — before it happens." },
-      { icon: "⚡", title: "Unlimited AI Requests",    desc: "No weekly cap — fastest inference across every section of the platform." },
+      { icon: "📐", title: "Gann Analysis AI",          desc: "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite." },
+      { icon: "📊", title: "HTF Multi-Timeframe AI",    desc: "Weekly and monthly cycle tracking with AI-generated structural analysis." },
+      { icon: "⚡", title: "Unlimited AI Requests",     desc: "No weekly cap — use every AI feature as much as you need." },
+      { icon: "🏦", title: "Coinbase Premium AI",       desc: "Institutional flow vs retail divergence interpreted in real time." },
     ],
-    cta: "Unlock Elite — $29/mo",
-    price: "$29/mo",
-    trust: "Cancel anytime · Includes everything in Pro · Instant access",
+    cta: "Unlock Elite — $29.99/mo",
+    price: "$29.99/mo",
+    trust: "Unlimited AI · Cancel anytime · Includes everything in Pro",
   },
 };
 
@@ -185,10 +185,10 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
         <div className="aiqw-plan bg-plan-card" style={{ "--plan-color": "#a78bfa" } as React.CSSProperties}>
           <div className="aiqw-plan-header">
             <span className="aiqw-plan-label" style={{ color: "#a78bfa" }}>Elite</span>
-            <span className="aiqw-plan-price">$29<span className="aiqw-plan-per">/mo</span></span>
+            <span className="aiqw-plan-price">$29.99<span className="aiqw-plan-per">/mo</span></span>
           </div>
           <ul className="aiqw-plan-features">
-            {["Everything in Pro", "AI Powered Prediction", "Gann Analysis", "Unlimited AI requests"].map(f => (
+            {["Everything in Pro — unlimited", "Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI"].map(f => (
               <li key={f}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 {f}
