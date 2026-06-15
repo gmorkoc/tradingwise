@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "coinglass-api",
+      "source": "@coinglass-api/v4.0#dyn13qmiptvrrz",
+      "integrity": "sha512-INyykSCl+3psS3kFAS2iVhlAOcz2dsILopkfM0sbvtNL9Cz3iMzmkBt450zmcvWJYl9K61kKfuUqPgaQGZ2G1A==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}

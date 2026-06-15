@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/AccountMenu.css";
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpenProfile }) => {
+  const { t } = useTranslation();
   const { user, profile, tier, signOut } = useAuth();
   const { used, limit, exceeded, isPaid } = useAIQuota();
   const [open, setOpen] = useState(false);
@@ -46,7 +48,7 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
   if (!user) {
     return (
       <button className="acct-signin-btn" onClick={onOpenAuth}>
-        Sign In
+        {t("account.signin")}
       </button>
     );
   }
@@ -75,10 +77,10 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
           style={{ top: dropPos.top, left: dropPos.left }}>
           {/* User info header */}
           <div className="acct-dd-header">
-            <div className="acct-dd-name">{profile?.full_name || "My Account"}</div>
+            <div className="acct-dd-name">{profile?.full_name || t("account.myAccount")}</div>
             <div className="acct-dd-email">{user.email}</div>
             <span className="acct-dd-tier-badge" style={{ color: tm.text, background: tm.bg }}>
-              {tm.label} Plan
+              {t("account.tierPlan", { tier: tm.label })}
             </span>
           </div>
 
@@ -94,7 +96,7 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
               </svg>
-              Profile
+              {t("account.profile")}
             </span>
             <span className="acct-dd-profile-right">
               <span className="acct-dd-tier-chip" style={{ color: tm.text, background: tm.bg }}>
@@ -120,18 +122,18 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
 
           {tier !== "elite" && (
             <button className="acct-dd-item acct-dd-item--upgrade" onClick={() => { setOpen(false); onOpenUpgrade(); }}>
-              <span>⚡ Upgrade Plan</span>
+              <span>{t("account.upgradePlan")}</span>
             </button>
           )}
 
           <button className="acct-dd-item" onClick={() => { setOpen(false); }}>
-            <span>⚙ Account Settings</span>
+            <span>{t("account.accountSettings")}</span>
           </button>
 
           <div className="acct-dd-divider" />
 
           <button className="acct-dd-item acct-dd-item--danger" onClick={() => { setOpen(false); signOut(); }}>
-            Sign Out
+            {t("account.signout")}
           </button>
         </div>,
         document.body

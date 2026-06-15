@@ -9,7 +9,44 @@
     "refresh": "Refresh",
     "updated": "Updated",
     "version": "Version",
-    "loading": "Loading..."
+    "loading": "Loading…",
+    "save": "Save",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "discard": "Discard",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "settings": "Settings",
+    "signin": "Sign In",
+    "signout": "Sign Out",
+    "signup": "Sign Up",
+    "profile": "Profile",
+    "upgrade": "Upgrade",
+    "or": "or",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data available",
+    "back": "Back",
+    "exit": "Exit",
+    "muted": "Muted",
+    "sound": "Sound",
+    "myAccount": "My Account",
+    "free": "Free",
+    "pro": "Pro",
+    "elite": "Elite",
+    "unlimited": "Unlimited",
+    "cancelAnytime": "Cancel anytime",
+    "swipeToOpen": "Swipe to open menu",
+    "viaBinance": "via Binance",
+    "strong": "Strong",
+    "medium": "Medium",
+    "weak": "Weak",
+    "rising": "rising",
+    "falling": "falling",
+    "declining": "declining",
+    "strong_signal": "Strong",
+    "moderate_signal": "Moderate",
+    "caution_signal": "Caution"
   },
   "header": {
     "subtitle": "Real-time market data with AI-powered predictions",
@@ -32,7 +69,12 @@
     "currentlyBullish": "⬆ Currently Bullish",
     "currentlyBearish": "⬇ Currently Bearish",
     "turnedBullish": "⬆ Price turned Bullish",
-    "turnedBearish": "⬇ Price turned Bearish"
+    "turnedBearish": "⬇ Price turned Bearish",
+    "bullishSignal": "▲ Bullish Signal",
+    "bearishSignal": "▼ Bearish Signal",
+    "neutralSignal": "Neutral",
+    "coinUp": "{{coin}} is up — momentum building, watch for continuation",
+    "coinDown": "{{coin}} is down — pressure mounting, watch support levels"
   },
   "main": {
     "marketData": "Market Data",
@@ -115,7 +157,8 @@
     "macdLegend": "MACD",
     "signalLegend": "Signal",
     "rsiOB": "OB 70",
-    "rsiOS": "OS 30"
+    "rsiOS": "OS 30",
+    "save": "Save"
   },
   "heatmap": {
     "title": "🔥 Liquidation Heatmap",
@@ -228,5 +271,560 @@
   },
   "footer": {
     "copyright": "© {{year}} TradingWise.AI. All rights reserved."
+  },
+  "auth": {
+    "logoText": "TradingWise",
+    "continueWithGoogle": "Continue with Google",
+    "divider": "or",
+    "login": {
+      "title": "Welcome back",
+      "sub": "Sign in to your account",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "signinBtn": "Sign In",
+      "signingIn": "Signing in…",
+      "noAccount": "Don't have an account?",
+      "signupFree": "Sign up free"
+    },
+    "signup": {
+      "title": "Create account",
+      "sub": "Start with a free plan — upgrade anytime",
+      "fullNameLabel": "Full name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmLabel": "Confirm password",
+      "createBtn": "Create Account",
+      "creating": "Creating account…",
+      "confirmEmail": "Check your email to confirm your account, then sign in.",
+      "alreadyAccount": "Already have an account?",
+      "signinLink": "Sign in"
+    },
+    "reset": {
+      "title": "Reset password",
+      "sub": "We'll send a reset link to your email",
+      "emailLabel": "Email",
+      "sendBtn": "Send Reset Link",
+      "sending": "Sending…",
+      "resetSent": "Password reset link sent — check your inbox.",
+      "backToSignin": "← Back to sign in"
+    },
+    "errors": {
+      "passwordMismatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters"
+    }
+  },
+  "account": {
+    "signin": "Sign In",
+    "myAccount": "My Account",
+    "profile": "Profile",
+    "tierPlan": "{{tier}} Plan",
+    "upgradePlan": "⚡ Upgrade Plan",
+    "accountSettings": "⚙ Account Settings",
+    "signout": "Sign Out"
+  },
+  "profile": {
+    "title": "Profile",
+    "sections": {
+      "subscription": "Subscription",
+      "aiUsage": "AI Usage",
+      "profileInfo": "Profile Info",
+      "security": "Security"
+    },
+    "subscription": {
+      "currentPlan": "Current plan",
+      "status": "Status",
+      "nextBilling": "Next billing",
+      "accessUntil": "Access until",
+      "manageBilling": "Manage billing / Cancel",
+      "loadingPortal": "Loading…",
+      "upgradePlan": "⚡ Upgrade Plan"
+    },
+    "status": {
+      "active": "Active",
+      "past_due": "Past due",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid",
+      "trialing": "Trial",
+      "incomplete": "Incomplete",
+      "incomplete_expired": "Expired"
+    },
+    "aiUsage": {
+      "unlimited": "Unlimited AI requests",
+      "requestsUsed": "{{used}} of {{limit}} requests used this week",
+      "resetsOn": "Resets {{date}}",
+      "upgradePro": "Upgrade to Pro",
+      "proHint": " for 35 AI requests/week, or Elite for unlimited.",
+      "upgradeElite": "Upgrade to Elite",
+      "eliteHint": " for unlimited AI requests."
+    },
+    "info": {
+      "displayName": "Display Name",
+      "username": "Username",
+      "email": "Email",
+      "bio": "Bio",
+      "yourName": "Your full name",
+      "yourUsername": "@username",
+      "yourEmail": "you@example.com",
+      "yourBio": "A short bio…"
+    },
+    "security": {
+      "title": "Security",
+      "sub": "Set a new password for your account.",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "minChars": "Min. 6 characters",
+      "repeatPassword": "Repeat new password",
+      "changePassword": "Change Password",
+      "strength": {
+        "strong": "Strong",
+        "medium": "Medium",
+        "weak": "Weak"
+      }
+    },
+    "messages": {
+      "saved": "✓ Profile saved",
+      "passwordUpdated": "✓ Password updated",
+      "displayNameRequired": "Display name is required.",
+      "emailRequired": "Email is required.",
+      "invalidEmail": "Enter a valid email address.",
+      "passwordTooShort": "New password must be at least 6 characters.",
+      "passwordMismatch": "Passwords do not match."
+    },
+    "actions": {
+      "saveChanges": "Save Changes",
+      "discard": "Discard",
+      "yourName": "Your Name",
+      "noEmail": "no email set"
+    }
+  },
+  "quotaWall": {
+    "freeTitle": "AI features require a paid plan",
+    "freeDesc": "Upgrade to unlock AI-powered market analysis, predictions, and insights across every section.",
+    "capTitle": "Weekly AI limit reached",
+    "capDesc": "You've used {{used}}/{{limit}} AI requests this week. Upgrade for unlimited access.",
+    "getBtn": "Get {{plan}}",
+    "redirecting": "Redirecting…",
+    "usagePips": "{{used}}/{{limit}} used · resets Monday",
+    "signin": "Already have a plan? Sign in"
+  },
+  "membershipGate": {
+    "loading": "Loading…",
+    "signin": {
+      "title": "Sign in to continue",
+      "sub": "Create a free account to access {{feature}} and unlock your edge in the market.",
+      "perks": ["Live price & order book", "Fear & Greed gauge", "On-chain metrics", "Liquidation heatmap"],
+      "cta": "Sign In / Sign Up — It's Free",
+      "trust": "No credit card required · Free forever plan"
+    },
+    "pro": {
+      "headline": "Trade Smarter with AI",
+      "sub": "Get real-time AI-powered analysis across price action, on-chain data, and market sentiment — all in one place.",
+      "features": [
+        { "icon": "✦", "title": "AI Market Intelligence", "desc": "GPT-4o reads the market for you — patterns, momentum, and bias at a glance." },
+        { "icon": "⛓",  "title": "On-Chain AI Analysis",  "desc": "Network health, miner behavior, and chain signals interpreted in plain language." },
+        { "icon": "📈", "title": "AI Price Predictions",  "desc": "Multi-scenario forecasts with confidence levels updated every interval." },
+        { "icon": "💬", "title": "AI Trading Assistant", "desc": "Ask anything — strategy, setups, risk — and get institutional-grade answers." }
+      ],
+      "cta": "Unlock Pro — $10.99/mo",
+      "trust": "35 AI requests/week · Cancel anytime · Instant access"
+    },
+    "elite": {
+      "headline": "The Edge Professionals Use",
+      "sub": "Gann Analysis, Coinbase Premium, and unlimited AI — the full institutional toolkit, no caps.",
+      "features": [
+        { "icon": "📐", "title": "Gann Analysis AI",   "desc": "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite." },
+        { "icon": "⚡", "title": "Unlimited AI Requests", "desc": "No weekly cap — use every AI feature as much as you need." },
+        { "icon": "🏦", "title": "Coinbase Premium AI", "desc": "Institutional flow vs retail divergence interpreted in real time." }
+      ],
+      "cta": "Unlock Elite — $29.99/mo",
+      "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro"
+    },
+    "blurGate": {
+      "features": ["Everything in Pro — unlimited", "HTF Multi-Timeframe AI", "Coinbase Premium AI"],
+      "signInBtn": "Sign in to upgrade",
+      "upgradeBtn": "Upgrade to Elite",
+      "redirecting": "Redirecting…",
+      "trust": "Cancel anytime · Includes everything in Pro"
+    }
+  },
+  "upgradeModal": {
+    "titleChoose": "Choose your plan",
+    "titleManage": "Manage your plan",
+    "subChoose": "Unlock AI-powered insights and advanced analytics",
+    "subManage": "Upgrades are charged immediately (prorated). Downgrades credit your next bill.",
+    "plans": {
+      "free": {
+        "label": "Free",
+        "features": ["Live price charts", "Order book", "Watchlist", "Fear & Greed gauge", "Flash news banner"]
+      },
+      "pro": {
+        "label": "Pro",
+        "features": ["Everything in Free", "HTF Multi-Timeframe AI", "AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"]
+      },
+      "elite": {
+        "label": "Elite",
+        "features": ["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI", "Early access to new features"]
+      }
+    },
+    "cta": {
+      "upgradeTo": "Upgrade to {{plan}}",
+      "switchTo": "Switch to {{plan}}",
+      "cancelPlan": "Cancel plan",
+      "currentPlan": "Current Plan",
+      "loading": "Loading…"
+    },
+    "confirm": {
+      "upgradeTitle": "Upgrade to {{plan}}",
+      "downgradeTitle": "Switch to {{plan}}",
+      "cancelTitle": "Cancel your {{plan}} plan",
+      "cancelBody": "Your subscription will be cancelled at the end of your current billing period. You'll keep all your current features until then — no partial refund is issued.",
+      "upgradeBody": "You'll be charged {{amount}} now — the prorated difference for the remaining days in your billing cycle. Your new features are available immediately.",
+      "downgradeBodyCredit": "A prorated credit of {{amount}} will be applied to your next bill. Your plan changes immediately.",
+      "downgradeBodyNoAmount": "A prorated credit will be applied to your next bill. Your plan changes immediately.",
+      "lostFeaturesLabel": "You'll lose access to:",
+      "payAndUpgrade": "Pay {{amount}} & Upgrade",
+      "processing": "Processing…",
+      "goBack": "Go back"
+    },
+    "success": {
+      "cancelMessage": "Plan cancelled",
+      "cancelSub": "You'll keep your {{plan}} access until {{date}}, then switch to Free.",
+      "upgradeMessage": "Welcome to {{plan}}!",
+      "upgradeSub": "Your new features are active immediately. The prorated charge has been applied to your card.",
+      "downgradeMessage": "Switched to {{plan}}",
+      "downgradeSub": "Your plan has been updated. A prorated credit will be applied to your next bill.",
+      "done": "Done"
+    },
+    "badges": {
+      "mostPopular": "Most Popular",
+      "yourPlan": "Your Plan"
+    },
+    "footer": {
+      "proratedNote": "Plan switches are prorated · ",
+      "manageBilling": "Manage billing",
+      "loadingPortal": "Loading…",
+      "cancelAnytime": "Cancel anytime",
+      "securePayment": " · Secure payment via Stripe"
+    },
+    "error": "Something went wrong"
+  },
+  "landing": {
+    "hero": {
+      "headline": "Read the Market Like an Institution",
+      "sub": "AI-powered analysis across price action, on-chain data, liquidations, and sentiment — all in one dashboard.",
+      "cta": "Start Free — No Card Required",
+      "trust": "Trusted by 2,000+ crypto traders · Free forever plan available"
+    },
+    "features": {
+      "title": "Everything you need to trade smarter",
+      "items": [
+        { "icon": "✦",  "title": "AI Market Intelligence",   "desc": "GPT-4o reads price action, funding rates, open interest and on-chain data — then gives you a plain-English bias with confidence level." },
+        { "icon": "📈", "title": "Price Prediction Chart",   "desc": "AI-generated Bull, Base, and Bear scenarios projected forward with probability scores, updated every interval." },
+        { "icon": "🔥", "title": "Liquidation Heatmap",     "desc": "Estimated liquidation clusters from $90K to $120K with color-coded intensity. See where forced selling or covering is likely." },
+        { "icon": "⛓",  "title": "On-Chain Intelligence",   "desc": "Hash rate, miner revenue, difficulty, and transaction volume — summarized and interpreted for you by AI in real time." },
+        { "icon": "📊", "title": "Long-Term Cycle Analysis","desc": "200W MA, Pi Cycle Top, Fibonacci levels, cycle comparisons and scenario paths — all in the HTF Analysis section." },
+        { "icon": "🧠", "title": "Trader Positioning",      "desc": "Retail vs smart money net positions, sentiment divergence, and AI-generated bias summaries — updated every 4 hours." }
+      ]
+    },
+    "plans": {
+      "title": "Simple, transparent pricing",
+      "sub": "Start free. Upgrade when you need more."
+    },
+    "signin": "Sign In",
+    "getStarted": "Get Started Free",
+    "noCard": "No card required"
+  },
+  "positions": {
+    "title": "Trader Positioning",
+    "sub": "Retail vs Smart Money · 4h · Binance{{candles}}",
+    "loading": "Loading position data…",
+    "error": "No position data available for this pair.",
+    "updatedHourly": "Updated hourly",
+    "panels": {
+      "retailNet": "Retail NET OPEN POSITION",
+      "smartSentiment": "Smart Money SENTIMENT",
+      "smartNet": "Smart Money NET OPEN POSITION",
+      "price": "Price Action"
+    },
+    "summary": {
+      "price": {
+        "trendUp": "Short-term momentum is bullish, up {{pct}}% over the last 10 candles.",
+        "trendDown": "Short-term momentum is bearish, down {{pct}}% over the last 10 candles.",
+        "consolidating": "Consolidating between support {{support}} and resistance {{resistance}}.",
+        "aboveSupport": "Holding above key support at {{support}}.",
+        "belowResistance": "Approaching resistance at {{resistance}}."
+      },
+      "retail": {
+        "heavilyLong": "Retail is heavily net long ({{bias}} net bias). Extreme retail longs historically precede pullbacks — contrarian bearish signal. Exposure is {{trend}}.",
+        "moderateLong": "Retail holds a moderate net long position ({{bias}} net bias). Mild bullish retail sentiment trending {{trend}}.",
+        "neutral": "Retail positioning is broadly neutral ({{bias}} net bias). No strong directional conviction from the crowd.",
+        "moderateShort": "Retail is moderately net short ({{bias}} net bias). A mild contrarian bullish setup — positioning is {{trend}}.",
+        "heavilyShort": "Retail is heavily net short ({{bias}} net bias). Strong contrarian bullish setup — retail capitulation typically precedes recoveries."
+      },
+      "sentiment": {
+        "stronglyBullish": "Smart money is strongly bullish at {{pct}}% long — well above the 50% neutral line. Institutional bias clearly long and {{trend}}.",
+        "mildlyBullish": "Smart money leans bullish at {{pct}}% long. Mild institutional preference for the long side, sentiment {{trend}}.",
+        "neutral": "Smart money is near-neutral at {{pct}}% long. No strong directional conviction — institutional positioning is balanced, trending {{trend}}.",
+        "mildlyBearish": "Smart money has a mild bearish lean at {{pct}}% long. Institutions slightly net short, sentiment is {{trend}}.",
+        "stronglyBearish": "Smart money is predominantly bearish at {{pct}}% long. Institutional traders clearly net short — significant downside bias."
+      },
+      "smartNet": {
+        "alignedBullish": "Smart money is firmly {{dir}} ({{bias}}), aligned with retail. Broad market consensus bullish — position is {{trend}}.",
+        "alignedBearish": "Smart money is firmly {{dir}} ({{bias}}), aligned with retail short. Broad consensus bearish — caution warranted. Trend is {{trend}}.",
+        "divergingSmartBullish": "Divergence: smart money is {{dir}} ({{bias}}) while retail leans opposite. Institutional positioning typically leads price — {{trend}} trend.",
+        "divergingSmartBearish": "Divergence: retail is long while smart money is {{dir}} ({{bias}}). Smart money fading retail euphoria — watch for a reversal. Trend is {{trend}}.",
+        "neutral": "Smart money net position is close to neutral ({{bias}} bias). No strong institutional directional bet, trending {{trend}}."
+      },
+      "dir": {
+        "netLong": "net long",
+        "netShort": "net short"
+      }
+    }
+  },
+  "htf": {
+    "loading": "Loading weekly candle data…",
+    "title": "Long-Term Analysis",
+    "sub": "HTF · Weekly · Cycle Tracking · {{coin}}/USD",
+    "aiLabel": "GPT-4o",
+    "sections": {
+      "monthly":  { "title": "Monthly Returns",  "sub": "Full history heatmap" },
+      "ma200":    { "title": "200W MA",           "sub": "Moving average bands" },
+      "cycle":    { "title": "Cycle Compare",     "sub": "2020 vs 2024 aligned" },
+      "pi":       { "title": "Pi Cycle Top",      "sub": "Cycle top indicator" },
+      "fib":      { "title": "Fibonacci",         "sub": "Key support & resistance" },
+      "scenario": { "title": "Scenarios",         "sub": "Bull · Base · Bear paths" },
+      "ai":       { "title": "AI Outlook",        "sub": "GPT-4o macro analysis" }
+    },
+    "stats": {
+      "price": "Price",
+      "ath": "ATH",
+      "drawdown": "Drawdown",
+      "ma200w": "200W MA",
+      "priceToMa": "Price / 200W MA",
+      "postHalving": "Post-Halving",
+      "cycleLow": "Cycle Low",
+      "trend": "Trend"
+    },
+    "phase": {
+      "earlyAccumulation": "Early Accumulation",
+      "midExpansion": "Mid Expansion",
+      "lateExpansion": "Late Expansion",
+      "distribution": "Distribution",
+      "bearMarket": "Bear Market",
+      "recovery": "Recovery"
+    },
+    "legend": {
+      "price": "Price",
+      "ma200w": "200W MA",
+      "ma50w": "50W MA",
+      "cycle2020": "2020 Cycle",
+      "cycle2024": "2024 Cycle",
+      "sma16w": "16W SMA (≈111DMA)",
+      "dbl50w": "2×50W SMA (≈2×350DMA)",
+      "historical26w": "Historical (26W)",
+      "bull": "Bull",
+      "base": "Base",
+      "bear": "Bear"
+    },
+    "notes": {
+      "cycle": "Both cycles indexed to 100% at their halving date. X-axis: weeks from halving. Y-axis: % gain from halving price.",
+      "fib": "Measured from current cycle low to ATH. Golden ratio (0.618) and ATH retest are the most watched levels. Extensions above 1.0 are potential cycle-top targets.",
+      "scenario": "Projected paths based on cycle week {{wks}}, historical analogues, Fibonacci levels and current momentum."
+    },
+    "piStatus": {
+      "above": "16W SMA is above 2×50W SMA by {{gap}}%",
+      "below": "16W SMA is below 2×50W SMA by {{gap}}%",
+      "converging": " — ⚠ Lines converging, watch closely"
+    },
+    "fib": {
+      "nearLabel": "← price near here"
+    },
+    "scenario": {
+      "bull": "Bull Case",
+      "base": "Base Case",
+      "bear": "Bear Case"
+    },
+    "ai": {
+      "ctaText": "AI-powered cycle analysis — cycle phase, 6-month and 12-month outlooks, key levels, and an actionable long-term take, powered by GPT-4o.",
+      "getOutlook": "Get AI Outlook",
+      "analysing": "Analysing…",
+      "refreshBtn": "Refresh Analysis",
+      "refreshing": "Refreshing…",
+      "outlook6m": "6-Month Outlook",
+      "outlook12m": "12-Month Outlook",
+      "keyLevels": "Key Levels",
+      "ourTake": "Our Take"
+    },
+    "tabAI": {
+      "label": "AI Take",
+      "badge": "AI Powered"
+    },
+    "explainer": {
+      "howItWorks": "How it works",
+      "currentReading": "Current reading",
+      "noData": "Insufficient data to compute.",
+      "monthly": {
+        "how": "Each cell shows Bitcoin's percentage return for that calendar month. Rows are years, columns are months. Deeper green = larger gain, deeper red = larger loss. This heatmap reveals seasonal patterns — which months have historically been strong or weak across multiple market cycles.",
+        "earlyAccumulation": "{{months}} months into the current post-halving cycle (Early Accumulation phase). Q4 and Q1 in post-halving years have historically been Bitcoin's strongest quarters. October through March tends to concentrate the largest monthly gains — compare those columns to 2020 and 2016 for confirmation.",
+        "midExpansion": "{{months}} months into the current post-halving cycle (Mid Expansion phase). Mid-cycle years show strong green clusters in Q3–Q4. Look for the current year's October–December columns matching the same period in 2020 and 2016 as the historical template.",
+        "lateExpansion": "{{months}} months into the current post-halving cycle (Late Expansion phase). Late-cycle monthly returns become erratic — alternating between sharp gains and sudden red months. High monthly volatility with declining volume on green months is a distribution signal.",
+        "distribution": "{{months}} months into the current post-halving cycle (Distribution phase). Distribution phases show a shift from green-dominated to red-dominated columns. Isolated green months appear as relief rallies against a bearish backdrop — compare to 2021 Q3–Q4.",
+        "bearMarket": "{{months}} months into the current post-halving cycle (Bear Market phase). Bear markets show persistent red. Watch January and October historically — they have the highest frequency of cycle-bottom reversals or the start of recovery months.",
+        "recovery": "{{months}} months into the current post-halving cycle (Recovery phase). Recovery phases see the first clusters of consistent monthly greens returning. Low-volume base building accelerates as the next halving approaches — compare to 2019 and 2015."
+      },
+      "ma200": {
+        "how": "The 200-Week Moving Average is Bitcoin's most-watched long-term support. Price has never closed a full week below this level without eventually recovering to new all-time highs. Touching or trading below the 200W MA has been a generational buy zone in every prior cycle; trading above 3× has preceded every major top.",
+        "below": "Price is trading below the 200W MA ({{ma200}}) — an extreme buy zone seen only at cycle lows. Every prior occurrence was followed by a full recovery to new highs.{{comp}}",
+        "earlyBull": "At {{ratio}}× the 200W MA ({{ma200}}), Bitcoin is in the early-bull range. There is significant room before the historically elevated zone above 3×.{{comp}}",
+        "midBull": "At {{ratio}}× the 200W MA ({{ma200}}), Bitcoin is in healthy mid-bull expansion territory. Both the 2017 and 2021 tops occurred above 3×.{{comp}}",
+        "approaching": "At {{ratio}}× the 200W MA ({{ma200}}), Bitcoin is approaching the historically elevated zone. Prior tops occurred near or above 3× — monitor for distribution signals.{{comp}}",
+        "stretched": "At {{ratio}}× the 200W MA ({{ma200}}), Bitcoin is in the historically stretched zone. Both prior cycle tops were followed by 70–85% drawdowns from this territory.{{comp}}",
+        "comp": " At the same week in the 2020 cycle (week {{wks}}), the ratio was {{r2020}}×."
+      },
+      "cycle": {
+        "how": "Both the 2020 and 2024 cycles are normalized to 100% at their respective halving dates, then plotted week-by-week on the same axis. This removes absolute price noise and reveals the structural shape of each cycle — whether the current one is running hot, cold, or in line with the prior bull market.",
+        "noData": "Week {{wks}} post-halving — comparing the current 2024 cycle against the 2020 cycle at the same point in time.",
+        "tracking": "Week {{wks}} post-halving: the 2024 cycle has gained {{gain24}}% from its halving price. At this same week, the 2020 cycle was up {{gain20}}%. The current cycle is closely tracking the 2020 analogue.",
+        "outperforming": "Week {{wks}} post-halving: the 2024 cycle has gained {{gain24}}% from its halving price. At this same week, the 2020 cycle was up {{gain20}}%. The current cycle is outperforming the 2020 analogue by {{diff}} percentage points.",
+        "trailing": "Week {{wks}} post-halving: the 2024 cycle has gained {{gain24}}% from its halving price. At this same week, the 2020 cycle was up {{gain20}}%. The current cycle is trailing the 2020 analogue by {{diff}} percentage points."
+      },
+      "pi": {
+        "how": "The Pi Cycle Top tracks two moving averages — the 111-day SMA (≈16-week) and twice the 350-day SMA (≈2×50-week). When the faster line crosses above the slower, it has marked the cycle top within days in every prior Bitcoin bull run: December 2017, April 2021, and November 2021.",
+        "warning": "⚠ Warning: the 16W SMA is only {{gap}}% above the 2×50W SMA — the lines are converging. Historically, a cross has fired within days of cycle tops (Dec 2017, Apr 2021, Nov 2021). Watch closely.",
+        "converging": "The lines are converging with a gap of only {{gap}}%. No cross yet, but the proximity warrants attention at week {{wks}} in the cycle.",
+        "above": "The 16W SMA is {{gap}}% above the 2×50W SMA at week {{wks}}. The lines are diverging — no imminent top signal. This indicator typically fires in the late-expansion or distribution phase.",
+        "below": "The 16W SMA is {{gap}}% below the 2×50W SMA at week {{wks}}. No Pi Cycle Top signal — lines are clearly separated. The indicator is inactive and a cross is not imminent."
+      },
+      "fib": {
+        "how": "Fibonacci retracement and extension levels are measured from the current cycle low to the all-time high. The 0.618 Golden Ratio and 0.786 levels are the most critical retracement supports on corrections. The 1.618 and 2.618 extensions above the ATH are the primary cycle-top target zones in prior Bitcoin bull markets.",
+        "support": "Current support: {{label}} at {{price}}. ",
+        "resistance": "Next resistance: {{label}} at {{price}}. ",
+        "aboveATH": "Price is above the ATH — in extension territory. The 1.618 ({{ext1618}}) and 2.618 ({{ext2618}}) levels are the primary cycle-top target zones in prior Bitcoin bull markets.",
+        "belowATH": "Price is {{pct}}% below the ATH ({{ath}}). A confirmed break above opens extension targets at 1.618 ({{ext1618}}) and 2.618 ({{ext2618}})."
+      },
+      "scenario": {
+        "how": "Three forward price paths are projected from the current cycle week: Bull (new ATH driven by institutional demand and ETF flows), Base (steady accumulation without a major macro catalyst), and Bear (macro shock or distribution retracement to Fibonacci support). Paths are shaped by historical cycle analogues and current Fibonacci targets.",
+        "prefix": "Week {{wks}} post-halving — {{phase}} phase. ",
+        "earlyAccumulation": "Historical analogues show the strongest price appreciation leg typically begins 6–18 months post-halving. The base case projects steady gains before the main expansion phase.",
+        "midExpansion": "Mid-expansion is Bitcoin's historically strongest phase. Analogues from 2020–2021 and 2016–2017 show sharp momentum moves interspersed with 20–40% corrections before the final leg.",
+        "lateExpansion": "Late expansion is marked by increasing volatility and the start of distribution. Prior cycles peaked in this window — the gap between the Bull and Bear targets is widest here.",
+        "distribution": "Prior cycles topped in the distribution phase and then entered 18–24 month bear markets. The Bear path reflects what prior drops looked like in magnitude and pace.",
+        "bearMarket": "Bear markets typically last 12–18 months from the peak. Accumulation zones near the 200W MA and 0.618 Fibonacci level have historically been generational entry points.",
+        "recovery": "Recovery phases transition to early accumulation — lower volatility, rising volume, and the first signs of renewed demand before the next halving sets up a new cycle."
+      }
+    }
+  },
+  "feargreed": {
+    "title": "Fear & Greed Index",
+    "loading": "Loading index…",
+    "zones": {
+      "extremeFear": "Extreme\nFear",
+      "fear": "Fear",
+      "neutral": "Neutral",
+      "greed": "Greed",
+      "extremeGreed": "Extreme\nGreed"
+    },
+    "history": {
+      "yesterday": "Yesterday",
+      "lastWeek": "Last Week"
+    }
+  },
+  "etf": {
+    "title": "Daily Net Inflow — 30 Days (USD)",
+    "loading": "Loading ETF data…",
+    "error": "No data available.",
+    "todayBtn": "Today",
+    "table": {
+      "fund": "Fund",
+      "dailyFlow": "Daily Flow",
+      "price": "Price",
+      "dayPct": "Day %",
+      "aum": "AUM",
+      "volume": "Volume",
+      "total": "Total ({{count}} funds)"
+    }
+  },
+  "onchain": {
+    "loading": "Loading…",
+    "metrics": {
+      "hashRate":     { "label": "Hash Rate",     "tooltip": "Total mining power securing the Bitcoin network" },
+      "dailyTxs":     { "label": "Daily Txs",     "tooltip": "Number of on-chain transactions in the last 24 hours" },
+      "minerRevenue": { "label": "Miner Revenue", "tooltip": "Total USD earned by miners today (block rewards + fees)" },
+      "difficulty":   { "label": "Difficulty",    "tooltip": "Current mining difficulty — how hard it is to find a block" },
+      "btcMined":     { "label": "BTC Mined",     "tooltip": "New BTC issued to miners today" },
+      "transferVol":  { "label": "Transfer Vol",  "tooltip": "Estimated USD value transferred on-chain today" }
+    },
+    "networkStrength": "{{label}} Network",
+    "action": {
+      "accumulate": "Accumulate",
+      "hold": "Hold",
+      "caution": "Caution"
+    },
+    "strength": {
+      "strong": "Strong",
+      "moderate": "Moderate",
+      "weak": "Weak"
+    },
+    "updated": "{{status}} {{time}}",
+    "cached": "Cached · {{time}}",
+    "updatedAt": "Updated {{time}}"
+  },
+  "coinbase": {
+    "loading": "Loading historical data…",
+    "explainer": {
+      "title": "What does this chart show?",
+      "body": "The Coinbase Premium Index measures the percentage difference between the BTC price on Coinbase Pro (USD) and Binance (USDT). A positive premium is typically bullish sentiment. When it is negative it signals a bearish signal. Sustained positive premiums during an uptrend confirm institutional buying."
+    }
+  },
+  "gann": {
+    "loading": "Loading candle data…",
+    "analyseBtn": "✦ Analyse with AI",
+    "analysing": "Analysing…",
+    "refresh": "Refresh",
+    "tooltip": "Click to see Gann predictions"
+  },
+  "watchlist": {
+    "searchPlaceholder": "Search by name or symbol…",
+    "loading": "Loading market data…",
+    "noResults": "No results found"
+  },
+  "alerts": {
+    "title": "Alerts Builder",
+    "enableNotifications": "Enable Notifications",
+    "notificationsOn": "🔔 Notifications On",
+    "newAlert": "+ New Alert",
+    "empty": {
+      "icon": "⚡",
+      "text": "No alerts configured",
+      "hint": "Click \"New Alert\" to set up compound conditions like RSI < 30 AND Funding Rate < 0"
+    },
+    "defaultName": "New Alert",
+    "logic": {
+      "and": "AND",
+      "or": "OR"
+    },
+    "metrics": {
+      "price": "Price (USD)",
+      "rsi": "RSI",
+      "fundingRate": "Funding Rate",
+      "longShortRatio": "Long/Short Ratio",
+      "openInterest": "Open Interest",
+      "macd": "MACD",
+      "liquidationAbove": "Liq. Above (USD)",
+      "liquidationBelow": "Liq. Below (USD)"
+    }
+  },
+  "nav": {
+    "sections": {
+      "ai": "AI Prediction",
+      "feargreed": "Fear & Greed",
+      "market": "Market Data",
+      "onchain": "On-Chain",
+      "chart": "Price Chart",
+      "heatmap": "Liquidations",
+      "alerts": "Alerts",
+      "watchlist": "Watchlist"
+    }
   }
 }

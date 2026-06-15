@@ -1,5 +1,6 @@
 import { createChart, ColorType, HistogramSeries, LineSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getPremiumAIAnalysis, PremiumAIResult } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { useAIQuota } from "../hooks/useAIQuota";
@@ -100,9 +101,9 @@ function calcTrend(premiums: number[]): "rising" | "falling" | "flat" {
 }
 
 const SENTIMENT_CFG = {
-  bullish: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   label: "Bullish" },
-  neutral: { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  label: "Neutral" },
-  bearish: { color: "#fb7185", bg: "rgba(251,113,133,0.12)", label: "Bearish" },
+  bullish: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   tKey: "common.bullish" },
+  neutral: { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  tKey: "common.neutral" },
+  bearish: { color: "#fb7185", bg: "rgba(251,113,133,0.12)", tKey: "common.bearish" },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -113,6 +114,7 @@ interface OnChainMetricsProps {
 }
 
 export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {} }: OnChainMetricsProps) {
+  const { t } = useTranslation();
   const { exceeded, used, limit, consume } = useAIQuota();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +271,7 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
       </div>
 
       {/* ── Chart ── */}
-      {histLoading && <div className="cbp-placeholder">Loading historical data…</div>}
+      {histLoading && <div className="cbp-placeholder">{t("coinbase.loading")}</div>}
       <div
         ref={containerRef}
         className="cbp-chart-container"
@@ -279,18 +281,8 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
       {/* ── Static explanation ── */}
       {!histLoading && (
         <div className="cbp-explainer">
-          <div className="cbp-explainer-title">What does this chart show?</div>
-          <p className="cbp-explainer-text">
-            The <strong>Coinbase Premium Index</strong> measures the percentage difference between
-            the Bitcoin price on Coinbase (USD) and the price on a global exchange like {refSource} (USDT).
-            When the premium is <span style={{ color: "#22c55e" }}>positive</span>, US-based buyers on
-            Coinbase are paying more than the global market — a sign of strong domestic demand and
-            typically <strong>bullish</strong> sentiment. When it is{" "}
-            <span style={{ color: "#fb7185" }}>negative</span>, US buyers are paying less, indicating
-            weaker demand or selling pressure from US institutions and retail — often a{" "}
-            <strong>bearish</strong> signal. Sustained positive premiums during an uptrend confirm
-            buying conviction; a falling premium during a rally can be an early warning of exhaustion.
-          </p>
+          <div className="cbp-explainer-title">{t("coinbase.explainer.title")}</div>
+          <p className="cbp-explainer-text">{t("coinbase.explainer.body")}</p>
         </div>
       )}
 
@@ -303,7 +295,7 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
             <span className="pattern-insight-ai-badge">✦ AI Powered</span>
             {ai && (() => {
               const s = SENTIMENT_CFG[ai.sentiment];
-              return <span className="cbp-ai-badge" style={{ color: s.color, background: s.bg }}>{s.label}</span>;
+              return <span className="cbp-ai-badge" style={{ color: s.color, background: s.bg }}>{t(s.tKey)}</span>;
             })()}
           </div>
 

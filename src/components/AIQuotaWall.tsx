@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { redirectToCheckout, PRICE_IDS } from "../services/stripeService";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/AIQuotaWall.css";
@@ -29,11 +30,12 @@ const PLANS = [
     color: "#a78bfa",
     popular: false,
     priceId: () => PRICE_IDS.elite,
-    features: ["Everything in Pro — unlimited", "Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI", "Early access to features"],
+    features: ["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI", "Early access to features"],
   },
 ];
 
 export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const isFreeBlock = limit === 0;
@@ -61,17 +63,15 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
           <div className="aiqw-text">
             {isFreeBlock ? (
               <>
-                <h3 className="aiqw-title">AI features require a paid plan</h3>
-                <p className="aiqw-desc">
-                  Upgrade to unlock AI-powered market analysis, predictions, and insights across every section.
-                </p>
+                <h3 className="aiqw-title">{t("quotaWall.freeTitle")}</h3>
+                <p className="aiqw-desc">{t("quotaWall.freeDesc")}</p>
               </>
             ) : (
               <>
-                <h3 className="aiqw-title">Weekly AI limit reached</h3>
-                <p className="aiqw-desc">
-                  You've used <strong>{used}/{limit}</strong> AI requests this week. Upgrade for unlimited access.
-                </p>
+                <h3 className="aiqw-title">{t("quotaWall.capTitle")}</h3>
+                <p className="aiqw-desc"
+                  dangerouslySetInnerHTML={{ __html: t("quotaWall.capDesc", { used, limit }) }}
+                />
               </>
             )}
           </div>
@@ -83,7 +83,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
             {Array.from({ length: limit }).map((_, i) => (
               <span key={i} className={`aiqw-pip ${i < used ? "aiqw-pip--used" : ""}`} />
             ))}
-            <span className="aiqw-usage-label">{used}/{limit} used · resets Monday</span>
+            <span className="aiqw-usage-label">{t("quotaWall.usagePips", { used, limit })}</span>
           </div>
         )}
 
@@ -112,7 +112,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
                 onClick={() => handleUpgrade(plan)}
                 disabled={loadingPlan === plan.id}
               >
-                {loadingPlan === plan.id ? "Redirecting…" : `Get ${plan.label}`}
+                {loadingPlan === plan.id ? t("quotaWall.redirecting") : t("quotaWall.getBtn", { plan: plan.label })}
               </button>
             </div>
           ))}
@@ -120,7 +120,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
 
         {/* Sign in link */}
         <button className="aiqw-signin" onClick={onOpenAuth}>
-          Already have a plan? Sign in
+          {t("quotaWall.signin")}
         </button>
       </div>
     </div>

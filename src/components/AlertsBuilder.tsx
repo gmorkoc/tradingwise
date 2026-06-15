@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { BTCData } from "../services/coinglass";
 import "../styles/AlertsBuilder.css";
 
@@ -25,15 +26,15 @@ interface AlertGroup {
 }
 
 /* ── Config ─────────────────────────────────────────────────────────────── */
-const METRICS: { key: MetricKey; label: string; defaultVal: number; step: number }[] = [
-  { key: "price",            label: "Price (USD)",       defaultVal: 90000, step: 100   },
-  { key: "rsi",              label: "RSI",               defaultVal: 30,    step: 1     },
-  { key: "fundingRate",      label: "Funding Rate",      defaultVal: 0,     step: 0.001 },
-  { key: "longShortRatio",   label: "Long/Short Ratio",  defaultVal: 1.0,   step: 0.01  },
-  { key: "openInterest",     label: "Open Interest",     defaultVal: 1e9,   step: 1e7   },
-  { key: "macd",             label: "MACD",              defaultVal: 0,     step: 0.01  },
-  { key: "liquidationAbove", label: "Liq. Above (USD)",  defaultVal: 95000, step: 100   },
-  { key: "liquidationBelow", label: "Liq. Below (USD)",  defaultVal: 85000, step: 100   },
+const METRICS: { key: MetricKey; tKey: string; defaultVal: number; step: number }[] = [
+  { key: "price",            tKey: "alerts.metrics.price",            defaultVal: 90000, step: 100   },
+  { key: "rsi",              tKey: "alerts.metrics.rsi",              defaultVal: 30,    step: 1     },
+  { key: "fundingRate",      tKey: "alerts.metrics.fundingRate",      defaultVal: 0,     step: 0.001 },
+  { key: "longShortRatio",   tKey: "alerts.metrics.longShortRatio",   defaultVal: 1.0,   step: 0.01  },
+  { key: "openInterest",     tKey: "alerts.metrics.openInterest",     defaultVal: 1e9,   step: 1e7   },
+  { key: "macd",             tKey: "alerts.metrics.macd",             defaultVal: 0,     step: 0.01  },
+  { key: "liquidationAbove", tKey: "alerts.metrics.liquidationAbove", defaultVal: 95000, step: 100   },
+  { key: "liquidationBelow", tKey: "alerts.metrics.liquidationBelow", defaultVal: 85000, step: 100   },
 ];
 
 const OPERATORS: Operator[] = [">", "<", ">=", "<="];
@@ -69,14 +70,15 @@ function evaluate(group: AlertGroup, data: Partial<BTCData>): boolean {
   return group.logic === "AND" ? results.every(Boolean) : results.some(Boolean);
 }
 
-function metricLabel(key: MetricKey): string {
-  return METRICS.find(m => m.key === key)?.label ?? key;
+function metricTKey(key: MetricKey): string {
+  return METRICS.find(m => m.key === key)?.tKey ?? key;
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 interface Props { btcData: Partial<BTCData> | null }
 
 export function AlertsBuilder({ btcData }: Props) {
+  const { t } = useTranslation();
   const [groups, setGroups] = useState<AlertGroup[]>(loadGroups);
   const [openIds, setOpenIds] = useState<Set<string>>(() => {
     const initial = loadGroups();
@@ -106,8 +108,8 @@ export function AlertsBuilder({ btcData }: Props) {
           lastFiredRef.current[g.id] = now;
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             const body = g.conditions
-              .map(c => `${metricLabel(c.metric)} ${c.operator} ${c.value}`)
-              .join(g.logic === "AND" ? " AND " : " OR ");
+              .map(c => `${t(metricTKey(c.metric))} ${c.operator} ${c.value}`)
+              .join(g.logic === "AND" ? ` ${t("alerts.logic.and")} ` : ` ${t("alerts.logic.or")} `);
             new Notification(`TradingWise.AI Alert: ${g.name}`, { body });
           }
         }
@@ -120,7 +122,7 @@ export function AlertsBuilder({ btcData }: Props) {
   const addGroup = () => {
     const id = uid();
     const g: AlertGroup = {
-      id, name: "New Alert", logic: "AND",
+      id, name: t("alerts.defaultName"), logic: "AND",
       conditions: [{ id: uid(), metric: "rsi", operator: "<", value: 30 }],
       enabled: true,
     };
@@ -170,27 +172,25 @@ export function AlertsBuilder({ btcData }: Props) {
   return (
     <div className="alerts-card">
       <div className="alerts-header">
-        <h3 className="alerts-title">Alerts Builder</h3>
+        <h3 className="alerts-title">{t("alerts.title")}</h3>
         <div className="alerts-header-right">
           {notifPerm !== "granted" && (
             <button className="alerts-notify-btn" onClick={requestNotif}>
-              Enable Notifications
+              {t("alerts.enableNotifications")}
             </button>
           )}
           {notifPerm === "granted" && (
-            <span className="alerts-notify-btn alerts-notify-btn--granted">🔔 Notifications On</span>
+            <span className="alerts-notify-btn alerts-notify-btn--granted">{t("alerts.notificationsOn")}</span>
           )}
-          <button className="alerts-add-btn" onClick={addGroup}>+ New Alert</button>
+          <button className="alerts-add-btn" onClick={addGroup}>{t("alerts.newAlert")}</button>
         </div>
       </div>
 
       {groups.length === 0 ? (
         <div className="alerts-empty">
-          <div className="alerts-empty-icon">⚡</div>
-          <div className="alerts-empty-text">No alerts configured</div>
-          <div className="alerts-empty-hint">
-            Click "New Alert" to set up compound conditions like RSI &lt; 30 AND Funding Rate &lt; 0
-          </div>
+          <div className="alerts-empty-icon">{t("alerts.empty.icon")}</div>
+          <div className="alerts-empty-text">{t("alerts.empty.text")}</div>
+          <div className="alerts-empty-hint">{t("alerts.empty.hint")}</div>
         </div>
       ) : (
         <div className="alerts-list">
@@ -253,7 +253,7 @@ export function AlertsBuilder({ btcData }: Props) {
 
                         <select className="alert-select alert-select--metric" value={cond.metric}
                           onChange={e => updateCondition(group.id, cond.id, { metric: e.target.value as MetricKey })}>
-                          {METRICS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+                          {METRICS.map(m => <option key={m.key} value={m.key}>{t(m.tKey)}</option>)}
                         </select>
 
                         <select className="alert-select alert-select--op" value={cond.operator}

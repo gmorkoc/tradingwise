@@ -9,30 +9,72 @@
     "refresh": "Yenile",
     "updated": "Güncellendi",
     "version": "Sürüm",
-    "loading": "Yükleniyor..."
+    "loading": "Yükleniyor…",
+    "save": "Kaydet",
+    "saved": "Kaydedildi",
+    "saving": "Kaydediliyor…",
+    "discard": "İptal Et",
+    "confirm": "Onayla",
+    "cancel": "Vazgeç",
+    "settings": "Ayarlar",
+    "signin": "Giriş Yap",
+    "signout": "Çıkış Yap",
+    "signup": "Kayıt Ol",
+    "profile": "Profil",
+    "upgrade": "Yükselt",
+    "or": "veya",
+    "error": "Hata",
+    "success": "Başarılı",
+    "noData": "Veri yok",
+    "back": "Geri",
+    "exit": "Çık",
+    "muted": "Sessiz",
+    "sound": "Ses",
+    "myAccount": "Hesabım",
+    "free": "Ücretsiz",
+    "pro": "Pro",
+    "elite": "Elite",
+    "unlimited": "Sınırsız",
+    "cancelAnytime": "İstediğin zaman iptal et",
+    "swipeToOpen": "Menüyü açmak için kaydır",
+    "viaBinance": "Binance üzerinden",
+    "strong": "Güçlü",
+    "medium": "Orta",
+    "weak": "Zayıf",
+    "rising": "yükseliyor",
+    "falling": "düşüyor",
+    "declining": "gerilemekte",
+    "strong_signal": "Güçlü",
+    "moderate_signal": "Orta",
+    "caution_signal": "Dikkat"
   },
   "header": {
     "subtitle": "Yapay zeka destekli tahminlerle gerçek zamanlı piyasa verileri",
-    "costBasis": "Maliyet Bazı",
+    "costBasis": "Maliyet Tabanı",
     "currentValue": "Güncel Değer",
     "pnl": "K/Z",
     "clickToRefresh": "Yenilemek için tıkla",
     "openCalculator": "Varlık Hesaplayıcısını Aç"
   },
   "assetCalc": {
-    "title": "💼 Varlık Hesaplayıcı",
+    "title": "💼 Varlık Hesaplayıcısı",
     "amountLabel": "{{coin}} Miktarı",
     "costLabel": "{{coin}} Başına Maliyet",
     "totalLabel": "Toplam Varlık Değeri",
-    "basedOn": "Güncel {{coin}} fiyatı {{price}} baz alınarak",
-    "costBasis": "Maliyet bazı: {{amount}}"
+    "basedOn": "{{coin}} güncel fiyatına göre: {{price}}",
+    "costBasis": "Maliyet tabanı: {{amount}}"
   },
   "alert": {
     "signalLabel": "Fiyat Sinyali",
-    "currentlyBullish": "⬆ Şu An Yükseliş",
-    "currentlyBearish": "⬇ Şu An Düşüş",
-    "turnedBullish": "⬆ Fiyat Yükselişe Döndü",
-    "turnedBearish": "⬇ Fiyat Düşüşe Döndü"
+    "currentlyBullish": "⬆ Şu an yükselişte",
+    "currentlyBearish": "⬇ Şu an düşüşte",
+    "turnedBullish": "⬆ Fiyat yükselişe döndü",
+    "turnedBearish": "⬇ Fiyat düşüşe döndü",
+    "bullishSignal": "▲ Yükseliş Sinyali",
+    "bearishSignal": "▼ Düşüş Sinyali",
+    "neutralSignal": "Nötr",
+    "coinUp": "{{coin}} yükseliyor — momentum artıyor, devamını izle",
+    "coinDown": "{{coin}} düşüyor — baskı artıyor, destek seviyelerini izle"
   },
   "main": {
     "marketData": "Piyasa Verileri",
@@ -41,34 +83,34 @@
   "dataDisplay": {
     "loading": "Piyasa verileri yükleniyor...",
     "failed": "Piyasa verileri yüklenemedi. API anahtarınızı kontrol edin.",
-    "refreshing": "Piyasa verileri güncelleniyor...",
+    "refreshing": "Piyasa verileri yenileniyor...",
     "coinPrice": "{{coin}} Fiyatı",
     "liquidationAbove": "Üst Tasfiye",
     "liquidationBelow": "Alt Tasfiye",
-    "openInterest": "Açık Pozisyon",
+    "openInterest": "Açık Faiz",
     "fundingRate": "Fonlama Oranı",
     "rsi": "RSI (14)",
     "macd": "MACD",
     "longShortRatio": "Long/Short Oranı",
-    "tooltipPrice": "Tahmini tasfiye aralığına göre güncel {{coin}} fiyatı. Orta noktanın üzerindeki fiyat yükselişe; aşağısı düşüşe işaret eder.",
-    "tooltipLiqAbove": "Tahmini yukarı yönlü tasfiye seviyesi. Güncel fiyatın üzerindeki daha geniş boşluk, daha fazla yükseliş alanı olduğunu gösterir.",
-    "tooltipLiqBelow": "Tahmini aşağı yönlü tasfiye seviyesi. Daha büyük alt tampon, daha fazla düşüş riski tamponunu gösterir.",
-    "tooltipOI": "Toplam açık pozisyon sayısı. Yüksek açık pozisyon, güçlü piyasa katılımı ve momentumu gösterir.",
-    "tooltipFunding": "Pozitif fonlama, longların shortlara ödeme yaptığı anlamına gelir; yükseliş eğilimini gösterir. Negatif ise düşüş eğilimini gösterir.",
-    "tooltipRSI": "Göreceli Güç Endeksi. 70 üzeri aşırı alım (düşüş uyarısı); 30 altı aşırı satım (yükseliş fırsatı).",
-    "tooltipMACD": "MACD momentumu ölçer. Pozitif değerler yükselişi; negatif değerler düşüşü gösterir.",
-    "tooltipLS": "1'in üzerindeki oran, shortlardan fazla long olduğunu (yükseliş); 1'in altı ise longlardan fazla short olduğunu (düşüş) gösterir."
+    "tooltipPrice": "{{coin}} güncel fiyatı tahmini tasfiye aralığına göre. Orta noktanın üstü yükseliş; altı düşüş eğilimi.",
+    "tooltipLiqAbove": "Tahmini yukarı tasfiye seviyesi. Güncel fiyatın üstünde daha geniş boşluk, daha fazla yükseliş alanı anlamına gelir.",
+    "tooltipLiqBelow": "Tahmini aşağı tasfiye seviyesi. Altta daha büyük tampon, daha fazla düşüş riski tamponu gösterir.",
+    "tooltipOI": "Toplam açık pozisyonlar. Yüksek açık faiz, piyasa katılımının ve momentumun güçlü olduğunu gösterir.",
+    "tooltipFunding": "Pozitif fonlama, longlar shortlara öder (yükseliş duyarlılığı). Negatif, shortlar longlara öder (düşüş eğilimi).",
+    "tooltipRSI": "Göreceli Güç Endeksi. 70 üzeri aşırı alım (düşüş uyarısı); 30 altı aşırı satım (alım fırsatı).",
+    "tooltipMACD": "MACD momentumu ölçer. Pozitif değerler yükseliş; negatif değerler düşüş.",
+    "tooltipLS": "1 üstü oran, shorttan fazla long (yükseliş); 1 altı, longtan fazla short (düşüş) anlamına gelir."
   },
   "aiPanel": {
-    "title": "Yapay Zeka Tahmini",
+    "title": "YZ Tahmini",
     "dirUp": "▲ Yükseliş",
     "dirDown": "▼ Düşüş",
     "dirNeutral": "● Nötr",
     "analyzing": "Piyasa verileri analiz ediliyor…",
-    "fetching": "Yapay zeka analizi alınıyor…",
-    "updatedAt": "Güncellendi {{time}}",
+    "fetching": "YZ analizi getiriliyor…",
+    "updatedAt": "{{time}} güncellendi",
     "refreshTitle": "Tahmini yenile",
-    "range8h": "8 Saatlik Aralık",
+    "range8h": "8S Aralığı",
     "confHigh": "yüksek güven",
     "confMedium": "orta güven",
     "confLow": "düşük güven",
@@ -78,14 +120,14 @@
   "chat": {
     "title": "💬 YZ Sohbet",
     "clear": "Temizle",
-    "placeholder": "Fiyat, trend, sinyal hakkında sorun…",
-    "defaultMessage": "Merhaba! {{coin}} piyasa verilerini analiz etmenize ve kripto para trendleri hakkında sorularınızı yanıtlamanıza yardımcı olabilirim. Mevcut piyasa durumu hakkında her şeyi sorabilirsiniz!"
+    "placeholder": "Fiyat, trendler, sinyaller hakkında sor…",
+    "defaultMessage": "Merhaba! {{coin}} piyasa verilerini analiz etmene ve kripto para trendleri hakkındaki sorularını yanıtlamana yardımcı olabilirim. Mevcut piyasa durumu hakkında her şeyi sorabilirsin!"
   },
   "chart": {
     "title": "📈 {{coin}} Fiyat Grafiği",
     "live": "● CANLI",
     "loading": "Grafik verileri yükleniyor...",
-    "noData": "Grafik verisi mevcut değil",
+    "noData": "Grafik verisi yok",
     "failed": "Grafik verileri alınamadı",
     "indicators": "Göstergeler",
     "overlays": "Katmanlar",
@@ -103,19 +145,20 @@
     "bbUpperLegend": "── Üst Bant",
     "bbMiddleLegend": "- - Orta (SMA 20)",
     "bbLowerLegend": "── Alt Bant",
-    "cmeLegend": "── CME Boşlukları (doldurulmamış)",
+    "cmeLegend": "── CME Boşlukları (kapatılmamış)",
     "strongBuy": "Güçlü Al",
     "buy": "Alım Bölgesi",
     "neutralZone": "Nötr",
     "sell": "Satım Bölgesi",
     "strongSell": "Güçlü Sat",
     "currentPattern": "Mevcut Formasyon",
-    "nextMove": "Olası sonraki hareket",
+    "nextMove": "Muhtemel sonraki hareket",
     "rsiLegend": "RSI",
     "macdLegend": "MACD",
     "signalLegend": "Sinyal",
-    "rsiOB": "AŞ 70",
-    "rsiOS": "AS 30"
+    "rsiOB": "AŞA 70",
+    "rsiOS": "AŞS 30",
+    "save": "Kaydet"
   },
   "heatmap": {
     "title": "🔥 Tasfiye Isı Haritası",
@@ -123,36 +166,36 @@
     "high": "Yüksek",
     "low": "Düşük",
     "loading": "Isı haritası yükleniyor…",
-    "disclaimer": "OHLC verileri kullanılarak yaygın kaldıraç seviyeleriyle simüle edilmiştir. Gerçek borsa açık pozisyon verisi değildir.",
+    "disclaimer": "Yaygın kaldıraç seviyeleri kullanılarak OHLC verilerinden simüle edilmiştir. Gerçek borsa açık faiz verisi değildir.",
     "clusterAnalysis": "📊 Tasfiye Kümesi Analizi",
     "longZones": "Long Tasfiye Bölgeleri",
-    "longBelow": "↓ fiyatın altı",
+    "longBelow": "↓ fiyatın altında",
     "shortZones": "Short Tasfiye Bölgeleri",
-    "shortAbove": "↑ fiyatın üstü",
+    "shortAbove": "↑ fiyatın üstünde",
     "noClusters": "Aralıkta önemli küme yok"
   },
   "leverage": {
     "title": "⚡ Kaldıraçlı Giriş Önerisi",
-    "disclaimer": "Yatırım tavsiyesi değildir",
+    "disclaimer": "Finansal tavsiye değildir",
     "long": "▲ Long",
     "short": "▼ Short",
     "leverage": "Kaldıraç",
     "custom": "Özel",
-    "waitingZone": "Bölge verisi yükleniyor…",
+    "waitingZone": "Bölge verileri yükleniyor…",
     "waitNotice": "⏳ Fiyat henüz ideal girişte değil — {{coin}}'in {{dir}} bölgesine ulaşmasını bekle",
     "entry": "Giriş",
     "stopLoss": "Stop Loss",
-    "takeProfit1": "Kâr Al 1",
-    "takeProfit2": "Kâr Al 2",
+    "takeProfit1": "Hedef 1",
+    "takeProfit2": "Hedef 2",
     "liquidation": "Tasfiye",
-    "riskReward": "Risk / Getiri",
+    "riskReward": "Risk / Ödül",
     "waitDown": "↓ Bekle",
     "waitUp": "↑ Bekle",
     "now": "Şimdi",
-    "buy": "alım",
-    "sell": "satım",
-    "warningHigh": "⚠️ {{lev}}x önemli tasfiye riski taşır. Pozisyon boyutlandırmasını dikkatli kullanın.",
-    "warningCritical": "⛔ {{lev}}x son derece yüksek risk. %{{pct}}'lik bir hareket pozisyonunuzu tasfiye eder."
+    "buy": "al",
+    "sell": "sat",
+    "warningHigh": "⚠️ {{lev}}× önemli tasfiye riski taşır. Pozisyon boyutlandırmaya dikkat et.",
+    "warningCritical": "⛔ {{lev}}× son derece yüksek risk. %{{pct}}'lik bir hareket pozisyonunu tasfiye eder."
   },
   "drawer": {
     "logo": "📊 TradingWise.AI",
@@ -163,70 +206,625 @@
     "lightMode": "☀️ Açık mod",
     "darkMode": "🌙 Koyu mod",
     "autoRefresh": "Otomatik yenileme",
-    "coin": "Coin",
+    "coin": "Kripto Para",
     "language": "Dil",
     "leverageBtn": "⚡ Kaldıraçlı Giriş Önerisi",
     "patternsBtn": "📚 Mum Formasyonları Rehberi",
     "appInfo": "ℹ️ Uygulama Bilgisi",
     "priceData": "Fiyat verisi",
     "charts": "Grafikler",
-    "ai": "Yapay Zeka",
+    "ai": "YZ",
     "reportIssue": "🐛 Sorun bildir",
     "dataSource": "📡 Veri kaynağı",
     "tradingGuide": "📚 İşlem Rehberi",
-    "disclaimer": "Yatırım tavsiyesi değildir. Sorumlu işlem yapın.",
+    "disclaimer": "Finansal tavsiye değildir. Sorumlu işlem yapın.",
     "docs": {
       "candlesticks": {
-        "title": "📊 Mum Çizelgeleri",
-        "body": "Her mum, bir zaman dilimi için açılış, yüksek, düşük ve kapanış fiyatlarını gösterir. Yeşil (yükseliş) mum, fiyatın açılıştan daha yüksek kapandığı anlamına gelir. Kırmızı (düşüş) mum daha düşük kapandığı anlamına gelir. Fitiller (ince çizgiler), o dönemde ulaşılan en yüksek ve en düşük fiyatı gösterir."
+        "title": "📊 Mum Grafikleri",
+        "body": "Her mum, bir zaman diliminin açılış, en yüksek, en düşük ve kapanış fiyatını gösterir. Yeşil (yükseliş) mum, kapanışın açılıştan yüksek olduğunu gösterir. Kırmızı (düşüş) mum ise kapanışın daha düşük olduğunu gösterir. Fitiller (ince çizgiler), o dönemde ulaşılan en yüksek ve en düşük fiyatları gösterir."
       },
       "bollingerBands": {
         "title": "📉 Bollinger Bantları",
-        "body": "Fiyatın etrafına çizilen üç çizgi: 20 periyotluk basit hareketli ortalama (orta), ve 2 standart sapma uzaktaki üst/alt bantlar. Fiyat üst banda yaklaştığında varlık aşırı alınmış olabilir. Alt bant yakınları aşırı satılmış koşulları gösterir. Dar bantlar düşük volatiliteyi; geniş bantlar yüksek volatiliteyi işaret eder."
+        "body": "Fiyatın etrafına çizilen üç çizgi: 20 dönemli basit hareketli ortalama (orta) ve 2 standart sapma uzaklıktaki üst/alt bantlar. Fiyat üst banda yaklaştığında varlık aşırı alım bölgesinde olabilir. Alt banda yakın ise aşırı satım koşullarına işaret eder. Dar bantlar düşük volatilite, geniş bantlar yüksek volatilite sinyali verir."
       },
       "rsi": {
         "title": "💪 RSI — Göreceli Güç Endeksi",
-        "body": "RSI, momentumu 0–100 ölçeğinde ölçer. 70 üzeri = aşırı alım (olası satış sinyali). 30 altı = aşırı satım (olası alış sinyali). 30–70 arası nötr bölgedir. RSI uyumsuzluğu — fiyat yeni bir zirve yaparken RSI yapmazsa — bir dönüşü işaret edebilir."
+        "body": "RSI, momentumu 0–100 ölçeğinde ölçer. 70 üstü = aşırı alım (olası satış sinyali). 30 altı = aşırı satım (olası alım sinyali). 30–70 arası nötr bölgedir. RSI uyumsuzluğu — fiyat yeni yüksek yaparken RSI yapmazsa — bir dönüşe işaret edebilir."
       },
       "macd": {
         "title": "📈 MACD",
-        "body": "Hareketli Ortalama Yakınsama/Iraksama, iki EMA (12 ve 26 periyot) kullanarak momentumu takip eder. MACD çizgisi sinyal çizgisinin üzerine çıktığında yükseliş sinyali verir. Altında = düşüş. Histogram iki çizgi arasındaki farkı gösterir."
+        "body": "Hareketli Ortalama Yakınsama/Iraksama, iki EMA (12 ve 26 dönem) kullanarak momentumu takip eder. MACD çizgisi sinyal çizgisinin üstüne çıktığında yükseliş sinyalidir. Altında = düşüş. Histogram iki çizgi arasındaki farkı gösterir. Pozitif = yükseliş momentumu, negatif = düşüş."
       },
       "supportResistance": {
         "title": "🧱 Destek ve Direnç",
-        "body": "Destek, alım ilgisinin düşüşü durduracak kadar güçlü olduğu fiyat seviyesidir. Direnç ise satış baskısının fiyatın yükselmesini engellediği bir tavandır. Bir kez kırıldıklarında bu seviyeler genellikle rollerini değiştirir."
+        "body": "Destek, alım ilgisinin düşüşü durdurmaya yetecek kadar güçlü olduğu fiyat seviyesidir — fiyat genellikle buradan 'sekme' yapar. Direnç ise tam tersidir: satış baskısının fiyat yükselişini durdurduğu bir tavan. Bir kez kırıldıklarında bu seviyeler genellikle rol değiştirir (destek direnç olur ve tersine)."
       },
       "openInterest": {
-        "title": "📂 Açık Pozisyon",
-        "body": "Açık Pozisyon (AP), henüz kapatılmamış vadeli işlem/opsiyon sözleşmelerinin toplam sayısıdır. Yükselen fiyatla artan AP = güçlü yükseliş trendi. Düşen fiyatla artan AP = güçlü düşüş trendi. Azalan AP genellikle pozisyonların kapatıldığı anlamına gelir."
+        "title": "📂 Açık Faiz",
+        "body": "Açık Faiz (OI), kapatılmamış vadeli/opsiyon sözleşmelerinin toplam sayısıdır. Fiyat artarken OI artışı = güçlü yükseliş trendi. Fiyat düşerken OI artışı = güçlü düşüş trendi. OI düşüşü genellikle pozisyonların kapatıldığı anlamına gelir (trend zayıflıyor)."
       },
       "fundingRate": {
         "title": "💰 Fonlama Oranı",
-        "body": "Sürekli vadeli işlemlerde fonlama oranı, sözleşme fiyatını spot fiyata yakın tutmak için longlar ve shortlar arasındaki periyodik ödemedir. Pozitif fonlama = longlar shortlara öder (piyasa yükselişte). Negatif = shortlar longlara öder (düşüş eğilimi)."
+        "body": "Sürekli vadeli işlemlerde fonlama oranı, sözleşme fiyatını spot fiyata yakın tutmak için longlar ve shortlar arasında periyodik bir ödemedir. Pozitif fonlama = longlar shortlara öder (piyasa yükselişte). Negatif = shortlar longlara öder (düşüş duyarlılığı). Aşırı fonlama oranları genellikle dönüşleri önceler."
       },
       "longShort": {
-        "title": "⚖️ Long/Short Oranı",
-        "body": "Uzun ve kısa pozisyon tutan yatırımcıların oranını gösterir. 1'in üzerindeki oran yükseliş eğilimini gösterir. 1 altı düşüş eğilimini gösterir. Aşırı oranlar bir dönüşün sinyali olabilir."
+        "title": "⚖️ Long / Short Oranı",
+        "body": "Long ve short pozisyon tutan işlemcilerin oranını gösterir. 1 üstü oran, shorttan fazla long anlamına gelir — yükseliş duyarlılığı. 1 altı = düşüş duyarlılığı. Tersine çevirerek bakıldığında, aşırı oranlar (ör. 3:1 long) piyasa genellikle kalabalığa karşı hareket ettiğinden bir dönüşe işaret edebilir."
       },
       "liquidations": {
         "title": "💥 Tasfiyeler",
-        "body": "Tasfiye, kaldıraçlı bir yatırımcının pozisyonu, marjının kayıpları karşılamaya yetmemesi nedeniyle zorla kapatıldığında gerçekleşir. Toplu tasfiyeler hızlı fiyat dalgalanmalarına neden olur. Isı haritası tahmini tasfiye kümelerini gösterir."
+        "body": "Tasfiye, kaldıraçlı bir işlemcinin marjı kayıpları karşılamaya yetmediği için pozisyonunun zorla kapatılmasıdır. Toplu tasfiyeler hızlı fiyat sıçramalarına neden olur — long tasfiyelerin kaskadı fiyatı sert aşağı iter; short tasfiyeler ise yukarı iter. Isı haritası tahmini tasfiye kümelerini gösterir."
       },
       "leverage": {
         "title": "⚡ Kaldıraç ve Risk",
-        "body": "Kaldıraç hem kazançları hem de kayıpları büyütür. 10× kaldıraçta, %10'luk bir fiyat hareketi tüm pozisyonunuzu siler. Her zaman stop-loss kullanın ve kaybetmeyi göze alamayacağınızdan fazlasını riske atmayın."
+        "body": "Kaldıraç hem kazanç hem de kayıpları büyütür. 10× kaldıraçta %10'luk bir fiyat hareketi tüm pozisyonunu siler. Tasfiye fiyatı yaklaşık olarak: Giriş × (1 − 1/Kaldıraç) longlar için, Giriş × (1 + 1/Kaldıraç) shortlar için. Her zaman stop-loss kullan ve kaybetmeyi göze alabileceğinden fazlasını riske atma."
       },
       "buySell": {
-        "title": "Alım/Satım Bölgeleri",
-        "body": "Alım bölgeleri, güçlü destek veya alt Bollinger Bandı yakınında fiyatın alıcı bulması muhtemel alanlardır. Satım bölgeleri direnç veya üst bant yakınındadır. Konfluans alanlarıdır — ne kadar çok gösterge aynı fikirde olursa sinyal o kadar güçlüdür."
+        "title": "Alım / Satım Bölgeleri",
+        "body": "Alım bölgeleri, güçlü desteklere veya alt Bollinger Bandına yakın fiyat alanlarıdır; burada alıcıların devreye girme ihtimali yüksektir. Satım bölgeleri dirençlere veya üst banda yakındır; burada satıcılar devreye girer. Ne kadar çok gösterge örtüşürse (destek + aşırı satım RSI + alt BB), sinyal o kadar güçlüdür."
       },
       "riskReward": {
-        "title": "📐 Risk/Getiri Oranı",
-        "body": "R/G = (Kâr Al mesafesi) ÷ (Stop Loss mesafesi). 1:2 oranı, $2 kazanmak için $1 riske attığınız anlamına gelir. Profesyonel yatırımcıların çoğu en az 1:2 hedefler. Hiçbir zaman R/G oranı 1:1'in altında olan bir işleme girmeyin."
+        "title": "📐 Risk / Ödül Oranı",
+        "body": "R/Ö = (Hedef mesafesi) ÷ (Stop Loss mesafesi). 1:2 oranı, $2 kazanmak için $1 riske attığın anlamına gelir. Profesyonel işlemcilerin çoğu en az 1:2 hedefler. %40 başarı oranıyla bile tutarlı bir 1:2 R/Ö uzun vadede karlıdır. Hiçbir zaman 1:1'in altında R/Ö ile işleme girme."
       }
     }
   },
   "footer": {
     "copyright": "© {{year}} TradingWise.AI. Tüm hakları saklıdır."
+  },
+  "auth": {
+    "logoText": "TradingWise",
+    "continueWithGoogle": "Google ile devam et",
+    "divider": "veya",
+    "login": {
+      "title": "Tekrar hoş geldiniz",
+      "sub": "Hesabınıza giriş yapın",
+      "emailLabel": "E-posta",
+      "passwordLabel": "Şifre",
+      "forgotPassword": "Şifremi unuttum?",
+      "signinBtn": "Giriş Yap",
+      "signingIn": "Giriş yapılıyor…",
+      "noAccount": "Hesabınız yok mu?",
+      "signupFree": "Ücretsiz kaydol"
+    },
+    "signup": {
+      "title": "Hesap oluştur",
+      "sub": "Ücretsiz planla başla — istediğin zaman yükselt",
+      "fullNameLabel": "Ad soyad",
+      "emailLabel": "E-posta",
+      "passwordLabel": "Şifre",
+      "confirmLabel": "Şifreyi onayla",
+      "createBtn": "Hesap Oluştur",
+      "creating": "Hesap oluşturuluyor…",
+      "confirmEmail": "Hesabınızı onaylamak için e-postanızı kontrol edin, ardından giriş yapın.",
+      "alreadyAccount": "Zaten hesabınız var mı?",
+      "signinLink": "Giriş yap"
+    },
+    "reset": {
+      "title": "Şifre sıfırla",
+      "sub": "E-postanıza sıfırlama bağlantısı göndereceğiz",
+      "emailLabel": "E-posta",
+      "sendBtn": "Sıfırlama Bağlantısı Gönder",
+      "sending": "Gönderiliyor…",
+      "resetSent": "Şifre sıfırlama bağlantısı gönderildi — gelen kutunuzu kontrol edin.",
+      "backToSignin": "← Girişe dön"
+    },
+    "errors": {
+      "passwordMismatch": "Şifreler eşleşmiyor",
+      "passwordTooShort": "Şifre en az 6 karakter olmalıdır"
+    }
+  },
+  "account": {
+    "signin": "Giriş Yap",
+    "myAccount": "Hesabım",
+    "profile": "Profil",
+    "tierPlan": "{{tier}} Planı",
+    "upgradePlan": "⚡ Planı Yükselt",
+    "accountSettings": "⚙ Hesap Ayarları",
+    "signout": "Çıkış Yap"
+  },
+  "profile": {
+    "title": "Profil",
+    "sections": {
+      "subscription": "Abonelik",
+      "aiUsage": "YZ Kullanımı",
+      "profileInfo": "Profil Bilgisi",
+      "security": "Güvenlik"
+    },
+    "subscription": {
+      "currentPlan": "Mevcut plan",
+      "status": "Durum",
+      "nextBilling": "Sonraki faturalama",
+      "accessUntil": "Erişim süresi",
+      "manageBilling": "Faturalamayı yönet / İptal et",
+      "loadingPortal": "Yükleniyor…",
+      "upgradePlan": "⚡ Planı Yükselt"
+    },
+    "status": {
+      "active": "Aktif",
+      "past_due": "Gecikmiş",
+      "canceled": "İptal edildi",
+      "unpaid": "Ödenmemiş",
+      "trialing": "Deneme",
+      "incomplete": "Tamamlanmamış",
+      "incomplete_expired": "Süresi doldu"
+    },
+    "aiUsage": {
+      "unlimited": "Sınırsız YZ isteği",
+      "requestsUsed": "Bu hafta {{limit}} isteğin {{used}}'i kullanıldı",
+      "resetsOn": "{{date}} tarihinde sıfırlanır",
+      "upgradePro": "Pro'ya Yükselt",
+      "proHint": " haftada 35 YZ isteği için ya da sınırsız için Elite.",
+      "upgradeElite": "Elite'e Yükselt",
+      "eliteHint": " sınırsız YZ isteği için."
+    },
+    "info": {
+      "displayName": "Görünen Ad",
+      "username": "Kullanıcı Adı",
+      "email": "E-posta",
+      "bio": "Biyografi",
+      "yourName": "Adınız soyadınız",
+      "yourUsername": "@kullaniciadi",
+      "yourEmail": "siz@ornek.com",
+      "yourBio": "Kısa bir biyografi…"
+    },
+    "security": {
+      "title": "Güvenlik",
+      "sub": "Hesabınız için yeni bir şifre belirleyin.",
+      "newPassword": "Yeni Şifre",
+      "confirmPassword": "Yeni Şifreyi Onayla",
+      "minChars": "En az 6 karakter",
+      "repeatPassword": "Yeni şifreyi tekrarla",
+      "changePassword": "Şifreyi Değiştir",
+      "strength": {
+        "strong": "Güçlü",
+        "medium": "Orta",
+        "weak": "Zayıf"
+      }
+    },
+    "messages": {
+      "saved": "✓ Profil kaydedildi",
+      "passwordUpdated": "✓ Şifre güncellendi",
+      "displayNameRequired": "Görünen ad zorunludur.",
+      "emailRequired": "E-posta zorunludur.",
+      "invalidEmail": "Geçerli bir e-posta adresi girin.",
+      "passwordTooShort": "Yeni şifre en az 6 karakter olmalıdır.",
+      "passwordMismatch": "Şifreler eşleşmiyor."
+    },
+    "actions": {
+      "saveChanges": "Değişiklikleri Kaydet",
+      "discard": "İptal Et",
+      "yourName": "Adınız",
+      "noEmail": "e-posta ayarlanmamış"
+    }
+  },
+  "quotaWall": {
+    "freeTitle": "YZ özellikleri ücretli plan gerektirir",
+    "freeDesc": "Her bölümde YZ destekli piyasa analizi, tahminler ve içgörülerin kilidini açmak için yükselt.",
+    "capTitle": "Haftalık YZ limiti doldu",
+    "capDesc": "Bu hafta {{used}}/{{limit}} YZ isteği kullandınız. Sınırsız erişim için yükselt.",
+    "getBtn": "{{plan}}'ı Al",
+    "redirecting": "Yönlendiriliyor…",
+    "usagePips": "{{used}}/{{limit}} kullanıldı · Pazartesi sıfırlanır",
+    "signin": "Zaten planınız var mı? Giriş yapın"
+  },
+  "membershipGate": {
+    "loading": "Yükleniyor…",
+    "signin": {
+      "title": "Devam etmek için giriş yapın",
+      "sub": "{{feature}}'a erişmek ve piyasada avantaj kazanmak için ücretsiz hesap oluşturun.",
+      "perks": ["Canlı fiyat ve emir defteri", "Korku ve açgözlülük göstergesi", "Zincir üzeri metrikler", "Tasfiye ısı haritası"],
+      "cta": "Giriş Yap / Kayıt Ol — Ücretsiz",
+      "trust": "Kredi kartı gerekmez · Sonsuza dek ücretsiz plan"
+    },
+    "pro": {
+      "headline": "YZ ile Daha Akıllı İşlem Yap",
+      "sub": "Fiyat hareketi, zincir üzeri veri ve piyasa duyarlılığında gerçek zamanlı YZ destekli analiz — hepsi tek yerde.",
+      "features": [
+        { "icon": "✦", "title": "YZ Piyasa İstihbaratı", "desc": "GPT-4o piyasayı sizin için okur — formasyonlar, momentum ve eğilim bir bakışta." },
+        { "icon": "⛓",  "title": "Zincir Üzeri YZ Analizi",  "desc": "Ağ sağlığı, madenci davranışı ve zincir sinyalleri sade bir dille yorumlanır." },
+        { "icon": "📈", "title": "YZ Fiyat Tahminleri",  "desc": "Her aralıkta güncellenen güven düzeyli çok senaryolu tahminler." },
+        { "icon": "💬", "title": "YZ İşlem Asistanı", "desc": "Her şeyi sor — strateji, kurulum, risk — ve kurumsal düzeyde yanıtlar al." }
+      ],
+      "cta": "Pro'yu Aç — $10,99/ay",
+      "trust": "Haftada 35 YZ isteği · İstediğin zaman iptal · Anında erişim"
+    },
+    "elite": {
+      "headline": "Profesyonellerin Kullandığı Avantaj",
+      "sub": "Gann Analizi, Coinbase Premium ve sınırsız YZ — tam kurumsal araç seti, limit yok.",
+      "features": [
+        { "icon": "📐", "title": "Gann Analizi YZ",   "desc": "Kare 9, Gann açıları ve döngü tahminleri GPT-4o tarafından yorumlanır — yalnızca Elite'e özel." },
+        { "icon": "⚡", "title": "Sınırsız YZ İsteği", "desc": "Haftalık limit yok — tüm YZ özelliklerini istediğin kadar kullan." },
+        { "icon": "🏦", "title": "Coinbase Premium YZ", "desc": "Kurumsal akış ile perakende sapması gerçek zamanlı yorumlanır." }
+      ],
+      "cta": "Elite'i Aç — $29,99/ay",
+      "trust": "Sınırsız YZ · İstediğin zaman iptal · Pro'daki her şeyi içerir"
+    },
+    "blurGate": {
+      "features": ["Pro'daki her şey — sınırsız", "HTF Çok Zaman Dilimli YZ", "Coinbase Premium YZ"],
+      "signInBtn": "Yükseltmek için giriş yap",
+      "upgradeBtn": "Elite'e Yükselt",
+      "redirecting": "Yönlendiriliyor…",
+      "trust": "İstediğin zaman iptal · Pro'daki her şeyi içerir"
+    }
+  },
+  "upgradeModal": {
+    "titleChoose": "Planınızı seçin",
+    "titleManage": "Planınızı yönetin",
+    "subChoose": "YZ destekli içgörüler ve gelişmiş analizlerin kilidini açın",
+    "subManage": "Yükseltmeler hemen ücretlendirilir (orantılı). Düşürmeler bir sonraki faturanıza alacak olarak yansır.",
+    "plans": {
+      "free": {
+        "label": "Ücretsiz",
+        "features": ["Canlı fiyat grafikleri", "Emir defteri", "İzleme listesi", "Korku ve açgözlülük göstergesi", "Flash haber bandı"]
+      },
+      "pro": {
+        "label": "Pro",
+        "features": ["Ücretsiz'deki her şey", "HTF Çok Zaman Dilimli YZ", "YZ Piyasa İstihbaratı", "Zincir Üzeri YZ Analizi", "Fiyat Tahmin Grafiği", "Tasfiye Isı Haritası YZ", "Haftada 35 YZ isteği"]
+      },
+      "elite": {
+        "label": "Elite",
+        "features": ["Pro'daki her şey — sınırsız", "Gann Analizi YZ", "Coinbase Premium YZ", "Yeni özelliklere erken erişim"]
+      }
+    },
+    "cta": {
+      "upgradeTo": "{{plan}}'a Yükselt",
+      "switchTo": "{{plan}}'a Geç",
+      "cancelPlan": "Planı iptal et",
+      "currentPlan": "Mevcut Plan",
+      "loading": "Yükleniyor…"
+    },
+    "confirm": {
+      "upgradeTitle": "{{plan}}'a Yükselt",
+      "downgradeTitle": "{{plan}}'a Geç",
+      "cancelTitle": "{{plan}} planını iptal et",
+      "cancelBody": "Aboneliğiniz mevcut faturalama dönemi sonunda iptal edilecektir. O zamana kadar tüm özelliklerinizi korursunuz — kısmi iade yapılmaz.",
+      "upgradeBody": "Şimdi {{amount}} ödenecektir — faturalama döneminin kalan günleri için orantılı fark. Yeni özelliklerinize hemen erişilebilir.",
+      "downgradeBodyCredit": "{{amount}} orantılı alacak bir sonraki faturanıza uygulanacaktır. Planınız hemen değişir.",
+      "downgradeBodyNoAmount": "Orantılı bir alacak bir sonraki faturanıza uygulanacaktır. Planınız hemen değişir.",
+      "lostFeaturesLabel": "Erişiminizi kaybedeceksiniz:",
+      "payAndUpgrade": "{{amount}} Öde ve Yükselt",
+      "processing": "İşleniyor…",
+      "goBack": "Geri dön"
+    },
+    "success": {
+      "cancelMessage": "Plan iptal edildi",
+      "cancelSub": "{{date}} tarihine kadar {{plan}} erişiminizi korursunuz, ardından Ücretsiz'e geçilir.",
+      "upgradeMessage": "{{plan}}'a Hoş Geldiniz!",
+      "upgradeSub": "Yeni özellikleriniz hemen aktif. Orantılı ücret kartınıza yansıtıldı.",
+      "downgradeMessage": "{{plan}}'a Geçildi",
+      "downgradeSub": "Planınız güncellendi. Orantılı alacak bir sonraki faturanıza uygulanacaktır.",
+      "done": "Tamam"
+    },
+    "badges": {
+      "mostPopular": "En Popüler",
+      "yourPlan": "Planınız"
+    },
+    "footer": {
+      "proratedNote": "Plan değişiklikleri orantılıdır · ",
+      "manageBilling": "Faturalamayı yönet",
+      "loadingPortal": "Yükleniyor…",
+      "cancelAnytime": "İstediğin zaman iptal et",
+      "securePayment": " · Stripe ile güvenli ödeme"
+    },
+    "error": "Bir şeyler yanlış gitti"
+  },
+  "landing": {
+    "hero": {
+      "headline": "Piyasayı Bir Kurum Gibi Okuyun",
+      "sub": "Fiyat hareketi, zincir üzeri veri, tasfiyeler ve duyarlılıkta YZ destekli analiz — hepsi tek bir panoda.",
+      "cta": "Ücretsiz Başla — Kart Gerekmez",
+      "trust": "2.000'den fazla kripto yatırımcısı tarafından güvenilir · Sonsuza dek ücretsiz plan mevcut"
+    },
+    "features": {
+      "title": "Daha akıllı işlem yapmak için ihtiyacınız olan her şey",
+      "items": [
+        { "icon": "✦",  "title": "YZ Piyasa İstihbaratı",   "desc": "GPT-4o fiyat hareketini, fonlama oranlarını, açık faizi ve zincir üzeri veriyi okur — ardından size güven düzeyli sade bir İngilizce eğilim sunar." },
+        { "icon": "📈", "title": "Fiyat Tahmin Grafiği",   "desc": "Yapay zeka tarafından üretilen Boğa, Temel ve Ayı senaryoları olasılık puanlarıyla ileriye yansıtılır, her aralıkta güncellenir." },
+        { "icon": "🔥", "title": "Tasfiye Isı Haritası",     "desc": "$90K ile $120K arasındaki tahmini tasfiye kümeleri renk kodlu yoğunlukla. Zorla satış veya kapanmanın nerede gerçekleşeceğini görün." },
+        { "icon": "⛓",  "title": "Zincir Üzeri İstihbarat",   "desc": "Hash oranı, madenci geliri, zorluk ve işlem hacmi — gerçek zamanlı olarak YZ tarafından özetlenir ve yorumlanır." },
+        { "icon": "📊", "title": "Uzun Vadeli Döngü Analizi","desc": "200H MA, Pi Döngü Tepesi, Fibonacci seviyeleri, döngü karşılaştırmaları ve senaryo yolları — hepsi HTF Analiz bölümünde." },
+        { "icon": "🧠", "title": "Yatırımcı Pozisyonlaması",      "desc": "Perakende ve akıllı para net pozisyonları, duyarlılık sapması ve YZ tarafından üretilen eğilim özetleri — her 4 saatte güncellenir." }
+      ]
+    },
+    "plans": {
+      "title": "Basit, şeffaf fiyatlandırma",
+      "sub": "Ücretsiz başla. Daha fazlasına ihtiyacın olduğunda yükselt."
+    },
+    "signin": "Giriş Yap",
+    "getStarted": "Ücretsiz Başla",
+    "noCard": "Kart gerekmez"
+  },
+  "positions": {
+    "title": "Yatırımcı Pozisyonlaması",
+    "sub": "Perakende vs Akıllı Para · 4s · Binance{{candles}}",
+    "loading": "Pozisyon verileri yükleniyor…",
+    "error": "Bu çift için pozisyon verisi yok.",
+    "updatedHourly": "Saatlik güncellenir",
+    "panels": {
+      "retailNet": "Perakende NET AÇIK POZİSYON",
+      "smartSentiment": "Akıllı Para DUYARLILIĞI",
+      "smartNet": "Akıllı Para NET AÇIK POZİSYON",
+      "price": "Fiyat Hareketi"
+    },
+    "summary": {
+      "price": {
+        "trendUp": "Kısa vadeli momentum yükselişte, son 10 mumda %{{pct}} artış.",
+        "trendDown": "Kısa vadeli momentum düşüşte, son 10 mumda %{{pct}} düşüş.",
+        "consolidating": "{{support}} destek ile {{resistance}} direnç arasında konsolidasyon.",
+        "aboveSupport": "{{support}} seviyesindeki kritik desteğin üzerinde tutuluyor.",
+        "belowResistance": "{{resistance}} seviyesindeki direce yaklaşıyor."
+      },
+      "retail": {
+        "heavilyLong": "Perakende yoğun şekilde net long ({{bias}} net eğilim). Aşırı perakende longları tarihsel olarak geri çekilmeleri önceler — karşıt düşüş sinyali. Maruziyet {{trend}}.",
+        "moderateLong": "Perakende ılımlı net long pozisyon ({{bias}} net eğilim). {{trend}} yönünde seyreden hafif yükseliş perakende duyarlılığı.",
+        "neutral": "Perakende pozisyonlaması genel olarak nötr ({{bias}} net eğilim). Kalabalıktan güçlü yönlü bir inanç yok.",
+        "moderateShort": "Perakende ılımlı şekilde net short ({{bias}} net eğilim). Hafif karşıt yükseliş kurulumu — pozisyonlama {{trend}}.",
+        "heavilyShort": "Perakende yoğun şekilde net short ({{bias}} net eğilim). Güçlü karşıt yükseliş kurulumu — perakende teslimiyeti genellikle toparlanmayı önceler."
+      },
+      "sentiment": {
+        "stronglyBullish": "Akıllı para %{{pct}} long ile güçlü şekilde yükselişte — %50 nötr çizgisinin çok üzerinde. Kurumsal eğilim açıkça long ve {{trend}}.",
+        "mildlyBullish": "Akıllı para %{{pct}} long ile yükseliş eğiliminde. Long tarafına hafif kurumsal tercih, duyarlılık {{trend}}.",
+        "neutral": "Akıllı para %{{pct}} long ile nötre yakın. Güçlü yönlü inanç yok — kurumsal pozisyonlama dengeli, {{trend}} yönünde.",
+        "mildlyBearish": "Akıllı para %{{pct}} long ile hafif düşüş eğiliminde. Kurumlar hafifçe net short, duyarlılık {{trend}}.",
+        "stronglyBearish": "Akıllı para %{{pct}} long ile ağırlıklı olarak düşüşte. Kurumsal yatırımcılar açıkça net short — önemli düşüş eğilimi."
+      },
+      "smartNet": {
+        "alignedBullish": "Akıllı para {{dir}} ({{bias}}) ile perakende ile aynı hizada. Geniş piyasa mutabakatı yükselişte — pozisyon {{trend}}.",
+        "alignedBearish": "Akıllı para {{dir}} ({{bias}}) ile perakende short ile aynı hizada. Geniş mutabakat düşüşte — dikkat önerilir. Trend {{trend}}.",
+        "divergingSmartBullish": "Sapma: akıllı para {{dir}} ({{bias}}) iken perakende zıt tarafa eğiliyor. Kurumsal pozisyonlama genellikle fiyata öncülük eder — {{trend}} trend.",
+        "divergingSmartBearish": "Sapma: perakende long iken akıllı para {{dir}} ({{bias}}). Akıllı para perakende coşkusunu söndürüyor — bir dönüşe dikkat. Trend {{trend}}.",
+        "neutral": "Akıllı para net pozisyonu nötre yakın ({{bias}} eğilim). Güçlü kurumsal yönlü bahis yok, {{trend}} yönünde seyrediyor."
+      },
+      "dir": {
+        "netLong": "net long",
+        "netShort": "net short"
+      }
+    }
+  },
+  "htf": {
+    "loading": "Haftalık mum verileri yükleniyor…",
+    "title": "Uzun Vadeli Analiz",
+    "sub": "HTF · Haftalık · Döngü Takibi · {{coin}}/USD",
+    "aiLabel": "GPT-4o",
+    "sections": {
+      "monthly":  { "title": "Aylık Getiriler",      "sub": "Tam tarihsel ısı haritası" },
+      "ma200":    { "title": "200H MA",               "sub": "Hareketli ortalama bantları" },
+      "cycle":    { "title": "Döngü Karşılaştırması", "sub": "2020 ve 2024 hizalı" },
+      "pi":       { "title": "Pi Döngü Tepesi",       "sub": "Döngü tepe göstergesi" },
+      "fib":      { "title": "Fibonacci",             "sub": "Kritik destek ve direnç" },
+      "scenario": { "title": "Senaryolar",            "sub": "Boğa · Temel · Ayı yolları" },
+      "ai":       { "title": "YZ Görünümü",           "sub": "GPT-4o makro analiz" }
+    },
+    "stats": {
+      "price": "Fiyat",
+      "ath": "ATH",
+      "drawdown": "Düşüş",
+      "ma200w": "200H MA",
+      "priceToMa": "Fiyat / 200H MA",
+      "postHalving": "Halving Sonrası",
+      "cycleLow": "Döngü Dibi",
+      "trend": "Trend"
+    },
+    "phase": {
+      "earlyAccumulation": "Erken Birikim",
+      "midExpansion": "Orta Genişleme",
+      "lateExpansion": "Geç Genişleme",
+      "distribution": "Dağıtım",
+      "bearMarket": "Ayı Piyasası",
+      "recovery": "Toparlanma"
+    },
+    "legend": {
+      "price": "Fiyat",
+      "ma200w": "200H MA",
+      "ma50w": "50H MA",
+      "cycle2020": "2020 Döngüsü",
+      "cycle2024": "2024 Döngüsü",
+      "sma16w": "16H SMA (≈111GHO)",
+      "dbl50w": "2×50H SMA (≈2×350GHO)",
+      "historical26w": "Tarihsel (26H)",
+      "bull": "Boğa",
+      "base": "Temel",
+      "bear": "Ayı"
+    },
+    "notes": {
+      "cycle": "Her iki döngü de halving tarihlerinde %100 olarak endekslenir. X ekseni: halving'den bu yana geçen haftalar. Y ekseni: halving fiyatından % kazanç.",
+      "fib": "Mevcut döngü dibinden ATH'ye ölçülür. Altın oran (0.618) ve ATH yeniden testi en çok izlenen seviyelerdir. 1.0'ın üzerindeki uzantılar potansiyel döngü tepe hedefleridir.",
+      "scenario": "Döngü haftası {{wks}}, tarihsel analoglar, Fibonacci seviyeleri ve mevcut momentum temelinde yansıtılan yollar."
+    },
+    "piStatus": {
+      "above": "16H SMA, 2×50H SMA'nın %{{gap}} üzerinde",
+      "below": "16H SMA, 2×50H SMA'nın %{{gap}} altında",
+      "converging": " — ⚠ Çizgiler yakınsıyor, dikkatle izleyin"
+    },
+    "fib": {
+      "nearLabel": "← fiyat burada yakın"
+    },
+    "scenario": {
+      "bull": "Boğa Senaryosu",
+      "base": "Temel Senaryo",
+      "bear": "Ayı Senaryosu"
+    },
+    "ai": {
+      "ctaText": "YZ destekli döngü analizi — döngü aşaması, 6 aylık ve 12 aylık görünümler, kritik seviyeler ve GPT-4o tarafından sunulan uygulanabilir uzun vadeli değerlendirme.",
+      "getOutlook": "YZ Görünümünü Al",
+      "analysing": "Analiz ediliyor…",
+      "refreshBtn": "Analizi Yenile",
+      "refreshing": "Yenileniyor…",
+      "outlook6m": "6 Aylık Görünüm",
+      "outlook12m": "12 Aylık Görünüm",
+      "keyLevels": "Kritik Seviyeler",
+      "ourTake": "Değerlendirmemiz"
+    },
+    "tabAI": {
+      "label": "YZ Değerlendirmesi",
+      "badge": "YZ Destekli"
+    },
+    "explainer": {
+      "howItWorks": "Nasıl çalışır",
+      "currentReading": "Güncel okuma",
+      "noData": "Hesaplamak için yeterli veri yok.",
+      "monthly": {
+        "how": "Her hücre, Bitcoin'in o takvim ayı için yüzdesel getirisini gösterir. Satırlar yıllar, sütunlar aylardır. Daha koyu yeşil = daha büyük kazanç, daha koyu kırmızı = daha büyük kayıp. Bu ısı haritası mevsimsel örüntüleri ortaya koyar — birden fazla piyasa döngüsünde hangi ayların tarihsel olarak güçlü veya zayıf olduğunu gösterir.",
+        "earlyAccumulation": "Mevcut halving sonrası döngüde {{months}} ay (Erken Birikim aşaması). Halving sonrası yıllarda Q4 ve Q1, Bitcoin'in tarihsel olarak en güçlü çeyrekleriydi. Ekim–Mart, en büyük aylık kazançları yoğunlaştırma eğilimindedir.",
+        "midExpansion": "Mevcut halving sonrası döngüde {{months}} ay (Orta Genişleme aşaması). Orta döngü yılları Q3–Q4'te güçlü yeşil kümeler gösterir. Mevcut yılın Ekim–Aralık sütunlarının 2020 ve 2016 ile örtüşüp örtüşmediğini kontrol edin.",
+        "lateExpansion": "Mevcut halving sonrası döngüde {{months}} ay (Geç Genişleme aşaması). Geç döngü aylık getirileri erratik hale gelir — keskin kazançlar ve ani kırmızı aylar arasında değişim. Yeşil aylarda yüksek oynaklık ve düşen hacim dağıtım sinyalidir.",
+        "distribution": "Mevcut halving sonrası döngüde {{months}} ay (Dağıtım aşaması). Dağıtım aşamaları yeşilden kırmızıya hâkim sütunlara geçişi gösterir. Yalnız yeşil aylar düşüş arka planına karşı yardım rallileri olarak görünür.",
+        "bearMarket": "Mevcut halving sonrası döngüde {{months}} ay (Ayı Piyasası aşaması). Ayı piyasaları kalıcı kırmızı gösterir. Ocak ve Ekim'i takip edin — döngü dibi dönüşlerinin en yüksek sıklığına sahip aylardır.",
+        "recovery": "Mevcut halving sonrası döngüde {{months}} ay (Toparlanma aşaması). Toparlanma aşamaları tutarlı aylık yeşillerin ilk kümelerini görür. Bir sonraki halvinge yaklaşıldıkça düşük hacimli taban yapımı hızlanır."
+      },
+      "ma200": {
+        "how": "200 Haftalık Hareketli Ortalama, Bitcoin'in en çok izlenen uzun vadeli desteğidir. Fiyat, bu seviyenin altında tam bir haftalık kapanış yapmadan hiçbir zaman yeni tarihsel zirvelere toparlanmadan kalmadı. Her önceki döngüde 200H MA'ya dokunmak veya altında işlem yapmak nesiller boyu alım bölgesi olmuştur; 3×'in üzerinde işlem yapmak ise her büyük tepe öncesinde gerçekleşti.",
+        "below": "Fiyat 200H MA'nın ({{ma200}}) altında işlem görüyor — yalnızca döngü diplerinde görülen aşırı alım bölgesi. Her önceki durum, yeni zirvelere tam toparlanmayla sonuçlandı.{{comp}}",
+        "earlyBull": "200H MA'nın {{ratio}}× üzerinde ({{ma200}}), Bitcoin erken boğa aralığında. 3×'in üzerindeki tarihsel olarak yüksek bölgeye kadar önemli alan var.{{comp}}",
+        "midBull": "200H MA'nın {{ratio}}× üzerinde ({{ma200}}), Bitcoin sağlıklı orta boğa genişleme bölgesinde. Hem 2017 hem de 2021 tepeleri 3×'in üzerinde gerçekleşti.{{comp}}",
+        "approaching": "200H MA'nın {{ratio}}× üzerinde ({{ma200}}), Bitcoin tarihsel olarak yüksek bölgeye yaklaşıyor. Önceki tepeler 3×'e yakın veya üzerinde gerçekleşti — dağıtım sinyallerini izleyin.{{comp}}",
+        "stretched": "200H MA'nın {{ratio}}× üzerinde ({{ma200}}), Bitcoin tarihsel olarak uzanmış bölgede. Her iki önceki döngü tepesi de bu bölgeden %70–85 düşüşlerle takip edildi.{{comp}}",
+        "comp": " 2020 döngüsünün aynı haftasında (hafta {{wks}}), oran {{r2020}}×'di."
+      },
+      "cycle": {
+        "how": "Hem 2020 hem de 2024 döngüleri kendi halving tarihlerinde %100 olarak normalleştirilir, ardından hafta hafta aynı eksen üzerinde çizilir. Bu mutlak fiyat gürültüsünü ortadan kaldırır ve her döngünün yapısal şeklini ortaya koyar.",
+        "noData": "Halving sonrası {{wks}}. hafta — mevcut 2024 döngüsü aynı noktada 2020 döngüsüyle karşılaştırılıyor.",
+        "tracking": "Halving sonrası {{wks}}. hafta: 2024 döngüsü halving fiyatından %{{gain24}} kazandı. Aynı haftada 2020 döngüsü %{{gain20}} yüksekteydi. Mevcut döngü 2020 analogunu yakından takip ediyor.",
+        "outperforming": "Halving sonrası {{wks}}. hafta: 2024 döngüsü halving fiyatından %{{gain24}} kazandı. Aynı haftada 2020 döngüsü %{{gain20}} yüksekteydi. Mevcut döngü 2020 analogunun {{diff}} yüzde puan önünde.",
+        "trailing": "Halving sonrası {{wks}}. hafta: 2024 döngüsü halving fiyatından %{{gain24}} kazandı. Aynı haftada 2020 döngüsü %{{gain20}} yüksekteydi. Mevcut döngü 2020 analogunun {{diff}} yüzde puan gerisinde."
+      },
+      "pi": {
+        "how": "Pi Döngü Tepesi iki hareketli ortalamayı izler — 111 günlük SMA (≈16 hafta) ve 350 günlük SMA'nın iki katı (≈2×50 hafta). Hızlı çizgi yavaş çizginin üstüne çıktığında, her önceki Bitcoin boğa koşusunda döngü tepesini günler içinde işaretledi: Aralık 2017, Nisan 2021 ve Kasım 2021.",
+        "warning": "⚠ Uyarı: 16H SMA, 2×50H SMA'nın yalnızca %{{gap}} üzerinde — çizgiler yakınsıyor. Tarihsel olarak bir çapraz, döngü tepelerinden (Ara 2017, Nis 2021, Kas 2021) günler içinde gerçekleşti. Dikkatle izleyin.",
+        "converging": "Çizgiler yalnızca %{{gap}} boşlukla yakınsamakta. Henüz çapraz yok, ancak döngünün {{wks}}. haftasında yakınlık dikkat gerektiriyor.",
+        "above": "16H SMA, {{wks}}. haftada 2×50H SMA'nın %{{gap}} üzerinde. Çizgiler ıraksıyor — yakın tepe sinyali yok.",
+        "below": "16H SMA, {{wks}}. haftada 2×50H SMA'nın %{{gap}} altında. Pi Döngü Tepesi sinyali yok — çizgiler açıkça ayrılmış."
+      },
+      "fib": {
+        "how": "Fibonacci geri çekilme ve uzantı seviyeleri mevcut döngü dibinden tarihsel zirveye ölçülür. 0.618 Altın Oran ve 0.786 seviyeleri düzeltmelerde en kritik geri çekilme destekleridir. ATH üzerindeki 1.618 ve 2.618 uzantıları, önceki Bitcoin boğa piyasalarında birincil döngü tepe hedef bölgeleridir.",
+        "support": "Güncel destek: {{label}} at {{price}}. ",
+        "resistance": "Sonraki direnç: {{label}} at {{price}}. ",
+        "aboveATH": "Fiyat ATH'nın üzerinde — uzantı bölgesinde. 1.618 ({{ext1618}}) ve 2.618 ({{ext2618}}) seviyeleri önceki Bitcoin boğa piyasalarındaki birincil döngü tepe hedef bölgeleridir.",
+        "belowATH": "Fiyat ATH'nın ({{ath}}) %{{pct}} altında. Onaylı bir kırılma, 1.618 ({{ext1618}}) ve 2.618 ({{ext2618}}) uzantı hedeflerini açar."
+      },
+      "scenario": {
+        "how": "Mevcut döngü haftasından üç ileriye dönük fiyat yolu yansıtılır: Boğa (kurumsal talep ve ETF akışlarıyla yeni ATH), Temel (büyük makro katalizör olmaksızın istikrarlı birikim) ve Ayı (makro şok veya Fibonacci desteğine dağıtım geri çekilmesi). Yollar tarihsel döngü analogları ve mevcut Fibonacci hedefleriyle şekillendirilir.",
+        "prefix": "Halving sonrası {{wks}}. hafta — {{phase}} aşaması. ",
+        "earlyAccumulation": "Tarihsel analoglar, en güçlü fiyat artışının genellikle halving sonrası 6–18 ay içinde başladığını gösterir. Temel senaryo, ana genişleme aşamasından önce istikrarlı kazançlar öngörür.",
+        "midExpansion": "Orta genişleme, Bitcoin'in tarihsel olarak en güçlü aşamasıdır. 2020–2021 ve 2016–2017 analogları, son ayak öncesinde %20–40 düzeltmelerle kesintili keskin momentum hareketlerini gösterir.",
+        "lateExpansion": "Geç genişleme, artan oynaklık ve dağıtımın başlangıcıyla karakterize edilir. Önceki döngüler bu pencerede tepe yaptı — Boğa ve Ayı hedefleri arasındaki boşluk burada en geniştir.",
+        "distribution": "Önceki döngüler dağıtım aşamasında tepe yaptı ve ardından 18–24 aylık ayı piyasalarına girdi. Ayı yolu önceki düşüşlerin büyüklük ve hızını yansıtır.",
+        "bearMarket": "Ayı piyasaları genellikle tepeden 12–18 ay sürer. 200H MA ve 0.618 Fibonacci seviyesine yakın birikim bölgeleri tarihsel olarak nesiller boyu giriş noktaları olmuştur.",
+        "recovery": "Toparlanma aşamaları erken birikime geçiş yapar — daha düşük oynaklık, artan hacim ve bir sonraki halving yeni bir döngü kurmadan önce yenilenen talebin ilk işaretleri."
+      }
+    }
+  },
+  "feargreed": {
+    "title": "Korku ve Açgözlülük Endeksi",
+    "loading": "Endeks yükleniyor…",
+    "zones": {
+      "extremeFear": "Aşırı\nKorku",
+      "fear": "Korku",
+      "neutral": "Nötr",
+      "greed": "Açgözlülük",
+      "extremeGreed": "Aşırı\nAçgözlülük"
+    },
+    "history": {
+      "yesterday": "Dün",
+      "lastWeek": "Geçen Hafta"
+    }
+  },
+  "etf": {
+    "title": "Günlük Net Giriş — 30 Gün (USD)",
+    "loading": "ETF verileri yükleniyor…",
+    "error": "Veri yok.",
+    "todayBtn": "Bugün",
+    "table": {
+      "fund": "Fon",
+      "dailyFlow": "Günlük Akış",
+      "price": "Fiyat",
+      "dayPct": "Gün %",
+      "aum": "AUM",
+      "volume": "Hacim",
+      "total": "Toplam ({{count}} fon)"
+    }
+  },
+  "onchain": {
+    "loading": "Yükleniyor…",
+    "metrics": {
+      "hashRate":     { "label": "Hash Oranı",       "tooltip": "Bitcoin ağını güvence altına alan toplam madencilik gücü" },
+      "dailyTxs":     { "label": "Günlük İşlemler",  "tooltip": "Son 24 saatte gerçekleştirilen zincir üzeri işlem sayısı" },
+      "minerRevenue": { "label": "Madenci Geliri",   "tooltip": "Madencilerin bugün kazandığı toplam USD (blok ödülleri + ücretler)" },
+      "difficulty":   { "label": "Zorluk",           "tooltip": "Mevcut madencilik zorluğu — bir blok bulmak ne kadar zor" },
+      "btcMined":     { "label": "Kazılan BTC",      "tooltip": "Bugün madencilere verilen yeni BTC" },
+      "transferVol":  { "label": "Transfer Hacmi",   "tooltip": "Bugün zincir üzerinde transfer edilen tahmini USD değeri" }
+    },
+    "networkStrength": "{{label}} Ağ",
+    "action": {
+      "accumulate": "Biriktir",
+      "hold": "Tut",
+      "caution": "Dikkat"
+    },
+    "strength": {
+      "strong": "Güçlü",
+      "moderate": "Orta",
+      "weak": "Zayıf"
+    },
+    "updated": "{{status}} {{time}}",
+    "cached": "Önbellekten · {{time}}",
+    "updatedAt": "{{time}} güncellendi"
+  },
+  "coinbase": {
+    "loading": "Tarihsel veriler yükleniyor…",
+    "explainer": {
+      "title": "Bu grafik neyi gösteriyor?",
+      "body": "Coinbase Premium Endeksi, Coinbase Pro (USD) ile Binance (USDT) arasındaki BTC fiyatı yüzdesel farkını ölçer. Pozitif premium genellikle yükseliş duyarlılığıdır. Negatif olduğunda düşüş sinyali verir. Yükseliş trendinde sürdürülen pozitif premiumlar kurumsal alımı doğrular."
+    }
+  },
+  "gann": {
+    "loading": "Mum verileri yükleniyor…",
+    "analyseBtn": "✦ YZ ile Analiz Et",
+    "analysing": "Analiz ediliyor…",
+    "refresh": "Yenile",
+    "tooltip": "Gann tahminlerini görmek için tıkla"
+  },
+  "watchlist": {
+    "searchPlaceholder": "Ad veya sembolle ara…",
+    "loading": "Piyasa verileri yükleniyor…",
+    "noResults": "Sonuç bulunamadı"
+  },
+  "alerts": {
+    "title": "Alarm Oluşturucu",
+    "enableNotifications": "Bildirimleri Etkinleştir",
+    "notificationsOn": "🔔 Bildirimler Açık",
+    "newAlert": "+ Yeni Alarm",
+    "empty": {
+      "icon": "⚡",
+      "text": "Yapılandırılmış alarm yok",
+      "hint": "RSI < 30 VE Fonlama Oranı < 0 gibi bileşik koşullar kurmak için \"Yeni Alarm\"a tıklayın"
+    },
+    "defaultName": "Yeni Alarm",
+    "logic": {
+      "and": "VE",
+      "or": "VEYA"
+    },
+    "metrics": {
+      "price": "Fiyat (USD)",
+      "rsi": "RSI",
+      "fundingRate": "Fonlama Oranı",
+      "longShortRatio": "Long/Short Oranı",
+      "openInterest": "Açık Faiz",
+      "macd": "MACD",
+      "liquidationAbove": "Üst Tasfiye (USD)",
+      "liquidationBelow": "Alt Tasfiye (USD)"
+    }
+  },
+  "nav": {
+    "sections": {
+      "ai": "YZ Tahmini",
+      "feargreed": "Korku ve Açgözlülük",
+      "market": "Piyasa Verileri",
+      "onchain": "Zincir Üzeri",
+      "chart": "Fiyat Grafiği",
+      "heatmap": "Tasfiyeler",
+      "alerts": "Alarmlar",
+      "watchlist": "İzleme Listesi"
+    }
   }
 }

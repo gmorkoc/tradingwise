@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FearGreedData } from "../services/feargreed";
 import "../styles/FearGreedGauge.css";
 
@@ -25,7 +26,7 @@ const ZONES = [
   { from: 46.8,  to: 0,     color: "#15803d" },
 ];
 
-const ZONE_LABELS = ["Extreme\nFear", "Fear", "Neutral", "Greed", "Extreme\nGreed"];
+// Zone labels fetched via t() inside component
 
 function zoneColor(value: number): string {
   if (value <= 24) return "#ef4444";
@@ -44,6 +45,14 @@ interface FearGreedExtended extends FearGreedData {
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 export function FearGreedGauge() {
+  const { t } = useTranslation();
+  const ZONE_LABELS = [
+    t("feargreed.zones.extremeFear"),
+    t("feargreed.zones.fear"),
+    t("feargreed.zones.neutral"),
+    t("feargreed.zones.greed"),
+    t("feargreed.zones.extremeGreed"),
+  ];
   const [data, setData] = useState<FearGreedExtended | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -82,9 +91,9 @@ export function FearGreedGauge() {
   if (loading) return (
     <div className="fng-card">
       <div className="fng-header">
-        <h3 className="fng-title">Fear & Greed Index</h3>
+        <h3 className="fng-title">{t("feargreed.title")}</h3>
       </div>
-      <div className="fng-loading">Loading index…</div>
+      <div className="fng-loading">{t("feargreed.loading")}</div>
     </div>
   );
 
@@ -99,7 +108,7 @@ export function FearGreedGauge() {
   return (
     <div className="fng-card">
       <div className="fng-header">
-        <h3 className="fng-title">Fear & Greed Index</h3>
+        <h3 className="fng-title">{t("feargreed.title")}</h3>
         <span className="fng-source">alternative.me</span>
       </div>
 
@@ -164,14 +173,14 @@ export function FearGreedGauge() {
         {/* Yesterday / Last week */}
         <div className="fng-compare">
           <div className="fng-compare-item">
-            <div className="fng-compare-label">Yesterday</div>
+            <div className="fng-compare-label">{t("feargreed.history.yesterday")}</div>
             <div className="fng-compare-val" style={{ color: zoneColor(data.yesterday.value) }}>
               {data.yesterday.value}
               <span className="fng-compare-class">{data.yesterday.classification}</span>
             </div>
           </div>
           <div className="fng-compare-item">
-            <div className="fng-compare-label">Last Week</div>
+            <div className="fng-compare-label">{t("feargreed.history.lastWeek")}</div>
             <div className="fng-compare-val" style={{ color: zoneColor(data.lastWeek.value) }}>
               {data.lastWeek.value}
               <span className="fng-compare-class">{data.lastWeek.classification}</span>

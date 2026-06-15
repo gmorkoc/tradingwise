@@ -258,6 +258,55 @@
 .htf-chart { width: 100%; }
 .htf-chart--fib { margin-top: 8px; }
 
+/* ── Explainer block ─────────────────────────────────────────────────────────── */
+.htf-explainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.htf-explainer-col {
+  padding: 14px 16px;
+}
+
+.htf-explainer-col--now {
+  border-left: 1px solid var(--color-border);
+  background: rgba(255,255,255,0.02);
+}
+
+.htf-explainer-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 7px;
+}
+
+.htf-explainer-col--now .htf-explainer-label {
+  color: var(--color-accent);
+}
+
+.htf-explainer-text {
+  margin: 0;
+  font-size: 0.815rem;
+  color: var(--color-text-secondary, var(--color-text-muted));
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .htf-explainer {
+    grid-template-columns: 1fr;
+  }
+  .htf-explainer-col--now {
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
 /* ── Pi Cycle status ─────────────────────────────────────────────────────────── */
 .htf-pi-status {
   font-size: 12px;

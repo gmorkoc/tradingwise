@@ -9,87 +9,129 @@
     "refresh": "Aggiorna",
     "updated": "Aggiornato",
     "version": "Versione",
-    "loading": "Caricamento..."
+    "loading": "Caricamento…",
+    "save": "Salva",
+    "saved": "Salvato",
+    "saving": "Salvataggio…",
+    "discard": "Annulla",
+    "confirm": "Conferma",
+    "cancel": "Annulla",
+    "settings": "Impostazioni",
+    "signin": "Accedi",
+    "signout": "Esci",
+    "signup": "Registrati",
+    "profile": "Profilo",
+    "upgrade": "Aggiorna",
+    "or": "o",
+    "error": "Errore",
+    "success": "Successo",
+    "noData": "Nessun dato disponibile",
+    "back": "Indietro",
+    "exit": "Esci",
+    "muted": "Silenziato",
+    "sound": "Suono",
+    "myAccount": "Il mio account",
+    "free": "Gratuito",
+    "pro": "Pro",
+    "elite": "Elite",
+    "unlimited": "Illimitato",
+    "cancelAnytime": "Annulla quando vuoi",
+    "swipeToOpen": "Scorri per aprire il menu",
+    "viaBinance": "tramite Binance",
+    "strong": "Forte",
+    "medium": "Medio",
+    "weak": "Debole",
+    "rising": "in salita",
+    "falling": "in calo",
+    "declining": "in declino",
+    "strong_signal": "Forte",
+    "moderate_signal": "Moderato",
+    "caution_signal": "Attenzione"
   },
   "header": {
-    "subtitle": "Dati di mercato in tempo reale con previsioni basate su IA",
-    "costBasis": "Costo Base",
-    "currentValue": "Valore Attuale",
-    "pnl": "G/P",
+    "subtitle": "Dati di mercato in tempo reale con previsioni basate sull'IA",
+    "costBasis": "Costo base",
+    "currentValue": "Valore attuale",
+    "pnl": "P&G",
     "clickToRefresh": "Clicca per aggiornare",
-    "openCalculator": "Apri Calcolatore Attivi"
+    "openCalculator": "Apri calcolatore asset"
   },
   "assetCalc": {
-    "title": "💼 Calcolatore Attivi",
-    "amountLabel": "Quantità di {{coin}}",
+    "title": "💼 Calcolatore Asset",
+    "amountLabel": "Quantità {{coin}}",
     "costLabel": "Costo per {{coin}}",
-    "totalLabel": "Valore Totale degli Attivi",
+    "totalLabel": "Valore totale asset",
     "basedOn": "Basato sul prezzo attuale di {{coin}}: {{price}}",
     "costBasis": "Costo base: {{amount}}"
   },
   "alert": {
-    "signalLabel": "Segnale di Prezzo",
-    "currentlyBullish": "⬆ Attualmente Rialzista",
-    "currentlyBearish": "⬇ Attualmente Ribassista",
-    "turnedBullish": "⬆ Il prezzo è diventato Rialzista",
-    "turnedBearish": "⬇ Il prezzo è diventato Ribassista"
+    "signalLabel": "Segnale prezzo",
+    "currentlyBullish": "⬆ Attualmente rialzista",
+    "currentlyBearish": "⬇ Attualmente ribassista",
+    "turnedBullish": "⬆ Il prezzo è diventato rialzista",
+    "turnedBearish": "⬇ Il prezzo è diventato ribassista",
+    "bullishSignal": "▲ Segnale rialzista",
+    "bearishSignal": "▼ Segnale ribassista",
+    "neutralSignal": "Neutrale",
+    "coinUp": "{{coin}} sale — momentum in aumento, osserva la continuazione",
+    "coinDown": "{{coin}} scende — pressione crescente, osserva i livelli di supporto"
   },
   "main": {
-    "marketData": "Dati di Mercato",
+    "marketData": "Dati di mercato",
     "error": "Errore"
   },
   "dataDisplay": {
     "loading": "Caricamento dati di mercato...",
-    "failed": "Caricamento dati di mercato fallito. Controlla la tua chiave API.",
+    "failed": "Impossibile caricare i dati di mercato. Controlla la tua chiave API.",
     "refreshing": "Aggiornamento dati di mercato...",
     "coinPrice": "Prezzo {{coin}}",
-    "liquidationAbove": "Liquidazione Superiore",
-    "liquidationBelow": "Liquidazione Inferiore",
-    "openInterest": "Interesse Aperto",
-    "fundingRate": "Tasso di Finanziamento",
+    "liquidationAbove": "Liquidazione sopra",
+    "liquidationBelow": "Liquidazione sotto",
+    "openInterest": "Open Interest",
+    "fundingRate": "Tasso di finanziamento",
     "rsi": "RSI (14)",
     "macd": "MACD",
     "longShortRatio": "Rapporto Long/Short",
-    "tooltipPrice": "Prezzo attuale di {{coin}} relativo all'intervallo di liquidazione stimato. Il prezzo sopra il punto medio è rialzista; sotto è ribassista.",
-    "tooltipLiqAbove": "Livello di liquidazione al rialzo stimato. Un divario più ampio sopra il prezzo attuale suggerisce più spazio rialzista.",
-    "tooltipLiqBelow": "Livello di liquidazione al ribasso stimato. Un cuscinetto inferiore maggiore mostra più buffer di rischio ribassista.",
-    "tooltipOI": "Posizioni aperte totali. Un interesse aperto maggiore indica partecipazione al mercato più forte e maggiore slancio.",
-    "tooltipFunding": "Il finanziamento positivo significa che i long pagano gli short, indicando un sentiment rialzista. Quello negativo indica una tendenza ribassista.",
+    "tooltipPrice": "Prezzo attuale di {{coin}} rispetto all'intervallo di liquidazione stimato. Sopra il punto medio è rialzista; sotto è ribassista.",
+    "tooltipLiqAbove": "Livello di liquidazione al rialzo stimato. Un margine più ampio sopra il prezzo suggerisce più spazio rialzista.",
+    "tooltipLiqBelow": "Livello di liquidazione al ribasso stimato. Un cuscinetto maggiore sotto mostra più margine di protezione ribassista.",
+    "tooltipOI": "Posizioni aperte totali. Open interest elevato indica una partecipazione e un momentum più forti.",
+    "tooltipFunding": "Tasso positivo significa che i long pagano gli short (sentiment rialzista). Negativo significa che gli short pagano i long (bias ribassista).",
     "tooltipRSI": "Indice di Forza Relativa. Sopra 70 è ipercomprato (avviso ribassista); sotto 30 è ipervenduto (opportunità rialzista).",
-    "tooltipMACD": "Il MACD misura lo slancio. I valori positivi sono rialzisti; quelli negativi sono ribassisti.",
-    "tooltipLS": "Un rapporto superiore a 1 significa più long che short (rialzista); sotto 1 significa più short che long (ribassista)."
+    "tooltipMACD": "Il MACD misura il momentum. Valori positivi sono rialzisti; negativi sono ribassisti.",
+    "tooltipLS": "Un rapporto superiore a 1 indica più long che short (rialzista); inferiore a 1 indica più short che long (ribassista)."
   },
   "aiPanel": {
     "title": "Previsione IA",
     "dirUp": "▲ Rialzista",
     "dirDown": "▼ Ribassista",
     "dirNeutral": "● Neutrale",
-    "analyzing": "Analisi dei dati di mercato…",
+    "analyzing": "Analisi dei dati di mercato in corso…",
     "fetching": "Recupero analisi IA…",
     "updatedAt": "Aggiornato {{time}}",
     "refreshTitle": "Aggiorna previsione",
-    "range8h": "Intervallo 8H",
-    "confHigh": "alta confidenza",
-    "confMedium": "media confidenza",
-    "confLow": "bassa confidenza",
+    "range8h": "Range 8H",
+    "confHigh": "alta fiducia",
+    "confMedium": "fiducia media",
+    "confLow": "bassa fiducia",
     "waitingData": "In attesa dei dati di mercato…",
     "unableToFetch": "Impossibile recuperare i dati di mercato."
   },
   "chat": {
     "title": "💬 Chat IA",
     "clear": "Cancella",
-    "placeholder": "Chiedi del prezzo, tendenze, segnali…",
+    "placeholder": "Chiedi di prezzo, tendenze, segnali…",
     "defaultMessage": "Ciao! Posso aiutarti ad analizzare i dati di mercato di {{coin}} e rispondere a domande sulle tendenze delle criptovalute. Chiedimi qualsiasi cosa sulla situazione attuale del mercato!"
   },
   "chart": {
     "title": "📈 Grafico Prezzo {{coin}}",
     "live": "● LIVE",
     "loading": "Caricamento dati grafico...",
-    "noData": "Nessun dato del grafico disponibile",
-    "failed": "Recupero dati grafico fallito",
+    "noData": "Nessun dato grafico disponibile",
+    "failed": "Impossibile recuperare i dati del grafico",
     "indicators": "Indicatori",
     "overlays": "Sovrapposizioni",
-    "subcharts": "Sotto-grafici",
+    "subcharts": "Sub-grafici",
     "bollingerBands": "Bande di Bollinger",
     "ema20": "EMA 20",
     "ema50": "EMA 50",
@@ -100,22 +142,23 @@
     "rsi14": "RSI (14)",
     "macd1269": "MACD (12, 26, 9)",
     "cmeGaps": "Gap CME",
-    "bbUpperLegend": "── Banda Superiore",
+    "bbUpperLegend": "── Banda superiore",
     "bbMiddleLegend": "- - Media (SMA 20)",
-    "bbLowerLegend": "── Banda Inferiore",
+    "bbLowerLegend": "── Banda inferiore",
     "cmeLegend": "── Gap CME (non colmati)",
-    "strongBuy": "Acquisto Forte",
-    "buy": "Zona di Acquisto",
+    "strongBuy": "Acquisto forte",
+    "buy": "Zona acquisto",
     "neutralZone": "Neutrale",
-    "sell": "Zona di Vendita",
-    "strongSell": "Vendita Forte",
-    "currentPattern": "Pattern Attuale",
+    "sell": "Zona vendita",
+    "strongSell": "Vendita forte",
+    "currentPattern": "Pattern attuale",
     "nextMove": "Prossima mossa probabile",
     "rsiLegend": "RSI",
     "macdLegend": "MACD",
     "signalLegend": "Segnale",
-    "rsiOB": "SA 70",
-    "rsiOS": "SV 30"
+    "rsiOB": "SI 70",
+    "rsiOS": "SV 30",
+    "save": "Salva"
   },
   "heatmap": {
     "title": "🔥 Mappa di Calore Liquidazioni",
@@ -123,7 +166,7 @@
     "high": "Alto",
     "low": "Basso",
     "loading": "Caricamento mappa di calore…",
-    "disclaimer": "Simulato da dati OHLC usando livelli di leva comuni. Non sono dati reali di interesse aperto degli exchange.",
+    "disclaimer": "Simulato dai dati OHLC usando i livelli di leva comuni. Non sono dati reali di open interest dell'exchange.",
     "clusterAnalysis": "📊 Analisi Cluster di Liquidazione",
     "longZones": "Zone Liq. Long",
     "longBelow": "↓ sotto il prezzo",
@@ -138,12 +181,12 @@
     "short": "▼ Short",
     "leverage": "Leva",
     "custom": "Personalizzato",
-    "waitingZone": "In attesa del caricamento dei dati di zona…",
-    "waitNotice": "⏳ Il prezzo non è ancora all'ingresso ideale — attendi che {{coin}} raggiunga la zona di {{dir}}",
+    "waitingZone": "Attesa dati zona…",
+    "waitNotice": "⏳ Prezzo non ancora all'ingresso ideale — attendi che {{coin}} raggiunga la zona {{dir}}",
     "entry": "Ingresso",
     "stopLoss": "Stop Loss",
-    "takeProfit1": "Prendi Profitto 1",
-    "takeProfit2": "Prendi Profitto 2",
+    "takeProfit1": "Obiettivo 1",
+    "takeProfit2": "Obiettivo 2",
     "liquidation": "Liquidazione",
     "riskReward": "Rischio / Rendimento",
     "waitDown": "↓ Attendi",
@@ -151,8 +194,8 @@
     "now": "Ora",
     "buy": "acquisto",
     "sell": "vendita",
-    "warningHigh": "⚠️ {{lev}}x comporta un rischio di liquidazione significativo. Usa un dimensionamento della posizione attento.",
-    "warningCritical": "⛔ {{lev}}x è un rischio estremamente elevato. Un movimento del {{pct}}% liquida la tua posizione."
+    "warningHigh": "⚠️ {{lev}}× comporta un rischio di liquidazione significativo. Usa il dimensionamento della posizione con attenzione.",
+    "warningCritical": "⛔ {{lev}}× è un rischio estremamente elevato. Un movimento del {{pct}}% liquida la tua posizione."
   },
   "drawer": {
     "logo": "📊 TradingWise.AI",
@@ -162,71 +205,626 @@
     "theme": "Tema",
     "lightMode": "☀️ Modalità chiara",
     "darkMode": "🌙 Modalità scura",
-    "autoRefresh": "Aggiornamento automatico",
-    "coin": "Moneta",
+    "autoRefresh": "Aggiornamento auto",
+    "coin": "Criptovaluta",
     "language": "Lingua",
     "leverageBtn": "⚡ Suggerimento Ingresso con Leva",
-    "patternsBtn": "📚 Guida ai Pattern Candlestick",
+    "patternsBtn": "📚 Guida Pattern Candele",
     "appInfo": "ℹ️ Info App",
-    "priceData": "Dati prezzi",
+    "priceData": "Dati prezzo",
     "charts": "Grafici",
     "ai": "IA",
     "reportIssue": "🐛 Segnala un problema",
     "dataSource": "📡 Fonte dati",
     "tradingGuide": "📚 Guida al Trading",
-    "disclaimer": "Non è una consulenza finanziaria. Fai trading con responsabilità.",
+    "disclaimer": "Non è una consulenza finanziaria. Fai trading responsabilmente.",
     "docs": {
       "candlesticks": {
-        "title": "📊 Grafici Candlestick",
-        "body": "Ogni candela mostra il prezzo di apertura, massimo, minimo e chiusura per un periodo. Una candela verde (rialzista) significa che il prezzo è chiuso più in alto rispetto all'apertura. Una candela rossa (ribassista) significa che è chiuso più in basso. Le ombre mostrano il prezzo più alto e più basso raggiunto durante quel periodo."
+        "title": "📊 Grafici a Candele",
+        "body": "Ogni candela mostra il prezzo di apertura, massimo, minimo e chiusura di un periodo. Una candela verde (rialzista) significa che ha chiuso più in alto dell'apertura. Una candela rossa (ribassista) ha chiuso più in basso. Le ombre (linee sottili) mostrano il prezzo massimo e minimo raggiunto durante quel periodo."
       },
       "bollingerBands": {
         "title": "📉 Bande di Bollinger",
-        "body": "Tre linee tracciate intorno al prezzo: una media mobile semplice a 20 periodi (centrale) e bande superiore/inferiore a 2 deviazioni standard. Quando il prezzo si avvicina alla banda superiore, l'asset potrebbe essere ipercomprato. Vicino alla banda inferiore suggerisce condizioni di ipervenduto."
+        "body": "Tre linee tracciate intorno al prezzo: una media mobile semplice a 20 periodi (centrale) e bande superiori/inferiori a 2 deviazioni standard. Quando il prezzo si avvicina alla banda superiore, l'asset potrebbe essere ipercomprato. Vicino alla banda inferiore suggerisce condizioni di ipervenduto. Bande strette segnalano bassa volatilità; larghe segnalano alta volatilità."
       },
       "rsi": {
         "title": "💪 RSI — Indice di Forza Relativa",
-        "body": "L'RSI misura lo slancio su una scala da 0 a 100. Sopra 70 = ipercomprato (possibile segnale di vendita). Sotto 30 = ipervenduto (possibile segnale di acquisto). Tra 30 e 70 è territorio neutrale. La divergenza RSI può segnalare un'inversione."
+        "body": "L'RSI misura il momentum su una scala 0–100. Sopra 70 = ipercomprato (possibile segnale di vendita). Sotto 30 = ipervenduto (possibile segnale di acquisto). Tra 30–70 è territorio neutrale. La divergenza RSI — quando il prezzo fa un nuovo massimo ma l'RSI non lo fa — può segnalare un'inversione."
       },
       "macd": {
         "title": "📈 MACD",
-        "body": "Il MACD traccia lo slancio usando due EMA (periodi 12 e 26). Quando la linea MACD supera la linea di segnale, è un segnale rialzista. Sotto = ribassista. L'istogramma mostra la differenza tra le due linee."
+        "body": "La Convergenza/Divergenza delle Medie Mobili traccia il momentum usando due EMA (periodi 12 e 26). Quando la linea MACD supera la linea segnale, è un segnale rialzista. Sotto = ribassista. L'istogramma mostra la differenza tra le due linee. Positivo = momentum rialzista, negativo = ribassista."
       },
       "supportResistance": {
         "title": "🧱 Supporto e Resistenza",
-        "body": "Il supporto è un livello di prezzo dove l'interesse all'acquisto è abbastanza forte da fermare un calo. La resistenza è un tetto dove la pressione di vendita impedisce al prezzo di salire. Una volta rotti, questi livelli spesso invertono i loro ruoli."
+        "body": "Il supporto è un livello di prezzo dove l'interesse all'acquisto è abbastanza forte da fermare un calo — il prezzo tende a 'rimbalzare'. La resistenza è l'opposto: un soffitto dove la pressione di vendita ferma il rialzo. Una volta rotti, questi livelli spesso invertono i ruoli (il supporto diventa resistenza e viceversa)."
       },
       "openInterest": {
-        "title": "📂 Interesse Aperto",
-        "body": "L'Interesse Aperto (IA) è il numero totale di contratti futures/opzioni in sospeso. IA in aumento con prezzo in aumento = forte trend rialzista. IA in aumento con prezzo in calo = forte trend ribassista. IA in calo segnala indebolimento del trend."
+        "title": "📂 Open Interest",
+        "body": "L'Open Interest (OI) è il numero totale di contratti futures/opzioni in essere non liquidati. OI in aumento con prezzo in aumento = forte tendenza rialzista. OI in aumento con prezzo in calo = forte tendenza ribassista. OI in calo di solito significa che le posizioni vengono chiuse (tendenza in indebolimento)."
       },
       "fundingRate": {
         "title": "💰 Tasso di Finanziamento",
-        "body": "Nei futures perpetui, il tasso di finanziamento è un pagamento periodico tra long e short. Positivo = i long pagano gli short (mercato rialzista). Negativo = gli short pagano i long (sentiment ribassista). Tassi estremi spesso precedono le inversioni."
+        "body": "Nei futures perpetui, il tasso di finanziamento è un pagamento periodico tra long e short per mantenere il prezzo del contratto vicino al prezzo spot. Tasso positivo = i long pagano gli short (mercato rialzista). Negativo = gli short pagano i long (sentiment ribassista). Tassi estremi spesso precedono inversioni."
       },
       "longShort": {
-        "title": "⚖️ Rapporto Long/Short",
-        "body": "Mostra il rapporto di trader che detengono posizioni long vs short. Superiore a 1 = sentiment rialzista. Sotto 1 = sentiment ribassista. Rapporti estremi possono segnalare un'inversione poiché il mercato spesso si muove contro la folla."
+        "title": "⚖️ Rapporto Long / Short",
+        "body": "Mostra il rapporto tra trader con posizioni long e short. Un rapporto superiore a 1 significa più long che short — sentiment rialzista. Sotto 1 = sentiment ribassista. Paradossalmente, rapporti estremi (es. 3:1 long) possono segnalare un'inversione poiché il mercato spesso si muove contro la folla."
       },
       "liquidations": {
         "title": "💥 Liquidazioni",
-        "body": "Una liquidazione avviene quando la posizione di un trader con leva viene chiusa forzatamente perché il suo margine è insufficiente. Le liquidazioni di massa causano rapidi picchi di prezzo. La mappa di calore mostra i cluster di liquidazione stimati."
+        "body": "Una liquidazione avviene quando la posizione di un trader con leva viene chiusa forzosamente perché il margine è insufficiente a coprire le perdite. Le liquidazioni di massa causano rapidi picchi di prezzo — una cascata di liquidazioni long spinge il prezzo bruscamente verso il basso; le short lo spingono verso l'alto. La mappa di calore mostra i cluster di liquidazione stimati."
       },
       "leverage": {
         "title": "⚡ Leva e Rischio",
-        "body": "La leva amplifica sia i guadagni che le perdite. Con una leva 10×, un movimento del 10% azzera l'intera posizione. Usa sempre stop-loss, dimensiona le posizioni in modo conservativo e non rischiare mai più di quanto puoi permetterti di perdere."
+        "body": "La leva amplifica sia i guadagni che le perdite. Con una leva 10×, un movimento del prezzo del 10% azzera la tua posizione. Il prezzo di liquidazione è approssimativamente: Ingresso × (1 − 1/Leva) per i long, Ingresso × (1 + 1/Leva) per gli short. Usa sempre stop-loss e non rischiare mai più di quanto puoi permetterti di perdere."
       },
       "buySell": {
-        "title": "Zone di Acquisto/Vendita",
-        "body": "Le zone di acquisto sono vicino a supporti forti o alla banda inferiore di Bollinger. Le zone di vendita sono vicino alla resistenza o alla banda superiore. Sono aree di confluenza — più indicatori concordano, più forte è il segnale."
+        "title": "Zone Acquisto / Vendita",
+        "body": "Le zone di acquisto sono aree di prezzo vicino a supporti forti o alla banda Bollinger inferiore dove è probabile trovare acquirenti. Le zone di vendita sono vicino alle resistenze o alla banda superiore dove i venditori tendono ad intervenire. Più indicatori concordano (supporto + RSI ipervenduto + BB inferiore), più forte è il segnale."
       },
       "riskReward": {
-        "title": "📐 Rapporto Rischio/Rendimento",
-        "body": "R/R = (distanza Take Profit) ÷ (distanza Stop Loss). Un rapporto 1:2 significa rischiare $1 per guadagnare $2. La maggior parte dei trader professionisti mira ad almeno 1:2. Non entrare mai in un'operazione con un R/R inferiore a 1:1."
+        "title": "📐 Rapporto Rischio / Rendimento",
+        "body": "R/R = (Distanza obiettivo) ÷ (Distanza stop loss). Un rapporto 1:2 significa che rischi $1 per guadagnare $2. La maggior parte dei trader professionisti punta ad almeno 1:2. Anche con un tasso di successo del 40%, un R/R consistente di 1:2 è redditizio nel tempo. Non entrare mai in un trade con R/R inferiore a 1:1."
       }
     }
   },
   "footer": {
     "copyright": "© {{year}} TradingWise.AI. Tutti i diritti riservati."
+  },
+  "auth": {
+    "logoText": "TradingWise",
+    "continueWithGoogle": "Continua con Google",
+    "divider": "o",
+    "login": {
+      "title": "Bentornato",
+      "sub": "Accedi al tuo account",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Password dimenticata?",
+      "signinBtn": "Accedi",
+      "signingIn": "Accesso in corso…",
+      "noAccount": "Non hai un account?",
+      "signupFree": "Registrati gratis"
+    },
+    "signup": {
+      "title": "Crea account",
+      "sub": "Inizia con il piano gratuito — aggiorna quando vuoi",
+      "fullNameLabel": "Nome completo",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmLabel": "Conferma password",
+      "createBtn": "Crea Account",
+      "creating": "Creazione account…",
+      "confirmEmail": "Controlla la tua email per confermare l'account, poi accedi.",
+      "alreadyAccount": "Hai già un account?",
+      "signinLink": "Accedi"
+    },
+    "reset": {
+      "title": "Reimposta password",
+      "sub": "Ti invieremo un link di reimpostazione via email",
+      "emailLabel": "Email",
+      "sendBtn": "Invia Link di Reimpostazione",
+      "sending": "Invio in corso…",
+      "resetSent": "Link di reimpostazione inviato — controlla la tua casella di posta.",
+      "backToSignin": "← Torna all'accesso"
+    },
+    "errors": {
+      "passwordMismatch": "Le password non corrispondono",
+      "passwordTooShort": "La password deve avere almeno 6 caratteri"
+    }
+  },
+  "account": {
+    "signin": "Accedi",
+    "myAccount": "Il mio account",
+    "profile": "Profilo",
+    "tierPlan": "Piano {{tier}}",
+    "upgradePlan": "⚡ Aggiorna Piano",
+    "accountSettings": "⚙ Impostazioni Account",
+    "signout": "Esci"
+  },
+  "profile": {
+    "title": "Profilo",
+    "sections": {
+      "subscription": "Abbonamento",
+      "aiUsage": "Utilizzo IA",
+      "profileInfo": "Informazioni Profilo",
+      "security": "Sicurezza"
+    },
+    "subscription": {
+      "currentPlan": "Piano attuale",
+      "status": "Stato",
+      "nextBilling": "Prossima fatturazione",
+      "accessUntil": "Accesso fino al",
+      "manageBilling": "Gestisci fatturazione / Annulla",
+      "loadingPortal": "Caricamento…",
+      "upgradePlan": "⚡ Aggiorna Piano"
+    },
+    "status": {
+      "active": "Attivo",
+      "past_due": "Scaduto",
+      "canceled": "Annullato",
+      "unpaid": "Non pagato",
+      "trialing": "Prova",
+      "incomplete": "Incompleto",
+      "incomplete_expired": "Scaduto"
+    },
+    "aiUsage": {
+      "unlimited": "Richieste IA illimitate",
+      "requestsUsed": "{{used}} di {{limit}} richieste usate questa settimana",
+      "resetsOn": "Si azzera il {{date}}",
+      "upgradePro": "Aggiorna a Pro",
+      "proHint": " per 35 richieste IA/settimana, o Elite per illimitate.",
+      "upgradeElite": "Aggiorna a Elite",
+      "eliteHint": " per richieste IA illimitate."
+    },
+    "info": {
+      "displayName": "Nome visualizzato",
+      "username": "Nome utente",
+      "email": "Email",
+      "bio": "Bio",
+      "yourName": "Il tuo nome completo",
+      "yourUsername": "@nomeutente",
+      "yourEmail": "tu@esempio.com",
+      "yourBio": "Una breve bio…"
+    },
+    "security": {
+      "title": "Sicurezza",
+      "sub": "Imposta una nuova password per il tuo account.",
+      "newPassword": "Nuova Password",
+      "confirmPassword": "Conferma Nuova Password",
+      "minChars": "Min. 6 caratteri",
+      "repeatPassword": "Ripeti la nuova password",
+      "changePassword": "Cambia Password",
+      "strength": {
+        "strong": "Forte",
+        "medium": "Media",
+        "weak": "Debole"
+      }
+    },
+    "messages": {
+      "saved": "✓ Profilo salvato",
+      "passwordUpdated": "✓ Password aggiornata",
+      "displayNameRequired": "Il nome visualizzato è obbligatorio.",
+      "emailRequired": "L'email è obbligatoria.",
+      "invalidEmail": "Inserisci un indirizzo email valido.",
+      "passwordTooShort": "La nuova password deve avere almeno 6 caratteri.",
+      "passwordMismatch": "Le password non corrispondono."
+    },
+    "actions": {
+      "saveChanges": "Salva Modifiche",
+      "discard": "Annulla",
+      "yourName": "Il tuo nome",
+      "noEmail": "nessuna email impostata"
+    }
+  },
+  "quotaWall": {
+    "freeTitle": "Le funzionalità IA richiedono un piano a pagamento",
+    "freeDesc": "Aggiorna per sbloccare analisi di mercato, previsioni e approfondimenti basati sull'IA in ogni sezione.",
+    "capTitle": "Limite settimanale IA raggiunto",
+    "capDesc": "Hai usato {{used}}/{{limit}} richieste IA questa settimana. Aggiorna per accesso illimitato.",
+    "getBtn": "Ottieni {{plan}}",
+    "redirecting": "Reindirizzamento…",
+    "usagePips": "{{used}}/{{limit}} usate · si azzera lunedì",
+    "signin": "Hai già un piano? Accedi"
+  },
+  "membershipGate": {
+    "loading": "Caricamento…",
+    "signin": {
+      "title": "Accedi per continuare",
+      "sub": "Crea un account gratuito per accedere a {{feature}} e ottenere un vantaggio sul mercato.",
+      "perks": ["Prezzo live e order book", "Indicatore Paura e Avidità", "Metriche on-chain", "Mappa di calore liquidazioni"],
+      "cta": "Accedi / Registrati — È Gratuito",
+      "trust": "Nessuna carta di credito · Piano gratuito per sempre"
+    },
+    "pro": {
+      "headline": "Fai Trading più Intelligente con l'IA",
+      "sub": "Analisi basata sull'IA in tempo reale su azione del prezzo, dati on-chain e sentiment di mercato — tutto in un posto.",
+      "features": [
+        { "icon": "✦", "title": "Intelligence di Mercato IA", "desc": "GPT-4o legge il mercato per te — pattern, momentum e bias a colpo d'occhio." },
+        { "icon": "⛓",  "title": "Analisi IA On-Chain",  "desc": "Salute della rete, comportamento dei miner e segnali on-chain interpretati in modo semplice." },
+        { "icon": "📈", "title": "Previsioni Prezzo IA",  "desc": "Previsioni multi-scenario con livelli di fiducia aggiornati ogni intervallo." },
+        { "icon": "💬", "title": "Assistente Trading IA", "desc": "Chiedi qualsiasi cosa — strategia, setup, rischio — e ottieni risposte di livello istituzionale." }
+      ],
+      "cta": "Sblocca Pro — $10,99/mese",
+      "trust": "35 richieste IA/settimana · Annulla quando vuoi · Accesso immediato"
+    },
+    "elite": {
+      "headline": "Il Vantaggio dei Professionisti",
+      "sub": "Analisi Gann, Coinbase Premium e IA illimitata — il kit istituzionale completo, senza limiti.",
+      "features": [
+        { "icon": "📐", "title": "Analisi Gann IA",   "desc": "Quadrato di 9, angoli Gann e previsioni ciclo interpretati da GPT-4o — esclusivo Elite." },
+        { "icon": "⚡", "title": "Richieste IA Illimitate", "desc": "Nessun limite settimanale — usa tutte le funzionalità IA quanto vuoi." },
+        { "icon": "🏦", "title": "Coinbase Premium IA", "desc": "Flusso istituzionale vs divergenza retail interpretato in tempo reale." }
+      ],
+      "cta": "Sblocca Elite — $29,99/mese",
+      "trust": "IA illimitata · Annulla quando vuoi · Include tutto di Pro"
+    },
+    "blurGate": {
+      "features": ["Tutto in Pro — illimitato", "HTF Multi-Timeframe IA", "Coinbase Premium IA"],
+      "signInBtn": "Accedi per aggiornare",
+      "upgradeBtn": "Aggiorna a Elite",
+      "redirecting": "Reindirizzamento…",
+      "trust": "Annulla quando vuoi · Include tutto di Pro"
+    }
+  },
+  "upgradeModal": {
+    "titleChoose": "Scegli il tuo piano",
+    "titleManage": "Gestisci il tuo piano",
+    "subChoose": "Sblocca approfondimenti basati sull'IA e analisi avanzate",
+    "subManage": "Gli aggiornamenti vengono addebitati immediatamente (prorata). I declassamenti vengono accreditati sulla prossima fattura.",
+    "plans": {
+      "free": {
+        "label": "Gratuito",
+        "features": ["Grafici prezzo live", "Order book", "Lista osservazione", "Indicatore Paura e Avidità", "Banner notizie flash"]
+      },
+      "pro": {
+        "label": "Pro",
+        "features": ["Tutto in Gratuito", "HTF Multi-Timeframe IA", "Intelligence di Mercato IA", "Analisi IA On-Chain", "Grafico Previsione Prezzo", "Mappa di Calore Liquidazioni IA", "35 richieste IA / settimana"]
+      },
+      "elite": {
+        "label": "Elite",
+        "features": ["Tutto in Pro — illimitato", "Analisi Gann IA", "Coinbase Premium IA", "Accesso anticipato a nuove funzionalità"]
+      }
+    },
+    "cta": {
+      "upgradeTo": "Aggiorna a {{plan}}",
+      "switchTo": "Passa a {{plan}}",
+      "cancelPlan": "Annulla piano",
+      "currentPlan": "Piano Attuale",
+      "loading": "Caricamento…"
+    },
+    "confirm": {
+      "upgradeTitle": "Aggiorna a {{plan}}",
+      "downgradeTitle": "Passa a {{plan}}",
+      "cancelTitle": "Annulla il piano {{plan}}",
+      "cancelBody": "Il tuo abbonamento verrà annullato al termine del periodo di fatturazione corrente. Manterrai tutte le funzionalità attuali fino ad allora — non viene emesso alcun rimborso parziale.",
+      "upgradeBody": "Ti verrà addebitato {{amount}} ora — la differenza in prorata per i giorni rimanenti nel tuo ciclo di fatturazione. Le tue nuove funzionalità sono disponibili immediatamente.",
+      "downgradeBodyCredit": "Un credito in prorata di {{amount}} verrà applicato alla tua prossima fattura. Il tuo piano cambia immediatamente.",
+      "downgradeBodyNoAmount": "Un credito in prorata verrà applicato alla tua prossima fattura. Il tuo piano cambia immediatamente.",
+      "lostFeaturesLabel": "Perderai l'accesso a:",
+      "payAndUpgrade": "Paga {{amount}} e Aggiorna",
+      "processing": "Elaborazione…",
+      "goBack": "Torna indietro"
+    },
+    "success": {
+      "cancelMessage": "Piano annullato",
+      "cancelSub": "Manterrai l'accesso {{plan}} fino al {{date}}, poi passerai al Gratuito.",
+      "upgradeMessage": "Benvenuto in {{plan}}!",
+      "upgradeSub": "Le tue nuove funzionalità sono attive immediatamente. L'addebito in prorata è stato applicato alla tua carta.",
+      "downgradeMessage": "Passato a {{plan}}",
+      "downgradeSub": "Il tuo piano è stato aggiornato. Un credito in prorata verrà applicato alla tua prossima fattura.",
+      "done": "Fatto"
+    },
+    "badges": {
+      "mostPopular": "Più Popolare",
+      "yourPlan": "Il tuo Piano"
+    },
+    "footer": {
+      "proratedNote": "I cambi di piano sono in prorata · ",
+      "manageBilling": "Gestisci fatturazione",
+      "loadingPortal": "Caricamento…",
+      "cancelAnytime": "Annulla quando vuoi",
+      "securePayment": " · Pagamento sicuro tramite Stripe"
+    },
+    "error": "Qualcosa è andato storto"
+  },
+  "landing": {
+    "hero": {
+      "headline": "Leggi il Mercato come un'Istituzione",
+      "sub": "Analisi basata sull'IA su azione del prezzo, dati on-chain, liquidazioni e sentiment — tutto in un dashboard.",
+      "cta": "Inizia Gratis — Nessuna Carta",
+      "trust": "Scelto da oltre 2.000 trader di criptovalute · Piano gratuito disponibile"
+    },
+    "features": {
+      "title": "Tutto ciò di cui hai bisogno per fare trading più intelligente",
+      "items": [
+        { "icon": "✦",  "title": "Intelligence di Mercato IA",   "desc": "GPT-4o legge l'azione del prezzo, i tassi di finanziamento, l'open interest e i dati on-chain — poi ti fornisce un bias in linguaggio semplice con livello di fiducia." },
+        { "icon": "📈", "title": "Grafico Previsione Prezzo",   "desc": "Scenari Bull, Base e Bear generati dall'IA proiettati in avanti con punteggi di probabilità, aggiornati ogni intervallo." },
+        { "icon": "🔥", "title": "Mappa di Calore Liquidazioni",     "desc": "Cluster di liquidazione stimati da $90K a $120K con intensità codificata per colore. Scopri dove è probabile la vendita forzata o la copertura." },
+        { "icon": "⛓",  "title": "Intelligence On-Chain",   "desc": "Hash rate, ricavi dei miner, difficoltà e volume delle transazioni — riepilogati e interpretati per te dall'IA in tempo reale." },
+        { "icon": "📊", "title": "Analisi Ciclo a Lungo Termine","desc": "200W MA, Pi Cycle Top, livelli Fibonacci, confronti cicli e percorsi di scenario — tutto nella sezione Analisi HTF." },
+        { "icon": "🧠", "title": "Posizionamento Trader",      "desc": "Posizioni nette retail vs smart money, divergenza del sentiment e riepiloghi bias generati dall'IA — aggiornati ogni 4 ore." }
+      ]
+    },
+    "plans": {
+      "title": "Prezzi semplici e trasparenti",
+      "sub": "Inizia gratis. Aggiorna quando ne hai bisogno."
+    },
+    "signin": "Accedi",
+    "getStarted": "Inizia Gratis",
+    "noCard": "Nessuna carta richiesta"
+  },
+  "positions": {
+    "title": "Posizionamento Trader",
+    "sub": "Retail vs Smart Money · 4h · Binance{{candles}}",
+    "loading": "Caricamento dati posizione…",
+    "error": "Nessun dato di posizione disponibile per questa coppia.",
+    "updatedHourly": "Aggiornato ogni ora",
+    "panels": {
+      "retailNet": "POSIZIONE NETTA APERTA Retail",
+      "smartSentiment": "SENTIMENT Smart Money",
+      "smartNet": "POSIZIONE NETTA APERTA Smart Money",
+      "price": "Azione del Prezzo"
+    },
+    "summary": {
+      "price": {
+        "trendUp": "Il momentum a breve termine è rialzista, in salita del {{pct}}% nelle ultime 10 candele.",
+        "trendDown": "Il momentum a breve termine è ribassista, in calo del {{pct}}% nelle ultime 10 candele.",
+        "consolidating": "Consolidamento tra supporto {{support}} e resistenza {{resistance}}.",
+        "aboveSupport": "Mantenuto sopra il supporto chiave a {{support}}.",
+        "belowResistance": "In avvicinamento alla resistenza a {{resistance}}."
+      },
+      "retail": {
+        "heavilyLong": "Il retail è fortemente net long (bias netto {{bias}}). I long estremi del retail storicamente precedono i pullback — segnale contrarian ribassista. L'esposizione è {{trend}}.",
+        "moderateLong": "Il retail mantiene una posizione net long moderata (bias netto {{bias}}). Sentiment retail leggermente rialzista in tendenza {{trend}}.",
+        "neutral": "Il posizionamento retail è generalmente neutrale (bias netto {{bias}}). Nessuna forte convinzione direzionale dalla folla.",
+        "moderateShort": "Il retail è moderatamente net short (bias netto {{bias}}). Setup contrarian leggermente rialzista — il posizionamento è {{trend}}.",
+        "heavilyShort": "Il retail è fortemente net short (bias netto {{bias}}). Forte setup contrarian rialzista — la capitolazione retail tipicamente precede le riprese."
+      },
+      "sentiment": {
+        "stronglyBullish": "Lo smart money è fortemente rialzista al {{pct}}% long — ben oltre la linea neutrale del 50%. Bias istituzionale chiaramente long e {{trend}}.",
+        "mildlyBullish": "Lo smart money è leggermente rialzista al {{pct}}% long. Lieve preferenza istituzionale per il lato long, sentiment {{trend}}.",
+        "neutral": "Lo smart money è quasi neutrale al {{pct}}% long. Nessuna forte convinzione direzionale — posizionamento istituzionale bilanciato, in tendenza {{trend}}.",
+        "mildlyBearish": "Lo smart money ha un leggero orientamento ribassista al {{pct}}% long. Istituzioni leggermente net short, sentiment {{trend}}.",
+        "stronglyBearish": "Lo smart money è prevalentemente ribassista al {{pct}}% long. I trader istituzionali sono chiaramente net short — significativo bias ribassista."
+      },
+      "smartNet": {
+        "alignedBullish": "Lo smart money è fermamente {{dir}} ({{bias}}), allineato con il retail. Ampio consenso di mercato rialzista — la posizione è {{trend}}.",
+        "alignedBearish": "Lo smart money è fermamente {{dir}} ({{bias}}), allineato con il retail short. Ampio consenso ribassista — attenzione raccomandata. La tendenza è {{trend}}.",
+        "divergingSmartBullish": "Divergenza: lo smart money è {{dir}} ({{bias}}) mentre il retail si orienta al contrario. Il posizionamento istituzionale tipicamente guida il prezzo — tendenza {{trend}}.",
+        "divergingSmartBearish": "Divergenza: il retail è long mentre lo smart money è {{dir}} ({{bias}}). Lo smart money smorza l'euforia retail — attenzione a un'inversione. La tendenza è {{trend}}.",
+        "neutral": "La posizione netta dello smart money è vicina al neutrale (bias {{bias}}). Nessuna scommessa istituzionale direzionale forte, in tendenza {{trend}}."
+      },
+      "dir": {
+        "netLong": "net long",
+        "netShort": "net short"
+      }
+    }
+  },
+  "htf": {
+    "loading": "Caricamento dati candele settimanali…",
+    "title": "Analisi a Lungo Termine",
+    "sub": "HTF · Settimanale · Tracking Ciclo · {{coin}}/USD",
+    "aiLabel": "GPT-4o",
+    "sections": {
+      "monthly":  { "title": "Rendimenti Mensili",    "sub": "Mappa di calore storica completa" },
+      "ma200":    { "title": "200W MA",               "sub": "Bande medie mobili" },
+      "cycle":    { "title": "Confronto Ciclo",       "sub": "2020 vs 2024 allineati" },
+      "pi":       { "title": "Pi Cycle Top",          "sub": "Indicatore picco ciclo" },
+      "fib":      { "title": "Fibonacci",             "sub": "Supporto e resistenza chiave" },
+      "scenario": { "title": "Scenari",               "sub": "Percorsi Bull · Base · Bear" },
+      "ai":       { "title": "Outlook IA",            "sub": "Analisi macro GPT-4o" }
+    },
+    "stats": {
+      "price": "Prezzo",
+      "ath": "ATH",
+      "drawdown": "Drawdown",
+      "ma200w": "200W MA",
+      "priceToMa": "Prezzo / 200W MA",
+      "postHalving": "Post-Halving",
+      "cycleLow": "Minimo Ciclo",
+      "trend": "Tendenza"
+    },
+    "phase": {
+      "earlyAccumulation": "Accumulo Iniziale",
+      "midExpansion": "Espansione Media",
+      "lateExpansion": "Espansione Tardiva",
+      "distribution": "Distribuzione",
+      "bearMarket": "Mercato Orso",
+      "recovery": "Ripresa"
+    },
+    "legend": {
+      "price": "Prezzo",
+      "ma200w": "200W MA",
+      "ma50w": "50W MA",
+      "cycle2020": "Ciclo 2020",
+      "cycle2024": "Ciclo 2024",
+      "sma16w": "SMA 16W (≈111GMA)",
+      "dbl50w": "2×SMA 50W (≈2×350GMA)",
+      "historical26w": "Storico (26W)",
+      "bull": "Bull",
+      "base": "Base",
+      "bear": "Bear"
+    },
+    "notes": {
+      "cycle": "Entrambi i cicli sono indicizzati al 100% alla data di halving. Asse X: settimane dall'halving. Asse Y: % guadagno dal prezzo dell'halving.",
+      "fib": "Misurato dal minimo del ciclo corrente all'ATH. Il rapporto aureo (0.618) e il retest dell'ATH sono i livelli più osservati. Le estensioni sopra 1.0 sono potenziali target del picco ciclo.",
+      "scenario": "Percorsi proiettati basati sulla settimana di ciclo {{wks}}, analogie storiche, livelli Fibonacci e momentum attuale."
+    },
+    "piStatus": {
+      "above": "SMA 16W è del {{gap}}% sopra la 2×SMA 50W",
+      "below": "SMA 16W è del {{gap}}% sotto la 2×SMA 50W",
+      "converging": " — ⚠ Linee convergenti, osserva attentamente"
+    },
+    "fib": {
+      "nearLabel": "← prezzo vicino qui"
+    },
+    "scenario": {
+      "bull": "Caso Bull",
+      "base": "Caso Base",
+      "bear": "Caso Bear"
+    },
+    "ai": {
+      "ctaText": "Analisi del ciclo basata sull'IA — fase del ciclo, outlook a 6 e 12 mesi, livelli chiave e una valutazione a lungo termine attuabile, powered by GPT-4o.",
+      "getOutlook": "Ottieni Outlook IA",
+      "analysing": "Analisi in corso…",
+      "refreshBtn": "Aggiorna Analisi",
+      "refreshing": "Aggiornamento…",
+      "outlook6m": "Outlook 6 Mesi",
+      "outlook12m": "Outlook 12 Mesi",
+      "keyLevels": "Livelli Chiave",
+      "ourTake": "La nostra valutazione"
+    },
+    "tabAI": {
+      "label": "Valutazione IA",
+      "badge": "Powered by IA"
+    },
+    "explainer": {
+      "howItWorks": "Come funziona",
+      "currentReading": "Lettura attuale",
+      "noData": "Dati insufficienti per il calcolo.",
+      "monthly": {
+        "how": "Ogni cella mostra il rendimento percentuale di Bitcoin per quel mese del calendario. Le righe sono anni, le colonne sono mesi. Verde più scuro = guadagno maggiore, rosso più scuro = perdita maggiore. Questa mappa di calore rivela pattern stagionali — quali mesi sono stati storicamente forti o deboli attraverso più cicli di mercato.",
+        "earlyAccumulation": "{{months}} mesi nell'attuale ciclo post-halving (fase Accumulo Iniziale). Il Q4 e Q1 negli anni post-halving sono stati storicamente i trimestri più forti di Bitcoin. Da ottobre a marzo tende a concentrare i maggiori guadagni mensili.",
+        "midExpansion": "{{months}} mesi nell'attuale ciclo post-halving (fase Espansione Media). Gli anni di metà ciclo mostrano forti cluster verdi in Q3–Q4. Controlla se le colonne ottobre–dicembre dell'anno corrente corrispondono al 2020 e 2016 come template storico.",
+        "lateExpansion": "{{months}} mesi nell'attuale ciclo post-halving (fase Espansione Tardiva). I rendimenti mensili di fine ciclo diventano erratici — alternando tra guadagni bruschi e mesi rossi improvvisi. Alta volatilità mensile con volume in calo nei mesi verdi è un segnale di distribuzione.",
+        "distribution": "{{months}} mesi nell'attuale ciclo post-halving (fase Distribuzione). Le fasi di distribuzione mostrano un passaggio da colonne dominate dal verde a colonne dominate dal rosso. I mesi verdi isolati appaiono come rally di sollievo — confronta con Q3–Q4 del 2021.",
+        "bearMarket": "{{months}} mesi nell'attuale ciclo post-halving (fase Mercato Orso). I mercati orso mostrano rosso persistente. Osserva gennaio e ottobre — hanno la più alta frequenza di inversioni al minimo del ciclo.",
+        "recovery": "{{months}} mesi nell'attuale ciclo post-halving (fase Ripresa). Le fasi di ripresa vedono i primi cluster di verdi mensili consistenti. La costruzione di base a basso volume accelera man mano che si avvicina il prossimo halving."
+      },
+      "ma200": {
+        "how": "La Media Mobile a 200 Settimane è il supporto a lungo termine più osservato di Bitcoin. Il prezzo non ha mai chiuso una settimana intera sotto questo livello senza poi recuperare a nuovi massimi storici. Toccare o scambiare sotto la 200W MA è stata una zona di acquisto generazionale in ogni ciclo precedente; scambiare sopra 3× ha preceduto ogni grande picco.",
+        "below": "Il prezzo scambia sotto la 200W MA ({{ma200}}) — una zona di acquisto estrema vista solo ai minimi del ciclo. Ogni precedente occorrenza è stata seguita da un pieno recupero a nuovi massimi.{{comp}}",
+        "earlyBull": "A {{ratio}}× la 200W MA ({{ma200}}), Bitcoin è nell'intervallo bull iniziale. C'è spazio significativo prima della zona storicamente elevata sopra 3×.{{comp}}",
+        "midBull": "A {{ratio}}× la 200W MA ({{ma200}}), Bitcoin è in un sano territorio di espansione mid-bull. Sia il picco del 2017 che quello del 2021 si sono verificati sopra 3×.{{comp}}",
+        "approaching": "A {{ratio}}× la 200W MA ({{ma200}}), Bitcoin si sta avvicinando alla zona storicamente elevata. I picchi precedenti si sono verificati vicino o sopra 3× — monitora i segnali di distribuzione.{{comp}}",
+        "stretched": "A {{ratio}}× la 200W MA ({{ma200}}), Bitcoin è nella zona storicamente estesa. Entrambi i precedenti picchi di ciclo sono stati seguiti da drawdown del 70–85% da questo territorio.{{comp}}",
+        "comp": " Alla stessa settimana del ciclo 2020 (settimana {{wks}}), il rapporto era {{r2020}}×."
+      },
+      "cycle": {
+        "how": "Sia il ciclo 2020 che quello 2024 sono normalizzati al 100% alle rispettive date di halving, poi tracciati settimana per settimana sullo stesso asse. Questo elimina il rumore del prezzo assoluto e rivela la forma strutturale di ogni ciclo.",
+        "noData": "Settimana {{wks}} post-halving — confronto del ciclo 2024 attuale con il ciclo 2020 nello stesso punto nel tempo.",
+        "tracking": "Settimana {{wks}} post-halving: il ciclo 2024 ha guadagnato {{gain24}}% dal suo prezzo di halving. Alla stessa settimana, il ciclo 2020 era in rialzo del {{gain20}}%. Il ciclo attuale sta seguendo da vicino l'analogo del 2020.",
+        "outperforming": "Settimana {{wks}} post-halving: il ciclo 2024 ha guadagnato {{gain24}}% dal suo prezzo di halving. Alla stessa settimana, il ciclo 2020 era in rialzo del {{gain20}}%. Il ciclo attuale supera l'analogo del 2020 di {{diff}} punti percentuali.",
+        "trailing": "Settimana {{wks}} post-halving: il ciclo 2024 ha guadagnato {{gain24}}% dal suo prezzo di halving. Alla stessa settimana, il ciclo 2020 era in rialzo del {{gain20}}%. Il ciclo attuale è in ritardo sull'analogo del 2020 di {{diff}} punti percentuali."
+      },
+      "pi": {
+        "how": "Il Pi Cycle Top traccia due medie mobili — la SMA a 111 giorni (≈16 settimane) e il doppio della SMA a 350 giorni (≈2×50 settimane). Quando la linea più veloce supera quella più lenta, ha segnato il picco del ciclo entro pochi giorni in ogni precedente bull run di Bitcoin: dicembre 2017, aprile 2021 e novembre 2021.",
+        "warning": "⚠ Attenzione: la SMA 16W è solo del {{gap}}% sopra la 2×SMA 50W — le linee stanno convergendo. Storicamente, un incrocio si è verificato entro giorni dai picchi del ciclo (dic 2017, apr 2021, nov 2021). Osserva attentamente.",
+        "converging": "Le linee stanno convergendo con un gap di solo {{gap}}%. Nessun incrocio ancora, ma la vicinanza richiede attenzione alla settimana {{wks}} del ciclo.",
+        "above": "La SMA 16W è del {{gap}}% sopra la 2×SMA 50W alla settimana {{wks}}. Le linee stanno divergendo — nessun segnale di picco imminente.",
+        "below": "La SMA 16W è del {{gap}}% sotto la 2×SMA 50W alla settimana {{wks}}. Nessun segnale Pi Cycle Top — le linee sono chiaramente separate."
+      },
+      "fib": {
+        "how": "I livelli di ritracciamento ed estensione di Fibonacci sono misurati dal minimo del ciclo corrente all'ATH. Il Rapporto Aureo 0.618 e i livelli 0.786 sono i supporti di ritracciamento più critici nelle correzioni. Le estensioni 1.618 e 2.618 sopra l'ATH sono le principali zone target del picco ciclo nei precedenti mercati bull di Bitcoin.",
+        "support": "Supporto attuale: {{label}} a {{price}}. ",
+        "resistance": "Resistenza successiva: {{label}} a {{price}}. ",
+        "aboveATH": "Il prezzo è sopra l'ATH — in territorio di estensione. I livelli 1.618 ({{ext1618}}) e 2.618 ({{ext2618}}) sono le principali zone target del picco ciclo nei precedenti mercati bull di Bitcoin.",
+        "belowATH": "Il prezzo è del {{pct}}% sotto l'ATH ({{ath}}). Una rottura confermata al rialzo apre i target di estensione a 1.618 ({{ext1618}}) e 2.618 ({{ext2618}})."
+      },
+      "scenario": {
+        "how": "Tre percorsi di prezzo futuri sono proiettati dalla settimana di ciclo corrente: Bull (nuovo ATH trainato dalla domanda istituzionale e dai flussi ETF), Base (accumulo costante senza un grande catalizzatore macro), e Bear (shock macro o ritracciamento di distribuzione al supporto Fibonacci). I percorsi sono modellati da analogie storiche del ciclo e dagli attuali target Fibonacci.",
+        "prefix": "Settimana {{wks}} post-halving — fase {{phase}}. ",
+        "earlyAccumulation": "Le analogie storiche mostrano che il leg di apprezzamento del prezzo più forte tipicamente inizia 6–18 mesi post-halving. Il caso base proietta guadagni costanti prima della fase di espansione principale.",
+        "midExpansion": "L'espansione media è la fase storicamente più forte di Bitcoin. Le analogie del 2020–2021 e del 2016–2017 mostrano bruschi movimenti di momentum intervallati da correzioni del 20–40% prima del leg finale.",
+        "lateExpansion": "L'espansione tardiva è caratterizzata da una volatilità crescente e dall'inizio della distribuzione. I cicli precedenti hanno raggiunto il picco in questa finestra — il divario tra i target Bull e Bear è il più ampio qui.",
+        "distribution": "I cicli precedenti hanno raggiunto il picco nella fase di distribuzione e sono poi entrati in mercati orso di 18–24 mesi. Il percorso Bear riflette la magnitudine e il ritmo delle precedenti cadute.",
+        "bearMarket": "I mercati orso tipicamente durano 12–18 mesi dal picco. Le zone di accumulo vicino alla 200W MA e al livello Fibonacci 0.618 sono stati storicamente punti di ingresso generazionali.",
+        "recovery": "Le fasi di ripresa transitano verso l'accumulo iniziale — minore volatilità, volume in aumento e i primi segnali di domanda rinnovata prima che il prossimo halving imposti un nuovo ciclo."
+      }
+    }
+  },
+  "feargreed": {
+    "title": "Indice Paura e Avidità",
+    "loading": "Caricamento indice…",
+    "zones": {
+      "extremeFear": "Paura\nEstrema",
+      "fear": "Paura",
+      "neutral": "Neutrale",
+      "greed": "Avidità",
+      "extremeGreed": "Avidità\nEstrema"
+    },
+    "history": {
+      "yesterday": "Ieri",
+      "lastWeek": "Settimana Scorsa"
+    }
+  },
+  "etf": {
+    "title": "Flusso Netto Giornaliero — 30 Giorni (USD)",
+    "loading": "Caricamento dati ETF…",
+    "error": "Nessun dato disponibile.",
+    "todayBtn": "Oggi",
+    "table": {
+      "fund": "Fondo",
+      "dailyFlow": "Flusso Giornaliero",
+      "price": "Prezzo",
+      "dayPct": "Giorno %",
+      "aum": "AUM",
+      "volume": "Volume",
+      "total": "Totale ({{count}} fondi)"
+    }
+  },
+  "onchain": {
+    "loading": "Caricamento…",
+    "metrics": {
+      "hashRate":     { "label": "Hash Rate",          "tooltip": "Potenza di mining totale che protegge la rete Bitcoin" },
+      "dailyTxs":     { "label": "Tx Giornaliere",     "tooltip": "Numero di transazioni on-chain nelle ultime 24 ore" },
+      "minerRevenue": { "label": "Ricavi Miner",       "tooltip": "USD totale guadagnato dai miner oggi (premi blocco + commissioni)" },
+      "difficulty":   { "label": "Difficoltà",         "tooltip": "Difficoltà di mining attuale — quanto è difficile trovare un blocco" },
+      "btcMined":     { "label": "BTC Minato",         "tooltip": "Nuovo BTC emesso ai miner oggi" },
+      "transferVol":  { "label": "Vol. Trasferimento", "tooltip": "Valore USD stimato trasferito on-chain oggi" }
+    },
+    "networkStrength": "Rete {{label}}",
+    "action": {
+      "accumulate": "Accumula",
+      "hold": "Mantieni",
+      "caution": "Attenzione"
+    },
+    "strength": {
+      "strong": "Forte",
+      "moderate": "Moderata",
+      "weak": "Debole"
+    },
+    "updated": "{{status}} {{time}}",
+    "cached": "Dalla cache · {{time}}",
+    "updatedAt": "Aggiornato {{time}}"
+  },
+  "coinbase": {
+    "loading": "Caricamento dati storici…",
+    "explainer": {
+      "title": "Cosa mostra questo grafico?",
+      "body": "L'Indice Premium Coinbase misura la differenza percentuale tra il prezzo BTC su Coinbase Pro (USD) e Binance (USDT). Un premium positivo è tipicamente un sentiment rialzista. Quando è negativo segnala un segnale ribassista. I premium positivi sostenuti durante un uptrend confermano gli acquisti istituzionali."
+    }
+  },
+  "gann": {
+    "loading": "Caricamento dati candele…",
+    "analyseBtn": "✦ Analizza con IA",
+    "analysing": "Analisi in corso…",
+    "refresh": "Aggiorna",
+    "tooltip": "Clicca per vedere le previsioni Gann"
+  },
+  "watchlist": {
+    "searchPlaceholder": "Cerca per nome o simbolo…",
+    "loading": "Caricamento dati di mercato…",
+    "noResults": "Nessun risultato"
+  },
+  "alerts": {
+    "title": "Costruttore Avvisi",
+    "enableNotifications": "Abilita Notifiche",
+    "notificationsOn": "🔔 Notifiche Attive",
+    "newAlert": "+ Nuovo Avviso",
+    "empty": {
+      "icon": "⚡",
+      "text": "Nessun avviso configurato",
+      "hint": "Clicca \"Nuovo Avviso\" per impostare condizioni composte come RSI < 30 E Tasso Finanziamento < 0"
+    },
+    "defaultName": "Nuovo Avviso",
+    "logic": {
+      "and": "E",
+      "or": "O"
+    },
+    "metrics": {
+      "price": "Prezzo (USD)",
+      "rsi": "RSI",
+      "fundingRate": "Tasso Finanziamento",
+      "longShortRatio": "Rapporto Long/Short",
+      "openInterest": "Open Interest",
+      "macd": "MACD",
+      "liquidationAbove": "Liq. Sopra (USD)",
+      "liquidationBelow": "Liq. Sotto (USD)"
+    }
+  },
+  "nav": {
+    "sections": {
+      "ai": "Previsione IA",
+      "feargreed": "Paura e Avidità",
+      "market": "Dati di Mercato",
+      "onchain": "On-Chain",
+      "chart": "Grafico Prezzo",
+      "heatmap": "Liquidazioni",
+      "alerts": "Avvisi",
+      "watchlist": "Lista Osservazione"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchOnChainData, OnChainData, fmtHashrate, fmtDifficulty } from "../services/onchain";
 import { getOnChainAIAnalysis, OnChainAIResult } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
@@ -27,61 +28,61 @@ interface Tile {
   tooltip: string;
 }
 
-function buildTiles(d: OnChainData): Tile[] {
+function buildTiles(d: OnChainData, t: (k: string) => string): Tile[] {
   return [
     {
       icon: "⚡",
-      label: "Hash Rate",
+      label: t("onchain.metrics.hashRate.label"),
       value: fmtHashrate(d.hashrateGHs),
       colorClass: "onchain-tile-value--blue",
-      tooltip: "Total mining power securing the Bitcoin network",
+      tooltip: t("onchain.metrics.hashRate.tooltip"),
     },
     {
       icon: "🔁",
-      label: "Daily Txs",
+      label: t("onchain.metrics.dailyTxs.label"),
       value: fmtNum(d.transactions),
-      tooltip: "Number of on-chain transactions in the last 24 hours",
+      tooltip: t("onchain.metrics.dailyTxs.tooltip"),
     },
     {
       icon: "⛏",
-      label: "Miner Revenue",
+      label: t("onchain.metrics.minerRevenue.label"),
       value: fmt$(d.minerRevenueUSD),
       colorClass: "onchain-tile-value--amber",
-      tooltip: "Total USD earned by miners today (block rewards + fees)",
+      tooltip: t("onchain.metrics.minerRevenue.tooltip"),
     },
     {
       icon: "🎯",
-      label: "Difficulty",
+      label: t("onchain.metrics.difficulty.label"),
       value: fmtDifficulty(d.difficulty),
       colorClass: "onchain-tile-value--purple",
-      tooltip: "Current mining difficulty — how hard it is to find a block",
+      tooltip: t("onchain.metrics.difficulty.tooltip"),
     },
     {
       icon: "₿",
-      label: "BTC Mined",
+      label: t("onchain.metrics.btcMined.label"),
       value: `${d.btcMinedToday.toFixed(2)} BTC`,
       colorClass: "onchain-tile-value--green",
-      tooltip: "New BTC issued to miners today",
+      tooltip: t("onchain.metrics.btcMined.tooltip"),
     },
     {
       icon: "💸",
-      label: "Transfer Vol",
+      label: t("onchain.metrics.transferVol.label"),
       value: fmt$(d.transferVolumeUSD),
-      tooltip: "Estimated USD value transferred on-chain today",
+      tooltip: t("onchain.metrics.transferVol.tooltip"),
     },
   ];
 }
 
 const HEALTH_CFG = {
-  strong:   { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   label: "Strong" },
-  moderate: { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  label: "Moderate" },
-  weak:     { color: "#fb7185", bg: "rgba(251,113,133,0.12)", label: "Weak" },
+  strong:   { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   key: "onchain.strength.strong" },
+  moderate: { color: "#f59e0b", bg: "rgba(245,158,11,0.12)",  key: "onchain.strength.moderate" },
+  weak:     { color: "#fb7185", bg: "rgba(251,113,133,0.12)", key: "onchain.strength.weak" },
 };
 
 const ACTION_CFG = {
-  accumulate: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   label: "Accumulate" },
-  hold:       { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  label: "Hold" },
-  caution:    { color: "#fb7185", bg: "rgba(251,113,133,0.12)", label: "Caution" },
+  accumulate: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   key: "onchain.action.accumulate" },
+  hold:       { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  key: "onchain.action.hold" },
+  caution:    { color: "#fb7185", bg: "rgba(251,113,133,0.12)", key: "onchain.action.caution" },
 };
 
 interface OnChainMetricsProps {
@@ -103,6 +104,7 @@ function writeCache<T>(key: string, data: T) {
 }
 
 export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {} }: OnChainMetricsProps) {
+  const { t } = useTranslation();
   const { exceeded, used, limit, consume } = useAIQuota();
 
   const cachedData  = readCache<OnChainData>(ONCHAIN_CACHE_KEY);
@@ -147,7 +149,7 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
     return () => clearInterval(id);
   }, []);
 
-  const tiles = data ? buildTiles(data) : [];
+  const tiles = data ? buildTiles(data, t) : [];
 
   return (
     <div className="onchain-card">
@@ -158,15 +160,17 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
         </div>
         <span className="onchain-updated">
           {updatedAt
-            ? `${isStale ? "Cached · " : "Updated "}${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-            : "Loading…"}
+            ? (isStale
+                ? t("onchain.cached", { time: updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+                : t("onchain.updatedAt", { time: updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }))
+            : t("onchain.loading")}
         </span>
       </div>
 
       {loading ? (
-        <div className="onchain-loading">Loading network data…</div>
+        <div className="onchain-loading">{t("onchain.loading")}</div>
       ) : !data ? (
-        <div className="onchain-loading">Unable to load on-chain data</div>
+        <div className="onchain-loading">{t("common.noData")}</div>
       ) : (
         <div className="onchain-grid">
           {tiles.map((tile) => (
@@ -193,7 +197,7 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
               const h = HEALTH_CFG[ai.networkHealth];
               return (
                 <span className="onchain-ai-health-badge" style={{ color: h.color, background: h.bg }}>
-                  {h.label} Network
+                  {t("onchain.networkStrength", { label: t(h.key) })}
                 </span>
               );
             })()}
@@ -201,7 +205,7 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
               const a = ACTION_CFG[ai.action];
               return (
                 <span className="onchain-ai-action-badge" style={{ color: a.color, background: a.bg }}>
-                  {a.label}
+                  {t(a.key)}
                 </span>
               );
             })()}

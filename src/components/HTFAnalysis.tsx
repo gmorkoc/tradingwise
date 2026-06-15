@@ -168,6 +168,108 @@ const ACTION_CLS: Record<string, string> = {
   hold: "htf-action--hold", watch: "htf-action--hold", sell: "htf-action--sell",
 };
 
+// ── Explainer block ───────────────────────────────────────────────────────────
+
+function ExplainerBlock({ how, now }: { how: string; now: string }) {
+  return (
+    <div className="htf-explainer">
+      <div className="htf-explainer-col">
+        <div className="htf-explainer-label">How it works</div>
+        <p className="htf-explainer-text">{how}</p>
+      </div>
+      <div className="htf-explainer-col htf-explainer-col--now">
+        <div className="htf-explainer-label">Current reading</div>
+        <p className="htf-explainer-text">{now}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Current-reading text generators ──────────────────────────────────────────
+
+function ma200NowText(ratio: number | null, ma200: number | null, wksSince: number, ratio2020: number | null): string {
+  if (!ratio || !ma200) return "Insufficient data to compute ratio.";
+  const comp = ratio2020 != null
+    ? ` At the same week in the 2020 cycle (week ${wksSince}), the ratio was ${ratio2020.toFixed(2)}×.`
+    : "";
+  if (ratio < 1)
+    return `Price is trading below the 200W MA (${fmtPrice(ma200)}) — an extreme buy zone seen only at cycle lows. Every prior occurrence was followed by a full recovery to new highs.${comp}`;
+  if (ratio < 1.5)
+    return `At ${ratio.toFixed(2)}× the 200W MA (${fmtPrice(ma200)}), Bitcoin is in the early-bull range. There is significant room before the historically elevated zone above 3×.${comp}`;
+  if (ratio < 2.5)
+    return `At ${ratio.toFixed(2)}× the 200W MA (${fmtPrice(ma200)}), Bitcoin is in healthy mid-bull expansion territory. Both the 2017 and 2021 tops occurred above 3×.${comp}`;
+  if (ratio < 3.5)
+    return `At ${ratio.toFixed(2)}× the 200W MA (${fmtPrice(ma200)}), Bitcoin is approaching the historically elevated zone. Prior tops occurred near or above 3× — monitor for distribution signals.${comp}`;
+  return `At ${ratio.toFixed(2)}× the 200W MA (${fmtPrice(ma200)}), Bitcoin is in the historically stretched zone. Both prior cycle tops were followed by 70–85% drawdowns from this territory.${comp}`;
+}
+
+function cycleNowText(wksSince: number, cy2020Gain: number | null, cy2024Gain: number | null): string {
+  if (cy2020Gain == null || cy2024Gain == null)
+    return `Week ${wksSince} post-halving — comparing the current 2024 cycle against the 2020 cycle at the same point in time.`;
+  const diff = cy2024Gain - cy2020Gain;
+  const rel = Math.abs(diff) < 15 ? "closely tracking" : diff > 0 ? "outperforming" : "trailing";
+  const diffStr = Math.abs(diff) >= 10 ? ` by ${Math.abs(diff).toFixed(0)} percentage points` : "";
+  return `Week ${wksSince} post-halving: the 2024 cycle has gained ${cy2024Gain.toFixed(0)}% from its halving price ($${fmtK(0).replace("$0","").trim()}). At this same week, the 2020 cycle was up ${cy2020Gain.toFixed(0)}%. The current cycle is ${rel} the 2020 analogue${diffStr}.`;
+}
+
+function piNowText(piGap: number, piNear: boolean, wksSince: number): string {
+  if (piNear && piGap > 0)
+    return `⚠ Warning: the 16W SMA is only ${Math.abs(piGap).toFixed(1)}% above the 2×50W SMA — the lines are converging. Historically, a cross has fired within days of cycle tops (Dec 2017, Apr 2021, Nov 2021). Watch closely.`;
+  if (piNear)
+    return `The lines are converging with a gap of only ${Math.abs(piGap).toFixed(1)}%. No cross yet, but the proximity warrants attention at week ${wksSince} in the cycle.`;
+  if (piGap > 0)
+    return `The 16W SMA is ${piGap.toFixed(1)}% above the 2×50W SMA at week ${wksSince}. The lines are diverging — no imminent top signal. This indicator typically fires in the late-expansion or distribution phase.`;
+  return `The 16W SMA is ${Math.abs(piGap).toFixed(1)}% below the 2×50W SMA at week ${wksSince}. No Pi Cycle Top signal — lines are clearly separated. The indicator is inactive and a cross is not imminent.`;
+}
+
+function fibNowText(fibLevels: FibLevel[], currentPrice: number): string {
+  const sorted = [...fibLevels].sort((a, b) => a.price - b.price);
+  const above = sorted.filter(f => f.price > currentPrice);
+  const below = sorted.filter(f => f.price <= currentPrice);
+  const nearestRes = above[0];
+  const nearestSup = below[below.length - 1];
+  const athLevel = fibLevels.find(f => f.label.includes("ATH") || f.label.includes("1.0"));
+  const ext1618  = fibLevels.find(f => f.label.includes("1.618"));
+  const ext2618  = fibLevels.find(f => f.label.includes("2.618"));
+  const aboveATH = athLevel && currentPrice > athLevel.price;
+
+  let text = "";
+  if (nearestSup) text += `Current support: ${nearestSup.label} at ${fmtPrice(nearestSup.price)}. `;
+  if (nearestRes) text += `Next resistance: ${nearestRes.label} at ${fmtPrice(nearestRes.price)}. `;
+  if (aboveATH) {
+    text += `Price is above the ATH — in extension territory. The 1.618 (${ext1618 ? fmtPrice(ext1618.price) : "—"}) and 2.618 (${ext2618 ? fmtPrice(ext2618.price) : "—"}) levels are the primary cycle-top target zones in prior Bitcoin bull markets.`;
+  } else if (athLevel) {
+    const pctToATH = ((athLevel.price - currentPrice) / currentPrice * 100).toFixed(1);
+    text += `Price is ${pctToATH}% below the ATH (${fmtPrice(athLevel.price)}). A confirmed break above opens extension targets at 1.618 (${ext1618 ? fmtPrice(ext1618.price) : "—"}) and 2.618 (${ext2618 ? fmtPrice(ext2618.price) : "—"}).`;
+  }
+  return text.trim();
+}
+
+function scenarioNowText(wksSince: number, phase: string): string {
+  const ctx: Record<string, string> = {
+    "Early Accumulation": "Historical analogues show the strongest price appreciation leg typically begins 6–18 months post-halving. The base case projects steady gains before the main expansion phase.",
+    "Mid Expansion": "Mid-expansion is Bitcoin's historically strongest phase. Analogues from 2020–2021 and 2016–2017 show sharp momentum moves interspersed with 20–40% corrections before the final leg.",
+    "Late Expansion": "Late expansion is marked by increasing volatility and the start of distribution. Prior cycles peaked in this window — the gap between the Bull and Bear targets is widest here.",
+    "Distribution": "Prior cycles topped in the distribution phase and then entered 18–24 month bear markets. The Bear path reflects what prior drops looked like in magnitude and pace.",
+    "Bear Market": "Bear markets typically last 12–18 months from the peak. Accumulation zones near the 200W MA and 0.618 Fibonacci level have historically been generational entry points.",
+    "Recovery": "Recovery phases transition to early accumulation — lower volatility, rising volume, and the first signs of renewed demand before the next halving sets up a new cycle.",
+  };
+  return `Week ${wksSince} post-halving — ${phase} phase. ${ctx[phase] ?? "Paths are modeled on current momentum and historical analogues."}`;
+}
+
+function monthlyNowText(wksSince: number, phase: string): string {
+  const ctx: Record<string, string> = {
+    "Early Accumulation": "Q4 and Q1 in post-halving years have historically been Bitcoin's strongest quarters. October through March tends to concentrate the largest monthly gains — compare those columns to 2020 and 2016 for confirmation.",
+    "Mid Expansion": "Mid-cycle years show strong green clusters in Q3–Q4. Look for the current year's October–December columns matching the same period in 2020 and 2016 as the historical template.",
+    "Late Expansion": "Late-cycle monthly returns become erratic — alternating between sharp gains and sudden red months. High monthly volatility with declining volume on green months is a distribution signal.",
+    "Distribution": "Distribution phases show a shift from green-dominated to red-dominated columns. Isolated green months appear as relief rallies against a bearish backdrop — compare to 2021 Q3–Q4.",
+    "Bear Market": "Bear markets show persistent red. Watch January and October historically — they have the highest frequency of cycle-bottom reversals or the start of recovery months.",
+    "Recovery": "Recovery phases see the first clusters of consistent monthly greens returning. Low-volume base building accelerates as the next halving approaches — compare to 2019 and 2015.",
+  };
+  const monthsSince = Math.round(wksSince / 4.33);
+  return `${monthsSince} months into the current post-halving cycle (${phase} phase). ${ctx[phase] ?? ""}`;
+}
+
 // ── AI Take footer (shared by all non-AI tabs) ───────────────────────────────
 
 function TabAITake({ text, loading }: { text?: string; loading: boolean }) {
@@ -201,33 +303,48 @@ function TabAITake({ text, loading }: { text?: string; loading: boolean }) {
 
 // ── Section panels ────────────────────────────────────────────────────────────
 
-function PanelMA200({ candles, aiText, aiLoading }: { candles: CandleDataPoint[]; aiText?: string; aiLoading: boolean }) {
+function PanelMA200({
+  candles, ratio, ma200, wksSince, ratio2020, aiText, aiLoading,
+}: {
+  candles: CandleDataPoint[];
+  ratio: number | null; ma200: number | null; wksSince: number; ratio2020: number | null;
+  aiText?: string; aiLoading: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useChart(ref, el => {
     const chart = mkChart(el, 340, true);
     const price = chart.addSeries(LineSeries, { color: "#3b82f6", lineWidth: 2, title: "Price" });
-    const ma200 = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 2, lineStyle: 2, title: "200W MA" });
-    const ma50  = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 1, lineStyle: 1, title: "50W MA" });
+    const ma200s = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 2, lineStyle: 2, title: "200W MA" });
+    const ma50   = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 1, lineStyle: 1, title: "50W MA" });
     price.setData(candles.map(c => ({ time: c.time as Time, value: c.close })));
-    ma200.setData(calcSMA(candles, 200).map(m => ({ time: m.time as Time, value: m.value })));
+    ma200s.setData(calcSMA(candles, 200).map(m => ({ time: m.time as Time, value: m.value })));
     ma50.setData(calcSMA(candles, 50).map(m => ({ time: m.time as Time, value: m.value })));
     return chart;
   }, [candles]);
   return (
     <div className="htf-panel-inner">
+      <ExplainerBlock
+        how="The 200-Week Moving Average is Bitcoin's most-watched long-term support. Price has never closed a full week below this level without eventually recovering to new all-time highs. Touching or trading below the 200W MA has been a generational buy zone in every prior cycle; trading above 3× has preceded every major top."
+        now={ma200NowText(ratio, ma200, wksSince, ratio2020)}
+      />
       <TabAITake text={aiText} loading={aiLoading} />
       <div className="htf-legend">
         <span className="htf-dot" style={{ background: "#3b82f6" }} />Price
         <span className="htf-dot" style={{ background: "#f59e0b" }} />200W MA
         <span className="htf-dot" style={{ background: "#22c55e" }} />50W MA
       </div>
-      <p className="htf-note">Price at or below the 200W MA has historically been a generational buy zone. Price above 3× the 200W MA often signals a cycle top.</p>
       <div ref={ref} className="htf-chart" />
     </div>
   );
 }
 
-function PanelCycle({ candles, aiText, aiLoading }: { candles: CandleDataPoint[]; aiText?: string; aiLoading: boolean }) {
+function PanelCycle({
+  candles, wksSince, cy2020Gain, cy2024Gain, aiText, aiLoading,
+}: {
+  candles: CandleDataPoint[];
+  wksSince: number; cy2020Gain: number | null; cy2024Gain: number | null;
+  aiText?: string; aiLoading: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useChart(ref, el => {
     const chart = mkChart(el, 340, false);
@@ -259,18 +376,27 @@ function PanelCycle({ candles, aiText, aiLoading }: { candles: CandleDataPoint[]
   }, [candles]);
   return (
     <div className="htf-panel-inner">
+      <ExplainerBlock
+        how="Both the 2020 and 2024 cycles are normalized to 100% at their respective halving dates, then plotted week-by-week on the same axis. This removes absolute price noise and reveals the structural shape of each cycle — whether the current one is running hot, cold, or in line with the prior bull market."
+        now={cycleNowText(wksSince, cy2020Gain, cy2024Gain)}
+      />
       <div className="htf-legend">
         <span className="htf-dot" style={{ background: "#8b5cf6" }} />2020 Cycle
         <span className="htf-dot" style={{ background: "#22c55e" }} />2024 Cycle
       </div>
       <TabAITake text={aiText} loading={aiLoading} />
-      <p className="htf-note">Both cycles indexed to 100% at their halving date and aligned for direct comparison. X-axis: weeks from halving.</p>
+      <p className="htf-note">Both cycles indexed to 100% at their halving date. X-axis: weeks from halving. Y-axis: % gain from halving price.</p>
       <div ref={ref} className="htf-chart" />
     </div>
   );
 }
 
-function PanelPiCycle({ candles, piGap, piNear, aiText, aiLoading }: { candles: CandleDataPoint[]; piGap: number; piNear: boolean; aiText?: string; aiLoading: boolean }) {
+function PanelPiCycle({
+  candles, piGap, piNear, wksSince, aiText, aiLoading,
+}: {
+  candles: CandleDataPoint[]; piGap: number; piNear: boolean; wksSince: number;
+  aiText?: string; aiLoading: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useChart(ref, el => {
     const chart = mkChart(el, 340, true);
@@ -284,11 +410,14 @@ function PanelPiCycle({ candles, piGap, piNear, aiText, aiLoading }: { candles: 
   }, [candles]);
   return (
     <div className="htf-panel-inner">
+      <ExplainerBlock
+        how="The Pi Cycle Top tracks two moving averages — the 111-day SMA (≈16-week) and twice the 350-day SMA (≈2×50-week). When the faster line crosses above the slower, it has marked the cycle top within days in every prior Bitcoin bull run: December 2017, April 2021, and November 2021."
+        now={piNowText(piGap, piNear, wksSince)}
+      />
       <div className="htf-legend">
         <span className="htf-dot" style={{ background: "#f59e0b" }} />16W SMA (≈111DMA)
         <span className="htf-dot" style={{ background: "#ef4444" }} />2×50W SMA (≈2×350DMA)
       </div>
-      <p className="htf-note">When 16W SMA crosses above 2×50W SMA, it has historically marked cycle tops within days (Nov 2021, Apr 2021, Dec 2017).</p>
       <TabAITake text={aiText} loading={aiLoading} />
       <div className={`htf-pi-status${piNear ? " htf-pi-status--warn" : ""}`}>
         16W SMA is <strong>{piGap > 0 ? "above" : "below"}</strong> 2×50W SMA by {Math.abs(piGap).toFixed(1)}%
@@ -299,7 +428,13 @@ function PanelPiCycle({ candles, piGap, piNear, aiText, aiLoading }: { candles: 
   );
 }
 
-function PanelFib({ candles, fibLevels, currentPrice, aiText, aiLoading }: { candles: CandleDataPoint[]; fibLevels: FibLevel[]; currentPrice: number; aiText?: string; aiLoading: boolean }) {
+function PanelFib({
+  candles, fibLevels, currentPrice, wksSince, phase, aiText, aiLoading,
+}: {
+  candles: CandleDataPoint[]; fibLevels: FibLevel[]; currentPrice: number;
+  wksSince: number; phase: string;
+  aiText?: string; aiLoading: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useChart(ref, el => {
     const chart = mkChart(el, 300, true);
@@ -318,10 +453,16 @@ function PanelFib({ candles, fibLevels, currentPrice, aiText, aiLoading }: { can
     }
     return chart;
   }, [candles, fibLevels]);
+
+  void wksSince; void phase;
+
   return (
     <div className="htf-panel-inner">
+      <ExplainerBlock
+        how="Fibonacci retracement and extension levels are measured from the current cycle low to the all-time high. The 0.618 Golden Ratio and 0.786 levels are the most critical retracement supports on corrections. The 1.618 and 2.618 extensions above the ATH are the primary cycle-top target zones in prior Bitcoin bull markets."
+        now={fibNowText(fibLevels, currentPrice)}
+      />
       <TabAITake text={aiText} loading={aiLoading} />
-      <p className="htf-note">Measured from current cycle low to ATH. Golden ratio (0.618) and ATH retest are the most watched levels. Extensions above 1.0 are potential cycle-top targets.</p>
       <div className="htf-fib-grid">
         {fibLevels.map(f => {
           const isNear = Math.abs(currentPrice - f.price) / f.price < 0.025;
@@ -340,7 +481,12 @@ function PanelFib({ candles, fibLevels, currentPrice, aiText, aiLoading }: { can
   );
 }
 
-function PanelScenario({ candles, scenarios, wksSince, aiText, aiLoading }: { candles: CandleDataPoint[]; scenarios: ScenarioPath[]; wksSince: number; aiText?: string; aiLoading: boolean }) {
+function PanelScenario({
+  candles, scenarios, wksSince, phase, aiText, aiLoading,
+}: {
+  candles: CandleDataPoint[]; scenarios: ScenarioPath[]; wksSince: number; phase: string;
+  aiText?: string; aiLoading: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useChart(ref, el => {
     const chart = mkChart(el, 320, true);
@@ -357,6 +503,10 @@ function PanelScenario({ candles, scenarios, wksSince, aiText, aiLoading }: { ca
   }, [candles, scenarios]);
   return (
     <div className="htf-panel-inner">
+      <ExplainerBlock
+        how="Three forward price paths are projected from the current cycle week: Bull (new ATH driven by institutional demand and ETF flows), Base (steady accumulation without a major macro catalyst), and Bear (macro shock or distribution retracement to Fibonacci support). Paths are shaped by historical cycle analogues and current Fibonacci targets."
+        now={scenarioNowText(wksSince, phase)}
+      />
       <div className="htf-legend">
         <span className="htf-dot" style={{ background: "#94a3b8" }} />Historical (26W)
         <span className="htf-dot" style={{ background: "#22c55e" }} />Bull
@@ -364,7 +514,6 @@ function PanelScenario({ candles, scenarios, wksSince, aiText, aiLoading }: { ca
         <span className="htf-dot" style={{ background: "#ef4444" }} />Bear
       </div>
       <TabAITake text={aiText} loading={aiLoading} />
-      <p className="htf-note">Projected paths based on cycle week {wksSince}, historical analogues, Fibonacci levels and current momentum.</p>
       <div ref={ref} className="htf-chart" />
       <div className="htf-scenario-cards">
         {scenarios.map(sc => (
@@ -482,6 +631,28 @@ export const HTFAnalysis: React.FC<Props> = ({
     return { price, ath, cycleLow, ma200, ratio, drawdown, wksSince, recentTrend, phase, lastTs, piGap, piNear: Math.abs(piGap) < 12 };
   }, [candles, propPrice]);
 
+  // Cycle-to-cycle comparison stats
+  const cycleComparison = useMemo(() => {
+    if (!candles.length || !stats) return null;
+    const h3ts = HALVINGS[2].ts;
+    const h4ts = LAST_HALVING_TS;
+    let b2020Price = 0, b2024Price = 0, idx2020 = -1;
+    for (let i = 0; i < candles.length; i++) {
+      if (!b2020Price && Math.abs(candles[i].time - h3ts) < WEEK_SEC * 3) { b2020Price = candles[i].close; idx2020 = i; }
+      if (!b2024Price && Math.abs(candles[i].time - h4ts) < WEEK_SEC * 3) { b2024Price = candles[i].close; }
+    }
+    const idx2020Now = idx2020 >= 0 ? idx2020 + stats.wksSince : -1;
+    const cy2020PriceAtNow = (idx2020Now >= 0 && idx2020Now < candles.length) ? candles[idx2020Now].close : null;
+    const cy2020GainPct = cy2020PriceAtNow && b2020Price > 0 ? (cy2020PriceAtNow / b2020Price - 1) * 100 : null;
+    const cy2024GainPct = b2024Price > 0 ? (stats.price / b2024Price - 1) * 100 : null;
+    // 200W MA ratio at equivalent 2020 week
+    const ma200at2020 = idx2020Now >= 200
+      ? candles.slice(idx2020Now - 199, idx2020Now + 1).reduce((s, c) => s + c.close, 0) / 200
+      : null;
+    const ratio2020 = ma200at2020 && cy2020PriceAtNow ? cy2020PriceAtNow / ma200at2020 : null;
+    return { cy2020GainPct, cy2024GainPct, ratio2020 };
+  }, [candles, stats]);
+
   const fibLevels = useMemo(() => stats ? computeFibLevels(stats.cycleLow, stats.ath) : [], [stats]);
   const scenarios = useMemo(() => stats ? computeScenarios(stats.price, stats.ath, stats.cycleLow, stats.lastTs) : [], [stats]);
 
@@ -589,18 +760,74 @@ export const HTFAnalysis: React.FC<Props> = ({
           {active === "ai" && <span className="htf-ai-badge">GPT-4o</span>}
         </div>
 
-        {active === "monthly"  && (
+        {active === "monthly" && stats && (
           <div className="htf-panel-inner">
+            <ExplainerBlock
+              how="Each cell shows Bitcoin's percentage return for that calendar month. Rows are years, columns are months. Deeper green = larger gain, deeper red = larger loss. This heatmap reveals seasonal patterns — which months have historically been strong or weak across multiple market cycles."
+              now={monthlyNowText(stats.wksSince, stats.phase)}
+            />
             <TabAITake text={tabInsights.monthly} loading={tabInsightLoading && active === "monthly"} />
             <MonthlyReturns coin={coin} />
           </div>
         )}
-        {active === "ma200"    && <PanelMA200 candles={candles} aiText={tabInsights.ma200} aiLoading={tabInsightLoading && active === "ma200"} />}
-        {active === "cycle"    && <PanelCycle candles={candles} aiText={tabInsights.cycle} aiLoading={tabInsightLoading && active === "cycle"} />}
-        {active === "pi"       && stats && <PanelPiCycle candles={candles} piGap={stats.piGap} piNear={stats.piNear} aiText={tabInsights.pi} aiLoading={tabInsightLoading && active === "pi"} />}
-        {active === "fib"      && stats && <PanelFib candles={candles} fibLevels={fibLevels} currentPrice={stats.price} aiText={tabInsights.fib} aiLoading={tabInsightLoading && active === "fib"} />}
-        {active === "scenario" && stats && <PanelScenario candles={candles} scenarios={scenarios} wksSince={stats.wksSince} aiText={tabInsights.scenario} aiLoading={tabInsightLoading && active === "scenario"} />}
-        {active === "ai"       && (
+        {active === "monthly" && !stats && (
+          <div className="htf-panel-inner">
+            <MonthlyReturns coin={coin} />
+          </div>
+        )}
+        {active === "ma200" && stats && (
+          <PanelMA200
+            candles={candles}
+            ratio={stats.ratio}
+            ma200={stats.ma200}
+            wksSince={stats.wksSince}
+            ratio2020={cycleComparison?.ratio2020 ?? null}
+            aiText={tabInsights.ma200}
+            aiLoading={tabInsightLoading && active === "ma200"}
+          />
+        )}
+        {active === "cycle" && stats && (
+          <PanelCycle
+            candles={candles}
+            wksSince={stats.wksSince}
+            cy2020Gain={cycleComparison?.cy2020GainPct ?? null}
+            cy2024Gain={cycleComparison?.cy2024GainPct ?? null}
+            aiText={tabInsights.cycle}
+            aiLoading={tabInsightLoading && active === "cycle"}
+          />
+        )}
+        {active === "pi" && stats && (
+          <PanelPiCycle
+            candles={candles}
+            piGap={stats.piGap}
+            piNear={stats.piNear}
+            wksSince={stats.wksSince}
+            aiText={tabInsights.pi}
+            aiLoading={tabInsightLoading && active === "pi"}
+          />
+        )}
+        {active === "fib" && stats && (
+          <PanelFib
+            candles={candles}
+            fibLevels={fibLevels}
+            currentPrice={stats.price}
+            wksSince={stats.wksSince}
+            phase={stats.phase}
+            aiText={tabInsights.fib}
+            aiLoading={tabInsightLoading && active === "fib"}
+          />
+        )}
+        {active === "scenario" && stats && (
+          <PanelScenario
+            candles={candles}
+            scenarios={scenarios}
+            wksSince={stats.wksSince}
+            phase={stats.phase}
+            aiText={tabInsights.scenario}
+            aiLoading={tabInsightLoading && active === "scenario"}
+          />
+        )}
+        {active === "ai" && (
           <PanelAI
             aiResult={aiResult} aiLoading={aiLoading} aiError={aiError}
             exceeded={exceeded} used={used} limit={limit}

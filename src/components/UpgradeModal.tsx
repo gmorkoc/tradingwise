@@ -53,6 +53,7 @@ const PLANS = [
     priceId: () => PRICE_IDS.pro,
     features: [
       "Everything in Free",
+      "HTF Multi-Timeframe AI",
       "AI Market Intelligence",
       "On-Chain AI Analysis",
       "Price Prediction Chart",
@@ -70,7 +71,6 @@ const PLANS = [
     features: [
       "Everything in Pro — unlimited",
       "Gann Analysis AI",
-      "HTF Multi-Timeframe AI",
       "Coinbase Premium AI",
       "Early access to new features",
     ],
@@ -79,7 +79,7 @@ const PLANS = [
 
 // Features exclusive to each tier (not inherited)
 const EXCLUSIVE_FEATURES: Record<string, string[]> = {
-  elite: ["Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI", "Everything in Pro — unlimited", "Early access to new features"],
+  elite: ["Gann Analysis AI", "Coinbase Premium AI", "Everything in Pro — unlimited", "Early access to new features"],
   pro:   ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"],
 };
 

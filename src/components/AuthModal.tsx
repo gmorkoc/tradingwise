@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/AuthModal.css";
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) => {
+  const { t } = useTranslation();
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [view,     setView]     = useState<View>(initialView);
   const [email,    setEmail]    = useState("");
@@ -46,12 +48,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) { setError("Passwords do not match"); return; }
-    if (password.length < 6)  { setError("Password must be at least 6 characters"); return; }
+    if (password !== confirm) { setError(t("auth.errors.passwordMismatch")); return; }
+    if (password.length < 6)  { setError(t("auth.errors.passwordTooShort")); return; }
     setBusy(true); setError("");
     const err = await signUp(email, password, name);
     if (err) setError(err);
-    else setInfo("Check your email to confirm your account, then sign in.");
+    else setInfo(t("auth.signup.confirmEmail"));
     setBusy(false);
   };
 
@@ -67,7 +69,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
     setBusy(true); setError("");
     const err = await resetPassword(email);
     if (err) setError(err);
-    else setInfo("Password reset link sent — check your inbox.");
+    else setInfo(t("auth.reset.resetSent"));
     setBusy(false);
   };
 
@@ -90,77 +92,77 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
               </linearGradient>
             </defs>
           </svg>
-          <span className="auth-logo-text">TradingWise<span>.ai</span></span>
+          <span className="auth-logo-text">{t("auth.logoText")}<span>.ai</span></span>
         </div>
 
         {view === "login" && (
           <>
-            <h2 className="auth-title">Welcome back</h2>
-            <p className="auth-sub">Sign in to your account</p>
+            <h2 className="auth-title">{t("auth.login.title")}</h2>
+            <p className="auth-sub">{t("auth.login.sub")}</p>
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
               <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-              Continue with Google
+              {t("auth.continueWithGoogle")}
             </button>
-            <div className="auth-divider"><span>or</span></div>
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleLogin}>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.login.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
               </label>
-              <label className="auth-label">Password
+              <label className="auth-label">{t("auth.login.passwordLabel")}
                 <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
               </label>
-              <button type="button" className="auth-link-btn" onClick={() => setView("reset")}>Forgot password?</button>
+              <button type="button" className="auth-link-btn" onClick={() => setView("reset")}>{t("auth.login.forgotPassword")}</button>
               {error && <p className="auth-error">{error}</p>}
               {info  && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? "Signing in…" : "Sign In"}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.login.signingIn") : t("auth.login.signinBtn")}</button>
             </form>
-            <p className="auth-switch">Don't have an account? <button className="auth-link-btn" onClick={() => setView("signup")}>Sign up free</button></p>
+            <p className="auth-switch">{t("auth.login.noAccount")} <button className="auth-link-btn" onClick={() => setView("signup")}>{t("auth.login.signupFree")}</button></p>
           </>
         )}
 
         {view === "signup" && (
           <>
-            <h2 className="auth-title">Create account</h2>
-            <p className="auth-sub">Start with a free plan — upgrade anytime</p>
+            <h2 className="auth-title">{t("auth.signup.title")}</h2>
+            <p className="auth-sub">{t("auth.signup.sub")}</p>
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
               <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-              Continue with Google
+              {t("auth.continueWithGoogle")}
             </button>
-            <div className="auth-divider"><span>or</span></div>
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleSignup}>
-              <label className="auth-label">Full name
+              <label className="auth-label">{t("auth.signup.fullNameLabel")}
                 <input className="auth-input" type="text" value={name} onChange={e => setName(e.target.value)} required autoFocus />
               </label>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.signup.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </label>
-              <label className="auth-label">Password
+              <label className="auth-label">{t("auth.signup.passwordLabel")}
                 <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
               </label>
-              <label className="auth-label">Confirm password
+              <label className="auth-label">{t("auth.signup.confirmLabel")}
                 <input className="auth-input" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
               </label>
               {error && <p className="auth-error">{error}</p>}
               {info  && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? "Creating account…" : "Create Account"}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
             </form>
-            <p className="auth-switch">Already have an account? <button className="auth-link-btn" onClick={() => setView("login")}>Sign in</button></p>
+            <p className="auth-switch">{t("auth.signup.alreadyAccount")} <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.signup.signinLink")}</button></p>
           </>
         )}
 
         {view === "reset" && (
           <>
-            <h2 className="auth-title">Reset password</h2>
-            <p className="auth-sub">We'll send a reset link to your email</p>
+            <h2 className="auth-title">{t("auth.reset.title")}</h2>
+            <p className="auth-sub">{t("auth.reset.sub")}</p>
             <form className="auth-form" onSubmit={handleReset}>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.reset.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
               </label>
               {error && <p className="auth-error">{error}</p>}
               {info  && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? "Sending…" : "Send Reset Link"}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.reset.sending") : t("auth.reset.sendBtn")}</button>
             </form>
-            <p className="auth-switch"><button className="auth-link-btn" onClick={() => setView("login")}>← Back to sign in</button></p>
+            <p className="auth-switch"><button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.reset.backToSignin")}</button></p>
           </>
         )}
 

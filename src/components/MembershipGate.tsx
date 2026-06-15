@@ -44,10 +44,9 @@ const TIER_COPY: Record<Tier, {
   },
   elite: {
     headline: "The Edge Professionals Use",
-    sub: "Gann Analysis, HTF Multi-Timeframe AI, and unlimited AI — the full institutional toolkit, no caps.",
+    sub: "Gann Analysis, Coinbase Premium, and unlimited AI — the full institutional toolkit, no caps.",
     features: [
       { icon: "📐", title: "Gann Analysis AI",          desc: "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite." },
-      { icon: "📊", title: "HTF Multi-Timeframe AI",    desc: "Weekly and monthly cycle tracking with AI-generated structural analysis." },
       { icon: "⚡", title: "Unlimited AI Requests",     desc: "No weekly cap — use every AI feature as much as you need." },
       { icon: "🏦", title: "Coinbase Premium AI",       desc: "Institutional flow vs retail divergence interpreted in real time." },
     ],
@@ -188,7 +187,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
             <span className="aiqw-plan-price">$29.99<span className="aiqw-plan-per">/mo</span></span>
           </div>
           <ul className="aiqw-plan-features">
-            {["Everything in Pro — unlimited", "Gann Analysis AI", "HTF Multi-Timeframe AI", "Coinbase Premium AI"].map(f => (
+            {["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI"].map(f => (
               <li key={f}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 {f}
