@@ -53,10 +53,10 @@ const PLANS = [
   },
 ];
 
-// Features exclusive to each tier (not inherited)
-const EXCLUSIVE_FEATURES: Record<string, string[]> = {
-  elite: ["Gann Analysis AI", "Coinbase Premium AI", "Everything in Pro — unlimited", "Early access to new features"],
-  pro:   ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"],
+// Feature locale keys exclusive to each tier (used for "you'll lose" confirmation list)
+const EXCLUSIVE_FEATURE_KEYS: Record<string, string[]> = {
+  elite: ["upgradeModal.lf.elitePro", "upgradeModal.lf.gann", "upgradeModal.lf.coinbase", "upgradeModal.lf.earlyAccess"],
+  pro:   ["upgradeModal.lf.aiMkt", "upgradeModal.lf.onchain", "upgradeModal.lf.predChart", "upgradeModal.lf.liqHeatmap", "upgradeModal.lf.aiReqs"],
 };
 
 function lostFeaturesFor(currentTier: string, targetTier: string): string[] {
@@ -64,8 +64,8 @@ function lostFeaturesFor(currentTier: string, targetTier: string): string[] {
   const targetRank  = TIER_RANK[targetTier  as keyof typeof TIER_RANK] ?? 0;
   if (targetRank >= currentRank) return [];
   const lost: string[] = [];
-  if (currentRank >= 2 && targetRank < 2) lost.push(...EXCLUSIVE_FEATURES.elite);
-  if (currentRank >= 1 && targetRank < 1) lost.push(...EXCLUSIVE_FEATURES.pro);
+  if (currentRank >= 2 && targetRank < 2) lost.push(...EXCLUSIVE_FEATURE_KEYS.elite);
+  if (currentRank >= 1 && targetRank < 1) lost.push(...EXCLUSIVE_FEATURE_KEYS.pro);
   return lost;
 }
 
@@ -268,7 +268,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 <div className="upgrade-lost-label">{t("upgradeModal.confirm.lostFeaturesLabel")}</div>
                 <ul className="upgrade-lost-list">
                   {confirm.lostFeatures.map(f => (
-                    <li key={f}><span className="upgrade-lost-x">✕</span>{f}</li>
+                    <li key={f}><span className="upgrade-lost-x">✕</span>{t(f)}</li>
                   ))}
                 </ul>
               </div>

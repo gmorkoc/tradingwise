@@ -2085,8 +2085,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // Zone signal
     if (zone) {
       const sigLabel: Record<string, string> = {
-        "strong-buy": "Strong Buy", "buy": "Buy", "oversold": "Oversold",
-        "neutral": "Neutral", "overbought": "Overbought", "sell": "Sell", "strong-sell": "Strong Sell",
+        "strong-buy": t("chart.strongBuy"), "buy": t("chart.buy"), "oversold": t("chart.oversold"),
+        "neutral": t("chart.neutralZone"), "overbought": t("chart.overbought"), "sell": t("chart.sell"), "strong-sell": t("chart.strongSell"),
       };
       const sigColor: Record<string, string> = {
         "strong-buy": "#22c55e", "buy": "#86efac", "oversold": "#f59e0b",
@@ -2146,8 +2146,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="zone-signal-live" />
                 {zone.signal === "strong-buy"  && t("chart.strongBuy")}
                 {zone.signal === "buy"          && t("chart.buy")}
-                {zone.signal === "oversold"     && "Oversold"}
-                {zone.signal === "overbought"   && "Overbought"}
+                {zone.signal === "oversold"     && t("chart.oversold")}
+                {zone.signal === "overbought"   && t("chart.overbought")}
                 {zone.signal === "neutral"      && t("chart.neutralZone")}
                 {zone.signal === "sell"         && t("chart.sell")}
                 {zone.signal === "strong-sell"  && t("chart.strongSell")}

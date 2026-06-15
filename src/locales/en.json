@@ -168,7 +168,9 @@
     "analyzing": "Analyzing…",
     "reset": "Reset",
     "aiPatternBadge": "✦ AI Pattern Analysis",
-    "gannCyclesLabel": "Gann Cycles from last pivot:"
+    "gannCyclesLabel": "Gann Cycles from last pivot:",
+    "oversold": "Oversold",
+    "overbought": "Overbought"
   },
   "heatmap": {
     "title": "🔥 Liquidation Heatmap",
@@ -589,7 +591,18 @@
       "securePayment": " · Secure payment via Stripe"
     },
     "error": "Something went wrong",
-    "perMonth": "/mo"
+    "perMonth": "/mo",
+    "lf": {
+      "elitePro": "Everything in Pro — unlimited",
+      "gann": "Gann Analysis AI",
+      "coinbase": "Coinbase Premium AI",
+      "earlyAccess": "Early access to new features",
+      "aiMkt": "AI Market Intelligence",
+      "onchain": "On-Chain AI Analysis",
+      "predChart": "Price Prediction Chart",
+      "liqHeatmap": "Liquidation Heatmap AI",
+      "aiReqs": "35 AI requests / week"
+    }
   },
   "landing": {
     "hero": {

@@ -168,7 +168,9 @@
     "analyzing": "Analiz ediliyor…",
     "reset": "Sıfırla",
     "aiPatternBadge": "✦ YZ Formasyon Analizi",
-    "gannCyclesLabel": "Son pivottan Gann döngüleri:"
+    "gannCyclesLabel": "Son pivottan Gann döngüleri:",
+    "oversold": "Aşırı Satım",
+    "overbought": "Aşırı Alım"
   },
   "heatmap": {
     "title": "🔥 Tasfiye Isı Haritası",
@@ -589,7 +591,18 @@
       "securePayment": " · Stripe ile güvenli ödeme"
     },
     "error": "Bir şeyler yanlış gitti",
-    "perMonth": "/ay"
+    "perMonth": "/ay",
+    "lf": {
+      "elitePro": "Pro'daki her şey — sınırsız",
+      "gann": "Gann Analizi YZ",
+      "coinbase": "Coinbase Premium YZ",
+      "earlyAccess": "Yeni özelliklere erken erişim",
+      "aiMkt": "YZ Piyasa İstihbaratı",
+      "onchain": "Zincir Üzeri YZ Analizi",
+      "predChart": "Fiyat Tahmin Grafiği",
+      "liqHeatmap": "Tasfiye Isı Haritası YZ",
+      "aiReqs": "Haftada 35 YZ isteği"
+    }
   },
   "landing": {
     "hero": {

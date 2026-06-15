@@ -168,7 +168,9 @@
     "analyzing": "Analisi in corso…",
     "reset": "Ripristina",
     "aiPatternBadge": "✦ Analisi Pattern IA",
-    "gannCyclesLabel": "Cicli Gann dall'ultimo pivot:"
+    "gannCyclesLabel": "Cicli Gann dall'ultimo pivot:",
+    "oversold": "Ipervenduto",
+    "overbought": "Ipercomprato"
   },
   "heatmap": {
     "title": "🔥 Mappa di Calore Liquidazioni",
@@ -589,7 +591,18 @@
       "securePayment": " · Pagamento sicuro tramite Stripe"
     },
     "error": "Qualcosa è andato storto",
-    "perMonth": "/mese"
+    "perMonth": "/mese",
+    "lf": {
+      "elitePro": "Tutto in Pro — illimitato",
+      "gann": "Analisi Gann AI",
+      "coinbase": "Coinbase Premium AI",
+      "earlyAccess": "Accesso anticipato alle nuove funzionalità",
+      "aiMkt": "Intelligenza di Mercato AI",
+      "onchain": "Analisi On-Chain AI",
+      "predChart": "Grafico Predizione Prezzi",
+      "liqHeatmap": "Heatmap Liquidazioni AI",
+      "aiReqs": "35 richieste AI / settimana"
+    }
   },
   "landing": {
     "hero": {
