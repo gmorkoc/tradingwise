@@ -1008,31 +1008,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    const el = chartSectionRef.current;
-    if (!el) return;
-
-    // Exit
     if (isFullscreen) {
-      if (cssFsRef.current) {
-        cssFsRef.current = false;
-        setIsFullscreen(false);
-      } else {
-        document.exitFullscreen();
-      }
+      cssFsRef.current = false;
+      setIsFullscreen(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       return;
     }
-
-    // Enter — try native API first, fall back to CSS overlay
-    const canNative = !!el.requestFullscreen && !!document.fullscreenEnabled;
-    if (canNative) {
-      el.requestFullscreen().catch(() => {
-        cssFsRef.current = true;
-        setIsFullscreen(true);
-      });
-    } else {
-      cssFsRef.current = true;
-      setIsFullscreen(true);
-    }
+    cssFsRef.current = true;
+    setIsFullscreen(true);
   }, [isFullscreen]);
 
   const fsScrollRef = useRef<HTMLDivElement>(null);
