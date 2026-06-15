@@ -68,7 +68,7 @@ function drawChart(
     return;
   }
 
-  const PAD = { top: 36, right: 16, bottom: 50, left: 16 };
+  const PAD = { top: 36, right: 52, bottom: 50, left: 16 };
   const cW = logW - PAD.left - PAD.right;
   const cH = logH - PAD.top  - PAD.bottom;
   const cB = PAD.top + cH;
