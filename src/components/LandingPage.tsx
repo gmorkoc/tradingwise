@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/LandingPage.css";
 
 interface Props {
@@ -53,20 +54,9 @@ const HEATMAP: number[][] = [
 ];
 const HMAP_LABELS = ["$109K","$107K","$105K","$103K","$101K","$99K","$97K","$95K","$93K","$91K"];
 
-const FEATURES = [
-  { icon: "📊", title: "Live Price Charts", color: "#38bdf8", desc: "Real-time candlestick charts with EMA, Bollinger Bands, RSI, and MACD. Powered by TradingView Lightweight Charts." },
-  { icon: "🤖", title: "AI Market Intelligence", color: "#818cf8", desc: "GPT-4o analyzes funding rate, liquidations, open interest, and on-chain data to deliver a full market thesis in seconds." },
-  { icon: "🎯", title: "Price Prediction Scenarios", color: "#22c55e", desc: "Bull, base, and bear case projections with probability scores and projected price paths drawn directly on the chart." },
-  { icon: "🔥", title: "Liquidation Heatmap", color: "#fb7185", desc: "See where billions in leveraged positions are clustered. Know the price levels that attract the most liquidity." },
-  { icon: "⛓", title: "On-Chain AI Analysis", color: "#f59e0b", desc: "Hash rate, miner revenue, transaction volume — interpreted by AI into actionable market signals." },
-  { icon: "📐", title: "Gann Analysis", color: "#a78bfa", desc: "Advanced geometric price & time theory. Square of 9, Gann angles, and cycle forecasts used by professional traders." },
-];
-
-const PLANS = [
-  { label: "Free",  price: "$0",     color: "#94a3b8", per: undefined, primary: false, cta: "Get Started Free", features: ["Live charts & order book","Watchlist","Fear & Greed gauge","ETF flows dashboard"] },
-  { label: "Pro",   price: "$10.99", color: "#38bdf8", per: "/mo",     primary: true,  cta: "Start Pro",        features: ["Everything in Free","HTF Multi-Timeframe AI","AI Market Intelligence","On-Chain AI Analysis","Price Prediction with scenarios","Liquidation Heatmap AI","35 AI requests / week"] },
-  { label: "Elite", price: "$29.99", color: "#a78bfa", per: "/mo",     primary: false, cta: "Go Elite",         features: ["Everything in Pro — unlimited","Gann Analysis AI","Coinbase Premium AI","Early access to features"] },
-];
+const FEATURE_COLORS = ["#38bdf8", "#818cf8", "#22c55e", "#fb7185", "#f59e0b", "#a78bfa"];
+const PLAN_COLORS = ["#94a3b8", "#38bdf8", "#a78bfa"];
+const PLAN_PRIMARY = [false, true, false];
 
 // ── Sub-components ──────────────────────────────────────────────────────
 
@@ -277,7 +267,14 @@ function AIChatMock() {
 
 // ── Main ────────────────────────────────────────────────────────────────
 
-export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onToggleTheme }) => (
+export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onToggleTheme }) => {
+  const { t } = useTranslation();
+  const featureList = t("landing.features.list", { returnObjects: true }) as { icon: string; title: string; desc: string }[];
+  const sidekickBullets = t("landing.sidekick.bullets", { returnObjects: true }) as string[];
+  const aiSectionBullets = t("landing.aiSection.bullets", { returnObjects: true }) as string[];
+  const pricingPlans = t("landing.pricing.plans", { returnObjects: true }) as { label: string; price: string; per: string; cta: string; features: string[] }[];
+
+  return (
   <div className="lp-root">
 
     {/* ── Nav ──────────────────────────────────────────────────────────── */}
@@ -292,8 +289,8 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
         <span>TradingWise<span className="lp-nav-ai">.ai</span></span>
       </div>
       <div className="lp-nav-actions">
-        <button className="lp-btn-ghost" onClick={onSignIn}>Sign In</button>
-        <button className="lp-btn-primary" onClick={onSignUp}>Get Started Free</button>
+        <button className="lp-btn-ghost" onClick={onSignIn}>{t("landing.signin")}</button>
+        <button className="lp-btn-primary" onClick={onSignUp}>{t("landing.getStarted")}</button>
         <button className="lp-theme-toggle" onClick={onToggleTheme} title="Toggle theme" aria-label="Toggle theme">{theme === "dark" ? "☀" : "☽"}</button>
       </div>
     </nav>
@@ -301,7 +298,6 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     {/* ── Hero ─────────────────────────────────────────────────────────── */}
     <section className="lp-hero">
       <div className="lp-hero-card">
-        {/* Chart lives at the bottom as the visual background */}
         <div className="lp-hero-chart-area">
           <div className="lp-hero-chart-bar">
             <span className="lp-hcb-pair">BTC/USD · 1H</span>
@@ -313,13 +309,12 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
           <div className="lp-hero-chart-rsi"><RSIChart /></div>
         </div>
 
-        {/* Text overlaid on top */}
         <div className="lp-hero-text">
-          <div className="lp-hero-badge">✦ AI-Powered Crypto Analytics</div>
-          <h1 className="lp-hero-title">Trade smarter with<br /><span className="lp-hero-gradient">AI market intelligence</span></h1>
-          <p className="lp-hero-sub">Real-time Bitcoin & crypto analytics powered by GPT-4o. Liquidation maps, on-chain signals, price prediction scenarios, and Gann analysis — all in one dashboard.</p>
+          <div className="lp-hero-badge">{t("landing.hero.badge")}</div>
+          <h1 className="lp-hero-title">{t("landing.hero.titleLine1")}<br /><span className="lp-hero-gradient">{t("landing.hero.titleGradient")}</span></h1>
+          <p className="lp-hero-sub">{t("landing.hero.desc")}</p>
           <div className="lp-hero-actions">
-            <button className="lp-btn-hero-primary" onClick={onSignUp}>Start for free ✦</button>
+            <button className="lp-btn-hero-primary" onClick={onSignUp}>{t("landing.hero.startFree")}</button>
           </div>
         </div>
       </div>
@@ -331,20 +326,15 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
         <div className="lp-sidekick-text">
           <div className="lp-sidekick-icon-wrap">✦</div>
           <h2 className="lp-section-title lp-sidekick-title">
-            Chat with our AI,<br />your trading-focused assistant
+            {t("landing.sidekick.title1")}<br />{t("landing.sidekick.title2")}
           </h2>
-          <p className="lp-sidekick-desc">
-            Purpose-built for crypto markets — not a generic chatbot. Ask about market structure, get stop-loss levels, decode funding rates, and receive actionable trade setups in real-time.
-          </p>
+          <p className="lp-sidekick-desc">{t("landing.sidekick.desc")}</p>
           <ul className="lp-sidekick-bullets">
-            <li><span className="lp-ai-check">✓</span> Instant chart &amp; structure analysis</li>
-            <li><span className="lp-ai-check">✓</span> Stop loss, target &amp; R-ratio calculations</li>
-            <li><span className="lp-ai-check">✓</span> Live funding rate &amp; liquidation context</li>
-            <li><span className="lp-ai-check">✓</span> Bull / bear scenario breakdowns</li>
+            {sidekickBullets.map((b, i) => (
+              <li key={i}><span className="lp-ai-check">✓</span> {b}</li>
+            ))}
           </ul>
-          <button className="lp-sidekick-cta" onClick={onSignUp}>
-            Try AI Chat <span className="lp-sidekick-cta-circle">→</span>
-          </button>
+          <button className="lp-sidekick-cta" onClick={onSignUp}>{t("landing.sidekick.cta")}</button>
         </div>
         <div className="lp-sidekick-visual">
           <AIChatMock />
@@ -354,11 +344,11 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
 
     {/* ── Features ─────────────────────────────────────────────────────── */}
     <section className="lp-features">
-      <div className="lp-section-label">What's inside</div>
-      <h2 className="lp-section-title">Everything you need to trade with edge</h2>
+      <div className="lp-section-label">{t("landing.features.label")}</div>
+      <h2 className="lp-section-title">{t("landing.features.sectionTitle")}</h2>
       <div className="lp-features-grid">
-        {FEATURES.map(f => (
-          <div key={f.title} className="lp-feature-card" style={{"--fc": f.color} as React.CSSProperties}>
+        {featureList.map((f, i) => (
+          <div key={i} className="lp-feature-card" style={{"--fc": FEATURE_COLORS[i]} as React.CSSProperties}>
             <div className="lp-feature-icon-wrap"><span className="lp-feature-icon">{f.icon}</span></div>
             <h3 className="lp-feature-title">{f.title}</h3>
             <p className="lp-feature-desc">{f.desc}</p>
@@ -371,16 +361,15 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     <section className="lp-ai-section">
       <div className="lp-ai-inner">
         <div className="lp-ai-text">
-          <div className="lp-section-label">AI Engine</div>
-          <h2 className="lp-section-title">GPT-4o reads the market so you don't have to</h2>
-          <p className="lp-ai-desc">Our AI ingests live funding rates, liquidation levels, RSI, MACD, long/short ratios, and fear & greed data — then synthesizes it into a clear market thesis with confidence rating, scenario projections, and an actionable recommendation.</p>
+          <div className="lp-section-label">{t("landing.aiSection.label")}</div>
+          <h2 className="lp-section-title">{t("landing.aiSection.title")}</h2>
+          <p className="lp-ai-desc">{t("landing.aiSection.desc")}</p>
           <ul className="lp-ai-bullets">
-            <li><span className="lp-ai-check">✓</span> Bull / base / bear scenario arrows on chart</li>
-            <li><span className="lp-ai-check">✓</span> Support & resistance levels from AI</li>
-            <li><span className="lp-ai-check">✓</span> Who's buying, who's selling analysis</li>
-            <li><span className="lp-ai-check">✓</span> Key risk factors that could flip the thesis</li>
+            {aiSectionBullets.map((b, i) => (
+              <li key={i}><span className="lp-ai-check">✓</span> {b}</li>
+            ))}
           </ul>
-          <button className="lp-btn-primary" onClick={onSignUp} style={{marginTop:24}}>Try it free →</button>
+          <button className="lp-btn-primary" onClick={onSignUp} style={{marginTop:24}}>{t("landing.aiSection.tryFree")}</button>
         </div>
 
         <div className="lp-ai-mock">
@@ -409,15 +398,15 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     <section className="lp-data-section">
       <div className="lp-data-inner">
         <div className="lp-data-block">
-          <div className="lp-section-label">Liquidation Heatmap</div>
-          <h3 className="lp-data-title">See where the leverage is hiding</h3>
-          <p className="lp-data-desc">Visualize billions in liquidation clusters. Bright zones are price magnets that the market gravitates toward.</p>
+          <div className="lp-section-label">{t("landing.heatmap.label")}</div>
+          <h3 className="lp-data-title">{t("landing.heatmap.title")}</h3>
+          <p className="lp-data-desc">{t("landing.heatmap.desc")}</p>
           <HeatmapPreview />
         </div>
         <div className="lp-data-block">
-          <div className="lp-section-label">Market Sentiment</div>
-          <h3 className="lp-data-title">Fear & Greed + On-Chain</h3>
-          <p className="lp-data-desc">Real-time sentiment index combined with hash rate, miner revenue, and on-chain volume — AI interprets it all.</p>
+          <div className="lp-section-label">{t("landing.sentiment.label")}</div>
+          <h3 className="lp-data-title">{t("landing.sentiment.title")}</h3>
+          <p className="lp-data-desc">{t("landing.sentiment.desc")}</p>
           <div className="lp-fg-wrap">
             <FearGreedGauge value={72} />
             <div className="lp-onchain-mini">
@@ -435,16 +424,16 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
 
     {/* ── Pricing ──────────────────────────────────────────────────────── */}
     <section className="lp-pricing">
-      <div className="lp-section-label">Pricing</div>
-      <h2 className="lp-section-title">Start free, upgrade when you're ready</h2>
+      <div className="lp-section-label">{t("landing.pricing.label")}</div>
+      <h2 className="lp-section-title">{t("landing.pricing.sectionTitle")}</h2>
       <div className="lp-plans">
-        {PLANS.map(plan => (
-          <div key={plan.label} className={`lp-plan${plan.primary?" lp-plan--popular":""}`} style={{"--pc":plan.color} as React.CSSProperties}>
-            {plan.primary && <div className="lp-plan-popular-tag">Most Popular</div>}
-            <div className="lp-plan-label" style={{color:plan.color}}>{plan.label}</div>
+        {pricingPlans.map((plan, i) => (
+          <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}`} style={{"--pc": PLAN_COLORS[i]} as React.CSSProperties}>
+            {PLAN_PRIMARY[i] && <div className="lp-plan-popular-tag">{t("landing.pricing.popularTag")}</div>}
+            <div className="lp-plan-label" style={{color: PLAN_COLORS[i]}}>{plan.label}</div>
             <div className="lp-plan-price"><span className="lp-plan-amount">{plan.price}</span>{plan.per && <span className="lp-plan-per">{plan.per}</span>}</div>
-            <ul className="lp-plan-features">{plan.features.map(f => <li key={f}><span style={{color:plan.color}}>✓</span> {f}</li>)}</ul>
-            <button className={`lp-plan-cta${plan.primary?" lp-plan-cta--primary":""}`} style={plan.primary?{}:{borderColor:plan.color,color:plan.color}} onClick={onSignUp}>{plan.cta}</button>
+            <ul className="lp-plan-features">{plan.features.map(f => <li key={f}><span style={{color: PLAN_COLORS[i]}}>✓</span> {f}</li>)}</ul>
+            <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary" : ""}`} style={PLAN_PRIMARY[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
           </div>
         ))}
       </div>
@@ -452,11 +441,12 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
 
     {/* ── CTA ──────────────────────────────────────────────────────────── */}
     <section className="lp-cta">
-      <h2 className="lp-cta-title">Ready to trade with AI?</h2>
-      <p className="lp-cta-sub">Join now — free forever, no credit card required.</p>
-      <button className="lp-btn-hero-primary" onClick={onSignUp}>Create free account →</button>
+      <h2 className="lp-cta-title">{t("landing.cta.title")}</h2>
+      <p className="lp-cta-sub">{t("landing.cta.sub")}</p>
+      <button className="lp-btn-hero-primary" onClick={onSignUp}>{t("landing.cta.btn")}</button>
     </section>
 
-    <footer className="lp-footer"><span>© 2025 TradingWise.ai · Built for serious traders</span></footer>
+    <footer className="lp-footer"><span>{t("landing.footer")}</span></footer>
   </div>
-);
+  );
+};

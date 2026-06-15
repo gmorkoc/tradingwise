@@ -166,13 +166,25 @@
     "high": "Yüksek",
     "low": "Düşük",
     "loading": "Isı haritası yükleniyor…",
-    "disclaimer": "Yaygın kaldıraç seviyeleri kullanılarak OHLC verilerinden simüle edilmiştir. Gerçek borsa açık faiz verisi değildir.",
-    "clusterAnalysis": "📊 Tasfiye Kümesi Analizi",
+    "loadError": "Yüklenemedi",
+    "noData": "Veri yok",
+    "disclaimer": "Tasfiye bölgeleri fiyat hareketinden ve kaldıraç dağılımından tahmin edilmektedir. Gerçek borsa verisi değildir.",
+    "clusterAnalysis": "Tasfiye Kümesi Analizi",
+    "rangeView": "{{range}} görünümü · mevcut ${{price}}",
     "longZones": "Long Tasfiye Bölgeleri",
     "longBelow": "↓ fiyatın altında",
     "shortZones": "Short Tasfiye Bölgeleri",
     "shortAbove": "↑ fiyatın üstünde",
-    "noClusters": "Aralıkta önemli küme yok"
+    "noClusters": "Önemli küme yok",
+    "leverageLabel": "Kaldıraç",
+    "seriesLiqLev": "Tasfiye Kaldıracı",
+    "seriesSupercharts": "Süper Grafikler",
+    "tooltipPrice": "Fiyat",
+    "tooltipEstLiq": "Tahmini Tasfiye",
+    "aiAnalysis": "YZ Analizi",
+    "aiPowered": "✦ YZ Destekli",
+    "aiAnalyzing": "Tasfiye kümeleri analiz ediliyor…",
+    "aiOurTake": "Görüşümüz"
   },
   "leverage": {
     "title": "⚡ Kaldıraçlı Giriş Önerisi",
@@ -441,6 +453,9 @@
       "trust": "Sınırsız YZ · İstediğin zaman iptal · Pro'daki her şeyi içerir"
     },
     "blurGate": {
+      "planLabel": "Elite",
+      "planPrice": "$29.99",
+      "perMonth": "/ay",
       "features": ["Pro'daki her şey — sınırsız", "HTF Çok Zaman Dilimli YZ", "Coinbase Premium YZ"],
       "signInBtn": "Yükseltmek için giriş yap",
       "upgradeBtn": "Elite'e Yükselt",
@@ -511,15 +526,42 @@
   },
   "landing": {
     "hero": {
+      "badge": "✦ YZ Destekli Kripto Analizi",
+      "titleLine1": "Daha Akıllı İşlem Yapın",
+      "titleGradient": "YZ piyasa zekasıyla",
+      "desc": "GPT-4o ile güçlendirilmiş gerçek zamanlı Bitcoin ve kripto analitiği. Tasfiye haritaları, zincir üzeri sinyaller, fiyat tahmin senaryoları ve Gann analizi — hepsi tek bir panoda.",
+      "startFree": "Ücretsiz başla ✦",
       "headline": "Piyasayı Bir Kurum Gibi Okuyun",
       "sub": "Fiyat hareketi, zincir üzeri veri, tasfiyeler ve duyarlılıkta YZ destekli analiz — hepsi tek bir panoda.",
       "cta": "Ücretsiz Başla — Kart Gerekmez",
       "trust": "2.000'den fazla kripto yatırımcısı tarafından güvenilir · Sonsuza dek ücretsiz plan mevcut"
     },
+    "sidekick": {
+      "title1": "YZ ile sohbet edin,",
+      "title2": "işlem odaklı asistanınız",
+      "desc": "Kripto piyasaları için özel olarak tasarlandı — genel bir sohbet botu değil. Piyasa yapısını sorun, stop-loss seviyeleri alın, fonlama oranlarını çözümleyin ve gerçek zamanlı uygulanabilir trade kurulumları alın.",
+      "bullets": [
+        "Anlık grafik ve yapı analizi",
+        "Stop-loss, hedef ve R-oranı hesaplamaları",
+        "Canlı fonlama oranı ve tasfiye bağlamı",
+        "Boğa / ayı senaryo açıklamaları"
+      ],
+      "cta": "YZ Sohbeti Deneyin →"
+    },
     "features": {
+      "label": "İçinde neler var",
+      "sectionTitle": "Avantajlı işlem yapmak için ihtiyacınız olan her şey",
       "title": "Daha akıllı işlem yapmak için ihtiyacınız olan her şey",
+      "list": [
+        { "icon": "📊", "title": "Canlı Fiyat Grafikleri",        "desc": "EMA, Bollinger Bantları, RSI ve MACD ile gerçek zamanlı mum grafikleri. TradingView Lightweight Charts ile güçlendirilmiş." },
+        { "icon": "🤖", "title": "YZ Piyasa İstihbaratı",         "desc": "GPT-4o fonlama oranını, tasfiyeleri, açık faizi ve zincir üzeri veriyi analiz ederek saniyeler içinde tam bir piyasa tezi sunar." },
+        { "icon": "🎯", "title": "Fiyat Tahmin Senaryoları",       "desc": "Olasılık puanları ve doğrudan grafik üzerine çizilmiş fiyat yollarıyla boğa, temel ve ayı tahminleri." },
+        { "icon": "🔥", "title": "Tasfiye Isı Haritası",           "desc": "Milyarlarca dolarlık kaldıraçlı pozisyonların nerede kümelendiğini görün. En fazla likiditeyi çeken fiyat seviyelerini bilin." },
+        { "icon": "⛓",  "title": "YZ Zincir Üzeri Analizi",       "desc": "Hash oranı, madenci geliri, işlem hacmi — YZ tarafından uygulanabilir piyasa sinyallerine yorumlanır." },
+        { "icon": "📐", "title": "Gann Analizi",                   "desc": "Gelişmiş geometrik fiyat ve zaman teorisi. Profesyonel yatırımcıların kullandığı Karenin 9'u, Gann açıları ve döngü tahminleri." }
+      ],
       "items": [
-        { "icon": "✦",  "title": "YZ Piyasa İstihbaratı",   "desc": "GPT-4o fiyat hareketini, fonlama oranlarını, açık faizi ve zincir üzeri veriyi okur — ardından size güven düzeyli sade bir İngilizce eğilim sunar." },
+        { "icon": "✦",  "title": "YZ Piyasa İstihbaratı",   "desc": "GPT-4o fiyat hareketini, fonlama oranlarını, açık faizi ve zincir üzeri veriyi okur — ardından size güven düzeyli sade bir eğilim sunar." },
         { "icon": "📈", "title": "Fiyat Tahmin Grafiği",   "desc": "Yapay zeka tarafından üretilen Boğa, Temel ve Ayı senaryoları olasılık puanlarıyla ileriye yansıtılır, her aralıkta güncellenir." },
         { "icon": "🔥", "title": "Tasfiye Isı Haritası",     "desc": "$90K ile $120K arasındaki tahmini tasfiye kümeleri renk kodlu yoğunlukla. Zorla satış veya kapanmanın nerede gerçekleşeceğini görün." },
         { "icon": "⛓",  "title": "Zincir Üzeri İstihbarat",   "desc": "Hash oranı, madenci geliri, zorluk ve işlem hacmi — gerçek zamanlı olarak YZ tarafından özetlenir ve yorumlanır." },
@@ -527,10 +569,50 @@
         { "icon": "🧠", "title": "Yatırımcı Pozisyonlaması",      "desc": "Perakende ve akıllı para net pozisyonları, duyarlılık sapması ve YZ tarafından üretilen eğilim özetleri — her 4 saatte güncellenir." }
       ]
     },
+    "aiSection": {
+      "label": "YZ Motoru",
+      "title": "GPT-4o piyasayı sizin yerinize okur",
+      "desc": "YZ'miz canlı fonlama oranlarını, tasfiye seviyelerini, RSI, MACD, uzun/kısa oranlarını ve korku & açgözlülük verilerini alır — ardından güven derecesi, senaryo tahminleri ve uygulanabilir bir öneri içeren net bir piyasa tezine dönüştürür.",
+      "bullets": [
+        "Grafik üzerinde boğa / temel / ayı senaryo okları",
+        "YZ'den destek ve direnç seviyeleri",
+        "Kimin aldığı, kimin sattığı analizi",
+        "Tezi tersine çevirebilecek kilit risk faktörleri"
+      ],
+      "tryFree": "Ücretsiz deneyin →"
+    },
+    "heatmap": {
+      "label": "Tasfiye Isı Haritası",
+      "title": "Kaldıracın nerede saklandığını görün",
+      "desc": "Tasfiye kümelerindeki milyarlarca doları görselleştirin. Parlak bölgeler, piyasanın çekildiği fiyat mıknatıslarıdır."
+    },
+    "sentiment": {
+      "label": "Piyasa Duyarlılığı",
+      "title": "Korku & Açgözlülük + Zincir Üzeri",
+      "desc": "Gerçek zamanlı duyarlılık endeksi, hash oranı, madenci gelirleri ve zincir üzeri hacimle birleştirildi — YZ hepsini yorumlar."
+    },
+    "pricing": {
+      "label": "Fiyatlandırma",
+      "sectionTitle": "Ücretsiz başla, hazır olduğunda yükselt",
+      "popularTag": "En Popüler",
+      "plans": [
+        { "label": "Ücretsiz", "price": "$0",     "per": "",   "cta": "Ücretsiz Başla",    "features": ["Canlı grafikler ve emir defteri", "İzleme listesi", "Korku & Açgözlülük göstergesi", "ETF akışları paneli"] },
+        { "label": "Pro",      "price": "$10.99", "per": "/ay","cta": "Pro'ya Başla",       "features": ["Ücretsiz'deki her şey", "HTF Çok Zaman Dilimli YZ", "YZ Piyasa İstihbaratı", "Zincir Üzeri YZ Analizi", "Senaryolu fiyat tahmini", "Tasfiye ısı haritası YZ", "35 YZ isteği / hafta"] },
+        { "label": "Elite",    "price": "$29.99", "per": "/ay","cta": "Elite'e Geç",        "features": ["Pro'daki her şey — sınırsız", "Gann Analizi YZ", "Coinbase Premium YZ", "Yeni özelliklere erken erişim"] }
+      ],
+      "title": "Basit, şeffaf fiyatlandırma",
+      "sub": "Ücretsiz başla. Daha fazlasına ihtiyacın olduğunda yükselt."
+    },
     "plans": {
       "title": "Basit, şeffaf fiyatlandırma",
       "sub": "Ücretsiz başla. Daha fazlasına ihtiyacın olduğunda yükselt."
     },
+    "cta": {
+      "title": "YZ ile işlem yapmaya hazır mısınız?",
+      "sub": "Şimdi katılın — sonsuza dek ücretsiz, kredi kartı gerekmez.",
+      "btn": "Ücretsiz hesap oluştur →"
+    },
+    "footer": "© 2025 TradingWise.ai · Ciddi yatırımcılar için tasarlandı",
     "signin": "Giriş Yap",
     "getStarted": "Ücretsiz Başla",
     "noCard": "Kart gerekmez"
@@ -731,10 +813,18 @@
     }
   },
   "etf": {
-    "title": "Günlük Net Giriş — 30 Gün (USD)",
+    "pageTitle": "Bitcoin Spot ETF Takipçisi",
+    "chartTitle": "Günlük Net Giriş — 30 Gün (USD)",
+    "source": "CoinGlass aracılığıyla",
     "loading": "ETF verileri yükleniyor…",
     "error": "Veri yok.",
+    "retry": "Yeniden Dene",
+    "clearBtn": "Temizle",
     "todayBtn": "Bugün",
+    "netFlow": "Net Akış",
+    "netFlowDate": "Net Akış · {{date}}",
+    "totalAum": "Toplam AUM",
+    "dailyVolume": "Günlük Hacim",
     "table": {
       "fund": "Fon",
       "dailyFlow": "Günlük Akış",
@@ -782,12 +872,52 @@
     "analyseBtn": "✦ YZ ile Analiz Et",
     "analysing": "Analiz ediliyor…",
     "refresh": "Yenile",
-    "tooltip": "Gann tahminlerini görmek için tıkla"
+    "tooltip": "Gann tahminlerini görmek için tıkla",
+    "title": "Gann Analizi",
+    "sub": "9 Karesi · Zaman Döngüleri · Gann Açıları · Pivot Zaman Çizelgesi",
+    "sq9Title": "9 Karesi",
+    "sq9Sub": "Mevcut fiyattan 90° dönüşlerdeki ana fiyat seviyeleri",
+    "currentPrice": "Güncel Fiyat",
+    "pivotTitle": "Pivot Zaman Çizelgesi",
+    "pivotSub": "Herhangi bir güne tıklayarak o tarih için Gann açısı fiyat tahminlerini görün",
+    "prev": "← Önceki",
+    "next": "Sonraki →",
+    "today": "Bugün",
+    "cycleConfluence": "⚡ Döngü Birleşimi",
+    "angleProjections": "📐 Gann Açısı Fiyat Projeksiyonları",
+    "fromHigh": "▼ Yüksekten",
+    "fromLow": "▲ Düşükten",
+    "highCycle": "■ Yüksek döngü",
+    "lowCycle": "■ Düşük döngü",
+    "bothCycles": "■ Her ikisi",
+    "aiTitle": "YZ Gann Analizi",
+    "aiSub": "GPT-4o tüm Gann verilerini analiz eder ve yapılandırılmış bir tahmin sunar",
+    "keyLevels": "İzlenecek Ana Seviyeler",
+    "priceTarget": "Fiyat Hedefi",
+    "nextCycleAlert": "Sonraki Döngü Uyarısı",
+    "support": "D",
+    "resistance": "D",
+    "sentimentBullish": "▲ Yükseliş",
+    "sentimentBearish": "▼ Düşüş",
+    "sentimentNeutral": "● Nötr",
+    "confidence": "{{level}} güven",
+    "selToday": "Bugün",
+    "selFuture": "{{n}} gün sonra",
+    "selFuturePlural": "{{n}} gün sonra",
+    "selPast": "{{n}} gün önce",
+    "selPastPlural": "{{n}} gün önce"
   },
   "watchlist": {
+    "title": "İzleme Listesi",
+    "updated": "Her dakika güncellenir",
+    "addCoin": "+ Coin Ekle",
     "searchPlaceholder": "Ad veya sembolle ara…",
     "loading": "Piyasa verileri yükleniyor…",
-    "noResults": "Sonuç bulunamadı"
+    "noResults": "Sonuç bulunamadı",
+    "emptyText": "İzleme listenizde coin yok",
+    "emptyHint": "Takibe başlamak için \"+ Coin Ekle\"ye tıkla",
+    "removeTitle": "Listeden kaldır",
+    "vol": "Hacim"
   },
   "alerts": {
     "title": "Alarm Oluşturucu",
@@ -816,15 +946,15 @@
     }
   },
   "nav": {
-    "sections": {
-      "ai": "YZ Tahmini",
-      "feargreed": "Korku ve Açgözlülük",
-      "market": "Piyasa Verileri",
-      "onchain": "Zincir Üzeri",
-      "chart": "Fiyat Grafiği",
-      "heatmap": "Tasfiyeler",
-      "alerts": "Alarmlar",
-      "watchlist": "İzleme Listesi"
-    }
+    "ai": "YZ Tahmini",
+    "feargreed": "Korku ve Açgözlülük",
+    "market": "Piyasa Verileri",
+    "onchain": "Zincir Üzeri",
+    "chart": "Fiyat Grafiği",
+    "heatmap": "Tasfiyeler",
+    "alerts": "Alarmlar",
+    "watchlist": "İzleme Listesi",
+    "gann": "Gann Analizi",
+    "live": "CANLI"
   }
 }

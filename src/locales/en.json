@@ -166,13 +166,25 @@
     "high": "High",
     "low": "Low",
     "loading": "Loading heatmap…",
-    "disclaimer": "Simulated from OHLC data using common leverage tiers. Not real exchange open-interest data.",
-    "clusterAnalysis": "📊 Liquidation Cluster Analysis",
+    "loadError": "Failed to load",
+    "noData": "No data",
+    "disclaimer": "Liquidation zones are estimated from price action and leverage distribution. Not real exchange data.",
+    "clusterAnalysis": "Liquidation Cluster Analysis",
+    "rangeView": "{{range}} view · current ${{price}}",
     "longZones": "Long Liq Zones",
     "longBelow": "↓ below price",
     "shortZones": "Short Liq Zones",
     "shortAbove": "↑ above price",
-    "noClusters": "No significant clusters in range"
+    "noClusters": "No significant clusters",
+    "leverageLabel": "Leverage",
+    "seriesLiqLev": "Liquidation Leverage",
+    "seriesSupercharts": "Supercharts",
+    "tooltipPrice": "Price",
+    "tooltipEstLiq": "Est. Liquidations",
+    "aiAnalysis": "AI Analysis",
+    "aiPowered": "✦ AI Powered",
+    "aiAnalyzing": "Analyzing liquidation clusters…",
+    "aiOurTake": "Our Take"
   },
   "leverage": {
     "title": "⚡ Leverage Entry Suggestion",
@@ -441,6 +453,9 @@
       "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro"
     },
     "blurGate": {
+      "planLabel": "Elite",
+      "planPrice": "$29.99",
+      "perMonth": "/mo",
       "features": ["Everything in Pro — unlimited", "HTF Multi-Timeframe AI", "Coinbase Premium AI"],
       "signInBtn": "Sign in to upgrade",
       "upgradeBtn": "Upgrade to Elite",
@@ -511,13 +526,40 @@
   },
   "landing": {
     "hero": {
+      "badge": "✦ AI-Powered Crypto Analytics",
+      "titleLine1": "Trade smarter with",
+      "titleGradient": "AI market intelligence",
+      "desc": "Real-time Bitcoin & crypto analytics powered by GPT-4o. Liquidation maps, on-chain signals, price prediction scenarios, and Gann analysis — all in one dashboard.",
+      "startFree": "Start for free ✦",
       "headline": "Read the Market Like an Institution",
       "sub": "AI-powered analysis across price action, on-chain data, liquidations, and sentiment — all in one dashboard.",
       "cta": "Start Free — No Card Required",
       "trust": "Trusted by 2,000+ crypto traders · Free forever plan available"
     },
+    "sidekick": {
+      "title1": "Chat with our AI,",
+      "title2": "your trading-focused assistant",
+      "desc": "Purpose-built for crypto markets — not a generic chatbot. Ask about market structure, get stop-loss levels, decode funding rates, and receive actionable trade setups in real-time.",
+      "bullets": [
+        "Instant chart & structure analysis",
+        "Stop loss, target & R-ratio calculations",
+        "Live funding rate & liquidation context",
+        "Bull / bear scenario breakdowns"
+      ],
+      "cta": "Try AI Chat →"
+    },
     "features": {
+      "label": "What's inside",
+      "sectionTitle": "Everything you need to trade with edge",
       "title": "Everything you need to trade smarter",
+      "list": [
+        { "icon": "📊", "title": "Live Price Charts",           "desc": "Real-time candlestick charts with EMA, Bollinger Bands, RSI, and MACD. Powered by TradingView Lightweight Charts." },
+        { "icon": "🤖", "title": "AI Market Intelligence",      "desc": "GPT-4o analyzes funding rate, liquidations, open interest, and on-chain data to deliver a full market thesis in seconds." },
+        { "icon": "🎯", "title": "Price Prediction Scenarios",  "desc": "Bull, base, and bear case projections with probability scores and projected price paths drawn directly on the chart." },
+        { "icon": "🔥", "title": "Liquidation Heatmap",        "desc": "See where billions in leveraged positions are clustered. Know the price levels that attract the most liquidity." },
+        { "icon": "⛓",  "title": "On-Chain AI Analysis",       "desc": "Hash rate, miner revenue, transaction volume — interpreted by AI into actionable market signals." },
+        { "icon": "📐", "title": "Gann Analysis",              "desc": "Advanced geometric price & time theory. Square of 9, Gann angles, and cycle forecasts used by professional traders." }
+      ],
       "items": [
         { "icon": "✦",  "title": "AI Market Intelligence",   "desc": "GPT-4o reads price action, funding rates, open interest and on-chain data — then gives you a plain-English bias with confidence level." },
         { "icon": "📈", "title": "Price Prediction Chart",   "desc": "AI-generated Bull, Base, and Bear scenarios projected forward with probability scores, updated every interval." },
@@ -527,10 +569,50 @@
         { "icon": "🧠", "title": "Trader Positioning",      "desc": "Retail vs smart money net positions, sentiment divergence, and AI-generated bias summaries — updated every 4 hours." }
       ]
     },
+    "aiSection": {
+      "label": "AI Engine",
+      "title": "GPT-4o reads the market so you don't have to",
+      "desc": "Our AI ingests live funding rates, liquidation levels, RSI, MACD, long/short ratios, and fear & greed data — then synthesizes it into a clear market thesis with confidence rating, scenario projections, and an actionable recommendation.",
+      "bullets": [
+        "Bull / base / bear scenario arrows on chart",
+        "Support & resistance levels from AI",
+        "Who's buying, who's selling analysis",
+        "Key risk factors that could flip the thesis"
+      ],
+      "tryFree": "Try it free →"
+    },
+    "heatmap": {
+      "label": "Liquidation Heatmap",
+      "title": "See where the leverage is hiding",
+      "desc": "Visualize billions in liquidation clusters. Bright zones are price magnets that the market gravitates toward."
+    },
+    "sentiment": {
+      "label": "Market Sentiment",
+      "title": "Fear & Greed + On-Chain",
+      "desc": "Real-time sentiment index combined with hash rate, miner revenue, and on-chain volume — AI interprets it all."
+    },
+    "pricing": {
+      "label": "Pricing",
+      "sectionTitle": "Start free, upgrade when you're ready",
+      "popularTag": "Most Popular",
+      "plans": [
+        { "label": "Free",  "price": "$0",     "per": "",     "cta": "Get Started Free", "features": ["Live charts & order book", "Watchlist", "Fear & Greed gauge", "ETF flows dashboard"] },
+        { "label": "Pro",   "price": "$10.99", "per": "/mo",  "cta": "Start Pro",        "features": ["Everything in Free", "HTF Multi-Timeframe AI", "AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction with scenarios", "Liquidation Heatmap AI", "35 AI requests / week"] },
+        { "label": "Elite", "price": "$29.99", "per": "/mo",  "cta": "Go Elite",         "features": ["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI", "Early access to features"] }
+      ],
+      "title": "Simple, transparent pricing",
+      "sub": "Start free. Upgrade when you need more."
+    },
     "plans": {
       "title": "Simple, transparent pricing",
       "sub": "Start free. Upgrade when you need more."
     },
+    "cta": {
+      "title": "Ready to trade with AI?",
+      "sub": "Join now — free forever, no credit card required.",
+      "btn": "Create free account →"
+    },
+    "footer": "© 2025 TradingWise.ai · Built for serious traders",
     "signin": "Sign In",
     "getStarted": "Get Started Free",
     "noCard": "No card required"
@@ -731,10 +813,18 @@
     }
   },
   "etf": {
-    "title": "Daily Net Inflow — 30 Days (USD)",
+    "pageTitle": "Bitcoin Spot ETF Tracker",
+    "chartTitle": "Daily Net Inflow — 30 Days (USD)",
+    "source": "via CoinGlass",
     "loading": "Loading ETF data…",
     "error": "No data available.",
+    "retry": "Retry",
+    "clearBtn": "Clear",
     "todayBtn": "Today",
+    "netFlow": "Net Flow",
+    "netFlowDate": "Net Flow · {{date}}",
+    "totalAum": "Total AUM",
+    "dailyVolume": "Daily Volume",
     "table": {
       "fund": "Fund",
       "dailyFlow": "Daily Flow",
@@ -782,12 +872,52 @@
     "analyseBtn": "✦ Analyse with AI",
     "analysing": "Analysing…",
     "refresh": "Refresh",
-    "tooltip": "Click to see Gann predictions"
+    "tooltip": "Click to see Gann predictions",
+    "title": "Gann Analysis",
+    "sub": "Square of 9 · Time Cycles · Gann Angles · Pivot Timeline",
+    "sq9Title": "Square of 9",
+    "sq9Sub": "Key price levels at 90° rotations from current price",
+    "currentPrice": "Current Price",
+    "pivotTitle": "Pivot Timeline",
+    "pivotSub": "Tap any day to see Gann angle price predictions for that date",
+    "prev": "← Prev",
+    "next": "Next →",
+    "today": "Today",
+    "cycleConfluence": "⚡ Cycle Confluence",
+    "angleProjections": "📐 Gann Angle Price Projections",
+    "fromHigh": "▼ From High",
+    "fromLow": "▲ From Low",
+    "highCycle": "■ High cycle",
+    "lowCycle": "■ Low cycle",
+    "bothCycles": "■ Both",
+    "aiTitle": "AI Gann Analysis",
+    "aiSub": "GPT-4o analyses all Gann data and delivers a structured prediction",
+    "keyLevels": "Key Levels to Watch",
+    "priceTarget": "Price Target",
+    "nextCycleAlert": "Next Cycle Alert",
+    "support": "S",
+    "resistance": "R",
+    "sentimentBullish": "▲ Bullish",
+    "sentimentBearish": "▼ Bearish",
+    "sentimentNeutral": "● Neutral",
+    "confidence": "{{level}} confidence",
+    "selToday": "Today",
+    "selFuture": "In {{n}} day",
+    "selFuturePlural": "In {{n}} days",
+    "selPast": "{{n}} day ago",
+    "selPastPlural": "{{n}} days ago"
   },
   "watchlist": {
+    "title": "Watchlist",
+    "updated": "Updated every minute",
+    "addCoin": "+ Add Coin",
     "searchPlaceholder": "Search by name or symbol…",
     "loading": "Loading market data…",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "emptyText": "No coins in your watchlist",
+    "emptyHint": "Click \"+ Add Coin\" to start tracking",
+    "removeTitle": "Remove from watchlist",
+    "vol": "Vol"
   },
   "alerts": {
     "title": "Alerts Builder",
@@ -816,15 +946,15 @@
     }
   },
   "nav": {
-    "sections": {
-      "ai": "AI Prediction",
-      "feargreed": "Fear & Greed",
-      "market": "Market Data",
-      "onchain": "On-Chain",
-      "chart": "Price Chart",
-      "heatmap": "Liquidations",
-      "alerts": "Alerts",
-      "watchlist": "Watchlist"
-    }
+    "ai": "AI Prediction",
+    "feargreed": "Fear & Greed",
+    "market": "Market Data",
+    "onchain": "On-Chain",
+    "chart": "Price Chart",
+    "heatmap": "Liquidations",
+    "alerts": "Alerts",
+    "watchlist": "Watchlist",
+    "gann": "Gann Analysis",
+    "live": "LIVE"
   }
 }

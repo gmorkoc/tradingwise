@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { coinglass, CandleDataPoint, CoinSymbol, HeatmapRange } from "../services/coinglass";
 import { openaiLiq, LiqAIResponse } from "../services/openai";
 import { useAIQuota } from "../hooks/useAIQuota";
@@ -445,6 +446,7 @@ function paletteCssBar(stops: ColorStop[]): string {
 export const LiquidationHeatmap: React.FC<Props> = ({
   coin, theme = "dark", onOpenAuth = () => {}, onOpenUpgrade = () => {},
 }) => {
+  const { t } = useTranslation();
   const canvasRef     = useRef<HTMLCanvasElement>(null);
   const wrapRef       = useRef<HTMLDivElement>(null);
   const candlesRef    = useRef<CandleDataPoint[]>([]);
@@ -560,10 +562,10 @@ export const LiquidationHeatmap: React.FC<Props> = ({
 
     coinglass.getHeatmapCandles(range.key, coin).then(data => {
       if (cancelled) return;
-      if (!data.length) { setError("No data"); setLoading(false); return; }
+      if (!data.length) { setError(t("heatmap.noData")); setLoading(false); return; }
       candlesRef.current = data;
       setLoading(false);
-    }).catch(() => { if (!cancelled) { setError("Failed to load"); setLoading(false); } });
+    }).catch(() => { if (!cancelled) { setError(t("heatmap.loadError")); setLoading(false); } });
 
     return () => { cancelled = true; };
   }, [coin, range.key]);
@@ -711,7 +713,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
       shortClusters: src.shortClusters.map(c => ({ priceCenter: c.priceCenter, strength: c.strength, label: c.label, distancePct: c.distancePct })),
     });
     if (res.success) setAiResult(res);
-    else setAiError(res.error ?? "Failed to generate analysis");
+    else setAiError(res.error ?? t("heatmap.loadError"));
     setAiLoading(false);
   };
 
@@ -823,15 +825,15 @@ export const LiquidationHeatmap: React.FC<Props> = ({
           <div className="lhm-series-legend">
             <span className="lhm-series-item">
               <span className="lhm-series-dot lhm-series-dot--purple" />
-              Liquidation Leverage
+              {t("heatmap.seriesLiqLev")}
             </span>
             <span className="lhm-series-item">
               <span className="lhm-series-dot lhm-series-dot--green" />
-              Supercharts
+              {t("heatmap.seriesSupercharts")}
             </span>
           </div>
 
-          {loading && <div className="lhm-overlay">Loading heatmap…</div>}
+          {loading && <div className="lhm-overlay">{t("heatmap.loading")}</div>}
           {error   && <div className="lhm-overlay lhm-error">⚠ {error}</div>}
 
           <canvas
@@ -845,7 +847,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
               <div className="lhm-tooltip-date">{tooltip.dateStr}</div>
               <div className="lhm-tooltip-row">
                 <span className="lhm-tooltip-circle" />
-                <span className="lhm-tooltip-lbl">Price</span>
+                <span className="lhm-tooltip-lbl">{t("heatmap.tooltipPrice")}</span>
                 <span className="lhm-tooltip-val">
                   {tooltip.price >= 1000
                     ? tooltip.price.toLocaleString("en-US", { maximumFractionDigits: 1 })
@@ -854,7 +856,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
               </div>
               <div className="lhm-tooltip-row">
                 <span className="lhm-tooltip-circle" />
-                <span className="lhm-tooltip-lbl">Est. Liquidations</span>
+                <span className="lhm-tooltip-lbl">{t("heatmap.tooltipEstLiq")}</span>
                 <span className="lhm-tooltip-val">
                   {tooltip.liqUSD >= 1e9
                     ? `$${(tooltip.liqUSD / 1e9).toFixed(2)}B`
@@ -883,7 +885,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
 
       {/* ── Leverage filter ─────────────────────────────────────────────────── */}
       <div className="lhm-lev-row">
-        <span className="lhm-lev-label">Leverage</span>
+        <span className="lhm-lev-label">{t("heatmap.leverageLabel")}</span>
         <div className="lhm-lev-pills">
           {LEVERAGES_ALL.map(lev => (
             <button
@@ -895,9 +897,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
         </div>
       </div>
 
-      <p className="lhm-disclaimer">
-        Liquidation zones are estimated from price action and leverage distribution. Not real exchange data.
-      </p>
+      <p className="lhm-disclaimer">{t("heatmap.disclaimer")}</p>
 
       {/* ── Analysis ────────────────────────────────────────────────────────── */}
       {analysis && !loading && (<>
@@ -910,21 +910,21 @@ export const LiquidationHeatmap: React.FC<Props> = ({
                   <rect x="9" y="8" width="4" height="14" rx="1"/>
                   <rect x="16" y="4" width="4" height="18" rx="1"/>
                 </svg>
-                Liquidation Cluster Analysis
+                {t("heatmap.clusterAnalysis")}
               </span>
               <span className="lhm-analysis-badge">
-                {range.label} view · current ${analysis.currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                {t("heatmap.rangeView", { range: range.label, price: analysis.currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 }) })}
               </span>
             </div>
 
             <div className="lhm-analysis-grid">
               <div className="lhm-analysis-col">
                 <div className="lhm-col-header lhm-col-header--long">
-                  <span className="lhm-col-dot lhm-col-dot--long" /> Long Liq Zones
-                  <span className="lhm-col-sub">↓ below price</span>
+                  <span className="lhm-col-dot lhm-col-dot--long" /> {t("heatmap.longZones")}
+                  <span className="lhm-col-sub">{t("heatmap.longBelow")}</span>
                 </div>
                 {analysis.longClusters.length === 0
-                  ? <div className="lhm-no-cluster">No significant clusters</div>
+                  ? <div className="lhm-no-cluster">{t("heatmap.noClusters")}</div>
                   : analysis.longClusters.map((c, i) => (
                     <div key={i} className="lhm-cluster-row">
                       <div className="lhm-cluster-price">
@@ -946,11 +946,11 @@ export const LiquidationHeatmap: React.FC<Props> = ({
 
               <div className="lhm-analysis-col">
                 <div className="lhm-col-header lhm-col-header--short">
-                  <span className="lhm-col-dot lhm-col-dot--short" /> Short Liq Zones
-                  <span className="lhm-col-sub">↑ above price</span>
+                  <span className="lhm-col-dot lhm-col-dot--short" /> {t("heatmap.shortZones")}
+                  <span className="lhm-col-sub">{t("heatmap.shortAbove")}</span>
                 </div>
                 {analysis.shortClusters.length === 0
-                  ? <div className="lhm-no-cluster">No significant clusters</div>
+                  ? <div className="lhm-no-cluster">{t("heatmap.noClusters")}</div>
                   : analysis.shortClusters.map((c, i) => (
                     <div key={i} className="lhm-cluster-row">
                       <div className="lhm-cluster-price">
@@ -987,8 +987,8 @@ export const LiquidationHeatmap: React.FC<Props> = ({
               <div className="lhm-ai-header">
                 <div className="lhm-ai-title">
                   <span className="lhm-ai-star">✦</span>
-                  AI Analysis
-                  <span className="lhm-ai-badge">✦ AI Powered</span>
+                  {t("heatmap.aiAnalysis")}
+                  <span className="lhm-ai-badge">{t("heatmap.aiPowered")}</span>
                 </div>
                 {!aiLoading && (
                   <button className="lhm-ai-refresh-btn" onClick={() => fetchAIAnalysis()} title="Regenerate">↺</button>
@@ -998,7 +998,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
               {aiLoading && (
                 <div className="lhm-ai-loading">
                   <span className="lhm-ai-spinner" />
-                  Analyzing liquidation clusters…
+                  {t("heatmap.aiAnalyzing")}
                 </div>
               )}
               {aiError && !aiLoading && <div className="lhm-ai-error">{aiError}</div>}
@@ -1015,7 +1015,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                           <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
                         </svg>
-                        Our Take
+                        {t("heatmap.aiOurTake")}
                         {aiResult.ourTakeAction && (
                           <span className={`lhm-ai-action-badge lhm-ai-action-badge--${aiResult.ourTakeAction}`}>
                             {aiResult.ourTakeAction.toUpperCase()}

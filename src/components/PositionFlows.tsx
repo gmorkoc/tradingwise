@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   getPositionData, getPriceCandles,
   LSRatioPoint, CoinSymbol, CandleDataPoint,
@@ -13,29 +14,31 @@ const W = 900;
 
 type Signal = "bullish" | "bearish" | "neutral";
 interface PFSummary { signal: Signal; text: string }
+type TFn = ReturnType<typeof useTranslation>["t"];
 
 function buildPriceSummary(
   candles: CandleDataPoint[],
   supports: number[],
   resistances: number[],
+  t: TFn,
 ): PFSummary {
   const recent = candles.slice(-90);
   const cur    = recent[recent.length - 1].close;
   const hi     = Math.max(...recent.map(c => c.high));
 
-  const slice10   = recent.slice(-10);
-  const trendUp   = slice10[slice10.length - 1].close > slice10[0].close;
-  const trendPct  = Math.abs((slice10[slice10.length - 1].close / slice10[0].close - 1) * 100).toFixed(1);
+  const slice10  = recent.slice(-10);
+  const trendUp  = slice10[slice10.length - 1].close > slice10[0].close;
+  const trendPct = Math.abs((slice10[slice10.length - 1].close / slice10[0].close - 1) * 100).toFixed(1);
   const trendText = trendUp
-    ? `Short-term momentum is bullish, up ${trendPct}% over the last 10 candles.`
-    : `Short-term momentum is bearish, down ${trendPct}% over the last 10 candles.`;
+    ? t("positions.summary.price.trendUp",   { pct: trendPct })
+    : t("positions.summary.price.trendDown", { pct: trendPct });
 
   const s = supports[0];
   const r = resistances[0];
   const levelText = s && r
-    ? `Consolidating between support ${Math.round(s).toLocaleString()} and resistance ${Math.round(r).toLocaleString()}.`
-    : s  ? `Holding above key support at ${Math.round(s).toLocaleString()}.`
-    : r  ? `Approaching resistance at ${Math.round(r).toLocaleString()}.`
+    ? t("positions.summary.price.consolidating", { support: Math.round(s).toLocaleString(), resistance: Math.round(r).toLocaleString() })
+    : s ? t("positions.summary.price.aboveSupport",    { support: Math.round(s).toLocaleString() })
+    : r ? t("positions.summary.price.belowResistance", { resistance: Math.round(r).toLocaleString() })
     : "";
 
   const dropPct = ((cur / hi - 1) * 100).toFixed(1);
@@ -45,96 +48,53 @@ function buildPriceSummary(
   };
 }
 
-function buildRetailSummary(lastNet: number, data: number[]): PFSummary {
+function buildRetailSummary(lastNet: number, data: number[], t: TFn): PFSummary {
   const recent = data.slice(-20);
   const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
-  const abs    = Math.abs(lastNet).toFixed(0);
+  const bias   = Math.abs(lastNet).toFixed(0);
 
-  if (lastNet > 150) return {
-    signal: "bearish",
-    text: `Retail is heavily net long (${abs} net bias). Extreme retail longs historically precede pullbacks — contrarian bearish signal. Exposure is ${trend}.`,
-  };
-  if (lastNet > 30) return {
-    signal: "neutral",
-    text: `Retail holds a moderate net long position (${abs} net bias). Mild bullish retail sentiment trending ${trend}.`,
-  };
-  if (lastNet > -30) return {
-    signal: "neutral",
-    text: `Retail positioning is broadly neutral (${abs} net bias). No strong directional conviction from the crowd.`,
-  };
-  if (lastNet > -150) return {
-    signal: "bullish",
-    text: `Retail is moderately net short (${abs} net bias). A mild contrarian bullish setup — positioning is ${trend}.`,
-  };
-  return {
-    signal: "bullish",
-    text: `Retail is heavily net short (${abs} net bias). Strong contrarian bullish setup — retail capitulation typically precedes recoveries.`,
-  };
+  if (lastNet > 150)  return { signal: "bearish", text: t("positions.summary.retail.heavilyLong",  { bias, trend }) };
+  if (lastNet > 30)   return { signal: "neutral",  text: t("positions.summary.retail.moderateLong", { bias, trend }) };
+  if (lastNet > -30)  return { signal: "neutral",  text: t("positions.summary.retail.neutral",      { bias }) };
+  if (lastNet > -150) return { signal: "bullish",  text: t("positions.summary.retail.moderateShort",{ bias, trend }) };
+  return { signal: "bullish", text: t("positions.summary.retail.heavilyShort", { bias }) };
 }
 
-function buildSentimentSummary(lastPct: number, data: number[]): PFSummary {
+function buildSentimentSummary(lastPct: number, data: number[], t: TFn): PFSummary {
   const recent = data.slice(-20);
   const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "declining";
   const pct    = lastPct.toFixed(1);
 
-  if (lastPct > 65) return {
-    signal: "bullish",
-    text: `Smart money is strongly bullish at ${pct}% long — well above the 50% neutral line. Institutional bias clearly long and ${trend}.`,
-  };
-  if (lastPct > 55) return {
-    signal: "bullish",
-    text: `Smart money leans bullish at ${pct}% long. Mild institutional preference for the long side, sentiment ${trend}.`,
-  };
-  if (lastPct > 45) return {
-    signal: "neutral",
-    text: `Smart money is near-neutral at ${pct}% long. No strong directional conviction — institutional positioning is balanced, trending ${trend}.`,
-  };
-  if (lastPct > 35) return {
-    signal: "bearish",
-    text: `Smart money has a mild bearish lean at ${pct}% long. Institutions slightly net short, sentiment is ${trend}.`,
-  };
-  return {
-    signal: "bearish",
-    text: `Smart money is predominantly bearish at ${pct}% long. Institutional traders clearly net short — significant downside bias.`,
-  };
+  if (lastPct > 65) return { signal: "bullish", text: t("positions.summary.sentiment.stronglyBullish", { pct, trend }) };
+  if (lastPct > 55) return { signal: "bullish", text: t("positions.summary.sentiment.mildlyBullish",   { pct, trend }) };
+  if (lastPct > 45) return { signal: "neutral", text: t("positions.summary.sentiment.neutral",         { pct, trend }) };
+  if (lastPct > 35) return { signal: "bearish", text: t("positions.summary.sentiment.mildlyBearish",   { pct, trend }) };
+  return { signal: "bearish", text: t("positions.summary.sentiment.stronglyBearish", { pct }) };
 }
 
 function buildSmartNetSummary(
   lastSmartNet: number,
   lastRetailNet: number,
   data: number[],
+  t: TFn,
 ): PFSummary {
   const recent  = data.slice(-20);
   const trend   = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
   const aligned = (lastSmartNet > 0) === (lastRetailNet > 0);
-  const abs     = Math.abs(lastSmartNet).toFixed(0);
-  const dir     = lastSmartNet > 0 ? "net long" : "net short";
+  const bias    = Math.abs(lastSmartNet).toFixed(0);
+  const dir     = t(lastSmartNet > 0 ? "positions.summary.dir.netLong" : "positions.summary.dir.netShort");
 
-  if (aligned && lastSmartNet > 100) return {
-    signal: "bullish",
-    text: `Smart money is firmly ${dir} (${abs}), aligned with retail. Broad market consensus bullish — position is ${trend}.`,
-  };
-  if (aligned && lastSmartNet < -100) return {
-    signal: "bearish",
-    text: `Smart money is firmly ${dir} (${abs}), aligned with retail short. Broad consensus bearish — caution warranted. Trend is ${trend}.`,
-  };
-  if (!aligned && lastSmartNet > 0) return {
-    signal: "bullish",
-    text: `Divergence: smart money is ${dir} (${abs}) while retail leans opposite. Institutional positioning typically leads price — ${trend} trend.`,
-  };
-  if (!aligned && lastSmartNet < 0) return {
-    signal: "bearish",
-    text: `Divergence: retail is long while smart money is ${dir} (${abs}). Smart money fading retail euphoria — watch for a reversal. Trend is ${trend}.`,
-  };
-  return {
-    signal: "neutral",
-    text: `Smart money net position is close to neutral (${abs} bias). No strong institutional directional bet, trending ${trend}.`,
-  };
+  if (aligned && lastSmartNet > 100)  return { signal: "bullish", text: t("positions.summary.smartNet.alignedBullish",       { dir, bias, trend }) };
+  if (aligned && lastSmartNet < -100) return { signal: "bearish", text: t("positions.summary.smartNet.alignedBearish",       { dir, bias, trend }) };
+  if (!aligned && lastSmartNet > 0)   return { signal: "bullish", text: t("positions.summary.smartNet.divergingSmartBullish",{ dir, bias, trend }) };
+  if (!aligned && lastSmartNet < 0)   return { signal: "bearish", text: t("positions.summary.smartNet.divergingSmartBearish",{ dir, bias, trend }) };
+  return { signal: "neutral", text: t("positions.summary.smartNet.neutral", { bias, trend }) };
 }
 
 // ── Summary footer ────────────────────────────────────────────────────────────
 
 function SummaryBar({ signal, text }: PFSummary) {
+  const { t } = useTranslation();
   return (
     <div className="pf-summary">
       <span className={`pf-summary-badge pf-summary-badge--${signal}`}>
@@ -143,7 +103,7 @@ function SummaryBar({ signal, text }: PFSummary) {
       <span className="pf-summary-text">{text}</span>
       <span className="pf-summary-live">
         <span className="pf-summary-live-dot" />
-        Updated hourly
+        {t("positions.updatedHourly")}
       </span>
     </div>
   );
@@ -198,6 +158,7 @@ function computeSR(candles: CandleDataPoint[]): { supports: number[]; resistance
 }
 
 function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: string }) {
+  const { t } = useTranslation();
   if (candles.length < 10) return null;
   // compute summary early so we can pass it down
 
@@ -217,7 +178,7 @@ function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: strin
   const curY = toY(cur);
 
   const { supports, resistances } = computeSR(recent);
-  const summary = buildPriceSummary(recent, supports, resistances);
+  const summary = buildPriceSummary(recent, supports, resistances, t);
 
   // Only show S&R within the visible range
   const visS = supports.filter(v => v > yMin && v < yMax);
@@ -506,6 +467,7 @@ interface Props {
 }
 
 export function PositionFlows({ coin = "BTC" }: Props) {
+  const { t } = useTranslation();
   const [posData,  setPosData]  = useState<{ retail: LSRatioPoint[]; smartMoney: LSRatioPoint[] } | null>(null);
   const [candles,  setCandles]  = useState<CandleDataPoint[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -545,7 +507,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
   if (loading) {
     return (
       <div className="pf-wrap">
-        <div className="pf-state"><div className="pf-spinner" />Loading position data…</div>
+        <div className="pf-state"><div className="pf-spinner" />{t("positions.loading")}</div>
       </div>
     );
   }
@@ -556,7 +518,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
     return (
       <div className="pf-wrap">
         <div className="pf-state pf-state--error">
-          {error || "No position data available for this pair."}
+          {error || t("positions.error")}
           {error && <button className="pf-retry" onClick={() => setRetryKey(k => k + 1)}>Retry</button>}
         </div>
       </div>
@@ -573,17 +535,17 @@ export function PositionFlows({ coin = "BTC" }: Props) {
   const lastSmartNet  = smartNet[smartNet.length - 1] ?? 0;
   const lastSentiment = smartSentiment[smartSentiment.length - 1] ?? 0;
 
-  const retailSummary    = buildRetailSummary(lastRetailNet, retailNet);
-  const sentimentSummary = buildSentimentSummary(lastSentiment, smartSentiment);
-  const smartNetSummary  = buildSmartNetSummary(lastSmartNet, lastRetailNet, smartNet);
+  const retailSummary    = buildRetailSummary(lastRetailNet, retailNet, t);
+  const sentimentSummary = buildSentimentSummary(lastSentiment, smartSentiment, t);
+  const smartNetSummary  = buildSmartNetSummary(lastSmartNet, lastRetailNet, smartNet, t);
 
   return (
     <div className="pf-wrap">
       <div className="pf-header">
         <div>
-          <h2 className="pf-title">Trader Positioning</h2>
+          <h2 className="pf-title">{t("positions.title")}</h2>
           <div className="pf-subtitle">
-            Retail vs Smart Money · 4h · Binance{retail.length ? ` · ${retail.length} candles` : ""}
+            {t("positions.sub", { candles: retail.length ? ` · ${retail.length} candles` : "" })}
           </div>
         </div>
         <div className="pf-coin-badge">{String(coin).toUpperCase()}</div>
@@ -591,15 +553,15 @@ export function PositionFlows({ coin = "BTC" }: Props) {
 
       <PriceChart candles={candles} coin={String(coin)} />
 
-      <Panel dot="red" label="Retail NET OPEN POSITION" value={lastRetailNet} summary={retailSummary}>
+      <Panel dot="red" label={t("positions.panels.retailNet")} value={lastRetailNet} summary={retailSummary}>
         <NetHistogram data={retailNet} color="red-green" />
       </Panel>
 
-      <Panel dot="pink" label="Smart Money SENTIMENT" value={lastSentiment} unit="%" summary={sentimentSummary}>
+      <Panel dot="pink" label={t("positions.panels.smartSentiment")} value={lastSentiment} unit="%" summary={sentimentSummary}>
         <SentimentArea data={smartSentiment} />
       </Panel>
 
-      <Panel dot="green" label="Smart Money NET OPEN POSITION" value={lastSmartNet} summary={smartNetSummary}>
+      <Panel dot="green" label={t("positions.panels.smartNet")} value={lastSmartNet} summary={smartNetSummary}>
         <NetHistogram data={smartNet} color="pink-red" />
       </Panel>
     </div>

@@ -166,13 +166,25 @@
     "high": "Alto",
     "low": "Basso",
     "loading": "Caricamento mappa di calore…",
-    "disclaimer": "Simulato dai dati OHLC usando i livelli di leva comuni. Non sono dati reali di open interest dell'exchange.",
-    "clusterAnalysis": "📊 Analisi Cluster di Liquidazione",
+    "loadError": "Caricamento fallito",
+    "noData": "Nessun dato",
+    "disclaimer": "Le zone di liquidazione sono stimate dall'azione del prezzo e dalla distribuzione della leva. Non sono dati reali dell'exchange.",
+    "clusterAnalysis": "Analisi Cluster di Liquidazione",
+    "rangeView": "Vista {{range}} · attuale ${{price}}",
     "longZones": "Zone Liq. Long",
     "longBelow": "↓ sotto il prezzo",
     "shortZones": "Zone Liq. Short",
     "shortAbove": "↑ sopra il prezzo",
-    "noClusters": "Nessun cluster significativo nell'intervallo"
+    "noClusters": "Nessun cluster significativo",
+    "leverageLabel": "Leva",
+    "seriesLiqLev": "Leva di Liquidazione",
+    "seriesSupercharts": "Supercharts",
+    "tooltipPrice": "Prezzo",
+    "tooltipEstLiq": "Liq. stimate",
+    "aiAnalysis": "Analisi IA",
+    "aiPowered": "✦ Powered da IA",
+    "aiAnalyzing": "Analisi dei cluster di liquidazione…",
+    "aiOurTake": "Il nostro parere"
   },
   "leverage": {
     "title": "⚡ Suggerimento Ingresso con Leva",
@@ -441,6 +453,9 @@
       "trust": "IA illimitata · Annulla quando vuoi · Include tutto di Pro"
     },
     "blurGate": {
+      "planLabel": "Elite",
+      "planPrice": "$29.99",
+      "perMonth": "/mese",
       "features": ["Tutto in Pro — illimitato", "HTF Multi-Timeframe IA", "Coinbase Premium IA"],
       "signInBtn": "Accedi per aggiornare",
       "upgradeBtn": "Aggiorna a Elite",
@@ -511,13 +526,40 @@
   },
   "landing": {
     "hero": {
+      "badge": "✦ Analisi Cripto con IA",
+      "titleLine1": "Fai trading più intelligente con",
+      "titleGradient": "intelligenza di mercato IA",
+      "desc": "Analisi Bitcoin e cripto in tempo reale powered by GPT-4o. Mappe di liquidazione, segnali on-chain, scenari di previsione prezzo e analisi Gann — tutto in un dashboard.",
+      "startFree": "Inizia gratis ✦",
       "headline": "Leggi il Mercato come un'Istituzione",
       "sub": "Analisi basata sull'IA su azione del prezzo, dati on-chain, liquidazioni e sentiment — tutto in un dashboard.",
       "cta": "Inizia Gratis — Nessuna Carta",
       "trust": "Scelto da oltre 2.000 trader di criptovalute · Piano gratuito disponibile"
     },
+    "sidekick": {
+      "title1": "Chatta con la nostra IA,",
+      "title2": "il tuo assistente di trading",
+      "desc": "Progettata appositamente per i mercati cripto — non un chatbot generico. Chiedi della struttura di mercato, ottieni livelli di stop-loss, decodifica i tassi di finanziamento e ricevi setup operativi in tempo reale.",
+      "bullets": [
+        "Analisi istantanea di grafici e struttura",
+        "Calcoli di stop-loss, target e rapporto R",
+        "Contesto live di tassi di finanziamento e liquidazioni",
+        "Analisi degli scenari rialzisti / ribassisti"
+      ],
+      "cta": "Prova la Chat IA →"
+    },
     "features": {
+      "label": "Cosa c'è dentro",
+      "sectionTitle": "Tutto ciò di cui hai bisogno per fare trading con vantaggio",
       "title": "Tutto ciò di cui hai bisogno per fare trading più intelligente",
+      "list": [
+        { "icon": "📊", "title": "Grafici Prezzo in Tempo Reale","desc": "Grafici a candele in tempo reale con EMA, Bande di Bollinger, RSI e MACD. Powered by TradingView Lightweight Charts." },
+        { "icon": "🤖", "title": "Intelligence di Mercato IA",    "desc": "GPT-4o analizza tassi di finanziamento, liquidazioni, open interest e dati on-chain per fornire una tesi di mercato completa in secondi." },
+        { "icon": "🎯", "title": "Scenari di Previsione Prezzo",  "desc": "Proiezioni rialziste, base e ribassiste con punteggi di probabilità e percorsi di prezzo disegnati direttamente sul grafico." },
+        { "icon": "🔥", "title": "Mappa di Calore Liquidazioni",  "desc": "Scopri dove si concentrano miliardi in posizioni a leva. Conosci i livelli di prezzo che attraggono più liquidità." },
+        { "icon": "⛓",  "title": "Analisi On-Chain con IA",      "desc": "Hash rate, ricavi dei miner, volume delle transazioni — interpretati dall'IA in segnali di mercato azionabili." },
+        { "icon": "📐", "title": "Analisi Gann",                  "desc": "Teoria geometrica avanzata di prezzo e tempo. Quadrato di 9, angoli di Gann e previsioni di ciclo usate dai trader professionisti." }
+      ],
       "items": [
         { "icon": "✦",  "title": "Intelligence di Mercato IA",   "desc": "GPT-4o legge l'azione del prezzo, i tassi di finanziamento, l'open interest e i dati on-chain — poi ti fornisce un bias in linguaggio semplice con livello di fiducia." },
         { "icon": "📈", "title": "Grafico Previsione Prezzo",   "desc": "Scenari Bull, Base e Bear generati dall'IA proiettati in avanti con punteggi di probabilità, aggiornati ogni intervallo." },
@@ -527,10 +569,50 @@
         { "icon": "🧠", "title": "Posizionamento Trader",      "desc": "Posizioni nette retail vs smart money, divergenza del sentiment e riepiloghi bias generati dall'IA — aggiornati ogni 4 ore." }
       ]
     },
+    "aiSection": {
+      "label": "Motore IA",
+      "title": "GPT-4o legge il mercato al posto tuo",
+      "desc": "La nostra IA assorbe tassi di finanziamento live, livelli di liquidazione, RSI, MACD, rapporti long/short e dati paura & avidità — poi li sintetizza in una chiara tesi di mercato con valutazione di confidenza, proiezioni di scenario e una raccomandazione operativa.",
+      "bullets": [
+        "Frecce di scenario rialzista / base / ribassista sul grafico",
+        "Livelli di supporto e resistenza dall'IA",
+        "Analisi di chi compra e chi vende",
+        "Fattori di rischio chiave che potrebbero invertire la tesi"
+      ],
+      "tryFree": "Provalo gratis →"
+    },
+    "heatmap": {
+      "label": "Mappa di Calore Liquidazioni",
+      "title": "Scopri dove si nasconde la leva",
+      "desc": "Visualizza miliardi in cluster di liquidazione. Le zone luminose sono calamite di prezzo verso cui il mercato gravita."
+    },
+    "sentiment": {
+      "label": "Sentiment di Mercato",
+      "title": "Paura & Avidità + On-Chain",
+      "desc": "Indice di sentiment in tempo reale combinato con hash rate, ricavi dei miner e volume on-chain — l'IA interpreta tutto."
+    },
+    "pricing": {
+      "label": "Prezzi",
+      "sectionTitle": "Inizia gratis, aggiorna quando sei pronto",
+      "popularTag": "Più Popolare",
+      "plans": [
+        { "label": "Free",  "price": "$0",     "per": "",     "cta": "Inizia Gratis",      "features": ["Grafici live e order book", "Lista di osservazione", "Indicatore paura & avidità", "Dashboard flussi ETF"] },
+        { "label": "Pro",   "price": "$10.99", "per": "/mese","cta": "Inizia Pro",          "features": ["Tutto di Free", "HTF Multi-Timeframe IA", "Intelligence di Mercato IA", "Analisi On-Chain IA", "Previsione prezzo con scenari", "Mappa calore liquidazioni IA", "35 richieste IA / settimana"] },
+        { "label": "Elite", "price": "$29.99", "per": "/mese","cta": "Vai ad Elite",        "features": ["Tutto di Pro — illimitato", "Analisi Gann IA", "Coinbase Premium IA", "Accesso anticipato alle novità"] }
+      ],
+      "title": "Prezzi semplici e trasparenti",
+      "sub": "Inizia gratis. Aggiorna quando ne hai bisogno."
+    },
     "plans": {
       "title": "Prezzi semplici e trasparenti",
       "sub": "Inizia gratis. Aggiorna quando ne hai bisogno."
     },
+    "cta": {
+      "title": "Pronto a fare trading con l'IA?",
+      "sub": "Unisciti ora — gratis per sempre, nessuna carta di credito richiesta.",
+      "btn": "Crea account gratuito →"
+    },
+    "footer": "© 2025 TradingWise.ai · Costruito per trader seri",
     "signin": "Accedi",
     "getStarted": "Inizia Gratis",
     "noCard": "Nessuna carta richiesta"
@@ -731,10 +813,18 @@
     }
   },
   "etf": {
-    "title": "Flusso Netto Giornaliero — 30 Giorni (USD)",
+    "pageTitle": "Tracker ETF Bitcoin Spot",
+    "chartTitle": "Flusso Netto Giornaliero — 30 Giorni (USD)",
+    "source": "tramite CoinGlass",
     "loading": "Caricamento dati ETF…",
     "error": "Nessun dato disponibile.",
+    "retry": "Riprova",
+    "clearBtn": "Cancella",
     "todayBtn": "Oggi",
+    "netFlow": "Flusso Netto",
+    "netFlowDate": "Flusso Netto · {{date}}",
+    "totalAum": "AUM Totale",
+    "dailyVolume": "Volume Giornaliero",
     "table": {
       "fund": "Fondo",
       "dailyFlow": "Flusso Giornaliero",
@@ -782,12 +872,52 @@
     "analyseBtn": "✦ Analizza con IA",
     "analysing": "Analisi in corso…",
     "refresh": "Aggiorna",
-    "tooltip": "Clicca per vedere le previsioni Gann"
+    "tooltip": "Clicca per vedere le previsioni Gann",
+    "title": "Analisi Gann",
+    "sub": "Quadrato di 9 · Cicli Temporali · Angoli Gann · Cronologia Pivot",
+    "sq9Title": "Quadrato di 9",
+    "sq9Sub": "Livelli di prezzo chiave a 90° di rotazione dal prezzo attuale",
+    "currentPrice": "Prezzo Attuale",
+    "pivotTitle": "Cronologia Pivot",
+    "pivotSub": "Tocca qualsiasi giorno per vedere le previsioni di prezzo degli angoli Gann",
+    "prev": "← Prec",
+    "next": "Succ →",
+    "today": "Oggi",
+    "cycleConfluence": "⚡ Confluenza Cicli",
+    "angleProjections": "📐 Proiezioni Prezzo Angoli Gann",
+    "fromHigh": "▼ Dal Massimo",
+    "fromLow": "▲ Dal Minimo",
+    "highCycle": "■ Ciclo massimo",
+    "lowCycle": "■ Ciclo minimo",
+    "bothCycles": "■ Entrambi",
+    "aiTitle": "Analisi Gann IA",
+    "aiSub": "GPT-4o analizza tutti i dati Gann e fornisce una previsione strutturata",
+    "keyLevels": "Livelli Chiave da Monitorare",
+    "priceTarget": "Obiettivo di Prezzo",
+    "nextCycleAlert": "Avviso Ciclo Successivo",
+    "support": "S",
+    "resistance": "R",
+    "sentimentBullish": "▲ Rialzista",
+    "sentimentBearish": "▼ Ribassista",
+    "sentimentNeutral": "● Neutro",
+    "confidence": "confidenza {{level}}",
+    "selToday": "Oggi",
+    "selFuture": "Tra {{n}} giorno",
+    "selFuturePlural": "Tra {{n}} giorni",
+    "selPast": "{{n}} giorno fa",
+    "selPastPlural": "{{n}} giorni fa"
   },
   "watchlist": {
+    "title": "Lista Osservazione",
+    "updated": "Aggiornato ogni minuto",
+    "addCoin": "+ Aggiungi Moneta",
     "searchPlaceholder": "Cerca per nome o simbolo…",
     "loading": "Caricamento dati di mercato…",
-    "noResults": "Nessun risultato"
+    "noResults": "Nessun risultato",
+    "emptyText": "Nessuna moneta nella tua lista",
+    "emptyHint": "Clicca \"+ Aggiungi Moneta\" per iniziare a seguire",
+    "removeTitle": "Rimuovi dalla lista",
+    "vol": "Vol"
   },
   "alerts": {
     "title": "Costruttore Avvisi",
@@ -816,15 +946,15 @@
     }
   },
   "nav": {
-    "sections": {
-      "ai": "Previsione IA",
-      "feargreed": "Paura e Avidità",
-      "market": "Dati di Mercato",
-      "onchain": "On-Chain",
-      "chart": "Grafico Prezzo",
-      "heatmap": "Liquidazioni",
-      "alerts": "Avvisi",
-      "watchlist": "Lista Osservazione"
-    }
+    "ai": "Previsione IA",
+    "feargreed": "Paura e Avidità",
+    "market": "Dati di Mercato",
+    "onchain": "On-Chain",
+    "chart": "Grafico Prezzo",
+    "heatmap": "Liquidazioni",
+    "alerts": "Avvisi",
+    "watchlist": "Lista Osservazione",
+    "gann": "Analisi Gann",
+    "live": "LIVE"
   }
 }
