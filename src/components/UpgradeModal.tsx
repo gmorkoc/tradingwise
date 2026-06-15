@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
   redirectToCheckout,
@@ -32,48 +33,23 @@ interface ConfirmState {
 const PLANS = [
   {
     id:    "free",
-    label: "Free",
     price: "$0",
     color: "#94a3b8",
-    features: [
-      "Live price charts",
-      "Order book",
-      "Watchlist",
-      "Fear & Greed gauge",
-      "Flash news banner",
-    ],
   },
   {
     id:      "pro",
-    label:   "Pro",
     price:   "$10.99",
     per:     "/mo",
     color:   "#38bdf8",
     popular: true,
     priceId: () => PRICE_IDS.pro,
-    features: [
-      "Everything in Free",
-      "HTF Multi-Timeframe AI",
-      "AI Market Intelligence",
-      "On-Chain AI Analysis",
-      "Price Prediction Chart",
-      "Liquidation Heatmap AI",
-      "35 AI requests / week",
-    ],
   },
   {
     id:    "elite",
-    label: "Elite",
     price: "$29.99",
     per:   "/mo",
     color: "#a78bfa",
     priceId: () => PRICE_IDS.elite,
-    features: [
-      "Everything in Pro — unlimited",
-      "Gann Analysis AI",
-      "Coinbase Premium AI",
-      "Early access to new features",
-    ],
   },
 ];
 
@@ -106,6 +82,7 @@ function formatDate(iso: string) {
 }
 
 export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
+  const { t } = useTranslation();
   const { user, tier } = useAuth();
   const [loading,    setLoading]    = useState<string | null>(null);
   const [error,      setError]      = useState("");
@@ -131,6 +108,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     if (!user) { onClose(); onOpenAuth(); return; }
     setError("");
 
+    const planLabel  = t(`upgradeModal.plans.${plan.id}.label`);
     const planRank   = TIER_RANK[plan.id as keyof typeof TIER_RANK] ?? 0;
     const kind: FlowKind =
       plan.id === "free"       ? "cancel"
@@ -140,7 +118,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     // Cancel flow — no preview needed, show static confirmation
     if (kind === "cancel") {
       setConfirm({
-        kind, planId: "free", planLabel: "Free", color: "#94a3b8",
+        kind, planId: "free", planLabel: t("upgradeModal.plans.free.label"), color: "#94a3b8",
         lostFeatures: lostFeaturesFor(tier, "free"),
       });
       return;
@@ -153,7 +131,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     if (!isPaid) {
       setLoading(plan.id);
       try { await redirectToCheckout(priceId); }
-      catch (e: any) { setError(e.message ?? "Something went wrong"); setLoading(null); }
+      catch (e: any) { setError(e.message ?? t("upgradeModal.error")); setLoading(null); }
       return;
     }
 
@@ -162,12 +140,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     try {
       const { amountDue, currency } = await previewUpgrade(priceId);
       setConfirm({
-        kind, planId: plan.id, planLabel: plan.label, priceId, color: plan.color,
+        kind, planId: plan.id, planLabel, priceId, color: plan.color,
         amountDue, currency,
         lostFeatures: lostFeaturesFor(tier, plan.id),
       });
     } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
+      setError(e.message ?? t("upgradeModal.error"));
     } finally {
       setLoading(null);
     }
@@ -182,25 +160,28 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       if (confirm.kind === "cancel") {
         const { accessUntil } = await cancelSubscription();
         setDone({
-          message: "Plan cancelled",
-          sub:     `You'll keep your ${tier === "elite" ? "Elite" : "Pro"} access until ${formatDate(accessUntil)}, then switch to Free.`,
+          message: t("upgradeModal.success.cancelMessage"),
+          sub:     t("upgradeModal.success.cancelSub", {
+            plan: tier === "elite" ? t("upgradeModal.plans.elite.label") : t("upgradeModal.plans.pro.label"),
+            date: formatDate(accessUntil),
+          }),
         });
       } else {
         const { isUpgrade } = await upgradePlan(confirm.priceId!);
         if (isUpgrade) {
           setDone({
-            message: `Welcome to ${confirm.planLabel}!`,
-            sub:     "Your new features are active immediately. The prorated charge has been applied to your card.",
+            message: t("upgradeModal.success.upgradeMessage", { plan: confirm.planLabel }),
+            sub:     t("upgradeModal.success.upgradeSub"),
           });
         } else {
           setDone({
-            message: `Switched to ${confirm.planLabel}`,
-            sub:     "Your plan has been updated. A prorated credit will be applied to your next bill.",
+            message: t("upgradeModal.success.downgradeMessage", { plan: confirm.planLabel }),
+            sub:     t("upgradeModal.success.downgradeSub"),
           });
         }
       }
     } catch (e: any) {
-      setError(e.message ?? "Something went wrong");
+      setError(e.message ?? t("upgradeModal.error"));
       setConfirming(false);
     }
   };
@@ -209,7 +190,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     setLoading("portal");
     setError("");
     try { await redirectToBillingPortal(); }
-    catch (e: any) { setError(e.message ?? "Something went wrong"); setLoading(null); }
+    catch (e: any) { setError(e.message ?? t("upgradeModal.error")); setLoading(null); }
   };
 
   const backdropClick = (e: React.MouseEvent) => {
@@ -239,7 +220,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             <h2 className="upgrade-title">{done.message}</h2>
             <p className="upgrade-sub">{done.sub}</p>
             <button className="upgrade-plan-cta" style={{ background: "#4ade80", maxWidth: 260, marginTop: 16 }} onClick={onClose}>
-              Done
+              {t("upgradeModal.success.done")}
             </button>
           </div>
         ) : confirm ? (
@@ -253,42 +234,38 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             </div>
 
             <h2 className="upgrade-title">
-              {confirm.kind === "cancel"    ? `Cancel your ${tier === "elite" ? "Elite" : "Pro"} plan`
-               : confirm.kind === "upgrade" ? `Upgrade to ${confirm.planLabel}`
-               :                             `Switch to ${confirm.planLabel}`}
+              {confirm.kind === "cancel"
+                ? t("upgradeModal.confirm.cancelTitle", { plan: tier === "elite" ? t("upgradeModal.plans.elite.label") : t("upgradeModal.plans.pro.label") })
+                : confirm.kind === "upgrade"
+                ? t("upgradeModal.confirm.upgradeTitle", { plan: confirm.planLabel })
+                : t("upgradeModal.confirm.downgradeTitle", { plan: confirm.planLabel })}
             </h2>
 
             {/* What happens */}
             {confirm.kind === "cancel" && (
-              <>
-                <p className="upgrade-sub">
-                  Your subscription will be cancelled at the end of your current billing period.
-                  You'll keep all your current features until then — no partial refund is issued.
-                </p>
-              </>
+              <p className="upgrade-sub">{t("upgradeModal.confirm.cancelBody")}</p>
             )}
             {confirm.kind === "upgrade" && confirm.amountDue !== undefined && (
-              <p className="upgrade-sub">
-                You'll be charged{" "}
-                <strong>{formatAmount(confirm.amountDue, confirm.currency!)}</strong>{" "}
-                now — the prorated difference for the remaining days in your billing cycle.
-                Your new features are available immediately.
-              </p>
+              <p className="upgrade-sub"
+                dangerouslySetInnerHTML={{ __html: t("upgradeModal.confirm.upgradeBody", {
+                  amount: `<strong>${formatAmount(confirm.amountDue, confirm.currency!)}</strong>`,
+                }) }}
+              />
             )}
             {confirm.kind === "downgrade" && (
-              <p className="upgrade-sub">
-                {confirm.amountDue && confirm.amountDue > 0
-                  ? <>A prorated credit of <strong>{formatAmount(confirm.amountDue, confirm.currency!)}</strong> will be applied to your next bill.</>
-                  : <>A prorated credit will be applied to your next bill.</>
-                }{" "}
-                Your plan changes immediately.
-              </p>
+              <p className="upgrade-sub"
+                dangerouslySetInnerHTML={{ __html:
+                  confirm.amountDue && confirm.amountDue > 0
+                    ? t("upgradeModal.confirm.downgradeBodyCredit", { amount: `<strong>${formatAmount(confirm.amountDue, confirm.currency!)}</strong>` })
+                    : t("upgradeModal.confirm.downgradeBodyNoAmount")
+                }}
+              />
             )}
 
             {/* Features you'll lose */}
             {confirm.lostFeatures.length > 0 && (
               <div className="upgrade-lost-features">
-                <div className="upgrade-lost-label">You'll lose access to:</div>
+                <div className="upgrade-lost-label">{t("upgradeModal.confirm.lostFeaturesLabel")}</div>
                 <ul className="upgrade-lost-list">
                   {confirm.lostFeatures.map(f => (
                     <li key={f}><span className="upgrade-lost-x">✕</span>{f}</li>
@@ -309,15 +286,15 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 onClick={handleConfirm}
                 disabled={confirming}
               >
-                {confirming ? "Processing…"
-                  : confirm.kind === "cancel"    ? "Cancel plan"
-                  : confirm.kind === "downgrade" ? `Switch to ${confirm.planLabel}`
+                {confirming ? t("upgradeModal.confirm.processing")
+                  : confirm.kind === "cancel"    ? t("upgradeModal.cta.cancelPlan")
+                  : confirm.kind === "downgrade" ? t("upgradeModal.cta.switchTo", { plan: confirm.planLabel })
                   : confirm.amountDue !== undefined
-                    ? `Pay ${formatAmount(confirm.amountDue, confirm.currency!)} & Upgrade`
-                    : `Upgrade to ${confirm.planLabel}`}
+                    ? t("upgradeModal.confirm.payAndUpgrade", { amount: formatAmount(confirm.amountDue, confirm.currency!) })
+                    : t("upgradeModal.cta.upgradeTo", { plan: confirm.planLabel })}
               </button>
               <button className="upgrade-manage-link" style={{ marginTop: 14 }} onClick={() => setConfirm(null)} disabled={confirming}>
-                Go back
+                {t("upgradeModal.confirm.goBack")}
               </button>
             </div>
 
@@ -328,27 +305,27 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
           <>
             <div className="upgrade-header">
               <h2 className="upgrade-title">
-                {isPaid ? "Manage your plan" : "Choose your plan"}
+                {isPaid ? t("upgradeModal.titleManage") : t("upgradeModal.titleChoose")}
               </h2>
               <p className="upgrade-sub">
-                {isPaid
-                  ? "Upgrades are charged immediately (prorated). Downgrades credit your next bill."
-                  : "Unlock AI-powered insights and advanced analytics"}
+                {isPaid ? t("upgradeModal.subManage") : t("upgradeModal.subChoose")}
               </p>
             </div>
 
             <div className="upgrade-plans">
               {PLANS.map(plan => {
+                const planLabel = t(`upgradeModal.plans.${plan.id}.label`);
+                const planFeatures = t(`upgradeModal.plans.${plan.id}.features`, { returnObjects: true }) as string[];
                 const isCurrent = tier === plan.id;
                 const planRank  = TIER_RANK[plan.id as keyof typeof TIER_RANK] ?? 0;
                 const isHigher  = planRank > currentRank;
                 const isLower   = planRank < currentRank;
 
                 let ctaLabel = "";
-                if      (!isCurrent && !isPaid && plan.priceId) ctaLabel = `Upgrade to ${plan.label}`;
-                else if (isHigher)  ctaLabel = `Upgrade to ${plan.label}`;
-                else if (isLower && plan.id !== "free") ctaLabel = `Switch to ${plan.label}`;
-                else if (isLower && plan.id === "free") ctaLabel = "Cancel plan";
+                if      (!isCurrent && !isPaid && plan.priceId) ctaLabel = t("upgradeModal.cta.upgradeTo", { plan: planLabel });
+                else if (isHigher)  ctaLabel = t("upgradeModal.cta.upgradeTo", { plan: planLabel });
+                else if (isLower && plan.id !== "free") ctaLabel = t("upgradeModal.cta.switchTo", { plan: planLabel });
+                else if (isLower && plan.id === "free") ctaLabel = t("upgradeModal.cta.cancelPlan");
 
                 return (
                   <div
@@ -356,16 +333,16 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                     className={`upgrade-plan${plan.popular ? " upgrade-plan--popular" : ""}${isCurrent ? " upgrade-plan--current" : ""}`}
                     style={{ "--plan-color": plan.color } as any}
                   >
-                    {plan.popular && !isCurrent && <div className="upgrade-popular-badge">Most Popular</div>}
-                    {isCurrent                   && <div className="upgrade-popular-badge upgrade-current-badge">Your Plan</div>}
+                    {plan.popular && !isCurrent && <div className="upgrade-popular-badge">{t("upgradeModal.badges.mostPopular")}</div>}
+                    {isCurrent                   && <div className="upgrade-popular-badge upgrade-current-badge">{t("upgradeModal.badges.yourPlan")}</div>}
 
-                    <div className="upgrade-plan-label" style={{ color: plan.color }}>{plan.label}</div>
+                    <div className="upgrade-plan-label" style={{ color: plan.color }}>{planLabel}</div>
                     <div className="upgrade-plan-price">
                       <span className="upgrade-plan-amount">{plan.price}</span>
-                      {plan.per && <span className="upgrade-plan-per">{plan.per}</span>}
+                      {plan.per && <span className="upgrade-plan-per">{t("upgradeModal.perMonth")}</span>}
                     </div>
                     <ul className="upgrade-plan-features">
-                      {plan.features.map(f => (
+                      {planFeatures.map(f => (
                         <li key={f}>
                           <span className="upgrade-plan-check" style={{ color: plan.color }}>✓</span>{f}
                         </li>
@@ -373,7 +350,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                     </ul>
 
                     {isCurrent ? (
-                      <div className="upgrade-plan-current">Current Plan</div>
+                      <div className="upgrade-plan-current">{t("upgradeModal.cta.currentPlan")}</div>
                     ) : ctaLabel ? (
                       <button
                         className={`upgrade-plan-cta${isLower ? " upgrade-plan-cta--down" : ""}`}
@@ -381,7 +358,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                         disabled={loading === plan.id}
                         onClick={() => handlePlanClick(plan)}
                       >
-                        {loading === plan.id ? "Loading…" : ctaLabel}
+                        {loading === plan.id ? t("upgradeModal.cta.loading") : ctaLabel}
                       </button>
                     ) : null}
                   </div>
@@ -393,9 +370,9 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
             <p className="upgrade-footer">
               {isPaid
-                ? <>Plan switches are prorated · <button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? "Loading…" : "Manage billing"}</button></>
-                : "Cancel anytime"
-              } · Secure payment via Stripe
+                ? <>{t("upgradeModal.footer.proratedNote")}<button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.footer.manageBilling")}</button></>
+                : t("upgradeModal.footer.cancelAnytime")
+              }{t("upgradeModal.footer.securePayment")}
             </p>
           </>
         )}

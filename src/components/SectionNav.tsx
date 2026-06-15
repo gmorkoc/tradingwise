@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/SectionNav.css";
 
 interface NavItem {
   id: string;
-  label: string;
+  tKey: string;
   icon: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "ai",        label: "AI Prediction",  icon: "✦" },
-  { id: "feargreed", label: "Fear & Greed",   icon: "◉" },
-  { id: "market",    label: "Market Data",    icon: "◈" },
-  { id: "onchain",   label: "On-Chain",       icon: "⛓" },
-  { id: "chart",     label: "Price Chart",    icon: "↗" },
-  { id: "heatmap",   label: "Liquidations",   icon: "⬡" },
-  { id: "alerts",    label: "Alerts",         icon: "⚡" },
-  { id: "watchlist", label: "Watchlist",       icon: "★" },
-  { id: "gann",      label: "Gann Analysis",  icon: "⊿" },
+  { id: "ai",        tKey: "nav.ai",        icon: "✦" },
+  { id: "feargreed", tKey: "nav.feargreed", icon: "◉" },
+  { id: "market",    tKey: "nav.market",    icon: "◈" },
+  { id: "onchain",   tKey: "nav.onchain",   icon: "⛓" },
+  { id: "chart",     tKey: "nav.chart",     icon: "↗" },
+  { id: "heatmap",   tKey: "nav.heatmap",   icon: "⬡" },
+  { id: "alerts",    tKey: "nav.alerts",    icon: "⚡" },
+  { id: "watchlist", tKey: "nav.watchlist", icon: "★" },
+  { id: "gann",      tKey: "nav.gann",      icon: "⊿" },
 ];
 
 interface SectionNavProps {
@@ -24,6 +25,7 @@ interface SectionNavProps {
 }
 
 export const SectionNav: React.FC<SectionNavProps> = ({ sectionOrder }) => {
+  const { t } = useTranslation();
   const [activeId, setActiveId] = useState<string>("");
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -68,10 +70,10 @@ export const SectionNav: React.FC<SectionNavProps> = ({ sectionOrder }) => {
           key={item.id}
           className={`section-nav-item${activeId === item.id ? " section-nav-item--active" : ""}`}
           onClick={() => scrollTo(item.id)}
-          title={item.label}
+          title={t(item.tKey)}
         >
           <span className="section-nav-dot" />
-          <span className="section-nav-label">{item.label}</span>
+          <span className="section-nav-label">{t(item.tKey)}</span>
           <span className="section-nav-icon">{item.icon}</span>
         </button>
       ))}

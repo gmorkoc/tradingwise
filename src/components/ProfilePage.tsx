@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
 import { redirectToBillingPortal } from "../services/stripeService";
@@ -19,19 +20,19 @@ interface ProfileData {
 }
 
 const TIER_CONFIG = {
-  free:  { label: "Free",  color: "#94a3b8" },
-  pro:   { label: "Pro",   color: "#38bdf8" },
-  elite: { label: "Elite", color: "#a78bfa" },
+  free:  { tKey: "upgradeModal.plans.free.label",  color: "#94a3b8" },
+  pro:   { tKey: "upgradeModal.plans.pro.label",   color: "#38bdf8" },
+  elite: { tKey: "upgradeModal.plans.elite.label", color: "#a78bfa" },
 };
 
-const STATUS_LABEL: Record<string, { text: string; color: string }> = {
-  active:            { text: "Active",       color: "#4ade80" },
-  past_due:          { text: "Past due",     color: "#fb923c" },
-  canceled:          { text: "Canceled",     color: "#f87171" },
-  unpaid:            { text: "Unpaid",       color: "#f87171" },
-  trialing:          { text: "Trial",        color: "#38bdf8" },
-  incomplete:        { text: "Incomplete",   color: "#94a3b8" },
-  incomplete_expired:{ text: "Expired",      color: "#f87171" },
+const STATUS_CONFIG: Record<string, { tKey: string; color: string }> = {
+  active:             { tKey: "profile.status.active",             color: "#4ade80" },
+  past_due:           { tKey: "profile.status.past_due",           color: "#fb923c" },
+  canceled:           { tKey: "profile.status.canceled",           color: "#f87171" },
+  unpaid:             { tKey: "profile.status.unpaid",             color: "#f87171" },
+  trialing:           { tKey: "profile.status.trialing",           color: "#38bdf8" },
+  incomplete:         { tKey: "profile.status.incomplete",         color: "#94a3b8" },
+  incomplete_expired: { tKey: "profile.status.incomplete_expired", color: "#f87171" },
 };
 
 function getInitials(name: string): string {
@@ -55,6 +56,7 @@ function getNextMonday(): string {
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpenUpgrade }) => {
+  const { t } = useTranslation();
   const { user, profile: authProfile, tier, refreshProfile } = useAuth();
   const { used, limit, isPaid } = useAIQuota();
 
@@ -107,9 +109,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   if (!isOpen) return null;
 
   const handleProfileSave = async () => {
-    if (!draft.displayName.trim()) { setProfileError("Display name is required."); return; }
-    if (!draft.email.trim()) { setProfileError("Email is required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email)) { setProfileError("Enter a valid email address."); return; }
+    if (!draft.displayName.trim()) { setProfileError(t("profile.messages.displayNameRequired")); return; }
+    if (!draft.email.trim()) { setProfileError(t("profile.messages.emailRequired")); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email)) { setProfileError(t("profile.messages.invalidEmail")); return; }
 
     const updates: { email?: string; data?: { full_name: string } } = {
       data: { full_name: draft.displayName.trim() },
@@ -127,8 +129,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   };
 
   const handlePasswordChange = async () => {
-    if (newPw.length < 6) { setPwError("New password must be at least 6 characters."); return; }
-    if (newPw !== confirmPw) { setPwError("Passwords do not match."); return; }
+    if (newPw.length < 6) { setPwError(t("profile.messages.passwordTooShort")); return; }
+    if (newPw !== confirmPw) { setPwError(t("profile.messages.passwordMismatch")); return; }
 
     const { error } = await supabase.auth.updateUser({ password: newPw });
     if (error) { setPwError(error.message); return; }
@@ -145,7 +147,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     try {
       await redirectToBillingPortal();
     } catch (e: any) {
-      setPortalError(e.message ?? "Could not open billing portal");
+      setPortalError(e.message ?? t("upgradeModal.error"));
       setPortalLoading(false);
     }
   };
@@ -153,8 +155,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const initials   = getInitials(profile.displayName || draft.displayName || "?");
   const isDirty    = JSON.stringify(draft) !== JSON.stringify(profile);
   const tierConf   = TIER_CONFIG[tier] ?? TIER_CONFIG.free;
+  const tierLabel  = t(tierConf.tKey);
   const subStatus  = authProfile?.subscription_status ?? null;
-  const statusConf = subStatus ? (STATUS_LABEL[subStatus] ?? { text: subStatus, color: "#94a3b8" }) : null;
+  const statusConf = subStatus ? (STATUS_CONFIG[subStatus] ?? { tKey: "", color: "#94a3b8", text: subStatus }) : null;
   const renewsAt   = authProfile?.subscription_end_at ?? null;
 
   return (
@@ -163,7 +166,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
         {/* Header */}
         <div className="profile-modal-header">
-          <span className="profile-modal-title">Profile</span>
+          <span className="profile-modal-title">{t("profile.title")}</span>
           <button className="profile-modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -173,35 +176,35 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
           <div className="profile-hero">
             <div className="profile-avatar"><span>{initials}</span></div>
             <div className="profile-hero-text">
-              <p className="profile-hero-name">{profile.displayName || "Your Name"}</p>
-              <p className="profile-hero-sub">{profile.email || "no email set"}</p>
+              <p className="profile-hero-name">{profile.displayName || t("profile.actions.yourName")}</p>
+              <p className="profile-hero-sub">{profile.email || t("profile.actions.noEmail")}</p>
             </div>
             <span className="profile-tier-badge" style={{ color: tierConf.color, borderColor: tierConf.color }}>
-              {tierConf.label}
+              {tierLabel}
             </span>
           </div>
 
           {/* Subscription */}
           <section className="profile-section">
-            <h4 className="profile-section-title">Subscription</h4>
+            <h4 className="profile-section-title">{t("profile.sections.subscription")}</h4>
 
             <div className="profile-sub-grid">
               <div className="profile-sub-item">
-                <span className="profile-sub-label">Current plan</span>
-                <span className="profile-sub-value" style={{ color: tierConf.color }}>{tierConf.label}</span>
+                <span className="profile-sub-label">{t("profile.subscription.currentPlan")}</span>
+                <span className="profile-sub-value" style={{ color: tierConf.color }}>{tierLabel}</span>
               </div>
 
               {statusConf && (
                 <div className="profile-sub-item">
-                  <span className="profile-sub-label">Status</span>
-                  <span className="profile-sub-value" style={{ color: statusConf.color }}>{statusConf.text}</span>
+                  <span className="profile-sub-label">{t("profile.subscription.status")}</span>
+                  <span className="profile-sub-value" style={{ color: statusConf.color }}>{statusConf.tKey ? t(statusConf.tKey) : subStatus}</span>
                 </div>
               )}
 
               {isPaid && renewsAt && (
                 <div className="profile-sub-item">
                   <span className="profile-sub-label">
-                    {subStatus === "canceled" ? "Access until" : "Next billing"}
+                    {subStatus === "canceled" ? t("profile.subscription.accessUntil") : t("profile.subscription.nextBilling")}
                   </span>
                   <span className="profile-sub-value">{formatDate(renewsAt)}</span>
                 </div>
@@ -217,14 +220,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                   onClick={handleManageBilling}
                   disabled={portalLoading}
                 >
-                  {portalLoading ? "Loading…" : "Manage billing / Cancel"}
+                  {portalLoading ? t("profile.subscription.loadingPortal") : t("profile.subscription.manageBilling")}
                 </button>
               ) : (
                 <button
                   className="profile-btn profile-btn--primary"
                   onClick={() => { onClose(); onOpenUpgrade(); }}
                 >
-                  ⚡ Upgrade Plan
+                  {t("profile.subscription.upgradePlan")}
                 </button>
               )}
             </div>
@@ -232,20 +235,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
           {/* AI Usage */}
           <section className="profile-section">
-            <h4 className="profile-section-title">AI Usage</h4>
+            <h4 className="profile-section-title">{t("profile.sections.aiUsage")}</h4>
 
             {tier === "elite" ? (
               <div className="profile-ai-unlimited">
                 <span className="profile-ai-unlimited-icon">✦</span>
-                <span>Unlimited AI requests</span>
+                <span>{t("profile.aiUsage.unlimited")}</span>
               </div>
             ) : (
               <>
                 <div className="profile-ai-usage-row">
-                  <span className="profile-ai-usage-label">
-                    <strong>{used}</strong> of <strong>{limit}</strong> requests used this week
-                  </span>
-                  <span className="profile-ai-reset">Resets {getNextMonday()}</span>
+                  <span className="profile-ai-usage-label"
+                    dangerouslySetInnerHTML={{ __html: t("profile.aiUsage.requestsUsed", {
+                      used: `<strong>${used}</strong>`,
+                      limit: `<strong>${limit}</strong>`,
+                    }) }}
+                  />
+                  <span className="profile-ai-reset">{t("profile.aiUsage.resetsOn", { date: getNextMonday() })}</span>
                 </div>
                 <div className="profile-ai-bar-track">
                   <div
@@ -260,17 +266,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 {!isPaid && (
                   <p className="profile-ai-upgrade-hint">
                     <button className="profile-ai-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>
-                      Upgrade to Pro
+                      {t("profile.aiUsage.upgradePro")}
                     </button>
-                    {" "}for 35 AI requests/week, or Elite for unlimited.
+                    {t("profile.aiUsage.proHint")}
                   </p>
                 )}
                 {isPaid && tier === "pro" && (
                   <p className="profile-ai-upgrade-hint">
                     <button className="profile-ai-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>
-                      Upgrade to Elite
+                      {t("profile.aiUsage.upgradeElite")}
                     </button>
-                    {" "}for unlimited AI requests.
+                    {t("profile.aiUsage.eliteHint")}
                   </p>
                 )}
               </>
@@ -279,52 +285,52 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
           {/* Profile Info */}
           <section className="profile-section">
-            <h4 className="profile-section-title">Profile Info</h4>
+            <h4 className="profile-section-title">{t("profile.sections.profileInfo")}</h4>
 
             <div className="profile-field-grid">
               <div className="profile-field">
-                <label>Display Name</label>
+                <label>{t("profile.info.displayName")}</label>
                 <input
                   type="text"
                   value={draft.displayName}
                   onChange={(e) => setDraft({ ...draft, displayName: e.target.value })}
-                  placeholder="Your full name"
+                  placeholder={t("profile.info.yourName")}
                 />
               </div>
 
               <div className="profile-field">
-                <label>Username</label>
+                <label>{t("profile.info.username")}</label>
                 <input
                   type="text"
                   value={draft.username}
                   onChange={(e) => setDraft({ ...draft, username: e.target.value.replace(/\s/g, "") })}
-                  placeholder="@username"
+                  placeholder={t("profile.info.yourUsername")}
                 />
               </div>
 
               <div className="profile-field profile-field--full">
-                <label>Email</label>
+                <label>{t("profile.info.email")}</label>
                 <input
                   type="email"
                   value={draft.email}
                   onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                  placeholder="you@example.com"
+                  placeholder={t("profile.info.yourEmail")}
                 />
               </div>
 
               <div className="profile-field profile-field--full">
-                <label>Bio</label>
+                <label>{t("profile.info.bio")}</label>
                 <textarea
                   value={draft.bio}
                   onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
-                  placeholder="A short bio…"
+                  placeholder={t("profile.info.yourBio")}
                   rows={3}
                 />
               </div>
             </div>
 
             {profileError && <p className="profile-msg profile-msg--error">{profileError}</p>}
-            {profileSaved && <p className="profile-msg profile-msg--success">✓ Profile saved</p>}
+            {profileSaved && <p className="profile-msg profile-msg--success">{t("profile.messages.saved")}</p>}
 
             <div className="profile-actions">
               <button
@@ -332,11 +338,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 onClick={handleProfileSave}
                 disabled={!isDirty}
               >
-                Save Changes
+                {t("profile.actions.saveChanges")}
               </button>
               {isDirty && (
                 <button className="profile-btn profile-btn--ghost" onClick={() => { setDraft(profile); setProfileError(""); }}>
-                  Discard
+                  {t("profile.actions.discard")}
                 </button>
               )}
             </div>
@@ -344,18 +350,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
           {/* Security */}
           <section className="profile-section">
-            <h4 className="profile-section-title">Security</h4>
-            <p className="profile-section-sub">Set a new password for your account.</p>
+            <h4 className="profile-section-title">{t("profile.sections.security")}</h4>
+            <p className="profile-section-sub">{t("profile.security.sub")}</p>
 
             <div className="profile-field-grid">
               <div className="profile-field">
-                <label>New Password</label>
+                <label>{t("profile.security.newPassword")}</label>
                 <div className="profile-pw-wrap">
                   <input
                     type={showNew ? "text" : "password"}
                     value={newPw}
                     onChange={(e) => setNewPw(e.target.value)}
-                    placeholder="Min. 6 characters"
+                    placeholder={t("profile.security.minChars")}
                     autoComplete="new-password"
                   />
                   <button className="profile-pw-eye" onClick={() => setShowNew((v) => !v)}>
@@ -365,13 +371,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
               </div>
 
               <div className="profile-field">
-                <label>Confirm New Password</label>
+                <label>{t("profile.security.confirmPassword")}</label>
                 <div className="profile-pw-wrap">
                   <input
                     type={showConfirm ? "text" : "password"}
                     value={confirmPw}
                     onChange={(e) => setConfirmPw(e.target.value)}
-                    placeholder="Repeat new password"
+                    placeholder={t("profile.security.repeatPassword")}
                     autoComplete="new-password"
                   />
                   <button className="profile-pw-eye" onClick={() => setShowConfirm((v) => !v)}>
@@ -384,12 +390,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
             {newPw && (
               <div className="profile-pw-strength">
                 <div className={`profile-pw-bar ${newPw.length >= 12 ? "strong" : newPw.length >= 8 ? "medium" : "weak"}`} />
-                <span>{newPw.length >= 12 ? "Strong" : newPw.length >= 8 ? "Medium" : "Weak"}</span>
+                <span>{newPw.length >= 12 ? t("profile.security.strength.strong") : newPw.length >= 8 ? t("profile.security.strength.medium") : t("profile.security.strength.weak")}</span>
               </div>
             )}
 
             {pwError && <p className="profile-msg profile-msg--error">{pwError}</p>}
-            {pwSaved && <p className="profile-msg profile-msg--success">✓ Password updated</p>}
+            {pwSaved && <p className="profile-msg profile-msg--success">{t("profile.messages.passwordUpdated")}</p>}
 
             <div className="profile-actions">
               <button
@@ -397,7 +403,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 onClick={handlePasswordChange}
                 disabled={!newPw || !confirmPw}
               >
-                Change Password
+                {t("profile.security.changePassword")}
               </button>
             </div>
           </section>

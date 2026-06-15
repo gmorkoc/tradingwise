@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Trade {
   id: number;
@@ -15,6 +16,7 @@ const MAX = 150;
 const BIG_TRADE_THRESHOLD = 50_000; // USD
 
 export function OrderFlowTape({ coin }: Props) {
+  const { t } = useTranslation();
   const [trades, setTrades]   = useState<Trade[]>([]);
   const [buyVol, setBuyVol]   = useState(0);
   const [sellVol, setSellVol] = useState(0);
@@ -102,20 +104,20 @@ export function OrderFlowTape({ coin }: Props) {
     <div className="oft-root">
       <div className="oft-status">
         <span className={`oft-dot ${connected ? 'oft-dot--live' : ''}`} />
-        {connected ? 'LIVE' : 'Connecting...'}
+        {connected ? t("orderFlowTape.live") : t("orderFlowTape.connecting")}
       </div>
 
       <div className="oft-stats">
         <div className="oft-stat">
-          <span className="oft-stat-lbl">Buy Volume</span>
+          <span className="oft-stat-lbl">{t("orderFlowTape.buyVolume")}</span>
           <span className="oft-stat-val oft-buy">{fmtUsd(buyVol)}</span>
         </div>
         <div className="oft-stat">
-          <span className="oft-stat-lbl">Sell Volume</span>
+          <span className="oft-stat-lbl">{t("orderFlowTape.sellVolume")}</span>
           <span className="oft-stat-val oft-sell">{fmtUsd(sellVol)}</span>
         </div>
         <div className="oft-stat">
-          <span className="oft-stat-lbl">Cumulative Delta</span>
+          <span className="oft-stat-lbl">{t("orderFlowTape.delta")}</span>
           <span className={`oft-stat-val ${delta >= 0 ? 'oft-buy' : 'oft-sell'}`}>
             {delta >= 0 ? '+' : ''}{fmtUsd(Math.abs(delta))}
           </span>
@@ -127,24 +129,24 @@ export function OrderFlowTape({ coin }: Props) {
           <div className="oft-pressure-buy" style={{ width: `${buyPct}%` }} />
         </div>
         <div className="oft-pressure-labels">
-          <span className="oft-buy">{buyPct.toFixed(1)}% Buy</span>
-          <span className="oft-sell">{(100 - buyPct).toFixed(1)}% Sell</span>
+          <span className="oft-buy">{buyPct.toFixed(1)}{t("orderFlowTape.buy")}</span>
+          <span className="oft-sell">{(100 - buyPct).toFixed(1)}{t("orderFlowTape.sell")}</span>
         </div>
       </div>
 
       <div className="oft-tape-header">
-        <span>Price</span><span>Size (USD)</span><span>Side</span><span>Time</span>
+        <span>{t("orderFlowTape.colPrice")}</span><span>{t("orderFlowTape.colSize")}</span><span>{t("orderFlowTape.colSide")}</span><span>{t("orderFlowTape.colTime")}</span>
       </div>
       <div className="oft-tape" ref={listRef}>
-        {[...trades].reverse().map(t => (
-          <div key={t.id} className={`oft-row${t.usd >= BIG_TRADE_THRESHOLD ? ' oft-row--big' : ''} ${t.isBuy ? 'oft-row--buy' : 'oft-row--sell'}`}>
-            <span className="oft-col-price">{t.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            <span className="oft-col-size">{fmtUsd(t.usd)}</span>
-            <span className={`oft-col-side ${t.isBuy ? 'oft-buy' : 'oft-sell'}`}>{t.isBuy ? '▲ BUY' : '▼ SELL'}</span>
-            <span className="oft-col-time">{fmtTime(t.time)}</span>
+        {[...trades].reverse().map(trade => (
+          <div key={trade.id} className={`oft-row${trade.usd >= BIG_TRADE_THRESHOLD ? ' oft-row--big' : ''} ${trade.isBuy ? 'oft-row--buy' : 'oft-row--sell'}`}>
+            <span className="oft-col-price">{trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="oft-col-size">{fmtUsd(trade.usd)}</span>
+            <span className={`oft-col-side ${trade.isBuy ? 'oft-buy' : 'oft-sell'}`}>{trade.isBuy ? t("orderFlowTape.sideBuy") : t("orderFlowTape.sideSell")}</span>
+            <span className="oft-col-time">{fmtTime(trade.time)}</span>
           </div>
         ))}
-        {trades.length === 0 && <div className="oft-empty">Waiting for trades...</div>}
+        {trades.length === 0 && <div className="oft-empty">{t("orderFlowTape.waiting")}</div>}
       </div>
     </div>
   );

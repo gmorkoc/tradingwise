@@ -40,10 +40,10 @@ import "./App.css";
 
 type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals";
 
-const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
-  { id: "chart", label: "Chart", d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
+const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
+  { id: "chart",     labelKey: "nav.chart",     d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
   {
-    id: "ai", label: "AI Analysis",
+    id: "ai",        labelKey: "nav.ai",
     d: [
       "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z",
       "M20 3v4M22 5h-4",
@@ -51,18 +51,18 @@ const NAV_ITEMS: { id: SectionId; label: string; d: string | string[]; requiredT
     ],
   },
   {
-    id: "feargreed", label: "Sentiment",
+    id: "feargreed", labelKey: "nav.feargreed",
     d: ["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"],
   },
-  { id: "heatmap", label: "Heatmap", d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
-  { id: "onchain", label: "On-Chain", d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
-  { id: "gann", label: "Gann", d: "M22 12h-4l-3 9L9 3l-3 9H2", requiredTier: "elite", hidden: true },
-  { id: "alerts", label: "Alerts", d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
-  { id: "etf", label: "ETF Flows", d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
-  { id: "positions", label: "Traders", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
-  { id: "htf", label: "HTF Analysis", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
-  { id: "orderflow", label: "Smart Money", d: ["M2 12h4l3-9 4 18 3-9h6"] },
-  { id: "signals",   label: "Confluence", d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
+  { id: "heatmap",   labelKey: "nav.heatmap",   d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
+  { id: "onchain",   labelKey: "nav.onchain",   d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
+  { id: "gann",      labelKey: "nav.gann",      d: "M22 12h-4l-3 9L9 3l-3 9H2", requiredTier: "elite", hidden: true },
+  { id: "alerts",    labelKey: "nav.alerts",    d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
+  { id: "etf",       labelKey: "nav.etf",       d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
+  { id: "positions", labelKey: "nav.positions", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
+  { id: "htf",       labelKey: "nav.htf",       d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
+  { id: "orderflow", labelKey: "nav.orderflow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
+  { id: "signals",   labelKey: "nav.signals",   d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -486,7 +486,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 key={item.id}
                 className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
                 onClick={() => setActiveSection(item.id)}
-                title={item.label}
+                title={t(item.labelKey)}
               >
                 <NavIcon d={item.d} />
                 {locked && (
@@ -496,7 +496,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                     </svg>
                   </span>
                 )}
-                <span className="icon-strip-label">{item.label}</span>
+                <span className="icon-strip-label">{t(item.labelKey)}</span>
               </button>
             );
           })}
@@ -512,12 +512,12 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               "M12 15a3 3 0 100-6 3 3 0 000 6z",
               "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
             ]} />
-            <span className="icon-strip-label">Settings</span>
+            <span className="icon-strip-label">{t("nav.settings")}</span>
           </button>
 
-          <button className="icon-strip-btn" onClick={() => { signOut(); setMobileNavOpen(false); }} title="Sign out">
+          <button className="icon-strip-btn" onClick={() => { signOut(); setMobileNavOpen(false); }} title={t("nav.signOut")}>
             <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-            <span className="icon-strip-label">Sign Out</span>
+            <span className="icon-strip-label">{t("nav.signOut")}</span>
           </button>
 
           <button
@@ -596,60 +596,60 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               return (
                 <>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">Liq Above</span>
+                    <span className="mch-stat-label">{t("stats.liqAbove")}</span>
                     <span className="mch-stat-value negative">
                       {btcData.liquidationAbove ? `$${btcData.liquidationAbove.toLocaleString()}` : "—"}
                     </span>
-                    <span className="mch-stat-signal mch-stat-signal--bear">▲ Risk</span>
+                    <span className="mch-stat-signal mch-stat-signal--bear">{t("stats.sigRisk")}</span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">Liq Below</span>
+                    <span className="mch-stat-label">{t("stats.liqBelow")}</span>
                     <span className="mch-stat-value positive">
                       {btcData.liquidationBelow ? `$${btcData.liquidationBelow.toLocaleString()}` : "—"}
                     </span>
-                    <span className="mch-stat-signal mch-stat-signal--bull">▼ Support</span>
+                    <span className="mch-stat-signal mch-stat-signal--bull">{t("stats.sigSupport")}</span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">Open Interest</span>
+                    <span className="mch-stat-label">{t("stats.openInterest")}</span>
                     <span className="mch-stat-value">
                       {btcData.openInterest ? `$${(btcData.openInterest / 1e9).toFixed(2)}B` : "—"}
                     </span>
-                    <span className="mch-stat-signal mch-stat-signal--neutral">● Neutral</span>
+                    <span className="mch-stat-signal mch-stat-signal--neutral">{t("stats.sigNeutral")}</span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">Funding Rate</span>
+                    <span className="mch-stat-label">{t("stats.fundingRate")}</span>
                     <span className={`mch-stat-value${fr < 0 ? " negative" : ""}`}>
                       {`${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%`}
                     </span>
                     <span className={`mch-stat-signal mch-stat-signal--${frSignal}`}>
-                      {frSignal === "bull" ? "▲ Bullish" : frSignal === "bear" ? "▼ Crowded" : "● Neutral"}
+                      {frSignal === "bull" ? t("stats.sigBullish") : frSignal === "bear" ? t("stats.sigCrowded") : t("stats.sigNeutral")}
                     </span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">RSI (14)</span>
+                    <span className="mch-stat-label">{t("stats.rsi14")}</span>
                     <span className={`mch-stat-value${rsi > 70 ? " negative" : rsi < 30 ? " positive" : ""}`}>
                       {rsi.toFixed(1)}
                     </span>
                     <span className={`mch-stat-signal mch-stat-signal--${rsiSignal}`}>
-                      {rsi > 70 ? "▼ Overbought" : rsi < 30 ? "▲ Oversold" : rsi < 50 ? "▼ Weak" : "▲ Neutral"}
+                      {rsi > 70 ? t("stats.sigOverbought") : rsi < 30 ? t("stats.sigOversold") : rsi < 50 ? t("stats.sigWeak") : t("stats.sigNeutral")}
                     </span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">MACD</span>
+                    <span className="mch-stat-label">{t("stats.macd")}</span>
                     <span className={`mch-stat-value${macd < 0 ? " negative" : ""}`}>
                       {macd.toFixed(2)}
                     </span>
                     <span className={`mch-stat-signal mch-stat-signal--${macdSignal}`}>
-                      {macd > 0 ? "▲ Bullish" : "▼ Bearish"}
+                      {macd > 0 ? t("stats.sigBullish") : t("stats.sigBearish")}
                     </span>
                   </div>
                   <div className="mch-stat">
-                    <span className="mch-stat-label">L/S Ratio</span>
+                    <span className="mch-stat-label">{t("stats.lsRatio")}</span>
                     <span className={`mch-stat-value${ls >= 1 ? " positive" : " negative"}`}>
                       {ls.toFixed(2)}
                     </span>
                     <span className={`mch-stat-signal mch-stat-signal--${lsSignal}`}>
-                      {ls >= 1 ? "▲ Longs Lead" : "▼ Shorts Lead"}
+                      {ls >= 1 ? t("stats.sigLongsLead") : t("stats.sigShortsLead")}
                     </span>
                   </div>
                   {(() => {
@@ -658,21 +658,21 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                     return (
                       <>
                         <div className="mch-stat">
-                          <span className="mch-stat-label">CME Gap ▲</span>
+                          <span className="mch-stat-label">{t("stats.cmeAbove")}</span>
                           <span className="mch-stat-value" style={{ fontSize: "0.7rem" }}>
                             {g?.above ? `${fmt(g.above.low)}–${fmt(g.above.high)}` : "—"}
                           </span>
                           <span className="mch-stat-signal mch-stat-signal--bull">
-                            {g?.above ? "▲ Above" : "● None"}
+                            {g?.above ? t("stats.sigAbove") : t("stats.sigNone")}
                           </span>
                         </div>
                         <div className="mch-stat">
-                          <span className="mch-stat-label">CME Gap ▼</span>
+                          <span className="mch-stat-label">{t("stats.cmeBelow")}</span>
                           <span className="mch-stat-value" style={{ fontSize: "0.7rem" }}>
                             {g?.below ? `${fmt(g.below.low)}–${fmt(g.below.high)}` : "—"}
                           </span>
                           <span className="mch-stat-signal mch-stat-signal--bear">
-                            {g?.below ? "▼ Below" : "● None"}
+                            {g?.below ? t("stats.sigBelow") : t("stats.sigNone")}
                           </span>
                         </div>
                       </>
@@ -862,7 +862,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </div>
-          <span>Swipe to open menu</span>
+          <span>{t("nav.swipeHint")}</span>
         </div>
       )}
 
@@ -877,10 +877,10 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         const up = delta >= 0;
 
         const insight = delta === 0
-          ? `${coin} is holding steady — no movement since you opened this view.`
+          ? t("priceTicker.insightSteady", { coin })
           : up
-            ? `${coin} is up ${deltaAbs.toFixed(3)}% since open — buyers in control, price pushing higher.`
-            : `${coin} is down ${deltaAbs.toFixed(3)}% since open — sellers applying pressure at current levels.`;
+            ? t("priceTicker.insightUp",   { coin, pct: deltaAbs.toFixed(3) })
+            : t("priceTicker.insightDown",  { coin, pct: deltaAbs.toFixed(3) });
 
         return (
           <div className="pticker-overlay"
@@ -906,13 +906,13 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                     <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/>
                   </svg>
                 )}
-                <span className="pticker-close-label">{tickerMuted ? "Muted" : "Sound"}</span>
+                <span className="pticker-close-label">{tickerMuted ? t("priceTicker.muted") : t("priceTicker.sound")}</span>
               </button>
               <button className="pticker-close" onClick={() => setPriceTicker(false)} aria-label="Exit">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
                 </svg>
-                <span className="pticker-close-label">Exit</span>
+                <span className="pticker-close-label">{t("priceTicker.exit")}</span>
               </button>
             </div>
             <div className="pticker-inner">
@@ -926,10 +926,10 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               </div>
               {openP > 0 && (
                 <div className={`pticker-delta ${up ? "pticker-delta--up" : "pticker-delta--down"}`}>
-                  {up ? "▲" : "▼"} {deltaAbs.toFixed(3)}% since open
+                  {up ? "▲" : "▼"} {deltaAbs.toFixed(3)}{t("priceTicker.sinceOpen")}
                 </div>
               )}
-              <div className="pticker-live-dot"><span /><span className="pticker-live-label">LIVE</span></div>
+              <div className="pticker-live-dot"><span /><span className="pticker-live-label">{t("nav.live")}</span></div>
 
               <div className={`pticker-insight-wrap ${delta === 0 ? "pticker-insight-wrap--neutral" : up ? "pticker-insight-wrap--up" : "pticker-insight-wrap--down"}`}>
                 <div className="pticker-insight-icon">
@@ -942,7 +942,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                   </svg>
                 </div>
                 <div className="pticker-insight-body">
-                  <span className="pticker-insight-label">{delta === 0 ? "Neutral" : up ? "Bullish Signal" : "Bearish Signal"}</span>
+                  <span className="pticker-insight-label">{delta === 0 ? t("priceTicker.neutral") : up ? t("priceTicker.bullishSignal") : t("priceTicker.bearishSignal")}</span>
                   <div className="pticker-insight pticker-insight--visible">{insight}</div>
                 </div>
               </div>

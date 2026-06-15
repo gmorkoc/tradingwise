@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol, ExchangeActivity } from "../services/coinglass";
 import "../styles/PredictionEngine.css";
 
@@ -30,7 +31,7 @@ interface Props {
 interface Signal {
   name: string;
   value: string;
-  score: number;   // -2 to +2
+  score: number;
   detail: string;
   icon: string;
 }
@@ -131,6 +132,7 @@ function calcPOC(candles: { high: number; low: number; volume?: number }[]): num
 }
 
 export function PredictionEngine({ btcData, coin, livePrice }: Props) {
+  const { t, i18n } = useTranslation();
   const [fearGreed,       setFearGreed]       = useState<FearGreed | null>(null);
   const [atr4h,           setAtr4h]           = useState(0);
   const [poc4h,           setPoc4h]           = useState(0);
@@ -143,7 +145,6 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
 
   const price = livePrice ?? btcData?.price ?? 0;
 
-  // Exchange activity — refresh every minute
   useEffect(() => {
     let cancelled = false;
     const loadExch = async () => {
@@ -211,95 +212,99 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
   const atr1w     = atr4hVal * 5.5;
 
   const targets: PriceTarget[] = [
-    { label: "4H Target",  bull: price + atr4hVal * 1.5, bear: price - atr4hVal * 1.5, atr: atr4hVal  },
-    { label: "Daily Target", bull: price + atr1d   * 1.0, bear: price - atr1d   * 1.0, atr: atr1d     },
-    { label: "Weekly Target",bull: price + atr1w   * 1.0, bear: price - atr1w   * 1.0, atr: atr1w     },
+    { label: t("predEngine.target4h"),     bull: price + atr4hVal * 1.5, bear: price - atr4hVal * 1.5, atr: atr4hVal },
+    { label: t("predEngine.targetDaily"),  bull: price + atr1d   * 1.0, bear: price - atr1d   * 1.0, atr: atr1d    },
+    { label: t("predEngine.targetWeekly"), bull: price + atr1w   * 1.0, bear: price - atr1w   * 1.0, atr: atr1w    },
   ];
 
   const signals: Signal[] = [
     {
-      name: "RSI (14)",
+      name: t("predEngine.rsiName"),
       value: rsi.toFixed(1),
       score: s1,
       icon: "📊",
       detail: rsi > 70
-        ? `RSI ${rsi.toFixed(1)} — overbought, ${fmtK(price)} may be near a local top`
+        ? t("predEngine.rsiOB",      { rsi: rsi.toFixed(1), price: fmtK(price) })
         : rsi < 30
-        ? `RSI ${rsi.toFixed(1)} — deeply oversold at ${fmtK(price)}, high bounce probability`
+        ? t("predEngine.rsiOS",      { rsi: rsi.toFixed(1), price: fmtK(price) })
         : rsi < 50
-        ? `RSI ${rsi.toFixed(1)} — weakening momentum, ${fmtK(price)} faces selling pressure`
-        : `RSI ${rsi.toFixed(1)} — healthy momentum supports current ${fmtK(price)} level`,
+        ? t("predEngine.rsiWeak",    { rsi: rsi.toFixed(1), price: fmtK(price) })
+        : t("predEngine.rsiHealthy", { rsi: rsi.toFixed(1), price: fmtK(price) }),
     },
     {
-      name: "MACD Cross",
+      name: t("predEngine.macdName"),
       value: `${macd >= 0 ? "+" : ""}${macd.toFixed(2)}`,
       score: s2,
       icon: "📈",
       detail: s2 >= 2
-        ? `Bullish crossover above zero — trend likely to push ${fmtK(price)} higher`
+        ? t("predEngine.macdBullAbove", { price: fmtK(price) })
         : s2 >= 1
-        ? `Bullish crossover in negative territory — ${fmtK(price)} recovering but still below baseline`
+        ? t("predEngine.macdBullBelow", { price: fmtK(price) })
         : s2 <= -2
-        ? `Bearish crossover below zero — ${fmtK(price)} under sustained downward pressure`
+        ? t("predEngine.macdBearBelow", { price: fmtK(price) })
         : s2 <= -1
-        ? `Bearish crossover above zero — momentum fading, ${fmtK(price)} may stall`
-        : `MACD near zero — no clear direction, ${fmtK(price)} in consolidation`,
+        ? t("predEngine.macdBearAbove", { price: fmtK(price) })
+        : t("predEngine.macdNeutral",   { price: fmtK(price) }),
     },
     {
-      name: "Funding Rate",
+      name: t("predEngine.frName"),
       value: `${(fundingRate * 100).toFixed(4)}%`,
       score: s3,
       icon: "💸",
       detail: fundingRate > 0.001
-        ? `Longs paying ${(fundingRate * 100).toFixed(4)}% — overheated, ${fmtK(price)} could see a flush`
+        ? t("predEngine.frHigh",    { fr: (fundingRate * 100).toFixed(4), price: fmtK(price) })
         : fundingRate < -0.001
-        ? `Shorts paying ${(Math.abs(fundingRate) * 100).toFixed(4)}% — short squeeze possible toward ${fmtK(price)}`
-        : `Near-zero funding at ${fmtK(price)} — balanced positioning, no directional bias`,
+        ? t("predEngine.frLow",     { fr: (Math.abs(fundingRate) * 100).toFixed(4), price: fmtK(price) })
+        : t("predEngine.frNeutral", { price: fmtK(price) }),
     },
     {
-      name: "Long/Short Ratio",
+      name: t("predEngine.lsName"),
       value: lsRatio.toFixed(2),
       score: s4,
       icon: "⚖️",
       detail: lsRatio > 1.5
-        ? `${lsRatio.toFixed(2)}x more longs than shorts — crowded at ${fmtK(price)}, squeeze risk if it dips`
+        ? t("predEngine.lsCrowded",  { ls: lsRatio.toFixed(2), price: fmtK(price) })
         : lsRatio > 1.1
-        ? `Slight long bias (${lsRatio.toFixed(2)}) — healthy trend support for ${fmtK(price)}`
+        ? t("predEngine.lsBull",     { ls: lsRatio.toFixed(2), price: fmtK(price) })
         : lsRatio < 0.9
-        ? `${lsRatio.toFixed(2)} — short-heavy positioning, contrarian buy signal at ${fmtK(price)}`
-        : `Balanced at ${lsRatio.toFixed(2)} — no crowding, ${fmtK(price)} driven by spot demand`,
+        ? t("predEngine.lsBear",     { ls: lsRatio.toFixed(2), price: fmtK(price) })
+        : t("predEngine.lsBalanced", { ls: lsRatio.toFixed(2), price: fmtK(price) }),
     },
     {
-      name: "Fear & Greed",
+      name: t("predEngine.fgName"),
       value: fearGreed ? `${fgValue} · ${fearGreed.label}` : "—",
       score: s5,
       icon: "🧠",
       detail: fearGreed
         ? fgValue >= 75
-          ? `Score ${fgValue} — extreme greed, ${fmtK(price)} may be overextended near-term`
+          ? t("predEngine.fgExtreme", { fg: fgValue, price: fmtK(price) })
           : fgValue <= 25
-          ? `Score ${fgValue} — extreme fear at ${fmtK(price)}, historically a strong buy zone`
+          ? t("predEngine.fgFear",    { fg: fgValue, price: fmtK(price) })
           : fgValue >= 55
-          ? `Score ${fgValue} — greed phase, momentum likely to carry ${fmtK(price)} further`
-          : `Score ${fgValue} — fear zone, risk/reward at ${fmtK(price)} is improving`
-        : "Loading sentiment data…",
+          ? t("predEngine.fgGreed",   { fg: fgValue, price: fmtK(price) })
+          : t("predEngine.fgMidFear", { fg: fgValue, price: fmtK(price) })
+        : t("predEngine.loadingSentiment"),
     },
     {
-      name: "Volume Profile POC",
+      name: t("predEngine.pocName"),
       value: poc4h ? `$${poc4h.toLocaleString()}` : "—",
       score: s6,
       icon: "📦",
       detail: poc4h
         ? price > poc4h * 1.03
-          ? `${fmtK(price)} is ${((price / poc4h - 1) * 100).toFixed(1)}% above POC ${fmtK(poc4h)} — extended, support below`
+          ? t("predEngine.pocAbove", { price: fmtK(price), pct: ((price / poc4h - 1) * 100).toFixed(1), poc: fmtK(poc4h) })
           : price < poc4h * 0.97
-          ? `${fmtK(price)} is ${((poc4h / price - 1) * 100).toFixed(1)}% below POC ${fmtK(poc4h)} — mean reversion target`
-          : `${fmtK(price)} at POC ${fmtK(poc4h)} — high-volume acceptance, strong base`
-        : "Computing 4H volume profile…",
+          ? t("predEngine.pocBelow", { price: fmtK(price), pct: ((poc4h / price - 1) * 100).toFixed(1), poc: fmtK(poc4h) })
+          : t("predEngine.pocAt",    { price: fmtK(price), poc: fmtK(poc4h) })
+        : t("predEngine.computingVP"),
     },
   ];
 
-  const label = confluenceScore >= 70 ? "Strong Bull" : confluenceScore >= 57 ? "Mild Bull" : confluenceScore >= 43 ? "Neutral" : confluenceScore >= 30 ? "Mild Bear" : "Strong Bear";
+  const label = confluenceScore >= 70 ? t("predEngine.strongBull")
+    : confluenceScore >= 57 ? t("predEngine.mildBull")
+    : confluenceScore >= 43 ? t("predEngine.neutral")
+    : confluenceScore >= 30 ? t("predEngine.mildBear")
+    : t("predEngine.strongBear");
   const labelClass = confluenceScore >= 57 ? "bull" : confluenceScore <= 43 ? "bear" : "neutral";
 
   const fmtPrice = (p: number) => `$${p.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
@@ -308,13 +313,12 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
     <div className="pe-wrap">
       <div className="pe-header">
         <div>
-          <h2 className="pe-title">Multi-Signal Confluence Engine</h2>
-          <p className="pe-sub">Composite score from 6 independent signals · {coin}/USD</p>
+          <h2 className="pe-title">{t("predEngine.title")}</h2>
+          <p className="pe-sub">{t("predEngine.sub", { coin })}</p>
         </div>
-        {loading && <span className="pe-loading-badge">Loading…</span>}
+        {loading && <span className="pe-loading-badge">{t("predEngine.loading")}</span>}
       </div>
 
-      {/* Gauge */}
       <div className="pe-gauge-card">
         <div className="pe-gauge-bar-wrap">
           <div className="pe-gauge-track">
@@ -322,9 +326,9 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
             <div className="pe-gauge-pointer" style={{ left: `${confluenceScore}%` }} />
           </div>
           <div className="pe-gauge-labels">
-            <span>Strong Bear</span>
-            <span>Neutral</span>
-            <span>Strong Bull</span>
+            <span>{t("predEngine.strongBear")}</span>
+            <span>{t("predEngine.neutral")}</span>
+            <span>{t("predEngine.strongBull")}</span>
           </div>
         </div>
         <div className="pe-score-box">
@@ -334,44 +338,40 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
         </div>
       </div>
 
-      {/* Two-column body */}
       <div className="pe-body">
 
-        {/* Left col: Price targets */}
         <div className="pe-targets-col">
-          <div className="pe-targets-label">Price Targets</div>
-          {targets.map(t => {
-            const bullPct = price > 0 ? ((t.bull - price) / price * 100).toFixed(1) : "0";
-            const bearPct = price > 0 ? ((t.bear - price) / price * 100).toFixed(1) : "0";
+          <div className="pe-targets-label">{t("predEngine.priceTargets")}</div>
+          {targets.map(tgt => {
+            const bullPct = price > 0 ? ((tgt.bull - price) / price * 100).toFixed(1) : "0";
+            const bearPct = price > 0 ? ((tgt.bear - price) / price * 100).toFixed(1) : "0";
             return (
-              <div key={t.label} className="pe-target-card">
-                <div className="pe-target-label">{t.label}</div>
+              <div key={tgt.label} className="pe-target-card">
+                <div className="pe-target-label">{tgt.label}</div>
                 <div className="pe-target-values">
                   <div className="pe-target-bull">
                     <span className="pe-target-arrow">▲</span>
-                    {fmtPrice(t.bull)}
+                    {fmtPrice(tgt.bull)}
                   </div>
                   <div className="pe-target-bear">
                     <span className="pe-target-arrow">▼</span>
-                    {fmtPrice(t.bear)}
+                    {fmtPrice(tgt.bear)}
                   </div>
                 </div>
                 <div className="pe-target-pct">
                   <span className="pe-target-pct-bull">+{bullPct}%</span>
                   <span className="pe-target-pct-bear">{bearPct}%</span>
                 </div>
-                <div className="pe-target-atr">ATR {fmtPrice(t.atr)}</div>
+                <div className="pe-target-atr">{t("predEngine.atrLabel")} {fmtPrice(tgt.atr)}</div>
               </div>
             );
           })}
         </div>
 
-        {/* Right col: Signal breakdown */}
         <div className="pe-signals-card">
-          <div className="pe-signals-title">Signal Breakdown</div>
+          <div className="pe-signals-title">{t("predEngine.signalBreakdown")}</div>
           {signals.map(sig => {
             const dotClass = sig.score >= 1 ? "bull" : sig.score <= -1 ? "bear" : "neutral";
-            // map score -2..+2 → 0%..100% for bar marker
             const markerPct = ((sig.score + 2) / 4) * 100;
             return (
               <div key={sig.name} className={`pe-signal-row pe-signal-row--${dotClass}`}>
@@ -389,8 +389,8 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
                   <div className={`pe-signal-bar-track pe-signal-bar-track--${dotClass}`}
                        style={{ "--bar-pos": `${markerPct}%` } as React.CSSProperties} />
                   <div className="pe-signal-bar-labels">
-                    <span>Bear</span>
-                    <span>Bull</span>
+                    <span>{t("predEngine.bear")}</span>
+                    <span>{t("predEngine.bull")}</span>
                   </div>
                 </div>
               </div>
@@ -398,18 +398,17 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
           })}
         </div>
 
-      </div>{/* end pe-body */}
+      </div>
 
-      {/* Exchange Activity */}
       <div className="pe-exch-card">
         <div className="pe-exch-header">
-          <span className="pe-exch-title">Exchange Activity</span>
-          <span className="pe-exch-sub">Funding rate per exchange · positive = longs crowded</span>
+          <span className="pe-exch-title">{t("predEngine.exchActivity")}</span>
+          <span className="pe-exch-sub">{t("predEngine.exchSub")}</span>
           <span className="pe-exch-updated">
             {exchLoading
-              ? "Updating…"
+              ? t("predEngine.updating")
               : exchUpdatedAt
-              ? `Updated ${exchUpdatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+              ? t("predEngine.updatedAt", { time: exchUpdatedAt.toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit", second: "2-digit" }) })
               : ""}
           </span>
         </div>
@@ -419,9 +418,9 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
             : exchangeData;
 
           const sigCfg: Record<ExchangeActivity["signal"], { label: string; cls: string; icon: string }> = {
-            buying:  { label: "Buying",  cls: "bull",    icon: "▲" },
-            selling: { label: "Selling", cls: "bear",    icon: "▼" },
-            neutral: { label: "Neutral", cls: "neutral", icon: "—" },
+            buying:  { label: t("predEngine.sigBuying"),  cls: "bull",    icon: "▲" },
+            selling: { label: t("predEngine.sigSelling"), cls: "bear",    icon: "▼" },
+            neutral: { label: t("predEngine.sigNeutral"), cls: "neutral", icon: "—" },
           };
 
           const sigPalette: Record<ExchangeActivity["signal"], string[]> = {
@@ -445,7 +444,6 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
 
           return (
             <div className="pe-exch-pie-heat-wrap">
-              {/* Donut */}
               <svg className="pe-exch-svg" viewBox="0 0 400 400">
                 {slices.map(s => (
                   <path key={s.exchange} d={donutSlice(CX, CY, OR, IR, s.a0, s.a1)} fill={s.color} />
@@ -466,12 +464,11 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
                 })}
               </svg>
 
-              {/* Heat rows */}
               <div className="pe-exch-heatgrid">
                 <div className="pe-exch-heat-axis">
-                  <span>◄ Selling</span>
-                  <span className="pe-exch-heat-axis-center">Funding Rate Bias</span>
-                  <span>Buying ►</span>
+                  <span>{t("predEngine.selling")}</span>
+                  <span className="pe-exch-heat-axis-center">{t("predEngine.frBias")}</span>
+                  <span>{t("predEngine.buying")}</span>
                 </div>
                 {slices.map(ex => {
                   const c = sigCfg[ex.signal];
@@ -502,7 +499,7 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
       </div>
 
       <p className="pe-disclaimer">
-        For informational purposes only. Not financial advice. Past signal correlations do not guarantee future results.
+        {t("predEngine.disclaimer")}
       </p>
     </div>
   );

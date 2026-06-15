@@ -954,7 +954,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   onOpenAuth = () => {},
   onOpenUpgrade = () => {},
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { exceeded, used, limit, consume, isPaid } = useAIQuota();
   const { tier } = useAuth();
   const isElite = hasAccess(tier, "elite");
@@ -2160,13 +2160,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
                     <circle cx="12" cy="13" r="4"/>
                   </svg>
-                  <span className="chart-icon-label">Save</span>
+                  <span className="chart-icon-label">{t("chart.save")}</span>
                 </button>
                 <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title="Exit fullscreen">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
                   </svg>
-                  <span className="chart-icon-label">Exit</span>
+                  <span className="chart-icon-label">{t("chart.exit")}</span>
                 </button>
               </div>
             )}
@@ -2431,14 +2431,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <line x1="15" y1="14" x2="6" y2="14"/>
               <line x1="12" y1="18" x2="6" y2="18"/>
             </svg>
-            <span className="chart-icon-label">Order Depth</span>
+            <span className="chart-icon-label">{t("chart.orderDepth")}</span>
           </button>
           <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
-            <span className="chart-icon-label">Save</span>
+            <span className="chart-icon-label">{t("chart.save")}</span>
           </button>
           <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
             {isFullscreen ? (
@@ -2450,7 +2450,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/>
               </svg>
             )}
-            <span className="chart-icon-label">{isFullscreen ? "Exit" : "Expand"}</span>
+            <span className="chart-icon-label">{isFullscreen ? t("chart.exit") : t("chart.expand")}</span>
           </button>
         </div>
       </div>
@@ -2514,10 +2514,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
       {showGann && gannCycles.length > 0 && (
         <div className="gann-cycles-strip">
-          <span className="gann-cycles-label">Gann Cycles from last pivot:</span>
+          <span className="gann-cycles-label">{t("chart.gannCyclesLabel")}</span>
           {gannCycles.map(gc => (
             <span key={gc.label} className={`gann-cycle-pill${gc.isPast ? " gann-cycle-pill--past" : ""}`}>
-              {gc.label} · {new Date(gc.timestamp * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              {gc.label} · {new Date(gc.timestamp * 1000).toLocaleDateString(i18n.language, { month: "short", day: "numeric" })}
             </span>
           ))}
         </div>
@@ -2569,7 +2569,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               className="predict-btn"
               onClick={() => setShowPredictionModal(true)}
             >
-              ✦ AI Powered Prediction ↗
+              {t("chart.aiPrediction")}
             </button>
           </>
         ) : (
@@ -2578,8 +2578,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             onClick={handlePredict}
             disabled={predictionLoading}
           >
-            {predictionLoading ? "Analyzing…" : "✦ Predict"}
-            {!predictionLoading && <span className="predict-ai-label">AI Powered</span>}
+            {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
+            {!predictionLoading && <span className="predict-ai-label">{t("chart.aiPowered")}</span>}
           </button>
         )}
         <button
@@ -2590,14 +2590,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             macdChartRef.current?.timeScale().fitContent();
           }}
         >
-          Reset
+          {t("chart.reset")}
         </button>
       </div>
 
       {!loading && exceeded && !isPaid ? (
         <div className="pattern-insight pattern-insight--neutral">
           <div className="pattern-insight-header">
-            <span className="pattern-insight-badge">✦ AI Pattern Analysis</span>
+            <span className="pattern-insight-badge">{t("chart.aiPatternBadge")}</span>
             <span className="pattern-insight-label">
               {t("chart.currentPattern")}
             </span>
@@ -2625,7 +2625,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               {patternInsight.name}
             </span>
             <div className="pattern-insight-header-right">
-              <span className="pattern-insight-ai-badge">✦ AI Powered</span>
+              <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
             </div>
           </div>
           <p className="pattern-insight-summary">{patternInsight.summary}</p>

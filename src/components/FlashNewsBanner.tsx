@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/FlashNewsBanner.css";
 
 interface NewsItem { title: string; url: string; source: string }
@@ -35,6 +36,7 @@ async function fetchCryptoNews(): Promise<NewsItem[]> {
 }
 
 export const FlashNewsBanner: React.FC = () => {
+  const { t } = useTranslation();
   const [items, setItems]       = useState<NewsItem[]>([]);
   const [index, setIndex]       = useState(0);
   const [visible, setVisible]   = useState(true);
@@ -72,7 +74,7 @@ export const FlashNewsBanner: React.FC = () => {
     <div className="fnb-root">
       <span className="fnb-tag">
         <span className="fnb-dot" />
-        LIVE
+        {t("nav.live")}
       </span>
       <span className="fnb-source">{current.source}</span>
       <a

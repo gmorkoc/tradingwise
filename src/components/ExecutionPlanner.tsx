@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 type Model = "duplet" | "triplet" | "convergence";
 
@@ -13,6 +14,7 @@ const FACTOR_PRESETS = [
 ];
 
 export function ExecutionPlanner() {
+  const { t } = useTranslation();
   const [model, setModel]         = useState<Model>("duplet");
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [stopLoss, setStopLoss]   = useState("");
@@ -44,7 +46,6 @@ export function ExecutionPlanner() {
   const updateFactor = (i: number, f: keyof Factor, v: string | number) =>
     setFactors(p => p.map((x, j) => j === i ? { ...x, [f]: v } : x));
 
-  // ── Calculations ──────────────────────────────────────────────────────────
   const activeLegCount = LEG_COUNTS[model] || 0;
   const activeLeg = model === "convergence" ? [] : legs.slice(0, activeLegCount);
   const validLegs = activeLeg.filter(l => l.price && l.size && +l.price > 0 && +l.size > 0);
@@ -59,7 +60,6 @@ export function ExecutionPlanner() {
   const rr         = riskUnit > 0 ? rewardUnit / riskUnit : 0;
   const totalRisk  = avgEntry > 0 && riskUnit > 0 ? (riskUnit / avgEntry) * totalSize : 0;
 
-  // Convergence zone
   const validF = factors.filter(f => f.price && +f.price > 0);
   const totalStrength = validF.reduce((s, f) => s + f.strength, 0);
   const convZone = totalStrength > 0
@@ -70,11 +70,10 @@ export function ExecutionPlanner() {
 
   return (
     <div className="ep-root">
-      {/* Model tabs */}
       <div className="ep-model-tabs">
         {(["duplet", "triplet", "convergence"] as Model[]).map(m => (
           <button key={m} className={`ep-model-tab${model === m ? " ep-model-tab--active" : ""}`} onClick={() => switchModel(m)}>
-            {m === "duplet" ? "Duplet (2-Leg)" : m === "triplet" ? "Triplet (3-Leg)" : "Convergence"}
+            {m === "duplet" ? t("executionPlanner.duplet") : m === "triplet" ? t("executionPlanner.triplet") : t("executionPlanner.convergence")}
           </button>
         ))}
       </div>
@@ -83,61 +82,56 @@ export function ExecutionPlanner() {
         {model !== "convergence" ? (
           <div className="ep-split">
             <div className="ep-left">
-              {/* Direction */}
               <div className="ep-dir-row">
-                <button className={`ep-dir${direction === "long" ? " ep-dir--long" : ""}`} onClick={() => setDirection("long")}>▲ Long</button>
-                <button className={`ep-dir${direction === "short" ? " ep-dir--short" : ""}`} onClick={() => setDirection("short")}>▼ Short</button>
+                <button className={`ep-dir${direction === "long" ? " ep-dir--long" : ""}`} onClick={() => setDirection("long")}>{t("executionPlanner.long")}</button>
+                <button className={`ep-dir${direction === "short" ? " ep-dir--short" : ""}`} onClick={() => setDirection("short")}>{t("executionPlanner.short")}</button>
               </div>
 
-              {/* Legs */}
               <div className="ep-legs">
                 {activeLeg.map((leg, i) => (
                   <div className="ep-leg" key={i}>
-                    <div className="ep-leg-num">Entry {i + 1}</div>
-                    <input className="ep-input" type="number" placeholder="Price" value={leg.price} onChange={e => updateLeg(i, "price", e.target.value)} />
-                    <input className="ep-input" type="number" placeholder="Size ($)" value={leg.size} onChange={e => updateLeg(i, "size", e.target.value)} />
+                    <div className="ep-leg-num">{t("executionPlanner.entryN", { n: i + 1 })}</div>
+                    <input className="ep-input" type="number" placeholder={t("executionPlanner.price")} value={leg.price} onChange={e => updateLeg(i, "price", e.target.value)} />
+                    <input className="ep-input" type="number" placeholder={t("executionPlanner.size")} value={leg.size} onChange={e => updateLeg(i, "size", e.target.value)} />
                   </div>
                 ))}
               </div>
 
-              {/* SL / TP */}
               <div className="ep-sltp">
                 <div className="ep-field">
-                  <label>Stop Loss</label>
-                  <input className="ep-input ep-input--sl" type="number" placeholder="Price" value={stopLoss} onChange={e => setStopLoss(e.target.value)} />
+                  <label>{t("executionPlanner.stopLoss")}</label>
+                  <input className="ep-input ep-input--sl" type="number" placeholder={t("executionPlanner.price")} value={stopLoss} onChange={e => setStopLoss(e.target.value)} />
                 </div>
                 <div className="ep-field">
-                  <label>Take Profit</label>
-                  <input className="ep-input ep-input--tp" type="number" placeholder="Price" value={target} onChange={e => setTarget(e.target.value)} />
+                  <label>{t("executionPlanner.takeProfit")}</label>
+                  <input className="ep-input ep-input--tp" type="number" placeholder={t("executionPlanner.price")} value={target} onChange={e => setTarget(e.target.value)} />
                 </div>
               </div>
             </div>
 
-            {/* Results */}
             <div className="ep-right">
-              <div className="ep-results-title">Summary</div>
+              <div className="ep-results-title">{t("executionPlanner.summary")}</div>
               <div className="ep-results">
-                <div className="ep-result-row"><span>Avg Entry</span><strong>{avgEntry ? `$${fmt(avgEntry)}` : "—"}</strong></div>
-                <div className="ep-result-row"><span>Total Position</span><strong>{totalSize ? `$${totalSize.toLocaleString()}` : "—"}</strong></div>
-                <div className="ep-result-row"><span>Risk per Leg</span><strong className="ep-danger">{riskUnit ? `${((riskUnit / avgEntry) * 100).toFixed(2)}%` : "—"}</strong></div>
-                <div className="ep-result-row"><span>Total $ Risk</span><strong className="ep-danger">{totalRisk ? `$${fmt(totalRisk)}` : "—"}</strong></div>
+                <div className="ep-result-row"><span>{t("executionPlanner.avgEntry")}</span><strong>{avgEntry ? `$${fmt(avgEntry)}` : "—"}</strong></div>
+                <div className="ep-result-row"><span>{t("executionPlanner.totalPosition")}</span><strong>{totalSize ? `$${totalSize.toLocaleString()}` : "—"}</strong></div>
+                <div className="ep-result-row"><span>{t("executionPlanner.riskPerLeg")}</span><strong className="ep-danger">{riskUnit ? `${((riskUnit / avgEntry) * 100).toFixed(2)}%` : "—"}</strong></div>
+                <div className="ep-result-row"><span>{t("executionPlanner.totalRisk")}</span><strong className="ep-danger">{totalRisk ? `$${fmt(totalRisk)}` : "—"}</strong></div>
                 <div className="ep-result-row ep-result-row--rr">
-                  <span>R:R Ratio</span>
+                  <span>{t("executionPlanner.rrRatio")}</span>
                   <strong className={rrColor}>{rr ? `${rr.toFixed(2)}R` : "—"}</strong>
                 </div>
               </div>
 
-              {/* Leg breakdown */}
               {validLegs.length >= 2 && (
                 <div className="ep-breakdown">
-                  <div className="ep-breakdown-title">Leg Breakdown</div>
+                  <div className="ep-breakdown-title">{t("executionPlanner.legBreakdown")}</div>
                   {validLegs.map((l, i) => {
                     const legRisk = riskUnit > 0 && avgEntry > 0
                       ? ((riskUnit / avgEntry) * +l.size) : 0;
                     const wt = totalSize > 0 ? (+l.size / totalSize) * 100 : 0;
                     return (
                       <div className="ep-breakdown-row" key={i}>
-                        <span>Entry {i + 1}</span>
+                        <span>{t("executionPlanner.entryN", { n: i + 1 })}</span>
                         <span>${(+l.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         <span>{wt.toFixed(0)}%</span>
                         <span className="ep-danger">{legRisk ? `$${fmt(legRisk)}` : "—"}</span>
@@ -149,12 +143,9 @@ export function ExecutionPlanner() {
             </div>
           </div>
         ) : (
-          /* Convergence */
           <div className="ep-split">
             <div className="ep-left">
-              <p className="ep-conv-desc">
-                Add confluence factors and assign a strength score (1–5). The tool calculates your weighted convergence zone.
-              </p>
+              <p className="ep-conv-desc">{t("executionPlanner.convDesc")}</p>
               <div className="ep-conv-factors">
                 {factors.map((f, i) => (
                   <div className="ep-conv-factor" key={i}>
@@ -162,7 +153,7 @@ export function ExecutionPlanner() {
                       onChange={e => updateFactor(i, "name", e.target.value)}>
                       {FACTOR_PRESETS.map(p => <option key={p}>{p}</option>)}
                     </select>
-                    <input className="ep-input" type="number" placeholder="Price level" value={f.price}
+                    <input className="ep-input" type="number" placeholder={t("executionPlanner.priceLevel")} value={f.price}
                       onChange={e => updateFactor(i, "price", e.target.value)} />
                     <div className="ep-strength-dots">
                       {[1,2,3,4,5].map(s => (
@@ -175,17 +166,21 @@ export function ExecutionPlanner() {
                   </div>
                 ))}
                 <button className="ep-add-factor" onClick={() => setFactors(p => [...p, { name: "Support Level", price: "", strength: 3 }])}>
-                  + Add Factor
+                  {t("executionPlanner.addFactor")}
                 </button>
               </div>
             </div>
 
             <div className="ep-right">
-              <div className="ep-results-title">Convergence Zone</div>
+              <div className="ep-results-title">{t("executionPlanner.convergenceZone")}</div>
               {convZone > 0 ? (
                 <>
                   <div className="ep-conv-zone-price">${fmt(convZone)}</div>
-                  <div className="ep-conv-zone-sub">Weighted average across {validF.length} factor{validF.length !== 1 ? "s" : ""}</div>
+                  <div className="ep-conv-zone-sub">
+                    {validF.length === 1
+                      ? t("executionPlanner.weightedAvg", { count: validF.length })
+                      : t("executionPlanner.weightedAvgPlural", { count: validF.length })}
+                  </div>
                   <div className="ep-conv-bars">
                     {validF.map((f, i) => (
                       <div className="ep-conv-bar-row" key={i}>
@@ -200,7 +195,7 @@ export function ExecutionPlanner() {
                   </div>
                 </>
               ) : (
-                <p className="ep-conv-hint">Add at least 2 factors with prices to see your convergence zone.</p>
+                <p className="ep-conv-hint">{t("executionPlanner.addFactorsHint")}</p>
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/LearnSection.css";
 
 interface MiniCandle { o: number; c: number; h: number; l: number; }
@@ -186,6 +187,7 @@ interface LearnSectionProps {
 }
 
 export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -199,7 +201,7 @@ export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) =
     <div className="learn-overlay" onClick={onClose}>
       <div className="learn-modal" onClick={e => e.stopPropagation()}>
         <div className="learn-modal-header">
-          <span className="learn-modal-title">📚 Candlestick Patterns</span>
+          <span className="learn-modal-title">{t("learnSection.title")}</span>
           <button className="learn-modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -207,7 +209,7 @@ export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) =
           <div className="learn-panels">
             <div className="learn-panel">
               <div className="learn-panel-header learn-panel-header--bullish">
-                <span className="learn-panel-dot" /> Bullish Patterns
+                <span className="learn-panel-dot" /> {t("learnSection.bullish")}
               </div>
               <div className="learn-pattern-list">
                 {BULLISH.map(p => <PatternCard key={p.name} pattern={p} type="bullish" />)}
@@ -216,7 +218,7 @@ export const LearnSection: React.FC<LearnSectionProps> = ({ isOpen, onClose }) =
 
             <div className="learn-panel">
               <div className="learn-panel-header learn-panel-header--bearish">
-                <span className="learn-panel-dot" /> Bearish Patterns
+                <span className="learn-panel-dot" /> {t("learnSection.bearish")}
               </div>
               <div className="learn-pattern-list">
                 {BEARISH.map(p => <PatternCard key={p.name} pattern={p} type="bearish" />)}

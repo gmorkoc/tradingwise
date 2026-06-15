@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { coinglass, MonthlyReturn, CoinSymbol } from "../services/coinglass";
 import "../styles/MonthlyReturns.css";
 
@@ -6,7 +7,6 @@ interface Props {
   coin?: CoinSymbol;
 }
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 function cellBg(pct: number): string {
   if (pct >= 80)  return "rgba(34,197,94,1)";
@@ -39,6 +39,8 @@ function fmtPct(n: number, compact = false): string {
 }
 
 export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
+  const { t } = useTranslation();
+  const MONTHS = t("monthlyReturns.months", { returnObjects: true }) as string[];
   const [data, setData] = useState<MonthlyReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,7 +50,7 @@ export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
     setError("");
     coinglass.getMonthlyReturns(coin)
       .then(d => { setData(d); setLoading(false); })
-      .catch(() => { setError("Failed to load monthly data"); setLoading(false); });
+      .catch(() => { setError(t("monthlyReturns.error")); setLoading(false); });
   }, [coin]);
 
   const byYear = useMemo(() => {
@@ -92,7 +94,7 @@ export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
     return (
       <div className="mr-loading">
         <div className="mr-spinner" />
-        <span>Loading historical monthly data…</span>
+        <span>{t("monthlyReturns.loading")}</span>
       </div>
     );
   }
@@ -106,21 +108,21 @@ export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
       {stats && (
         <div className="mr-stats">
           <div className="mr-stat">
-            <span className="mr-stat-label">Green Months</span>
+            <span className="mr-stat-label">{t("monthlyReturns.greenMonths")}</span>
             <span className="mr-stat-val mr-green">{stats.green}/{stats.total} ({((stats.green/stats.total)*100).toFixed(0)}%)</span>
           </div>
           <div className="mr-stat">
-            <span className="mr-stat-label">Avg Monthly Return</span>
+            <span className="mr-stat-label">{t("monthlyReturns.avgReturn")}</span>
             <span className={`mr-stat-val ${stats.avg >= 0 ? "mr-green" : "mr-red"}`}>{fmtPct(stats.avg)}</span>
           </div>
           <div className="mr-stat">
-            <span className="mr-stat-label">Best Month</span>
+            <span className="mr-stat-label">{t("monthlyReturns.bestMonth")}</span>
             <span className="mr-stat-val mr-green">
               {MONTHS[stats.best.month]} {stats.best.year} {fmtPct(stats.best.pct)}
             </span>
           </div>
           <div className="mr-stat">
-            <span className="mr-stat-label">Worst Month</span>
+            <span className="mr-stat-label">{t("monthlyReturns.worstMonth")}</span>
             <span className="mr-stat-val mr-red">
               {MONTHS[stats.worst.month]} {stats.worst.year} {fmtPct(stats.worst.pct)}
             </span>
@@ -133,13 +135,13 @@ export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
         <table className="mr-table">
           <thead>
             <tr>
-              <th className="mr-th mr-th--year">Year</th>
+              <th className="mr-th mr-th--year">{t("monthlyReturns.yearHeader")}</th>
               {MONTHS.map(m => <th key={m} className="mr-th">{m}</th>)}
-              <th className="mr-th mr-th--total">Total</th>
+              <th className="mr-th mr-th--total">{t("monthlyReturns.totalHeader")}</th>
             </tr>
             {/* Month stats row */}
             <tr className="mr-month-avg-row">
-              <td className="mr-year-cell mr-avg-label">Avg</td>
+              <td className="mr-year-cell mr-avg-label">{t("monthlyReturns.avgLabel")}</td>
               {monthStats.map((ms, i) => (
                 <td key={i} className="mr-avg-cell">
                   {ms ? (
@@ -206,7 +208,7 @@ export const MonthlyReturns: React.FC<Props> = ({ coin = "BTC" }) => {
           );
         })}
       </div>
-      <p className="mr-footnote">Win rate = % of years that month closed green</p>
+      <p className="mr-footnote">{t("monthlyReturns.footnote")}</p>
     </div>
   );
 };

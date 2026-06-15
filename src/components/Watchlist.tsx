@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/Watchlist.css";
 
 interface CatalogEntry { id: string; symbol: string; name: string }
@@ -192,6 +193,7 @@ function fmtVol(v: number): string {
 
 /* ── Component ──────────────────────────────────────────────────────────── */
 export function Watchlist() {
+  const { t } = useTranslation();
   const [watchedIds, setWatchedIds] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("watchlistCoins_v1") ?? "null");
@@ -258,22 +260,22 @@ export function Watchlist() {
   return (
     <div className="wl-card">
       <div className="wl-header">
-        <h3 className="wl-title">Watchlist</h3>
+        <h3 className="wl-title">{t("watchlist.title")}</h3>
         <span className="wl-subtitle">
-          Updated every minute ·{" "}
+          {t("watchlist.updated")} ·{" "}
           <a className="wl-source-badge" href="https://www.coingecko.com" target="_blank" rel="noopener noreferrer">
             Powered by CoinGecko
           </a>
         </span>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
-            + Add Coin
+            {t("watchlist.addCoin")}
           </button>
           {searchOpen && (
             <div className="wl-dropdown">
               <input
                 className="wl-search-input"
-                placeholder="Search by name or symbol…"
+                placeholder={t("watchlist.searchPlaceholder")}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 autoFocus
@@ -286,7 +288,7 @@ export function Watchlist() {
                   </button>
                 ))}
                 {filteredCatalog.length === 0 && (
-                  <div className="wl-dropdown-empty">No results</div>
+                  <div className="wl-dropdown-empty">{t("watchlist.noResults")}</div>
                 )}
               </div>
             </div>
@@ -295,14 +297,14 @@ export function Watchlist() {
       </div>
 
       {loading && watchedIds.length > 0 && (
-        <div className="wl-loading">Loading market data…</div>
+        <div className="wl-loading">{t("watchlist.loading")}</div>
       )}
 
       {!loading && watchedIds.length === 0 && (
         <div className="wl-empty">
           <div className="wl-empty-icon">☆</div>
-          <div className="wl-empty-text">No coins in your watchlist</div>
-          <div className="wl-empty-hint">Click "+ Add Coin" to start tracking</div>
+          <div className="wl-empty-text">{t("watchlist.emptyText")}</div>
+          <div className="wl-empty-hint">{t("watchlist.emptyHint")}</div>
         </div>
       )}
 
@@ -325,7 +327,7 @@ export function Watchlist() {
 
                 <div className="wl-row-info">
                   <span className="wl-row-symbol">{symbol}-USD</span>
-                  <span className="wl-row-vol">Vol {coin ? fmtVol(coin.total_volume) : "—"}</span>
+                  <span className="wl-row-vol">{t("watchlist.vol")} {coin ? fmtVol(coin.total_volume) : "—"}</span>
                 </div>
 
                 {coin?.sparkline_in_7d?.price && (
@@ -344,7 +346,7 @@ export function Watchlist() {
                 <button
                   className="wl-row-star"
                   onClick={() => removeCoin(id)}
-                  title="Remove from watchlist"
+                  title={t("watchlist.removeTitle")}
                 >
                   ★
                 </button>

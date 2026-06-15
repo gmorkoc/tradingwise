@@ -158,7 +158,17 @@
     "signalLegend": "Señal",
     "rsiOB": "SB 70",
     "rsiOS": "SS 30",
-    "save": "Guardar"
+    "save": "Guardar",
+    "orderDepth": "Profundidad",
+    "expand": "Expandir",
+    "exit": "Salir",
+    "predict": "✦ Predecir",
+    "aiPowered": "✦ Con IA",
+    "aiPrediction": "✦ Predicción con IA ↗",
+    "analyzing": "Analizando…",
+    "reset": "Restablecer",
+    "aiPatternBadge": "✦ Análisis de Patrones IA",
+    "gannCyclesLabel": "Ciclos Gann desde el último pivote:"
   },
   "heatmap": {
     "title": "🔥 Mapa de calor de liquidaciones",
@@ -425,7 +435,12 @@
     "signin": {
       "title": "Inicia sesión para continuar",
       "sub": "Crea una cuenta gratuita para acceder a {{feature}} y ganar ventaja en el mercado.",
-      "perks": ["Precio en vivo y libro de órdenes", "Indicador miedo y codicia", "Métricas on-chain", "Mapa de calor de liquidaciones"],
+      "perks": [
+        "Precio en vivo y libro de órdenes",
+        "Indicador miedo y codicia",
+        "Métricas on-chain",
+        "Mapa de calor de liquidaciones"
+      ],
       "cta": "Iniciar sesión / Registrarse — Es gratis",
       "trust": "Sin tarjeta de crédito · Plan gratuito para siempre"
     },
@@ -433,10 +448,26 @@
       "headline": "Opera más inteligente con IA",
       "sub": "Obtén análisis con IA en tiempo real sobre acción del precio, datos on-chain y sentimiento de mercado — todo en un lugar.",
       "features": [
-        { "icon": "✦", "title": "Inteligencia de mercado IA", "desc": "GPT-4o lee el mercado por ti — patrones, momentum y sesgo de un vistazo." },
-        { "icon": "⛓",  "title": "Análisis IA on-chain",  "desc": "Salud de la red, comportamiento de mineros y señales on-chain interpretadas en lenguaje sencillo." },
-        { "icon": "📈", "title": "Predicciones de precio IA",  "desc": "Pronósticos multi-escenario con niveles de confianza actualizados cada intervalo." },
-        { "icon": "💬", "title": "Asistente de trading IA", "desc": "Pregunta cualquier cosa — estrategia, setups, riesgo — y obtén respuestas de nivel institucional." }
+        {
+          "icon": "✦",
+          "title": "Inteligencia de mercado IA",
+          "desc": "GPT-4o lee el mercado por ti — patrones, momentum y sesgo de un vistazo."
+        },
+        {
+          "icon": "⛓",
+          "title": "Análisis IA on-chain",
+          "desc": "Salud de la red, comportamiento de mineros y señales on-chain interpretadas en lenguaje sencillo."
+        },
+        {
+          "icon": "📈",
+          "title": "Predicciones de precio IA",
+          "desc": "Pronósticos multi-escenario con niveles de confianza actualizados cada intervalo."
+        },
+        {
+          "icon": "💬",
+          "title": "Asistente de trading IA",
+          "desc": "Pregunta cualquier cosa — estrategia, setups, riesgo — y obtén respuestas de nivel institucional."
+        }
       ],
       "cta": "Activar Pro — $10,99/mes",
       "trust": "35 solicitudes IA/semana · Cancela cuando quieras · Acceso instantáneo"
@@ -445,9 +476,21 @@
       "headline": "La ventaja que usan los profesionales",
       "sub": "Análisis Gann, Coinbase Premium y IA ilimitada — el kit institucional completo, sin límites.",
       "features": [
-        { "icon": "📐", "title": "Análisis Gann IA",   "desc": "Cuadrado de 9, ángulos Gann y pronósticos de ciclo interpretados por GPT-4o — exclusivo de Elite." },
-        { "icon": "⚡", "title": "Solicitudes IA ilimitadas", "desc": "Sin límite semanal — usa todas las funciones de IA tanto como necesites." },
-        { "icon": "🏦", "title": "Coinbase Premium IA", "desc": "Flujo institucional vs divergencia retail interpretado en tiempo real." }
+        {
+          "icon": "📐",
+          "title": "Análisis Gann IA",
+          "desc": "Cuadrado de 9, ángulos Gann y pronósticos de ciclo interpretados por GPT-4o — exclusivo de Elite."
+        },
+        {
+          "icon": "⚡",
+          "title": "Solicitudes IA ilimitadas",
+          "desc": "Sin límite semanal — usa todas las funciones de IA tanto como necesites."
+        },
+        {
+          "icon": "🏦",
+          "title": "Coinbase Premium IA",
+          "desc": "Flujo institucional vs divergencia retail interpretado en tiempo real."
+        }
       ],
       "cta": "Activar Elite — $29,99/mes",
       "trust": "IA ilimitada · Cancela cuando quieras · Incluye todo de Pro"
@@ -456,7 +499,11 @@
       "planLabel": "Elite",
       "planPrice": "$29.99",
       "perMonth": "/mes",
-      "features": ["Todo en Pro — ilimitado", "IA Multi-Timeframe HTF", "Coinbase Premium IA"],
+      "features": [
+        "Todo en Pro — ilimitado",
+        "IA Multi-Timeframe HTF",
+        "Coinbase Premium IA"
+      ],
       "signInBtn": "Inicia sesión para mejorar",
       "upgradeBtn": "Mejorar a Elite",
       "redirecting": "Redirigiendo…",
@@ -471,15 +518,34 @@
     "plans": {
       "free": {
         "label": "Gratis",
-        "features": ["Gráficos de precio en vivo", "Libro de órdenes", "Lista de seguimiento", "Indicador miedo y codicia", "Banner de noticias"]
+        "features": [
+          "Gráficos de precio en vivo",
+          "Libro de órdenes",
+          "Lista de seguimiento",
+          "Indicador miedo y codicia",
+          "Banner de noticias"
+        ]
       },
       "pro": {
         "label": "Pro",
-        "features": ["Todo en Gratis", "IA Multi-Timeframe HTF", "Inteligencia de mercado IA", "Análisis IA on-chain", "Gráfico de predicción de precio", "IA de mapa de calor de liquidaciones", "35 solicitudes IA / semana"]
+        "features": [
+          "Todo en Gratis",
+          "IA Multi-Timeframe HTF",
+          "Inteligencia de mercado IA",
+          "Análisis IA on-chain",
+          "Gráfico de predicción de precio",
+          "IA de mapa de calor de liquidaciones",
+          "35 solicitudes IA / semana"
+        ]
       },
       "elite": {
         "label": "Elite",
-        "features": ["Todo en Pro — ilimitado", "Análisis Gann IA", "Coinbase Premium IA", "Acceso anticipado a nuevas funciones"]
+        "features": [
+          "Todo en Pro — ilimitado",
+          "Análisis Gann IA",
+          "Coinbase Premium IA",
+          "Acceso anticipado a nuevas funciones"
+        ]
       }
     },
     "cta": {
@@ -522,7 +588,8 @@
       "cancelAnytime": "Cancela cuando quieras",
       "securePayment": " · Pago seguro vía Stripe"
     },
-    "error": "Algo salió mal"
+    "error": "Algo salió mal",
+    "perMonth": "/mes"
   },
   "landing": {
     "hero": {
@@ -553,20 +620,68 @@
       "sectionTitle": "Todo lo que necesitas para operar con ventaja",
       "title": "Todo lo que necesitas para operar mejor",
       "list": [
-        { "icon": "📊", "title": "Gráficos de precio en vivo",      "desc": "Gráficos de velas en tiempo real con EMA, Bandas de Bollinger, RSI y MACD. Impulsado por TradingView Lightweight Charts." },
-        { "icon": "🤖", "title": "Inteligencia de mercado IA",       "desc": "GPT-4o analiza tasas de financiación, liquidaciones, interés abierto y datos on-chain para entregar una tesis de mercado completa en segundos." },
-        { "icon": "🎯", "title": "Escenarios de predicción de precio","desc": "Proyecciones alcistas, base y bajistas con puntuaciones de probabilidad y caminos de precio proyectados directamente en el gráfico." },
-        { "icon": "🔥", "title": "Mapa de calor de liquidaciones",   "desc": "Ve dónde se agrupan miles de millones en posiciones apalancadas. Conoce los niveles de precio que atraen más liquidez." },
-        { "icon": "⛓",  "title": "Análisis on-chain con IA",        "desc": "Hash rate, ingresos de mineros, volumen de transacciones — interpretados por IA en señales de mercado accionables." },
-        { "icon": "📐", "title": "Análisis de Gann",                 "desc": "Teoría avanzada de precio y tiempo geométrico. Cuadrado de 9, ángulos de Gann y pronósticos de ciclo usados por traders profesionales." }
+        {
+          "icon": "📊",
+          "title": "Gráficos de precio en vivo",
+          "desc": "Gráficos de velas en tiempo real con EMA, Bandas de Bollinger, RSI y MACD. Impulsado por TradingView Lightweight Charts."
+        },
+        {
+          "icon": "🤖",
+          "title": "Inteligencia de mercado IA",
+          "desc": "GPT-4o analiza tasas de financiación, liquidaciones, interés abierto y datos on-chain para entregar una tesis de mercado completa en segundos."
+        },
+        {
+          "icon": "🎯",
+          "title": "Escenarios de predicción de precio",
+          "desc": "Proyecciones alcistas, base y bajistas con puntuaciones de probabilidad y caminos de precio proyectados directamente en el gráfico."
+        },
+        {
+          "icon": "🔥",
+          "title": "Mapa de calor de liquidaciones",
+          "desc": "Ve dónde se agrupan miles de millones en posiciones apalancadas. Conoce los niveles de precio que atraen más liquidez."
+        },
+        {
+          "icon": "⛓",
+          "title": "Análisis on-chain con IA",
+          "desc": "Hash rate, ingresos de mineros, volumen de transacciones — interpretados por IA en señales de mercado accionables."
+        },
+        {
+          "icon": "📐",
+          "title": "Análisis de Gann",
+          "desc": "Teoría avanzada de precio y tiempo geométrico. Cuadrado de 9, ángulos de Gann y pronósticos de ciclo usados por traders profesionales."
+        }
       ],
       "items": [
-        { "icon": "✦",  "title": "Inteligencia de mercado IA",   "desc": "GPT-4o lee la acción del precio, tasas de financiación, interés abierto y datos on-chain — y te da un sesgo en lenguaje sencillo con nivel de confianza." },
-        { "icon": "📈", "title": "Gráfico de predicción de precio",   "desc": "Escenarios Bull, Base y Bear generados por IA proyectados hacia adelante con puntuaciones de probabilidad, actualizados cada intervalo." },
-        { "icon": "🔥", "title": "Mapa de calor de liquidaciones",     "desc": "Grupos de liquidación estimados de $90K a $120K con intensidad codificada por colores. Ve dónde es probable la venta forzada o la cobertura." },
-        { "icon": "⛓",  "title": "Inteligencia on-chain",   "desc": "Hash rate, ingresos de mineros, dificultad y volumen de transacciones — resumidos e interpretados por IA en tiempo real." },
-        { "icon": "📊", "title": "Análisis de ciclo a largo plazo","desc": "MA 200W, Pi Cycle Top, niveles Fibonacci, comparaciones de ciclos y caminos de escenarios — todo en la sección de Análisis HTF." },
-        { "icon": "🧠", "title": "Posicionamiento de traders",      "desc": "Posiciones netas retail vs dinero inteligente, divergencia de sentimiento y resúmenes de sesgo con IA — actualizados cada 4 horas." }
+        {
+          "icon": "✦",
+          "title": "Inteligencia de mercado IA",
+          "desc": "GPT-4o lee la acción del precio, tasas de financiación, interés abierto y datos on-chain — y te da un sesgo en lenguaje sencillo con nivel de confianza."
+        },
+        {
+          "icon": "📈",
+          "title": "Gráfico de predicción de precio",
+          "desc": "Escenarios Bull, Base y Bear generados por IA proyectados hacia adelante con puntuaciones de probabilidad, actualizados cada intervalo."
+        },
+        {
+          "icon": "🔥",
+          "title": "Mapa de calor de liquidaciones",
+          "desc": "Grupos de liquidación estimados de $90K a $120K con intensidad codificada por colores. Ve dónde es probable la venta forzada o la cobertura."
+        },
+        {
+          "icon": "⛓",
+          "title": "Inteligencia on-chain",
+          "desc": "Hash rate, ingresos de mineros, dificultad y volumen de transacciones — resumidos e interpretados por IA en tiempo real."
+        },
+        {
+          "icon": "📊",
+          "title": "Análisis de ciclo a largo plazo",
+          "desc": "MA 200W, Pi Cycle Top, niveles Fibonacci, comparaciones de ciclos y caminos de escenarios — todo en la sección de Análisis HTF."
+        },
+        {
+          "icon": "🧠",
+          "title": "Posicionamiento de traders",
+          "desc": "Posiciones netas retail vs dinero inteligente, divergencia de sentimiento y resúmenes de sesgo con IA — actualizados cada 4 horas."
+        }
       ]
     },
     "aiSection": {
@@ -596,9 +711,45 @@
       "sectionTitle": "Empieza gratis, mejora cuando estés listo",
       "popularTag": "Más popular",
       "plans": [
-        { "label": "Free",  "price": "$0",     "per": "",    "cta": "Empezar gratis",    "features": ["Gráficos en vivo y libro de órdenes", "Lista de seguimiento", "Indicador de miedo y codicia", "Panel de flujos ETF"] },
-        { "label": "Pro",   "price": "$10.99", "per": "/mes","cta": "Empezar Pro",       "features": ["Todo lo de Free", "IA HTF Multi-Temporal", "Inteligencia de mercado IA", "Análisis on-chain con IA", "Predicción de precio con escenarios", "IA de mapa de calor de liquidaciones", "35 peticiones IA / semana"] },
-        { "label": "Elite", "price": "$29.99", "per": "/mes","cta": "Ir a Elite",        "features": ["Todo lo de Pro — ilimitado", "IA de análisis Gann", "IA de Prima Coinbase", "Acceso anticipado a novedades"] }
+        {
+          "label": "Free",
+          "price": "$0",
+          "per": "",
+          "cta": "Empezar gratis",
+          "features": [
+            "Gráficos en vivo y libro de órdenes",
+            "Lista de seguimiento",
+            "Indicador de miedo y codicia",
+            "Panel de flujos ETF"
+          ]
+        },
+        {
+          "label": "Pro",
+          "price": "$10.99",
+          "per": "/mes",
+          "cta": "Empezar Pro",
+          "features": [
+            "Todo lo de Free",
+            "IA HTF Multi-Temporal",
+            "Inteligencia de mercado IA",
+            "Análisis on-chain con IA",
+            "Predicción de precio con escenarios",
+            "IA de mapa de calor de liquidaciones",
+            "35 peticiones IA / semana"
+          ]
+        },
+        {
+          "label": "Elite",
+          "price": "$29.99",
+          "per": "/mes",
+          "cta": "Ir a Elite",
+          "features": [
+            "Todo lo de Pro — ilimitado",
+            "IA de análisis Gann",
+            "IA de Prima Coinbase",
+            "Acceso anticipado a novedades"
+          ]
+        }
       ],
       "title": "Precios simples y transparentes",
       "sub": "Empieza gratis. Mejora cuando necesites más."
@@ -670,13 +821,34 @@
     "sub": "HTF · Semanal · Seguimiento de ciclo · {{coin}}/USD",
     "aiLabel": "GPT-4o",
     "sections": {
-      "monthly":  { "title": "Retornos mensuales",   "sub": "Mapa de calor histórico completo" },
-      "ma200":    { "title": "MA 200W",              "sub": "Bandas de media móvil" },
-      "cycle":    { "title": "Comparación de ciclo", "sub": "2020 vs 2024 alineados" },
-      "pi":       { "title": "Pi Cycle Top",         "sub": "Indicador de techo de ciclo" },
-      "fib":      { "title": "Fibonacci",            "sub": "Soporte y resistencia clave" },
-      "scenario": { "title": "Escenarios",           "sub": "Caminos Alcista · Base · Bajista" },
-      "ai":       { "title": "Perspectiva IA",       "sub": "Análisis macro GPT-4o" }
+      "monthly": {
+        "title": "Retornos mensuales",
+        "sub": "Mapa de calor histórico completo"
+      },
+      "ma200": {
+        "title": "MA 200W",
+        "sub": "Bandas de media móvil"
+      },
+      "cycle": {
+        "title": "Comparación de ciclo",
+        "sub": "2020 vs 2024 alineados"
+      },
+      "pi": {
+        "title": "Pi Cycle Top",
+        "sub": "Indicador de techo de ciclo"
+      },
+      "fib": {
+        "title": "Fibonacci",
+        "sub": "Soporte y resistencia clave"
+      },
+      "scenario": {
+        "title": "Escenarios",
+        "sub": "Caminos Alcista · Base · Bajista"
+      },
+      "ai": {
+        "title": "Perspectiva IA",
+        "sub": "Análisis macro GPT-4o"
+      }
     },
     "stats": {
       "price": "Precio",
@@ -838,12 +1010,30 @@
   "onchain": {
     "loading": "Cargando…",
     "metrics": {
-      "hashRate":     { "label": "Hash Rate",          "tooltip": "Potencia total de minería que asegura la red Bitcoin" },
-      "dailyTxs":     { "label": "Txs diarias",        "tooltip": "Número de transacciones on-chain en las últimas 24 horas" },
-      "minerRevenue": { "label": "Ingresos mineros",   "tooltip": "Total en USD ganado por los mineros hoy (recompensas de bloque + comisiones)" },
-      "difficulty":   { "label": "Dificultad",         "tooltip": "Dificultad de minería actual — qué tan difícil es encontrar un bloque" },
-      "btcMined":     { "label": "BTC minado",         "tooltip": "Nuevo BTC emitido a los mineros hoy" },
-      "transferVol":  { "label": "Vol. transferencia", "tooltip": "Valor estimado en USD transferido on-chain hoy" }
+      "hashRate": {
+        "label": "Hash Rate",
+        "tooltip": "Potencia total de minería que asegura la red Bitcoin"
+      },
+      "dailyTxs": {
+        "label": "Txs diarias",
+        "tooltip": "Número de transacciones on-chain en las últimas 24 horas"
+      },
+      "minerRevenue": {
+        "label": "Ingresos mineros",
+        "tooltip": "Total en USD ganado por los mineros hoy (recompensas de bloque + comisiones)"
+      },
+      "difficulty": {
+        "label": "Dificultad",
+        "tooltip": "Dificultad de minería actual — qué tan difícil es encontrar un bloque"
+      },
+      "btcMined": {
+        "label": "BTC minado",
+        "tooltip": "Nuevo BTC emitido a los mineros hoy"
+      },
+      "transferVol": {
+        "label": "Vol. transferencia",
+        "tooltip": "Valor estimado en USD transferido on-chain hoy"
+      }
     },
     "networkStrength": "Red {{label}}",
     "action": {
@@ -946,15 +1136,408 @@
     }
   },
   "nav": {
-    "ai": "Predicción IA",
-    "feargreed": "Miedo y Codicia",
+    "ai": "Análisis IA",
+    "feargreed": "Sentimiento",
     "market": "Datos de Mercado",
     "onchain": "On-Chain",
-    "chart": "Gráfico de Precio",
-    "heatmap": "Liquidaciones",
+    "chart": "Gráfico",
+    "heatmap": "Mapa de Calor",
     "alerts": "Alertas",
     "watchlist": "Lista de Seguimiento",
-    "gann": "Análisis Gann",
-    "live": "EN VIVO"
+    "gann": "Gann",
+    "live": "EN VIVO",
+    "etf": "Flujos ETF",
+    "positions": "Traders",
+    "htf": "Análisis HTF",
+    "orderflow": "Dinero Inteligente",
+    "signals": "Confluencia",
+    "settings": "Configuración",
+    "signOut": "Cerrar Sesión",
+    "swipeHint": "Desliza para abrir el menú"
+  },
+  "tradeManager": {
+    "long": "▲ Largo",
+    "short": "▼ Corto",
+    "accountRisk": "Cuenta y Riesgo",
+    "accountSize": "Tamaño de Cuenta ($)",
+    "riskPct": "Riesgo (%)",
+    "tradeLevels": "Niveles de Operación",
+    "entryPrice": "Precio de Entrada",
+    "stopLoss": "Stop Loss",
+    "invalidationLevel": "Nivel de Invalidación",
+    "hardClose": "cierre forzado",
+    "invWarn": "⚠ La invalidación supera tu stop — revisa la colocación",
+    "takeProfits": "Tomar Ganancias",
+    "price": "Precio",
+    "addTP": "+ Añadir TP",
+    "positionSummary": "Resumen de Posición",
+    "positionSize": "Tamaño de Posición",
+    "units": "Unidades",
+    "dollarRisk": "Riesgo en Dólares",
+    "riskOnEntry": "Riesgo en Entrada",
+    "targetBreakdown": "Desglose de Objetivos",
+    "fillHint": "Completa la entrada, el stop y los TP para ver el desglose.",
+    "priceLadder": "Escalera de Precios",
+    "entry": "Entrada",
+    "stop": "Stop",
+    "invalid": "Inval."
+  },
+  "predEngine": {
+    "title": "Motor de Confluencia Multi-Señal",
+    "sub": "Puntuación compuesta de 6 señales independientes · {{coin}}/USD",
+    "loading": "Cargando…",
+    "strongBear": "Bajista Fuerte",
+    "mildBear": "Bajista Leve",
+    "neutral": "Neutral",
+    "mildBull": "Alcista Leve",
+    "strongBull": "Alcista Fuerte",
+    "priceTargets": "Objetivos de Precio",
+    "target4h": "Objetivo 4H",
+    "targetDaily": "Objetivo Diario",
+    "targetWeekly": "Objetivo Semanal",
+    "atrLabel": "ATR",
+    "signalBreakdown": "Desglose de Señales",
+    "bear": "Bajista",
+    "bull": "Alcista",
+    "exchActivity": "Actividad de Exchanges",
+    "exchSub": "Tasa de financiación por exchange · positiva = longs sobrecargados",
+    "updating": "Actualizando…",
+    "updatedAt": "Actualizado {{time}}",
+    "selling": "◄ Vendiendo",
+    "frBias": "Sesgo de Tasa de Financiación",
+    "buying": "Comprando ►",
+    "sigBuying": "Comprando",
+    "sigSelling": "Vendiendo",
+    "sigNeutral": "Neutral",
+    "disclaimer": "Solo para fines informativos. No es asesoramiento financiero. Las correlaciones pasadas no garantizan resultados futuros.",
+    "loadingSentiment": "Cargando datos de sentimiento…",
+    "computingVP": "Calculando perfil de volumen 4H…",
+    "rsiName": "RSI (14)",
+    "macdName": "Cruce MACD",
+    "frName": "Tasa de Financiación",
+    "lsName": "Ratio Long/Short",
+    "fgName": "Miedo y Codicia",
+    "pocName": "POC Perfil de Volumen",
+    "rsiOB": "RSI {{rsi}} — sobrecomprado, {{price}} puede estar cerca de un techo local",
+    "rsiOS": "RSI {{rsi}} — muy sobrevendido en {{price}}, alta probabilidad de rebote",
+    "rsiWeak": "RSI {{rsi}} — momentum debilitándose, {{price}} enfrenta presión vendedora",
+    "rsiHealthy": "RSI {{rsi}} — momentum saludable apoya el nivel actual de {{price}}",
+    "macdBullAbove": "Cruce alcista sobre cero — tendencia probable a empujar {{price}} más alto",
+    "macdBullBelow": "Cruce alcista en territorio negativo — {{price}} recuperándose pero aún bajo la base",
+    "macdBearBelow": "Cruce bajista bajo cero — {{price}} bajo presión bajista sostenida",
+    "macdBearAbove": "Cruce bajista sobre cero — momentum desvaneciéndose, {{price}} puede estancarse",
+    "macdNeutral": "MACD cerca de cero — sin dirección clara, {{price}} en consolidación",
+    "frHigh": "Los longs pagan {{fr}}% — sobrecalentado, {{price}} puede ver una liquidación",
+    "frLow": "Los shorts pagan {{fr}}% — posible short squeeze hacia {{price}}",
+    "frNeutral": "Financiación cercana a cero en {{price}} — posicionamiento equilibrado",
+    "lsCrowded": "{{ls}}x más longs que shorts — aglomerado en {{price}}, riesgo de squeeze si baja",
+    "lsBull": "Ligero sesgo largo ({{ls}}) — soporte de tendencia saludable para {{price}}",
+    "lsBear": "{{ls}} — posicionamiento corto pesado, señal contraria de compra en {{price}}",
+    "lsBalanced": "Equilibrado en {{ls}} — sin aglomeración, {{price}} impulsado por demanda spot",
+    "fgExtreme": "Puntuación {{fg}} — codicia extrema, {{price}} puede estar sobreextendido",
+    "fgFear": "Puntuación {{fg}} — miedo extremo en {{price}}, históricamente zona de compra fuerte",
+    "fgGreed": "Puntuación {{fg}} — fase de codicia, momentum probable a llevar {{price}} más alto",
+    "fgMidFear": "Puntuación {{fg}} — zona de miedo, riesgo/beneficio en {{price}} mejorando",
+    "pocAbove": "{{price}} está {{pct}}% sobre el POC {{poc}} — extendido, soporte abajo",
+    "pocBelow": "{{price}} está {{pct}}% bajo el POC {{poc}} — objetivo de reversión a la media",
+    "pocAt": "{{price}} en el POC {{poc}} — aceptación de alto volumen, base sólida"
+  },
+  "executionPlanner": {
+    "duplet": "Dúplete (2 Entradas)",
+    "triplet": "Tríplete (3 Entradas)",
+    "convergence": "Convergencia",
+    "long": "▲ Largo",
+    "short": "▼ Corto",
+    "entryN": "Entrada {{n}}",
+    "price": "Precio",
+    "size": "Tamaño ($)",
+    "stopLoss": "Stop Loss",
+    "takeProfit": "Take Profit",
+    "summary": "Resumen",
+    "avgEntry": "Entrada Promedio",
+    "totalPosition": "Posición Total",
+    "riskPerLeg": "Riesgo por Entrada",
+    "totalRisk": "Riesgo Total $",
+    "rrRatio": "Ratio R:R",
+    "legBreakdown": "Desglose por Entrada",
+    "convDesc": "Añade factores de confluencia y asigna una puntuación de fuerza (1–5). La herramienta calcula tu zona de convergencia ponderada.",
+    "priceLevel": "Nivel de precio",
+    "addFactor": "+ Añadir Factor",
+    "convergenceZone": "Zona de Convergencia",
+    "weightedAvg": "Promedio ponderado de {{count}} factor",
+    "weightedAvgPlural": "Promedio ponderado de {{count}} factores",
+    "addFactorsHint": "Añade al menos 2 factores con precios para ver tu zona de convergencia."
+  },
+  "volumeProfile": {
+    "loading": "Construyendo perfil de volumen...",
+    "buyLegend": "■ Compra",
+    "sellLegend": "■ Venta",
+    "pocLegend": "― POC",
+    "vaLegend": "░ Área de Valor (70%)"
+  },
+  "priceAlerts": {
+    "title": "Alertas de Precio",
+    "placeholder": "Precio objetivo (USD)",
+    "addBtn": "Añadir",
+    "empty": "No hay alertas. Introduce un precio arriba para empezar.",
+    "goesAbove": "Precio supera",
+    "goesBelow": "Precio cae a",
+    "triggered": "Activada",
+    "toastTitle": "Alerta de Precio Activada",
+    "toastReached": "alcanzó",
+    "toastDropped": "cayó a"
+  },
+  "monthlyReturns": {
+    "loading": "Cargando datos mensuales históricos…",
+    "error": "Error al cargar datos mensuales",
+    "greenMonths": "Meses Positivos",
+    "avgReturn": "Retorno Mensual Promedio",
+    "bestMonth": "Mejor Mes",
+    "worstMonth": "Peor Mes",
+    "yearHeader": "Año",
+    "totalHeader": "Total",
+    "avgLabel": "Prom.",
+    "footnote": "Tasa de éxito = % de años que ese mes cerró en positivo",
+    "months": [
+      "Ene",
+      "Feb",
+      "Mar",
+      "Abr",
+      "May",
+      "Jun",
+      "Jul",
+      "Ago",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dic"
+    ]
+  },
+  "whaleAlerts": {
+    "label": "Alerta Ballena · BTC",
+    "bullish": "▲ Alcista",
+    "bearish": "▼ Bajista"
+  },
+  "orderBook": {
+    "title": "Libro de Órdenes",
+    "loading": "Cargando…",
+    "unavailable": "No disponible para {{coin}} en {{exchange}}",
+    "colPrice": "Precio",
+    "colSize": "Cantidad",
+    "colValue": "Valor"
+  },
+  "orderFlowTape": {
+    "live": "EN VIVO",
+    "connecting": "Conectando...",
+    "buyVolume": "Volumen Compra",
+    "sellVolume": "Volumen Venta",
+    "delta": "Delta Acumulado",
+    "buy": "% Compra",
+    "sell": "% Venta",
+    "colPrice": "Precio",
+    "colSize": "Tamaño (USD)",
+    "colSide": "Lado",
+    "colTime": "Hora",
+    "sideBuy": "▲ COMPRA",
+    "sideSell": "▼ VENTA",
+    "waiting": "Esperando operaciones..."
+  },
+  "orderFlowFramework": {
+    "title": "Mesa de Dinero Inteligente",
+    "subtitle": "Herramientas de ejecución de nivel institucional para entradas, gestión y salidas",
+    "tabFlow": "Flujo en Vivo",
+    "tabPlanner": "Planificador de Ejecución",
+    "tabManager": "Gestor de Operaciones",
+    "tabProfile": "Perfil de Volumen"
+  },
+  "learnSection": {
+    "title": "📚 Patrones de Velas",
+    "bullish": "Patrones Alcistas",
+    "bearish": "Patrones Bajistas"
+  },
+  "onboarding": {
+    "welcomeTitle": "Bienvenido a\nTradingWise",
+    "welcomeSub": "Responde 4 preguntas rápidas para que podamos personalizar tu panel y mostrarte las señales más relevantes.",
+    "getStarted": "Comenzar",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "resultTitle": "Tu perfil de trading",
+    "enterDashboard": "Entrar al Panel",
+    "questions": [
+      {
+        "title": "¿Cuánto tiempo llevas en cripto?",
+        "subtitle": "Adaptaremos el panel a tu nivel de experiencia.",
+        "options": [
+          {
+            "label": "Recién empezando",
+            "desc": "Menos de un mes"
+          },
+          {
+            "label": "Menos de un año",
+            "desc": "Todavía aprendiendo"
+          },
+          {
+            "label": "1 – 3 años",
+            "desc": "Ya ví algún ciclo"
+          },
+          {
+            "label": "3+ años",
+            "desc": "Veterano del mercado"
+          }
+        ]
+      },
+      {
+        "title": "¿Cuál es tu tamaño de posición típico?",
+        "subtitle": "Nos ayuda a contextualizar los datos de riesgo.",
+        "options": [
+          {
+            "label": "Menos de $1.000",
+            "desc": "Empezando pequeño"
+          },
+          {
+            "label": "$1K – $10K",
+            "desc": "Acumulador constante"
+          },
+          {
+            "label": "$10K – $100K",
+            "desc": "Jugador serio"
+          },
+          {
+            "label": "$100K+",
+            "desc": "Territorio ballena"
+          }
+        ]
+      },
+      {
+        "title": "¿Qué herramientas usas activamente?",
+        "subtitle": "Selecciona todas las que apliquen.",
+        "options": [
+          {
+            "label": "Trading Spot",
+            "desc": "Compra y venta directa"
+          },
+          {
+            "label": "Futuros y Apalancamiento",
+            "desc": "Long / short con margen"
+          },
+          {
+            "label": "DeFi y Yield",
+            "desc": "Pools de liquidez, staking"
+          },
+          {
+            "label": "Opciones y Derivados",
+            "desc": "Productos estructurados"
+          },
+          {
+            "label": "Análisis On-Chain",
+            "desc": "Flujos de wallets, mempool"
+          }
+        ]
+      },
+      {
+        "title": "¿Cuál es tu estrategia principal?",
+        "subtitle": "Sin respuestas incorrectas — solo nos ayuda a enfocar los datos.",
+        "options": [
+          {
+            "label": "Comprar y Mantener",
+            "desc": "Acumulación a largo plazo"
+          },
+          {
+            "label": "Swing Trading",
+            "desc": "Días a semanas"
+          },
+          {
+            "label": "Day Trading",
+            "desc": "Múltiples operaciones al día"
+          },
+          {
+            "label": "Algorítmico / Quant",
+            "desc": "Sistemas y automatización"
+          }
+        ]
+      }
+    ],
+    "levels": [
+      {
+        "label": "Principiante",
+        "desc": "Estás empezando. Destacaremos las señales más importantes y reduciremos el ruido para que puedas ganar confianza paso a paso."
+      },
+      {
+        "label": "Intermedio",
+        "desc": "Ya tienes las bases. Mostraremos señales de mercado más profundas, contexto de tasas de financiación y análisis multi-temporalidad."
+      },
+      {
+        "label": "Avanzado",
+        "desc": "Conoces el terreno. Acceso completo a datos y todas las herramientas desbloqueadas — mapas de liquidación, métricas on-chain, análisis Gann."
+      },
+      {
+        "label": "Experto",
+        "desc": "Desayunas con mapas de calor de liquidaciones. Máxima densidad de datos, cero asistencia, señal pura."
+      }
+    ]
+  },
+  "predModal": {
+    "title": "Predicción IA · {{coin}} · {{interval}}",
+    "bullish": "🐂 ALCISTA",
+    "bearish": "🐻 BAJISTA",
+    "neutral": "◆ NEUTRAL",
+    "confHigh": "●●● Alta",
+    "confMed": "●●○ Media",
+    "confLow": "●○○ Baja",
+    "confidence": "Confianza",
+    "save": "Guardar",
+    "scenario": "Escenario",
+    "entry": "Entrada",
+    "target": "Objetivo",
+    "stopLoss": "Stop Loss",
+    "rr": "Riesgo / Beneficio",
+    "bullDiv": "Divergencia RSI Alcista",
+    "bearDiv": "Divergencia RSI Bajista",
+    "bullDivDesc": "El precio hizo un mínimo más bajo mientras el RSI hizo un mínimo más alto — el momentum se fortalece a pesar de la caída del precio, señalando una posible reversión al alza.",
+    "bearDivDesc": "El precio hizo un máximo más alto mientras el RSI hizo un máximo más bajo — el momentum se debilita a pesar de la subida del precio, señalando una posible reversión a la baja.",
+    "analysis": "Análisis",
+    "keyFactors": "Factores Clave",
+    "safeLeverage": "Apalancamiento Seguro",
+    "upTo": "hasta {{lev}}x",
+    "liqPrices": "Precios de Liquidación",
+    "long": "Largo",
+    "short": "Corto"
+  },
+  "stats": {
+    "liqAbove": "Liq Arriba",
+    "liqBelow": "Liq Abajo",
+    "openInterest": "Interés Abierto",
+    "fundingRate": "Tasa de Financiamiento",
+    "rsi14": "RSI (14)",
+    "macd": "MACD",
+    "lsRatio": "Ratio L/C",
+    "cmeAbove": "Gap CME ▲",
+    "cmeBelow": "Gap CME ▼",
+    "sigRisk": "▲ Riesgo",
+    "sigSupport": "▼ Soporte",
+    "sigNeutral": "● Neutral",
+    "sigBullish": "▲ Alcista",
+    "sigCrowded": "▼ Saturado",
+    "sigOverbought": "▼ Sobrecomprado",
+    "sigOversold": "▲ Sobrevendido",
+    "sigWeak": "▼ Débil",
+    "sigBearish": "▼ Bajista",
+    "sigLongsLead": "▲ Longs Lideran",
+    "sigShortsLead": "▼ Shorts Lideran",
+    "sigAbove": "▲ Arriba",
+    "sigBelow": "▼ Abajo",
+    "sigNone": "● Ninguno"
+  },
+  "priceTicker": {
+    "muted": "Silenciado",
+    "sound": "Sonido",
+    "exit": "Salir",
+    "sinceOpen": "% desde apertura",
+    "neutral": "Neutral",
+    "bullishSignal": "Señal Alcista",
+    "bearishSignal": "Señal Bajista",
+    "insightSteady": "{{coin}} se mantiene estable — sin movimiento desde que abriste esta vista.",
+    "insightUp": "{{coin}} sube {{pct}}% desde apertura — compradores al mando, precio al alza.",
+    "insightDown": "{{coin}} baja {{pct}}% desde apertura — vendedores presionando en los niveles actuales."
   }
 }

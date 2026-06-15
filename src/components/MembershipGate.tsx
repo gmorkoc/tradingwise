@@ -1,4 +1,5 @@
 import { useState, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Tier, hasAccess } from "../services/supabase";
 import { redirectToCheckout, PRICE_IDS } from "../services/stripeService";
@@ -9,51 +10,6 @@ const TIER_COLOR: Record<Tier, string> = {
   free:  "#94a3b8",
   pro:   "#38bdf8",
   elite: "#a78bfa",
-};
-
-interface FeatureItem { icon: string; title: string; desc: string; }
-
-const TIER_COPY: Record<Tier, {
-  headline: string;
-  sub: string;
-  features: FeatureItem[];
-  cta: string;
-  price: string;
-  trust: string;
-}> = {
-  free: {
-    headline: "",
-    sub: "",
-    features: [],
-    cta: "",
-    price: "",
-    trust: "",
-  },
-  pro: {
-    headline: "Trade Smarter with AI",
-    sub: "Get real-time AI-powered analysis across price action, on-chain data, and market sentiment — all in one place.",
-    features: [
-      { icon: "✦", title: "AI Market Intelligence",    desc: "GPT-4o reads the market for you — patterns, momentum, and bias at a glance." },
-      { icon: "⛓",  title: "On-Chain AI Analysis",     desc: "Network health, miner behavior, and chain signals interpreted in plain language." },
-      { icon: "📈", title: "AI Price Predictions",     desc: "Multi-scenario forecasts with confidence levels updated every interval." },
-      { icon: "💬", title: "AI Trading Assistant",     desc: "Ask anything — strategy, setups, risk — and get institutional-grade answers." },
-    ],
-    cta: "Unlock Pro — $10.99/mo",
-    price: "$10.99/mo",
-    trust: "35 AI requests/week · Cancel anytime · Instant access",
-  },
-  elite: {
-    headline: "The Edge Professionals Use",
-    sub: "Gann Analysis, Coinbase Premium, and unlimited AI — the full institutional toolkit, no caps.",
-    features: [
-      { icon: "📐", title: "Gann Analysis AI",          desc: "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite." },
-      { icon: "⚡", title: "Unlimited AI Requests",     desc: "No weekly cap — use every AI feature as much as you need." },
-      { icon: "🏦", title: "Coinbase Premium AI",       desc: "Institutional flow vs retail divergence interpreted in real time." },
-    ],
-    cta: "Unlock Elite — $29.99/mo",
-    price: "$29.99/mo",
-    trust: "Unlimited AI · Cancel anytime · Includes everything in Pro",
-  },
 };
 
 interface Props {
@@ -75,11 +31,13 @@ function CheckIcon({ color }: { color: string }) {
 export const MembershipGate: React.FC<Props> = ({
   requiredTier, children, onOpenAuth, onOpenUpgrade, featureName,
 }) => {
+  const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
 
-  if (loading) return <div className="mg-loading">Loading…</div>;
+  if (loading) return <div className="mg-loading">{t("membershipGate.loading")}</div>;
 
   if (!user) {
+    const perks = t("membershipGate.signin.perks", { returnObjects: true }) as string[];
     return (
       <div className="mg-wall">
         <div className="mg-orb mg-orb--1" />
@@ -92,11 +50,11 @@ export const MembershipGate: React.FC<Props> = ({
             </svg>
           </div>
           <div className="mg-headline-block">
-            <h3 className="mg-title">Sign in to continue</h3>
-            <p className="mg-sub">Create a free account to access {featureName ?? "this feature"} and unlock your edge in the market.</p>
+            <h3 className="mg-title">{t("membershipGate.signin.title")}</h3>
+            <p className="mg-sub">{t("membershipGate.signin.sub", { feature: featureName ?? t("common.na") })}</p>
           </div>
           <div className="mg-free-perks">
-            {["Live price & order book", "Fear & Greed gauge", "On-chain metrics", "Liquidation heatmap"].map(p => (
+            {perks.map(p => (
               <div key={p} className="mg-free-perk">
                 <CheckIcon color="#22c55e" />
                 <span>{p}</span>
@@ -104,10 +62,10 @@ export const MembershipGate: React.FC<Props> = ({
             ))}
           </div>
           <button className="mg-cta mg-cta--neutral" onClick={onOpenAuth}>
-            Sign In / Sign Up — It's Free
+            {t("membershipGate.signin.cta")}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
-          <p className="mg-trust">No credit card required · Free forever plan</p>
+          <p className="mg-trust">{t("membershipGate.signin.trust")}</p>
         </div>
       </div>
     );
@@ -115,7 +73,8 @@ export const MembershipGate: React.FC<Props> = ({
 
   if (!hasAccess(tier, requiredTier)) {
     const color = TIER_COLOR[requiredTier];
-    const copy  = TIER_COPY[requiredTier];
+    const ns = requiredTier as "pro" | "elite";
+    const features = t(`membershipGate.${ns}.features`, { returnObjects: true }) as Array<{ icon: string; title: string; desc: string }>;
 
     return (
       <div className="mg-wall">
@@ -125,13 +84,13 @@ export const MembershipGate: React.FC<Props> = ({
 
           {/* Headline */}
           <div className="mg-headline-block">
-            <h3 className="mg-title">{copy.headline}</h3>
-            <p className="mg-sub">{copy.sub}</p>
+            <h3 className="mg-title">{t(`membershipGate.${ns}.headline`)}</h3>
+            <p className="mg-sub">{t(`membershipGate.${ns}.sub`)}</p>
           </div>
 
           {/* Feature cards */}
           <div className="mg-feature-grid">
-            {copy.features.map(f => (
+            {features.map(f => (
               <div key={f.title} className="mg-feature-card">
                 <span className="mg-feature-icon">{f.icon}</span>
                 <div>
@@ -148,10 +107,10 @@ export const MembershipGate: React.FC<Props> = ({
             style={{ "--mg-color": color } as React.CSSProperties}
             onClick={onOpenUpgrade}
           >
-            {copy.cta}
+            {t(`membershipGate.${ns}.cta`)}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
-          <p className="mg-trust">{copy.trust}</p>
+          <p className="mg-trust">{t(`membershipGate.${ns}.trust`)}</p>
 
         </div>
       </div>
@@ -163,6 +122,7 @@ export const MembershipGate: React.FC<Props> = ({
 
 /* ── BlurGate: renders content blurred with a floating upgrade card ───────── */
 export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }) => {
+  const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState(false);
 
@@ -183,11 +143,11 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
       <div className="bg-overlay">
         <div className="aiqw-plan bg-plan-card" style={{ "--plan-color": "#a78bfa" } as React.CSSProperties}>
           <div className="aiqw-plan-header">
-            <span className="aiqw-plan-label" style={{ color: "#a78bfa" }}>Elite</span>
-            <span className="aiqw-plan-price">$29.99<span className="aiqw-plan-per">/mo</span></span>
+            <span className="aiqw-plan-label" style={{ color: "#a78bfa" }}>{t("membershipGate.blurGate.planLabel")}</span>
+            <span className="aiqw-plan-price">{t("membershipGate.blurGate.planPrice")}<span className="aiqw-plan-per">{t("membershipGate.blurGate.perMonth")}</span></span>
           </div>
           <ul className="aiqw-plan-features">
-            {["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI"].map(f => (
+            {(t("membershipGate.blurGate.features", { returnObjects: true }) as string[]).map(f => (
               <li key={f}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 {f}
@@ -200,9 +160,9 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
             onClick={!user ? onOpenAuth : handleUpgrade}
             disabled={loadingPlan}
           >
-            {!user ? "Sign in to upgrade" : loadingPlan ? "Redirecting…" : "Upgrade to Elite"}
+            {!user ? t("membershipGate.blurGate.signInBtn") : loadingPlan ? t("membershipGate.blurGate.redirecting") : t("membershipGate.blurGate.upgradeBtn")}
           </button>
-          <p className="bg-card-trust">Cancel anytime · Includes everything in Pro</p>
+          <p className="bg-card-trust">{t("membershipGate.blurGate.trust")}</p>
         </div>
       </div>
     </div>

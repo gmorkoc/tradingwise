@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol } from "../services/coinglass";
 import "../styles/PriceAlerts.css";
 
@@ -82,6 +83,7 @@ function syncPanelPos(el: HTMLElement) {
 }
 
 export function PriceAlerts({ coin, currentPrice }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen]         = useState(false);
   const [alerts, setAlerts]     = useState<PriceAlert[]>(loadAlerts);
   const [input, setInput]       = useState("");
@@ -183,7 +185,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
         ref={bellRef}
         className={`alerts-bell${activeCount > 0 ? " alerts-bell--active" : ""}`}
         onClick={handleBellClick}
-        title="Price Alerts"
+        title={t("priceAlerts.title")}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -199,7 +201,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
               <div className="alerts-backdrop" onClick={() => setOpen(false)} />
               <div className="alerts-panel">
                 <div className="alerts-panel-header">
-                  <span className="alerts-panel-title">Price Alerts</span>
+                  <span className="alerts-panel-title">{t("priceAlerts.title")}</span>
                   <span className="alerts-panel-price">
                     {coin} ${livePrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -210,17 +212,17 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
                   <input
                     className="alerts-input"
                     type="number"
-                    placeholder="Target price (USD)"
+                    placeholder={t("priceAlerts.placeholder")}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addAlert()}
                   />
-                  <button className="alerts-add-btn" onClick={addAlert}>Add</button>
+                  <button className="alerts-add-btn" onClick={addAlert}>{t("priceAlerts.addBtn")}</button>
                 </div>
 
                 <div className="alerts-list">
                   {alerts.length === 0 && (
-                    <p className="alerts-empty">No alerts set. Enter a price above to get started.</p>
+                    <p className="alerts-empty">{t("priceAlerts.empty")}</p>
                   )}
                   {alerts.map((alert) => (
                     <div key={alert.id} className={`alert-item${alert.triggered ? " alert-item--triggered" : ""}`}>
@@ -231,10 +233,10 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
                         ${alert.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="alert-tag">
-                        {alert.direction === "above" ? "Price goes above" : "Price goes below"}
+                        {alert.direction === "above" ? t("priceAlerts.goesAbove") : t("priceAlerts.goesBelow")}
                       </span>
                       {alert.triggered && (
-                        <span className="alert-triggered-badge">Triggered</span>
+                        <span className="alert-triggered-badge">{t("priceAlerts.triggered")}</span>
                       )}
                       <div className="alert-actions">
                         {alert.triggered && (
@@ -253,8 +255,8 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
             <div className="alert-toast" onClick={() => setToast(null)}>
               <div className="alert-toast-icon">🔔</div>
               <div className="alert-toast-body">
-                <strong>Price Alert Triggered</strong>
-                <span>{coin} {toast.direction === "above" ? "reached" : "dropped to"} ${toast.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <strong>{t("priceAlerts.toastTitle")}</strong>
+                <span>{coin} {toast.direction === "above" ? t("priceAlerts.toastReached") : t("priceAlerts.toastDropped")} ${toast.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <button className="alert-toast-close">✕</button>
             </div>

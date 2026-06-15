@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
 import "../styles/WhaleAlerts.css";
 
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export function WhaleAlerts({ btcPrice }: Props) {
+  const { t } = useTranslation();
   const [alerts, setAlerts] = useState<WhaleTx[]>([]);
   const [muted, setMuted] = useState(() => localStorage.getItem("whale-muted") !== "0");
   const mutedRef = useRef(muted);
@@ -92,10 +94,10 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
             <div className="whale-alert-body">
               <div className="whale-alert-label">
-                Whale Alert · BTC
+                {t("whaleAlerts.label")}
                 {alert.sentiment !== "neutral" && (
                   <span className={`whale-sentiment whale-sentiment--${alert.sentiment}`}>
-                    {alert.sentiment === "bullish" ? "▲ Bullish" : "▼ Bearish"}
+                    {alert.sentiment === "bullish" ? t("whaleAlerts.bullish") : t("whaleAlerts.bearish")}
                   </span>
                 )}
               </div>

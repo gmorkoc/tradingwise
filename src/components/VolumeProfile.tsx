@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { coinglass } from "../services/coinglass";
 
 type IV = "1h" | "4h" | "1day";
@@ -12,6 +13,7 @@ const VA_PCT  = 0.70;
 interface Props { coin: string; }
 
 export function VolumeProfile({ coin }: Props) {
+  const { t } = useTranslation();
   const [interval, setInterval] = useState<IV>("1h");
   const [candles,  setCandles]  = useState<Candle[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -87,7 +89,7 @@ export function VolumeProfile({ coin }: Props) {
       </div>
 
       {loading ? (
-        <div className="vp-loading">Building volume profile...</div>
+        <div className="vp-loading">{t("volumeProfile.loading")}</div>
       ) : (
         <div className="vp-chart">
           <div className="vp-rows">
@@ -114,10 +116,10 @@ export function VolumeProfile({ coin }: Props) {
             })}
           </div>
           <div className="vp-legend">
-            <span className="vp-leg-buy">■ Buy</span>
-            <span className="vp-leg-sell">■ Sell</span>
-            <span className="vp-leg-poc">― POC</span>
-            <span className="vp-leg-va">░ Value Area (70%)</span>
+            <span className="vp-leg-buy">{t("volumeProfile.buyLegend")}</span>
+            <span className="vp-leg-sell">{t("volumeProfile.sellLegend")}</span>
+            <span className="vp-leg-poc">{t("volumeProfile.pocLegend")}</span>
+            <span className="vp-leg-va">{t("volumeProfile.vaLegend")}</span>
           </div>
         </div>
       )}

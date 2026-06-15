@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol } from "../services/coinglass";
 import { getGannAnalysis, GannAIResult } from "../services/openai";
 import { useAIQuota } from "../hooks/useAIQuota";
@@ -77,6 +78,7 @@ const fmtDate = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day
 // ── Component ──────────────────────────────────────────────────────────────
 
 export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", currentPrice = 0, onOpenAuth = () => {}, onOpenUpgrade = () => {} }) => {
+  const { t } = useTranslation();
   const { exceeded, used, limit, consume, isPaid } = useAIQuota();
   const [candles, setCandles] = useState<CandlePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,9 +239,10 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
   const selMarks = selectedDay ? (pivotMap.get(startOfDay(selectedDay).toISOString()) || []) : [];
   const selDaysAway = selectedDay ? Math.round((selectedDay.getTime() - today.getTime()) / 86400000) : 0;
   const selRelLabel = !selectedDay ? "" :
-    selDaysAway === 0 ? "Today" :
-    selDaysAway > 0 ? `In ${selDaysAway} day${selDaysAway === 1 ? "" : "s"}` :
-    `${Math.abs(selDaysAway)} day${Math.abs(selDaysAway) === 1 ? "" : "s"} ago`;
+    selDaysAway === 0 ? t("gann.selToday") :
+    selDaysAway > 0
+      ? (selDaysAway === 1 ? t("gann.selFuture", { n: selDaysAway }) : t("gann.selFuturePlural", { n: selDaysAway }))
+      : (Math.abs(selDaysAway) === 1 ? t("gann.selPast", { n: Math.abs(selDaysAway) }) : t("gann.selPastPlural", { n: Math.abs(selDaysAway) }));
 
   return (
     <section className="gann-card">
@@ -249,10 +252,10 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
             <span className="gann-logo">📐</span>
             <div>
               <div className="gann-title">
-                Gann Analysis
+                {t("gann.title")}
                 <span className="pattern-insight-ai-badge">✦ AI Powered</span>
               </div>
-              <div className="gann-sub">Square of 9 · Time Cycles · Gann Angles · Pivot Timeline</div>
+              <div className="gann-sub">{t("gann.sub")}</div>
             </div>
           </div>
           <div className="gann-header-right">
@@ -264,7 +267,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
         </div>
       </div>
 
-      {loading && <div className="gann-loading">Loading candle data…</div>}
+      {loading && <div className="gann-loading">{t("gann.loading")}</div>}
 
       {!loading && (
         <div className="gann-body">
@@ -274,8 +277,8 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
 
             {/* Square of 9 */}
             <div className="gann-panel">
-              <div className="gann-panel-title">Square of 9</div>
-              <p className="gann-panel-sub">Key price levels at 90° rotations from current price</p>
+              <div className="gann-panel-title">{t("gann.sq9Title")}</div>
+              <p className="gann-panel-sub">{t("gann.sq9Sub")}</p>
               {sq9 && (
                 <div className="gann-sq9">
                   {sq9.above.map(l => (
@@ -287,7 +290,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                   ))}
                   <div className="gann-sq9-current">
                     <span>● ${fmtPrice(price)}</span>
-                    <span className="gann-sq9-current-label">Current Price</span>
+                    <span className="gann-sq9-current-label">{t("gann.currentPrice")}</span>
                   </div>
                   {sq9.below.map(l => (
                     <div key={l.deg} className="gann-sq9-row gann-sq9-row--below">
@@ -302,16 +305,16 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
 
             {/* Pivot Timeline */}
             <div className="gann-panel">
-              <div className="gann-panel-title">Pivot Timeline</div>
-              <p className="gann-panel-sub">Tap any day to see Gann angle price predictions for that date</p>
+              <div className="gann-panel-title">{t("gann.pivotTitle")}</div>
+              <p className="gann-panel-sub">{t("gann.pivotSub")}</p>
 
               <div className="gann-tl-nav">
-                <button className="gann-tl-nav-btn" onClick={goBack}>← Prev</button>
+                <button className="gann-tl-nav-btn" onClick={goBack}>{t("gann.prev")}</button>
                 <div className="gann-tl-nav-center">
                   <span className="gann-tl-range">{windowRangeLabel}</span>
-                  <button className="gann-tl-today-btn" onClick={goToday}>Today</button>
+                  <button className="gann-tl-today-btn" onClick={goToday}>{t("gann.today")}</button>
                 </div>
-                <button className="gann-tl-nav-btn" onClick={goForward}>Next →</button>
+                <button className="gann-tl-nav-btn" onClick={goForward}>{t("gann.next")}</button>
               </div>
 
               <div className="gann-tl-strip">
@@ -338,7 +341,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                       key={i}
                       className={cellClass}
                       onClick={() => setSelectedDay(isSelected ? null : day)}
-                      title="Click to see Gann predictions"
+                      title={t("gann.tooltip")}
                     >
                       <span className="gann-tl-dow">{DOW[day.getDay()]}</span>
                       <span className="gann-tl-day">{day.getDate()}</span>
@@ -372,7 +375,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
 
                   {selMarks.length > 0 && (
                     <div className="gann-tl-detail-cycles">
-                      <div className="gann-tl-detail-section-label">⚡ Cycle Confluence</div>
+                      <div className="gann-tl-detail-section-label">{t("gann.cycleConfluence")}</div>
                       <div className="gann-tl-detail-cycle-list">
                         {selMarks.map((m, i) => (
                           <div key={i} className={`gann-tl-detail-cycle gann-tl-detail-cycle--${m.from}`}>
@@ -384,12 +387,12 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                   )}
 
                   <div className="gann-tl-detail-section-label" style={{ marginTop: selMarks.length > 0 ? 10 : 0 }}>
-                    📐 Gann Angle Price Projections
+                    {t("gann.angleProjections")}
                   </div>
                   <div className="gann-tl-detail-angles">
                     <div className="gann-tl-detail-angles-col">
                       <div className="gann-tl-detail-col-head gann-tl-detail-col-head--high">
-                        ▼ From High
+                        {t("gann.fromHigh")}
                         <span className="gann-tl-detail-col-days">
                           {selProj.daysFromHigh >= 0 ? `+${selProj.daysFromHigh}d` : `${selProj.daysFromHigh}d`}
                         </span>
@@ -410,7 +413,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                     </div>
                     <div className="gann-tl-detail-angles-col">
                       <div className="gann-tl-detail-col-head gann-tl-detail-col-head--low">
-                        ▲ From Low
+                        {t("gann.fromLow")}
                         <span className="gann-tl-detail-col-days">
                           {selProj.daysFromLow >= 0 ? `+${selProj.daysFromLow}d` : `${selProj.daysFromLow}d`}
                         </span>
@@ -434,9 +437,9 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
               )}
 
               <div className="gann-cal-legend" style={{ marginTop: 10 }}>
-                <span className="gann-cal-legend-item gann-cal-legend--high">■ High cycle</span>
-                <span className="gann-cal-legend-item gann-cal-legend--low">■ Low cycle</span>
-                <span className="gann-cal-legend-item gann-cal-legend--both">■ Both</span>
+                <span className="gann-cal-legend-item gann-cal-legend--high">{t("gann.highCycle")}</span>
+                <span className="gann-cal-legend-item gann-cal-legend--low">{t("gann.lowCycle")}</span>
+                <span className="gann-cal-legend-item gann-cal-legend--both">{t("gann.bothCycles")}</span>
               </div>
             </div>
           </div>
@@ -445,8 +448,8 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
           <div className="gann-panel gann-panel--full gann-ai-panel">
             <div className="gann-ai-header">
               <div>
-                <div className="gann-panel-title">AI Gann Analysis</div>
-                <p className="gann-panel-sub" style={{ margin: 0 }}>GPT-4o analyses all Gann data and delivers a structured prediction</p>
+                <div className="gann-panel-title">{t("gann.aiTitle")}</div>
+                <p className="gann-panel-sub" style={{ margin: 0 }}>{t("gann.aiSub")}</p>
               </div>
               {!exceeded || isPaid ? (
                 <button
@@ -454,7 +457,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                   onClick={runGannAI}
                   disabled={aiLoading || !swings || !price}
                 >
-                  {aiLoading ? "Analysing…" : aiResult ? "Refresh" : "✦ Analyse with AI"}
+                  {aiLoading ? t("gann.analysing") : aiResult ? t("gann.refresh") : t("gann.analyseBtn")}
                 </button>
               ) : null}
             </div>
@@ -473,10 +476,10 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                 <div className="gann-ai-sentiment-row">
                   <span className="pattern-insight-ai-badge" style={{ marginRight: "auto" }}>✦ AI Powered</span>
                   <span className={`gann-ai-sentiment gann-ai-sentiment--${aiResult.sentiment}`}>
-                    {aiResult.sentiment === "bullish" ? "▲ Bullish" : aiResult.sentiment === "bearish" ? "▼ Bearish" : "● Neutral"}
+                    {aiResult.sentiment === "bullish" ? t("gann.sentimentBullish") : aiResult.sentiment === "bearish" ? t("gann.sentimentBearish") : t("gann.sentimentNeutral")}
                   </span>
                   <span className={`gann-ai-confidence gann-ai-confidence--${aiResult.confidence}`}>
-                    {aiResult.confidence} confidence
+                    {t("gann.confidence", { level: aiResult.confidence })}
                   </span>
                 </div>
 
@@ -486,11 +489,11 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                 {/* Key levels + price target */}
                 <div className="gann-ai-grid">
                   <div className="gann-ai-section">
-                    <div className="gann-ai-section-title">Key Levels to Watch</div>
+                    <div className="gann-ai-section-title">{t("gann.keyLevels")}</div>
                     <div className="gann-ai-levels">
                       {aiResult.keyLevels?.slice(0, 5).map((l, i) => (
                         <div key={i} className={`gann-ai-level gann-ai-level--${l.type}`}>
-                          <span className="gann-ai-level-tag">{l.type === "support" ? "S" : "R"}</span>
+                          <span className="gann-ai-level-tag">{l.type === "support" ? t("gann.support") : t("gann.resistance")}</span>
                           <span className="gann-ai-level-price">${fmtPrice(l.price)}</span>
                           <span className="gann-ai-level-label">{l.label}</span>
                         </div>
@@ -499,7 +502,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                   </div>
 
                   <div className="gann-ai-section">
-                    <div className="gann-ai-section-title">Price Target</div>
+                    <div className="gann-ai-section-title">{t("gann.priceTarget")}</div>
                     <div className="gann-ai-target">
                       <div className="gann-ai-target-range">
                         <span className="gann-ai-target-low">${fmtPrice(aiResult.priceTarget?.low ?? 0)}</span>
@@ -508,7 +511,7 @@ export const GannAnalysis: React.FC<GannAnalysisProps> = ({ coin = "BTC", curren
                       </div>
                       <div className="gann-ai-target-tf">{aiResult.priceTarget?.timeframe}</div>
                     </div>
-                    <div className="gann-ai-section-title" style={{ marginTop: 14 }}>Next Cycle Alert</div>
+                    <div className="gann-ai-section-title" style={{ marginTop: 14 }}>{t("gann.nextCycleAlert")}</div>
                     <p className="gann-ai-cycle-alert">{aiResult.nextCycleAlert}</p>
                   </div>
                 </div>

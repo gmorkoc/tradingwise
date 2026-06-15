@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getETFData, ETFData, ETFDayTotal } from "../services/etf";
 import "../styles/ETFInflows.css";
 
@@ -29,11 +30,12 @@ function HistoryChart({ history, selectedDate, onSelect }: {
   selectedDate: string | null;
   onSelect: (date: string) => void;
 }) {
+  const { t } = useTranslation();
   const recent = history.slice(-30);
   const maxAbs = Math.max(...recent.map(d => Math.abs(d.flowUsd)), 1);
   return (
     <div className="etf-chart-card">
-      <div className="etf-chart-title">Daily Net Inflow — 30 Days (USD)</div>
+      <div className="etf-chart-title">{t("etf.chartTitle")}</div>
       <div className="etf-hist-bars">
         {recent.map((day, i) => {
           const pct = (Math.abs(day.flowUsd) / maxAbs) * 96;
@@ -76,6 +78,7 @@ function DatePicker({ history, selectedDate, onSelect }: {
   const [view, setView] = useState<"days" | "months">("days");
   const years = [...new Set(months.map(m => m.slice(0, 4)))].sort();
   const [yearIdx, setYearIdx] = useState(years.length - 1);
+  const { t } = useTranslation();
   if (!months.length) return null;
 
   const month = months[monthIdx];
@@ -157,13 +160,13 @@ function DatePicker({ history, selectedDate, onSelect }: {
             })}
           </div>
           <div className="etf-cal-footer">
-            <button className="etf-cal-action" onClick={() => { onSelect(null); setOpen(false); }}>Clear</button>
+            <button className="etf-cal-action" onClick={() => { onSelect(null); setOpen(false); }}>{t("etf.clearBtn")}</button>
             <button className="etf-cal-action accent" onClick={() => {
               const todayMonth = today.slice(0, 7);
               const ti = months.indexOf(todayMonth);
               if (ti >= 0) setMonthIdx(ti);
               if (dataMap[today]) { onSelect(today); setOpen(false); }
-            }}>Today</button>
+            }}>{t("etf.todayBtn")}</button>
           </div>
         </>
       )}
@@ -172,6 +175,7 @@ function DatePicker({ history, selectedDate, onSelect }: {
 }
 
 export function ETFInflows() {
+  const { t } = useTranslation();
   const [data,         setData]         = useState<ETFData | null>(null);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState("");
@@ -197,7 +201,7 @@ export function ETFInflows() {
   if (loading) {
     return (
       <div className="etf-wrap">
-        <div className="etf-loading"><div className="etf-spinner" />Loading ETF data…</div>
+        <div className="etf-loading"><div className="etf-spinner" />{t("etf.loading")}</div>
       </div>
     );
   }
@@ -206,8 +210,8 @@ export function ETFInflows() {
     return (
       <div className="etf-wrap">
         <div className="etf-error">
-          {error || "No data available."}
-          {error && <button className="etf-retry" onClick={() => setRetryKey(k => k + 1)}>Retry</button>}
+          {error || t("etf.error")}
+          {error && <button className="etf-retry" onClick={() => setRetryKey(k => k + 1)}>{t("etf.retry")}</button>}
         </div>
       </div>
     );
@@ -243,9 +247,9 @@ export function ETFInflows() {
     <div className="etf-wrap">
       <div className="etf-header">
         <div>
-          <h2 className="etf-title">Bitcoin Spot ETF Tracker</h2>
+          <h2 className="etf-title">{t("etf.pageTitle")}</h2>
           <div className="etf-date">
-            via CoinGlass · {displayDate}
+            {t("etf.source")} · {displayDate}
           </div>
         </div>
       </div>
@@ -260,15 +264,15 @@ export function ETFInflows() {
       {/* Summary cards */}
       <div className="etf-summary-row">
         <div className="etf-summary-card">
-          <div className="etf-summary-label">Net Flow{historyDay ? ` · ${historyDay.date}` : ""}</div>
+          <div className="etf-summary-label">{historyDay ? t("etf.netFlowDate", { date: historyDay.date }) : t("etf.netFlow")}</div>
           <div className={`etf-summary-value ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
         </div>
         <div className="etf-summary-card">
-          <div className="etf-summary-label">Total AUM</div>
+          <div className="etf-summary-label">{t("etf.totalAum")}</div>
           <div className="etf-summary-value">{fmtUsd(totalAum, 2)}</div>
         </div>
         <div className="etf-summary-card">
-          <div className="etf-summary-label">Daily Volume</div>
+          <div className="etf-summary-label">{t("etf.dailyVolume")}</div>
           <div className="etf-summary-value">{fmtUsd(totalVol)}</div>
         </div>
       </div>
@@ -285,12 +289,12 @@ export function ETFInflows() {
         <table className="etf-table">
           <thead>
             <tr>
-              <th>Fund</th>
-              <th>Daily Flow</th>
-              <th>Price</th>
-              <th>Day %</th>
-              <th>AUM</th>
-              <th>Volume</th>
+              <th>{t("etf.table.fund")}</th>
+              <th>{t("etf.table.dailyFlow")}</th>
+              <th>{t("etf.table.price")}</th>
+              <th>{t("etf.table.dayPct")}</th>
+              <th>{t("etf.table.aum")}</th>
+              <th>{t("etf.table.volume")}</th>
             </tr>
           </thead>
           <tbody>
@@ -321,7 +325,7 @@ export function ETFInflows() {
               </tr>
             ))}
             <tr className="etf-total-row">
-              <td>Total ({data.rows.length} funds)</td>
+              <td>{t("etf.table.total", { count: data.rows.length })}</td>
               <td className="etf-flow-cell">
                 <div className={`etf-flow-val ${cls(totalFlow)}`}>{fmtUsd(totalFlow)}</div>
               </td>

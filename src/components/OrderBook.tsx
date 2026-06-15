@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CoinSymbol } from "../services/coinglass";
 import "../styles/OrderBook.css";
 
@@ -133,6 +134,7 @@ function fmtUsd(v: number): string {
 }
 
 export function OrderBook({ coin, onHide }: OrderBookProps) {
+  const { t } = useTranslation();
   const [exchange, setExchange] = useState<Exchange>("Binance");
   const [minUsd, setMinUsd] = useState(0);
   const [bids, setBids] = useState<Level[]>([]);
@@ -188,7 +190,7 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
       )}
 
       <div className="ob-header">
-        <h3 className="ob-title">Order Book</h3>
+        <h3 className="ob-title">{t("orderBook.title")}</h3>
       </div>
 
       <div className="ob-exchange-row">
@@ -213,17 +215,17 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
         ))}
       </div>
 
-      {loading && <div className="ob-loading">Loading…</div>}
+      {loading && <div className="ob-loading">{t("orderBook.loading")}</div>}
       {!loading && unavailable && (
-        <div className="ob-loading">Not available for {coin} on {exchange}</div>
+        <div className="ob-loading">{t("orderBook.unavailable", { coin, exchange })}</div>
       )}
 
       {!loading && !unavailable && (
         <div className="ob-body">
           <div className="ob-col-headers">
-            <span>Price</span>
-            <span>Size</span>
-            <span>Value</span>
+            <span>{t("orderBook.colPrice")}</span>
+            <span>{t("orderBook.colSize")}</span>
+            <span>{t("orderBook.colValue")}</span>
           </div>
 
           {/* Bids — column-reverse so best bid sits near mid-row */}

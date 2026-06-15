@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { createChart, CandlestickSeries, IChartApi, Time, createSeriesMarkers } from "lightweight-charts";
 import { CandleDataPoint } from "../services/coinglass";
 import { PredictionPath } from "./DrawingOverlay";
@@ -131,6 +132,8 @@ interface Props {
 export function PredictionModal({
   candles, prediction, chartPrediction, coin, interval, theme = "dark", divergence, onClose,
 }: Props) {
+  const { t } = useTranslation();
+
   // ESC key close
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -448,7 +451,7 @@ export function PredictionModal({
         {/* ── Header ── */}
         <div className="pred-modal-header">
           <div className="pred-modal-header-row">
-            <span className="pred-modal-title-text">AI Prediction · {coin} · {interval}</span>
+            <span className="pred-modal-title-text">{t("predModal.title", { coin, interval })}</span>
             <button className="pred-modal-close" onClick={onClose} aria-label="Close">
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <path d="M1 1l9 9M10 1L1 10"/>
@@ -458,13 +461,13 @@ export function PredictionModal({
           <div className="pred-modal-header-row pred-modal-header-row--start">
             <span className={`pred-modal-dir-badge pred-modal-dir-badge--${dir}`}>
               {dir === "bullish" ? (
-                <>🐂 BULLISH <span className="pm-live-dot" /></>
+                <>{t("predModal.bullish")} <span className="pm-live-dot" /></>
               ) : dir === "bearish" ? (
-                <>🐻 BEARISH <span className="pm-live-dot pm-live-dot--bearish" /></>
-              ) : "◆ NEUTRAL"}
+                <>{t("predModal.bearish")} <span className="pm-live-dot pm-live-dot--bearish" /></>
+              ) : t("predModal.neutral")}
             </span>
             <span className={`pred-modal-conf pred-modal-conf--${conf}`}>
-              {conf === "high" ? "●●● High" : conf === "medium" ? "●●○ Medium" : "●○○ Low"} Confidence
+              {conf === "high" ? t("predModal.confHigh") : conf === "medium" ? t("predModal.confMed") : t("predModal.confLow")} {t("predModal.confidence")}
             </span>
           </div>
         </div>
@@ -477,7 +480,7 @@ export function PredictionModal({
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
             </svg>
-            Save
+            {t("predModal.save")}
           </button>
         </div>
 
@@ -486,19 +489,19 @@ export function PredictionModal({
 
           {/* Scenario */}
           <div className="pred-modal-scenario-row">
-            <span className="pred-modal-scenario-label">Scenario</span>
+            <span className="pred-modal-scenario-label">{t("predModal.scenario")}</span>
             <span className="pred-modal-scenario-text">{chartPrediction.scenario}</span>
           </div>
 
           {/* ── Metrics strip ── */}
           <div className="pm-stats-strip">
             <div className="pm-stat">
-              <span className="pm-stat-label">Entry</span>
+              <span className="pm-stat-label">{t("predModal.entry")}</span>
               <span className="pm-stat-value">{fmt(entry)}</span>
             </div>
             <div className="pm-stat-sep" />
             <div className="pm-stat">
-              <span className="pm-stat-label">Target</span>
+              <span className="pm-stat-label">{t("predModal.target")}</span>
               <div className="pm-stat-right">
                 <span className={`pm-stat-value pm-stat-value--${dir}`}>{fmt(target)}</span>
                 <span className={`pm-stat-pct pm-stat-pct--${dir}`}>{dir === "bearish" ? "−" : "+"}{rewardPct.toFixed(2)}%</span>
@@ -506,7 +509,7 @@ export function PredictionModal({
             </div>
             <div className="pm-stat-sep" />
             <div className="pm-stat">
-              <span className="pm-stat-label">Stop Loss</span>
+              <span className="pm-stat-label">{t("predModal.stopLoss")}</span>
               <div className="pm-stat-right">
                 <span className="pm-stat-value pm-stat-value--sl">{fmt(sl)}</span>
                 <span className="pm-stat-pct pm-stat-pct--sl">−{riskPct.toFixed(2)}%</span>
@@ -514,7 +517,7 @@ export function PredictionModal({
             </div>
             <div className="pm-stat-sep" />
             <div className="pm-stat">
-              <span className="pm-stat-label">Risk / Reward</span>
+              <span className="pm-stat-label">{t("predModal.rr")}</span>
               <div className="pm-stat-right">
                 <span className={`pm-stat-rr-val pm-stat-rr-val--${rr >= 2 ? "good" : rr >= 1 ? "ok" : "bad"}`}>
                   {rr >= 1 ? `1 : ${rr.toFixed(1)}` : `${(1 / rr).toFixed(1)} : 1`}
@@ -533,12 +536,10 @@ export function PredictionModal({
                   <span className="pm-divergence-icon">{divergence.type === "bullish" ? "↑" : "↓"}</span>
                   <div>
                     <span className="pm-divergence-label">
-                      {divergence.type === "bullish" ? "Bullish RSI Divergence" : "Bearish RSI Divergence"}
+                      {divergence.type === "bullish" ? t("predModal.bullDiv") : t("predModal.bearDiv")}
                     </span>
                     <p className="pm-divergence-desc">
-                      {divergence.type === "bullish"
-                        ? "Price made a lower low while RSI made a higher low — momentum is strengthening despite the price drop, signaling a potential reversal upward."
-                        : "Price made a higher high while RSI made a lower high — momentum is weakening despite the price rise, signaling a potential reversal downward."}
+                      {divergence.type === "bullish" ? t("predModal.bullDivDesc") : t("predModal.bearDivDesc")}
                     </p>
                   </div>
                 </div>
@@ -546,14 +547,14 @@ export function PredictionModal({
 
               {chartPrediction.analysis && (
                 <div>
-                  <span className="pred-modal-section-label">Analysis</span>
+                  <span className="pred-modal-section-label">{t("predModal.analysis")}</span>
                   <p className="pred-modal-analysis">{chartPrediction.analysis}</p>
                 </div>
               )}
 
               {chartPrediction.keyFactors?.length > 0 && (
                 <div>
-                  <span className="pred-modal-section-label">Key Factors</span>
+                  <span className="pred-modal-section-label">{t("predModal.keyFactors")}</span>
                   <ul className="pred-modal-factors">
                     {chartPrediction.keyFactors.map((f, i) => (
                       <li key={i} className="pred-modal-factor">
@@ -575,8 +576,8 @@ export function PredictionModal({
 
               <div className="pm-lev-block">
                 <div className="pm-block-header">
-                  <span className="pm-block-label">Safe Leverage</span>
-                  <span className="pm-block-value">up to {safeLev}x</span>
+                  <span className="pm-block-label">{t("predModal.safeLeverage")}</span>
+                  <span className="pm-block-value">{t("predModal.upTo", { lev: safeLev })}</span>
                 </div>
                 <div className="pm-lev-track">
                   {[2, 5, 10, 20].map(lev => (
@@ -590,12 +591,12 @@ export function PredictionModal({
 
               <div className="pm-liq-block">
                 <div className="pm-block-header">
-                  <span className="pm-block-label">Liquidation Prices</span>
+                  <span className="pm-block-label">{t("predModal.liqPrices")}</span>
                 </div>
                 <div className="pm-liq-grid-head">
                   <span />
-                  <span className="pm-liq-col-label">Long</span>
-                  <span className="pm-liq-col-label">Short</span>
+                  <span className="pm-liq-col-label">{t("predModal.long")}</span>
+                  <span className="pm-liq-col-label">{t("predModal.short")}</span>
                 </div>
                 {liqLevels.map(({ lev, long, short }) => (
                   <div key={lev} className="pm-liq-grid-row">
