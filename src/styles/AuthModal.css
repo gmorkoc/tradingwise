@@ -113,22 +113,22 @@
 }
 
 .auth-link-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  background: transparent;
-  border: none;
-  outline: none;
+  all: unset;
+  display: inline;
   color: #38bdf8;
   font-size: 0.78rem;
-  cursor: pointer;
-  padding: 0;
   font-weight: 600;
-  text-align: left;
-  text-decoration: none;
+  cursor: pointer;
   transition: color 0.15s;
 }
-.auth-link-btn:hover { color: #7dd3fc; }
-.auth-link-btn:focus-visible { outline: none; }
+.auth-link-btn:hover,
+.auth-link-btn:focus,
+.auth-link-btn:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #93c5fd;
+  outline: none;
+}
 
 .auth-error {
   margin: 0;
