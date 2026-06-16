@@ -113,17 +113,22 @@
 }
 
 .auth-link-btn {
-  background: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
   border: none;
+  outline: none;
   color: #38bdf8;
   font-size: 0.78rem;
   cursor: pointer;
   padding: 0;
   font-weight: 600;
   text-align: left;
-  transition: opacity 0.15s;
+  text-decoration: none;
+  transition: color 0.15s;
 }
-.auth-link-btn:hover { opacity: 0.75; }
+.auth-link-btn:hover { color: #7dd3fc; }
+.auth-link-btn:focus-visible { outline: none; }
 
 .auth-error {
   margin: 0;
