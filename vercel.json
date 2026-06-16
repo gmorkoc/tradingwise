@@ -1,8 +1,4 @@
 {
-  "functions": {
-    "api/delete-account.ts": { "runtime": "nodejs20.x" },
-    "api/openai.ts": { "runtime": "nodejs20.x" }
-  },
   "rewrites": [
     { "source": "/cc-api/:path*",      "destination": "https://min-api.cryptocompare.com/:path*" },
     { "source": "/okx-api/:path*",     "destination": "https://www.okx.com/:path*" },

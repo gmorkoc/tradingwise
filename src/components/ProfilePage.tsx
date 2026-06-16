@@ -164,8 +164,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     try {
       const token = session?.access_token;
       if (!token) throw new Error("Not authenticated");
-      const res = await fetch("/api/delete-account", {
-        method: "DELETE",
+      const res = await fetch("/api/deleteAccount", {
+        method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
