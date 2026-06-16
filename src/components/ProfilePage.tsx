@@ -169,8 +169,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error ?? "Failed to delete account");
+        const text = await res.text();
+        let msg = "Failed to delete account";
+        try { msg = JSON.parse(text).error ?? msg; } catch {}
+        throw new Error(msg);
       }
       await signOut();
       onClose();
