@@ -353,7 +353,8 @@
       "subscription": "Suscripción",
       "aiUsage": "Uso de IA",
       "profileInfo": "Información de perfil",
-      "security": "Seguridad"
+      "security": "Seguridad",
+      "dangerZone": "Zona de Peligro"
     },
     "subscription": {
       "currentPlan": "Plan actual",
@@ -420,6 +421,14 @@
       "discard": "Descartar",
       "yourName": "Tu nombre",
       "noEmail": "sin correo configurado"
+    },
+    "deleteAccount": {
+      "sub": "Una vez que elimines tu cuenta, todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.",
+      "button": "Eliminar Mi Cuenta",
+      "warning": "Esto eliminará permanentemente tu cuenta, cancelará cualquier suscripción activa y eliminará todos tus datos. No se puede deshacer.",
+      "typeToConfirm": "Escribe \"DELETE\" para confirmar",
+      "confirmButton": "Eliminar Cuenta Permanentemente",
+      "deleting": "Eliminando…"
     }
   },
   "quotaWall": {

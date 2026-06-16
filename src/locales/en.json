@@ -353,7 +353,8 @@
       "subscription": "Subscription",
       "aiUsage": "AI Usage",
       "profileInfo": "Profile Info",
-      "security": "Security"
+      "security": "Security",
+      "dangerZone": "Danger Zone"
     },
     "subscription": {
       "currentPlan": "Current plan",
@@ -420,6 +421,14 @@
       "discard": "Discard",
       "yourName": "Your Name",
       "noEmail": "no email set"
+    },
+    "deleteAccount": {
+      "sub": "Once you delete your account, all your data will be permanently removed. This action cannot be undone.",
+      "button": "Delete My Account",
+      "warning": "This will permanently delete your account, cancel any active subscription, and remove all your data. This cannot be undone.",
+      "typeToConfirm": "Type \"DELETE\" to confirm",
+      "confirmButton": "Permanently Delete Account",
+      "deleting": "Deleting…"
     }
   },
   "quotaWall": {

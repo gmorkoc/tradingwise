@@ -57,7 +57,7 @@ function getNextMonday(): string {
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpenUpgrade }) => {
   const { t } = useTranslation();
-  const { user, profile: authProfile, tier, refreshProfile } = useAuth();
+  const { user, profile: authProfile, tier, refreshProfile, session, signOut } = useAuth();
   const { used, limit, isPaid } = useAIQuota();
 
   const blankFromAuth = (): ProfileData => ({
@@ -83,6 +83,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError]     = useState("");
+
+  const [deleteStep,    setDeleteStep]    = useState<"idle" | "confirm">("idle");
+  const [deleteInput,   setDeleteInput]   = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError,   setDeleteError]   = useState("");
 
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -149,6 +154,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     } catch (e: any) {
       setPortalError(e.message ?? t("upgradeModal.error"));
       setPortalLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteInput !== "DELETE") return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const token = session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+      const res = await fetch("/api/delete-account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error ?? "Failed to delete account");
+      }
+      await signOut();
+      onClose();
+    } catch (e: any) {
+      setDeleteError(e.message ?? t("upgradeModal.error"));
+      setDeleteLoading(false);
     }
   };
 
@@ -406,6 +434,52 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 {t("profile.security.changePassword")}
               </button>
             </div>
+          </section>
+
+          {/* Danger Zone */}
+          <section className="profile-section profile-section--danger">
+            <h4 className="profile-section-title profile-section-title--danger">{t("profile.sections.dangerZone")}</h4>
+            <p className="profile-section-sub">{t("profile.deleteAccount.sub")}</p>
+
+            {deleteStep === "idle" ? (
+              <button
+                className="profile-btn profile-btn--danger"
+                onClick={() => { setDeleteStep("confirm"); setDeleteInput(""); setDeleteError(""); }}
+              >
+                {t("profile.deleteAccount.button")}
+              </button>
+            ) : (
+              <div className="profile-delete-confirm">
+                <p className="profile-delete-warning">{t("profile.deleteAccount.warning")}</p>
+                <div className="profile-field" style={{ marginBottom: 12 }}>
+                  <label>{t("profile.deleteAccount.typeToConfirm")}</label>
+                  <input
+                    type="text"
+                    value={deleteInput}
+                    onChange={(e) => setDeleteInput(e.target.value)}
+                    placeholder="DELETE"
+                    autoFocus
+                  />
+                </div>
+                {deleteError && <p className="profile-msg profile-msg--error">{deleteError}</p>}
+                <div className="profile-actions">
+                  <button
+                    className="profile-btn profile-btn--danger"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteInput !== "DELETE" || deleteLoading}
+                  >
+                    {deleteLoading ? t("profile.deleteAccount.deleting") : t("profile.deleteAccount.confirmButton")}
+                  </button>
+                  <button
+                    className="profile-btn profile-btn--ghost"
+                    onClick={() => { setDeleteStep("idle"); setDeleteInput(""); setDeleteError(""); }}
+                    disabled={deleteLoading}
+                  >
+                    {t("profile.actions.discard")}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
         </div>

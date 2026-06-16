@@ -353,7 +353,8 @@
       "subscription": "Abbonamento",
       "aiUsage": "Utilizzo IA",
       "profileInfo": "Informazioni Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "dangerZone": "Zona Pericolosa"
     },
     "subscription": {
       "currentPlan": "Piano attuale",
@@ -420,6 +421,14 @@
       "discard": "Annulla",
       "yourName": "Il tuo nome",
       "noEmail": "nessuna email impostata"
+    },
+    "deleteAccount": {
+      "sub": "Una volta eliminato il tuo account, tutti i tuoi dati saranno rimossi definitivamente. Questa azione non può essere annullata.",
+      "button": "Elimina Il Mio Account",
+      "warning": "Questo eliminerà definitivamente il tuo account, annullerà qualsiasi abbonamento attivo e rimuoverà tutti i tuoi dati. Non può essere annullato.",
+      "typeToConfirm": "Digita \"DELETE\" per confermare",
+      "confirmButton": "Elimina Account Definitivamente",
+      "deleting": "Eliminazione…"
     }
   },
   "quotaWall": {

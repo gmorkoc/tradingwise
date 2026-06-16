@@ -353,7 +353,8 @@
       "subscription": "Abonelik",
       "aiUsage": "YZ Kullanımı",
       "profileInfo": "Profil Bilgisi",
-      "security": "Güvenlik"
+      "security": "Güvenlik",
+      "dangerZone": "Tehlikeli Bölge"
     },
     "subscription": {
       "currentPlan": "Mevcut plan",
@@ -420,6 +421,14 @@
       "discard": "İptal Et",
       "yourName": "Adınız",
       "noEmail": "e-posta ayarlanmamış"
+    },
+    "deleteAccount": {
+      "sub": "Hesabını sildiğinde tüm veriler kalıcı olarak kaldırılır. Bu işlem geri alınamaz.",
+      "button": "Hesabımı Sil",
+      "warning": "Bu işlem hesabını kalıcı olarak siler, aktif aboneliğini iptal eder ve tüm verilerini kaldırır. Geri alınamaz.",
+      "typeToConfirm": "Onaylamak için \"DELETE\" yazın",
+      "confirmButton": "Hesabı Kalıcı Olarak Sil",
+      "deleting": "Siliniyor…"
     }
   },
   "quotaWall": {
