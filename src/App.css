@@ -57,6 +57,9 @@ html[data-theme="light"] body {
   position: fixed;
   inset: 0;
   background: var(--color-background);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 html,

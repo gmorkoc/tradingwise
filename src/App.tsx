@@ -990,7 +990,11 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading) return <div className="app-boot-screen" />;
+  if (authLoading) return (
+    <div className="app-boot-screen">
+      <CoinHintzLogo loading={true} />
+    </div>
+  );
 
   if (!user) {
     return (
