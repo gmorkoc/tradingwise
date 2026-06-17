@@ -288,8 +288,9 @@ select {
 
 .st-logo {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
 }
 
 .st-logo-icon {
@@ -300,15 +301,16 @@ select {
 .st-logo-wordmark {
   display: flex;
   align-items: baseline;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 
 .st-logo-simply {
-  color: var(--color-text-secondary);
-  font-weight: 500;
+  color: #4f46e5;
+  font-weight: 700;
 }
 
 .st-logo-trade {
@@ -324,6 +326,7 @@ select {
 .st-logo-char {
   display: inline-block;
 }
+
 
 .st-logo--wave .st-logo-char {
   animation: st-wave 0.85s ease-in-out infinite;
@@ -1096,7 +1099,6 @@ body {
   background: var(--color-primary-soft);
 }
 
-/* Show icon only — hide wordmark in the narrow strip */
 .icon-strip-logo .st-logo {
   flex-direction: column;
   gap: 2px;
@@ -1106,7 +1108,9 @@ body {
   height: 40px;
 }
 .icon-strip-logo .st-logo-wordmark {
-  display: none;
+  display: flex;
+  font-size: 13px;
+  letter-spacing: -0.01em;
 }
 
 .icon-strip-nav {

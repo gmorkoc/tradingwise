@@ -11,7 +11,7 @@ import { LiquidationHeatmap } from "./components/LiquidationHeatmap";
 import { LearnSection } from "./components/LearnSection";
 import { NewsTicker } from "./components/NewsTicker";
 import { LeveragePopup } from "./components/LeveragePopup";
-import { CoinHintzLogo } from "./components/SimplyTradeLogo";
+import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { ProfilePage } from "./components/ProfilePage";
 import { GannAnalysis } from "./components/GannAnalysis";
