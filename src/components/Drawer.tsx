@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
+import { CoinHintzLogo } from "./CoinHintzLogo";
 import "../styles/Drawer.css";
 
 interface DrawerProps {
@@ -14,6 +15,7 @@ interface DrawerProps {
   onOpenLearn: () => void;
   onOpenProfile: () => void;
   onOpenWizard: () => void;
+  onOpenTutorials: () => void;
   traderLevel: string | null;
 }
 
@@ -25,25 +27,17 @@ const LANGUAGES = [
 ];
 
 const DOC_KEYS = [
-  "candlesticks",
-  "bollingerBands",
-  "rsi",
-  "macd",
-  "supportResistance",
-  "openInterest",
-  "fundingRate",
-  "longShort",
-  "liquidations",
-  "leverage",
-  "buySell",
-  "riskReward",
+  "candlesticks","bollingerBands","rsi","macd","supportResistance",
+  "openInterest","fundingRate","longShort","liquidations","leverage","buySell","riskReward",
 ] as const;
 
 export const Drawer: React.FC<DrawerProps> = ({
-  isOpen, onClose, theme, setTheme, autoRefresh, setAutoRefresh, onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, traderLevel,
+  isOpen, onClose, theme, setTheme, autoRefresh, setAutoRefresh,
+  onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, traderLevel,
 }) => {
   const { t } = useTranslation();
-  const [openDoc, setOpenDoc] = useState<number | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [openDoc, setOpenDoc]     = useState<number | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,142 +56,104 @@ export const Drawer: React.FC<DrawerProps> = ({
       {isOpen && <div className="drawer-backdrop" onClick={onClose} />}
 
       <aside className={`drawer ${isOpen ? "drawer--open" : ""}`}>
+
+        {/* Header */}
         <div className="drawer-header">
-          <span className="drawer-logo">{t("drawer.logo")}</span>
+          <CoinHintzLogo variant="nav" />
           <button className="drawer-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="drawer-body">
 
-          {/* ── Settings ────────────────────────────────────────── */}
+          {/* ── Preferences ───────────────────────────────── */}
           <section className="drawer-section">
-            <h4 className="drawer-section-title">{t("drawer.settings")}</h4>
+            <h4 className="drawer-section-title">Preferences</h4>
 
-            {/* Profile */}
-            <div className="drawer-setting drawer-setting--clickable" onClick={onOpenProfile}>
-              <span>{t("drawer.profile")}</span>
-              <span className="drawer-setting-arrow">›</span>
+            <div className="drawer-row drawer-row--clickable" onClick={onOpenProfile}>
+              <span className="drawer-row-label">{t("drawer.profile")}</span>
+              <span className="drawer-row-arrow">›</span>
             </div>
 
-            {/* Trader level wizard */}
-            <div className="drawer-setting drawer-setting--clickable" onClick={() => { onClose(); onOpenWizard(); }}>
-              <span>Trading Level</span>
-              <span className="drawer-wizard-badge">
-                {traderLevel ?? "not set"}
-              </span>
+            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenWizard(); }}>
+              <span className="drawer-row-label">Trading Level</span>
+              <span className="drawer-badge">{traderLevel ?? "Not set"}</span>
             </div>
 
-            <div className="drawer-setting">
-              <span>{t("drawer.theme")}</span>
-              <button
-                className="drawer-toggle-btn"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? t("drawer.lightMode") : t("drawer.darkMode")}
+            <div className="drawer-row">
+              <span className="drawer-row-label">{t("drawer.theme")}</span>
+              <button className="drawer-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? "☀ Light" : "☽ Dark"}
               </button>
             </div>
 
-            <div className="drawer-setting">
-              <span>{t("drawer.autoRefresh")}</span>
+            <div className="drawer-row">
+              <span className="drawer-row-label">{t("drawer.autoRefresh")}</span>
               <label className="drawer-switch">
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(e) => setAutoRefresh(e.target.checked)}
-                />
+                <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
                 <span className="drawer-switch-track" />
               </label>
             </div>
 
-            <div className="drawer-setting">
-              <span>{t("drawer.language")}</span>
-              <select
-                className="drawer-coin-select"
-                value={i18n.language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>{l.label}</option>
-                ))}
+            <div className="drawer-row">
+              <span className="drawer-row-label">{t("drawer.language")}</span>
+              <select className="drawer-coin-select" value={i18n.language} onChange={(e) => handleLanguageChange(e.target.value)}>
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
               </select>
             </div>
           </section>
 
-          {/* ── Tools ───────────────────────────────────────────── */}
+          {/* ── Tools ─────────────────────────────────────── */}
           <section className="drawer-section">
-            <h4 className="drawer-section-title">{t("drawer.tools")}</h4>
-            <button
-              className="drawer-leverage-btn"
-              onClick={() => { onClose(); onOpenLeverage(); }}
-            >
-              {t("drawer.leverageBtn")}
+            <h4 className="drawer-section-title">Tools</h4>
+
+            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLeverage(); }}>
+              <span className="drawer-row-label">{t("drawer.leverageBtn")}</span>
+              <span className="drawer-row-right"><span className="drawer-row-icon">⚡</span><span className="drawer-row-arrow">›</span></span>
+            </div>
+
+            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLearn(); }}>
+              <span className="drawer-row-label">{t("drawer.patternsBtn")}</span>
+              <span className="drawer-row-right"><span className="drawer-row-icon">📚</span><span className="drawer-row-arrow">›</span></span>
+            </div>
+
+            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenTutorials(); }}>
+              <span className="drawer-row-label">Trading Tutorials</span>
+              <span className="drawer-row-right"><span className="drawer-row-icon">🎓</span><span className="drawer-row-arrow">›</span></span>
+
+            </div>
+          </section>
+
+          {/* ── Trading Guide (collapsible) ────────────────── */}
+          <section className="drawer-section">
+            <button className="drawer-guide-toggle" onClick={() => setGuideOpen(!guideOpen)}>
+              <span>Trading Guide</span>
+              <span className="drawer-guide-chevron">{guideOpen ? "▲" : "▼"}</span>
             </button>
-            <button
-              className="drawer-leverage-btn"
-              style={{ marginTop: 8 }}
-              onClick={() => { onClose(); onOpenLearn(); }}
-            >
-              {t("drawer.patternsBtn")}
-            </button>
+
+            {guideOpen && (
+              <div className="drawer-docs">
+                {DOC_KEYS.map((key, i) => (
+                  <div key={key} className="doc-item">
+                    <button
+                      className={`doc-trigger${openDoc === i ? " open" : ""}`}
+                      onClick={() => setOpenDoc(openDoc === i ? null : i)}
+                    >
+                      <span>{t(`drawer.docs.${key}.title`)}</span>
+                      <span className="doc-chevron">{openDoc === i ? "▲" : "▼"}</span>
+                    </button>
+                    {openDoc === i && <p className="doc-body">{t(`drawer.docs.${key}.body`)}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* ── App Info ─────────────────────────────────────────── */}
-          <section className="drawer-section">
-            <h4 className="drawer-section-title">{t("drawer.appInfo")}</h4>
-            <div className="drawer-info-grid">
-              <span className="info-label">{t("common.version")}</span>
-              <span className="info-value">0.1.0</span>
-              <span className="info-label">{t("drawer.priceData")}</span>
-              <span className="info-value">Binance · CoinGlass</span>
-              <span className="info-label">{t("drawer.charts")}</span>
-              <span className="info-value">TradingView Lightweight</span>
-              <span className="info-label">{t("drawer.ai")}</span>
-              <span className="info-value">OpenAI GPT</span>
-            </div>
-            <div className="drawer-links">
-              <a
-                href="https://github.com/anthropics/claude-code/issues"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="drawer-link"
-              >
-                {t("drawer.reportIssue")}
-              </a>
-              <a
-                href="https://www.binance.com/en/binance-api"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="drawer-link"
-              >
-                {t("drawer.dataSource")}
-              </a>
-            </div>
-          </section>
+          {/* ── Footer ────────────────────────────────────── */}
+          <div className="drawer-footer-block">
+            <p className="drawer-version">v0.1.0 · Binance · CoinGlass · OpenAI GPT</p>
+            <p className="drawer-footer">{t("drawer.disclaimer")}</p>
+          </div>
 
-          {/* ── Trading Docs ──────────────────────────────────────── */}
-          <section className="drawer-section">
-            <h4 className="drawer-section-title">{t("drawer.tradingGuide")}</h4>
-            <div className="drawer-docs">
-              {DOC_KEYS.map((key, i) => (
-                <div key={key} className="doc-item">
-                  <button
-                    className={`doc-trigger ${openDoc === i ? "open" : ""}`}
-                    onClick={() => setOpenDoc(openDoc === i ? null : i)}
-                  >
-                    <span>{t(`drawer.docs.${key}.title`)}</span>
-                    <span className="doc-chevron">{openDoc === i ? "▲" : "▼"}</span>
-                  </button>
-                  {openDoc === i && (
-                    <p className="doc-body">{t(`drawer.docs.${key}.body`)}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <p className="drawer-footer">
-            {t("drawer.disclaimer")}
-          </p>
         </div>
       </aside>
     </>

@@ -14,6 +14,7 @@ import { LeveragePopup } from "./components/LeveragePopup";
 import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { ProfilePage } from "./components/ProfilePage";
+import { TutorialPage } from "./components/TutorialPage";
 import { GannAnalysis } from "./components/GannAnalysis";
 import { HTFAnalysis } from "./components/HTFAnalysis";
 import { FearGreedGauge } from "./components/FearGreedGauge";
@@ -292,7 +293,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   };
 
   const [leverageOpen, setLeverageOpen] = useState(false);
-  const [learnOpen,    setLearnOpen]    = useState(false);
+  const [learnOpen,      setLearnOpen]      = useState(false);
+  const [tutorialOpen,   setTutorialOpen]   = useState(false);
   const [chartZone,    setChartZone]    = useState<ZoneResult | null>(null);
   const [chartPrice,   setChartPrice]   = useState(0);
 
@@ -443,11 +445,13 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         setAutoRefresh={setAutoRefresh}
         onOpenLeverage={() => setLeverageOpen(true)}
         onOpenLearn={() => setLearnOpen(true)}
+        onOpenTutorials={() => setTutorialOpen(true)}
         onOpenProfile={() => { setDrawerOpen(false); setProfileOpen(true); }}
         onOpenWizard={() => setShowOnboarding(true)}
         traderLevel={profile?.trader_level ?? null}
       />
       <LearnSection isOpen={learnOpen} onClose={() => setLearnOpen(false)} />
+      {tutorialOpen && <TutorialPage onClose={() => setTutorialOpen(false)} />}
       <LeveragePopup
         isOpen={leverageOpen}
         onClose={() => setLeverageOpen(false)}

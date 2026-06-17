@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { CoinHintzLogo } from "./CoinHintzLogo";
 import "../styles/LandingPage.css";
 
 interface Props {
@@ -280,13 +281,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     {/* ── Nav ──────────────────────────────────────────────────────────── */}
     <nav className="lp-nav">
       <div className="lp-nav-logo">
-        <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
-          <polyline points="5,9 11,27 18,13 25,27 31,9" stroke="url(#lpG)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-          <line x1="25" y1="27" x2="31" y2="9" stroke="#4ade80" strokeWidth="2.6" strokeLinecap="round"/>
-          <circle cx="18" cy="13" r="3" fill="#0284c7"/><circle cx="31" cy="9" r="3" fill="#4ade80"/>
-          <defs><linearGradient id="lpG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#4f46e5"/><stop offset="100%" stopColor="#0284c7"/></linearGradient></defs>
-        </svg>
-        <span>CoinHintz<span className="lp-nav-ai">.io</span></span>
+        <CoinHintzLogo variant="nav" />
       </div>
       <div className="lp-nav-actions">
         <button className="lp-btn-ghost" onClick={onSignIn}>{t("landing.signin")}</button>
