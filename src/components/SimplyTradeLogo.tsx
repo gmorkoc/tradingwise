@@ -6,7 +6,7 @@ interface Props {
   loading?: boolean;
 }
 
-export const TradingWiseLogo: React.FC<Props> = ({ loading = false }) => (
+export const CoinHintzLogo: React.FC<Props> = ({ loading = false }) => (
   <span className={`st-logo${loading ? " st-logo--wave" : ""}`}>
     <svg
       className="st-logo-icon"

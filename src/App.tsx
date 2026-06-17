@@ -11,7 +11,7 @@ import { LiquidationHeatmap } from "./components/LiquidationHeatmap";
 import { LearnSection } from "./components/LearnSection";
 import { NewsTicker } from "./components/NewsTicker";
 import { LeveragePopup } from "./components/LeveragePopup";
-import { TradingWiseLogo } from "./components/SimplyTradeLogo";
+import { CoinHintzLogo } from "./components/SimplyTradeLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { ProfilePage } from "./components/ProfilePage";
 import { GannAnalysis } from "./components/GannAnalysis";
@@ -461,7 +461,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
       )}
       <nav className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}`}>
         <button className="icon-strip-logo" onClick={fetchBTCData} title={t("header.clickToRefresh")}>
-          <TradingWiseLogo loading={loading || refreshing} />
+          <CoinHintzLogo loading={loading || refreshing} />
         </button>
 
         {/* Mobile-only profile header */}

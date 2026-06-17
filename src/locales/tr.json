@@ -297,7 +297,7 @@
     "copyright": "© {{year}} TradingWise.AI. Tüm hakları saklıdır."
   },
   "auth": {
-    "logoText": "TradingWise",
+    "logoText": "CoinHintz",
     "continueWithGoogle": "Google ile devam et",
     "divider": "veya",
     "login": {
@@ -785,10 +785,11 @@
       "sub": "Şimdi katılın — sonsuza dek ücretsiz, kredi kartı gerekmez.",
       "btn": "Ücretsiz hesap oluştur →"
     },
-    "footer": "© 2025 TradingWise.ai · Ciddi yatırımcılar için tasarlandı",
+    "footer": "© 2025 CoinHintz.io · Ciddi yatırımcılar için tasarlandı",
     "signin": "Giriş Yap",
     "getStarted": "Ücretsiz Başla",
-    "noCard": "Kart gerekmez"
+    "noCard": "Kart gerekmez",
+    "copyright": "© {{year}} CoinHintz.io. Tüm hakları saklıdır."
   },
   "positions": {
     "title": "Yatırımcı Pozisyonlaması",
@@ -1175,7 +1176,8 @@
     "signals": "Uyum",
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
-    "swipeHint": "Menüyü açmak için kaydır"
+    "swipeHint": "Menüyü açmak için kaydır",
+    "logo": "📊 CoinHintz.AI"
   },
   "tradeManager": {
     "long": "▲ Long",
@@ -1378,7 +1380,7 @@
     "bearish": "Düşüş Formasyonları"
   },
   "onboarding": {
-    "welcomeTitle": "TradingWise'a\nHoş Geldiniz",
+    "welcomeTitle": "CoinHintz'e\nHoş Geldiniz",
     "welcomeSub": "Panelinizi kişiselleştirebilmemiz ve sizin için en önemli sinyalleri gösterebilmemiz için 4 hızlı soruyu yanıtlayın.",
     "getStarted": "Başla",
     "back": "Geri",

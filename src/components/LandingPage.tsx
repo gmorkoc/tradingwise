@@ -220,7 +220,7 @@ function AIChatMock() {
     <div className="lp-chat-window">
       <div className="lp-chat-header">
         <span className="lp-chat-header-logo">✦</span>
-        <span className="lp-chat-header-title">TradingWise AI</span>
+        <span className="lp-chat-header-title">CoinHintz AI</span>
         <span className="lp-chat-header-live"><span className="lp-chat-live-dot" />Live</span>
       </div>
       <div className="lp-chat-body">
@@ -286,7 +286,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
           <circle cx="18" cy="13" r="3" fill="#0284c7"/><circle cx="31" cy="9" r="3" fill="#4ade80"/>
           <defs><linearGradient id="lpG" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#4f46e5"/><stop offset="100%" stopColor="#0284c7"/></linearGradient></defs>
         </svg>
-        <span>TradingWise<span className="lp-nav-ai">.ai</span></span>
+        <span>CoinHintz<span className="lp-nav-ai">.io</span></span>
       </div>
       <div className="lp-nav-actions">
         <button className="lp-btn-ghost" onClick={onSignIn}>{t("landing.signin")}</button>

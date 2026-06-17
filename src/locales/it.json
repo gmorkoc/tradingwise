@@ -297,7 +297,7 @@
     "copyright": "© {{year}} TradingWise.AI. Tutti i diritti riservati."
   },
   "auth": {
-    "logoText": "TradingWise",
+    "logoText": "CoinHintz",
     "continueWithGoogle": "Continua con Google",
     "divider": "o",
     "login": {
@@ -785,10 +785,11 @@
       "sub": "Unisciti ora — gratis per sempre, nessuna carta di credito richiesta.",
       "btn": "Crea account gratuito →"
     },
-    "footer": "© 2025 TradingWise.ai · Costruito per trader seri",
+    "footer": "© 2025 CoinHintz.io · Costruito per trader seri",
     "signin": "Accedi",
     "getStarted": "Inizia Gratis",
-    "noCard": "Nessuna carta richiesta"
+    "noCard": "Nessuna carta richiesta",
+    "copyright": "© {{year}} CoinHintz.io. Tutti i diritti riservati."
   },
   "positions": {
     "title": "Posizionamento Trader",
@@ -1175,7 +1176,8 @@
     "signals": "Confluenza",
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
-    "swipeHint": "Scorri per aprire il menu"
+    "swipeHint": "Scorri per aprire il menu",
+    "logo": "📊 CoinHintz.AI"
   },
   "tradeManager": {
     "long": "▲ Long",
@@ -1378,7 +1380,7 @@
     "bearish": "Pattern Ribassisti"
   },
   "onboarding": {
-    "welcomeTitle": "Benvenuto su\nTradingWise",
+    "welcomeTitle": "Benvenuto su\nCoinHintz",
     "welcomeSub": "Rispondi a 4 domande rapide per personalizzare il tuo pannello e mostrarti i segnali più rilevanti.",
     "getStarted": "Inizia",
     "back": "Indietro",

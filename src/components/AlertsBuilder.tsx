@@ -110,7 +110,7 @@ export function AlertsBuilder({ btcData }: Props) {
             const body = g.conditions
               .map(c => `${t(metricTKey(c.metric))} ${c.operator} ${c.value}`)
               .join(g.logic === "AND" ? ` ${t("alerts.logic.and")} ` : ` ${t("alerts.logic.or")} `);
-            new Notification(`TradingWise.AI Alert: ${g.name}`, { body });
+            new Notification(`CoinHintz Alert: ${g.name}`, { body });
           }
         }
       }
