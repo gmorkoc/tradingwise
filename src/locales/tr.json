@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}× son derece yüksek risk. %{{pct}}'lik bir hareket pozisyonunu tasfiye eder."
   },
   "drawer": {
-    "logo": "📊 TradingWise.AI",
+    "logo": "📊 CoinHintz",
     "settings": "⚙️ Ayarlar",
     "profile": "Profil",
     "tools": "🛠 Araçlar",
@@ -294,7 +294,7 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} TradingWise.AI. Tüm hakları saklıdır."
+    "copyright": "© {{year}} CoinHintz.io. Tüm hakları saklıdır."
   },
   "auth": {
     "logoText": "CoinHintz",

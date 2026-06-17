@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}× es extremadamente alto riesgo. Un movimiento del {{pct}}% liquida tu posición."
   },
   "drawer": {
-    "logo": "📊 TradingWise.AI",
+    "logo": "📊 CoinHintz",
     "settings": "⚙️ Configuración",
     "profile": "Perfil",
     "tools": "🛠 Herramientas",
@@ -294,7 +294,7 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} TradingWise.AI. Todos los derechos reservados."
+    "copyright": "© {{year}} CoinHintz.io. Todos los derechos reservados."
   },
   "auth": {
     "logoText": "CoinHintz",
