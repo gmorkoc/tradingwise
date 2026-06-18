@@ -2556,15 +2556,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </button>
           </>
         ) : (
-          <button
-            className={`predict-btn${predictionLoading ? " predict-btn--loading" : ""}${!isElite ? " predict-btn--locked" : ""}`}
-            onClick={handlePredict}
-            disabled={predictionLoading}
-          >
-            {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
-            {!predictionLoading && !isElite && <span className="predict-elite-badge">⚡ Elite</span>}
-            {!predictionLoading && isElite && <span className="predict-ai-label">{t("chart.aiPowered")}</span>}
-          </button>
+          <div className="predict-wrap">
+            {!isElite && <span className="predict-upgrade-badge">⚡ Upgrade to Elite</span>}
+            <button
+              className={`predict-btn${predictionLoading ? " predict-btn--loading" : ""}`}
+              onClick={handlePredict}
+              disabled={predictionLoading}
+            >
+              {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
+              {!predictionLoading && isElite && <span className="predict-ai-label">{t("chart.aiPowered")}</span>}
+            </button>
+          </div>
         )}
         <button
           className="chart-reset-view-btn"
