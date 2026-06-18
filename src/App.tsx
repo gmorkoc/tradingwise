@@ -35,11 +35,13 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
 import { PTickerBgChart } from "./components/PTickerBgChart";
 import { PredictionEngine } from "./components/PredictionEngine";
+import { FundingBot } from "./components/FundingBot";
+import { SectionBanner } from "./components/SectionBanner";
 import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier } from "./services/supabase";
 import "./App.css";
 
-type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals";
+type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot";
 
 const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
   { id: "chart",     labelKey: "nav.chart",     d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
@@ -64,6 +66,7 @@ const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requir
   { id: "htf",       labelKey: "nav.htf",       d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
   { id: "orderflow", labelKey: "nav.orderflow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
   { id: "signals",   labelKey: "nav.signals",   d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
+  { id: "fundingbot", labelKey: "nav.fundingbot", d: ["M19 5L5 19", "M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0", "M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0"] },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -748,6 +751,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               </div>
             </>
           )}
+          {activeSection !== "chart" && <SectionBanner section={activeSection} />}
           {activeSection === "ai" && (
             <AIPredictionPanel btcData={btcData} coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
           )}
@@ -767,6 +771,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {activeSection === "positions" && <PositionFlows coin={coin} />}
           {activeSection === "orderflow" && <OrderFlowFramework coin={coin} />}
           {activeSection === "signals"   && <PredictionEngine btcData={btcData} coin={coin} livePrice={livePrice} />}
+          {activeSection === "fundingbot" && <FundingBot coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
         </div>
 
       </div>
