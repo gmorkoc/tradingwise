@@ -76,6 +76,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   align-items: stretch;
+  padding-top: 16px;
 }
 
 .upgrade-plan {
@@ -97,7 +98,7 @@
 
 .upgrade-popular-badge {
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.65rem;
@@ -109,6 +110,7 @@
   background: var(--plan-color, #38bdf8);
   color: #000;
   white-space: nowrap;
+  z-index: 1;
 }
 
 .upgrade-plan-label {
@@ -168,8 +170,9 @@
 }
 
 .upgrade-current-badge {
-  background: var(--color-border) !important;
-  color: var(--color-text-secondary) !important;
+  background: var(--color-card-bg) !important;
+  color: var(--plan-color) !important;
+  border: 1.5px solid var(--plan-color) !important;
 }
 
 .upgrade-plan-cta {
