@@ -429,7 +429,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   return (
     <div className="app-shell">
       {showOnboarding && (
-        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={() => setShowOnboarding(false)} />
       )}
       <ProfilePage isOpen={profileOpen} onClose={() => setProfileOpen(false)} onOpenUpgrade={() => { setProfileOpen(false); onOpenUpgrade(); }} />
       <div className="app-shell-news"><NewsTicker /></div>
@@ -955,10 +955,11 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 function AppGate() {
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const [showAuth,    setShowAuth]    = useState(false);
+  const [authView,    setAuthView]    = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   const [theme, setTheme] = useState<"dark" | "light">(() =>
-    (localStorage.getItem("theme") as "dark" | "light") || "dark"
+    (localStorage.getItem("theme") as "dark" | "light") || "light"
   );
 
   useEffect(() => {
@@ -996,12 +997,12 @@ function AppGate() {
     return (
       <>
         <LandingPage
-          onSignIn={() => setShowAuth(true)}
-          onSignUp={() => setShowAuth(true)}
+          onSignIn={() => { setAuthView("login"); setShowAuth(true); }}
+          onSignUp={() => { setAuthView("signup"); setShowAuth(true); }}
           theme={theme}
           onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         />
-        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} initialView={authView} />}
       </>
     );
   }

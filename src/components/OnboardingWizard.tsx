@@ -80,9 +80,10 @@ function getLevelIndex(score: number): number {
 
 interface Props {
   onComplete: (level: string) => void;
+  onSkip?: () => void;
 }
 
-export const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
+export const OnboardingWizard: React.FC<Props> = ({ onComplete, onSkip }) => {
   const { t } = useTranslation();
   const { user, refreshProfile } = useAuth();
   const [step, setStep]               = useState(-1);
@@ -138,6 +139,12 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
         <div className="onb-progress">
           <div className="onb-progress-fill" style={{ width: `${pct}%` }} />
         </div>
+
+        {onSkip && (
+          <button className="onb-skip" onClick={onSkip} aria-label="Skip onboarding">
+            Skip
+          </button>
+        )}
 
         <div key={animKey} className="onb-body onb-anim">
 

@@ -22,6 +22,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
   const [error,    setError]    = useState("");
   const [info,     setInfo]     = useState("");
   const [busy,     setBusy]     = useState(false);
+  const [showPw,   setShowPw]   = useState(false);
+  const [showCfm,  setShowCfm]  = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,8 +44,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
     e.preventDefault();
     setBusy(true); setError("");
     const err = await signIn(email, password);
-    if (err) setError(err);
-    else onClose();
+    if (err) {
+      const isNotFound = err.toLowerCase().includes("invalid login credentials");
+      setError(isNotFound ? "no_account" : err);
+    } else {
+      onClose();
+    }
     setBusy(false);
   };
 
@@ -53,8 +59,14 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
     if (password.length < 6)  { setError(t("auth.errors.passwordTooShort")); return; }
     setBusy(true); setError("");
     const err = await signUp(email, password, name);
-    if (err) setError(err);
-    else setInfo(t("auth.signup.confirmEmail"));
+    if (err) {
+      const isDuplicate = err.toLowerCase().includes("already registered")
+        || err.toLowerCase().includes("already been registered")
+        || err.toLowerCase().includes("user already exists");
+      setError(isDuplicate ? "sso_exists" : err);
+    } else {
+      setInfo(t("auth.signup.confirmEmail"));
+    }
     setBusy(false);
   };
 
@@ -98,10 +110,25 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
               </label>
               <label className="auth-label">{t("auth.login.passwordLabel")}
-                <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <div className="auth-input-wrap">
+                  <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                  <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
+                    {showPw
+                      ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </div>
               </label>
               <button type="button" className="auth-link-btn" onClick={() => setView("reset")}>{t("auth.login.forgotPassword")}</button>
-              {error && <p className="auth-error">{error}</p>}
+              {error === "no_account" ? (
+                <p className="auth-error">
+                  No account found with this email.{" "}
+                  <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>Sign up free →</button>
+                </p>
+              ) : error ? (
+                <p className="auth-error">{error}</p>
+              ) : null}
               {info  && <p className="auth-info">{info}</p>}
               <button className="auth-submit" disabled={busy}>{busy ? t("auth.login.signingIn") : t("auth.login.signinBtn")}</button>
             </form>
@@ -126,12 +153,35 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </label>
               <label className="auth-label">{t("auth.signup.passwordLabel")}
-                <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                <div className="auth-input-wrap">
+                  <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                  <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
+                    {showPw
+                      ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </div>
               </label>
               <label className="auth-label">{t("auth.signup.confirmLabel")}
-                <input className="auth-input" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                <div className="auth-input-wrap">
+                  <input className="auth-input" type={showCfm ? "text" : "password"} value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                  <button type="button" className="auth-eye" onClick={() => setShowCfm(v => !v)} tabIndex={-1}>
+                    {showCfm
+                      ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
+                  </button>
+                </div>
               </label>
-              {error && <p className="auth-error">{error}</p>}
+              {error === "sso_exists" ? (
+                <p className="auth-error">
+                  This email is already linked to a Google account.{" "}
+                  <button type="button" className="auth-link-btn" onClick={handleGoogle}>Sign in with Google →</button>
+                </p>
+              ) : error ? (
+                <p className="auth-error">{error}</p>
+              ) : null}
               {info  && <p className="auth-info">{info}</p>}
               <button className="auth-submit" disabled={busy}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
             </form>

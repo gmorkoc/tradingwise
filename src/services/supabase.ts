@@ -33,8 +33,32 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
     .select("*")
     .eq("id", userId)
     .single();
-  if (error) return null;
-  return data as Profile;
+
+  if (!error) return data as Profile;
+
+  // Row missing — bootstrap a free profile so tier/quota tracking works
+  if (error.code === "PGRST116") {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: created } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        email: user?.email ?? "",
+        full_name: user?.user_metadata?.full_name ?? "",
+        tier: "free",
+        subscription_status: "none",
+        ai_requests_used: 0,
+        ai_requests_week: null,
+        stripe_customer_id: null,
+        subscription_end_at: null,
+        trader_level: null,
+      })
+      .select()
+      .single();
+    return created as Profile | null;
+  }
+
+  return null;
 }
 
 export async function saveTraderLevel(userId: string, level: string): Promise<void> {
