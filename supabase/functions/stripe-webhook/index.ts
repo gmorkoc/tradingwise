@@ -53,9 +53,10 @@ Deno.serve(async (req) => {
     }
 
     case "customer.subscription.updated": {
-      const sub = event.data.object as Stripe.Subscription;
+      const raw = event.data.object as Stripe.Subscription;
+      const sub = await stripe.subscriptions.retrieve(raw.id);
       const priceId = sub.items.data[0]?.price.id ?? "";
-      await updateProfileByCustomer(customerId(sub), {
+      await updateProfileByCustomer(customerId(raw), {
         tier:                PRICE_TIER[priceId] ?? "free",
         subscription_status: sub.status,
         subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
