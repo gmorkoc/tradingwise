@@ -240,7 +240,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   useEffect(() => {
     if (profile && !onboardingCheckedRef.current) {
       onboardingCheckedRef.current = true;
-      if (!profile.trader_level) setShowOnboarding(true);
+      if (!profile.trader_level && !localStorage.getItem("onb_never_show")) setShowOnboarding(true);
     }
   }, [profile]);
 

@@ -83,6 +83,8 @@ interface Props {
   onSkip?: () => void;
 }
 
+export const ONB_NEVER_KEY = "onb_never_show";
+
 export const OnboardingWizard: React.FC<Props> = ({ onComplete, onSkip }) => {
   const { t } = useTranslation();
   const { user, refreshProfile } = useAuth();
@@ -158,6 +160,18 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete, onSkip }) => {
               <button className="onb-btn-primary" onClick={() => goTo(0)}>
                 {t("onboarding.getStarted")} <span className="onb-arrow">→</span>
               </button>
+              {onSkip && (
+                <button
+                  className="onb-never-label"
+                  onClick={async () => {
+                    localStorage.setItem(ONB_NEVER_KEY, "1");
+                    if (user) await saveTraderLevel(user.id, "skipped");
+                    onSkip();
+                  }}
+                >
+                  Don't show this again
+                </button>
+              )}
             </div>
           )}
 

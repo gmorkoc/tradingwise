@@ -80,6 +80,24 @@
   gap: 16px;
 }
 
+/* ── Never show checkbox ─────────────────────────────────────────────────── */
+.onb-never-label {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.onb-never-label:hover { color: var(--color-text); }
+
 .onb-intro-glyph {
   font-size: 2.8rem;
   background: linear-gradient(135deg, #6366f1, #818cf8, #a78bfa);

@@ -2375,16 +2375,15 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 60px #22c55e88 !important; }
 .pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
 .pticker-price-source {
-  position: absolute;
-  top: 18px;
-  right: 24px;
+  position: fixed;
+  top: 20px;
+  left: 16px;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--pticker-muted);
   text-shadow: none;
-  opacity: 0.6;
 }
 .pticker-live-dot {
   display: flex;
@@ -2506,30 +2505,15 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
   gap: 4px;
   z-index: 100001;
 }
-.pticker-sound-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  border-radius: 8px;
-  color: var(--pticker-muted);
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-.pticker-sound-btn:hover { color: var(--pticker-text); background: var(--pticker-card-bg); }
-.pticker-sound-btn--on { color: var(--pticker-text); }
+.pticker-sound-btn,
 .pticker-close {
-  position: static;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 10px 14px;
+  padding: 10px 0;
+  width: 64px;
   background: none;
   border: none;
   border-radius: 8px;
@@ -2537,11 +2521,12 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
   cursor: pointer;
   transition: color 0.15s, background 0.15s;
 }
+.pticker-sound-btn svg,
 .pticker-close svg { width: 26px; height: 26px; }
-.pticker-close:hover {
-  color: var(--pticker-text);
-  background: var(--pticker-card-bg);
-}
+.pticker-sound-btn:hover,
+.pticker-close:hover { color: var(--pticker-text); background: var(--pticker-card-bg); }
+.pticker-sound-btn--on { color: var(--pticker-text); }
+
 .pticker-close-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; line-height: 1; color: inherit; }
 
 /* ── Light theme overrides ── */
