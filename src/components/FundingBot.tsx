@@ -140,6 +140,11 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
   const [aiError, setAiError]     = useState("");
   const [countdown, setCountdown] = useState("");
   const [hoveredTip, setHoveredTip] = useState<{ tip: Tip; x: number; y: number } | null>(null);
+  const [watchlist, setWatchlist]   = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("fb_watchlist") ?? "[]")); }
+    catch { return new Set(); }
+  });
+  const [viewMode, setViewMode]     = useState<"all" | "watchlist">("all");
   const refreshTimerRef           = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimerRef         = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -278,12 +283,23 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
     }
   };
 
+  const toggleWatch = (sym: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setWatchlist(prev => {
+      const next = new Set(prev);
+      next.has(sym) ? next.delete(sym) : next.add(sym);
+      localStorage.setItem("fb_watchlist", JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   /* ── Derived ─────────────────────────────────────────────────────────────── */
   const selectedRow    = rows.find(r => r.symbol === selectedCoin);
   const selectedSignal = selectedRow ? getSignal(selectedRow.fundingRate, t) : null;
   const maxAbsRate     = Math.max(...rows.map(r => Math.abs(r.fundingRate)), 0.0001);
-  const totalPages     = Math.ceil(rows.length / PAGE_SIZE);
-  const pageRows       = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleRows    = viewMode === "watchlist" ? rows.filter(r => watchlist.has(r.symbol)) : rows;
+  const totalPages     = Math.ceil(visibleRows.length / PAGE_SIZE);
+  const pageRows       = visibleRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   /* ── Render ──────────────────────────────────────────────────────────────── */
   return (
@@ -327,14 +343,29 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
 
       {/* ── Scanner table ────────────────────────────────────────────────────── */}
       <div className="fb-scanner-wrap">
-        <div className="fb-scanner-title">{t("fundingBot.scanner")}</div>
+        <div className="fb-scanner-topbar">
+          <div className="fb-scanner-title">{t("fundingBot.scanner")}</div>
+          <div className="fb-view-tabs">
+            <button className={`fb-view-tab${viewMode === "all" ? " fb-view-tab--active" : ""}`} onClick={() => { setViewMode("all"); setPage(0); }}>All</button>
+            <button className={`fb-view-tab${viewMode === "watchlist" ? " fb-view-tab--active" : ""}`} onClick={() => { setViewMode("watchlist"); setPage(0); }}>
+              ★ Watchlist {watchlist.size > 0 && <span className="fb-wl-count">{watchlist.size}</span>}
+            </button>
+          </div>
+        </div>
         {loading && <div className="fb-loading">{t("fundingBot.loading")}</div>}
         {error && <div className="fb-error">{error}</div>}
-        {!loading && !error && (
+        {!loading && !error && viewMode === "watchlist" && watchlist.size === 0 && (
+          <div className="fb-wl-empty">
+            <span>★</span>
+            <p>No coins in your watchlist yet.<br />Click the star on any row to add it.</p>
+          </div>
+        )}
+        {!loading && !error && !(viewMode === "watchlist" && watchlist.size === 0) && (
           <div className="fb-table-scroll">
             <table className="fb-table">
               <thead>
                 <tr>
+                  <th className="fb-col-star"></th>
                   <th>{t("fundingBot.colCoin")}</th>
                   <th>{t("fundingBot.colRate")}</th>
                   <th className="fb-col-bar">{t("fundingBot.colBar")}</th>
@@ -359,6 +390,15 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
                       onMouseMove={e  => setHoveredTip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
                       onMouseLeave={() => setHoveredTip(null)}
                     >
+                      {/* Star */}
+                      <td className="fb-td-star">
+                        <button
+                          className={`fb-star-btn${watchlist.has(row.symbol) ? " fb-star-btn--on" : ""}`}
+                          onClick={e => toggleWatch(row.symbol, e)}
+                          title={watchlist.has(row.symbol) ? "Remove from watchlist" : "Add to watchlist"}
+                        >★</button>
+                      </td>
+
                       {/* Coin */}
                       <td className="fb-td-coin">
                         <span className="fb-coin-sym">{row.symbol}</span>
