@@ -153,9 +153,7 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete, onSkip }) => {
           {step === -1 && (
             <div className="onb-intro">
               <div className="onb-intro-glyph">✦</div>
-              <h1 className="onb-intro-title">{t("onboarding.welcomeTitle").split("\n").map((line, i) => (
-                <React.Fragment key={i}>{line}{i === 0 && <br />}</React.Fragment>
-              ))}</h1>
+              <h1 className="onb-intro-title">{t("onboarding.welcomeTitle")}</h1>
               <p className="onb-intro-sub">{t("onboarding.welcomeSub")}</p>
               <button className="onb-btn-primary" onClick={() => goTo(0)}>
                 {t("onboarding.getStarted")} <span className="onb-arrow">→</span>
