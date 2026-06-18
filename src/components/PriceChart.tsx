@@ -2458,7 +2458,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <div className="chart-error">⚠️ {error}</div>
       )}
 
-      <div style={{ position: "relative" }} onDoubleClick={toggleFullscreen}>
+      <div style={{ position: "relative" }} onDoubleClick={toggleFullscreen} className="chart-dblclick-wrap">
         {loading && (
           <div className="chart-loading-overlay">
             <span>{t("chart.loading")}</span>

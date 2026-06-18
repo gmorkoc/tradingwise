@@ -235,6 +235,28 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: var(--color-text);
 }
 
+.chart-dblclick-wrap::after {
+  content: "⛶  Double-click for fullscreen";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.07);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 5;
+}
+.chart-dblclick-wrap:hover::after {
+  opacity: 1;
+}
+
 .day-hl-badge {
   display: inline-flex;
   align-items: center;

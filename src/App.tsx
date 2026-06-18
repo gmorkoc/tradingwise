@@ -581,7 +581,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 {(livePrice ?? btcData?.price) && (
                   <span className="mch-coin-price">${(livePrice ?? btcData!.price!).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
                 )}
-                <span className="price-source">via Binance</span>
+                <span className="price-source">via Binance <span className="price-source-fs-hint">⛶ Double-click chart for fullscreen</span></span>
               </div>
               <span className="mch-coin-chevron">▾</span>
             </button>
