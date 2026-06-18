@@ -1211,8 +1211,8 @@ body {
 
 .icon-strip-lock {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: -3px;
+  right: -10px;
   width: 13px;
   height: 13px;
   border-radius: 50%;
@@ -1229,8 +1229,8 @@ body {
 
 .icon-strip-elite-badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: -3px;
+  right: -10px;
   width: 11px;
   height: 11px;
   border-radius: 3px;
@@ -2023,7 +2023,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
     height: auto;
     flex-direction: row;
     justify-content: flex-start;
-    padding: 12px 20px 12px 28px;
+    padding: 4px 20px 4px 28px;
     gap: 16px;
     border-radius: 0;
     background: none !important;
@@ -2063,6 +2063,15 @@ html[data-theme="light"] .icon-strip-quota-bar {
   .icon-strip .icon-strip-label::before,
   .icon-strip .icon-strip-label::after {
     display: none;
+  }
+
+  /* Badges: vertically centered, left of icon on mobile */
+  .icon-strip .icon-strip-elite-badge,
+  .icon-strip .icon-strip-lock {
+    top: 50%;
+    transform: translateY(-50%);
+    right: auto;
+    left: -14px;
   }
 
   /* ── Divider before bottom section ────────────────────────────────────── */
