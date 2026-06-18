@@ -1054,6 +1054,8 @@ body {
   height: 100dvh;
   overflow: hidden;
   background: var(--color-background);
+  padding-top: env(safe-area-inset-top);
+  box-sizing: border-box;
 }
 
 .app-shell-news {
