@@ -260,6 +260,223 @@ const AdvancedIndicatorsSVG = () => (
   </svg>
 );
 
+const EXCHANGES = [
+  {
+    name: "Binance",
+    tagline: "Largest volume worldwide",
+    url: "https://www.binance.com/en/register",
+    color: "#f59e0b",
+    glow: "rgba(245,158,11,0.18)",
+    border: "rgba(245,158,11,0.32)",
+    bg: "linear-gradient(160deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
+    stars: 5,
+    badge: "Best for Pro",
+    pros: ["350+ coins available", "Low trading fees 0.1%", "Full futures & margin"],
+    cons: ["Not available in the US"],
+  },
+  {
+    name: "Coinbase",
+    tagline: "Most beginner-friendly",
+    url: "https://www.coinbase.com/signup",
+    color: "#3b82f6",
+    glow: "rgba(59,130,246,0.18)",
+    border: "rgba(59,130,246,0.32)",
+    bg: "linear-gradient(160deg, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.04) 100%)",
+    stars: 5,
+    badge: "Best for Beginners",
+    pros: ["US licensed & regulated", "Very simple interface", "200+ coins"],
+    cons: ["Higher fees ~1.5%"],
+  },
+  {
+    name: "Kraken",
+    tagline: "Most trusted globally",
+    url: "https://www.kraken.com/sign-up",
+    color: "#8b5cf6",
+    glow: "rgba(139,92,246,0.18)",
+    border: "rgba(139,92,246,0.32)",
+    bg: "linear-gradient(160deg, rgba(139,92,246,0.12) 0%, rgba(139,92,246,0.04) 100%)",
+    stars: 4,
+    badge: "Best for Safety",
+    pros: ["US & EU fully licensed", "Industry-leading security", "Low fees 0.16%"],
+    cons: ["Fewer altcoins"],
+  },
+] as const;
+
+const ExchangeSelectionCards = () => (
+  <div style={{
+    display: "flex", gap: "10px", padding: "14px 12px", background: "#0b1220",
+    borderRadius: "12px", width: "100%", boxSizing: "border-box", minHeight: "210px",
+  }}>
+    {EXCHANGES.map((ex) => (
+      <div key={ex.name} style={{
+        flex: 1, background: ex.bg, border: `1px solid ${ex.border}`,
+        borderRadius: "12px", padding: "14px 12px 12px",
+        display: "flex", flexDirection: "column", gap: "6px",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", top: "-24px", left: "50%", transform: "translateX(-50%)",
+          width: "90px", height: "90px", background: ex.glow,
+          filter: "blur(28px)", borderRadius: "50%", pointerEvents: "none",
+        }}/>
+        <div style={{ fontSize: "1.05rem", fontWeight: 800, color: ex.color, textAlign: "center", letterSpacing: "-0.02em" }}>
+          {ex.name}
+        </div>
+        <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.38)", textAlign: "center" }}>
+          {ex.tagline}
+        </div>
+        <div style={{ textAlign: "center", fontSize: "0.78rem", color: ex.color, letterSpacing: "1px" }}>
+          {"★".repeat(ex.stars)}{"☆".repeat(5 - ex.stars)}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "5px", flex: 1, marginTop: "4px" }}>
+          {ex.pros.map((p) => (
+            <div key={p} style={{ display: "flex", gap: "6px", fontSize: "0.73rem", color: "#4ade80", alignItems: "flex-start" }}>
+              <span style={{ flexShrink: 0, marginTop: "1px" }}>✓</span><span>{p}</span>
+            </div>
+          ))}
+          {ex.cons.map((c) => (
+            <div key={c} style={{ display: "flex", gap: "6px", fontSize: "0.73rem", color: "#f87171", alignItems: "flex-start" }}>
+              <span style={{ flexShrink: 0, marginTop: "1px" }}>✗</span><span>{c}</span>
+            </div>
+          ))}
+        </div>
+        <a
+          href={ex.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "block", textAlign: "center", padding: "8px 10px", marginTop: "6px",
+            background: `${ex.color}1a`, border: `1px solid ${ex.border}`,
+            borderRadius: "8px", color: ex.color, fontSize: "0.76rem",
+            fontWeight: 700, textDecoration: "none", letterSpacing: "0.01em",
+            transition: "background 0.15s, border-color 0.15s",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = `${ex.color}30`; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = `${ex.color}1a`; }}
+        >
+          {ex.badge} →
+        </a>
+      </div>
+    ))}
+  </div>
+);
+
+const AccountSetupSVG = () => (
+  <svg viewBox="0 0 460 210" fill="none" xmlns="http://www.w3.org/2000/svg" className="tutorial-svg">
+    <rect width="460" height="210" fill="#0d1520" rx="10"/>
+    <text x="8" y="14" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="sans-serif" fontWeight="600">ACCOUNT SETUP — 6 STEPS TO YOUR FIRST TRADE</text>
+    {([
+      { x: 10,  icon: "📧", label: "Sign Up",  sub1: "Email +",    sub2: "Password",    color: "#60a5fa" },
+      { x: 84,  icon: "✉️", label: "Verify",   sub1: "Check your", sub2: "email inbox", color: "#4ade80" },
+      { x: 158, icon: "🪪", label: "KYC",      sub1: "ID + selfie", sub2: "~5 min",     color: "#fbbf24" },
+      { x: 232, icon: "🔐", label: "2FA",      sub1: "Auth app",   sub2: "not SMS",     color: "#a78bfa" },
+      { x: 306, icon: "💳", label: "Deposit",  sub1: "Bank/card",  sub2: "or crypto",   color: "#f97316" },
+      { x: 380, icon: "🚀", label: "Trade",    sub1: "Spot only",  sub2: "to start!",   color: "#4ade80" },
+    ] as const).map((s, i) => (
+      <g key={i}>
+        <rect x={s.x} y="28" width="68" height="158" fill={`${s.color}0d`} stroke={`${s.color}44`} strokeWidth="1.2" rx="7"/>
+        <text x={s.x + 34} y="56" fontSize="17" fontFamily="sans-serif" textAnchor="middle">{s.icon}</text>
+        <rect x={s.x + 24} y="62" width="20" height="13" fill={`${s.color}22`} rx="6"/>
+        <text x={s.x + 34} y="72" fill={s.color} fontSize="8" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">{`0${i + 1}`}</text>
+        <text x={s.x + 34} y="91" fill={s.color} fontSize="9.5" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">{s.label}</text>
+        <text x={s.x + 34} y="108" fill="rgba(255,255,255,0.45)" fontSize="7.5" fontFamily="sans-serif" textAnchor="middle">{s.sub1}</text>
+        <text x={s.x + 34} y="120" fill="rgba(255,255,255,0.45)" fontSize="7.5" fontFamily="sans-serif" textAnchor="middle">{s.sub2}</text>
+        {i < 5 && <polygon points={`${s.x + 70},107 ${s.x + 77},103 ${s.x + 77},111`} fill="rgba(255,255,255,0.18)"/>}
+      </g>
+    ))}
+    <text x="230" y="202" fill="rgba(255,255,255,0.25)" fontSize="8" fontFamily="sans-serif" textAnchor="middle">Total time: ~15 minutes • Available 24/7</text>
+  </svg>
+);
+
+const CexDexCards = () => (
+  <div style={{
+    display: "flex", gap: "10px", padding: "14px 12px", background: "#0b1220",
+    borderRadius: "12px", width: "100%", boxSizing: "border-box", minHeight: "210px",
+    alignItems: "stretch", position: "relative",
+  }}>
+    {([
+      {
+        key: "cex", label: "CEX", sublabel: "Centralized Exchange",
+        examples: "Binance · Coinbase · Kraken",
+        color: "#3b82f6", glow: "rgba(59,130,246,0.18)", border: "rgba(59,130,246,0.32)",
+        bg: "linear-gradient(160deg, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.04) 100%)",
+        pros: ["Beginner-friendly UI", "Fiat deposit (bank/card)", "KYC adds accountability", "24/7 customer support"],
+        cons: ["They hold your keys", "Can be hacked/frozen", "Account can be banned"],
+      },
+      {
+        key: "dex", label: "DEX", sublabel: "Decentralized Exchange",
+        examples: "Uniswap · dYdX · Jupiter",
+        color: "#f59e0b", glow: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.32)",
+        bg: "linear-gradient(160deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
+        pros: ["You own your keys", "No KYC needed", "Cannot be frozen", "Access to DeFi tokens"],
+        cons: ["Complex for beginners", "No fiat on-ramp", "No support if error"],
+      },
+    ] as const).map((side, idx) => (
+      <div key={side.key} style={{
+        flex: 1, background: side.bg, border: `1px solid ${side.border}`,
+        borderRadius: "12px", padding: "14px 14px 14px",
+        display: "flex", flexDirection: "column", gap: "5px",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", top: "-20px", left: "50%", transform: "translateX(-50%)",
+          width: "100px", height: "100px", background: side.glow,
+          filter: "blur(30px)", borderRadius: "50%", pointerEvents: "none",
+        }}/>
+        <div style={{ fontSize: "1.35rem", fontWeight: 800, color: side.color, textAlign: "center", letterSpacing: "-0.02em" }}>
+          {side.label}
+        </div>
+        <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.38)", textAlign: "center" }}>{side.sublabel}</div>
+        <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.2)", textAlign: "center", marginBottom: "6px" }}>{side.examples}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "7px", flex: 1 }}>
+          {side.pros.map((p) => (
+            <div key={p} style={{ display: "flex", gap: "7px", fontSize: "0.78rem", color: "#4ade80", alignItems: "flex-start" }}>
+              <span style={{ flexShrink: 0, fontWeight: 700 }}>✓</span><span>{p}</span>
+            </div>
+          ))}
+          <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "2px 0" }}/>
+          {side.cons.map((c) => (
+            <div key={c} style={{ display: "flex", gap: "7px", fontSize: "0.78rem", color: "#f87171", alignItems: "flex-start" }}>
+              <span style={{ flexShrink: 0, fontWeight: 700 }}>✗</span><span>{c}</span>
+            </div>
+          ))}
+        </div>
+        {idx === 0 && (
+          <div style={{
+            position: "absolute", right: "-18px", top: "50%", transform: "translateY(-50%)",
+            fontSize: "0.72rem", fontWeight: 800, color: "rgba(255,255,255,0.2)",
+            background: "#0b1220", padding: "4px 6px", borderRadius: "20px",
+            border: "1px solid rgba(255,255,255,0.08)", zIndex: 2, letterSpacing: "0.05em",
+          }}>vs</div>
+        )}
+      </div>
+    ))}
+  </div>
+);
+
+const SecuritySetupSVG = () => (
+  <svg viewBox="0 0 460 218" fill="none" xmlns="http://www.w3.org/2000/svg" className="tutorial-svg">
+    <rect width="460" height="218" fill="#0d1520" rx="10"/>
+    <text x="8" y="14" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="sans-serif" fontWeight="600">SECURITY LAYERS — PROTECTING YOUR CRYPTO</text>
+    <path d="M230 22 L262 36 L262 65 Q262 90 230 102 Q198 90 198 65 L198 36 Z" fill="rgba(74,222,128,0.09)" stroke="#4ade80" strokeWidth="1.5"/>
+    <text x="230" y="70" fontSize="20" fontFamily="sans-serif" textAnchor="middle">🛡</text>
+    <text x="230" y="88" fill="#4ade80" fontSize="8" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">Your Crypto</text>
+    <rect x="10" y="110" width="440" height="30" fill="rgba(96,165,250,0.07)" stroke="rgba(96,165,250,0.22)" strokeWidth="1" rx="6"/>
+    <text x="20" y="129" fill="#60a5fa" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">LAYER 1 — Strong Password (16+ chars, unique, use a password manager)</text>
+    <rect x="398" y="115" width="44" height="20" fill="rgba(96,165,250,0.14)" rx="4"/>
+    <text x="420" y="128" fill="#60a5fa" fontSize="8" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">Basic</text>
+    <rect x="10" y="146" width="440" height="30" fill="rgba(167,139,250,0.07)" stroke="rgba(167,139,250,0.22)" strokeWidth="1" rx="6"/>
+    <text x="20" y="165" fill="#a78bfa" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">LAYER 2 — 2FA via Authenticator App (not SMS — SIM-swap risk!)</text>
+    <rect x="398" y="151" width="44" height="20" fill="rgba(167,139,250,0.14)" rx="4"/>
+    <text x="420" y="164" fill="#a78bfa" fontSize="8" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">Must</text>
+    <rect x="10" y="182" width="440" height="30" fill="rgba(251,191,36,0.07)" stroke="rgba(251,191,36,0.22)" strokeWidth="1" rx="6"/>
+    <text x="20" y="201" fill="#fbbf24" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">LAYER 3 — Hardware Wallet (Ledger / Trezor) for long-term holdings</text>
+    <rect x="398" y="187" width="44" height="20" fill="rgba(251,191,36,0.14)" rx="4"/>
+    <text x="420" y="200" fill="#fbbf24" fontSize="8" fontFamily="sans-serif" fontWeight="700" textAnchor="middle">Pro</text>
+  </svg>
+);
+
 /* ─── TUTORIAL DATA ─────────────────────────────────────────── */
 
 const TUTORIALS = [
@@ -440,6 +657,61 @@ const TUTORIALS = [
         "Missing the entry because you waited for 'more confirmation' after the sweep",
       ],
       tips: ["Set alerts at key heatmap levels so you don't miss the sweep", "The bigger the cluster, the sharper the reversal after the sweep", "Historical heatmap levels that held become support/resistance going forward"],
+    },
+  },
+  {
+    icon: "🏦", title: "Open an Account",
+    beginner: {
+      illustrations: [
+        { title: "Choosing Your Exchange", svg: <ExchangeSelectionCards /> },
+        { title: "Account Setup — 6 Steps", svg: <AccountSetupSVG /> },
+      ],
+      steps: [
+        { emoji: "1️⃣", text: "Choose a reputable exchange. Coinbase is best for US beginners. Binance has the most coins. Kraken is trusted globally. Never use unknown exchanges — your funds can disappear overnight." },
+        { emoji: "2️⃣", text: "Go to the official exchange website and click Sign Up. Use your real email and create a unique, strong password (16+ characters). Never reuse passwords from other sites." },
+        { emoji: "3️⃣", text: "Verify your email. The exchange sends a confirmation link within minutes. Check spam if it doesn't arrive. Click the link to activate your account." },
+        { emoji: "4️⃣", text: "Complete KYC (Know Your Customer). Upload a government ID (passport or driver's license) and take a selfie. This takes 2–10 minutes and is required by law." },
+        { emoji: "5️⃣", text: "Enable 2FA immediately. Download Google Authenticator or Authy, scan the QR code in your exchange security settings. Never skip this — it protects you if your password is leaked." },
+        { emoji: "6️⃣", text: "Make your first deposit. Bank transfer is cheapest (0–0.1% fee). Card deposit is fastest but costs 1.5–3%. Start small — $50–$100 is enough to learn." },
+        { emoji: "7️⃣", text: "Buy your first crypto. Start with Bitcoin (BTC) or Ethereum (ETH). Use the 'Buy' button and choose Spot trading (not Futures or Leverage) for your very first purchase." },
+      ],
+      mistakes: [
+        "Downloading fake exchange apps — always visit the official website first, then the official app store link",
+        "Skipping 2FA setup — without it, a leaked password means your entire account is gone",
+        "Depositing your life savings immediately — start with an amount you're comfortable losing",
+        "Using SMS for 2FA — SIM-swap attacks can bypass SMS; use an authenticator app instead",
+      ],
+      tips: [
+        "Write your 2FA backup codes on paper and store safely — you'll need them if you lose your phone",
+        "Bookmark the official exchange URL to avoid phishing sites that look identical",
+        "US residents: Coinbase or Kraken. Rest of world: Binance or OKX",
+      ],
+    },
+    advanced: {
+      illustrations: [
+        { title: "CEX vs DEX — Which to Use?", svg: <CexDexCards /> },
+        { title: "Security Layers — Protecting Your Crypto", svg: <SecuritySetupSVG /> },
+      ],
+      steps: [
+        { emoji: "1️⃣", text: "Understand custodial risk: on a CEX, the exchange holds your private keys. 'Not your keys, not your coins.' FTX held $8B in customer funds and collapsed in 72 hours. Hardware wallets are your solution." },
+        { emoji: "2️⃣", text: "Use a DEX for DeFi and privacy. MetaMask + Uniswap (Ethereum) or Phantom + Jupiter (Solana). You buy on a CEX first, then transfer to a self-custody wallet before swapping on a DEX." },
+        { emoji: "3️⃣", text: "Secure your seed phrase: 12 or 24 words that are the master key to your wallet. Write it on metal (not paper — fire risk). Store copies in two separate physical locations. Never type it online." },
+        { emoji: "4️⃣", text: "Enable exchange withdrawal whitelists — only pre-approved wallet addresses can receive your funds. Even if a hacker gains account access, they cannot withdraw to an unknown address." },
+        { emoji: "5️⃣", text: "Use a dedicated device for crypto if possible. A cheap Chromebook reset to factory settings and used only for trading is far safer than a phone with 50 apps installed." },
+        { emoji: "6️⃣", text: "Spread holdings across exchanges — never keep everything on one platform. Exchange insolvency and hacks do happen. Crypto is not FDIC-insured." },
+        { emoji: "7️⃣", text: "Track taxes from day one. Most countries treat crypto as property — every trade, sale, or swap is a taxable event. Tools like Koinly or CoinTracking automate this if you connect your wallets early." },
+      ],
+      mistakes: [
+        "Storing seed phrases digitally (photos, cloud notes, email) — one data breach loses everything permanently",
+        "Trusting 'guaranteed yield' platforms — anything above 15% APY is almost always unsustainable or a Ponzi",
+        "Sending to wrong network — ETH sent on BSC to an ETH-only address is permanent loss; always verify the chain",
+        "Keeping large holdings on an exchange long-term — exchanges are for trading, hardware wallets are for holding",
+      ],
+      tips: [
+        "Ledger Nano X (~$150) protects against exchange hacks, phishing, and malware — worth it above $2,000",
+        "Create a separate email address exclusively for crypto — never share it, never use it for anything else",
+        "Cold-storage rule: anything you wouldn't lose sleep over can stay on exchange; the rest goes to hardware",
+      ],
     },
   },
   {

@@ -1,159 +1,4 @@
-.pf-wrap {
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-sizing: border-box;
-}
-
-/* ── Header ──────────────────────────────────────────────────────────────── */
-.pf-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.pf-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.pf-subtitle {
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
-  margin-top: 3px;
-}
-
-.pf-coin-badge {
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: 8px;
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-/* ── Panel ───────────────────────────────────────────────────────────────── */
-.pf-panel {
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.pf-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px 8px;
-}
-
-.pf-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.pf-dot--red   { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
-.pf-dot--pink  { background: #ec4899; box-shadow: 0 0 6px rgba(236,72,153,0.5); }
-.pf-dot--green { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
-.pf-dot--amber { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
-
-.pf-panel-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex: 1;
-}
-
-.pf-panel-val {
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.pf-panel-val.pos { color: #22c55e; }
-.pf-panel-val.neg { color: #ef4444; }
-
-/* ── Chart row ───────────────────────────────────────────────────────────── */
-.pf-chart-wrap {
-  padding: 0 0 6px;
-}
-
-.pf-chart-row {
-  display: flex;
-  align-items: flex-start;
-}
-
-.pf-chart-svg {
-  display: block;
-  flex: 1;
-  min-width: 0;
-  height: 110px;
-}
-
-.pf-chart-empty {
-  flex: 1;
-  height: 110px;
-  background: var(--color-surface);
-}
-
-/* ── Y-axis labels ───────────────────────────────────────────────────────── */
-.pf-y-axis {
-  position: relative;
-  width: 52px;
-  height: 110px;
-  flex-shrink: 0;
-}
-
-/* Wider column for 5-digit price labels */
-.pf-y-axis--price {
-  width: 66px;
-  height: 200px;
-}
-
-.pf-ytick {
-  position: absolute;
-  right: 6px;
-  font-size: 0.6rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  color: rgba(255, 255, 255, 0.3);
-  white-space: nowrap;
-}
-
-.pf-ytick--cur {
-  right: 2px;
-  padding: 2px 4px;
-  border-radius: 3px;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.62rem;
-}
-
-/* ── States ──────────────────────────────────────────────────────────────── */
-.pf-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
-  gap: 10px;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.pf-state--error { color: #ef4444; }
-
+/* ── Shared spinner (used by multiple components) ─────────────────────────── */
 .pf-spinner {
   width: 18px;
   height: 18px;
@@ -163,80 +8,573 @@
   animation: pf-spin 0.8s linear infinite;
   flex-shrink: 0;
 }
-
 @keyframes pf-spin { to { transform: rotate(360deg); } }
 
-/* ── Summary bar ─────────────────────────────────────────────────────────── */
-.pf-summary {
+/* ══════════════════════════════════════════════════════════════════════
+   Long/Short Ratio — CoinGlass-style layout (ls2-*)
+   ══════════════════════════════════════════════════════════════════════ */
+
+.ls2-wrap {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+.ls2-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  padding: 60px 0;
+  justify-content: center;
+}
+.ls2-state--error { color: #f87171; }
+
+/* ── Title ── */
+.ls2-title {
+  margin: 0 0 14px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+/* ── Vol section card ── */
+.ls2-vol-wrap {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+
+.ls2-vol-controls {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px 14px;
-  border-top: 1px solid var(--color-border);
-  background: rgba(255,255,255,0.02);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ls2-vol-ctrl-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
-.pf-summary-badge {
-  flex-shrink: 0;
-  font-size: 0.7rem;
+/* Interval tabs */
+.ls2-iv-tabs {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-input-bg);
+}
+.ls2-iv-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.ls2-iv-btn.active {
+  background: var(--color-border);
+  color: var(--color-text);
+  font-weight: 700;
+}
+.ls2-iv-btn:not(.active):hover { color: var(--color-text); }
+
+/* Vol cards grid */
+.ls2-vol-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 520px) { .ls2-vol-cards { grid-template-columns: 1fr; } }
+
+.ls2-vc {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+.ls2-vc--long  {
+  background: rgba(3, 35, 20, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.ls2-vc--short {
+  background: rgba(40, 8, 8, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.ls2-vc-info { flex: 1; }
+.ls2-vc-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ls2-vc-amount {
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Exchange cards grid ── */
+.ls2-ex-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 820px) { .ls2-ex-grid { grid-template-columns: 1fr; } }
+
+.ls2-ex-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ls2-ex-card-title {
+  padding: 14px 16px;
+  font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 4px 10px;
-  border-radius: 5px;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.pf-summary-live {
+/* Table */
+.ls2-ex-table { display: flex; flex-direction: column; }
+
+.ls2-ex-thead {
+  display: grid;
+  grid-template-columns: 1fr 90px 108px;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ls2-ex-trow {
+  display: grid;
+  grid-template-columns: 1fr 90px 108px;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.82rem;
+  transition: background 0.12s;
+}
+.ls2-ex-trow:last-child { border-bottom: none; }
+.ls2-ex-trow:hover { background: rgba(255, 255, 255, 0.03); }
+.ls2-ex-trow--smart { background: rgba(99, 102, 241, 0.04); }
+.ls2-ex-trow--smart:hover { background: rgba(99, 102, 241, 0.07); }
+
+.ls2-trow-type {
+  color: var(--color-text);
+  font-weight: 500;
+  font-size: 0.83rem;
+}
+.ls2-ex-trow--smart .ls2-trow-type {
+  color: #a5b4fc;
+  font-weight: 600;
+}
+
+.ls2-trow-ratio {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+}
+.ls2-ratio-up   { color: #22c55e; }
+.ls2-ratio-down { color: #ef4444; }
+
+.ls2-trow-sent { display: flex; align-items: center; }
+
+/* ── Sentiment badges ── */
+.sen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  line-height: 1;
+}
+.sen-flame { font-size: 0.8rem; }
+
+.sen--vbull {
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.5);
+  background: rgba(74, 222, 128, 0.08);
+}
+.sen--bull {
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  background: rgba(45, 212, 191, 0.08);
+}
+.sen--neutral {
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  background: transparent;
+}
+.sen--bear {
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  background: rgba(251, 146, 60, 0.08);
+}
+.sen--xbear {
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ── Exchange vol table + large trades side-by-side row ── */
+.ls2-ev-lt-row {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .ls2-ev-lt-row { grid-template-columns: 1fr; }
+}
+
+/* ── Exchange taker volume table ── */
+.ls2-ev-wrap {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ls2-ev-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+.ls2-ev-empty {
+  padding: 32px 16px;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  text-align: center;
+  opacity: 0.6;
+}
+.ls2-ev-row {
+  display: grid;
+  grid-template-columns: 26px 90px 1fr 36px 88px 40px 88px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.8rem;
+  transition: background 0.12s;
+}
+.ls2-ev-row:last-child { border-bottom: none; }
+.ls2-ev-row:hover { background: rgba(255,255,255,0.03); }
+.ls2-ev-row--agg {
+  background: rgba(255,255,255,0.025);
+  border-bottom: 1px solid var(--color-border);
+}
+.ls2-ev-rank { color: var(--color-text-secondary); font-size: 0.72rem; }
+.ls2-ev-name { font-weight: 700; color: var(--color-text); font-size: 0.83rem; }
+.ls2-ev-name--agg { color: #f59e0b; }
+
+.ls2-ev-bar-cell { }
+.ls2-ev-bar {
+  height: 22px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.ls2-ev-bar-long {
+  background: rgba(20,184,166,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.ls2-ev-bar-short {
+  background: rgba(239,68,68,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.ls2-ev-bar-pct {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ls2-ev-label {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.ls2-ev-vol {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Large trades panel ── */
+.ls2-lt-wrap {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 540px;
+}
+.ls2-lt-header {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+}
+.ls2-lt-thead {
+  display: grid;
+  grid-template-columns: 1fr 72px 68px 64px;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  background: rgba(255,255,255,0.025);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.ls2-lt-body {
+  overflow-y: auto;
+  flex: 1;
+}
+.ls2-lt-body::-webkit-scrollbar { width: 4px; }
+.ls2-lt-body::-webkit-scrollbar-track { background: transparent; }
+.ls2-lt-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.ls2-lt-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+.ls2-lt-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 68px 64px;
+  gap: 6px;
+  padding: 7px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.74rem;
+  align-items: center;
+  transition: background 0.1s;
+}
+.ls2-lt-row:last-child { border-bottom: none; }
+.ls2-lt-row--buy  { background: rgba(34,197,94,0.04); }
+.ls2-lt-row--sell { background: rgba(239,68,68,0.04); }
+.ls2-lt-row:hover { filter: brightness(1.15); }
+
+.ls2-lt-pair {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.73rem;
+}
+.ls2-lt-arrow {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+.ls2-lt-price {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-size: 0.73rem;
+}
+.ls2-lt-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.ls2-lt-time {
+  font-size: 0.62rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+  white-space: pre;
+  line-height: 1.35;
+}
+
+/* ── Price + L/S Ratio Chart ── */
+.ls2-chart-section {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ls2-chart-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+.ls2-chart-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.ls2-chart-sub {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+.ls2-chart-legend-row {
+  display: flex;
+  gap: 16px;
+  padding: 6px 16px 8px;
+}
+.ls2-legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  letter-spacing: 0.04em;
-  opacity: 0.6;
-  margin-left: auto;
-  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
 }
-
-.pf-summary-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+.ls2-legend-line--price {
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  background: rgba(220, 220, 220, 0.8);
+  border-radius: 1px;
+}
+.ls2-legend-dot--bull {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
   background: #22c55e;
-  animation: pf-pulse 2s ease-in-out infinite;
+  border-radius: 2px;
 }
-
-@keyframes pf-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.35; transform: scale(0.75); }
+.ls2-chart-svg-wrap {
+  width: 100%;
+  padding: 0 0 4px;
 }
-
-.pf-summary-badge--bullish {
-  background: rgba(34,197,94,0.15);
-  color: #22c55e;
-  border: 1px solid rgba(34,197,94,0.3);
+.ls2-ratio-svg {
+  display: block;
+  width: 100%;
+  height: 200px;
 }
-
-.pf-summary-badge--bearish {
-  background: rgba(239,68,68,0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239,68,68,0.3);
-}
-
-.pf-summary-badge--neutral {
-  background: rgba(245,158,11,0.12);
-  color: #f59e0b;
-  border: 1px solid rgba(245,158,11,0.25);
-}
-
-.pf-summary-text {
+.ls2-chart-placeholder {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
   font-size: 0.82rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
+  opacity: 0.6;
 }
 
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
+/* ── Multi-coin table ── */
+.ls2-mc-wrap {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ls2-mc-thead {
+  display: grid;
+  grid-template-columns: 32px 130px 90px 72px 1fr 100px 120px;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  background: rgba(255,255,255,0.025);
+  border-bottom: 1px solid var(--color-border);
+}
+.ls2-mc-body { display: flex; flex-direction: column; }
+.ls2-mc-row {
+  display: grid;
+  grid-template-columns: 32px 130px 90px 72px 1fr 100px 120px;
+  gap: 8px;
+  align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.82rem;
+  transition: background 0.12s;
+}
+.ls2-mc-row:last-child { border-bottom: none; }
+.ls2-mc-row:hover { background: rgba(255,255,255,0.03); }
+
+.ls2-mc-rank { color: var(--color-text-secondary); font-size: 0.72rem; }
+.ls2-mc-sym { display: flex; flex-direction: column; gap: 1px; }
+.ls2-mc-sym-tick { font-weight: 700; color: var(--color-text); font-size: 0.85rem; }
+.ls2-mc-sym-name { font-size: 0.68rem; color: var(--color-text-secondary); }
+.ls2-mc-price { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-text); }
+.ls2-mc-chg   { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.ls2-mc-bar-cell { display: flex; flex-direction: column; gap: 4px; }
+.ls2-mc-bar {
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+}
+.ls2-mc-bar-long  { background: #22c55e; }
+.ls2-mc-bar-short { background: #ef4444; }
+.ls2-mc-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ls2-mc-ratio { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 768px) {
+  .ls2-mc-thead, .ls2-mc-row {
+    grid-template-columns: 24px 1fr 70px 60px;
+  }
+  .ls2-mc-thead span:nth-child(n+5),
+  .ls2-mc-row  > span:nth-child(n+5) { display: none; }
+}
+
+/* ── Disclaimer ── */
+.ls2-disclaimer {
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  opacity: 0.45;
+  text-align: center;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
-  .pf-wrap { padding: 14px 12px; }
+  .ls2-wrap { padding: 14px 12px; }
+  .ls2-vc-amount { font-size: 1.2rem; }
 }

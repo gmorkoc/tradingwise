@@ -1,492 +1,437 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
-  getPositionData, getPriceCandles,
-  LSRatioPoint, CoinSymbol, CandleDataPoint,
+  getTakerBuySellVol, getExchangeLSData, getPriceLSHistory, getMultiCoinLSSnapshot,
+  getAllExchangeTakerVol, getRecentLargeTrades,
+  TakerVolData, ExchangeLSData, PriceLSPoint, CoinLSSnapshot,
+  ExchangeTakerRow, LargeTradeItem, CoinSymbol, COINS,
 } from "../services/coinglass";
 import "../styles/PositionFlows.css";
 
-// ── Shared constants ──────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const W = 900;
+const INTERVALS = [
+  { label: "1 hour",  short: "1H",  cg: "1h", limit: 24 },
+  { label: "4 hour",  short: "4H",  cg: "4h", limit: 90 },
+  { label: "12 hour", short: "12H", cg: "4h", limit: 180 },
+  { label: "24 hour", short: "24H", cg: "1d", limit: 30  },
+];
 
-// ── Summary computation ───────────────────────────────────────────────────────
+type Sentiment = "Very Bullish" | "Bullish" | "Neutral" | "Bearish" | "Extremely Bearish";
 
-type Signal = "bullish" | "bearish" | "neutral";
-interface PFSummary { signal: Signal; text: string }
-type TFn = ReturnType<typeof useTranslation>["t"];
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildPriceSummary(
-  candles: CandleDataPoint[],
-  supports: number[],
-  resistances: number[],
-  t: TFn,
-): PFSummary {
-  const recent = candles.slice(-90);
-  const cur    = recent[recent.length - 1].close;
-  const hi     = Math.max(...recent.map(c => c.high));
-
-  const slice10  = recent.slice(-10);
-  const trendUp  = slice10[slice10.length - 1].close > slice10[0].close;
-  const trendPct = Math.abs((slice10[slice10.length - 1].close / slice10[0].close - 1) * 100).toFixed(1);
-  const trendText = trendUp
-    ? t("positions.summary.price.trendUp",   { pct: trendPct })
-    : t("positions.summary.price.trendDown", { pct: trendPct });
-
-  const s = supports[0];
-  const r = resistances[0];
-  const levelText = s && r
-    ? t("positions.summary.price.consolidating", { support: Math.round(s).toLocaleString(), resistance: Math.round(r).toLocaleString() })
-    : s ? t("positions.summary.price.aboveSupport",    { support: Math.round(s).toLocaleString() })
-    : r ? t("positions.summary.price.belowResistance", { resistance: Math.round(r).toLocaleString() })
-    : "";
-
-  const dropPct = ((cur / hi - 1) * 100).toFixed(1);
-  return {
-    signal: trendUp ? "bullish" : "bearish",
-    text:   `${trendText} ${levelText} ${dropPct}% from the recent high of ${Math.round(hi).toLocaleString()}.`.trim(),
-  };
+function ratioToSentiment(ratio: number): Sentiment {
+  if (ratio >= 1.3) return "Bullish";
+  if (ratio >= 0.8) return "Neutral";
+  if (ratio >= 0.5) return "Bearish";
+  return "Extremely Bearish";
 }
 
-function buildRetailSummary(lastNet: number, data: number[], t: TFn): PFSummary {
-  const recent = data.slice(-20);
-  const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
-  const bias   = Math.abs(lastNet).toFixed(0);
-
-  if (lastNet > 150)  return { signal: "bearish", text: t("positions.summary.retail.heavilyLong",  { bias, trend }) };
-  if (lastNet > 30)   return { signal: "neutral",  text: t("positions.summary.retail.moderateLong", { bias, trend }) };
-  if (lastNet > -30)  return { signal: "neutral",  text: t("positions.summary.retail.neutral",      { bias }) };
-  if (lastNet > -150) return { signal: "bullish",  text: t("positions.summary.retail.moderateShort",{ bias, trend }) };
-  return { signal: "bullish", text: t("positions.summary.retail.heavilyShort", { bias }) };
+function smartMoneySentiment(retailRatio: number): Sentiment {
+  if (retailRatio >= 1.7) return "Extremely Bearish";
+  if (retailRatio >= 1.35) return "Bearish";
+  if (retailRatio >= 0.85) return "Neutral";
+  if (retailRatio >= 0.6)  return "Bullish";
+  return "Very Bullish";
 }
 
-function buildSentimentSummary(lastPct: number, data: number[], t: TFn): PFSummary {
-  const recent = data.slice(-20);
-  const trend  = recent[recent.length - 1] > recent[0] ? "rising" : "declining";
-  const pct    = lastPct.toFixed(1);
-
-  if (lastPct > 65) return { signal: "bullish", text: t("positions.summary.sentiment.stronglyBullish", { pct, trend }) };
-  if (lastPct > 55) return { signal: "bullish", text: t("positions.summary.sentiment.mildlyBullish",   { pct, trend }) };
-  if (lastPct > 45) return { signal: "neutral", text: t("positions.summary.sentiment.neutral",         { pct, trend }) };
-  if (lastPct > 35) return { signal: "bearish", text: t("positions.summary.sentiment.mildlyBearish",   { pct, trend }) };
-  return { signal: "bearish", text: t("positions.summary.sentiment.stronglyBearish", { pct }) };
+function fmtVol(v: number): string {
+  if (!v) return "—";
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  return `$${(v / 1e3).toFixed(2)}K`;
 }
 
-function buildSmartNetSummary(
-  lastSmartNet: number,
-  lastRetailNet: number,
-  data: number[],
-  t: TFn,
-): PFSummary {
-  const recent  = data.slice(-20);
-  const trend   = recent[recent.length - 1] > recent[0] ? "rising" : "falling";
-  const aligned = (lastSmartNet > 0) === (lastRetailNet > 0);
-  const bias    = Math.abs(lastSmartNet).toFixed(0);
-  const dir     = t(lastSmartNet > 0 ? "positions.summary.dir.netLong" : "positions.summary.dir.netShort");
-
-  if (aligned && lastSmartNet > 100)  return { signal: "bullish", text: t("positions.summary.smartNet.alignedBullish",       { dir, bias, trend }) };
-  if (aligned && lastSmartNet < -100) return { signal: "bearish", text: t("positions.summary.smartNet.alignedBearish",       { dir, bias, trend }) };
-  if (!aligned && lastSmartNet > 0)   return { signal: "bullish", text: t("positions.summary.smartNet.divergingSmartBullish",{ dir, bias, trend }) };
-  if (!aligned && lastSmartNet < 0)   return { signal: "bearish", text: t("positions.summary.smartNet.divergingSmartBearish",{ dir, bias, trend }) };
-  return { signal: "neutral", text: t("positions.summary.smartNet.neutral", { bias, trend }) };
+function fmtPrice(p: number): string {
+  if (p >= 1000) return `$${(p / 1000).toFixed(1)}K`;
+  if (p >= 1)    return `$${p.toFixed(2)}`;
+  return `$${p.toFixed(4)}`;
 }
 
-// ── Summary footer ────────────────────────────────────────────────────────────
+// ── Circle ring ───────────────────────────────────────────────────────────────
 
-function SummaryBar({ signal, text }: PFSummary) {
-  const { t } = useTranslation();
+function CircleRing({ pct, color, track }: { pct: number; color: string; track: string }) {
+  const R = 30, CX = 38, CY = 38, CIRC = 2 * Math.PI * R;
+  const dash = (pct / 100) * CIRC;
   return (
-    <div className="pf-summary">
-      <span className={`pf-summary-badge pf-summary-badge--${signal}`}>
-        {signal.toUpperCase()}
-      </span>
-      <span className="pf-summary-text">{text}</span>
-      <span className="pf-summary-live">
-        <span className="pf-summary-live-dot" />
-        {t("positions.updatedHourly")}
-      </span>
+    <svg width="76" height="76" viewBox="0 0 76 76" style={{ flexShrink: 0 }}>
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke={track} strokeWidth="5" />
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke={color} strokeWidth="5"
+        strokeDasharray={`${dash.toFixed(2)} ${(CIRC - dash).toFixed(2)}`}
+        strokeLinecap="round" transform={`rotate(-90 ${CX} ${CY})`} />
+      <text x={CX} y={CY + 4} textAnchor="middle" fill="white" fontSize="11" fontWeight="700"
+        fontFamily="system-ui,sans-serif">{pct.toFixed(2)}%</text>
+    </svg>
+  );
+}
+
+// ── Sentiment badge ───────────────────────────────────────────────────────────
+
+function SentimentBadge({ s }: { s: Sentiment }) {
+  const cls =
+    s === "Very Bullish"       ? "sen--vbull" :
+    s === "Bullish"            ? "sen--bull" :
+    s === "Neutral"            ? "sen--neutral" :
+    s === "Bearish"            ? "sen--bear" :
+    /* Extremely Bearish */      "sen--xbear";
+  return (
+    <span className={`sen-badge ${cls}`}>
+      {s === "Extremely Bearish" && <span className="sen-flame">🔥</span>}{s}
+    </span>
+  );
+}
+
+// ── Exchange card ─────────────────────────────────────────────────────────────
+
+function ExchangeCard({ data }: { data: ExchangeLSData }) {
+  const smSent: Sentiment = data.retail ? smartMoneySentiment(data.retail.ratio) : "Neutral";
+  type Row = { label: string; ratio: number | null; sentiment: Sentiment };
+  const rows: Row[] = [
+    { label: "Retail",         ratio: data.retail?.ratio       ?? null, sentiment: data.retail       ? ratioToSentiment(data.retail.ratio)       : "Neutral" },
+    { label: "Whale Account",  ratio: data.whaleAccount?.ratio ?? null, sentiment: data.whaleAccount ? ratioToSentiment(data.whaleAccount.ratio) : "Neutral" },
+    { label: "Whale Position", ratio: data.whalePosition?.ratio ?? null, sentiment: data.whalePosition ? ratioToSentiment(data.whalePosition.ratio) : "Neutral" },
+    { label: "Smart Money Sentiment", ratio: null, sentiment: smSent },
+  ];
+  return (
+    <div className="ls2-ex-card">
+      <div className="ls2-ex-card-title">{data.exchange} Bitcoin Long/Short Ratio</div>
+      <div className="ls2-ex-table">
+        <div className="ls2-ex-thead">
+          <span>Type</span><span>Long/Short</span><span>Sentiment</span>
+        </div>
+        {rows.map(({ label, ratio, sentiment }) => (
+          <div key={label} className={`ls2-ex-trow${label === "Smart Money Sentiment" ? " ls2-ex-trow--smart" : ""}`}>
+            <span className="ls2-trow-type">{label}</span>
+            <span className={`ls2-trow-ratio${ratio !== null ? (ratio >= 1 ? " ls2-ratio-up" : " ls2-ratio-down") : ""}`}>
+              {ratio !== null ? `${ratio >= 1 ? "↑" : "↓"} ${ratio.toFixed(2)}` : "—"}
+            </span>
+            <span className="ls2-trow-sent"><SentimentBadge s={sentiment} /></span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-// ── Price chart ───────────────────────────────────────────────────────────────
+// ── Price + L/S Ratio chart ───────────────────────────────────────────────────
 
-const HP = 200; // price chart height (px = SVG units, 1:1)
+const PW = 900, PH = 200, ML = 70, MR = 46, MT = 16, MB = 28;
+const CW = PW - ML - MR, CH = PH - MT - MB;
 
-function niceStep(raw: number): number {
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const r = raw / mag;
-  if (r < 1.5) return mag;
-  if (r < 3.5) return 2 * mag;
-  if (r < 7.5) return 5 * mag;
-  return 10 * mag;
-}
+function PriceLSChart({ data, title }: { data: PriceLSPoint[]; title: string }) {
+  if (data.length < 2) return <div className="ls2-chart-placeholder">Loading chart…</div>;
 
-const fmtP = (v: number) => Math.round(v).toString();
+  const prices = data.map(d => d.price);
+  const ratios = data.map(d => d.lsRatio);
 
-function computeSR(candles: CandleDataPoint[]): { supports: number[]; resistances: number[] } {
-  const LB = 5;
-  const rawR: number[] = [];
-  const rawS: number[] = [];
+  const minP = Math.min(...prices), maxP = Math.max(...prices);
+  const pPad = (maxP - minP) * 0.08;
+  const pMin = minP - pPad, pMax = maxP + pPad;
+  const pRange = pMax - pMin || 1;
 
-  for (let i = LB; i < candles.length - LB; i++) {
-    const hi = candles[i].high;
-    const lo = candles[i].low;
-    if (candles.slice(i - LB, i).every(c => c.high <= hi) &&
-        candles.slice(i + 1, i + LB + 1).every(c => c.high <= hi)) rawR.push(hi);
-    if (candles.slice(i - LB, i).every(c => c.low >= lo) &&
-        candles.slice(i + 1, i + LB + 1).every(c => c.low >= lo)) rawS.push(lo);
-  }
+  const maxR = Math.max(2.5, ...ratios.map(r => Math.ceil(r * 2) / 2));
+  const minR = 0;
+  const rRange = maxR - minR;
 
-  const cluster = (levels: number[]) => {
-    if (!levels.length) return [];
-    const sorted = [...levels].sort((a, b) => a - b);
-    const groups: { avg: number; count: number; total: number }[] = [];
-    for (const l of sorted) {
-      const g = groups.find(g => Math.abs(g.avg - l) / g.avg < 0.015);
-      if (g) { g.count++; g.total += l; g.avg = g.total / g.count; }
-      else groups.push({ avg: l, count: 1, total: l });
-    }
-    return groups.sort((a, b) => b.count - a.count).slice(0, 5).map(g => g.avg);
+  const barW = CW / data.length;
+  const bx   = (i: number) => ML + i * barW;
+  const py   = (p: number) => MT + (1 - (p - pMin) / pRange) * CH;
+  const ry   = (r: number) => MT + (1 - (r - minR) / rRange) * CH;
+  const ry1  = ry(1.0);
+
+  const pricePts = data.map((d, i) =>
+    `${(ML + (i + 0.5) * barW).toFixed(1)},${py(d.price).toFixed(1)}`).join(" ");
+
+  // Price axis ticks
+  const priceStep = (pMax - pMin) / 4;
+  const pTicks = Array.from({ length: 5 }, (_, i) => pMin + i * priceStep);
+
+  // Ratio axis ticks
+  const rTicks = Array.from({ length: Math.ceil(maxR / 0.5) + 1 }, (_, i) => i * 0.5).filter(v => v <= maxR);
+
+  // Time axis labels (≤7 labels)
+  const timeStep = Math.max(1, Math.floor(data.length / 6));
+  const timePts  = data
+    .map((d, i) => ({ ...d, i }))
+    .filter(({ i }) => i % timeStep === 0);
+
+  const fmtTime = (t: number) => {
+    const d = new Date(t * 1000);
+    return `${(d.getUTCMonth() + 1).toString().padStart(2, "0")}-${d.getUTCDate().toString().padStart(2, "0")}`;
   };
-
-  const cur = candles[candles.length - 1].close;
-  return {
-    resistances: cluster(rawR).filter(r => r > cur).sort((a, b) => a - b).slice(0, 4),
-    supports:    cluster(rawS).filter(s => s < cur).sort((a, b) => b - a).slice(0, 4),
-  };
-}
-
-function PriceChart({ candles, coin }: { candles: CandleDataPoint[]; coin: string }) {
-  const { t } = useTranslation();
-  if (candles.length < 10) return null;
-  // compute summary early so we can pass it down
-
-  const recent  = candles.slice(-90);
-  const dataMin = Math.min(...recent.map(c => c.low));
-  const dataMax = Math.max(...recent.map(c => c.high));
-  const pad     = (dataMax - dataMin) * 0.06;
-  const yMin    = dataMin - pad;
-  const yMax    = dataMax + pad;
-
-  const toY  = (v: number) => HP - ((v - yMin) / (yMax - yMin)) * HP;
-  const toXc = (i: number) => ((i + 0.5) / recent.length) * W; // wick center
-  const toXb = (i: number) => (i / recent.length) * W;          // body left
-  const barW  = Math.max(1, W / recent.length - 1);
-
-  const cur  = recent[recent.length - 1].close;
-  const curY = toY(cur);
-
-  const { supports, resistances } = computeSR(recent);
-  const summary = buildPriceSummary(recent, supports, resistances, t);
-
-  // Only show S&R within the visible range
-  const visS = supports.filter(v => v > yMin && v < yMax);
-  const visR = resistances.filter(v => v > yMin && v < yMax);
-
-  // Y-axis scale ticks
-  const step  = niceStep((yMax - yMin) / 5);
-  const first = Math.ceil(yMin / step) * step;
-  const ticks: number[] = [];
-  for (let v = first; v <= yMax; v += step) ticks.push(v);
-
-  // Collect all right-column labels and resolve vertical collisions (min 14px gap)
-  type LabelEntry = { origY: number; y: number; v: number; type: 'support' | 'resistance' | 'current' };
-  const rawLabels: LabelEntry[] = [
-    ...visS.map(v => ({ origY: toY(v), y: toY(v), v, type: 'support'    as const })),
-    ...visR.map(v => ({ origY: toY(v), y: toY(v), v, type: 'resistance' as const })),
-    { origY: curY, y: curY, v: cur, type: 'current' as const },
-  ].sort((a, b) => a.y - b.y);
-
-  for (let i = 1; i < rawLabels.length; i++) {
-    if (rawLabels[i].y - rawLabels[i - 1].y < 14)
-      rawLabels[i].y = rawLabels[i - 1].y + 14;
-  }
-  const labels = rawLabels;
+  const fmtPLabel = (p: number) => p >= 1000 ? `$${(p / 1000).toFixed(1)}K` : `$${p.toFixed(0)}`;
 
   return (
-    <div className="pf-panel pf-panel--price">
-      <div className="pf-panel-header">
-        <span className="pf-dot pf-dot--amber" />
-        <span className="pf-panel-label">{coin.toUpperCase()} PRICE · 4h · Binance</span>
-        <span className="pf-panel-val" style={{ color: "#f59e0b" }}>{fmtP(cur)}</span>
+    <div className="ls2-chart-section">
+      <div className="ls2-chart-header">
+        <span className="ls2-chart-title">{title}</span>
+        <span className="ls2-chart-sub">Taker Buy/Sell Volume</span>
       </div>
-      <div className="pf-chart-wrap">
-        <div className="pf-chart-row">
+      <div className="ls2-chart-legend-row">
+        <span className="ls2-legend-item"><span className="ls2-legend-line ls2-legend-line--price" /> Price</span>
+        <span className="ls2-legend-item"><span className="ls2-legend-dot ls2-legend-dot--bull" /> Long/Short</span>
+      </div>
+      <div className="ls2-chart-svg-wrap">
+        <svg viewBox={`0 0 ${PW} ${PH}`} className="ls2-ratio-svg" preserveAspectRatio="none">
+          {/* Grid */}
+          {rTicks.map(v => (
+            <line key={v} x1={ML} y1={ry(v)} x2={PW - MR} y2={ry(v)}
+              stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+          ))}
+          <line x1={ML} y1={ry1} x2={PW - MR} y2={ry1}
+            stroke="rgba(255,255,255,0.18)" strokeWidth="1" strokeDasharray="4,3" />
 
-          <svg
-            viewBox={`0 0 ${W} ${HP}`}
-            style={{ display: "block", flex: 1, minWidth: 0, height: HP }}
-            preserveAspectRatio="none"
-          >
-            {/* Grid */}
-            {ticks.map(v => (
-              <line key={v} x1={0} y1={toY(v)} x2={W} y2={toY(v)}
-                stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-            ))}
+          {/* L/S ratio bars */}
+          {data.map((d, i) => {
+            const isLong = d.lsRatio >= 1;
+            const top = isLong ? ry(d.lsRatio) : ry1;
+            const h   = Math.max(1, Math.abs(ry(d.lsRatio) - ry1));
+            return (
+              <rect key={i} x={bx(i)} y={top} width={Math.max(1, barW - 0.5)} height={h}
+                fill={isLong ? "#22c55e" : "#ef4444"} opacity={0.8} />
+            );
+          })}
 
-            {/* Support zones */}
-            {visS.map(v => (
-              <line key={`s${v}`} x1={0} y1={toY(v)} x2={W} y2={toY(v)}
-                stroke="#22c55e" strokeWidth="1.2" strokeDasharray="5,3" opacity="0.55" />
-            ))}
+          {/* Price line */}
+          <polyline points={pricePts} fill="none" stroke="rgba(220,220,220,0.9)" strokeWidth="1.6"
+            strokeLinejoin="round" strokeLinecap="round" />
 
-            {/* Resistance zones */}
-            {visR.map(v => (
-              <line key={`r${v}`} x1={0} y1={toY(v)} x2={W} y2={toY(v)}
-                stroke="#ef4444" strokeWidth="1.2" strokeDasharray="5,3" opacity="0.55" />
-            ))}
+          {/* Left Y axis labels (price) */}
+          {pTicks.map(p => (
+            <text key={p} x={ML - 6} y={py(p) + 4} textAnchor="end"
+              fill="rgba(255,255,255,0.38)" fontSize="9.5" fontFamily="system-ui,sans-serif">
+              {fmtPLabel(p)}
+            </text>
+          ))}
 
-            {/* Candlesticks */}
-            {recent.map((c, i) => {
-              const isUp  = c.close >= c.open;
-              const color = isUp ? "#22c55e" : "#ef4444";
-              const bTop  = toY(Math.max(c.open, c.close));
-              const bBot  = toY(Math.min(c.open, c.close));
-              const bH    = Math.max(1, bBot - bTop);
-              return (
-                <g key={i}>
-                  <line x1={toXc(i)} y1={toY(c.high)} x2={toXc(i)} y2={toY(c.low)}
-                    stroke={color} strokeWidth="1" opacity="0.65" />
-                  <rect x={toXb(i)} y={bTop} width={barW} height={bH}
-                    fill={color} opacity="0.85" rx="0.3" />
-                </g>
-              );
-            })}
+          {/* Right Y axis labels (L/S ratio) */}
+          {rTicks.map(v => (
+            <text key={v} x={PW - MR + 5} y={ry(v) + 4} textAnchor="start"
+              fill="rgba(255,255,255,0.38)" fontSize="9.5" fontFamily="system-ui,sans-serif">
+              {v.toFixed(1)}
+            </text>
+          ))}
 
-            {/* Current price line */}
-            <line x1={0} y1={curY} x2={W} y2={curY}
-              stroke="#f59e0b" strokeWidth="1" strokeDasharray="5,3" opacity="0.85" />
-          </svg>
+          {/* X axis time labels */}
+          {timePts.map(({ i, time }) => (
+            <text key={i} x={(ML + (i + 0.5) * barW).toFixed(1)} y={PH - 4} textAnchor="middle"
+              fill="rgba(255,255,255,0.32)" fontSize="9" fontFamily="system-ui,sans-serif">
+              {fmtTime(time)}
+            </text>
+          ))}
 
-          <div className="pf-y-axis pf-y-axis--price">
-            {/* Scale ticks */}
-            {ticks.map(v => (
-              <span key={v} className="pf-ytick" style={{ top: toY(v) - 7 }}>
-                {fmtP(v)}
-              </span>
-            ))}
+          {/* Axis borders */}
+          <line x1={ML} y1={MT} x2={ML} y2={MT + CH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+          <line x1={PW - MR} y1={MT} x2={PW - MR} y2={MT + CH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+          <line x1={ML} y1={MT + CH} x2={PW - MR} y2={MT + CH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+        </svg>
+      </div>
+    </div>
+  );
+}
 
-            {/* S&R + current price pills */}
-            {labels.map(({ v, y, type }) => {
-              const bg = type === 'support' ? '#22c55e'
-                       : type === 'resistance' ? '#ef4444'
-                       : '#f59e0b';
-              return (
-                <span
-                  key={`${type}${v}`}
-                  className="pf-ytick pf-ytick--cur"
-                  style={{ top: y - 7, background: bg }}
-                >
-                  {fmtP(v)}
-                </span>
-              );
-            })}
+// ── Exchange taker volume table ───────────────────────────────────────────────
+
+function ExchangeVolumeTable({ rows, interval }: { rows: ExchangeTakerRow[]; interval: string }) {
+  if (!rows.length) return (
+    <div className="ls2-ev-wrap">
+      <div className="ls2-ev-header">
+        <span className="ls2-chart-title">Exchanges BTC Long/Short Ratio</span>
+        <span className="ls2-chart-sub">Taker Buy/Sell Volume · {interval}</span>
+      </div>
+      <div className="ls2-ev-empty">Loading exchange data…</div>
+    </div>
+  );
+
+  const totalLong  = rows.reduce((s, r) => s + r.longVolUsd,  0);
+  const totalShort = rows.reduce((s, r) => s + r.shortVolUsd, 0);
+  const totalAll   = totalLong + totalShort;
+  const aggLong    = totalAll > 0 ? (totalLong  / totalAll) * 100 : 50;
+  const aggShort   = totalAll > 0 ? (totalShort / totalAll) * 100 : 50;
+
+  return (
+    <div className="ls2-ev-wrap">
+      <div className="ls2-ev-header">
+        <span className="ls2-chart-title">Exchanges BTC Long/Short Ratio</span>
+        <span className="ls2-chart-sub">Taker Buy/Sell Volume · {interval}</span>
+      </div>
+
+      {/* Aggregate row */}
+      <div className="ls2-ev-row ls2-ev-row--agg">
+        <span className="ls2-ev-rank" />
+        <span className="ls2-ev-name ls2-ev-name--agg">BTC</span>
+        <div className="ls2-ev-bar-cell">
+          <div className="ls2-ev-bar">
+            <div className="ls2-ev-bar-long"  style={{ width: `${aggLong}%` }}>
+              <span className="ls2-ev-bar-pct">{aggLong.toFixed(2)}%</span>
+            </div>
+            <div className="ls2-ev-bar-short" style={{ width: `${aggShort}%` }}>
+              <span className="ls2-ev-bar-pct">{aggShort.toFixed(2)}%</span>
+            </div>
           </div>
         </div>
+        <span className="ls2-ev-label">Long</span>
+        <span className="ls2-ev-vol ls2-ratio-up">{fmtVol(totalLong)}</span>
+        <span className="ls2-ev-label">Short</span>
+        <span className="ls2-ev-vol ls2-ratio-down">{fmtVol(totalShort)}</span>
       </div>
-      <SummaryBar {...summary} />
+
+      {rows.map((row, i) => (
+        <div key={row.exchange} className="ls2-ev-row">
+          <span className="ls2-ev-rank">{i + 1}</span>
+          <span className="ls2-ev-name">{row.exchange}</span>
+          <div className="ls2-ev-bar-cell">
+            <div className="ls2-ev-bar">
+              <div className="ls2-ev-bar-long"  style={{ width: `${row.longPct}%` }}>
+                <span className="ls2-ev-bar-pct">{row.longPct.toFixed(2)}%</span>
+              </div>
+              <div className="ls2-ev-bar-short" style={{ width: `${row.shortPct}%` }}>
+                <span className="ls2-ev-bar-pct">{row.shortPct.toFixed(2)}%</span>
+              </div>
+            </div>
+          </div>
+          <span className="ls2-ev-label">Long</span>
+          <span className="ls2-ev-vol ls2-ratio-up">{fmtVol(row.longVolUsd)}</span>
+          <span className="ls2-ev-label">Short</span>
+          <span className="ls2-ev-vol ls2-ratio-down">{fmtVol(row.shortVolUsd)}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Indicator charts ──────────────────────────────────────────────────────────
+// ── Large trades panel ────────────────────────────────────────────────────────
 
-const H = 110;
+function fmtTradeTime(ms: number): string {
+  const d = new Date(ms);
+  const h = d.getUTCHours().toString().padStart(2, "0");
+  const m = d.getUTCMinutes().toString().padStart(2, "0");
+  const s = d.getUTCSeconds().toString().padStart(2, "0");
+  const mo = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+  const day = d.getUTCDate().toString().padStart(2, "0");
+  return `${h}:${m}:${s}\n${mo}-${day}`;
+}
 
-const fmtTick = (v: number) => {
-  const abs  = Math.abs(v);
-  const sign = v < 0 ? "-" : "";
-  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(0)}K`;
-  return `${sign}${abs.toFixed(0)}`;
-};
-
-function NetHistogram({ data, color }: {
-  data: number[];
-  color: "red-green" | "pink-red";
-}) {
-  if (!data.length) return <div className="pf-chart-empty" />;
-  const barW   = W / data.length;          // no gap — bars touch
-  const absMax = Math.max(...data.map(Math.abs), 0.001);
-  const midY   = H / 2;
-
-  const last  = data[data.length - 1];
-  const currY = midY - (last / absMax) * (H / 2 - 2);
-  const isPos = last >= 0;
-  const curBg = color === "pink-red"
-    ? (isPos ? "#ec4899" : "#ef4444")
-    : (isPos ? "#22c55e" : "#ef4444");
-
-  const posColor = color === "pink-red" ? "#ec4899" : "#22c55e";
-  const negColor = "#ef4444";
-
-  // Nice round ticks
-  const rawStep = absMax / 2;
-  const mag     = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const step    = Math.ceil(rawStep / mag) * mag;
-  const ticks: number[] = [0];
-  for (let v = step; v < absMax * 1.05; v += step) { ticks.push(v); ticks.push(-v); }
-  const uniqueTicks = [...new Set(ticks)].sort((a, b) => b - a);
-
-  const toY = (v: number) => midY - (v / absMax) * (H / 2 - 2);
-
+function LargeTradesPanel({ trades }: { trades: LargeTradeItem[] }) {
   return (
-    <div className="pf-chart-row">
-      <svg viewBox={`0 0 ${W} ${H}`} className="pf-chart-svg" preserveAspectRatio="none">
-        {/* Thin midline */}
-        <line x1="0" y1={midY} x2={W} y2={midY}
-          stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-
-        {data.map((v, i) => {
-          const x   = (i / data.length) * W;
-          const pct = Math.abs(v) / absMax;
-          const h   = Math.max(pct * (H / 2 - 2), 1);
-          const pos = v >= 0;
-          const y   = pos ? midY - h : midY;
-          return <rect key={i} x={x} y={y} width={barW} height={h} fill={pos ? posColor : negColor} />;
-        })}
-
-        {/* White dashed current-value line */}
-        <line x1="0" y1={currY} x2={W} y2={currY}
-          stroke="rgba(255,255,255,0.7)" strokeWidth="1" strokeDasharray="5,4" />
-      </svg>
-
-      <div className="pf-y-axis">
-        {uniqueTicks.map(v => {
-          const y = toY(v);
-          if (y < 0 || y > H) return null;
-          return (
-            <span key={v} className="pf-ytick" style={{ top: y - 7 }}>
-              {fmtTick(v)}
+    <div className="ls2-lt-wrap">
+      <div className="ls2-lt-header">
+        <span className="ls2-chart-title">Large Trades (Real-Time)</span>
+      </div>
+      <div className="ls2-lt-thead">
+        <span>Pair</span>
+        <span>Price</span>
+        <span>Value</span>
+        <span>Time</span>
+      </div>
+      <div className="ls2-lt-body">
+        {trades.length === 0 && (
+          <div className="ls2-lt-empty">Fetching trades…</div>
+        )}
+        {trades.map((t, i) => (
+          <div key={i} className={`ls2-lt-row${t.isBuy ? " ls2-lt-row--buy" : " ls2-lt-row--sell"}`}>
+            <span className="ls2-lt-pair">
+              <span className="ls2-lt-arrow">{t.isBuy ? "→" : "←"}</span>
+              {t.pair}
             </span>
+            <span className="ls2-lt-price">${t.price.toLocaleString()}</span>
+            <span className={`ls2-lt-val ${t.isBuy ? "ls2-ratio-up" : "ls2-ratio-down"}`}>
+              {fmtVol(t.valueUsd)}
+            </span>
+            <span className="ls2-lt-time">{fmtTradeTime(t.time)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Multi-coin futures table ──────────────────────────────────────────────────
+
+function MultiCoinTable({ rows }: { rows: CoinLSSnapshot[] }) {
+  if (!rows.length) return null;
+  return (
+    <div className="ls2-mc-wrap">
+      <div className="ls2-chart-header" style={{ padding: "14px 16px 12px" }}>
+        <span className="ls2-chart-title">Cryptocurrency Futures Longs vs Shorts</span>
+      </div>
+      <div className="ls2-mc-thead">
+        <span>#</span>
+        <span>Symbol</span>
+        <span>Price</span>
+        <span>24h %</span>
+        <span>Long / Short</span>
+        <span>L/S Ratio</span>
+        <span>Sentiment</span>
+      </div>
+      <div className="ls2-mc-body">
+        {rows.map((r, i) => {
+          const change = r.change24h;
+          const sent = ratioToSentiment(r.lsRatio);
+          return (
+            <div key={r.coin} className="ls2-mc-row">
+              <span className="ls2-mc-rank">{i + 1}</span>
+              <span className="ls2-mc-sym">
+                <span className="ls2-mc-sym-tick">{r.coin}</span>
+                <span className="ls2-mc-sym-name">{r.name}</span>
+              </span>
+              <span className="ls2-mc-price">{fmtPrice(r.price)}</span>
+              <span className={`ls2-mc-chg ${change >= 0 ? "ls2-ratio-up" : "ls2-ratio-down"}`}>
+                {change >= 0 ? "+" : ""}{change.toFixed(2)}%
+              </span>
+              <span className="ls2-mc-bar-cell">
+                <div className="ls2-mc-bar">
+                  <div className="ls2-mc-bar-long"  style={{ width: `${r.longPct}%` }} />
+                  <div className="ls2-mc-bar-short" style={{ width: `${r.shortPct}%` }} />
+                </div>
+                <div className="ls2-mc-bar-labels">
+                  <span className="ls2-ratio-up">{r.longPct.toFixed(1)}%</span>
+                  <span className="ls2-ratio-down">{r.shortPct.toFixed(1)}%</span>
+                </div>
+              </span>
+              <span className={`ls2-mc-ratio ${r.lsRatio >= 1 ? "ls2-ratio-up" : "ls2-ratio-down"}`}>
+                {r.lsRatio >= 1 ? "↑" : "↓"} {r.lsRatio.toFixed(4)}
+              </span>
+              <span><SentimentBadge s={sent} /></span>
+            </div>
           );
         })}
-        <span
-          className="pf-ytick pf-ytick--cur"
-          style={{ top: Math.min(H - 16, Math.max(2, currY - 7)), background: curBg }}
-        >
-          {fmtTick(last)}
-        </span>
       </div>
-    </div>
-  );
-}
-
-function SentimentArea({ data }: { data: number[] }) {
-  if (data.length < 2) return <div className="pf-chart-empty" />;
-
-  const toX = (i: number) => (i / (data.length - 1)) * W;
-  const toY = (v: number) => H - (v / 100) * (H - 4) - 2;
-
-  const linePts = data.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(" ");
-  const areaPath = [
-    `M ${toX(0)},${H}`,
-    ...data.map((v, i) => `L ${toX(i).toFixed(1)},${toY(v).toFixed(1)}`),
-    `L ${toX(data.length - 1)},${H} Z`,
-  ].join(" ");
-
-  const lastVal = data[data.length - 1];
-  const lastY   = toY(lastVal);
-  const ticks   = [75, 50, 25];
-
-  return (
-    <div className="pf-chart-row">
-      <svg viewBox={`0 0 ${W} ${H}`} className="pf-chart-svg" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="pf-sent-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="rgba(236,72,153,0.45)" />
-            <stop offset="100%" stopColor="rgba(236,72,153,0.02)" />
-          </linearGradient>
-        </defs>
-
-        {ticks.map(v => (
-          <line key={v} x1="0" y1={toY(v)} x2={W} y2={toY(v)}
-            stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-        ))}
-
-        <path d={areaPath} fill="url(#pf-sent-grad)" />
-        <polyline points={linePts} fill="none" stroke="#ec4899" strokeWidth="1.8"
-          strokeLinejoin="round" strokeLinecap="round" />
-        <line x1="0" y1={lastY} x2={W} y2={lastY}
-          stroke="#ec4899" strokeWidth="1" strokeDasharray="5,4" opacity="0.8" />
-      </svg>
-
-      <div className="pf-y-axis">
-        {ticks.map(v => (
-          <span key={v} className="pf-ytick" style={{ top: toY(v) - 7 }}>{v}.00</span>
-        ))}
-        <span
-          className="pf-ytick pf-ytick--cur"
-          style={{ top: Math.min(H - 16, Math.max(2, lastY - 7)), background: "#ec4899" }}
-        >
-          {lastVal.toFixed(2)}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Panel wrapper ─────────────────────────────────────────────────────────────
-
-function Panel({
-  dot, label, value, unit = "", summary, children,
-}: {
-  dot: "red" | "pink" | "green";
-  label: string;
-  value: number;
-  unit?: string;
-  summary: PFSummary;
-  children: React.ReactNode;
-}) {
-  const fmt = (v: number) => {
-    const abs  = Math.abs(v);
-    const sign = v < 0 ? "-" : "";
-    if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(2)}K`;
-    return `${sign}${abs.toFixed(2)}`;
-  };
-
-  return (
-    <div className="pf-panel">
-      <div className="pf-panel-header">
-        <span className={`pf-dot pf-dot--${dot}`} />
-        <span className="pf-panel-label">{label}</span>
-        <span className={`pf-panel-val ${value >= 0 ? "pos" : "neg"}`}>
-          {value >= 0 ? "+" : ""}{fmt(value)}{unit}
-        </span>
-      </div>
-      <div className="pf-chart-wrap">{children}</div>
-      <SummaryBar {...summary} />
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-interface Props {
-  coin?: CoinSymbol | string;
-}
+interface Props { coin?: CoinSymbol | string; }
 
 export function PositionFlows({ coin = "BTC" }: Props) {
-  const { t } = useTranslation();
-  const [posData,  setPosData]  = useState<{ retail: LSRatioPoint[]; smartMoney: LSRatioPoint[] } | null>(null);
-  const [candles,  setCandles]  = useState<CandleDataPoint[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState("");
-  const [retryKey, setRetryKey] = useState(0);
+  const [intervalIdx,  setIntervalIdx]  = useState(2);
+  const [takerVol,     setTakerVol]     = useState<TakerVolData | null>(null);
+  const [exchanges,    setExchanges]    = useState<ExchangeLSData[]>([]);
+  const [chartData,    setChartData]    = useState<PriceLSPoint[]>([]);
+  const [multiCoin,    setMultiCoin]    = useState<CoinLSSnapshot[]>([]);
+  const [exVol,        setExVol]        = useState<ExchangeTakerRow[]>([]);
+  const [largeTrades,  setLargeTrades]  = useState<LargeTradeItem[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState("");
 
+  const iv = INTERVALS[intervalIdx];
+
+  // Primary load: vol cards + exchange breakdown
   useEffect(() => {
     let dead = false;
     setLoading(true);
     setError("");
 
     Promise.all([
-      getPositionData(coin),
-      getPriceCandles(coin, '4h', 120),
+      getTakerBuySellVol(coin, iv.cg, 1),
+      getExchangeLSData(coin),
     ])
-      .then(([pos, cdl]) => {
+      .then(([vol, exs]) => {
         if (dead) return;
-        setPosData(pos);
-        setCandles(cdl);
+        setTakerVol(vol);
+        setExchanges(exs);
         setLoading(false);
       })
       .catch(err => {
@@ -495,75 +440,117 @@ export function PositionFlows({ coin = "BTC" }: Props) {
         setLoading(false);
       });
 
-    const id = setInterval(() => {
-      Promise.all([getPositionData(coin), getPriceCandles(coin, '4h', 120)])
-        .then(([pos, cdl]) => { if (!dead) { setPosData(pos); setCandles(cdl); } })
-        .catch(() => {});
-    }, 5 * 60_000);
+    return () => { dead = true; };
+  }, [coin, intervalIdx]);
 
-    return () => { dead = true; clearInterval(id); };
-  }, [coin, retryKey]);
+  // Secondary load: chart + multi-coin table + exchange vol + large trades (lazy)
+  useEffect(() => {
+    let dead = false;
+    setChartData([]);
 
-  if (loading) {
-    return (
-      <div className="pf-wrap">
-        <div className="pf-state"><div className="pf-spinner" />{t("positions.loading")}</div>
-      </div>
-    );
-  }
+    getPriceLSHistory(coin, iv.cg, iv.limit).then(d => {
+      if (!dead) setChartData(d);
+    }).catch(() => {});
 
-  const noPos = !posData || (!posData.retail.length && !posData.smartMoney.length);
+    getMultiCoinLSSnapshot(COINS).then(d => {
+      if (!dead) setMultiCoin(d);
+    }).catch(() => {});
 
-  if (error || noPos) {
-    return (
-      <div className="pf-wrap">
-        <div className="pf-state pf-state--error">
-          {error || t("positions.error")}
-          {error && <button className="pf-retry" onClick={() => setRetryKey(k => k + 1)}>Retry</button>}
-        </div>
-      </div>
-    );
-  }
+    getAllExchangeTakerVol(coin, iv.cg).then(d => {
+      if (!dead) setExVol(d);
+    }).catch(() => {});
 
-  const { retail, smartMoney } = posData!;
+    getRecentLargeTrades(coin).then(d => {
+      if (!dead) setLargeTrades(d);
+    }).catch(() => {});
 
-  const retailNet      = retail.map(d => (d.longRatio - d.shortRatio) * 1000);
-  const smartNet       = smartMoney.map(d => (d.longRatio - d.shortRatio) * 1000);
-  const smartSentiment = smartMoney.map(d => d.longRatio * 100);
+    // Poll large trades every 15 s
+    const poll = setInterval(() => {
+      getRecentLargeTrades(coin).then(d => { if (!dead) setLargeTrades(d); }).catch(() => {});
+    }, 15_000);
 
-  const lastRetailNet = retailNet[retailNet.length - 1] ?? 0;
-  const lastSmartNet  = smartNet[smartNet.length - 1] ?? 0;
-  const lastSentiment = smartSentiment[smartSentiment.length - 1] ?? 0;
+    return () => { dead = true; clearInterval(poll); };
+  }, [coin, intervalIdx]);
 
-  const retailSummary    = buildRetailSummary(lastRetailNet, retailNet, t);
-  const sentimentSummary = buildSentimentSummary(lastSentiment, smartSentiment, t);
-  const smartNetSummary  = buildSmartNetSummary(lastSmartNet, lastRetailNet, smartNet, t);
+  if (loading) return (
+    <div className="ls2-wrap">
+      <div className="ls2-state"><div className="pf-spinner" />Loading Long/Short data…</div>
+    </div>
+  );
+  if (error) return (
+    <div className="ls2-wrap">
+      <div className="ls2-state ls2-state--error">{error}</div>
+    </div>
+  );
+
+  const avgRetailRatio = exchanges.length
+    ? exchanges.reduce((s, ex) => s + (ex.retail?.ratio ?? 1), 0) / exchanges.length : 1;
+  const longPct  = takerVol ? takerVol.buyRatio  * 100 : (avgRetailRatio / (1 + avgRetailRatio)) * 100;
+  const shortPct = takerVol ? takerVol.sellRatio * 100 : 100 - longPct;
 
   return (
-    <div className="pf-wrap">
-      <div className="pf-header">
-        <div>
-          <h2 className="pf-title">{t("positions.title")}</h2>
-          <div className="pf-subtitle">
-            {t("positions.sub", { candles: retail.length ? ` · ${retail.length} candles` : "" })}
+    <div className="ls2-wrap">
+
+      {/* ── Section 1: Taker Vol ── */}
+      <div className="ls2-vol-wrap">
+        <h2 className="ls2-title">Cryptocurrency Longs vs Shorts</h2>
+        <div className="ls2-vol-controls">
+          <span className="ls2-vol-ctrl-label">Taker Buy/Sell Volume</span>
+          <div className="ls2-iv-tabs">
+            {INTERVALS.map((iv, i) => (
+              <button key={iv.label}
+                className={`ls2-iv-btn${intervalIdx === i ? " active" : ""}`}
+                onClick={() => setIntervalIdx(i)}>
+                {iv.label}
+              </button>
+            ))}
           </div>
         </div>
-        <div className="pf-coin-badge">{String(coin).toUpperCase()}</div>
+        <div className="ls2-vol-cards">
+          <div className="ls2-vc ls2-vc--long">
+            <CircleRing pct={longPct}  color="#22c55e" track="rgba(34,197,94,0.2)" />
+            <div className="ls2-vc-info">
+              <div className="ls2-vc-label">{iv.short} Long Volume</div>
+              <div className="ls2-vc-amount">
+                {takerVol && takerVol.buyVolUsd > 0 ? fmtVol(takerVol.buyVolUsd) : `${longPct.toFixed(2)}%`}
+              </div>
+            </div>
+          </div>
+          <div className="ls2-vc ls2-vc--short">
+            <CircleRing pct={shortPct} color="#ef4444" track="rgba(239,68,68,0.2)" />
+            <div className="ls2-vc-info">
+              <div className="ls2-vc-label">{iv.short} Short Volume</div>
+              <div className="ls2-vc-amount">
+                {takerVol && takerVol.sellVolUsd > 0 ? fmtVol(takerVol.sellVolUsd) : `${shortPct.toFixed(2)}%`}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <PriceChart candles={candles} coin={String(coin)} />
+      {/* ── Section 2: Exchange breakdown ── */}
+      {exchanges.length > 0 && (
+        <div className="ls2-ex-grid">
+          {exchanges.map(ex => <ExchangeCard key={ex.exchange} data={ex} />)}
+        </div>
+      )}
 
-      <Panel dot="red" label={t("positions.panels.retailNet")} value={lastRetailNet} summary={retailSummary}>
-        <NetHistogram data={retailNet} color="red-green" />
-      </Panel>
+      {/* ── Section 3: Exchange taker vol table + Large trades ── */}
+      <div className="ls2-ev-lt-row">
+        <ExchangeVolumeTable rows={exVol} interval={iv.label} />
+        <LargeTradesPanel trades={largeTrades} />
+      </div>
 
-      <Panel dot="pink" label={t("positions.panels.smartSentiment")} value={lastSentiment} unit="%" summary={sentimentSummary}>
-        <SentimentArea data={smartSentiment} />
-      </Panel>
+      {/* ── Section 4: BTC L/S Ratio Chart ── */}
+      <PriceLSChart
+        data={chartData}
+        title={`${String(coin).toUpperCase()} Long/Short Ratio Chart`}
+      />
 
-      <Panel dot="green" label={t("positions.panels.smartNet")} value={lastSmartNet} summary={smartNetSummary}>
-        <NetHistogram data={smartNet} color="pink-red" />
-      </Panel>
+      {/* ── Section 5: Multi-coin futures table ── */}
+      {multiCoin.length > 0 && <MultiCoinTable rows={multiCoin} />}
+
+      <p className="ls2-disclaimer">Data from CoinGlass · Binance / OKX / Bybit Futures · Educational only</p>
     </div>
   );
 }

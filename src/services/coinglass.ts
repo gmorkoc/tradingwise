@@ -308,14 +308,22 @@ export const coinglass = {
 
   calculateRSI: (closes: number[], period = 14): number => {
     if (closes.length <= period) return 0;
-    const recent = closes.slice(-period - 1);
-    let gain = 0, loss = 0;
-    for (let i = 1; i < recent.length; i++) {
-      const d = recent[i] - recent[i - 1];
-      if (d > 0) gain += d; else loss += Math.abs(d);
+    // Wilder's smoothed RSI — matches TradingView / industry standard
+    const changes: number[] = [];
+    for (let i = 1; i < closes.length; i++) changes.push(closes[i] - closes[i - 1]);
+    // Seed with simple average of first `period` changes
+    let avgGain = 0, avgLoss = 0;
+    for (let i = 0; i < period; i++) {
+      if (changes[i] > 0) avgGain += changes[i];
+      else avgLoss += Math.abs(changes[i]);
     }
-    const avgGain = gain / period;
-    const avgLoss = loss / period;
+    avgGain /= period;
+    avgLoss /= period;
+    // Wilder's smoothing for the rest
+    for (let i = period; i < changes.length; i++) {
+      avgGain = (avgGain * (period - 1) + Math.max(changes[i], 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + Math.max(-changes[i], 0)) / period;
+    }
     if (avgLoss === 0) return 100;
     return Math.round((100 - 100 / (1 + avgGain / avgLoss)) * 10) / 10;
   },
@@ -354,8 +362,9 @@ export const coinglass = {
     try {
       const symbol = toCgSymbol(coin);
 
-      const [candlesRes, oiRes, frRes, cmeRes] = await Promise.all([
-        fetchBinanceKlines(coin, '4h', 42),
+      // 200 candles: RSI needs 14 warmup + history, MACD needs 26+9; 200 gives accurate results
+      const [candlesRes, oiRes, frRes, cmeRes, lsRes] = await Promise.all([
+        fetchBinanceKlines(coin, '4h', 200),
         api.get('futures/open-interest/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
@@ -363,13 +372,22 @@ export const coinglass = {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
         fetchBinanceKlines(coin, '1h', 1440).catch(() => [] as CandleDataPoint[]),
+        api.get('futures/global-long-short-account-ratio/history', {
+          params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
+        }).catch(() => null),
       ]);
 
       const candles = candlesRes;
       if (!candles.length) return null;
 
       const price = candles[candles.length - 1].close;
-      const liquidation = coinglass.getLiquidationLevels(candles);
+
+      // Liquidation levels: use recent swing high/low as realistic magnet levels
+      const recentCandles = candles.slice(-48); // last 8 days on 4h
+      const swingHigh = Math.max(...recentCandles.map(c => c.high));
+      const swingLow  = Math.min(...recentCandles.map(c => c.low));
+      const liquidationAbove = swingHigh;
+      const liquidationBelow = swingLow;
 
       const openInterest = oiRes?.data?.code === '0'
         ? parseFloat(oiRes.data.data?.[0]?.close ?? '0')
@@ -383,14 +401,22 @@ export const coinglass = {
       const rsi = coinglass.calculateRSI(closes);
       const macdData = coinglass.calculateMACD(closes);
 
-      const longShortRatio = fundingRate >= 0
-        ? 1 + Math.min(fundingRate * 200, 0.5)
-        : 1 / (1 + Math.min(Math.abs(fundingRate) * 200, 0.5));
+      // Real L/S ratio from CoinGlass; fall back to funding-rate estimate if unavailable
+      const lsPoint = lsRes?.data?.code === '0' ? lsRes.data.data?.[0] : null;
+      const longShortRatio = lsPoint
+        ? (() => {
+            const longPct  = parseFloat(lsPoint.global_account_long_percent  ?? lsPoint.longAccount  ?? '0');
+            const shortPct = parseFloat(lsPoint.global_account_short_percent ?? lsPoint.shortAccount ?? '0');
+            return shortPct > 0 ? Math.round((longPct / shortPct) * 100) / 100 : 1;
+          })()
+        : (fundingRate >= 0
+            ? 1 + Math.min(fundingRate * 200, 0.5)
+            : 1 / (1 + Math.min(Math.abs(fundingRate) * 200, 0.5)));
 
       return {
         price,
-        liquidationAbove: liquidation.above,
-        liquidationBelow: liquidation.below,
+        liquidationAbove,
+        liquidationBelow,
         openInterest,
         fundingRate,
         longShortRatio,
@@ -649,9 +675,9 @@ function parseLSRatio(raw: Record<string, number | string>[], longKey: string, s
   }));
 }
 
-export async function getPositionData(coin: CoinSymbol | string = 'BTC'): Promise<PositionData> {
+export async function getPositionData(coin: CoinSymbol | string = 'BTC', interval = '4h', limit = 180): Promise<PositionData> {
   const symbol = toCgSymbol(coin);
-  const params = { symbol, interval: '4h', limit: 180, exchange: 'Binance' };
+  const params = { symbol, interval, limit, exchange: 'Binance' };
 
   const [retailRes, smartRes] = await Promise.all([
     api.get('futures/global-long-short-account-ratio/history', { params }).catch(() => null),
@@ -668,12 +694,361 @@ export async function getPositionData(coin: CoinSymbol | string = 'BTC'): Promis
   };
 }
 
+export interface LSExchangeSnapshot {
+  exchange: string;
+  longPct: number;
+  shortPct: number;
+  ratio: number;
+  type: 'global' | 'top';
+}
+
+const LS_EXCHANGES = ['Binance', 'Bybit', 'OKX', 'Bitget'] as const;
+
+// ── Taker buy/sell volume ────────────────────────────────────────────────────
+
+export interface TakerVolData {
+  buyVolUsd: number;
+  sellVolUsd: number;
+  buyRatio: number;   // 0–1
+  sellRatio: number;  // 0–1
+}
+
+export async function getTakerBuySellVol(
+  coin: CoinSymbol | string = 'BTC',
+  interval = '4h',
+  limit = 1,
+  exchange = 'Binance',
+): Promise<TakerVolData | null> {
+  const symbol = toCgSymbol(coin);
+  try {
+    const res = await api.get('futures/taker-buy-sell-vol/history', {
+      params: { symbol, interval, limit, exchange },
+    });
+    if (res.data?.code !== '0' || !res.data.data?.length) return null;
+    const d = res.data.data[0];
+    const buy  = parseFloat(d.buyVol ?? d.buy_vol ?? d.buyVolUsd  ?? d.longVol  ?? '0');
+    const sell = parseFloat(d.sellVol ?? d.sell_vol ?? d.sellVolUsd ?? d.shortVol ?? '0');
+    const total = buy + sell;
+    if (!total) return null;
+    return { buyVolUsd: buy, sellVolUsd: sell, buyRatio: buy / total, sellRatio: sell / total };
+  } catch { return null; }
+}
+
+export interface TakerVolHistory {
+  time: number;
+  buyVolUsd: number;
+  sellVolUsd: number;
+  ratio: number; // buy/sell
+}
+
+export async function getTakerBuySellHistory(
+  coin: CoinSymbol | string = 'BTC',
+  interval = '4h',
+  limit = 180,
+  exchange = 'Binance',
+): Promise<TakerVolHistory[]> {
+  const symbol = toCgSymbol(coin);
+  try {
+    const res = await api.get('futures/taker-buy-sell-vol/history', {
+      params: { symbol, interval, limit, exchange },
+    });
+    if (res.data?.code !== '0') return [];
+    return (res.data.data ?? []).map((d: Record<string, string>) => {
+      const buy  = parseFloat(d.buyVol ?? d.buy_vol ?? d.buyVolUsd  ?? '0');
+      const sell = parseFloat(d.sellVol ?? d.sell_vol ?? d.sellVolUsd ?? '0');
+      return {
+        time: Math.floor(Number(d.time ?? d.createTime) / 1000),
+        buyVolUsd: buy,
+        sellVolUsd: sell,
+        ratio: sell > 0 ? buy / sell : 1,
+      };
+    });
+  } catch { return []; }
+}
+
+// ── Per-exchange L/S breakdown ───────────────────────────────────────────────
+
+export interface ExchangeRatioRow {
+  longPct: number;
+  shortPct: number;
+  ratio: number;
+}
+
+export interface ExchangeLSData {
+  exchange: string;
+  retail: ExchangeRatioRow | null;
+  whaleAccount: ExchangeRatioRow | null;
+  whalePosition: ExchangeRatioRow | null;
+}
+
+const LS_BREAKDOWN_EXCHANGES = ['Binance', 'OKX', 'Bybit'] as const;
+
+export async function getExchangeLSData(coin: CoinSymbol | string = 'BTC'): Promise<ExchangeLSData[]> {
+  const symbol = toCgSymbol(coin);
+  const params = (exchange: string) => ({ symbol, interval: '4h', limit: 1, exchange });
+
+  const all = await Promise.all(
+    LS_BREAKDOWN_EXCHANGES.flatMap(exchange => [
+      api.get('futures/global-long-short-account-ratio/history',  { params: params(exchange) }).catch(() => null),
+      api.get('futures/top-long-short-account-ratio/history',     { params: params(exchange) }).catch(() => null),
+      api.get('futures/top-long-short-position-ratio/history',    { params: params(exchange) }).catch(() => null),
+    ])
+  );
+
+  const parseRow = (res: typeof all[0], lKey: string, sKey: string): ExchangeRatioRow | null => {
+    if (res?.data?.code !== '0') return null;
+    const d = res.data.data?.[0];
+    if (!d) return null;
+    const longPct  = parseFloat(d[lKey] ?? '0');
+    const shortPct = parseFloat(d[sKey] ?? '0');
+    if (!longPct && !shortPct) return null;
+    return { longPct, shortPct, ratio: shortPct > 0 ? longPct / shortPct : 1 };
+  };
+
+  return LS_BREAKDOWN_EXCHANGES.map((exchange, i) => ({
+    exchange,
+    retail:       parseRow(all[i * 3],     'global_account_long_percent', 'global_account_short_percent'),
+    whaleAccount: parseRow(all[i * 3 + 1], 'top_account_long_percent',   'top_account_short_percent'),
+    whalePosition:parseRow(all[i * 3 + 2], 'top_position_long_percent',  'top_position_short_percent'),
+  }));
+}
+
+export async function getLSRatioByExchange(coin: CoinSymbol | string = 'BTC'): Promise<LSExchangeSnapshot[]> {
+  const symbol = toCgSymbol(coin);
+
+  const requests = LS_EXCHANGES.flatMap(exchange => [
+    api.get('futures/global-long-short-account-ratio/history', {
+      params: { symbol, interval: '4h', limit: 1, exchange },
+    }).catch(() => null),
+    api.get('futures/top-long-short-account-ratio/history', {
+      params: { symbol, interval: '4h', limit: 1, exchange },
+    }).catch(() => null),
+  ]);
+
+  const results = await Promise.all(requests);
+  const snapshots: LSExchangeSnapshot[] = [];
+
+  LS_EXCHANGES.forEach((exchange, i) => {
+    const globalRes = results[i * 2];
+    const topRes    = results[i * 2 + 1];
+
+    const parseSnap = (res: typeof globalRes, type: 'global' | 'top', lKey: string, sKey: string) => {
+      if (res?.data?.code !== '0') return;
+      const d = res.data.data?.[0];
+      if (!d) return;
+      const longPct  = parseFloat(d[lKey] ?? '0');
+      const shortPct = parseFloat(d[sKey] ?? '0');
+      if (!longPct && !shortPct) return;
+      snapshots.push({ exchange, longPct, shortPct, ratio: shortPct > 0 ? longPct / shortPct : 1, type });
+    };
+
+    parseSnap(globalRes, 'global', 'global_account_long_percent', 'global_account_short_percent');
+    parseSnap(topRes,    'top',    'top_account_long_percent',    'top_account_short_percent');
+  });
+
+  return snapshots;
+}
+
 export async function getPriceCandles(
   coin: CoinSymbol | string,
   interval: string,
   limit: number,
 ): Promise<CandleDataPoint[]> {
   return fetchPriceCandles(coin, interval, limit);
+}
+
+// ── Per-exchange taker buy/sell volume table ─────────────────────────────────
+
+export interface ExchangeTakerRow {
+  exchange: string;
+  longPct: number;
+  shortPct: number;
+  longVolUsd: number;
+  shortVolUsd: number;
+}
+
+const TAKER_EXCHANGE_LIST = [
+  'Binance', 'OKX', 'Bybit', 'Bitget', 'Gate', 'KuCoin', 'BingX', 'MEXC',
+] as const;
+
+export async function getAllExchangeTakerVol(
+  coin: CoinSymbol | string = 'BTC',
+  interval = '4h',
+): Promise<ExchangeTakerRow[]> {
+  const symbol = toCgSymbol(coin);
+
+  const results = await Promise.allSettled(
+    TAKER_EXCHANGE_LIST.map(exchange =>
+      api.get('futures/taker-buy-sell-vol/history', {
+        params: { symbol, interval, limit: 1, exchange },
+      }).catch(() => null)
+    )
+  );
+
+  const rows: ExchangeTakerRow[] = [];
+  TAKER_EXCHANGE_LIST.forEach((exchange, i) => {
+    const res = results[i].status === 'fulfilled' ? results[i].value : null;
+    if (res?.data?.code !== '0' || !res.data.data?.length) return;
+    const d   = res.data.data[0] as Record<string, string>;
+    const buy  = parseFloat(d.buyVol  ?? d.buy_vol  ?? d.buyVolUsd  ?? d.longVol  ?? '0');
+    const sell = parseFloat(d.sellVol ?? d.sell_vol ?? d.sellVolUsd ?? d.shortVol ?? '0');
+    const total = buy + sell;
+    if (!total) return;
+    rows.push({
+      exchange,
+      longPct:     (buy  / total) * 100,
+      shortPct:    (sell / total) * 100,
+      longVolUsd:   buy,
+      shortVolUsd:  sell,
+    });
+  });
+
+  return rows;
+}
+
+// ── Large trades from Binance futures (public, CORS-friendly via CDN) ─────────
+
+export interface LargeTradeItem {
+  pair: string;
+  price: number;
+  valueUsd: number;
+  isBuy: boolean;
+  time: number; // unix ms
+}
+
+export async function getRecentLargeTrades(
+  coin: CoinSymbol | string = 'BTC',
+  minValueUsd = 50_000,
+): Promise<LargeTradeItem[]> {
+  // Binance futures aggTrades via CORS-open CDN mirror
+  const symbol = `${coin}USDT`;
+  try {
+    const res = await bnApi.get('/api/v3/aggTrades', {
+      params: { symbol, limit: 500 },
+    });
+    const raw = res.data as { p: string; q: string; T: number; m: boolean }[];
+    return raw
+      .map(t => ({
+        pair:     symbol,
+        price:    parseFloat(t.p),
+        valueUsd: parseFloat(t.p) * parseFloat(t.q),
+        isBuy:    !t.m,   // m = buyer is market maker → !m means taker bought
+        time:     t.T,
+      }))
+      .filter(t => t.valueUsd >= minValueUsd)
+      .reverse()
+      .slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
+// ── Price + L/S Ratio history (for dual-axis chart) ─────────────────────────
+
+export interface PriceLSPoint {
+  time: number;
+  price: number;
+  lsRatio: number;  // longPct / shortPct
+}
+
+export async function getPriceLSHistory(
+  coin: CoinSymbol | string = 'BTC',
+  interval = '4h',
+  limit = 90,
+): Promise<PriceLSPoint[]> {
+  const symbol = toCgSymbol(coin);
+  const bnInterval = interval === '1d' ? '1d' : interval === '1h' ? '1h' : '4h';
+
+  const [lsRes, priceCandles] = await Promise.all([
+    api.get('futures/global-long-short-account-ratio/history', {
+      params: { symbol, interval, limit, exchange: 'Binance' },
+    }).catch(() => null),
+    fetchBinanceKlines(coin, bnInterval, limit),
+  ]);
+
+  if (!priceCandles.length) return [];
+
+  const priceMap = new Map(priceCandles.map(c => [c.time, c.close]));
+
+  if (lsRes?.data?.code !== '0' || !lsRes.data.data?.length) {
+    return priceCandles.map(c => ({ time: c.time, price: c.close, lsRatio: 1 }));
+  }
+
+  const points: PriceLSPoint[] = [];
+  const pTimes = priceCandles.map(c => c.time);
+
+  for (const d of (lsRes.data.data as Record<string, string>[])) {
+    const t = Math.floor(Number(d.time) / 1000);
+    const longPct  = parseFloat(d.global_account_long_percent  ?? '50');
+    const shortPct = parseFloat(d.global_account_short_percent ?? '50');
+    const lsRatio  = shortPct > 0 ? longPct / shortPct : 1;
+
+    // nearest price timestamp
+    const nearest = pTimes.reduce((best, pt) =>
+      Math.abs(pt - t) < Math.abs(best - t) ? pt : best, pTimes[0]);
+    const price = priceMap.get(nearest);
+    if (price) points.push({ time: t, price, lsRatio });
+  }
+
+  return points.sort((a, b) => a.time - b.time);
+}
+
+// ── Multi-coin L/S snapshot (for futures table) ──────────────────────────────
+
+export interface CoinLSSnapshot {
+  coin: string;
+  name: string;
+  price: number;
+  change24h: number;
+  longPct: number;
+  shortPct: number;
+  lsRatio: number;
+}
+
+export async function getMultiCoinLSSnapshot(
+  coins: readonly { symbol: string; name: string }[],
+): Promise<CoinLSSnapshot[]> {
+  // Binance 24h ticker — all coins in one request
+  const symbols = JSON.stringify(coins.map(c => `${c.symbol}USDT`));
+  const tickerRes = await bnApi.get('/api/v3/ticker/24hr', { params: { symbols } }).catch(() => null);
+
+  const priceMap = new Map<string, { price: number; change: number }>();
+  if (Array.isArray(tickerRes?.data)) {
+    for (const t of tickerRes.data as { symbol: string; lastPrice: string; priceChangePercent: string }[]) {
+      const sym = t.symbol.replace('USDT', '');
+      priceMap.set(sym, {
+        price:  parseFloat(t.lastPrice ?? '0'),
+        change: parseFloat(t.priceChangePercent ?? '0'),
+      });
+    }
+  }
+
+  // CoinGlass global L/S ratio per coin — parallel
+  const lsResults = await Promise.allSettled(
+    coins.map(c =>
+      api.get('futures/global-long-short-account-ratio/history', {
+        params: { symbol: toCgSymbol(c.symbol), interval: '4h', limit: 1, exchange: 'Binance' },
+      }).catch(() => null)
+    )
+  );
+
+  return coins.map((c, i) => {
+    const lsRes  = lsResults[i].status === 'fulfilled' ? lsResults[i].value : null;
+    const lsData = lsRes?.data?.code === '0' ? lsRes.data.data?.[0] : null;
+    const longPct  = lsData ? parseFloat(lsData.global_account_long_percent  ?? '50') : 50;
+    const shortPct = lsData ? parseFloat(lsData.global_account_short_percent ?? '50') : 50;
+    const pd = priceMap.get(c.symbol) ?? { price: 0, change: 0 };
+
+    return {
+      coin:     c.symbol,
+      name:     c.name,
+      price:    pd.price,
+      change24h: pd.change,
+      longPct,
+      shortPct,
+      lsRatio: shortPct > 0 ? longPct / shortPct : 1,
+    };
+  });
 }
 
 export function clearCandleCache(): void {
