@@ -2034,6 +2034,38 @@ html[data-theme="light"] .icon-strip-quota-bar {
     flex-shrink: 0;
   }
 
+  /* E badge — static inline, pushed to right edge of the row */
+  .icon-strip .icon-strip-elite-badge,
+  .icon-strip .icon-strip-lock {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    margin-left: auto;
+    flex-shrink: 0;
+    box-shadow: none;
+  }
+
+  .icon-strip .icon-strip-elite-badge {
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+
+  .icon-strip .icon-strip-lock {
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+
   /* Labels inline */
   .icon-strip .icon-strip-label {
     display: block;
