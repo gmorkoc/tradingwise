@@ -1051,11 +1051,9 @@ body {
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100vh;
   overflow: hidden;
   background: var(--color-background);
-  padding-top: env(safe-area-inset-top);
-  box-sizing: border-box;
 }
 
 .app-shell-news {
