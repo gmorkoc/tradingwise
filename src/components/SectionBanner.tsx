@@ -15,6 +15,7 @@ const ICONS: Partial<Record<string, string>> = {
   signals:    "★",
   fundingbot: "%",
   gann:       "✕",
+  candleai:   "🕯",
 };
 
 interface Props { section: string }

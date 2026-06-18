@@ -1175,6 +1175,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluenza",
     "fundingbot": "Bot Funding",
+    "candleai":   "Candele IA",
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
     "swipeHint": "Scorri per aprire il menu",
@@ -1577,7 +1578,8 @@
     "orderflow": { "title": "Flusso Ordini",                 "desc": "Il nastro in tempo reale delle grandi operazioni che colpiscono il book. Gli ordini istituzionali aggressivi rivelano convinzione prima che il prezzo reagisca — offrendoti una finestra su ciò che lo smart money sta facendo in questo momento.", "tags": ["Nastro in Tempo Reale", "Ordini Grandi", "Attività Istituzionale"] },
     "signals":   { "title": "Segnali IA",                    "desc": "Segnali di consenso multi-exchange che filtrano il rumore dal vero momentum. Combina tassi di finanziamento, RSI, MACD, profilo di volume e dati di liquidazione tra exchange in chiamate chiare e azionabili.", "tags": ["Multi-Exchange", "Segnali Momentum", "Punteggio di Consenso"] },
     "fundingbot":{ "title": "Bot di Finanziamento IA",       "desc": "I tassi di finanziamento dei futures perpetui rivelano gli eccessi di leva in tempo reale. I long affollati che pagano oltre lo 0,05% ogni 8h (oltre il 50% annualizzato) quasi sempre precedono uno svuotamento. Gli short intrappolati in tassi negativi preparano squeeze violenti.", "tags": ["Tassi di Finanziamento", "Eccessi di Leva", "Segnali Carry Trade"] },
-    "gann":      { "title": "Analisi Gann",                  "desc": "Le relazioni geometriche prezzo/tempo di W.D. Gann identificano zone di inversione ad alta probabilità che la maggior parte dei trader non vede mai. Quando prezzo e tempo si quadrano, le inversioni diventano altamente probabili.", "tags": ["Prezzo / Tempo", "Livelli Geometrici", "Zone di Inversione"] }
+    "gann":      { "title": "Analisi Gann", "desc": "Le relazioni geometriche prezzo/tempo di W.D. Gann identificano zone di inversione ad alta probabilità.", "tags": ["Prezzo / Tempo", "Livelli Geometrici", "Zone di Inversione"] },
+    "candleai":  { "title": "Candele IA", "desc": "Analisi in tempo reale delle candele con IA. Legge ogni candela, identifica cosa stanno facendo i market maker e prevede la prossima mossa.", "tags": ["Pattern Candele", "Lettura Mercato", "Solo Elite"] }
   },
   "fundingBot": {
     "title": "Bot di Finanziamento IA",

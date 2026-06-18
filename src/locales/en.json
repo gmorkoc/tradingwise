@@ -1175,6 +1175,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluence",
     "fundingbot": "Funding Bot",
+    "candleai":   "Candle AI",
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
@@ -1577,7 +1578,8 @@
     "orderflow": { "title": "Order Flow",                "desc": "The real-time tape of large trades hitting the book. Aggressive institutional orders reveal conviction before price reacts — giving you a window into what smart money is doing right now.", "tags": ["Real-Time Tape", "Large Orders", "Institutional Activity"] },
     "signals":   { "title": "AI Signals",                "desc": "Multi-exchange consensus signals that filter noise from true momentum. Combines funding rates, RSI, MACD, volume profile, and liquidation data across exchanges into clear, actionable calls.", "tags": ["Multi-Exchange", "Momentum Signals", "Consensus Score"] },
     "fundingbot":{ "title": "AI Funding Bot",            "desc": "Perpetual futures funding rates reveal leverage extremes in real time. Crowded longs paying 0.05%+ per 8h (over 50% annualized) almost always precede a flush. Shorts trapped in negative rates set up violent squeezes.", "tags": ["Funding Rates", "Leverage Extremes", "Carry Trade Signals"] },
-    "gann":      { "title": "Gann Analysis",             "desc": "W.D. Gann's geometric price/time relationships identify high-probability reversal zones that most traders never see. When price and time square off, reversals become highly probable.", "tags": ["Price / Time", "Geometric Levels", "Reversal Zones"] }
+    "gann":      { "title": "Gann Analysis",             "desc": "W.D. Gann's geometric price/time relationships identify high-probability reversal zones that most traders never see. When price and time square off, reversals become highly probable.", "tags": ["Price / Time", "Geometric Levels", "Reversal Zones"] },
+    "candleai":  { "title": "AI Candle Watcher",         "desc": "Real-time candlestick analysis powered by AI. Reads every candle, identifies what market makers are doing, and calls the next move with key levels to watch.", "tags": ["Pattern Recognition", "Market Maker Reading", "Smart Money", "Elite Only"] }
   },
   "fundingBot": {
     "title": "AI Funding Bot",

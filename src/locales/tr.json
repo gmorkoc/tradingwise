@@ -1175,6 +1175,7 @@
     "orderflow": "Akıllı Para",
     "signals": "Uyum",
     "fundingbot": "Fonlama Botu",
+    "candleai":   "Mum YZ",
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
     "swipeHint": "Menüyü açmak için kaydır",
@@ -1577,7 +1578,8 @@
     "orderflow": { "title": "Emir Akışı",                    "desc": "Deftere gelen büyük işlemlerin gerçek zamanlı bandı. Agresif kurumsal emirler, fiyat tepki vermeden önce inancı ortaya koyar — akıllı paranın şu anda ne yaptığına dair bir pencere sunar.", "tags": ["Gerçek Zamanlı Bant", "Büyük Emirler", "Kurumsal Aktivite"] },
     "signals":   { "title": "YZ Sinyalleri",                 "desc": "Gürültüyü gerçek momentumdan filtreleyen çok borsa konsensüs sinyalleri. Fonlama oranlarını, RSI'yi, MACD'yi, hacim profilini ve borsalar arası tasfiye verilerini net ve uygulanabilir çağrılarda birleştirir.", "tags": ["Çok Borsa", "Momentum Sinyalleri", "Konsensüs Puanı"] },
     "fundingbot":{ "title": "YZ Fonlama Botu",               "desc": "Sürekli vadeli işlem fonlama oranları gerçek zamanlı kaldıraç aşırılıklarını açığa çıkarır. 8 saatte %0,05'ten fazla ödeyen kalabalık longlar (yıllık %50'den fazla) neredeyse her zaman bir temizlenmeyi önceler. Negatif oranlarda sıkışan shortlar şiddetli sıkışmaları hazırlar.", "tags": ["Fonlama Oranları", "Kaldıraç Aşırılıkları", "Carry Trade Sinyalleri"] },
-    "gann":      { "title": "Gann Analizi",                  "desc": "W.D. Gann'ın geometrik fiyat/zaman ilişkileri, çoğu yatırımcının hiç görmediği yüksek olasılıklı dönüş bölgelerini tanımlar. Fiyat ve zaman karşılaştığında, dönüşler son derece olası hale gelir.", "tags": ["Fiyat / Zaman", "Geometrik Seviyeler", "Dönüş Bölgeleri"] }
+    "gann":      { "title": "Gann Analizi",                  "desc": "W.D. Gann'ın geometrik fiyat/zaman ilişkileri, çoğu yatırımcının hiç görmediği yüksek olasılıklı dönüş bölgelerini tanımlar. Fiyat ve zaman karşılaştığında, dönüşler son derece olası hale gelir.", "tags": ["Fiyat / Zaman", "Geometrik Seviyeler", "Dönüş Bölgeleri"] },
+    "candleai":  { "title": "YZ Mum İzleyici",              "desc": "YZ destekli gerçek zamanlı mum analizi. Her mumu okur, market maker'ların ne yaptığını tespit eder ve izlenecek kritik seviyeleri belirler.", "tags": ["Mum Desenleri", "Piyasa Okuma", "Yalnızca Elite"] }
   },
   "fundingBot": {
     "title": "YZ Fonlama Botu",

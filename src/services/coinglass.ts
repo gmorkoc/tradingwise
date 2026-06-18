@@ -525,6 +525,10 @@ export const coinglass = {
     return fetchBinanceKlines(coin, '1w', 260);
   },
 
+  getCandles: async (coin: CoinSymbol | string, interval: string, limit = 100): Promise<CandleDataPoint[]> => {
+    return fetchBinanceKlines(coin, interval, limit);
+  },
+
   getMonthlyReturns: async (coin: CoinSymbol | string = 'BTC'): Promise<MonthlyReturn[]> => {
     const cacheKey = `monthly:${coin}`;
     const cached = monthlyCache.get(cacheKey);

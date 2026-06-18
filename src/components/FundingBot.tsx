@@ -121,6 +121,77 @@ function timeUntil(ms: number): string {
   return `${s}s`;
 }
 
+/* ── Pure-data funding insight ───────────────────────────────────────────────── */
+
+function FundingInsight({ row, signal, history }: { row: CoinRow; signal: Signal; history: FundingRateEntry[] }) {
+  const rate    = row.fundingRate;
+  const absRate = Math.abs(rate);
+  const annual  = (absRate * 3 * 365 * 100).toFixed(1);
+  const isPos   = rate >= 0;
+
+  // Trend from history (last 10 periods)
+  const rates = history.slice(-10).map(h => parseFloat(h.fundingRate));
+  const trend: "rising" | "falling" | "stable" = (() => {
+    if (rates.length < 3) return "stable";
+    const first = rates.slice(0, Math.floor(rates.length / 2)).reduce((s, v) => s + v, 0) / Math.floor(rates.length / 2);
+    const last  = rates.slice(Math.ceil(rates.length / 2)).reduce((s, v) => s + v, 0) / Math.ceil(rates.length / 2);
+    const diff  = last - first;
+    if (Math.abs(diff) < 0.00005) return "stable";
+    return diff > 0 ? "rising" : "falling";
+  })();
+
+  // Derived plain-English lines
+  const whoPayWho = isPos
+    ? `Longs are paying shorts ${fmtRate(rate)} every 8h (${annual}% annualized).`
+    : `Shorts are paying longs ${fmtRate(absRate)} every 8h (${annual}% annualized).`;
+
+  const crowding = isPos
+    ? rate >= 0.0005
+      ? "Market is heavily long — longs are overcrowded and paying a high premium to stay in."
+      : "More longs than shorts — mild long bias in perpetuals."
+    : absRate >= 0.0005
+      ? "Market is heavily short — shorts are overcrowded and paying a high premium to stay in."
+      : "More shorts than longs — mild short bias in perpetuals.";
+
+  const trendLine = trend === "rising"
+    ? `Funding has been rising over the last ${rates.length} periods — pressure is building${isPos ? " on longs" : " on shorts"}.`
+    : trend === "falling"
+      ? `Funding has been falling — ${isPos ? "long crowding is easing" : "short pressure is easing"}.`
+      : "Funding has been stable — no major positioning shift recently.";
+
+  const implication = isPos
+    ? rate >= 0.0005
+      ? "High positive funding often precedes a flush — watch for a long squeeze if price drops."
+      : "Mildly positive — holding shorts here earns funding; not extreme enough to call a squeeze."
+    : absRate >= 0.0005
+      ? "High negative funding often precedes a short squeeze — watch for a sharp move up."
+      : "Mildly negative — holding longs here earns funding; positioning not extreme.";
+
+  const rows2: { label: string; value: string; color?: string }[] = [
+    { label: "Who pays",    value: whoPayWho },
+    { label: "Positioning", value: crowding },
+    { label: "Trend",       value: trendLine },
+    { label: "Implication", value: implication },
+  ];
+
+  return (
+    <div className="fb-insight">
+      <div className="fb-insight-header">
+        <span className="fb-insight-title">Funding Insight</span>
+        <span className={`fb-signal-badge ${signal.colorClass}`}>{signal.label}</span>
+      </div>
+      <div className="fb-insight-rows">
+        {rows2.map(r => (
+          <div key={r.label} className="fb-insight-row">
+            <span className="fb-insight-label">{r.label}</span>
+            <span className="fb-insight-value">{r.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────────────────────────── */
 export const FundingBot: React.FC<Props> = ({ coin }) => {
   const { t } = useTranslation();
@@ -135,9 +206,6 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
   });
   const [history, setHistory]     = useState<FundingRateEntry[]>([]);
   const [histLoading, setHistLoading] = useState(false);
-  const [aiText, setAiText]       = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError]     = useState("");
   const [countdown, setCountdown] = useState("");
   const [hoveredTip, setHoveredTip] = useState<{ tip: Tip; x: number; y: number } | null>(null);
   const [watchlist, setWatchlist]   = useState<Set<string>>(() => {
@@ -229,8 +297,6 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
   /* ── Fetch history when coin changes ────────────────────────────────────── */
   useEffect(() => {
     fetchHistory(selectedCoin);
-    setAiText("");
-    setAiError("");
   }, [selectedCoin, fetchHistory]);
 
   /* ── Countdown to next funding ───────────────────────────────────────────── */
@@ -243,45 +309,6 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
     countdownTimerRef.current = setInterval(updateCountdown, 1000);
     return () => { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); };
   }, [rows, selectedCoin]);
-
-  /* ── AI analysis ─────────────────────────────────────────────────────────── */
-  const runAI = async () => {
-    const row = rows.find(r => r.symbol === selectedCoin);
-    if (!row) return;
-    const signal = getSignal(row.fundingRate, t);
-    const histRates = history.map(h => (parseFloat(h.fundingRate) * 100).toFixed(4) + "%").join(", ");
-
-    setAiLoading(true);
-    setAiError("");
-    setAiText("");
-
-    try {
-      const res = await fetch("/api/openai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a crypto funding rate analyst. Analyze the funding rate data and provide a concise trade thesis. Focus on: 1) what the funding rate tells us about market positioning, 2) whether longs or shorts are overcrowded, 3) the trade opportunity if any. Be direct and actionable. Max 120 words.",
-            },
-            {
-              role: "user",
-              content: `Coin: ${selectedCoin}/USDT Perp\nCurrent funding rate: ${fmtRate(row.fundingRate)}\nRate trend (last 10 periods): [${histRates}]\nSignal: ${signal.label}\nMark price: ${fmtPrice(row.markPrice)}\n\nAnalyze this funding data and give me a trade thesis.`,
-            },
-          ],
-        }),
-      });
-      const json = await res.json();
-      if (json.success) setAiText(json.message);
-      else setAiError(json.error ?? t("fundingBot.aiError"));
-    } catch {
-      setAiError(t("fundingBot.networkError"));
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   const toggleWatch = (sym: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -531,44 +558,8 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
             )}
           </div>
 
-          {/* AI Analysis panel */}
-          <div className="fb-ai-section">
-            <div className="fb-ai-header">
-              <div className="fb-ai-title">
-                <span className="fb-ai-star">✦</span>
-                AI Funding Analysis
-                <span className="fb-ai-badge">AI Powered</span>
-              </div>
-              {!aiLoading && (
-                <button className="fb-ai-generate-btn" onClick={runAI}>
-                  {aiText ? "↺ Regenerate" : t("fundingBot.aiBtn")}
-                </button>
-              )}
-            </div>
-
-            {!aiText && !aiLoading && !aiError && (
-              <p className="fb-ai-cta-hint">
-                Click "Generate AI Analysis" to get a funding rate trade thesis for {selectedRow.symbol}.
-              </p>
-            )}
-
-            {aiLoading && (
-              <div className="fb-ai-loading">
-                <span className="fb-ai-spinner" />
-                {t("fundingBot.analyzing")}
-              </div>
-            )}
-
-            {aiError && !aiLoading && (
-              <div className="fb-ai-error">{aiError}</div>
-            )}
-
-            {aiText && !aiLoading && (
-              <div className="fb-ai-result">
-                <p className="fb-ai-text">{aiText}</p>
-              </div>
-            )}
-          </div>
+          {/* Funding Insight — pure data, no AI */}
+          <FundingInsight row={selectedRow} signal={selectedSignal} history={history} />
 
         </div>
       )}

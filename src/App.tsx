@@ -36,17 +36,18 @@ import { LandingPage } from "./components/LandingPage";
 import { PTickerBgChart } from "./components/PTickerBgChart";
 import { PredictionEngine } from "./components/PredictionEngine";
 import { FundingBot } from "./components/FundingBot";
+import { CandleWatcher } from "./components/CandleWatcher";
 import { SectionBanner } from "./components/SectionBanner";
 import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
 import "./App.css";
 
-type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot";
+type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai";
 
 const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
-  { id: "chart",     labelKey: "nav.chart",     d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
+  { id: "chart",      labelKey: "nav.chart",      d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
   {
-    id: "ai",        labelKey: "nav.ai",
+    id: "ai",         labelKey: "nav.ai",         requiredTier: "elite",
     d: [
       "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z",
       "M20 3v4M22 5h-4",
@@ -54,19 +55,20 @@ const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requir
     ],
   },
   {
-    id: "feargreed", labelKey: "nav.feargreed",
+    id: "feargreed",  labelKey: "nav.feargreed",
     d: ["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"],
   },
-  { id: "heatmap",   labelKey: "nav.heatmap",   d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
-  { id: "onchain",   labelKey: "nav.onchain",   d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
-  { id: "gann",      labelKey: "nav.gann",      d: "M22 12h-4l-3 9L9 3l-3 9H2", requiredTier: "elite", hidden: true },
-  { id: "alerts",    labelKey: "nav.alerts",    d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
-  { id: "etf",       labelKey: "nav.etf",       d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
-  { id: "positions", labelKey: "nav.positions", d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
-  { id: "htf",       labelKey: "nav.htf",       d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
-  { id: "orderflow", labelKey: "nav.orderflow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
-  { id: "signals",   labelKey: "nav.signals",   d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
+  { id: "heatmap",   labelKey: "nav.heatmap",    requiredTier: "elite", d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
+  { id: "onchain",   labelKey: "nav.onchain",    requiredTier: "elite", d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
+  { id: "gann",      labelKey: "nav.gann",       requiredTier: "elite", hidden: true, d: "M22 12h-4l-3 9L9 3l-3 9H2" },
+  { id: "alerts",    labelKey: "nav.alerts",     d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
+  { id: "etf",       labelKey: "nav.etf",        d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
+  { id: "positions", labelKey: "nav.positions",  d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
+  { id: "htf",       labelKey: "nav.htf",        requiredTier: "elite", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
+  { id: "orderflow", labelKey: "nav.orderflow",  d: ["M2 12h4l3-9 4 18 3-9h6"] },
+  { id: "signals",   labelKey: "nav.signals",    d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
   { id: "fundingbot", labelKey: "nav.fundingbot", d: ["M19 5L5 19", "M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0", "M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0"] },
+  { id: "candleai",  labelKey: "nav.candleai",   requiredTier: "elite", d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"] },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -496,12 +498,14 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 title={t(item.labelKey)}
               >
                 <NavIcon d={item.d} />
-                {locked && (
+                {locked ? (
                   <span className="icon-strip-lock">
                     <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                       <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
                     </svg>
                   </span>
+                ) : item.requiredTier === "elite" && (
+                  <span className="icon-strip-elite-badge">E</span>
                 )}
                 <span className="icon-strip-label">{t(item.labelKey)}</span>
               </button>
@@ -772,6 +776,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {activeSection === "orderflow" && <OrderFlowFramework coin={coin} />}
           {activeSection === "signals"   && <PredictionEngine btcData={btcData} coin={coin} livePrice={livePrice} />}
           {activeSection === "fundingbot" && <FundingBot coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
+          {activeSection === "candleai"  && <CandleWatcher coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
         </div>
 
       </div>

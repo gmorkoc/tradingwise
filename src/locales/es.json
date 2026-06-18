@@ -1175,6 +1175,7 @@
     "orderflow": "Dinero Inteligente",
     "signals": "Confluencia",
     "fundingbot": "Bot Funding",
+    "candleai":   "Velas IA",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
@@ -1577,7 +1578,8 @@
     "orderflow": { "title": "Flujo de Órdenes",               "desc": "La cinta en tiempo real de las grandes operaciones que llegan al libro. Las órdenes institucionales agresivas revelan convicción antes de que el precio reaccione — dándote una ventana sobre lo que el dinero inteligente está haciendo ahora mismo.", "tags": ["Cinta en Tiempo Real", "Grandes Órdenes", "Actividad Institucional"] },
     "signals":   { "title": "Señales IA",                     "desc": "Señales de consenso multi-exchange que filtran el ruido del verdadero momentum. Combina tasas de financiación, RSI, MACD, perfil de volumen y datos de liquidación entre exchanges en llamadas claras y accionables.", "tags": ["Multi-Exchange", "Señales de Momentum", "Puntuación de Consenso"] },
     "fundingbot":{ "title": "Bot de Financiación IA",         "desc": "Las tasas de financiación de futuros perpetuos revelan extremos de apalancamiento en tiempo real. Los largos masificados pagando más del 0.05% por 8h (más del 50% anualizado) casi siempre preceden a una purga. Los cortos atrapados en tasas negativas preparan squeezes violentos.", "tags": ["Tasas de Financiación", "Extremos de Apalancamiento", "Señales de Carry Trade"] },
-    "gann":      { "title": "Análisis Gann",                  "desc": "Las relaciones geométricas precio/tiempo de W.D. Gann identifican zonas de reversión de alta probabilidad que la mayoría de los traders nunca ven. Cuando el precio y el tiempo se cuadran, las reversiones se vuelven muy probables.", "tags": ["Precio / Tiempo", "Niveles Geométricos", "Zonas de Reversión"] }
+    "gann":      { "title": "Análisis Gann", "desc": "Las relaciones geométricas precio/tiempo de W.D. Gann identifican zonas de reversión de alta probabilidad.", "tags": ["Precio / Tiempo", "Niveles Geométricos", "Zonas de Reversión"] },
+    "candleai":  { "title": "Velas IA", "desc": "Análisis de velas en tiempo real con IA. Lee cada vela, identifica qué hacen los creadores de mercado y predice el próximo movimiento.", "tags": ["Patrones de Velas", "Lectura de Mercado", "Solo Elite"] }
   },
   "fundingBot": {
     "title": "Bot de Financiación IA",
