@@ -1392,9 +1392,33 @@ html[data-theme="light"] .icon-strip-quota-bar {
 }
 
 .side-panel--hidden {
-  width: 0;
+  width: 8px;
   overflow: hidden;
-  border-left: none;
+}
+
+.side-panel-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.15s;
+}
+
+.side-panel-edge:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+.side-panel-edge:focus,
+.side-panel-edge:focus-visible,
+.side-panel-edge:active {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .wl-toggle-btn {
@@ -1418,42 +1442,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
   background: var(--color-hover);
 }
 
-.watchlist-reveal-btn {
-  position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 60px;
-  padding: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-right: none;
-  border-radius: 6px 0 0 6px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: right 0.22s ease, color 0.15s, background 0.15s;
-}
-
-.watchlist-reveal-btn--open {
-  right: 330px;
-}
-
-.watchlist-reveal-btn:hover {
-  color: var(--color-text);
-  background: var(--color-hover);
-}
-
-@media (max-width: 1200px) {
-  .watchlist-reveal-btn--open { right: 270px; }
-}
-
 @media (max-width: 900px) {
-  .wl-toggle-btn, .watchlist-reveal-btn { display: none; }
+  .wl-toggle-btn, .side-panel, .side-panel-edge { display: none; }
 }
 
 /* Strip card chrome — Watchlist lives flush in the panel */
