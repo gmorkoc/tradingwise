@@ -1162,6 +1162,19 @@ html[data-theme="light"] .chart-loading-overlay {
   margin-left: 4px;
 }
 
+.predict-elite-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+}
+
 .predict-btn:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
