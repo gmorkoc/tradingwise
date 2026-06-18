@@ -38,7 +38,7 @@ import { PredictionEngine } from "./components/PredictionEngine";
 import { FundingBot } from "./components/FundingBot";
 import { SectionBanner } from "./components/SectionBanner";
 import { ZoneResult } from "./components/PriceChart.types";
-import { hasAccess, Tier } from "./services/supabase";
+import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
 import "./App.css";
 
 type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot";
@@ -971,6 +971,16 @@ function AppGate() {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  // Sync pending terms agreement to DB once user is authenticated
+  useEffect(() => {
+    if (!user) return;
+    const pending = localStorage.getItem("terms_agreed_at");
+    if (!pending) return;
+    saveTermsAgreement(user.id, pending).then(() => {
+      localStorage.removeItem("terms_agreed_at");
+    });
+  }, [user]);
 
   // Handle Stripe return — poll until tier changes (webhook is async)
   useEffect(() => {

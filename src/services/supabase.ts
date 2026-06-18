@@ -19,6 +19,7 @@ export interface Profile {
   ai_requests_used: number;
   ai_requests_week: string | null;
   trader_level: string | null;
+  terms_agreed_at: string | null;
 }
 
 export const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, elite: 2 };
@@ -52,6 +53,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
         stripe_customer_id: null,
         subscription_end_at: null,
         trader_level: null,
+        terms_agreed_at: null,
       })
       .select()
       .single();
@@ -65,5 +67,12 @@ export async function saveTraderLevel(userId: string, level: string): Promise<vo
   await supabase
     .from("profiles")
     .update({ trader_level: level })
+    .eq("id", userId);
+}
+
+export async function saveTermsAgreement(userId: string, agreedAt: string): Promise<void> {
+  await supabase
+    .from("profiles")
+    .update({ terms_agreed_at: agreedAt })
     .eq("id", userId);
 }

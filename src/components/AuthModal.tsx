@@ -14,20 +14,21 @@ interface Props {
 export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) => {
   const { t } = useTranslation();
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
-  const [view,     setView]     = useState<View>(initialView);
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm,  setConfirm]  = useState("");
-  const [name,     setName]     = useState("");
-  const [error,    setError]    = useState("");
-  const [info,     setInfo]     = useState("");
-  const [busy,     setBusy]     = useState(false);
-  const [showPw,   setShowPw]   = useState(false);
-  const [showCfm,  setShowCfm]  = useState(false);
+  const [view,         setView]         = useState<View>(initialView);
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [confirm,      setConfirm]      = useState("");
+  const [name,         setName]         = useState("");
+  const [error,        setError]        = useState("");
+  const [info,         setInfo]         = useState("");
+  const [busy,         setBusy]         = useState(false);
+  const [showPw,       setShowPw]       = useState(false);
+  const [showCfm,      setShowCfm]      = useState(false);
+  const [termsAgreed,  setTermsAgreed]  = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setError(""); setInfo("");
+    setError(""); setInfo(""); setTermsAgreed(false);
   }, [view]);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
         || err.toLowerCase().includes("user already exists");
       setError(isDuplicate ? "sso_exists" : err);
     } else {
+      localStorage.setItem("terms_agreed_at", new Date().toISOString());
       setInfo(t("auth.signup.confirmEmail"));
     }
     setBusy(false);
@@ -72,6 +74,9 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
 
   const handleGoogle = async () => {
     setBusy(true); setError("");
+    if (view === "signup") {
+      localStorage.setItem("terms_agreed_at", new Date().toISOString());
+    }
     const err = await signInWithGoogle();
     if (err) { setError(err); setBusy(false); }
     // on success the page redirects — no need to setBusy(false)
@@ -140,7 +145,29 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
           <>
             <h2 className="auth-title">{t("auth.signup.title")}</h2>
             <p className="auth-sub">{t("auth.signup.sub")}</p>
-            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
+
+            <div className="auth-disclaimer">
+              <div className="auth-disclaimer-scroll">
+                <p className="auth-disclaimer-heading">⚠️ Risk Disclaimer &amp; Terms of Use</p>
+                <p>CoinHintz provides market data, analytical tools, and AI-generated signals for <strong>informational and educational purposes only</strong>. Nothing on this platform constitutes financial, investment, legal, or tax advice of any kind.</p>
+                <p><strong>Cryptocurrency trading involves substantial risk of loss.</strong> Digital asset markets are highly volatile and largely unregulated. You may lose some or all of your invested capital. Never invest money you cannot afford to lose.</p>
+                <p>All AI predictions, signals, funding rate analyses, and market insights are generated algorithmically and are <strong>not guaranteed to be accurate, complete, or timely</strong>. Past performance of any signal or strategy does not guarantee future results.</p>
+                <p>Market data displayed may be delayed, incomplete, or inaccurate. CoinHintz makes no representations or warranties regarding data accuracy, and is not liable for any errors or omissions in the information provided.</p>
+                <p><strong>You are solely responsible for any financial decisions you make.</strong> CoinHintz and its operators bear no liability for any financial losses, missed opportunities, or damages of any kind arising from your use of this platform.</p>
+                <p>This platform is intended for users who are of legal age and legally permitted to engage with cryptocurrency services in their jurisdiction. By creating an account you confirm both conditions.</p>
+                <p>CoinHintz reserves the right to update these terms at any time. Continued use of the platform constitutes acceptance of any revised terms.</p>
+              </div>
+              <label className="auth-terms-check">
+                <input
+                  type="checkbox"
+                  checked={termsAgreed}
+                  onChange={e => setTermsAgreed(e.target.checked)}
+                />
+                <span>I have read and agree — I understand this is not financial advice and I trade entirely at my own risk</span>
+              </label>
+            </div>
+
+            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy || !termsAgreed}>
               <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
               {t("auth.continueWithGoogle")}
             </button>
@@ -183,7 +210,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView = "login" }) =
                 <p className="auth-error">{error}</p>
               ) : null}
               {info  && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
+              <button className="auth-submit" disabled={busy || !termsAgreed}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
             </form>
             <p className="auth-switch">{t("auth.signup.alreadyAccount")} <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.signup.signinLink")}</button></p>
           </>
