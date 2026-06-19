@@ -1,0 +1,346 @@
+/* ── Wrapper ──────────────────────────────────────────────────────────────── */
+.gm-wrap {
+  width: 100%;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Loading / Error ──────────────────────────────────────────────────────── */
+.gm-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.gm-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #fb7185;
+  font-size: 0.9rem;
+}
+
+.gm-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: gm-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes gm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Page header ──────────────────────────────────────────────────────────── */
+.gm-header { display: flex; flex-direction: column; gap: 4px; }
+
+.gm-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.gm-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* ── Stat cards grid ──────────────────────────────────────────────────────── */
+.gm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.gm-stat-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gm-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.gm-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.gm-stat-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* ── Generic section card ──────────────────────────────────────────────────── */
+.gm-section {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gm-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gm-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.gm-section-sub {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Dominance bar ──────────────────────────────────────────────────────────── */
+.gm-dom-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.gm-dom-seg {
+  height: 100%;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.gm-dom-seg:hover { opacity: 0.8; cursor: default; }
+
+.gm-dom-seg--other {
+  background: rgba(148, 163, 184, 0.2);
+  flex: 1;
+}
+
+.gm-dom-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.gm-dom-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gm-dom-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gm-dom-sym {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.gm-dom-pct {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Chart tabs / period tabs ──────────────────────────────────────────────── */
+.gm-chart-tabs,
+.gm-period-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.gm-chart-tab,
+.gm-period-tab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gm-chart-tab:hover,
+.gm-period-tab:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+.gm-chart-tab--active,
+.gm-period-tab--active {
+  background: var(--color-input-bg);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* ── Chart wrap ───────────────────────────────────────────────────────────── */
+.gm-chart-wrap {
+  position: relative;
+  height: 260px;
+}
+
+.gm-chart-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card-bg);
+  border-radius: 10px;
+  z-index: 1;
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────────────────── */
+.gm-tooltip {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.gm-tooltip-label {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 2px;
+}
+
+.gm-tooltip-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ── Top coins table ──────────────────────────────────────────────────────── */
+.gm-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.gm-table-wrap::-webkit-scrollbar { height: 4px; }
+.gm-table-wrap::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.gm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.gm-th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gm-th--rank { width: 36px; }
+.gm-th--r { text-align: right; }
+
+.gm-tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s;
+}
+
+.gm-tr:hover { background: var(--color-input-bg); }
+
+.gm-td {
+  padding: 9px 10px;
+  color: var(--color-text);
+}
+
+.gm-td--rank {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.gm-td--name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.gm-td--r { text-align: right; }
+
+.gm-td--muted { color: var(--color-text-secondary); }
+
+.gm-coin-img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gm-coin-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.gm-coin-sym {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.gm-pct--pos { color: #22c55e; }
+.gm-pct--neg { color: #fb7185; }
+
+/* ── Disclaimer ───────────────────────────────────────────────────────────── */
+.gm-disclaimer {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+  margin: 0;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .gm-wrap { padding: 16px 14px 36px; gap: 20px; }
+  .gm-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .gm-stat-value { font-size: 1.05rem; }
+  .gm-section { padding: 14px; }
+  .gm-section-header { gap: 8px; }
+}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData } from "../services/coinglass";
+import { openai, PredictionResponse } from "../services/openai";
+import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
 import "../styles/CandleWatcher.css";
 
@@ -1345,6 +1347,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
   const [macroCtx, setMacroCtx] = useState<MacroContextData | null>(null);
+  const [predData, setPredData] = useState<PredictionResponse | null>(null);
+  const [predLoading, setPredLoading] = useState(false);
   const [wizardIntent, setWizardIntent] = useState<WizardIntent | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const volSeriesRef     = useRef<ISeriesApi<"Histogram", any> | null>(null);
@@ -1925,6 +1929,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   useEffect(() => {
     fetchMTFBiases(coin as string).then(setMtfBiases).catch(() => {});
     setWizardIntent(null);
+    setPredData(null);
   }, [coin]);
 
   // Run AI + macro fetch when flagged
@@ -1939,10 +1944,19 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     Promise.all([
       getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, detectICT(candles)),
       getMacroContext(coin as string).catch(() => null),
-    ]).then(([res, macro]) => {
-      if (res)    setAiRead(res);
-      if (macro)  setMacroCtx(macro);
+      coinglass.getAllBTCData(coin as string).catch(() => null),
+      fetchFearGreed().catch(() => null),
+    ]).then(([res, macro, btcLive, fearGreed]) => {
+      if (res)   setAiRead(res);
+      if (macro) setMacroCtx(macro);
       setAiLoading(false);
+      if (btcLive) {
+        setPredLoading(true);
+        openai.getPricePrediction(btcLive, fearGreed ?? undefined)
+          .then(pred => { if (pred?.success) setPredData(pred); })
+          .catch(() => {})
+          .finally(() => setPredLoading(false));
+      }
     });
   }, [candles]);
 
@@ -2538,6 +2552,111 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       ))}
                     </div>
                   )}
+                    </div>
+                  )}
+
+                  {/* ── Our Take ─────────────────────────────────────────── */}
+                  {predData?.ourTake && (
+                    <div className={`cw-our-take cw-our-take--${predData.ourTakeAction ?? "watch"}`}>
+                      <div className="cw-our-take-header">
+                        <span className="cw-our-take-eyebrow">✦ Our Take</span>
+                        {predData.ourTakeAction && (
+                          <span className={`cw-our-take-action cw-our-take-action--${predData.ourTakeAction}`}>
+                            {predData.ourTakeAction.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <p className="cw-our-take-text">{predData.ourTake}</p>
+                    </div>
+                  )}
+
+                  {/* ── Price Range Forecast ──────────────────────────────── */}
+                  {predData?.timeframes && (() => {
+                    const TF = ["8h", "12h", "16h", "24h"] as const;
+                    const currentPrice = candles[candles.length - 1]?.close ?? 0;
+                    const fmtP = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+                    return (
+                      <div className="cw-ai-section cw-range-forecast">
+                        <div className="cw-ai-section-label">Price Range Forecast</div>
+                        <div className="cw-range-rows">
+                          {TF.map(tf => {
+                            const r = predData.timeframes![tf];
+                            const span = r.high - r.low;
+                            const cpTop = currentPrice > 0 && span > 0
+                              ? Math.max(1, Math.min(99, ((r.high - currentPrice) / span) * 100))
+                              : null;
+                            const outOfRange = currentPrice > 0 && (currentPrice < r.low || currentPrice > r.high);
+                            return (
+                              <div key={tf} className="cw-range-row">
+                                <span className="cw-range-tf">{tf.toUpperCase()}</span>
+                                <div className="cw-range-track">
+                                  <div className="cw-range-fill" />
+                                  {cpTop !== null && (
+                                    <div className={`cw-range-needle${outOfRange ? " cw-range-needle--out" : ""}`}
+                                      style={{ top: `${cpTop}%` }}
+                                      title={`Current: ${fmtP(currentPrice)}`} />
+                                  )}
+                                </div>
+                                <div className="cw-range-vals">
+                                  <span className="cw-range-hi">{fmtP(r.high)}</span>
+                                  <span className="cw-range-lo">{fmtP(r.low)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {currentPrice > 0 && (
+                          <p className="cw-range-footer">
+                            <span className="cw-range-dot" /> Current: <strong>${currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Intelligence Cards ────────────────────────────────── */}
+                  {predData && (predData.priceDrivers || predData.whoIsBuying || predData.whoIsSelling || predData.marketContext || predData.keyRisks) && (
+                    <div className="cw-ai-section">
+                      <div className="cw-ai-section-label">Market Intelligence</div>
+                      <div className="cw-intel-grid">
+                        {predData.priceDrivers && (
+                          <div className="cw-intel-card">
+                            <div className="cw-intel-card-label">Price Drivers</div>
+                            <p className="cw-intel-card-text">{predData.priceDrivers}</p>
+                          </div>
+                        )}
+                        {predData.whoIsBuying && (
+                          <div className="cw-intel-card cw-intel-card--bull">
+                            <div className="cw-intel-card-label">Who's Buying</div>
+                            <p className="cw-intel-card-text">{predData.whoIsBuying}</p>
+                          </div>
+                        )}
+                        {predData.whoIsSelling && (
+                          <div className="cw-intel-card cw-intel-card--bear">
+                            <div className="cw-intel-card-label">Who's Selling</div>
+                            <p className="cw-intel-card-text">{predData.whoIsSelling}</p>
+                          </div>
+                        )}
+                        {predData.marketContext && (
+                          <div className="cw-intel-card">
+                            <div className="cw-intel-card-label">Macro & News</div>
+                            <p className="cw-intel-card-text">{predData.marketContext}</p>
+                          </div>
+                        )}
+                        {predData.keyRisks && (
+                          <div className="cw-intel-card cw-intel-card--risk">
+                            <div className="cw-intel-card-label">Key Risks</div>
+                            <p className="cw-intel-card-text">{predData.keyRisks}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {predLoading && !predData && (
+                    <div className="cw-intel-loading">
+                      <div className="cw-ai-spinner" />
+                      <span>Fetching market intelligence…</span>
                     </div>
                   )}
 

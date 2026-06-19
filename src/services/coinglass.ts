@@ -74,17 +74,88 @@ interface CandleDataPoint {
 }
 
 export const COINS = [
-  { symbol: 'BTC',  name: 'Bitcoin'  },
-  { symbol: 'ETH',  name: 'Ethereum' },
-  { symbol: 'XRP',  name: 'XRP'      },
-  { symbol: 'SOL',  name: 'Solana'   },
-  { symbol: 'BNB',  name: 'BNB'      },
-  { symbol: 'SUI',  name: 'Sui'      },
-  { symbol: 'DOGE',   name: 'Dogecoin' },
-  { symbol: 'ADA',    name: 'Cardano'  },
-  { symbol: 'NEAR',   name: 'NEAR'     },
-  { symbol: 'RENDER', name: 'Render'   },
-  { symbol: 'ZEC',    name: 'Zcash'    },
+  // Majors
+  { symbol: 'BTC',     name: 'Bitcoin'           },
+  { symbol: 'ETH',     name: 'Ethereum'          },
+  { symbol: 'BNB',     name: 'BNB'               },
+  { symbol: 'SOL',     name: 'Solana'            },
+  { symbol: 'XRP',     name: 'XRP'               },
+  { symbol: 'ADA',     name: 'Cardano'           },
+  { symbol: 'AVAX',    name: 'Avalanche'         },
+  { symbol: 'DOT',     name: 'Polkadot'          },
+  { symbol: 'ATOM',    name: 'Cosmos'            },
+  { symbol: 'TRX',     name: 'TRON'              },
+  { symbol: 'ETC',     name: 'Ethereum Classic'  },
+  { symbol: 'LTC',     name: 'Litecoin'          },
+  { symbol: 'BCH',     name: 'Bitcoin Cash'      },
+  // L1 / Infra
+  { symbol: 'NEAR',    name: 'NEAR Protocol'     },
+  { symbol: 'ICP',     name: 'Internet Computer' },
+  { symbol: 'FIL',     name: 'Filecoin'          },
+  { symbol: 'AR',      name: 'Arweave'           },
+  { symbol: 'TIA',     name: 'Celestia'          },
+  { symbol: 'EGLD',    name: 'MultiversX'        },
+  { symbol: 'APT',     name: 'Aptos'             },
+  { symbol: 'SUI',     name: 'Sui'               },
+  { symbol: 'STX',     name: 'Stacks'            },
+  { symbol: 'CFX',     name: 'Conflux'           },
+  { symbol: 'DASH',    name: 'Dash'              },
+  { symbol: 'ZEC',     name: 'Zcash'             },
+  { symbol: 'XLM',     name: 'Stellar'           },
+  // DeFi
+  { symbol: 'LINK',    name: 'Chainlink'         },
+  { symbol: 'UNI',     name: 'Uniswap'           },
+  { symbol: 'AAVE',    name: 'Aave'              },
+  { symbol: 'CRV',     name: 'Curve'             },
+  { symbol: 'INJ',     name: 'Injective'         },
+  { symbol: 'ENS',     name: 'Ethereum Name Svc' },
+  { symbol: 'COMP',    name: 'Compound'          },
+  { symbol: 'LDO',     name: 'Lido DAO'          },
+  { symbol: 'DYDX',    name: 'dYdX'              },
+  { symbol: 'SNX',     name: 'Synthetix'         },
+  { symbol: 'YFI',     name: 'Yearn Finance'     },
+  { symbol: 'UMA',     name: 'UMA'               },
+  { symbol: 'TRB',     name: 'Tellor'            },
+  { symbol: 'LPT',     name: 'Livepeer'          },
+  { symbol: 'NMR',     name: 'Numeraire'         },
+  { symbol: 'AUCTION', name: 'Bounce'            },
+  { symbol: 'KSM',     name: 'Kusama'            },
+  { symbol: 'ZEN',     name: 'Horizen'           },
+  { symbol: 'SSV',     name: 'SSV Network'       },
+  // L2 / Scaling
+  { symbol: 'OP',      name: 'Optimism'          },
+  { symbol: 'ARB',     name: 'Arbitrum'          },
+  // New Narratives
+  { symbol: 'HYPE',    name: 'Hyperliquid'       },
+  { symbol: 'TAO',     name: 'Bittensor'         },
+  { symbol: 'WLD',     name: 'Worldcoin'         },
+  { symbol: 'ORDI',    name: 'ORDI'              },
+  { symbol: 'BERA',    name: 'Berachain'         },
+  { symbol: 'ENA',     name: 'Ethena'            },
+  { symbol: 'JTO',     name: 'Jito'              },
+  { symbol: 'VIRTUAL', name: 'Virtuals Protocol' },
+  { symbol: 'GRASS',   name: 'Grass'             },
+  { symbol: 'RENDER',  name: 'Render'            },
+  { symbol: 'ONDO',    name: 'Ondo Finance'      },
+  // Memes
+  { symbol: 'DOGE',    name: 'Dogecoin'          },
+  { symbol: 'SHIB',    name: 'Shiba Inu'         },
+  { symbol: 'PEPE',    name: 'Pepe'              },
+  { symbol: 'FLOKI',   name: 'Floki'             },
+  { symbol: 'BONK',    name: 'Bonk'              },
+  { symbol: 'WIF',     name: 'dogwifhat'         },
+  { symbol: 'TRUMP',   name: 'TRUMP'             },
+  { symbol: 'MEME',    name: 'Memecoin'          },
+  { symbol: 'BOME',    name: 'Book of Meme'      },
+  { symbol: 'NOT',     name: 'Notcoin'           },
+  // Gaming / Metaverse
+  { symbol: 'GALA',    name: 'Gala'              },
+  { symbol: 'CHZ',     name: 'Chiliz'            },
+  { symbol: 'APE',     name: 'ApeCoin'           },
+  { symbol: 'AXS',     name: 'Axie Infinity'     },
+  { symbol: 'SAND',    name: 'The Sandbox'       },
+  { symbol: 'MANA',    name: 'Decentraland'      },
+  { symbol: 'ENJ',     name: 'Enjin Coin'        },
 ] as const;
 
 export type CoinSymbol = typeof COINS[number]['symbol'];
@@ -1142,6 +1213,68 @@ export function clearCandleCache(): void {
     candleCache.set(key, { ...entry, fetchedAt: 0 });
   }
   candleInFlight.clear();
+}
+
+// ── Market caps from CoinGecko public API ─────────────────────────────────────
+
+let marketCapCache: Map<string, number> | null = null;
+let marketCapFetchedAt = 0;
+const MARKET_CAP_TTL = 5 * 60 * 1000; // 5 min
+
+export async function fetchCoinMarketCaps(): Promise<Map<string, number>> {
+  if (marketCapCache && Date.now() - marketCapFetchedAt < MARKET_CAP_TTL) {
+    return marketCapCache;
+  }
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false',
+      { headers: { accept: 'application/json' } }
+    );
+    const data = await res.json() as { symbol: string; market_cap: number }[];
+    const map = new Map<string, number>();
+    for (const coin of data) {
+      map.set(coin.symbol.toUpperCase(), coin.market_cap);
+    }
+    marketCapCache = map;
+    marketCapFetchedAt = Date.now();
+    return map;
+  } catch {
+    return marketCapCache ?? new Map();
+  }
+}
+
+// ── 24h High/Low from Binance ticker ─────────────────────────────────────────
+
+export interface Ticker24h { high: number; low: number; change: number; }
+
+let ticker24hCache: Map<string, Ticker24h> | null = null;
+let ticker24hFetchedAt = 0;
+const TICKER_TTL = 60 * 1000; // 1 min
+
+export async function fetchCoin24hTickers(
+  coins: readonly { symbol: string }[],
+): Promise<Map<string, Ticker24h>> {
+  if (ticker24hCache && Date.now() - ticker24hFetchedAt < TICKER_TTL) {
+    return ticker24hCache;
+  }
+  const results = await Promise.allSettled(
+    coins.map(c =>
+      bnApi.get('/api/v3/ticker/24hr', { params: { symbol: `${c.symbol}USDT` } })
+        .then(res => ({ symbol: c.symbol, data: res.data }))
+    )
+  );
+  const map = new Map<string, Ticker24h>();
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    const { symbol, data } = r.value as { symbol: string; data: Record<string, string> };
+    const high = parseFloat(data.highPrice ?? '0');
+    const low  = parseFloat(data.lowPrice  ?? '0');
+    if (!high && !low) continue;
+    map.set(symbol, { high, low, change: parseFloat(data.priceChangePercent ?? '0') });
+  }
+  ticker24hCache = map;
+  ticker24hFetchedAt = Date.now();
+  return map;
 }
 
 export type { BTCData, PriceDataPoint, CandleDataPoint };

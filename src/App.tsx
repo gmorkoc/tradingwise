@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
-import { coinglass, BTCData, CoinSymbol, clearCandleCache, COINS } from "./services/coinglass";
-import { AIPredictionPanel } from "./components/AIPredictionPanel";
+import { coinglass, BTCData, CoinSymbol, clearCandleCache, COINS, fetchCoinMarketCaps, fetchCoin24hTickers, Ticker24h } from "./services/coinglass";
 import { ChatInterface } from "./components/ChatInterface";
 import { PriceChart } from "./components/PriceChart";
 import { Drawer } from "./components/Drawer";
@@ -37,22 +36,17 @@ import { PredictionEngine } from "./components/PredictionEngine";
 import { FundingBot } from "./components/FundingBot";
 import { CandleWatcher } from "./components/CandleWatcher";
 import { SectionBanner } from "./components/SectionBanner";
+import { GlobalSearch } from "./components/GlobalSearch";
+import { GlobalMarkets } from "./components/GlobalMarkets";
 import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
 import "./App.css";
 
-type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai";
+type SectionId = "chart" | "heatmap" | "feargreed" | "onchain" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai" | "markets";
 
 const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
   { id: "chart",      labelKey: "nav.chart",      d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
-  {
-    id: "ai",         labelKey: "nav.ai",         requiredTier: "elite",
-    d: [
-      "M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z",
-      "M20 3v4M22 5h-4",
-      "M4 17v2M5 18H3",
-    ],
-  },
+  { id: "candleai",  labelKey: "nav.candleai",   requiredTier: "elite", d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"] },
   {
     id: "feargreed",  labelKey: "nav.feargreed",
     d: ["M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z", "M12 6v6l4 2"],
@@ -66,7 +60,7 @@ const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requir
   { id: "orderflow", labelKey: "nav.orderflow",  d: ["M2 12h4l3-9 4 18 3-9h6"] },
   { id: "signals",   labelKey: "nav.signals",    d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"] },
   { id: "fundingbot", labelKey: "nav.fundingbot", d: ["M19 5L5 19", "M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0", "M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0"] },
-  { id: "candleai",  labelKey: "nav.candleai",   requiredTier: "elite", d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"] },
+  { id: "markets",    labelKey: "nav.markets",    d: ["M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0", "M3.6 9h16.8", "M3.6 15h16.8", "M11.5 3a17 17 0 0 0 0 18", "M12.5 3a17 17 0 0 1 0 18"] },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -251,6 +245,14 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [profileOpen,     setProfileOpen]     = useState(false);
   const [coinPickerOpen,  setCoinPickerOpen]  = useState(false);
+  const [coinSearch,      setCoinSearch]      = useState("");
+  const [globalSearch,    setGlobalSearch]    = useState(false);
+  const [coinMarketCaps,  setCoinMarketCaps]  = useState<Map<string, number>>(new Map());
+  const [coinTickers,     setCoinTickers]     = useState<Map<string, Ticker24h>>(new Map());
+  useEffect(() => {
+    fetchCoinMarketCaps().then(setCoinMarketCaps).catch(() => {});
+    fetchCoin24hTickers(COINS).then(setCoinTickers).catch(() => {});
+  }, []);
   const [mobileNavOpen,   setMobileNavOpen]   = useState(false);
   const [obSize,          setObSize]          = useState({ h: 380, w: 135 });
   const chartWrapRef  = useRef<HTMLDivElement>(null);
@@ -259,7 +261,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const mobileNavOpenRef  = useRef(false);
   mobileNavOpenRef.current = mobileNavOpen;
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
-  const [coinPickerPos, setCoinPickerPos]   = useState({ top: 0, right: 0 });
+  const [coinPickerPos, setCoinPickerPos]   = useState({ top: 0, left: 0 });
 
   const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -290,10 +292,14 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const openCoinPicker = () => {
     if (coinPickerBtnRef.current) {
       const rect = coinPickerBtnRef.current.getBoundingClientRect();
-      setCoinPickerPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+      setCoinPickerPos({ top: rect.bottom + 8, left: rect.left });
     }
-    setCoinPickerOpen(v => !v);
+    setCoinPickerOpen(v => { if (v) setCoinSearch(""); return !v; });
+    fetchCoinMarketCaps().then(setCoinMarketCaps).catch(() => {});
+    fetchCoin24hTickers(COINS).then(setCoinTickers).catch(() => {});
   };
+
+  const closeCoinPicker = () => { setCoinPickerOpen(false); setCoinSearch(""); };
 
   const [leverageOpen, setLeverageOpen] = useState(false);
   const [learnOpen,      setLearnOpen]      = useState(false);
@@ -329,6 +335,18 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  // Global search keyboard shortcut (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setGlobalSearch(v => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   // Close mobile nav when section changes
@@ -501,18 +519,18 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                 )}
                 <span className="nav-icon-wrap">
                   <NavIcon d={item.d} />
-                  {/* Desktop badge — absolute corner of icon */}
-                  {locked ? (
-                    <span className="icon-strip-lock nav-badge--desktop">
-                      <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
-                      </svg>
-                    </span>
-                  ) : item.requiredTier === "elite" && (
-                    <span className="icon-strip-elite-badge nav-badge--desktop">E</span>
-                  )}
                 </span>
                 <span className="icon-strip-label">{t(item.labelKey)}</span>
+                {/* Desktop badge — after label */}
+                {locked ? (
+                  <span className="icon-strip-lock nav-badge--desktop">
+                    <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
+                    </svg>
+                  </span>
+                ) : item.requiredTier === "elite" && (
+                  <span className="icon-strip-elite-badge nav-badge--desktop">E</span>
+                )}
               </button>
             );
           })}
@@ -702,6 +720,14 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {btcData && <span className="price-source-badge">via CoinGlass</span>}
 
           <div className="mch-right">
+            <button className="mch-search-btn" onClick={() => setGlobalSearch(true)} title="Search (⌘K)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <span className="mch-search-label">Search</span>
+              <kbd className="mch-search-kbd">⌘K</kbd>
+            </button>
             <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
             <div className="mch-portfolio" onClick={() => setAssetPanelOpen(v => !v)} title={t("header.openCalculator")}>
               <span className="mch-portfolio-label">{t("header.pnl")}</span>
@@ -761,9 +787,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             </>
           )}
           {activeSection !== "chart" && <SectionBanner section={activeSection} />}
-          {activeSection === "ai" && (
-            <AIPredictionPanel btcData={btcData} coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
-          )}
           {activeSection === "heatmap"   && <LiquidationHeatmap coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
           {activeSection === "feargreed" && <FearGreedGauge />}
           {activeSection === "onchain"   && <OnChainMetrics onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
@@ -781,6 +804,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {activeSection === "signals"   && <PredictionEngine btcData={btcData} coin={coin} livePrice={livePrice} />}
           {activeSection === "fundingbot" && <FundingBot coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
           {activeSection === "candleai"  && <CandleWatcher coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
+          {activeSection === "markets"   && <GlobalMarkets />}
         </div>
 
       </div>
@@ -798,23 +822,85 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
       {coinPickerOpen && ReactDOM.createPortal(
         <>
-          <div className="coin-picker-backdrop" onClick={() => setCoinPickerOpen(false)} />
-          <ul className="coin-picker-menu" style={{ top: coinPickerPos.top, right: coinPickerPos.right }}>
-            {COINS.map(c => (
-              <li
-                key={c.symbol}
-                className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
-                onClick={() => { setCoin(c.symbol); clearCandleCache(); setCoinPickerOpen(false); }}
-              >
-                <span className="coin-picker-item-icon">{COIN_ICONS[c.symbol] ?? c.symbol}</span>
-                <span className="coin-picker-item-name">{c.name}</span>
-                <span className="coin-picker-item-sym">{c.symbol}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
+          <div className="coin-picker-menu" style={{ top: coinPickerPos.top, left: coinPickerPos.left }}>
+            <div className="coin-picker-search-wrap">
+              <svg className="coin-picker-search-icon" width="13" height="13" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                className="coin-picker-search-input"
+                placeholder="Search…"
+                autoFocus
+                value={coinSearch}
+                onChange={e => setCoinSearch(e.target.value)}
+                onClick={e => e.stopPropagation()}
+              />
+              {coinSearch && (
+                <button className="coin-picker-search-clear" onClick={() => setCoinSearch("")}>✕</button>
+              )}
+            </div>
+            <ul className="coin-picker-list">
+              {COINS
+                .filter(c => {
+                  if (!coinSearch) return true;
+                  const q = coinSearch.toLowerCase();
+                  return c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+                })
+                .map(c => {
+                  const mc = coinMarketCaps.get(c.symbol);
+                  const mcLabel = mc == null ? null
+                    : mc >= 1e12 ? `$${(mc / 1e12).toFixed(2)}T`
+                    : mc >= 1e9  ? `$${(mc / 1e9).toFixed(1)}B`
+                    : mc >= 1e6  ? `$${(mc / 1e6).toFixed(0)}M`
+                    : null;
+                  const tk = coinTickers.get(c.symbol);
+                  const fmtP = (n: number) =>
+                    n >= 10000 ? `$${(n / 1000).toFixed(1)}K`
+                    : n >= 1   ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+                    : `$${n.toFixed(4)}`;
+                  return (
+                    <li
+                      key={c.symbol}
+                      className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
+                      onClick={() => { setCoin(c.symbol); clearCandleCache(); closeCoinPicker(); }}
+                    >
+                      <span className="coin-picker-item-icon">{COIN_ICONS[c.symbol] ?? c.symbol[0]}</span>
+                      <span className="coin-picker-item-name">{c.name}</span>
+                      <span className="coin-picker-item-right">
+                        <span className="coin-picker-item-row1">
+                          <span className="coin-picker-item-sym">{c.symbol}</span>
+                          {mcLabel && <span className="coin-picker-item-mc">{mcLabel}</span>}
+                        </span>
+                        <span className="coin-picker-item-hl">
+                          {tk ? (
+                            <>
+                              <span className="coin-picker-hl-high">{fmtP(tk.high)}</span>
+                              <span className="coin-picker-hl-sep">/</span>
+                              <span className="coin-picker-hl-low">{fmtP(tk.low)}</span>
+                            </>
+                          ) : (
+                            <span className="coin-picker-hl-na">N/A</span>
+                          )}
+                        </span>
+                      </span>
+                    </li>
+                  );
+                })
+              }
+            </ul>
+          </div>
         </>,
         document.body
       )}
+
+      <GlobalSearch
+        open={globalSearch}
+        onClose={() => setGlobalSearch(false)}
+        onCoinSelect={c => { setCoin(c); clearCandleCache(); setActiveSection("chart"); }}
+        onSectionSelect={s => setActiveSection(s as SectionId)}
+      />
 
       {assetPanelOpen && (
         <div className="asset-modal-overlay" onClick={() => setAssetPanelOpen(false)}>
