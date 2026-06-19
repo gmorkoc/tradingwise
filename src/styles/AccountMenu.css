@@ -27,7 +27,15 @@
   align-items: center;
   justify-content: center;
   padding: 6px 0;
+  width: 100%;
 }
+@media (min-width: 641px) {
+  .icon-strip:hover .icon-strip-acct {
+    justify-content: flex-start;
+    padding-left: 14px;
+  }
+}
+
 .icon-strip-acct .acct-avatar,
 .icon-strip-acct .acct-signin-btn {
   width: 36px;
