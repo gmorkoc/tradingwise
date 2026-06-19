@@ -1051,6 +1051,199 @@ Respond ONLY with valid JSON:
   }
 }
 
+// ── Multi-timeframe alignment ─────────────────────────────────────────────────
+
+interface MTFBias { label: string; interval: string; bias: "bullish" | "bearish" | "neutral" }
+
+async function fetchMTFBiases(coin: string): Promise<MTFBias[]> {
+  const frames: MTFBias[] = [
+    { label: "1H", interval: "1h",  bias: "neutral" },
+    { label: "4H", interval: "4h",  bias: "neutral" },
+    { label: "1D", interval: "1d",  bias: "neutral" },
+    { label: "1W", interval: "1w",  bias: "neutral" },
+  ];
+  const results = await Promise.allSettled(frames.map(f => coinglass.getCandles(coin, f.interval, 60)));
+  return frames.map((f, i) => {
+    if (results[i].status !== "fulfilled") return f;
+    const candles = (results[i] as PromiseFulfilledResult<CandleDataPoint[]>).value;
+    if (candles.length < 50) return f;
+    const closes  = candles.map(c => c.close);
+    const ema20   = calcEMA(closes, 20);
+    const ema50   = calcEMA(closes, 50);
+    const e20 = ema20[ema20.length - 1], e50 = ema50[ema50.length - 1];
+    const close = closes[closes.length - 1];
+    const bias: MTFBias["bias"] =
+      close > e20 && e20 > e50 ? "bullish" :
+      close < e20 && e20 < e50 ? "bearish" : "neutral";
+    return { ...f, bias };
+  });
+}
+
+function getMTFSummary(biases: MTFBias[]): {
+  htfBias: "bullish" | "bearish" | "neutral";
+  ltfBias: "bullish" | "bearish" | "neutral";
+  direction: "long" | "short" | "wait";
+  explanation: string;
+} {
+  const htf = biases.filter(b => ["4H", "1D", "1W"].includes(b.label));
+  const ltf = biases.filter(b => ["1H"].includes(b.label));
+  const score = (arr: MTFBias[]) =>
+    arr.length ? arr.reduce((s, b) => s + (b.bias === "bullish" ? 1 : b.bias === "bearish" ? -1 : 0), 0) / arr.length : 0;
+  const toBias = (s: number): MTFBias["bias"] =>
+    s >= 0.5 ? "bullish" : s <= -0.5 ? "bearish" : "neutral";
+
+  const htfBias = toBias(score(htf));
+  const ltfBias = toBias(score(ltf));
+
+  if (htfBias === "bullish" && ltfBias === "bullish")
+    return { htfBias, ltfBias, direction: "long",
+      explanation: "All timeframes bullish — strong buy setup. The trend is clear at every level. Enter longs, trail your stop." };
+  if (htfBias === "bearish" && ltfBias === "bearish")
+    return { htfBias, ltfBias, direction: "short",
+      explanation: "All timeframes bearish — strong sell setup. Trend is clear on every level. Short rallies, avoid longs." };
+  if (htfBias === "bullish" && ltfBias === "bearish")
+    return { htfBias, ltfBias, direction: "long",
+      explanation: "HTF uptrend + LTF pullback = buy-the-dip setup. Don't short — wait for the lower timeframe to turn bullish for your entry." };
+  if (htfBias === "bearish" && ltfBias === "bullish")
+    return { htfBias, ltfBias, direction: "short",
+      explanation: "HTF downtrend + LTF bounce = counter-trend rally. This 1H bounce is a shorting opportunity, not a buy. The 4H+ structure wins." };
+  if (htfBias === "bullish")
+    return { htfBias, ltfBias, direction: "long",
+      explanation: "HTF structure is bullish. Lower timeframes are mixed — wait for the 1H to turn bullish before entering a long." };
+  if (htfBias === "bearish")
+    return { htfBias, ltfBias, direction: "short",
+      explanation: "HTF structure is bearish. Lower timeframes are mixed — wait for the 1H to confirm the sell before entering a short." };
+  return { htfBias, ltfBias, direction: "wait",
+    explanation: "No clear trend across timeframes. Choppy market — reduce size or stay flat until higher timeframes align." };
+}
+
+// ── Trade Wizard ─────────────────────────────────────────────────────────────
+
+type WizardIntent = "buy" | "sell" | "long" | "short";
+
+interface WizardLevels {
+  entry: number;
+  stopLoss: number;
+  target: number;
+  rr: number;
+  support: number[];
+  resistance: number[];
+}
+
+interface WizardRec {
+  verdict: "go" | "wait" | "avoid";
+  headline: string;
+  body: string;
+  risk: string | null;
+  levels: WizardLevels | null;
+}
+
+function getWizardRec(
+  intent: WizardIntent,
+  aiRead: AIRead,
+  mtfBiases: MTFBias[],
+  ind: Indicators | null,
+  lastPrice: number | null,
+): WizardRec {
+  const isBull = intent === "buy" || intent === "long";
+  const bias = aiRead.bias;
+  const aligns    = (isBull && bias === "bullish") || (!isBull && bias === "bearish");
+  const conflicts = (isBull && bias === "bearish") || (!isBull && bias === "bullish");
+
+  const mtf = getMTFSummary(mtfBiases);
+  const mtfAligns    = (isBull && mtf.direction === "long")  || (!isBull && mtf.direction === "short");
+  const mtfConflicts = (isBull && mtf.direction === "short") || (!isBull && mtf.direction === "long");
+
+  const confScore  = aiRead.confidence === "high" ? 1 : aiRead.confidence === "medium" ? 0.6 : 0.3;
+  const totalScore = (aligns ? 1 : conflicts ? -1 : 0) * confScore + (mtfAligns ? 0.3 : mtfConflicts ? -0.3 : 0);
+
+  const intentLabel = { buy: "Buy", sell: "Sell", long: "Long", short: "Short" }[intent];
+  const dirLabel    = isBull ? "bullish" : "bearish";
+
+  let risk: string | null = null;
+  if (ind?.rsi != null) {
+    if (isBull  && ind.rsi > 70) risk = `RSI ${ind.rsi.toFixed(0)} — overbought. Consider waiting for a pullback entry.`;
+    else if (!isBull && ind.rsi < 30) risk = `RSI ${ind.rsi.toFixed(0)} — oversold. Watch for a bounce before entering.`;
+  }
+
+  // ── Price levels ──────────────────────────────────────────────────────────
+  let levels: WizardLevels | null = null;
+  if (lastPrice && ind) {
+    const atr = ind.atr ?? lastPrice * 0.005;
+    // Merge AI key levels with indicator S/R, deduplicated and sorted
+    const aiAbove = aiRead.keyLevels.filter(l => l.side === "above").map(l => l.price);
+    const aiBelow = aiRead.keyLevels.filter(l => l.side === "below").map(l => l.price);
+
+    const allResistance = [...new Set([...aiAbove, ...ind.resistance])]
+      .filter(p => p > lastPrice)
+      .sort((a, b) => a - b);
+    const allSupport = [...new Set([...aiBelow, ...ind.support])]
+      .filter(p => p < lastPrice)
+      .sort((a, b) => b - a);
+
+    if (isBull) {
+      const entry   = lastPrice;
+      const nearSup = allSupport[0] ?? lastPrice - atr * 1.5;
+      const stopLoss = nearSup - atr * 0.4;
+      const target   = allResistance[0] ?? lastPrice + atr * 3;
+      const risk_pts = entry - stopLoss;
+      const rr = risk_pts > 0 ? (target - entry) / risk_pts : 0;
+      levels = {
+        entry, stopLoss, target, rr,
+        support: allSupport.slice(0, 2),
+        resistance: allResistance.slice(0, 2),
+      };
+    } else {
+      const entry    = lastPrice;
+      const nearRes  = allResistance[0] ?? lastPrice + atr * 1.5;
+      const stopLoss = nearRes + atr * 0.4;
+      const target   = allSupport[0] ?? lastPrice - atr * 3;
+      const risk_pts = stopLoss - entry;
+      const rr = risk_pts > 0 ? (entry - target) / risk_pts : 0;
+      levels = {
+        entry, stopLoss, target, rr,
+        support: allSupport.slice(0, 2),
+        resistance: allResistance.slice(0, 2),
+      };
+    }
+  }
+
+  if (totalScore >= 0.65) {
+    return {
+      verdict: "go",
+      headline: `${intentLabel} conditions aligned`,
+      body: `${aiRead.confidence.charAt(0).toUpperCase() + aiRead.confidence.slice(1)} conviction ${dirLabel} signal${mtfAligns ? " with full MTF support" : ""}. Setup favors a ${intentLabel.toLowerCase()} entry.`,
+      risk, levels,
+    };
+  }
+  if (totalScore >= 0.25) {
+    return {
+      verdict: "go",
+      headline: `${intentLabel} — partial setup`,
+      body: `Bias leans ${dirLabel} (${aiRead.confidence} confidence) but not all timeframes agree. Consider reduced size and wait for a cleaner trigger.`,
+      risk: risk ?? "Mixed alignment — manage position size carefully.",
+      levels,
+    };
+  }
+  if (totalScore > -0.25) {
+    return {
+      verdict: "wait",
+      headline: bias === "neutral" ? "No clear direction yet" : `${intentLabel} — wait for confirmation`,
+      body: bias === "neutral"
+        ? `Market is ranging. No clear signal for a ${intentLabel.toLowerCase()} here. Wait for a breakout or clearer structure.`
+        : `Bias is ${bias} (${aiRead.confidence} confidence) but ${mtfConflicts ? "HTF structure is opposing" : "timeframes are mixed"}. A confirmed trigger will improve risk/reward.`,
+      risk, levels,
+    };
+  }
+  return {
+    verdict: "avoid",
+    headline: `${intentLabel} goes against the trend`,
+    body: `Current signal shows ${bias} conditions — ${isBull ? "buying or longing" : "selling or shorting"} here puts you against the dominant flow.${mtfConflicts ? " HTF structure confirms the opposing direction." : ""}`,
+    risk: "Counter-trend trades need very tight stops and a clear invalidation level.",
+    levels,
+  };
+}
+
 // ── Mini SVG candlestick ─────────────────────────────────────────────────────
 
 function MiniCandle({ open, high, low, close }: { open: number; high: number; low: number; close: number }) {
@@ -1148,9 +1341,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const forecastTargetRef    = useRef<IPriceLine | null>(null);
   const indRef               = useRef<Indicators | null>(null);
   const macroCtxRef          = useRef<MacroContextData | null>(null);
+  const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
   const [macroCtx, setMacroCtx] = useState<MacroContextData | null>(null);
+  const [wizardIntent, setWizardIntent] = useState<WizardIntent | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const volSeriesRef     = useRef<ISeriesApi<"Histogram", any> | null>(null);
   const bbUpperRef       = useRef<ISeriesApi<"Line", any> | null>(null);
@@ -1726,6 +1921,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [coin]);
 
+  // MTF biases — fetch on coin change
+  useEffect(() => {
+    fetchMTFBiases(coin as string).then(setMtfBiases).catch(() => {});
+    setWizardIntent(null);
+  }, [coin]);
+
   // Run AI + macro fetch when flagged
   useEffect(() => {
     if (!triggerAI.current || candles.length < 20) return;
@@ -2038,6 +2239,43 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 )}
               </div>
 
+              {/* ── Forecast button — always at top when aiRead available ── */}
+              {!aiLoading && aiRead && (
+                <button
+                  className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
+                  onClick={toggleForecast}
+                >
+                  {showForecast ? "✕ Hide Forecast" : "✦ Show Next Move on Chart"}
+                  {showForecast && (
+                    <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
+                  )}
+                </button>
+              )}
+
+              {/* ── MTF Alignment ── */}
+              {mtfBiases.length > 0 && (() => {
+                const mtf = getMTFSummary(mtfBiases);
+                return (
+                  <div className="cw-mtf-panel">
+                    <div className="cw-mtf-header">
+                      <span className="cw-mtf-label">Timeframe Alignment</span>
+                      <span className={`cw-mtf-direction cw-mtf-direction--${mtf.direction}`}>
+                        {mtf.direction === "long" ? "▲ LONG BIAS" : mtf.direction === "short" ? "▼ SHORT BIAS" : "◆ WAIT"}
+                      </span>
+                    </div>
+                    <div className="cw-mtf-chips">
+                      {mtfBiases.map(b => (
+                        <div key={b.label} className={`cw-mtf-chip cw-mtf-chip--${b.bias}`}>
+                          <span className="cw-mtf-chip-tf">{b.label}</span>
+                          <span className="cw-mtf-chip-arrow">{b.bias === "bullish" ? "↑" : b.bias === "bearish" ? "↓" : "→"}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="cw-mtf-explanation">{mtf.explanation}</p>
+                  </div>
+                );
+              })()}
+
               {aiLoading && (
                 <div className="cw-ai-loading">
                   <div className="cw-ai-spinner" />
@@ -2050,21 +2288,54 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   <div className={`cw-bias-bar cw-bias-bar--${aiRead.bias}`}>
                     <span className="cw-bias-label">
                       {aiRead.bias === "bullish" ? "▲ BULLISH BIAS" : aiRead.bias === "bearish" ? "▼ BEARISH BIAS" : "◆ NEUTRAL"}
+                      <span className="cw-bias-interval"> · {interval.label}</span>
                     </span>
                     <span className={`cw-confidence cw-confidence--${aiRead.confidence}`}>
                       {aiRead.confidence.toUpperCase()} CONF
                     </span>
                   </div>
 
-                  <button
-                    className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
-                    onClick={toggleForecast}
-                  >
-                    {showForecast ? "✕ Hide Forecast" : "✦ Show Next Move on Chart"}
-                    {showForecast && (
-                      <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
-                    )}
-                  </button>
+                  {/* Conflict notice — only for sub-MTF intervals (not 1h/4h/1d/1w which are already in the MTF panel) */}
+                  {mtfBiases.length > 0 && !["1h","4h","1d","1w"].includes(interval.value) && (() => {
+                    const mtf = getMTFSummary(mtfBiases);
+                    const aiBull = aiRead.bias === "bullish";
+                    const aiBear = aiRead.bias === "bearish";
+                    const conflicts = (aiBull && mtf.direction === "short") || (aiBear && mtf.direction === "long");
+                    if (!conflicts) return null;
+                    const htfDir = mtf.direction === "long" ? "bullish" : "bearish";
+                    const isCTRBull = aiBull && mtf.direction === "short";
+                    return (
+                      <div className="cw-bias-conflict">
+                        <div className="cw-bias-conflict-header">
+                          <span className="cw-bias-conflict-icon">⚠</span>
+                          <span className="cw-bias-conflict-title">Why you're seeing conflicting signals</span>
+                        </div>
+                        <div className="cw-bias-conflict-rows">
+                          <div className="cw-bias-conflict-row">
+                            <span className="cw-bias-conflict-source">{interval.label} AI</span>
+                            <span className="cw-bias-conflict-read">
+                              Reads <strong>{aiRead.bias}</strong> — based on candlestick patterns and momentum on your current {interval.label} chart
+                            </span>
+                          </div>
+                          <div className="cw-bias-conflict-row">
+                            <span className="cw-bias-conflict-source">HTF Trend</span>
+                            <span className="cw-bias-conflict-read">
+                              Reads <strong>{htfDir}</strong> — based on EMA20/50 structure across 1H · 4H · 1D · 1W
+                            </span>
+                          </div>
+                        </div>
+                        <p className="cw-bias-conflict-note">
+                          Both are technically correct. A {isCTRBull ? "bullish bounce" : "bearish pullback"} can form
+                          inside a larger {htfDir} trend — this is called a <strong>counter-trend move</strong>.{" "}
+                          {isCTRBull
+                            ? "The bounce may be short-lived before sellers reassert control."
+                            : "The dip may be temporary before buyers step back in."}
+                          {" "}Trade with tighter stops and reduced size.
+                        </p>
+                      </div>
+                    );
+                  })()}
+
 
                   {/* ── Macro Context ── */}
                   {macroCtx && (
@@ -2105,6 +2376,98 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     </div>
                   )}
 
+
+                  {/* ── Trade Wizard ── */}
+                  <div className="cw-wizard">
+                    {wizardIntent === null ? (
+                      <>
+                        <div className="cw-wizard-prompt">What's your play?</div>
+                        <div className="cw-wizard-intents">
+                          {(["buy", "sell", "long", "short"] as WizardIntent[]).map(i => (
+                            <button key={i} className="cw-wizard-intent-btn" onClick={() => setWizardIntent(i)}>
+                              <span className="cw-wizard-intent-icon">{i === "buy" ? "↑" : i === "sell" ? "↓" : i === "long" ? "▲" : "▼"}</span>
+                              <span>{i === "buy" ? "Buy" : i === "sell" ? "Sell" : i === "long" ? "Long" : "Short"}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (() => {
+                      const rec = getWizardRec(wizardIntent, aiRead, mtfBiases, ind, lastPrice);
+                      const fmt = (p: number) => "$" + p.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                      const pct = (a: number, b: number) => ((Math.abs(a - b) / b) * 100).toFixed(1) + "%";
+                      return (
+                        <div className={`cw-wizard-rec cw-wizard-rec--${rec.verdict}`}>
+                          <div className="cw-wizard-rec-header">
+                            <span className="cw-wizard-rec-verdict">
+                              {rec.verdict === "go" ? "✅ GO" : rec.verdict === "wait" ? "⏸ WAIT" : "🚫 AVOID"}
+                            </span>
+                            <span className="cw-wizard-rec-headline">{rec.headline}</span>
+                            <button className="cw-wizard-reset-btn" onClick={() => setWizardIntent(null)} title="Change intent">✕</button>
+                          </div>
+                          <p className="cw-wizard-rec-body">{rec.body}</p>
+
+                          {rec.levels && (
+                            <div className="cw-wizard-levels">
+                              <div className="cw-wizard-levels-header">
+                                <span className="cw-wizard-levels-label">Price levels</span>
+                                <span className="cw-wizard-levels-interval">based on {interval.label} chart</span>
+                              </div>
+                              <div className="cw-wizard-level cw-wizard-level--entry">
+                                <span className="cw-wizard-level-tag">Entry</span>
+                                <span className="cw-wizard-level-price">{fmt(rec.levels.entry)}</span>
+                                <span className="cw-wizard-level-sub">market price</span>
+                              </div>
+                              <div className="cw-wizard-level cw-wizard-level--sl">
+                                <span className="cw-wizard-level-tag">Stop Loss</span>
+                                <span className="cw-wizard-level-price">{fmt(rec.levels.stopLoss)}</span>
+                                <span className="cw-wizard-level-sub cw-wizard-level-sub--sl">
+                                  -{pct(rec.levels.entry, rec.levels.stopLoss)}
+                                </span>
+                              </div>
+                              <div className="cw-wizard-level cw-wizard-level--tp">
+                                <span className="cw-wizard-level-tag">Target</span>
+                                <span className="cw-wizard-level-price">{fmt(rec.levels.target)}</span>
+                                <span className="cw-wizard-level-sub cw-wizard-level-sub--tp">
+                                  +{pct(rec.levels.entry, rec.levels.target)}
+                                </span>
+                              </div>
+                              <div className="cw-wizard-level cw-wizard-level--rr">
+                                <span className="cw-wizard-level-tag">R/R</span>
+                                <span className={`cw-wizard-level-price cw-wizard-level-rr-val${rec.levels.rr >= 2 ? "--good" : rec.levels.rr >= 1 ? "--ok" : "--bad"}`}>
+                                  {rec.levels.rr.toFixed(1)}:1
+                                </span>
+                                <span className="cw-wizard-level-sub">{rec.levels.rr >= 2 ? "favorable" : rec.levels.rr >= 1 ? "acceptable" : "tight"}</span>
+                              </div>
+
+                              {/* Key S/R levels */}
+                              {(rec.levels.resistance.length > 0 || rec.levels.support.length > 0) && (
+                                <div className="cw-wizard-sr">
+                                  {rec.levels.resistance.map((r, i) => (
+                                    <div key={"r" + i} className="cw-wizard-sr-row cw-wizard-sr-row--r">
+                                      <span className="cw-wizard-sr-tag">R{i + 1}</span>
+                                      <span className="cw-wizard-sr-price">{fmt(r)}</span>
+                                      <span className="cw-wizard-sr-pct">+{pct(lastPrice!, r)}</span>
+                                    </div>
+                                  ))}
+                                  {rec.levels.support.map((s, i) => (
+                                    <div key={"s" + i} className="cw-wizard-sr-row cw-wizard-sr-row--s">
+                                      <span className="cw-wizard-sr-tag">S{i + 1}</span>
+                                      <span className="cw-wizard-sr-price">{fmt(s)}</span>
+                                      <span className="cw-wizard-sr-pct">-{pct(lastPrice!, s)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {rec.risk && <div className="cw-wizard-rec-risk">⚠ {rec.risk}</div>}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+
                   {/* ── Likely Scenario ── */}
                   {aiRead.scenario && (
                     <div className="cw-scenario">
@@ -2129,23 +2492,27 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     </div>
                   )}
 
-                  <div className="cw-ai-section-label">What smart money is doing</div>
-                  <p className="cw-ai-text">{aiRead.mmReading}</p>
 
-                  <div className="cw-ai-section-label">Next move</div>
-                  <p className="cw-ai-text">{aiRead.nextMove}</p>
+                  <div className="cw-ai-section">
+                    <div className="cw-ai-section-label">What smart money is doing</div>
+                    <p className="cw-ai-text">{aiRead.mmReading}</p>
+                    <div className="cw-ai-section-label">Next move</div>
+                    <p className="cw-ai-text">{aiRead.nextMove}</p>
+                  </div>
 
-                  {aiRead.keyLevels.length > 0 && (
-                    <div className="cw-levels">
-                      <div className="cw-ai-section-label">Key levels</div>
-                      {aiRead.keyLevels.map((lv, i) => (
-                        <div key={i} className={`cw-level-row cw-level-row--${lv.side}`}>
-                          <span className="cw-level-label">{lv.label}</span>
-                          <span className="cw-level-price">${lv.price.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                  {(aiRead.keyLevels.length > 0 || (ind && (ind.resistance.length > 0 || ind.support.length > 0))) && (
+                    <div className="cw-ai-section">
+                      {aiRead.keyLevels.length > 0 && (
+                        <div className="cw-levels">
+                          <div className="cw-ai-section-label">Key levels</div>
+                          {aiRead.keyLevels.map((lv, i) => (
+                            <div key={i} className={`cw-level-row cw-level-row--${lv.side}`}>
+                              <span className="cw-level-label">{lv.label}</span>
+                              <span className="cw-level-price">${lv.price.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )}
 
                   {/* S/R from indicators */}
                   {ind && (ind.resistance.length > 0 || ind.support.length > 0) && (
@@ -2169,6 +2536,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                           <span className="cw-level-price">${s.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
                         </div>
                       ))}
+                    </div>
+                  )}
                     </div>
                   )}
 
