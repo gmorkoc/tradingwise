@@ -2072,7 +2072,10 @@ html[data-theme="light"] .icon-strip-quota-bar {
   .icon-strip .nav-badge--desktop { display: none !important; }
   .icon-strip .nav-badge--mobile {
     display: flex !important;
-    position: static !important;
+    position: absolute !important;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 17px;
     height: 17px;
     border-radius: 50%;
@@ -2082,9 +2085,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
     font-size: 0.52rem;
     font-weight: 900;
     color: #fff;
-    flex-shrink: 0;
-    align-self: center;
-    margin-left: 0;
     box-shadow: 0 0 6px rgba(99,102,241,0.5);
     letter-spacing: 0;
   }
