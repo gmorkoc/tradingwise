@@ -510,17 +510,11 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
                     <span className="icon-strip-elite-badge nav-badge--desktop">E</span>
                   )}
                 </span>
-                {/* Mobile badge — static inline, between icon and label */}
-                {locked ? (
-                  <span className="icon-strip-lock nav-badge--mobile">
-                    <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                      <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/>
-                    </svg>
-                  </span>
-                ) : item.requiredTier === "elite" && (
-                  <span className="icon-strip-elite-badge nav-badge--mobile">E</span>
-                )}
                 <span className="icon-strip-label">{t(item.labelKey)}</span>
+                {/* Mobile badge — far right after label */}
+                {item.requiredTier === "elite" && (
+                  <span className="nav-badge--mobile">E</span>
+                )}
               </button>
             );
           })}

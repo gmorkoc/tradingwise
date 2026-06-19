@@ -1209,7 +1209,7 @@ body {
   height: 22px;
 }
 
-/* Mobile badge is hidden on desktop; desktop badge visible */
+/* Mobile E badge — hidden on desktop */
 .nav-badge--mobile { display: none !important; }
 
 .icon-strip-lock {
@@ -2068,16 +2068,25 @@ html[data-theme="light"] .icon-strip-quota-bar {
     display: none;
   }
 
-  /* Badges: hide absolute desktop version, show static inline mobile version */
+  /* Badges: hide desktop absolute badge, show simple E circle on mobile */
   .icon-strip .nav-badge--desktop { display: none !important; }
   .icon-strip .nav-badge--mobile {
     display: flex !important;
     position: static !important;
-    top: auto !important; left: auto !important; right: auto !important;
-    transform: none !important;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    align-items: center;
+    justify-content: center;
+    font-size: 0.52rem;
+    font-weight: 900;
+    color: #fff;
     flex-shrink: 0;
     align-self: center;
-    margin-left: -8px;
+    margin-left: 0;
+    box-shadow: 0 0 6px rgba(99,102,241,0.5);
+    letter-spacing: 0;
   }
 
   /* ── Divider before bottom section ────────────────────────────────────── */
