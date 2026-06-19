@@ -1329,8 +1329,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
+}
+.nav-icon-wrap svg {
+  width: 26px;
+  height: 26px;
 }
 
 /* Mobile E badge — hidden on desktop */
