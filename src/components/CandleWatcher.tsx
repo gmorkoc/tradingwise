@@ -64,7 +64,9 @@ const INTERVALS: Interval[] = [
   { label: "30m", value: "30m", refresh: 120_000,  limit: 100, durationSec: 1_800   },
   { label: "1h",  value: "1h",  refresh: 300_000,  limit: 100, durationSec: 3_600   },
   { label: "4h",  value: "4h",  refresh: 600_000,  limit: 100, durationSec: 14_400  },
+  { label: "8h",  value: "8h",  refresh: 900_000,  limit: 100, durationSec: 28_800  },
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
+  { label: "1w",  value: "1w",  refresh: 3600_000, limit: 100, durationSec: 604_800 },
 ];
 
 function fmtCountdown(sec: number): string {
@@ -888,6 +890,62 @@ function detectICT(candles: CandleDataPoint[]): ICTResult {
   };
 }
 
+// ── Retest detection ──────────────────────────────────────────────────────────
+
+interface RetestEvent {
+  time: number;
+  price: number;
+  type: "bearish" | "bullish";
+}
+
+function detectRetests(candles: CandleDataPoint[], ict: ICTResult): RetestEvent[] {
+  if (candles.length < 20) return [];
+
+  // Collect significant levels: S/R + liquidity pools + OB midpoints
+  const { support, resistance } = calcSR(candles);
+  const levels: number[] = [
+    ...resistance,
+    ...support,
+    ...ict.liquidityPools.map(lp => lp.price),
+    ...ict.orderBlocks.map(ob => (ob.high + ob.low) / 2),
+  ];
+
+  const tol = 0.009; // 0.9% proximity to level counts as a touch
+  const breakTol = 0.004;
+  const seen = new Set<number>();
+  const retests: RetestEvent[] = [];
+
+  for (const level of levels) {
+    let state: "above" | "below" | null = null;
+    let brokeIdx = -1;
+
+    for (let i = 3; i < candles.length; i++) {
+      const c = candles[i];
+      const aboveNow = c.close > level;
+
+      if (state === null) { state = aboveNow ? "above" : "below"; continue; }
+
+      // Detect clean break below
+      if (state === "above" && c.close < level * (1 - breakTol)) { state = "below"; brokeIdx = i; continue; }
+      // Detect clean break above
+      if (state === "below" && c.close > level * (1 + breakTol)) { state = "above"; brokeIdx = i; continue; }
+
+      if (brokeIdx < 0 || i < brokeIdx + 2) continue;
+
+      // Bearish retest: broke below, wick touches back up to level, closes below
+      if (state === "below" && Math.abs(c.high - level) / level < tol && c.close < level) {
+        if (!seen.has(c.time)) { seen.add(c.time); retests.push({ time: c.time, price: level, type: "bearish" }); brokeIdx = -1; }
+      }
+      // Bullish retest: broke above, wick touches back down to level, closes above
+      if (state === "above" && Math.abs(c.low - level) / level < tol && c.close > level) {
+        if (!seen.has(c.time)) { seen.add(c.time); retests.push({ time: c.time, price: level, type: "bullish" }); brokeIdx = -1; }
+      }
+    }
+  }
+
+  return retests.slice(-8);
+}
+
 // ── AI Analysis ───────────────────────────────────────────────────────────────
 
 async function getMMAnalysis(
@@ -1300,6 +1358,25 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const ict = detectICT(data);
     const ictMarkers: SeriesMarker<UTCTimestamp>[] = [];
 
+    // Retest markers
+    const retestEvents = detectRetests(data, ict);
+    const retestMarkers: SeriesMarker<UTCTimestamp>[] = retestEvents.map(r => {
+      newMap.set(r.time, {
+        comment: r.type === "bearish"
+          ? `Bearish Retest — price broke below $${r.price.toFixed(0)} and is retesting it as resistance. Former support flipped — sellers are defending this level.`
+          : `Bullish Retest — price broke above $${r.price.toFixed(0)} and is retesting it as support. Former resistance flipped — buyers are defending this level.`,
+        type: r.type,
+      });
+      return {
+        time:     r.time as UTCTimestamp,
+        position: r.type === "bearish" ? "aboveBar" : "belowBar",
+        color:    r.type === "bearish" ? "#ef4444" : "#22c55e",
+        shape:    r.type === "bearish" ? "arrowDown" : "arrowUp",
+        text:     r.type === "bearish" ? "Bearish Retest" : "Bull Retest",
+        size: 2,
+      };
+    });
+
     if (candleSeriesRef.current) {
       const addLine = (
         price: number, color: string, lineTitle: string,
@@ -1408,7 +1485,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         text:     d.type === "bull" ? "Bull Div" : "Bear Div",
         size: 1,
       }));
-      const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers]
+      const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers, ...retestMarkers]
         .sort((a, b) => (a.time as number) - (b.time as number));
       divMarkersRef.current.setMarkers(allMarkers);
     }
@@ -1509,13 +1586,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }
 
     const targetColor = isBull ? "#38bdf8" : isBear ? "#a78bfa" : "#94a3b8";
+    const lastClose = candles[candles.length - 1].close;
+    const pctMove = ((targetPrice - lastClose) / lastClose * 100);
+    const pctLabel = (pctMove >= 0 ? "+" : "") + pctMove.toFixed(1) + "%";
     const tl = candleSeriesRef.current.createPriceLine({
       price: targetPrice,
       color: targetColor,
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       axisLabelVisible: true,
-      title: `Target  $${targetPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
+      title: `Target ${pctLabel}  $${targetPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
     });
     forecastTargetRef.current = tl;
 
