@@ -75,6 +75,30 @@ function fmtCountdown(sec: number): string {
   return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
+function dailyCloseInsight(o: number, h: number, l: number, c: number, pct: number): string {
+  const range  = h - l || 1;
+  const body   = Math.abs(c - o);
+  const bodyPct = body / range;
+  const upperWick = (h - Math.max(o, c)) / range;
+  const lowerWick = (Math.min(o, c) - l) / range;
+  const bull = c >= o;
+  const mag  = Math.abs(pct);
+
+  if (bull) {
+    if (bodyPct > 0.7)  return `Dominant bull session — buyers controlled ${(bodyPct*100).toFixed(0)}% of the range with minimal rejection. Strong momentum candle.`;
+    if (upperWick > 0.4) return `Bulls made progress but faced late selling at the highs. Upper wick signals overhead supply — watch for retest.`;
+    if (lowerWick > 0.4) return `Intraday sell-off was fully absorbed and reversed. Demand zone confirmed at the lows — bullish structure intact.`;
+    if (mag > 3) return `Strong bullish close at +${pct.toFixed(2)}% — buyers in full control. Continuation likely if volume holds.`;
+    return `Modest bullish close at +${pct.toFixed(2)}%. Structure favors bulls but momentum is measured — await confirmation.`;
+  } else {
+    if (bodyPct > 0.7)  return `Dominant bear session — sellers controlled ${(bodyPct*100).toFixed(0)}% of the range. Distribution pressure likely ongoing.`;
+    if (lowerWick > 0.4) return `Bears pushed lower but buyers defended the lows. Lower wick hints at support — potential reversal zone forming.`;
+    if (upperWick > 0.4) return `Early buying was rejected hard. Upper wick confirms supply overhead — bearish bias carries into next session.`;
+    if (mag > 3) return `Heavy bearish close at ${pct.toFixed(2)}% — sellers dominant. Risk-off bias until key support is reclaimed.`;
+    return `Mild bearish close at ${pct.toFixed(2)}%. Bears have the edge but conviction is low — watch for early-session direction.`;
+  }
+}
+
 // ── Indicator math ────────────────────────────────────────────────────────────
 
 function calcEMA(values: number[], period: number): number[] {
@@ -318,7 +342,7 @@ function detectPattern(candles: CandleDataPoint[]): Pattern {
 
   // Inside bar
   if (c0.high < c1.high && c0.low > c1.low)
-    return { name: "Inside Bar", type: "neutral", emoji: "🔲", desc: "Price coiled inside the prior candle's range — compression before expansion, breakout direction is the key" };
+    return { name: "Inside The Candle", type: "neutral", emoji: "🔲", desc: "Price coiled inside the prior candle's range — compression before expansion, breakout direction is the key" };
 
   // Spinning top
   if (body0 / range0 < 0.3 && upperWick0 > body0 && lowerWick0 > body0)
@@ -472,7 +496,7 @@ function CandleTapeRow({ candle, prev1, prev2, isLast, isNew }: {
   const time = new Date(Number(candle.time) * 1000);
   const hhmm = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   return (
-    <div className={`cw-tape-row cw-tape-row--${pattern.type}${isLast ? " cw-tape-row--latest" : ""}${isNew ? " cw-tape-row--new" : ""}`}>
+    <div className={`cw-tape-row cw-tape-row--${pattern.type}${isLast ? ` cw-tape-row--latest cw-tape-row--latest-${bull ? "bull" : "bear"}` : ""}${isNew ? " cw-tape-row--new" : ""}`}>
       <div className="cw-tape-time">{hhmm}</div>
       <div className="cw-tape-candle">
         <MiniCandle open={candle.open} high={candle.high} low={candle.low} close={candle.close} />
@@ -515,6 +539,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [candleCountdown, setCandleCountdown] = useState<string>("");
   const [dailyCountdown, setDailyCountdown]   = useState<string>("");
+  const [dailyCloseBanner, setDailyCloseBanner] = useState<{
+    direction: "bullish" | "bearish";
+    open: number; close: number; high: number; low: number;
+    changePct: number; dismissed: boolean;
+  } | null>(null);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -715,6 +744,44 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, []);
 
+  // Daily close banner — show for 1 hour after UTC midnight
+  useEffect(() => {
+    const BINANCE_SYM: Record<string, string> = {
+      BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
+      DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
+      NEAR: "NEARUSDT", RENDER: "RENDERUSDT", ZEC: "ZECUSDT",
+    };
+    const sym = BINANCE_SYM[coin as string] ?? `${coin}USDT`;
+    const dismissKey = `daily-banner-dismissed-${coin}`;
+
+    const check = async () => {
+      const now = new Date();
+      const minsSinceMidnight = now.getUTCHours() * 60 + now.getUTCMinutes();
+      if (minsSinceMidnight >= 60) { setDailyCloseBanner(null); return; }
+
+      const todayStr = now.toISOString().slice(0, 10);
+      if (sessionStorage.getItem(dismissKey) === todayStr) return;
+
+      try {
+        const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1d&limit=2`);
+        const data = await res.json();
+        const c = data[0];
+        const open = parseFloat(c[1]), high = parseFloat(c[2]);
+        const low = parseFloat(c[3]), close = parseFloat(c[4]);
+        setDailyCloseBanner({
+          direction: close >= open ? "bullish" : "bearish",
+          open, high, low, close,
+          changePct: ((close - open) / open) * 100,
+          dismissed: false,
+        });
+      } catch { /* ignore */ }
+    };
+
+    check();
+    const id = setInterval(check, 60_000);
+    return () => clearInterval(id);
+  }, [coin]);
+
   // Run AI when flagged
   useEffect(() => {
     if (!triggerAI.current || candles.length < 20) return;
@@ -815,6 +882,43 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             </button>
           </div>
         </div>
+
+        {/* ── Daily close banner ── */}
+        {dailyCloseBanner && !dailyCloseBanner.dismissed && (
+          <div className={`cw-daily-banner cw-daily-banner--${dailyCloseBanner.direction}`}>
+            <div className="cw-daily-banner-icon">
+              {dailyCloseBanner.direction === "bullish" ? "📈" : "📉"}
+            </div>
+            <div className="cw-daily-banner-body">
+              <div className="cw-daily-banner-title">
+                Daily Close &nbsp;·&nbsp;
+                <span className={`cw-daily-banner-dir cw-daily-banner-dir--${dailyCloseBanner.direction}`}>
+                  {dailyCloseBanner.direction === "bullish" ? "Bullish" : "Bearish"}
+                </span>
+                <span className={`cw-daily-banner-pct cw-daily-banner-pct--${dailyCloseBanner.direction}`}>
+                  {dailyCloseBanner.changePct >= 0 ? "+" : ""}{dailyCloseBanner.changePct.toFixed(2)}%
+                </span>
+              </div>
+              <div className="cw-daily-banner-stats">
+                <span>O <strong>${dailyCloseBanner.open.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                <span>H <strong>${dailyCloseBanner.high.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                <span>L <strong>${dailyCloseBanner.low.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+                <span>C <strong>${dailyCloseBanner.close.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
+              </div>
+              <div className="cw-daily-banner-insight">
+                {dailyCloseInsight(dailyCloseBanner.open, dailyCloseBanner.high, dailyCloseBanner.low, dailyCloseBanner.close, dailyCloseBanner.changePct)}
+              </div>
+            </div>
+            <button
+              className="cw-daily-banner-close"
+              onClick={() => {
+                const todayStr = new Date().toISOString().slice(0, 10);
+                sessionStorage.setItem(`daily-banner-dismissed-${coin}`, todayStr);
+                setDailyCloseBanner(prev => prev ? { ...prev, dismissed: true } : null);
+              }}
+            >✕</button>
+          </div>
+        )}
 
         {/* ── Main grid ── */}
         <div className="cw-grid">
