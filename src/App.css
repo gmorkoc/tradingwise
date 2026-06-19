@@ -1824,6 +1824,16 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .mch-stat:first-child {
   margin-left: 8px;
 }
+
+/* Price stat visible only on mobile */
+.mch-stat--price-mobile {
+  display: none;
+}
+@media (max-width: 640px) {
+  .mch-stat--price-mobile {
+    display: flex;
+  }
+}
 .mch-stat-label {
   font-size: 0.65rem;
   color: var(--color-text-muted);
@@ -1961,6 +1971,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .mch-portfolio-value.positive {
   color: var(--color-success);
 }
+.mch-portfolio-icon { display: none; }
+
 .mch-portfolio-value.negative {
   color: var(--color-danger);
 }
@@ -2431,7 +2443,30 @@ html[data-theme="light"] .icon-strip-quota-bar {
     padding-left: 6px;
     flex-shrink: 0;
     order: 2;
+    gap: 5px;
   }
+
+  /* Icon-only buttons on mobile — uniform 32×32 squares */
+  .mch-search-btn,
+  .alerts-bell,
+  .mch-portfolio {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    flex-shrink: 0;
+  }
+
+  .mch-search-label,
+  .mch-search-kbd,
+  .mch-alerts-label,
+  .mch-portfolio-label,
+  .mch-portfolio-value { display: none; }
+
+  .mch-portfolio-icon { display: block; }
 
   .price-source-badge {
     order: 3;

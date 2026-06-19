@@ -633,6 +633,15 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
               const lsSignal   = ls >= 1 ? "bull" : "bear";
               return (
                 <>
+                  {(livePrice ?? btcData.price) && (
+                    <div className="mch-stat mch-stat--price-mobile">
+                      <span className="mch-stat-label">{coin}/USD</span>
+                      <span className="mch-stat-value">
+                        ${(livePrice ?? btcData.price!).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                      </span>
+                      <span className="mch-stat-signal mch-stat-signal--neutral">Binance</span>
+                    </div>
+                  )}
                   <div className="mch-stat">
                     <span className="mch-stat-label">{t("stats.liqAbove")}</span>
                     <span className="mch-stat-value negative">
@@ -725,7 +734,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
 
           <div className="mch-right">
             <button className="mch-search-btn" onClick={() => setGlobalSearch(true)} title="Search (⌘K)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
@@ -734,6 +743,9 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             </button>
             <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
             <div className="mch-portfolio" onClick={() => setAssetPanelOpen(v => !v)} title={t("header.openCalculator")}>
+              <svg className="mch-portfolio-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
               <span className="mch-portfolio-label">{t("header.pnl")}</span>
               <span className={`mch-portfolio-value${profitLoss >= 0 ? " positive" : " negative"}`}>
                 {btcAmountValue > 0 ? `${profitLoss >= 0 ? "+" : ""}${formatCurrency(profitLoss)}` : "—"}
