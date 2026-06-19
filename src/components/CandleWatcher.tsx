@@ -939,7 +939,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               {loading && <div className="cw-chart-loader">Loading candles…</div>}
               <button
                 className="cw-reset-view-btn"
-                onClick={() => chartRef.current?.timeScale().fitContent()}
+                onClick={() => {
+                  chartRef.current?.timeScale().fitContent();
+                  chartRef.current?.priceScale("right").applyOptions({ autoScale: true });
+                }}
                 title="Reset view"
               >
                 Reset
