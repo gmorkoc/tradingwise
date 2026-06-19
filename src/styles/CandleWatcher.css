@@ -299,6 +299,38 @@
   z-index: 5;
 }
 
+.cw-reset-view-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.cw-reset-view-btn::before {
+  content: '⤢';
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.cw-reset-view-btn:hover {
+  opacity: 1;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
 /* ── Indicator pills ─────────────────────────────────────────────────────── */
 
 .cw-pills {

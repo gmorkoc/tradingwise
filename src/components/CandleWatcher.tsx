@@ -937,6 +937,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           <div className="cw-left">
             <div className="cw-chart-wrap" ref={chartContainerRef}>
               {loading && <div className="cw-chart-loader">Loading candles…</div>}
+              <button
+                className="cw-reset-view-btn"
+                onClick={() => chartRef.current?.timeScale().fitContent()}
+                title="Reset view"
+              >
+                Reset
+              </button>
             </div>
 
             {/* Indicator pills */}
