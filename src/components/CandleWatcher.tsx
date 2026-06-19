@@ -61,8 +61,10 @@ interface AIRead {
 const INTERVALS: Interval[] = [
   { label: "1m",  value: "1m",  refresh: 30_000,   limit: 100, durationSec: 60      },
   { label: "5m",  value: "5m",  refresh: 60_000,   limit: 100, durationSec: 300     },
+  { label: "15m", value: "15m", refresh: 60_000,   limit: 100, durationSec: 900     },
   { label: "30m", value: "30m", refresh: 120_000,  limit: 100, durationSec: 1_800   },
   { label: "1h",  value: "1h",  refresh: 300_000,  limit: 100, durationSec: 3_600   },
+  { label: "2h",  value: "2h",  refresh: 300_000,  limit: 100, durationSec: 7_200   },
   { label: "4h",  value: "4h",  refresh: 600_000,  limit: 100, durationSec: 14_400  },
   { label: "8h",  value: "8h",  refresh: 900_000,  limit: 100, durationSec: 28_800  },
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
