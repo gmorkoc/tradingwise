@@ -75,6 +75,16 @@ function fmtCountdown(sec: number): string {
   return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
+function fmtCountdownFull(sec: number): string {
+  if (sec <= 0) return "closing…";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;
+  if (m > 0) return `${m}m ${String(s).padStart(2,"0")}s`;
+  return `${s}s`;
+}
+
 function dailyCloseInsight(o: number, h: number, l: number, c: number, pct: number): string {
   const range  = h - l || 1;
   const body   = Math.abs(c - o);
@@ -737,7 +747,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const tick = () => {
       const now      = Date.now();
       const midnight = Math.ceil(now / 86_400_000) * 86_400_000;
-      setDailyCountdown(fmtCountdown(Math.max(0, Math.floor((midnight - now) / 1000))));
+      setDailyCountdown(fmtCountdownFull(Math.max(0, Math.floor((midnight - now) / 1000))));
     };
     tick();
     const id = setInterval(tick, 1000);

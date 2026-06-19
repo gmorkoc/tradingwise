@@ -93,28 +93,61 @@
 }
 
 .cw-candle-close--daily {
-  border-color: rgba(245,158,11,0.3);
-  background: rgba(245,158,11,0.07);
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 10px;
+  border-color: rgba(245,158,11,0.35);
+  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06));
+  box-shadow: 0 0 12px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer sweep on the daily close pill */
+.cw-candle-close--daily::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.18) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: cw-daily-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+@keyframes cw-daily-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Clock icon before label */
+.cw-candle-close--daily .cw-candle-close-label::before {
+  content: '⏳';
+  font-size: 0.7rem;
+  margin-right: 4px;
 }
 
 .cw-candle-close-label {
-  font-size: 0.55rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: rgba(245,158,11,0.75);
 }
 
 .cw-candle-close-value {
-  font-size: 0.8rem;
-  font-weight: 800;
+  font-size: 0.82rem;
+  font-weight: 900;
   color: #818cf8;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
 
 .cw-candle-close--daily .cw-candle-close-value {
-  color: #f59e0b;
+  color: #fbbf24;
+  font-size: 0.95rem;
+  text-shadow: 0 0 12px rgba(251,191,36,0.5);
 }
 
 .cw-updated {
@@ -640,10 +673,10 @@
 /* Each row */
 .cw-tape-row {
   display: grid;
-  grid-template-columns: 34px 20px 1fr auto;
+  grid-template-columns: 38px 24px 1fr auto;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 11px 14px;
   border-radius: 10px;
   border: 1px solid var(--color-border);
   background: var(--color-input-bg);
@@ -726,7 +759,7 @@
 }
 
 .cw-tape-time {
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-align: right;
@@ -753,7 +786,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.74rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--color-text);
   white-space: nowrap;
@@ -763,7 +796,7 @@
 }
 
 .cw-tape-emoji {
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -789,7 +822,7 @@
 }
 
 .cw-tape-desc {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   color: var(--color-text-secondary);
   line-height: 1.4;
   white-space: nowrap;

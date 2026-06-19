@@ -1209,6 +1209,9 @@ body {
   height: 22px;
 }
 
+/* Mobile badge is hidden on desktop; desktop badge visible */
+.nav-badge--mobile { display: none !important; }
+
 .icon-strip-lock {
   position: absolute;
   top: -3px;
@@ -2065,13 +2068,16 @@ html[data-theme="light"] .icon-strip-quota-bar {
     display: none;
   }
 
-  /* Badges: top-left corner of icon on mobile — no transforms, iOS-safe */
-  .icon-strip .icon-strip-elite-badge,
-  .icon-strip .icon-strip-lock {
-    top: -2px;
-    left: -2px;
-    right: auto;
-    transform: none;
+  /* Badges: hide absolute desktop version, show static inline mobile version */
+  .icon-strip .nav-badge--desktop { display: none !important; }
+  .icon-strip .nav-badge--mobile {
+    display: flex !important;
+    position: static !important;
+    top: auto !important; left: auto !important; right: auto !important;
+    transform: none !important;
+    flex-shrink: 0;
+    align-self: center;
+    margin-left: -8px;
   }
 
   /* ── Divider before bottom section ────────────────────────────────────── */
