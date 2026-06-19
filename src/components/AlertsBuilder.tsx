@@ -75,9 +75,9 @@ function metricTKey(key: MetricKey): string {
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
-interface Props { btcData: Partial<BTCData> | null }
+interface Props { btcData: Partial<BTCData> | null; visible?: boolean }
 
-export function AlertsBuilder({ btcData }: Props) {
+export function AlertsBuilder({ btcData, visible = true }: Props) {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<AlertGroup[]>(loadGroups);
   const [openIds, setOpenIds] = useState<Set<string>>(() => {
@@ -168,6 +168,8 @@ export function AlertsBuilder({ btcData }: Props) {
     const perm = await Notification.requestPermission();
     setNotifPerm(perm);
   };
+
+  if (!visible) return null;
 
   return (
     <div className="alerts-card">
