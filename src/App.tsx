@@ -12,13 +12,13 @@ import { LearnSection } from "./components/LearnSection";
 import { NewsTicker } from "./components/NewsTicker";
 import { LeveragePopup } from "./components/LeveragePopup";
 import { CoinHintzLogo } from "./components/CoinHintzLogo";
+import { PriceAlerts } from "./components/PriceAlerts";
 import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
 import { GannAnalysis } from "./components/GannAnalysis";
 import { HTFAnalysis } from "./components/HTFAnalysis";
 import { FearGreedGauge } from "./components/FearGreedGauge";
 import { OnChainMetrics } from "./components/OnChainMetrics";
-import { AlertsBuilder } from "./components/AlertsBuilder";
 import { OrderBook } from "./components/OrderBook";
 import { ETFInflows } from "./components/ETFInflows";
 import { PositionFlows } from "./components/PositionFlows";
@@ -41,7 +41,7 @@ import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
 import "./App.css";
 
-type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "alerts" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai";
+type SectionId = "chart" | "ai" | "heatmap" | "feargreed" | "onchain" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai";
 
 const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requiredTier?: Tier; hidden?: boolean }[] = [
   { id: "chart",      labelKey: "nav.chart",      d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"] },
@@ -60,7 +60,6 @@ const NAV_ITEMS: { id: SectionId; labelKey: string; d: string | string[]; requir
   { id: "heatmap",   labelKey: "nav.heatmap",    requiredTier: "elite", d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"] },
   { id: "onchain",   labelKey: "nav.onchain",    requiredTier: "elite", d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" },
   { id: "gann",      labelKey: "nav.gann",       requiredTier: "elite", hidden: true, d: "M22 12h-4l-3 9L9 3l-3 9H2" },
-  { id: "alerts",    labelKey: "nav.alerts",     hidden: true, d: ["M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9", "M13.73 21a2 2 0 01-3.46 0"] },
   { id: "etf",       labelKey: "nav.etf",        d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"] },
   { id: "positions", labelKey: "nav.positions",  d: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2", "M23 21v-2a4 4 0 00-3-3.87", "M16 3.13a4 4 0 010 7.75", "M9 7a4 4 0 100 8 4 4 0 000-8z"] },
   { id: "htf",       labelKey: "nav.htf",        requiredTier: "elite", d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"] },
@@ -703,17 +702,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {btcData && <span className="price-source-badge">via CoinGlass</span>}
 
           <div className="mch-right">
-            <button
-              className={`mch-alerts-btn${activeSection === "alerts" ? " mch-alerts-btn--active" : ""}`}
-              onClick={() => setActiveSection(s => s === "alerts" ? "chart" : "alerts")}
-              title="Alert Builder"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 01-3.46 0"/>
-              </svg>
-              <span>Alerts</span>
-            </button>
+            <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
             <div className="mch-portfolio" onClick={() => setAssetPanelOpen(v => !v)} title={t("header.openCalculator")}>
               <span className="mch-portfolio-label">{t("header.pnl")}</span>
               <span className={`mch-portfolio-value${profitLoss >= 0 ? " positive" : " negative"}`}>
@@ -778,7 +767,6 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           {activeSection === "heatmap"   && <LiquidationHeatmap coin={coin} theme={theme} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
           {activeSection === "feargreed" && <FearGreedGauge />}
           {activeSection === "onchain"   && <OnChainMetrics onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
-          <AlertsBuilder btcData={btcData} visible={activeSection === "alerts"} />
           {activeSection === "gann"      && (
             <BlurGate requiredTier="elite" featureName="Gann Analysis" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade}>
               <GannAnalysis coin={coin} currentPrice={btcData?.price} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
