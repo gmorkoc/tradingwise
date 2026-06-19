@@ -2245,7 +2245,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
                   onClick={toggleForecast}
                 >
-                  {showForecast ? "✕ Hide Forecast" : "✦ Show Next Move on Chart"}
+                  {showForecast ? "✕ Hide Prediction" : "✦ Predict Next Move on Chart"}
                   {showForecast && (
                     <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
                   )}
