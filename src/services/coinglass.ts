@@ -23,9 +23,10 @@ addRetry(api);
 // Binance public market data CDN — geo-unrestricted, open CORS
 const bnApi = axios.create({
   baseURL: 'https://data-api.binance.vision',
-  timeout: 10000,
+  timeout: 20000,
   headers: { accept: 'application/json' },
 });
+addRetry(bnApi);
 
 
 interface CMEGapZone { low: number; high: number; }
@@ -213,7 +214,10 @@ async function fetchBinanceKlines(
 
   const promise = (async (): Promise<CandleDataPoint[]> => {
     try { return await doFetch(); }
-    catch { return cached?.data ?? []; }
+    catch (err) {
+      if (cached?.data.length) return cached.data;  // serve stale rather than failing
+      throw err;                                      // no cache — let caller handle it
+    }
     finally { candleInFlight.delete(key); }
   })();
 
@@ -1053,6 +1057,82 @@ export async function getMultiCoinLSSnapshot(
       lsRatio: shortPct > 0 ? longPct / shortPct : 1,
     };
   });
+}
+
+// ── Macro context for forecast ────────────────────────────────────────────────
+
+export interface MacroContextData {
+  btcDominance:   number | null;   // e.g. 54.2 (%)
+  fundingRate:    number | null;   // raw 8h rate, e.g. 0.0001
+  oiDelta:        number | null;   // % OI change last period
+  marketStructure: "uptrend" | "downtrend" | "ranging" | null;
+}
+
+export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promise<MacroContextData> {
+  const sym = toCgSymbol(coin);
+
+  const [dominanceRes, fundingRes, oiRes, dailyRes] = await Promise.allSettled([
+    fetch('https://api.coingecko.com/api/v3/global').then(r => r.json()),
+    api.get('futures/funding-rate/history',  { params: { symbol: sym, interval: '8h', limit: 2,  exchange: 'Binance' } }),
+    api.get('futures/open-interest/history', { params: { symbol: sym, interval: '4h', limit: 3,  exchange: 'Binance' } }),
+    fetchBinanceKlines(coin, '1d', 60),
+  ]);
+
+  // BTC Dominance
+  let btcDominance: number | null = null;
+  if (dominanceRes.status === 'fulfilled') {
+    const raw = dominanceRes.value?.data?.btc_dominance;
+    if (raw != null) btcDominance = Math.round(raw * 10) / 10;
+  }
+
+  // Funding rate (latest)
+  let fundingRate: number | null = null;
+  if (fundingRes.status === 'fulfilled' && fundingRes.value?.data?.code === '0') {
+    const d = fundingRes.value.data.data ?? [];
+    if (d.length) fundingRate = parseFloat(d[0]?.close ?? '');
+    if (!isFinite(fundingRate!)) fundingRate = null;
+  }
+
+  // OI delta (% change between latest two points)
+  let oiDelta: number | null = null;
+  if (oiRes.status === 'fulfilled' && oiRes.value?.data?.code === '0') {
+    const d = oiRes.value.data.data ?? [];
+    if (d.length >= 2) {
+      const curr = parseFloat(d[0]?.close ?? '0');
+      const prev = parseFloat(d[1]?.close ?? '0');
+      if (prev > 0) oiDelta = Math.round(((curr - prev) / prev) * 10000) / 100;
+    }
+  }
+
+  // Market structure from daily EMA20 vs EMA50
+  let marketStructure: MacroContextData['marketStructure'] = null;
+  if (dailyRes.status === 'fulfilled' && dailyRes.value.length >= 50) {
+    const closes = dailyRes.value.map(c => c.close);
+    const ema20arr = closes.map((_, i) => {
+      if (i < 19) return NaN;
+      const k = 2 / 21;
+      let e = closes.slice(0, 20).reduce((s, v) => s + v, 0) / 20;
+      for (let j = 20; j <= i; j++) e = closes[j] * k + e * (1 - k);
+      return e;
+    });
+    const ema50arr = closes.map((_, i) => {
+      if (i < 49) return NaN;
+      const k = 2 / 51;
+      let e = closes.slice(0, 50).reduce((s, v) => s + v, 0) / 50;
+      for (let j = 50; j <= i; j++) e = closes[j] * k + e * (1 - k);
+      return e;
+    });
+    const lastClose = closes[closes.length - 1];
+    const e20 = ema20arr[ema20arr.length - 1];
+    const e50 = ema50arr[ema50arr.length - 1];
+    if (!isNaN(e20) && !isNaN(e50)) {
+      if (lastClose > e20 && e20 > e50)       marketStructure = 'uptrend';
+      else if (lastClose < e20 && e20 < e50)  marketStructure = 'downtrend';
+      else                                     marketStructure = 'ranging';
+    }
+  }
+
+  return { btcDominance, fundingRate, oiDelta, marketStructure };
 }
 
 export function clearCandleCache(): void {

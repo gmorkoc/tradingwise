@@ -1728,6 +1728,33 @@ html[data-theme="light"] .icon-strip-quota-bar {
   flex-shrink: 0;
 }
 
+.mch-alerts-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s, color 0.18s;
+  white-space: nowrap;
+}
+.mch-alerts-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.mch-alerts-btn--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
 .mch-portfolio {
   display: flex;
   flex-direction: column;

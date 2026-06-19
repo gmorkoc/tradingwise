@@ -3,22 +3,28 @@
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 14px;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
   border: 1px solid var(--color-border);
   background: var(--color-input-bg);
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     border-color 0.15s,
     color 0.15s,
-    background 0.15s;
-  padding: 0;
+    box-shadow 0.15s;
 }
 
-.alerts-bell:hover,
+.alerts-bell:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--color-text);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
 .alerts-bell--active {
   border-color: rgba(56, 189, 248, 0.45);
   color: #38bdf8;
