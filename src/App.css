@@ -2468,11 +2468,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
 
   .mch-portfolio-icon { display: block; }
 
-  .price-source-badge {
-    order: 3;
-    align-self: center;
-    margin: 2px 0 2px 4px;
-  }
+  .price-source-badge { display: none; }
 
   .mch-stats {
     order: 4;
