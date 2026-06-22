@@ -138,6 +138,22 @@
   line-height: 1.45;
 }
 
+.pwa-install-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: opacity 0.15s;
+}
+.pwa-install-btn:hover { opacity: 0.88; }
+
 .pwa-footer {
   margin-top: 18px;
   text-align: center;
