@@ -40,6 +40,8 @@ import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
 import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
+import { ContactForm } from "./components/ContactForm";
+import { ResolutionBanner } from "./components/ResolutionBanner";
 import "./App.css";
 
 type SectionId = "chart" | "heatmap" | "feargreed" | "onchain" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai" | "markets";
@@ -244,6 +246,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
   const [assetPanelOpen,  setAssetPanelOpen]  = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [profileOpen,     setProfileOpen]     = useState(false);
+  const [contactOpen,     setContactOpen]     = useState(false);
   const [coinPickerOpen,  setCoinPickerOpen]  = useState(false);
   const [coinSearch,      setCoinSearch]      = useState("");
   const [globalSearch,    setGlobalSearch]    = useState(false);
@@ -469,8 +472,10 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
         onOpenTutorials={() => setTutorialOpen(true)}
         onOpenProfile={() => { setDrawerOpen(false); setProfileOpen(true); }}
         onOpenWizard={() => setShowOnboarding(true)}
+        onOpenContact={() => { setDrawerOpen(false); setContactOpen(true); }}
         traderLevel={profile?.trader_level ?? null}
       />
+      <ContactForm isOpen={contactOpen} onClose={() => setContactOpen(false)} />
       <LearnSection isOpen={learnOpen} onClose={() => setLearnOpen(false)} />
       {tutorialOpen && <TutorialPage onClose={() => setTutorialOpen(false)} />}
       <LeveragePopup
@@ -1143,6 +1148,7 @@ function AppGate() {
       />
       {showAuth    && <AuthModal    onClose={() => setShowAuth(false)} />}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} onOpenAuth={() => { setShowUpgrade(false); setShowAuth(true); }} />}
+      <ResolutionBanner />
     </>
   );
 }

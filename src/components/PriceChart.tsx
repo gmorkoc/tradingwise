@@ -2439,16 +2439,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       </div>
       </div>
 
-      {banner && (
+      {banner && isPaid && (
         <div className={`interval-banner interval-banner--${banner.sentiment}`}>
           <div className="interval-banner-header">
             <span className="interval-banner-title">{banner.title}</span>
-            <button
-              className="interval-banner-close"
-              onClick={() => setBanner(null)}
-            >
-              ✕
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
+              <button
+                className="interval-banner-close"
+                onClick={() => setBanner(null)}
+              >
+                ✕
+              </button>
+            </div>
           </div>
           <p className="interval-banner-body">{banner.body}</p>
         </div>
@@ -2577,7 +2580,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </button>
       </div>
 
-      {!loading && exceeded && !isPaid ? (
+      {!loading && !isElite ? (
+        <div className="pattern-insight pattern-insight--neutral">
+          <div className="pattern-insight-header">
+            <span className="pattern-insight-badge">{t("chart.aiPatternBadge")}</span>
+            <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
+          </div>
+          <div className="pattern-insight-elite-gate">
+            <span className="pattern-insight-elite-lock">🔒</span>
+            <p className="pattern-insight-elite-msg">
+              AI Pattern Analysis is an <strong>Elite</strong> feature.{" "}
+              <button className="pattern-insight-elite-btn" onClick={onOpenUpgrade}>Upgrade to Elite</button>
+            </p>
+          </div>
+        </div>
+      ) : !loading && exceeded ? (
         <div className="pattern-insight pattern-insight--neutral">
           <div className="pattern-insight-header">
             <span className="pattern-insight-badge">{t("chart.aiPatternBadge")}</span>

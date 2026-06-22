@@ -16,6 +16,7 @@ interface DrawerProps {
   onOpenProfile: () => void;
   onOpenWizard: () => void;
   onOpenTutorials: () => void;
+  onOpenContact: () => void;
   traderLevel: string | null;
 }
 
@@ -33,7 +34,7 @@ const DOC_KEYS = [
 
 export const Drawer: React.FC<DrawerProps> = ({
   isOpen, onClose, theme, setTheme, autoRefresh, setAutoRefresh,
-  onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, traderLevel,
+  onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, traderLevel,
 }) => {
   const { t } = useTranslation();
   const [guideOpen, setGuideOpen] = useState(false);
@@ -146,6 +147,15 @@ export const Drawer: React.FC<DrawerProps> = ({
                 ))}
               </div>
             )}
+          </section>
+
+          {/* ── Support ───────────────────────────────────── */}
+          <section className="drawer-section">
+            <h4 className="drawer-section-title">Support</h4>
+            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenContact(); }}>
+              <span className="drawer-row-label">Contact / Feedback</span>
+              <span className="drawer-row-right"><span className="drawer-row-icon">✉️</span><span className="drawer-row-arrow">›</span></span>
+            </div>
           </section>
 
           {/* ── Footer ────────────────────────────────────── */}

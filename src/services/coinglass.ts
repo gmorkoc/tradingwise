@@ -1257,20 +1257,22 @@ export async function fetchCoin24hTickers(
   if (ticker24hCache && Date.now() - ticker24hFetchedAt < TICKER_TTL) {
     return ticker24hCache;
   }
-  const results = await Promise.allSettled(
-    coins.map(c =>
-      bnApi.get('/api/v3/ticker/24hr', { params: { symbol: `${c.symbol}USDT` } })
-        .then(res => ({ symbol: c.symbol, data: res.data }))
-    )
-  );
+  // Single batch request — one connection instead of one per coin.
+  // Binance silently skips symbols that don't exist (no CORS errors from 400s).
+  const symbolList = JSON.stringify(coins.map(c => `${c.symbol}USDT`));
   const map = new Map<string, Ticker24h>();
-  for (const r of results) {
-    if (r.status !== 'fulfilled') continue;
-    const { symbol, data } = r.value as { symbol: string; data: Record<string, string> };
-    const high = parseFloat(data.highPrice ?? '0');
-    const low  = parseFloat(data.lowPrice  ?? '0');
-    if (!high && !low) continue;
-    map.set(symbol, { high, low, change: parseFloat(data.priceChangePercent ?? '0') });
+  try {
+    const res = await bnApi.get('/api/v3/ticker/24hr', { params: { symbols: symbolList } });
+    const rows = res.data as Record<string, string>[];
+    for (const row of rows) {
+      const sym = (row.symbol as string).replace(/USDT$/, '');
+      const high = parseFloat(row.highPrice ?? '0');
+      const low  = parseFloat(row.lowPrice  ?? '0');
+      if (!high && !low) continue;
+      map.set(sym, { high, low, change: parseFloat(row.priceChangePercent ?? '0') });
+    }
+  } catch {
+    if (ticker24hCache) return ticker24hCache;
   }
   ticker24hCache = map;
   ticker24hFetchedAt = Date.now();

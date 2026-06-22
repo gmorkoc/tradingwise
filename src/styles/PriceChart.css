@@ -1065,6 +1065,41 @@ html[data-theme="light"] .chart-loading-overlay {
   gap: 6px;
 }
 
+.pattern-insight-elite-gate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 4px;
+}
+
+.pattern-insight-elite-lock {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.pattern-insight-elite-msg {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.pattern-insight-elite-msg strong {
+  color: var(--color-text);
+}
+
+.pattern-insight-elite-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  font-weight: 700;
+  color: #a78bfa;
+  transition: color 0.15s;
+}
+.pattern-insight-elite-btn:hover { color: #c4b5fd; text-decoration: underline; }
+
 .pattern-insight-label {
   font-size: 0.68rem;
   font-weight: 700;
