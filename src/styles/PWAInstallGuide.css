@@ -1,0 +1,152 @@
+.pwa-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  animation: pwa-fade-in 0.2s ease;
+}
+
+@keyframes pwa-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pwa-sheet {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-card-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 32px;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
+  animation: pwa-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes pwa-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.pwa-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--color-border);
+  margin: 0 auto 18px;
+}
+
+.pwa-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pwa-app-icon {
+  font-size: 2rem;
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pwa-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 2px;
+}
+
+.pwa-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.pwa-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  padding: 6px;
+  border-radius: 8px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.pwa-close:hover { opacity: 1; }
+
+.pwa-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pwa-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.pwa-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pwa-step-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+.pwa-step-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.pwa-footer {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.pwa-badge {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+/* The install button in the sidebar — only show on touch devices */
+.pwa-install-btn {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .pwa-install-btn {
+    display: flex;
+  }
+}

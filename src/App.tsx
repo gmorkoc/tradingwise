@@ -42,6 +42,7 @@ import { ZoneResult } from "./components/PriceChart.types";
 import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
+import { PWAInstallButton } from "./components/PWAInstallGuide";
 import "./App.css";
 
 type SectionId = "chart" | "heatmap" | "feargreed" | "onchain" | "gann" | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals" | "fundingbot" | "candleai" | "markets";
@@ -545,6 +546,8 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
           <div className="icon-strip-acct">
             <AccountMenu onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} onOpenProfile={() => setProfileOpen(true)} />
           </div>
+
+          <PWAInstallButton />
 
           <button className="icon-strip-btn" onClick={() => { setDrawerOpen(true); setMobileNavOpen(false); }} title={t("drawer.settings")}>
             <span className="nav-icon-wrap">
