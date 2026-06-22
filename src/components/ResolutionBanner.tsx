@@ -8,6 +8,8 @@ export function ResolutionBanner() {
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return;
+    // Skip on touch devices (phones, tablets) — only relevant for desktop browsers
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     if (window.innerWidth < 1280 || window.innerHeight < 800) {
       setVisible(true);
     }
