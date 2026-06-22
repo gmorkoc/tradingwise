@@ -13,15 +13,24 @@
   to   { opacity: 1; }
 }
 
+/* Full-width with small side gaps (mobile) */
 .pwa-sheet {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+  width: calc(100% - 24px);
+  margin: 0 12px;
   background: var(--color-card-bg);
   border-radius: 20px 20px 0 0;
-  padding: 12px 20px 32px;
+  padding: 12px 20px 36px;
   box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
   animation: pwa-slide-up 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Desktop only: cap width and center */
+@media (min-width: 500px) {
+  .pwa-sheet {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
+  }
 }
 
 @keyframes pwa-slide-up {
@@ -45,15 +54,16 @@
 }
 
 .pwa-app-icon {
-  font-size: 2rem;
   width: 52px;
   height: 52px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
+  display: block;
+}
+
+.pwa-header-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .pwa-title {
@@ -70,7 +80,7 @@
 }
 
 .pwa-close {
-  margin-left: auto;
+  flex-shrink: 0;
   background: none;
   border: none;
   cursor: pointer;
@@ -79,7 +89,6 @@
   padding: 6px;
   border-radius: 8px;
   line-height: 1;
-  flex-shrink: 0;
   opacity: 0.7;
   transition: opacity 0.15s;
 }
@@ -88,7 +97,7 @@
 .pwa-steps {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .pwa-step {
@@ -116,9 +125,9 @@
 }
 
 .pwa-step-icon {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
-  width: 28px;
+  width: 26px;
   text-align: center;
 }
 
@@ -138,15 +147,4 @@
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   opacity: 0.7;
-}
-
-/* The install button in the sidebar — only show on touch devices */
-.pwa-install-btn {
-  display: none;
-}
-
-@media (pointer: coarse) {
-  .pwa-install-btn {
-    display: flex;
-  }
 }

@@ -547,7 +547,7 @@ function AppDashboard({ onOpenAuth, onOpenUpgrade, theme, setTheme }: DashboardP
             <AccountMenu onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} onOpenProfile={() => setProfileOpen(true)} />
           </div>
 
-          <PWAInstallButton />
+          <PWAInstallButton onCloseMobileNav={() => setMobileNavOpen(false)} />
 
           <button className="icon-strip-btn" onClick={() => { setDrawerOpen(true); setMobileNavOpen(false); }} title={t("drawer.settings")}>
             <span className="nav-icon-wrap">
