@@ -136,7 +136,7 @@ export function PredictionOverlay({ chartRef, seriesRef, prediction }: OverlayPr
     const dpr  = window.devicePixelRatio || 1;
     const logW = canvas.offsetWidth;
     const logH = canvas.offsetHeight;
-    if (!logW || !logH) return;
+    if (!logW || !logH || logW > 8192 || logH > 8192) return;
 
     if (canvas.width !== logW * dpr || canvas.height !== logH * dpr) {
       canvas.width  = logW * dpr;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   createChart,
+  ColorType,
   CandlestickSeries,
   LineSeries,
   HistogramSeries,
@@ -19,10 +20,7 @@ import {
   ChartPrediction,
   TechnicalContext,
 } from "../services/openai";
-import {
-  PredictionOverlay,
-  PredictionPath,
-} from "./DrawingOverlay";
+import { PredictionOverlay, PredictionPath } from "./DrawingOverlay";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools } from "./ChartDrawingTools";
@@ -32,7 +30,16 @@ import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import "../styles/PriceChart.css";
 
-type TimeInterval = "1sec" | "1min" | "5min" | "15min" | "1h" | "4h" | "6h" | "1day" | "1week";
+type TimeInterval =
+  | "1sec"
+  | "1min"
+  | "5min"
+  | "15min"
+  | "1h"
+  | "4h"
+  | "6h"
+  | "1day"
+  | "1week";
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
 
 interface PriceChartProps {
@@ -57,25 +64,25 @@ const INTERVALS: TimeInterval[] = [
 ];
 
 const INTERVAL_LABELS: Record<TimeInterval, string> = {
-  "1sec":  "1s  (last 30 min)",
-  "1min":  "1m  (last 6 hours)",
-  "5min":  "5m  (last 24 hours)",
+  "1sec": "1s  (last 30 min)",
+  "1min": "1m  (last 6 hours)",
+  "5min": "5m  (last 24 hours)",
   "15min": "15m (last 48 hours)",
-  "1h":    "1H  (~7 days)",
-  "4h":    "4H  (~4 weeks)",
-  "6h":    "6H  (~15 days)",
-  "1day":  "1D  (90 days)",
+  "1h": "1H  (~7 days)",
+  "4h": "4H  (~4 weeks)",
+  "6h": "6H  (~15 days)",
+  "1day": "1D  (90 days)",
   "1week": "1W  (52 weeks)",
 };
 
 const FIB_LEVELS = [
-  { ratio: 0,     label: "0",     color: "rgba(251,191,36,0.85)"  },
+  { ratio: 0, label: "0", color: "rgba(251,191,36,0.85)" },
   { ratio: 0.236, label: "0.236", color: "rgba(167,139,250,0.85)" },
-  { ratio: 0.382, label: "0.382", color: "rgba(52,211,153,0.85)"  },
-  { ratio: 0.5,   label: "0.5",   color: "rgba(251,113,133,0.85)" },
-  { ratio: 0.618, label: "0.618", color: "rgba(56,189,248,0.85)"  },
-  { ratio: 0.786, label: "0.786", color: "rgba(249,115,22,0.85)"  },
-  { ratio: 1,     label: "1",     color: "rgba(251,191,36,0.85)"  },
+  { ratio: 0.382, label: "0.382", color: "rgba(52,211,153,0.85)" },
+  { ratio: 0.5, label: "0.5", color: "rgba(251,113,133,0.85)" },
+  { ratio: 0.618, label: "0.618", color: "rgba(56,189,248,0.85)" },
+  { ratio: 0.786, label: "0.786", color: "rgba(249,115,22,0.85)" },
+  { ratio: 1, label: "1", color: "rgba(251,191,36,0.85)" },
 ] as const;
 
 // ── Utility: Bollinger Bands ────────────────────────────────────────────────
@@ -168,21 +175,19 @@ function calcBuySellZones(candles: CandleDataPoint[]): ZoneResult | null {
   const sellZone = { upper: sellRef * 1.006, lower: sellRef * 0.994 };
 
   // Trend context via EMA50 — prevents "Strong Buy" in a downtrend
-  const closes = candles.map(c => c.close);
+  const closes = candles.map((c) => c.close);
   const ema50arr = coinglass.calculateEMA(closes, 50);
   const ema50 = ema50arr[ema50arr.length - 1];
   const downtrend = ema50 != null && last.close < ema50;
-  const uptrend   = ema50 != null && last.close > ema50;
+  const uptrend = ema50 != null && last.close > ema50;
 
   let signal: ZoneSignal;
   if (bbPos <= 0.12 || last.close <= buyZone.upper)
     signal = downtrend ? "oversold" : "strong-buy";
-  else if (bbPos <= 0.35)
-    signal = downtrend ? "neutral" : "buy";
+  else if (bbPos <= 0.35) signal = downtrend ? "neutral" : "buy";
   else if (bbPos >= 0.88 || last.close >= sellZone.lower)
     signal = uptrend ? "overbought" : "strong-sell";
-  else if (bbPos >= 0.65)
-    signal = uptrend ? "neutral" : "sell";
+  else if (bbPos >= 0.65) signal = uptrend ? "neutral" : "sell";
   else signal = "neutral";
 
   return { buyZone, sellZone, signal };
@@ -249,13 +254,14 @@ function detectRSIDivergence(
     const c = recent[i];
     const rsi = rsiByTime.get(c.time as number);
     if (rsi === undefined) continue;
-    let isLow = true, isHigh = true;
+    let isLow = true,
+      isHigh = true;
     for (let j = i - swingWindow; j <= i + swingWindow; j++) {
       if (j === i) continue;
-      if (recent[j].low  < c.low)  isLow  = false;
+      if (recent[j].low < c.low) isLow = false;
       if (recent[j].high > c.high) isHigh = false;
     }
-    if (isLow)  swingLows.push({ time: c.time as number, price: c.low,  rsi });
+    if (isLow) swingLows.push({ time: c.time as number, price: c.low, rsi });
     if (isHigh) swingHighs.push({ time: c.time as number, price: c.high, rsi });
   }
 
@@ -535,56 +541,62 @@ function detectGannPivots(candles: CandleDataPoint[], n: number): GannPivot[] {
   const pivots: GannPivot[] = [];
   for (let i = n; i < candles.length - n; i++) {
     const c = candles[i];
-    let isHigh = true, isLow = true;
+    let isHigh = true,
+      isLow = true;
     for (let j = i - n; j <= i + n; j++) {
       if (j === i) continue;
       if (candles[j].high >= c.high) isHigh = false;
       if (candles[j].low <= c.low) isLow = false;
     }
     if (isHigh) pivots.push({ time: c.time, price: c.high, type: "high" });
-    if (isLow)  pivots.push({ time: c.time, price: c.low,  type: "low" });
+    if (isLow) pivots.push({ time: c.time, price: c.low, type: "low" });
   }
   return pivots;
 }
 
 // Gann time cycle offsets in seconds for different interval granularities
-const GANN_CYCLE_OFFSETS: Record<string, { label: string; seconds: number }[]> = {
-  daily: [
-    { label: "30d",  seconds: 30  * 86400 },
-    { label: "45d",  seconds: 45  * 86400 },
-    { label: "60d",  seconds: 60  * 86400 },
-    { label: "90d",  seconds: 90  * 86400 },
-    { label: "120d", seconds: 120 * 86400 },
-    { label: "144d", seconds: 144 * 86400 },
-    { label: "180d", seconds: 180 * 86400 },
-    { label: "270d", seconds: 270 * 86400 },
-    { label: "360d", seconds: 360 * 86400 },
-  ],
-  hourly: [
-    { label: "24h",  seconds: 24  * 3600 },
-    { label: "48h",  seconds: 48  * 3600 },
-    { label: "72h",  seconds: 72  * 3600 },
-    { label: "90h",  seconds: 90  * 3600 },
-    { label: "120h", seconds: 120 * 3600 },
-    { label: "144h", seconds: 144 * 3600 },
-    { label: "180h", seconds: 180 * 3600 },
-  ],
-  minutes: [
-    { label: "4h",   seconds: 4  * 3600 },
-    { label: "8h",   seconds: 8  * 3600 },
-    { label: "12h",  seconds: 12 * 3600 },
-    { label: "24h",  seconds: 24 * 3600 },
-    { label: "48h",  seconds: 48 * 3600 },
-  ],
-};
+const GANN_CYCLE_OFFSETS: Record<string, { label: string; seconds: number }[]> =
+  {
+    daily: [
+      { label: "30d", seconds: 30 * 86400 },
+      { label: "45d", seconds: 45 * 86400 },
+      { label: "60d", seconds: 60 * 86400 },
+      { label: "90d", seconds: 90 * 86400 },
+      { label: "120d", seconds: 120 * 86400 },
+      { label: "144d", seconds: 144 * 86400 },
+      { label: "180d", seconds: 180 * 86400 },
+      { label: "270d", seconds: 270 * 86400 },
+      { label: "360d", seconds: 360 * 86400 },
+    ],
+    hourly: [
+      { label: "24h", seconds: 24 * 3600 },
+      { label: "48h", seconds: 48 * 3600 },
+      { label: "72h", seconds: 72 * 3600 },
+      { label: "90h", seconds: 90 * 3600 },
+      { label: "120h", seconds: 120 * 3600 },
+      { label: "144h", seconds: 144 * 3600 },
+      { label: "180h", seconds: 180 * 3600 },
+    ],
+    minutes: [
+      { label: "4h", seconds: 4 * 3600 },
+      { label: "8h", seconds: 8 * 3600 },
+      { label: "12h", seconds: 12 * 3600 },
+      { label: "24h", seconds: 24 * 3600 },
+      { label: "48h", seconds: 48 * 3600 },
+    ],
+  };
 
 function gannCycleGroup(interval: string): string {
   if (interval === "1day" || interval === "1week") return "daily";
-  if (interval === "1h" || interval === "4h" || interval === "6h") return "hourly";
+  if (interval === "1h" || interval === "4h" || interval === "6h")
+    return "hourly";
   return "minutes";
 }
 
-function computeGannCycles(lastPivot: GannPivot, interval: string): GannCycleDate[] {
+function computeGannCycles(
+  lastPivot: GannPivot,
+  interval: string,
+): GannCycleDate[] {
   const now = Date.now() / 1000;
   const offsets = GANN_CYCLE_OFFSETS[gannCycleGroup(interval)];
   return offsets.map(({ label, seconds }) => {
@@ -921,7 +933,8 @@ function trendAwarePattern(
   bannerSentiment: "bullish" | "bearish" | "neutral" | null,
 ): PatternInsight | null {
   const result = detectCandlePattern(candles);
-  if (!result || !bannerSentiment || bannerSentiment === "neutral") return result;
+  if (!result || !bannerSentiment || bannerSentiment === "neutral")
+    return result;
 
   if (result.type === "bullish" && bannerSentiment === "bearish")
     return {
@@ -993,9 +1006,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showDepthProfile, setShowDepthProfile] = useState(false);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const textColor = isLight ? (isFullscreen ? "#0f172a" : "#475569") : "#94a3b8";
-  const gridColor = isLight ? (isFullscreen ? "#94a3b8" : "#e2e8f0") : "#1e293b";
-  const bgColor   = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#0f172a";
+  const textColor = isLight
+    ? isFullscreen
+      ? "#0f172a"
+      : "#475569"
+    : "#94a3b8";
+  const gridColor = isLight
+    ? isFullscreen
+      ? "#94a3b8"
+      : "#e2e8f0"
+    : "#1e293b";
+  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#0f172a";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -1058,11 +1079,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       updateFsThumb();
     };
 
-    outer.addEventListener("touchstart", onStart, { passive: true,  capture: true });
-    outer.addEventListener("touchmove",  onMove,  { passive: false, capture: true });
+    outer.addEventListener("touchstart", onStart, {
+      passive: true,
+      capture: true,
+    });
+    outer.addEventListener("touchmove", onMove, {
+      passive: false,
+      capture: true,
+    });
     return () => {
-      outer.removeEventListener("touchstart", onStart, { capture: true } as EventListenerOptions);
-      outer.removeEventListener("touchmove",  onMove,  { capture: true } as EventListenerOptions);
+      outer.removeEventListener("touchstart", onStart, {
+        capture: true,
+      } as EventListenerOptions);
+      outer.removeEventListener("touchmove", onMove, {
+        capture: true,
+      } as EventListenerOptions);
     };
   }, [isFullscreen, updateFsThumb]);
 
@@ -1102,12 +1133,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const viewInitializedForRef = useRef<string | null>(null);
 
   // Persists drawings across fullscreen toggle (component unmount/remount)
-  const drawingsPersistRef = useRef<import('./ChartDrawingTools').Drawing[]>([]);
+  const drawingsPersistRef = useRef<import("./ChartDrawingTools").Drawing[]>(
+    [],
+  );
 
   // Drawing tools state
-  const [predictionPath, setPredictionPath] = useState<PredictionPath | null>(null);
+  const [predictionPath, setPredictionPath] = useState<PredictionPath | null>(
+    null,
+  );
   const [predictionLoading, setPredictionLoading] = useState(false);
-  const [chartPrediction, setChartPrediction] = useState<ChartPrediction | null>(null);
+  const [chartPrediction, setChartPrediction] =
+    useState<ChartPrediction | null>(null);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
 
   const [divergence, setDivergence] = useState<DivergenceResult | null>(null);
@@ -1139,122 +1175,178 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ma200Ref = useRef<any>(null);
 
-  // ── Create main chart once ───────────────────────────────────────────────
+  // ── Create main chart ────────────────────────────────────────────────────
   useEffect(() => {
-    if (!containerRef.current) return;
-    const el = containerRef.current;
+    let ro: ResizeObserver | null = null;
+    let resizeListener: (() => void) | null = null;
+    let isMounted = true;
 
-    const chart = createChart(el, {
-      autoSize: true,
-      layout: { background: { color: bgColor }, textColor },
-      grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
-      },
-      rightPriceScale: { borderColor: gridColor },
-      timeScale: {
-        borderColor: gridColor,
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
-    });
+    const initChart = () => {
+      const el = containerRef.current;
+      if (!el || !isMounted) return;
+      const width = el.clientWidth || el.offsetWidth;
+      const height = el.clientHeight || 400;
 
-    candleRef.current = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e",
-      downColor: "#ef4444",
-      borderUpColor: "#22c55e",
-      borderDownColor: "#ef4444",
-      wickUpColor: "#22c55e",
-      wickDownColor: "#ef4444",
-    });
+      if (width <= 0 || height <= 0) {
+        requestAnimationFrame(initChart);
+        return;
+      }
 
-    volumeRef.current = chart.addSeries(HistogramSeries, {
-      priceScaleId: "volume",
-      priceLineVisible: false,
-      lastValueVisible: false,
-      color: "rgba(100,100,100,0.4)",
-    });
-    chart.priceScale("volume").applyOptions({
-      scaleMargins: { top: 0.80, bottom: 0 },
-    });
+      const chart = createChart(el, {
+        width,
+        height,
+        layout: {
+          background: {
+            type: ColorType.Solid,
+            color: isLight ? "#ffffff" : "#0f1117",
+          },
+          textColor: isLight ? "#475569" : "#94a3b8",
+        },
+        grid: {
+          vertLines: {
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.04)",
+          },
+          horzLines: {
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.04)",
+          },
+        },
+        crosshair: { mode: 1 },
+        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#1e293b" },
+        timeScale: {
+          borderColor: isLight ? "#e2e8f0" : "#1e293b",
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        handleScale: {
+          mouseWheel: true,
+          pinch: true,
+          axisPressedMouseMove: true,
+        },
+      });
 
-    const bbLineOpts = {
-      lineWidth: 1 as const,
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
+      const bbOpts = {
+        lineWidth: 1 as const,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      };
+      const maOpts = {
+        lineWidth: 1 as const,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: false,
+      };
+
+      candleRef.current = chart.addSeries(CandlestickSeries, {
+        upColor: "#22c55e",
+        downColor: "#ef4444",
+        borderUpColor: "#22c55e",
+        borderDownColor: "#ef4444",
+        wickUpColor: "#22c55e",
+        wickDownColor: "#ef4444",
+      });
+      volumeRef.current = chart.addSeries(HistogramSeries, {
+        priceScaleId: "volume",
+        priceLineVisible: false,
+        lastValueVisible: false,
+        color: "rgba(100,100,100,0.4)",
+      });
+      chart
+        .priceScale("volume")
+        .applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+
+      bbUpperRef.current = chart.addSeries(LineSeries, {
+        ...bbOpts,
+        color: "rgba(251,113,133,0.7)",
+      });
+      bbMiddleRef.current = chart.addSeries(LineSeries, {
+        ...bbOpts,
+        color: "rgba(148,163,184,0.6)",
+        lineStyle: 1,
+      });
+      bbLowerRef.current = chart.addSeries(LineSeries, {
+        ...bbOpts,
+        color: "rgba(34,197,94,0.7)",
+      });
+      ema20Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#4ade80",
+        title: "EMA 20",
+      });
+      ema50Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#fb923c",
+        title: "EMA 50",
+      });
+      ema200Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#c084fc",
+        title: "EMA 200",
+        visible: false,
+      });
+      ma20Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#38bdf8",
+        title: "MA 20",
+        visible: false,
+      });
+      ma50Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#f472b6",
+        title: "MA 50",
+        visible: false,
+      });
+      ma200Ref.current = chart.addSeries(LineSeries, {
+        ...maOpts,
+        color: "#facc15",
+        title: "MA 200",
+        visible: false,
+      });
+
+      chartRef.current = chart;
+      if (lastCandlesRef.current.length > 0) {
+        candleRef.current?.setData(lastCandlesRef.current);
+      }
+
+      const resizeChart = () => {
+        const currentEl = containerRef.current;
+        if (!currentEl || !chart) return;
+        const nextWidth = currentEl.clientWidth || currentEl.offsetWidth;
+        const nextHeight = currentEl.clientHeight || 400;
+        if (nextWidth > 0 && nextHeight > 0) {
+          chart.resize(nextWidth, nextHeight);
+        }
+      };
+
+      ro = new ResizeObserver(resizeChart);
+      ro.observe(el);
+
+      resizeListener = () => resizeChart();
+      window.addEventListener("resize", resizeListener);
     };
-    bbUpperRef.current = chart.addSeries(LineSeries, {
-      ...bbLineOpts,
-      color: "rgba(251,113,133,0.7)",
-    });
-    bbMiddleRef.current = chart.addSeries(LineSeries, {
-      ...bbLineOpts,
-      color: "rgba(148,163,184,0.6)",
-      lineStyle: 1,
-    });
-    bbLowerRef.current = chart.addSeries(LineSeries, {
-      ...bbLineOpts,
-      color: "rgba(34,197,94,0.7)",
-    });
 
-    const maOpts = {
-      lineWidth: 1 as const,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: false,
-    };
-    ema20Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#4ade80",
-      title: "EMA 20",
-    });
-    ema50Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#fb923c",
-      title: "EMA 50",
-    });
-    ema200Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#c084fc",
-      title: "EMA 200",
-      visible: false,
-    });
-    ma20Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#38bdf8",
-      title: "MA 20",
-      visible: false,
-    });
-    ma50Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#f472b6",
-      title: "MA 50",
-      visible: false,
-    });
-    ma200Ref.current = chart.addSeries(LineSeries, {
-      ...maOpts,
-      color: "#facc15",
-      title: "MA 200",
-      visible: false,
-    });
-
-    chartRef.current = chart;
+    initChart();
 
     return () => {
-      chart.remove();
+      isMounted = false;
+      if (ro) ro.disconnect();
+      if (resizeListener) window.removeEventListener("resize", resizeListener);
+      chartRef.current?.remove();
       chartRef.current = candleRef.current = volumeRef.current = null;
       bbUpperRef.current = bbMiddleRef.current = bbLowerRef.current = null;
       ema20Ref.current = ema50Ref.current = ema200Ref.current = null;
       ma20Ref.current = ma50Ref.current = ma200Ref.current = null;
+      viewInitializedForRef.current = null;
     };
-  }, []);
+  }, [isLight]);
 
   // ── Predict handler ───────────────────────────────────────────────────────
   const handlePredict = async () => {
-    if (!isElite) { onOpenUpgrade(); return; }
+    if (!isElite) {
+      onOpenUpgrade();
+      return;
+    }
     const candles = lastCandlesRef.current;
     if (!candles.length || predictionLoading) return;
     setPredictionLoading(true);
@@ -1262,25 +1354,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setChartPrediction(null);
     try {
       // ── Pre-calculate all technical indicators ────────────────────────────
-      const rsiData  = calcRSI(candles);
-      const rsi      = rsiData[rsiData.length - 1]?.value ?? null;
+      const rsiData = calcRSI(candles);
+      const rsi = rsiData[rsiData.length - 1]?.value ?? null;
 
       const { macdLine, signalLine, histogram } = calcMACD(candles);
-      const macdVal   = macdLine[macdLine.length - 1]?.value ?? null;
+      const macdVal = macdLine[macdLine.length - 1]?.value ?? null;
       const signalVal = signalLine[signalLine.length - 1]?.value ?? null;
-      const histVal   = histogram[histogram.length - 1]?.value ?? null;
+      const histVal = histogram[histogram.length - 1]?.value ?? null;
 
       const { upper, lower } = calcBollingerBands(candles);
       const lastClose = candles[candles.length - 1].close;
       const bbU = upper[upper.length - 1]?.value;
       const bbL = lower[lower.length - 1]?.value;
-      const bbPos = bbU && bbL && bbU !== bbL ? (lastClose - bbL) / (bbU - bbL) : null;
+      const bbPos =
+        bbU && bbL && bbU !== bbL ? (lastClose - bbL) / (bbU - bbL) : null;
 
-      const ema20d  = calcEMALine(candles, 20);
-      const ema50d  = calcEMALine(candles, 50);
+      const ema20d = calcEMALine(candles, 20);
+      const ema50d = calcEMALine(candles, 50);
       const ema200d = calcEMALine(candles, 200);
-      const ema20v  = ema20d[ema20d.length - 1]?.value ?? null;
-      const ema50v  = ema50d[ema50d.length - 1]?.value ?? null;
+      const ema20v = ema20d[ema20d.length - 1]?.value ?? null;
+      const ema50v = ema50d[ema50d.length - 1]?.value ?? null;
       const ema200v = ema200d[ema200d.length - 1]?.value ?? null;
 
       const { resistance, support } = calcSupportResistance(candles);
@@ -1288,17 +1381,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
       const trend: TechnicalContext["trend"] =
         ema20v && ema50v
-          ? lastClose > ema20v && ema20v > ema50v ? "uptrend"
-          : lastClose < ema20v && ema20v < ema50v ? "downtrend"
-          : "sideways"
+          ? lastClose > ema20v && ema20v > ema50v
+            ? "uptrend"
+            : lastClose < ema20v && ema20v < ema50v
+              ? "downtrend"
+              : "sideways"
           : "unknown";
 
       const tech: TechnicalContext = {
-        rsi, macdLine: macdVal, macdSignal: signalVal, macdHist: histVal,
-        bbPosition: bbPos, ema20: ema20v, ema50: ema50v, ema200: ema200v,
-        trend, pattern: pattern ? { name: pattern.name, type: pattern.type } : null,
-        support:    support.slice(0, 4).map(s => s.price),
-        resistance: resistance.slice(0, 4).map(r => r.price),
+        rsi,
+        macdLine: macdVal,
+        macdSignal: signalVal,
+        macdHist: histVal,
+        bbPosition: bbPos,
+        ema20: ema20v,
+        ema50: ema50v,
+        ema200: ema200v,
+        trend,
+        pattern: pattern ? { name: pattern.name, type: pattern.type } : null,
+        support: support.slice(0, 4).map((s) => s.price),
+        resistance: resistance.slice(0, 4).map((r) => r.price),
       };
 
       const res = await getChartPrediction(coin, interval, candles, tech);
@@ -1311,7 +1413,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         targetPrice: pred.targetPrice,
         stopLoss: pred.stopLoss,
         scenario: pred.scenario,
-        waypoints: pred.waypoints.map(wp => ({
+        waypoints: pred.waypoints.map((wp) => ({
           time: lastTime + wp.offsetSeconds,
           price: wp.price,
         })),
@@ -1327,7 +1429,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           if (visRange) {
             chart.timeScale().setVisibleRange({
               from: visRange.from,
-              to: (lastWp.time + (lastWp.time - lastTime) * 0.1) as import("lightweight-charts").Time,
+              to: (lastWp.time +
+                (lastWp.time - lastTime) *
+                  0.1) as import("lightweight-charts").Time,
             });
           }
         } catch {}
@@ -1340,7 +1444,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ── Update chart colours on theme change ────────────────────────────────
   useEffect(() => {
     const themeOpts = {
-      layout: { background: { color: bgColor }, textColor },
+      layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
       grid: {
         vertLines: { color: gridColor },
         horzLines: { color: gridColor },
@@ -1356,6 +1460,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ── Fetch candles ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    const waitForSeriesReady = async () => {
+      let attempts = 0;
+      while (!cancelled && !candleRef.current && attempts < 200) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        attempts += 1;
+      }
+    };
+
     const fetch = async () => {
       setLoading(true);
       setError("");
@@ -1367,13 +1479,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           setError("No chart data available");
         } else {
           if (fresh.length > 0) lastCandlesRef.current = fresh;
+          await waitForSeriesReady();
+          if (cancelled) return;
           candleRef.current?.setData(data);
           if (showFibRef.current) redrawFibLines();
-          volumeRef.current?.setData(data.map(c => ({
-            time: c.time,
-            value: c.volume ?? 0,
-            color: c.close >= c.open ? "rgba(34,197,94,0.45)" : "rgba(239,68,68,0.45)",
-          })));
+          volumeRef.current?.setData(
+            data.map((c) => ({
+              time: c.time,
+              value: c.volume ?? 0,
+              color:
+                c.close >= c.open
+                  ? "rgba(34,197,94,0.45)"
+                  : "rgba(239,68,68,0.45)",
+            })),
+          );
           const { upper, middle, lower } = calcBollingerBands(data);
           bbUpperRef.current?.setData(upper);
           bbMiddleRef.current?.setData(middle);
@@ -1450,7 +1569,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           const cutoff24 = now24 - 86400;
           // For 1sec/1min only a few minutes of data exist — use all of it.
           // For 1week candles open days ago and won't pass the filter — fallback to last candle.
-          const shortInterval = interval === "1sec" || interval === "1min" || interval === "5min" || interval === "15min";
+          const shortInterval =
+            interval === "1sec" ||
+            interval === "1min" ||
+            interval === "5min" ||
+            interval === "15min";
           const filtered24 = shortInterval
             ? data
             : data.filter((c) => (c.time as number) >= cutoff24);
@@ -1488,7 +1611,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
           // Show cached or rule-based insight immediately; fallback is trend-aware
           const cached = readPatternCache(coin, interval);
-          setPatternInsight(cached ?? trendAwarePattern(data, newBanner?.sentiment ?? null));
+          setPatternInsight(
+            cached ?? trendAwarePattern(data, newBanner?.sentiment ?? null),
+          );
           // Only call AI if quota allows
           if (!exceeded && consume()) {
             getCandlePatternAnalysis(coin, interval, data).then((res) => {
@@ -1520,15 +1645,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             const priceMarkers: SeriesMarker<number>[] = div
               ? div.pivots.map((p) => ({
                   time: p.time,
-                  position: div.type === "bullish" ? ("belowBar" as const) : ("aboveBar" as const),
-                  shape: div.type === "bullish" ? ("arrowUp" as const) : ("arrowDown" as const),
+                  position:
+                    div.type === "bullish"
+                      ? ("belowBar" as const)
+                      : ("aboveBar" as const),
+                  shape:
+                    div.type === "bullish"
+                      ? ("arrowUp" as const)
+                      : ("arrowDown" as const),
                   color: div.type === "bullish" ? "#22c55e" : "#ef4444",
                   size: 3,
                   text: div.type === "bullish" ? "Bull Div" : "Bear Div",
                 }))
               : [];
             if (!divMarkersRef.current) {
-              divMarkersRef.current = createSeriesMarkers(candleRef.current, priceMarkers);
+              divMarkersRef.current = createSeriesMarkers(
+                candleRef.current,
+                priceMarkers,
+              );
             } else {
               divMarkersRef.current.setMarkers(priceMarkers);
             }
@@ -1537,14 +1671,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             const rsiMarkers: SeriesMarker<number>[] = div
               ? div.pivots.map((p) => ({
                   time: p.time,
-                  position: div.type === "bullish" ? ("belowBar" as const) : ("aboveBar" as const),
-                  shape: div.type === "bullish" ? ("arrowUp" as const) : ("arrowDown" as const),
+                  position:
+                    div.type === "bullish"
+                      ? ("belowBar" as const)
+                      : ("aboveBar" as const),
+                  shape:
+                    div.type === "bullish"
+                      ? ("arrowUp" as const)
+                      : ("arrowDown" as const),
                   color: div.type === "bullish" ? "#22c55e" : "#ef4444",
                   size: 2,
                 }))
               : [];
             if (!rsiDivMarkersRef.current) {
-              rsiDivMarkersRef.current = createSeriesMarkers(rsiSeriesRef.current, rsiMarkers);
+              rsiDivMarkersRef.current = createSeriesMarkers(
+                rsiSeriesRef.current,
+                rsiMarkers,
+              );
             } else {
               rsiDivMarkersRef.current.setMarkers(rsiMarkers);
             }
@@ -1565,17 +1708,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           if (viewInitializedForRef.current !== viewKey) {
             viewInitializedForRef.current = viewKey;
             const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
-              "1min":  6 * 60 * 60,
-              "5min":  2 * 24 * 60 * 60,
+              "1min": 6 * 60 * 60,
+              "5min": 2 * 24 * 60 * 60,
               "15min": 4 * 24 * 60 * 60,
-              "1h":    14 * 24 * 60 * 60,
-              "4h":    28 * 24 * 60 * 60,
-              "6h":    56 * 24 * 60 * 60,
+              "1h": 14 * 24 * 60 * 60,
+              "4h": 28 * 24 * 60 * 60,
+              "6h": 56 * 24 * 60 * 60,
             };
             const window = INTERVAL_WINDOW[interval];
             if (window && data.length > 0) {
               const to = data[data.length - 1].time as number;
-              chartRef.current?.timeScale().setVisibleRange({ from: (to - window) as UTCTimestamp, to: to as UTCTimestamp });
+              chartRef.current?.timeScale().setVisibleRange({
+                from: (to - window) as UTCTimestamp,
+                to: to as UTCTimestamp,
+              });
             } else {
               chartRef.current?.timeScale().fitContent();
             }
@@ -1623,7 +1769,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             volumeRef.current?.update({
               time: candle.time,
               value: candle.volume,
-              color: candle.close >= candle.open ? "rgba(34,197,94,0.45)" : "rgba(239,68,68,0.45)",
+              color:
+                candle.close >= candle.open
+                  ? "rgba(34,197,94,0.45)"
+                  : "rgba(239,68,68,0.45)",
             });
           }
         }
@@ -1690,14 +1839,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ── Fibonacci retracement lines ──────────────────────────────────────────
   const redrawFibLines = useCallback(() => {
     for (const pl of fibLineRefs.current) {
-      try { candleRef.current?.removePriceLine(pl); } catch { /* ok */ }
+      try {
+        candleRef.current?.removePriceLine(pl);
+      } catch {
+        /* ok */
+      }
     }
     fibLineRefs.current = [];
     if (!showFibRef.current || !candleRef.current) return;
     const candles = lastCandlesRef.current;
     if (candles.length === 0) return;
     const high = Math.max(...candles.map((c) => c.high));
-    const low  = Math.min(...candles.map((c) => c.low));
+    const low = Math.min(...candles.map((c) => c.low));
     const range = high - low;
     for (const { ratio, label, color } of FIB_LEVELS) {
       const price = high - ratio * range;
@@ -1728,7 +1881,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     }
     const candles = lastCandlesRef.current;
     if (candles.length === 0) return;
-    const n = interval === "1week" ? 3 : interval === "1day" || interval === "4h" || interval === "6h" ? 5 : 8;
+    const n =
+      interval === "1week"
+        ? 3
+        : interval === "1day" || interval === "4h" || interval === "6h"
+          ? 5
+          : 8;
     const pivots = detectGannPivots(candles, n);
     if (pivots.length === 0) return;
     const lastPivot = pivots[pivots.length - 1];
@@ -1741,7 +1899,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       size: 1,
     }));
     if (!gannMarkersPluginRef.current) {
-      gannMarkersPluginRef.current = createSeriesMarkers(candleRef.current, markers);
+      gannMarkersPluginRef.current = createSeriesMarkers(
+        candleRef.current,
+        markers,
+      );
     } else {
       gannMarkersPluginRef.current.setMarkers(markers);
     }
@@ -1819,7 +1980,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const macdEl = macdContainerRef.current;
     if (!rsiEl || !macdEl) return;
     const baseOpts = {
-      layout: { background: { color: bgColor }, textColor },
+      layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
       grid: {
         vertLines: { color: gridColor },
         horzLines: { color: gridColor },
@@ -2000,7 +2161,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const onStart = (e: TouchEvent) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      lastY  = startY;
+      lastY = startY;
       direction = null;
     };
 
@@ -2024,10 +2185,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
 
     el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove",  onMove,  { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
     return () => {
       el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove",  onMove);
+      el.removeEventListener("touchmove", onMove);
     };
   }, []);
 
@@ -2036,15 +2197,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const mainCanvas = chartRef.current?.takeScreenshot();
     if (!mainCanvas) return;
 
-    const rsiCanvas  = showRSI  && rsiChartRef.current  ? rsiChartRef.current.takeScreenshot()  : null;
-    const macdCanvas = showMACD && macdChartRef.current ? macdChartRef.current.takeScreenshot() : null;
+    const rsiCanvas =
+      showRSI && rsiChartRef.current
+        ? rsiChartRef.current.takeScreenshot()
+        : null;
+    const macdCanvas =
+      showMACD && macdChartRef.current
+        ? macdChartRef.current.takeScreenshot()
+        : null;
 
     const HEADER_H = 44;
     const W = mainCanvas.width;
-    const H = HEADER_H + mainCanvas.height + (rsiCanvas?.height ?? 0) + (macdCanvas?.height ?? 0);
+    const H =
+      HEADER_H +
+      mainCanvas.height +
+      (rsiCanvas?.height ?? 0) +
+      (macdCanvas?.height ?? 0);
 
     const out = document.createElement("canvas");
-    out.width  = W;
+    out.width = W;
     out.height = H;
     const ctx = out.getContext("2d")!;
 
@@ -2068,23 +2239,43 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // Zone signal
     if (zone) {
       const sigLabel: Record<string, string> = {
-        "strong-buy": t("chart.strongBuy"), "buy": t("chart.buy"), "oversold": t("chart.oversold"),
-        "neutral": t("chart.neutralZone"), "overbought": t("chart.overbought"), "sell": t("chart.sell"), "strong-sell": t("chart.strongSell"),
+        "strong-buy": t("chart.strongBuy"),
+        buy: t("chart.buy"),
+        oversold: t("chart.oversold"),
+        neutral: t("chart.neutralZone"),
+        overbought: t("chart.overbought"),
+        sell: t("chart.sell"),
+        "strong-sell": t("chart.strongSell"),
       };
       const sigColor: Record<string, string> = {
-        "strong-buy": "#22c55e", "buy": "#86efac", "oversold": "#f59e0b",
-        "neutral": "#94a3b8", "overbought": "#f59e0b", "sell": "#fca5a5", "strong-sell": "#ef4444",
+        "strong-buy": "#22c55e",
+        buy: "#86efac",
+        oversold: "#f59e0b",
+        neutral: "#94a3b8",
+        overbought: "#f59e0b",
+        sell: "#fca5a5",
+        "strong-sell": "#ef4444",
       };
       const sigText = sigLabel[zone.signal] ?? zone.signal;
       ctx.font = "bold 11px 'Inter', system-ui, sans-serif";
       ctx.fillStyle = sigColor[zone.signal] ?? "#94a3b8";
-      ctx.fillText(`● ${sigText}`, W / 2 - ctx.measureText(`● ${sigText}`).width / 2, HEADER_H / 2);
+      ctx.fillText(
+        `● ${sigText}`,
+        W / 2 - ctx.measureText(`● ${sigText}`).width / 2,
+        HEADER_H / 2,
+      );
     }
 
     // Right label: timestamp
     ctx.font = "12px 'Inter', system-ui, sans-serif";
     ctx.fillStyle = "#64748b";
-    const ts = new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const ts = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     ctx.fillText(ts, W - ctx.measureText(ts).width - 16, HEADER_H / 2);
 
     // Draw chart canvases
@@ -2092,570 +2283,727 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     ctx.drawImage(mainCanvas, 0, y);
 
     // Composite drawing overlay on top of main chart (same position/size)
-    const drawingCanvas = document.querySelector('.cdt-canvas') as HTMLCanvasElement | null;
+    const drawingCanvas = document.querySelector(
+      ".cdt-canvas",
+    ) as HTMLCanvasElement | null;
     if (drawingCanvas && drawingCanvas.width > 0 && drawingCanvas.height > 0) {
       ctx.drawImage(drawingCanvas, 0, y, mainCanvas.width, mainCanvas.height);
     }
 
     y += mainCanvas.height;
-    if (rsiCanvas)  { ctx.drawImage(rsiCanvas,  0, y); y += rsiCanvas.height;  }
-    if (macdCanvas) { ctx.drawImage(macdCanvas, 0, y); }
+    if (rsiCanvas) {
+      ctx.drawImage(rsiCanvas, 0, y);
+      y += rsiCanvas.height;
+    }
+    if (macdCanvas) {
+      ctx.drawImage(macdCanvas, 0, y);
+    }
 
     // Trigger download
     const link = document.createElement("a");
-    link.href     = out.toDataURL("image/png");
+    link.href = out.toDataURL("image/png");
     link.download = `${coin}-${shortInterval}-${new Date().toISOString().slice(0, 10)}.png`;
     link.click();
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div ref={chartSectionRef} className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}`}>
     <div
-      ref={isFullscreen ? fsScrollRef : undefined}
-      className={isFullscreen ? "price-chart-fs-scroll" : undefined}
-      onScroll={isFullscreen ? updateFsThumb : undefined}
+      ref={chartSectionRef}
+      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}`}
     >
-      <div className="chart-fs-header-group">
-      <div className="chart-header">
-        <div className="chart-header-left">
-          <div className="chart-title-row">
-            <h3>{t("chart.title", { coin })}</h3>
-            {(interval === "1sec" || interval === "1min") && isLive && (
-              <span className="live-badge">{t("chart.live")}</span>
-            )}
-            {zone && (
-              <span className={`zone-signal zone-signal--${zone.signal}`}>
-                <span className="zone-signal-live" />
-                {zone.signal === "strong-buy"  && t("chart.strongBuy")}
-                {zone.signal === "buy"          && t("chart.buy")}
-                {zone.signal === "oversold"     && t("chart.oversold")}
-                {zone.signal === "overbought"   && t("chart.overbought")}
-                {zone.signal === "neutral"      && t("chart.neutralZone")}
-                {zone.signal === "sell"         && t("chart.sell")}
-                {zone.signal === "strong-sell"  && t("chart.strongSell")}
-              </span>
-            )}
-            {isFullscreen && (
-              <div className="chart-title-actions">
-                <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                  <span className="chart-icon-label">{t("chart.save")}</span>
-                </button>
-                <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title="Exit fullscreen">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
-                  </svg>
-                  <span className="chart-icon-label">{t("chart.exit")}</span>
-                </button>
+      <div
+        ref={isFullscreen ? fsScrollRef : undefined}
+        className={isFullscreen ? "price-chart-fs-scroll" : undefined}
+        onScroll={isFullscreen ? updateFsThumb : undefined}
+      >
+        <div className="chart-fs-header-group">
+          <div className="chart-header">
+            <div className="chart-header-left">
+              <div className="chart-title-row">
+                <h3>{t("chart.title", { coin })}</h3>
+                {(interval === "1sec" || interval === "1min") && isLive && (
+                  <span className="live-badge">{t("chart.live")}</span>
+                )}
+                {zone && (
+                  <span className={`zone-signal zone-signal--${zone.signal}`}>
+                    <span className="zone-signal-live" />
+                    {zone.signal === "strong-buy" && t("chart.strongBuy")}
+                    {zone.signal === "buy" && t("chart.buy")}
+                    {zone.signal === "oversold" && t("chart.oversold")}
+                    {zone.signal === "overbought" && t("chart.overbought")}
+                    {zone.signal === "neutral" && t("chart.neutralZone")}
+                    {zone.signal === "sell" && t("chart.sell")}
+                    {zone.signal === "strong-sell" && t("chart.strongSell")}
+                  </span>
+                )}
+                {isFullscreen && (
+                  <div className="chart-title-actions">
+                    <button
+                      className="chart-screenshot-btn"
+                      onClick={handleScreenshot}
+                      title="Save chart as PNG"
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <span className="chart-icon-label">
+                        {t("chart.save")}
+                      </span>
+                    </button>
+                    <button
+                      className="chart-fullscreen-btn"
+                      onClick={toggleFullscreen}
+                      title="Exit fullscreen"
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+                      </svg>
+                      <span className="chart-icon-label">
+                        {t("chart.exit")}
+                      </span>
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {dayHigh !== null && dayLow !== null && (
-            <span className="day-hl-badge">
-              <span className="day-hl-label">
-                {interval === "1sec"
-                  ? "30M"
-                  : interval === "1min"
-                    ? "1H"
-                    : interval === "5min"
-                      ? "24H"
-                      : interval === "15min"
-                        ? "48H"
-                        : interval === "1h"
-                          ? "24H"
-                          : interval === "1week"
-                            ? "7D"
-                            : "24H"}
-              </span>
-              <span className="day-hl-high">
-                H: $
-                {dayHigh.toLocaleString("en-US", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </span>
-              <span className="day-hl-sep"> · </span>
-              <span className="day-hl-low">
-                L: $
-                {dayLow.toLocaleString("en-US", {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                })}
-              </span>
-            </span>
-          )}
-            {divergence && (
-              <span className={`div-badge div-badge--${divergence.type}`}>
-                {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="chart-header-right">
-          <div className="chart-header-controls">
-          <div className="indicators-menu-wrapper" ref={menuRef}>
-            <button
-              className={`indicators-toggle${menuOpen ? " indicators-toggle--active" : ""}`}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              ◈ {t("chart.indicators")} {menuOpen ? "▴" : "▾"}
-            </button>
-            {menuOpen && (
-              <div className="indicators-menu">
-                <div className="indicators-menu-group-label">
-                  {t("chart.overlays")}
-                </div>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showBB}
-                    onChange={(e) => setShowBB(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "rgba(251,113,133,0.85)" }}
-                  />
-                  <span>{t("chart.bollingerBands")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showEMA20}
-                    onChange={(e) => setShowEMA20(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#4ade80" }}
-                  />
-                  <span>{t("chart.ema20")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showEMA50}
-                    onChange={(e) => setShowEMA50(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#fb923c" }}
-                  />
-                  <span>{t("chart.ema50")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showEMA200}
-                    onChange={(e) => setShowEMA200(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#c084fc" }}
-                  />
-                  <span>{t("chart.ema200")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showMA20}
-                    onChange={(e) => setShowMA20(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#38bdf8" }}
-                  />
-                  <span>{t("chart.ma20")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showMA50}
-                    onChange={(e) => setShowMA50(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#f472b6" }}
-                  />
-                  <span>{t("chart.ma50")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showMA200}
-                    onChange={(e) => setShowMA200(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#facc15" }}
-                  />
-                  <span>{t("chart.ma200")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showCME}
-                    onChange={(e) => setShowCME(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "rgba(251,191,36,0.85)" }}
-                  />
-                  <span>{t("chart.cmeGaps")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showGann}
-                    onChange={(e) => setShowGann(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#f97316" }}
-                  />
-                  <span>Gann Pivots</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showFib}
-                    onChange={(e) => setShowFib(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "rgba(251,191,36,0.85)" }}
-                  />
-                  <span>Fibonacci Levels</span>
-                </label>
-                <div className="indicators-menu-divider" />
-                <div className="indicators-menu-group-label">
-                  {t("chart.subcharts")}
-                </div>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showRSI}
-                    onChange={(e) => setShowRSI(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#38bdf8" }}
-                  />
-                  <span>{t("chart.rsi14")}</span>
-                </label>
-                <label className="indicators-menu-item">
-                  <input
-                    type="checkbox"
-                    checked={showMACD}
-                    onChange={(e) => setShowMACD(e.target.checked)}
-                  />
-                  <span
-                    className="indicators-menu-dot"
-                    style={{ background: "#f97316" }}
-                  />
-                  <span>{t("chart.macd1269")}</span>
-                </label>
-              </div>
-            )}
-          </div>
-          <select
-            className="interval-select"
-            value={interval}
-            onChange={(e) => setInterval(e.target.value as TimeInterval)}
-          >
-            {INTERVALS.map((opt) => (
-              <option key={opt} value={opt}>
-                {INTERVAL_LABELS[opt]}
-                {trends[opt] === "bullish"
-                  ? " ↑"
-                  : trends[opt] === "bearish"
-                    ? " ↓"
-                    : ""}
-              </option>
-            ))}
-          </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="chart-legend">
-        {showBB && (
-          <>
-            <span className="legend-item legend-bb-upper">{t("chart.bbUpperLegend")}</span>
-            <span className="legend-item legend-bb-middle">{t("chart.bbMiddleLegend")}</span>
-            <span className="legend-item legend-bb-lower">{t("chart.bbLowerLegend")}</span>
-          </>
-        )}
-        <div className="chart-legend-actions">
-          <button
-            className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
-            onClick={() => {
-              if (showDepthProfile) {
-                setShowDepthProfile(false);
-                if (document.fullscreenElement) {
-                  document.exitFullscreen().catch(() => {});
-                } else if (cssFsRef.current) {
-                  cssFsRef.current = false;
-                  setIsFullscreen(false);
-                }
-              } else {
-                toggleFullscreen();
-                setShowDepthProfile(true);
-              }
-            }}
-            title={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="6"/>
-              <line x1="21" y1="10" x2="6" y2="10"/>
-              <line x1="15" y1="14" x2="6" y2="14"/>
-              <line x1="12" y1="18" x2="6" y2="18"/>
-            </svg>
-            <span className="chart-icon-label">{t("chart.orderDepth")}</span>
-          </button>
-          <button className="chart-screenshot-btn" onClick={handleScreenshot} title="Save chart as PNG">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-            <span className="chart-icon-label">{t("chart.save")}</span>
-          </button>
-          <button className="chart-fullscreen-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
-            {isFullscreen ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
-              </svg>
-            ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/>
-              </svg>
-            )}
-            <span className="chart-icon-label">{isFullscreen ? t("chart.exit") : t("chart.expand")}</span>
-          </button>
-        </div>
-      </div>
-      </div>
-
-      {banner && isPaid && (
-        <div className={`interval-banner interval-banner--${banner.sentiment}`}>
-          <div className="interval-banner-header">
-            <span className="interval-banner-title">{banner.title}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
-              <button
-                className="interval-banner-close"
-                onClick={() => setBanner(null)}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                ✕
+                {dayHigh !== null && dayLow !== null && (
+                  <span className="day-hl-badge">
+                    <span className="day-hl-label">
+                      {interval === "1sec"
+                        ? "30M"
+                        : interval === "1min"
+                          ? "1H"
+                          : interval === "5min"
+                            ? "24H"
+                            : interval === "15min"
+                              ? "48H"
+                              : interval === "1h"
+                                ? "24H"
+                                : interval === "1week"
+                                  ? "7D"
+                                  : "24H"}
+                    </span>
+                    <span className="day-hl-high">
+                      H: $
+                      {dayHigh.toLocaleString("en-US", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                    <span className="day-hl-sep"> · </span>
+                    <span className="day-hl-low">
+                      L: $
+                      {dayLow.toLocaleString("en-US", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
+                    </span>
+                  </span>
+                )}
+                {divergence && (
+                  <span className={`div-badge div-badge--${divergence.type}`}>
+                    {divergence.type === "bullish"
+                      ? "↑ Bull Div"
+                      : "↓ Bear Div"}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="chart-header-right">
+              <div className="chart-header-controls">
+                <div className="indicators-menu-wrapper" ref={menuRef}>
+                  <button
+                    className={`indicators-toggle${menuOpen ? " indicators-toggle--active" : ""}`}
+                    onClick={() => setMenuOpen((v) => !v)}
+                  >
+                    ◈ {t("chart.indicators")} {menuOpen ? "▴" : "▾"}
+                  </button>
+                  {menuOpen && (
+                    <div className="indicators-menu">
+                      <div className="indicators-menu-group-label">
+                        {t("chart.overlays")}
+                      </div>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showBB}
+                          onChange={(e) => setShowBB(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "rgba(251,113,133,0.85)" }}
+                        />
+                        <span>{t("chart.bollingerBands")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showEMA20}
+                          onChange={(e) => setShowEMA20(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#4ade80" }}
+                        />
+                        <span>{t("chart.ema20")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showEMA50}
+                          onChange={(e) => setShowEMA50(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#fb923c" }}
+                        />
+                        <span>{t("chart.ema50")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showEMA200}
+                          onChange={(e) => setShowEMA200(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#c084fc" }}
+                        />
+                        <span>{t("chart.ema200")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showMA20}
+                          onChange={(e) => setShowMA20(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#38bdf8" }}
+                        />
+                        <span>{t("chart.ma20")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showMA50}
+                          onChange={(e) => setShowMA50(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#f472b6" }}
+                        />
+                        <span>{t("chart.ma50")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showMA200}
+                          onChange={(e) => setShowMA200(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#facc15" }}
+                        />
+                        <span>{t("chart.ma200")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showCME}
+                          onChange={(e) => setShowCME(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "rgba(251,191,36,0.85)" }}
+                        />
+                        <span>{t("chart.cmeGaps")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showGann}
+                          onChange={(e) => setShowGann(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#f97316" }}
+                        />
+                        <span>Gann Pivots</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showFib}
+                          onChange={(e) => setShowFib(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "rgba(251,191,36,0.85)" }}
+                        />
+                        <span>Fibonacci Levels</span>
+                      </label>
+                      <div className="indicators-menu-divider" />
+                      <div className="indicators-menu-group-label">
+                        {t("chart.subcharts")}
+                      </div>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showRSI}
+                          onChange={(e) => setShowRSI(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#38bdf8" }}
+                        />
+                        <span>{t("chart.rsi14")}</span>
+                      </label>
+                      <label className="indicators-menu-item">
+                        <input
+                          type="checkbox"
+                          checked={showMACD}
+                          onChange={(e) => setShowMACD(e.target.checked)}
+                        />
+                        <span
+                          className="indicators-menu-dot"
+                          style={{ background: "#f97316" }}
+                        />
+                        <span>{t("chart.macd1269")}</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+                <select
+                  className="interval-select"
+                  value={interval}
+                  onChange={(e) => setInterval(e.target.value as TimeInterval)}
+                >
+                  {INTERVALS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {INTERVAL_LABELS[opt]}
+                      {trends[opt] === "bullish"
+                        ? " ↑"
+                        : trends[opt] === "bearish"
+                          ? " ↓"
+                          : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="chart-legend">
+            {showBB && (
+              <>
+                <span className="legend-item legend-bb-upper">
+                  {t("chart.bbUpperLegend")}
+                </span>
+                <span className="legend-item legend-bb-middle">
+                  {t("chart.bbMiddleLegend")}
+                </span>
+                <span className="legend-item legend-bb-lower">
+                  {t("chart.bbLowerLegend")}
+                </span>
+              </>
+            )}
+            <div className="chart-legend-actions">
+              <button
+                className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
+                onClick={() => {
+                  if (showDepthProfile) {
+                    setShowDepthProfile(false);
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen().catch(() => {});
+                    } else if (cssFsRef.current) {
+                      cssFsRef.current = false;
+                      setIsFullscreen(false);
+                    }
+                  } else {
+                    toggleFullscreen();
+                    setShowDepthProfile(true);
+                  }
+                }}
+                title={
+                  showDepthProfile ? "Hide depth profile" : "Show depth profile"
+                }
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="6" />
+                  <line x1="21" y1="10" x2="6" y2="10" />
+                  <line x1="15" y1="14" x2="6" y2="14" />
+                  <line x1="12" y1="18" x2="6" y2="18" />
+                </svg>
+                <span className="chart-icon-label">
+                  {t("chart.orderDepth")}
+                </span>
+              </button>
+              <button
+                className="chart-screenshot-btn"
+                onClick={handleScreenshot}
+                title="Save chart as PNG"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span className="chart-icon-label">{t("chart.save")}</span>
+              </button>
+              <button
+                className="chart-fullscreen-btn"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
+                  </svg>
+                )}
+                <span className="chart-icon-label">
+                  {isFullscreen ? t("chart.exit") : t("chart.expand")}
+                </span>
               </button>
             </div>
           </div>
-          <p className="interval-banner-body">{banner.body}</p>
-        </div>
-      )}
-
-      {error && lastCandlesRef.current.length === 0 && (
-        <div className="chart-error">⚠️ {error}</div>
-      )}
-
-      <div style={{ position: "relative" }} onDoubleClick={toggleFullscreen} className="chart-dblclick-wrap">
-        {loading && (
-          <div className="chart-loading-overlay">
-            <span>{t("chart.loading")}</span>
-          </div>
-        )}
-        <div ref={containerRef} className="chart-canvas-wrap chart-main-wrap" style={{ width: "100%", height: isFullscreen ? "calc(100vh - 290px)" : "400px" }} />
-        <PredictionOverlay
-          chartRef={chartRef}
-          seriesRef={candleRef}
-          prediction={predictionPath}
-        />
-        <ChartDrawingTools
-          chartRef={chartRef}
-          seriesRef={candleRef}
-          containerRef={containerRef}
-          candlesRef={lastCandlesRef}
-          visible={isFullscreen}
-          persistRef={drawingsPersistRef}
-        />
-      </div>
-
-      {showDepthProfile && (
-        <OrderBookProfileModal
-          coin={coin}
-          onClose={() => {
-            setShowDepthProfile(false);
-            if (document.fullscreenElement) {
-              document.exitFullscreen().catch(() => {});
-            } else if (cssFsRef.current) {
-              cssFsRef.current = false;
-              setIsFullscreen(false);
-            }
-          }}
-        />
-      )}
-
-      {showGann && gannCycles.length > 0 && (
-        <div className="gann-cycles-strip">
-          <span className="gann-cycles-label">{t("chart.gannCyclesLabel")}</span>
-          {gannCycles.map(gc => (
-            <span key={gc.label} className={`gann-cycle-pill${gc.isPast ? " gann-cycle-pill--past" : ""}`}>
-              {gc.label} · {new Date(gc.timestamp * 1000).toLocaleDateString(i18n.language, { month: "short", day: "numeric" })}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="sub-charts">
-        <div
-          className={`sub-chart-panel${showRSI ? "" : " sub-chart-panel--hidden"}`}
-        >
-          <div className="sub-chart-header">
-            <span className="sub-chart-title">{t("chart.rsi14")}</span>
-            <div className="sub-chart-legend">
-              <span className="sub-chart-legend-item legend-rsi">
-                ── {t("chart.rsiLegend")}
-              </span>
-              <span className="sub-chart-legend-item legend-ob">
-                ▬ {t("chart.rsiOB")}
-              </span>
-              <span className="sub-chart-legend-item legend-os">
-                ▬ {t("chart.rsiOS")}
-              </span>
-            </div>
-          </div>
-          <div ref={rsiContainerRef} className="chart-canvas-wrap" style={{ width: "100%", height: "130px" }} />
         </div>
 
-        <div
-          className={`sub-chart-panel${showMACD ? "" : " sub-chart-panel--hidden"}`}
-        >
-          <div className="sub-chart-header">
-            <span className="sub-chart-title">{t("chart.macd1269")}</span>
-            <div className="sub-chart-legend">
-              <span className="sub-chart-legend-item legend-macd">
-                ── {t("chart.macdLegend")}
-              </span>
-              <span className="sub-chart-legend-item legend-signal">
-                ── {t("chart.signalLegend")}
-              </span>
-            </div>
-          </div>
-          <div ref={macdContainerRef} className="chart-canvas-wrap" style={{ width: "100%", height: "130px" }} />
-        </div>
-      </div>
-
-      <div className="chart-reset-row">
-        {predictionPath ? (
-          <>
-            <button
-              className="predict-btn"
-              onClick={() => setShowPredictionModal(true)}
-            >
-              {t("chart.aiPrediction")}
-            </button>
-          </>
-        ) : (
-          <button
-            className={`predict-btn${predictionLoading ? " predict-btn--loading" : ""}`}
-            onClick={handlePredict}
-            disabled={predictionLoading}
+        {banner && isPaid && (
+          <div
+            className={`interval-banner interval-banner--${banner.sentiment}`}
           >
-            {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
-            {!predictionLoading && <span className="predict-ai-label">{t("chart.aiPowered")}</span>}
-          </button>
+            <div className="interval-banner-header">
+              <span className="interval-banner-title">{banner.title}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="pattern-insight-ai-badge">
+                  {t("chart.aiPowered")}
+                </span>
+                <button
+                  className="interval-banner-close"
+                  onClick={() => setBanner(null)}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <p className="interval-banner-body">{banner.body}</p>
+          </div>
         )}
-        <button
-          className="chart-reset-view-btn"
-          onClick={() => {
-            chartRef.current?.timeScale().fitContent();
-            rsiChartRef.current?.timeScale().fitContent();
-            macdChartRef.current?.timeScale().fitContent();
-          }}
-        >
-          {t("chart.reset")}
-        </button>
-      </div>
 
-      {!loading && !isElite ? (
-        <div className="pattern-insight pattern-insight--neutral">
-          <div className="pattern-insight-header">
-            <span className="pattern-insight-badge">{t("chart.aiPatternBadge")}</span>
-            <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
-          </div>
-          <div className="pattern-insight-elite-gate">
-            <span className="pattern-insight-elite-lock">🔒</span>
-            <p className="pattern-insight-elite-msg">
-              AI Pattern Analysis is an <strong>Elite</strong> feature.{" "}
-              <button className="pattern-insight-elite-btn" onClick={onOpenUpgrade}>Upgrade to Elite</button>
-            </p>
-          </div>
-        </div>
-      ) : !loading && exceeded ? (
-        <div className="pattern-insight pattern-insight--neutral">
-          <div className="pattern-insight-header">
-            <span className="pattern-insight-badge">{t("chart.aiPatternBadge")}</span>
-            <span className="pattern-insight-label">
-              {t("chart.currentPattern")}
-            </span>
-          </div>
-          <AIQuotaWall
-            used={used}
-            limit={limit}
-            onOpenUpgrade={onOpenUpgrade}
-            onOpenAuth={onOpenAuth}
+        {error && lastCandlesRef.current.length === 0 && (
+          <div className="chart-error">⚠️ {error}</div>
+        )}
+
+        <div
+          style={{ position: "relative" }}
+          onDoubleClick={toggleFullscreen}
+          className="chart-dblclick-wrap"
+        >
+          {loading && (
+            <div className="chart-loading-overlay">
+              <span>{t("chart.loading")}</span>
+            </div>
+          )}
+          <div
+            ref={containerRef}
+            className="chart-canvas-wrap chart-main-wrap"
+            style={{
+              width: "100%",
+              height: isFullscreen ? "calc(100vh - 290px)" : "400px",
+            }}
+          />
+          <PredictionOverlay
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            prediction={predictionPath}
+          />
+          <ChartDrawingTools
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            containerRef={containerRef}
+            candlesRef={lastCandlesRef}
+            visible={isFullscreen}
+            persistRef={drawingsPersistRef}
           />
         </div>
-      ) : !loading && patternInsight ? (
-        <div
-          className={`pattern-insight pattern-insight--${patternInsight.type}`}
-        >
-          <div className="pattern-insight-header">
-            <span
-              className={`pattern-insight-badge pattern-insight-badge--${patternInsight.type}`}
-            >
-              {patternInsight.type === "bullish"
-                ? "🟢"
-                : patternInsight.type === "bearish"
-                  ? "🔴"
-                  : "⚪"}{" "}
-              {patternInsight.name}
+
+        {showDepthProfile && (
+          <OrderBookProfileModal
+            coin={coin}
+            onClose={() => {
+              setShowDepthProfile(false);
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              } else if (cssFsRef.current) {
+                cssFsRef.current = false;
+                setIsFullscreen(false);
+              }
+            }}
+          />
+        )}
+
+        {showGann && gannCycles.length > 0 && (
+          <div className="gann-cycles-strip">
+            <span className="gann-cycles-label">
+              {t("chart.gannCyclesLabel")}
             </span>
-            <div className="pattern-insight-header-right">
-              <span className="pattern-insight-ai-badge">{t("chart.aiPowered")}</span>
-            </div>
+            {gannCycles.map((gc) => (
+              <span
+                key={gc.label}
+                className={`gann-cycle-pill${gc.isPast ? " gann-cycle-pill--past" : ""}`}
+              >
+                {gc.label} ·{" "}
+                {new Date(gc.timestamp * 1000).toLocaleDateString(
+                  i18n.language,
+                  { month: "short", day: "numeric" },
+                )}
+              </span>
+            ))}
           </div>
-          <p className="pattern-insight-summary">{patternInsight.summary}</p>
-          <p className="pattern-insight-narrative">
-            {patternInsight.narrative}
-          </p>
-          <div className="pattern-insight-next">
-            <span className="pattern-insight-next-label">
-              {t("chart.nextMove")}
-            </span>
-            <p className="pattern-insight-next-text">
-              {patternInsight.nextMove}
-            </p>
+        )}
+
+        <div className="sub-charts">
+          <div
+            className={`sub-chart-panel${showRSI ? "" : " sub-chart-panel--hidden"}`}
+          >
+            <div className="sub-chart-header">
+              <span className="sub-chart-title">{t("chart.rsi14")}</span>
+              <div className="sub-chart-legend">
+                <span className="sub-chart-legend-item legend-rsi">
+                  ── {t("chart.rsiLegend")}
+                </span>
+                <span className="sub-chart-legend-item legend-ob">
+                  ▬ {t("chart.rsiOB")}
+                </span>
+                <span className="sub-chart-legend-item legend-os">
+                  ▬ {t("chart.rsiOS")}
+                </span>
+              </div>
+            </div>
+            <div
+              ref={rsiContainerRef}
+              className="chart-canvas-wrap"
+              style={{ width: "100%", height: "130px" }}
+            />
+          </div>
+
+          <div
+            className={`sub-chart-panel${showMACD ? "" : " sub-chart-panel--hidden"}`}
+          >
+            <div className="sub-chart-header">
+              <span className="sub-chart-title">{t("chart.macd1269")}</span>
+              <div className="sub-chart-legend">
+                <span className="sub-chart-legend-item legend-macd">
+                  ── {t("chart.macdLegend")}
+                </span>
+                <span className="sub-chart-legend-item legend-signal">
+                  ── {t("chart.signalLegend")}
+                </span>
+              </div>
+            </div>
+            <div
+              ref={macdContainerRef}
+              className="chart-canvas-wrap"
+              style={{ width: "100%", height: "130px" }}
+            />
           </div>
         </div>
-      ) : null}
 
-      {showPredictionModal && predictionPath && chartPrediction && (
-        <PredictionModal
-          candles={lastCandlesRef.current}
-          prediction={predictionPath}
-          chartPrediction={chartPrediction}
-          coin={coin}
-          interval={interval}
-          theme={theme}
-          divergence={divergence ? { type: divergence.type, pivots: divergence.pivots.map(p => ({ time: p.time, price: p.price })) } : null}
-          onClose={() => setShowPredictionModal(false)}
-        />
-      )}
-    </div>
+        <div className="chart-reset-row">
+          {predictionPath ? (
+            <>
+              <button
+                className="predict-btn"
+                onClick={() => setShowPredictionModal(true)}
+              >
+                {t("chart.aiPrediction")}
+              </button>
+            </>
+          ) : (
+            <button
+              className={`predict-btn${predictionLoading ? " predict-btn--loading" : ""}`}
+              onClick={handlePredict}
+              disabled={predictionLoading}
+            >
+              {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
+              {!predictionLoading && (
+                <span className="predict-ai-label">{t("chart.aiPowered")}</span>
+              )}
+            </button>
+          )}
+          <button
+            className="chart-reset-view-btn"
+            onClick={() => {
+              chartRef.current?.timeScale().fitContent();
+              rsiChartRef.current?.timeScale().fitContent();
+              macdChartRef.current?.timeScale().fitContent();
+            }}
+          >
+            {t("chart.reset")}
+          </button>
+        </div>
+
+        {!loading && !isElite ? (
+          <div className="pattern-insight pattern-insight--neutral">
+            <div className="pattern-insight-header">
+              <span className="pattern-insight-badge">
+                {t("chart.aiPatternBadge")}
+              </span>
+              <span className="pattern-insight-ai-badge">
+                {t("chart.aiPowered")}
+              </span>
+            </div>
+            <div className="pattern-insight-elite-gate">
+              <span className="pattern-insight-elite-lock">🔒</span>
+              <p className="pattern-insight-elite-msg">
+                AI Pattern Analysis is an <strong>Elite</strong> feature.{" "}
+                <button
+                  className="pattern-insight-elite-btn"
+                  onClick={onOpenUpgrade}
+                >
+                  Upgrade to Elite
+                </button>
+              </p>
+            </div>
+          </div>
+        ) : !loading && exceeded ? (
+          <div className="pattern-insight pattern-insight--neutral">
+            <div className="pattern-insight-header">
+              <span className="pattern-insight-badge">
+                {t("chart.aiPatternBadge")}
+              </span>
+              <span className="pattern-insight-label">
+                {t("chart.currentPattern")}
+              </span>
+            </div>
+            <AIQuotaWall
+              used={used}
+              limit={limit}
+              onOpenUpgrade={onOpenUpgrade}
+              onOpenAuth={onOpenAuth}
+            />
+          </div>
+        ) : !loading && patternInsight ? (
+          <div
+            className={`pattern-insight pattern-insight--${patternInsight.type}`}
+          >
+            <div className="pattern-insight-header">
+              <span
+                className={`pattern-insight-badge pattern-insight-badge--${patternInsight.type}`}
+              >
+                {patternInsight.type === "bullish"
+                  ? "🟢"
+                  : patternInsight.type === "bearish"
+                    ? "🔴"
+                    : "⚪"}{" "}
+                {patternInsight.name}
+              </span>
+              <div className="pattern-insight-header-right">
+                <span className="pattern-insight-ai-badge">
+                  {t("chart.aiPowered")}
+                </span>
+              </div>
+            </div>
+            <p className="pattern-insight-summary">{patternInsight.summary}</p>
+            <p className="pattern-insight-narrative">
+              {patternInsight.narrative}
+            </p>
+            <div className="pattern-insight-next">
+              <span className="pattern-insight-next-label">
+                {t("chart.nextMove")}
+              </span>
+              <p className="pattern-insight-next-text">
+                {patternInsight.nextMove}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {showPredictionModal && predictionPath && chartPrediction && (
+          <PredictionModal
+            candles={lastCandlesRef.current}
+            prediction={predictionPath}
+            chartPrediction={chartPrediction}
+            coin={coin}
+            interval={interval}
+            theme={theme}
+            divergence={
+              divergence
+                ? {
+                    type: divergence.type,
+                    pivots: divergence.pivots.map((p) => ({
+                      time: p.time,
+                      price: p.price,
+                    })),
+                  }
+                : null
+            }
+            onClose={() => setShowPredictionModal(false)}
+          />
+        )}
+      </div>
     </div>
   );
 };
