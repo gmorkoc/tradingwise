@@ -86,8 +86,8 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           </div>
         </div>
 
-        {/* Usage pips — only shown for paid tiers that hit their cap */}
-        {!isFreeBlock && (
+        {/* Usage pips — only shown for paid tiers that hit their cap, not in gate mode */}
+        {!isFreeBlock && !planId && (
           <div className="aiqw-usage">
             {Array.from({ length: limit }).map((_, i) => (
               <span key={i} className={`aiqw-pip ${i < used ? "aiqw-pip--used" : ""}`} />
