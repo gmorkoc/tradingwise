@@ -76,8 +76,13 @@ Deno.serve(async (req) => {
       subscription_proration_behavior: "create_prorations",
     });
 
+    // Sum only the proration line items — amount_due includes next period's full charge too
+    const proratedAmount = upcoming.lines.data
+      .filter((line) => line.proration)
+      .reduce((sum, line) => sum + line.amount, 0);
+
     return new Response(
-      JSON.stringify({ amountDue: upcoming.amount_due, currency: upcoming.currency }),
+      JSON.stringify({ amountDue: proratedAmount, currency: upcoming.currency }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

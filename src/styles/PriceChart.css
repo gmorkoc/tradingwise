@@ -602,6 +602,7 @@ html[data-theme="light"] .chart-loading-overlay {
   color: var(--color-text-secondary);
 }
 
+
 .chart-error,
 .chart-empty {
   display: flex;
@@ -1065,40 +1066,65 @@ html[data-theme="light"] .chart-loading-overlay {
   gap: 6px;
 }
 
+.pattern-insight--elite-gate {
+  background: rgba(167, 139, 250, 0.07);
+  border-color: rgba(167, 139, 250, 0.35);
+  border-left: 3px solid #a78bfa;
+}
+
+.pattern-insight-badge--elite {
+  color: #a78bfa;
+}
+
 .pattern-insight-elite-gate {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0 4px;
+  padding: 6px 14px 8px;
+  flex-wrap: wrap;
+}
+
+.pattern-insight-elite-content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
 }
 
 .pattern-insight-elite-lock {
-  font-size: 1rem;
+  font-size: 0.82rem;
   flex-shrink: 0;
 }
 
 .pattern-insight-elite-msg {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pattern-insight-elite-msg strong {
-  color: var(--color-text);
+  color: #a78bfa;
 }
 
-.pattern-insight-elite-btn {
-  background: none;
+.pattern-insight-elite-cta {
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
   border: none;
-  padding: 0;
-  cursor: pointer;
-  font-size: inherit;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.74rem;
   font-weight: 700;
-  color: #a78bfa;
-  transition: color 0.15s;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
 }
-.pattern-insight-elite-btn:hover { color: #c4b5fd; text-decoration: underline; }
+.pattern-insight-elite-cta:hover { opacity: 0.85; }
 
 .pattern-insight-label {
   font-size: 0.68rem;
@@ -1353,3 +1379,158 @@ html[data-theme="light"] .chart-loading-overlay {
   font-weight: 700;
   color: #ef4444;
 }
+
+/* ── AI Pattern Analysis gate card (compact) ─────────────────────────── */
+.pi-gate-card {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  margin-left: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 18px;
+  background: rgba(167, 139, 250, 0.07);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-left: 3px solid #a78bfa;
+  border-radius: 10px;
+}
+
+.pi-gate-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.pi-gate-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.pi-gate-card-icon {
+  font-size: 0.82rem;
+  color: #a78bfa;
+}
+
+.pi-gate-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.pi-gate-card-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-transform: uppercase;
+}
+
+.pi-gate-card-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.pi-gate-card-cta {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.pi-gate-card-cta:hover { opacity: 0.85; }
+
+/* ── AI Interval Analysis gate card (compact, Pro) ───────────────────── */
+.ib-gate-card {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  margin-left: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 18px;
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-left: 3px solid #6366f1;
+  border-radius: 10px;
+}
+
+.ib-gate-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ib-gate-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+}
+
+.ib-gate-card-icon {
+  font-size: 0.82rem;
+  color: #818cf8;
+}
+
+.ib-gate-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.ib-gate-card-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-transform: uppercase;
+}
+
+.ib-gate-card-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.ib-gate-card-cta {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #4f46e5, #818cf8);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.ib-gate-card-cta:hover { opacity: 0.85; }

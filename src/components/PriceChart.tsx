@@ -49,7 +49,7 @@ interface PriceChartProps {
   coin?: CoinSymbol;
   onZoneChange?: (zone: ZoneResult | null, price: number) => void;
   onOpenAuth?: () => void;
-  onOpenUpgrade?: () => void;
+  onOpenUpgrade?: (plan?: "pro" | "elite") => void;
 }
 
 const INTERVALS: TimeInterval[] = [
@@ -2758,6 +2758,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         )}
 
+        {!isPaid && (
+          <div className="ib-gate-card">
+            <button className="ib-gate-card-cta" onClick={() => onOpenUpgrade?.("pro")}>
+              Upgrade to Pro
+            </button>
+            <div className="ib-gate-card-body">
+              <div className="ib-gate-card-top">
+                <span className="ib-gate-card-icon">✦</span>
+                <span className="ib-gate-card-title">AI Interval Analysis</span>
+                <span className="ib-gate-card-badge">Pro</span>
+              </div>
+              <p className="ib-gate-card-desc">Real-time interval sentiment, trend context &amp; key level insights for every timeframe.</p>
+            </div>
+          </div>
+        )}
+
         {error && lastCandlesRef.current.length === 0 && (
           <div className="chart-error">⚠️ {error}</div>
         )}
@@ -2912,27 +2928,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </div>
 
         {!loading && !isElite ? (
-          <div className="pattern-insight pattern-insight--neutral">
-            <div className="pattern-insight-header">
-              <span className="pattern-insight-badge">
-                {t("chart.aiPatternBadge")}
-              </span>
-              <span className="pattern-insight-ai-badge">
-                {t("chart.aiPowered")}
-              </span>
+          <div className="pi-gate-card">
+            <div className="pi-gate-card-body">
+              <div className="pi-gate-card-top">
+                <span className="pi-gate-card-icon">✦</span>
+                <span className="pi-gate-card-title">AI Pattern Analysis</span>
+                <span className="pi-gate-card-badge">Elite</span>
+              </div>
+              <p className="pi-gate-card-desc">Real-time pattern detection, narrative analysis &amp; next-move predictions.</p>
             </div>
-            <div className="pattern-insight-elite-gate">
-              <span className="pattern-insight-elite-lock">🔒</span>
-              <p className="pattern-insight-elite-msg">
-                AI Pattern Analysis is an <strong>Elite</strong> feature.{" "}
-                <button
-                  className="pattern-insight-elite-btn"
-                  onClick={onOpenUpgrade}
-                >
-                  Upgrade to Elite
-                </button>
-              </p>
-            </div>
+            <button className="pi-gate-card-cta" onClick={() => onOpenUpgrade?.("elite")}>
+              Upgrade to Elite
+            </button>
           </div>
         ) : !loading && exceeded ? (
           <div className="pattern-insight pattern-insight--neutral">
