@@ -257,6 +257,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-dblclick-wrap:hover::after {
   opacity: 1;
 }
+.price-chart-container--fs .chart-dblclick-wrap::after,
+.price-chart-container:fullscreen .chart-dblclick-wrap::after {
+  display: none;
+}
 
 .day-hl-badge {
   display: inline-flex;
