@@ -13,6 +13,8 @@ interface Props {
   theme: "dark" | "light";
   onOpenAuth: () => void;
   onOpenUpgrade: () => void;
+  onReady?: () => void;
+  refreshTrigger?: number;
 }
 
 type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number };
@@ -1312,10 +1314,11 @@ function IndicatorPill({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade }) => {
+export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady }) => {
   const [intervalIdx, setIntervalIdx] = useState(3);  // default 1h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [lastCandleTime, setLastCandleTime] = useState<number | null>(null);
@@ -1848,6 +1851,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         setLastCandleTime(data[data.length - 1].time);
         setLoading(false);
         triggerAI.current = true;
+        if (!onReadyFiredRef.current) { onReadyFiredRef.current = true; onReady?.(); }
       })
       .catch(() => {
         if (cancelled) return;

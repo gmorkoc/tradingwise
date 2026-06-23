@@ -39,7 +39,8 @@ type TimeInterval =
   | "4h"
   | "6h"
   | "1day"
-  | "1week";
+  | "1week"
+  | "all";
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
 
 interface PriceChartProps {
@@ -61,6 +62,7 @@ const INTERVALS: TimeInterval[] = [
   "6h",
   "1day",
   "1week",
+  "all",
 ];
 
 const INTERVAL_LABELS: Record<TimeInterval, string> = {
@@ -73,6 +75,7 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "6h": "6H  (~15 days)",
   "1day": "1D  (90 days)",
   "1week": "1W  (52 weeks)",
+  "all": "ALL (full history)",
 };
 
 const FIB_LEVELS = [
@@ -1573,7 +1576,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             interval === "1sec" ||
             interval === "1min" ||
             interval === "5min" ||
-            interval === "15min";
+            interval === "15min" ||
+            interval === "all";
           const filtered24 = shortInterval
             ? data
             : data.filter((c) => (c.time as number) >= cutoff24);
@@ -1882,7 +1886,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const candles = lastCandlesRef.current;
     if (candles.length === 0) return;
     const n =
-      interval === "1week"
+      interval === "1week" || interval === "all"
         ? 3
         : interval === "1day" || interval === "4h" || interval === "6h"
           ? 5
@@ -2403,7 +2407,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                 ? "24H"
                                 : interval === "1week"
                                   ? "7D"
-                                  : "24H"}
+                                  : interval === "all"
+                                    ? "ATH"
+                                    : "24H"}
                     </span>
                     <span className="day-hl-high">
                       H: $

@@ -1553,6 +1553,24 @@ html[data-theme="light"] .icon-strip-quota-bar {
   background: none;
 }
 
+/* ── Compact sidebar on smaller desktops ────────────────────────────────── */
+@media (min-width: 641px) and (max-width: 1512px) {
+  .icon-strip {
+    width: 48px;
+    padding: 12px 0 16px;
+  }
+  .icon-strip:hover { width: 140px; }
+  .icon-strip-logo .st-logo-icon { width: 26px; height: 26px; }
+  .icon-strip-btn {
+    padding: 5px 10px 5px 11px;
+  }
+  .icon-strip-nav { gap: 1px; padding: 4px 0; }
+  .icon-strip-bottom { gap: 1px; padding-top: 8px; }
+  .nav-icon-wrap,
+  .nav-icon-wrap svg { width: 22px; height: 22px; }
+  .icon-strip-label { font-size: 0.75rem; }
+}
+
 /* ── Side watchlist panel ───────────────────────────────────────────────── */
 .side-panel {
   width: 330px;

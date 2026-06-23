@@ -161,7 +161,7 @@ export const COINS = [
 export type CoinSymbol = typeof COINS[number]['symbol'];
 
 // HOBBYIST plan supports: 4h, 6h, 8h, 12h, 1d, 1w — 1min/1h use CryptoCompare, 1sec uses OKX public API
-type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week';
+type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week' | 'all';
 
 export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m' | '3m';
 
@@ -185,6 +185,7 @@ function toCgSymbol(coin: CoinSymbol | string): string {
 const CACHE_TTL = 30_000;
 const candleCache = new Map<string, { data: CandleDataPoint[]; fetchedAt: number }>();
 const candleInFlight = new Map<string, Promise<CandleDataPoint[]>>();
+
 
 async function fetchPriceCandles(
   coin: CoinSymbol | string,
@@ -296,7 +297,65 @@ async function fetchBinanceKlines(
   return promise;
 }
 
+async function fetchCoinGlassAllTime(coin: CoinSymbol | string): Promise<CandleDataPoint[]> {
+  const sym = String(coin).toUpperCase();
+  const key = `cg-all:${sym}`;
+  const TTL = 4 * 60 * 60 * 1000;
+  const cached = candleCache.get(key);
+  if (cached && Date.now() - cached.fetchedAt < TTL) return cached.data;
 
+  const allCandles: CandleDataPoint[] = [];
+  // Bitstamp has BTC/USD data from 2011; Coinbase from 2015; Binance from 2017
+  // Try Bitstamp BTCUSD first for the oldest coverage, fall back to Binance BTCUSDT
+  const candidates = [
+    { exchange: 'Bitstamp', symbol: `${sym}USD`  },
+    { exchange: 'Coinbase', symbol: `${sym}USD`  },
+    { exchange: 'Binance',  symbol: `${sym}USDT` },
+  ];
+
+  const DAY_MS    = 86_400_000;
+  const LIMIT     = 1000;
+  const START_MS  = 1_325_376_000_000; // 2012-01-01 UTC
+
+  for (const { exchange, symbol } of candidates) {
+    const pages: CandleDataPoint[] = [];
+    let startTime = START_MS;
+    const now = Date.now();
+    let ok = false;
+
+    while (startTime < now) {
+      const endTime = Math.min(startTime + LIMIT * DAY_MS, now);
+      try {
+        const res = await api.get('spot/price/history', {
+          params: { exchange, symbol, interval: '1d', limit: LIMIT, start_time: startTime, end_time: endTime },
+        });
+        if (res.data?.code === '0' && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          const batch = (res.data.data as { time: number; open: string; high: string; low: string; close: string }[])
+            .map(c => ({
+              time:  Math.floor(c.time / 1000),
+              open:  parseFloat(c.open),
+              high:  parseFloat(c.high),
+              low:   parseFloat(c.low),
+              close: parseFloat(c.close),
+            }))
+            .filter(c => c.open > 0);
+          pages.push(...batch);
+          ok = true;
+        }
+      } catch { /* skip failed page */ }
+      startTime = endTime + DAY_MS;
+    }
+
+    if (ok && pages.length > 0) {
+      allCandles.push(...pages);
+      break;
+    }
+  }
+
+  allCandles.sort((a, b) => a.time - b.time);
+  candleCache.set(key, { data: allCandles, fetchedAt: Date.now() });
+  return allCandles;
+}
 
 function computeCMEGap(spotCandles: CandleDataPoint[], currentPrice: number): CMEGap {
   // CME BTC futures close Friday ~21:00 UTC and reopen Sunday ~22:00 UTC.
@@ -516,6 +575,7 @@ export const coinglass = {
     if (interval === '6h')    return fetchBinanceKlines(coin, '6h',  60);
     if (interval === '1day')  return fetchBinanceKlines(coin, '1d',  90);
     if (interval === '1week') return fetchBinanceKlines(coin, '1w',  52);
+    if (interval === 'all')   return fetchCoinGlassAllTime(coin);
     return fetchBinanceKlines(coin, '4h', 168);
   },
 

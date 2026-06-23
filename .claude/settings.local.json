@@ -24,7 +24,10 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(curl -s \"https://s3.coinglass.com/v1/cg/_next/static/chunks/pages/etf/bitcoin-9fee8486ab8d68de.js\")"
+      "Bash(curl -s \"https://s3.coinglass.com/v1/cg/_next/static/chunks/pages/etf/bitcoin-9fee8486ab8d68de.js\")",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(open http://localhost:5173)"
     ]
   }
 }

@@ -11,6 +11,7 @@ interface AuthContextValue {
   tier:        Tier;
   signUp:      (email: string, password: string, fullName: string) => Promise<string | null>;
   signIn:      (email: string, password: string) => Promise<string | null>;
+  signInWithMagicLink: (email: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
   signOut:     () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
@@ -65,6 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error?.message ?? null;
   };
 
+  const signInWithMagicLink = async (email: string): Promise<string | null> => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+    return error?.message ?? null;
+  };
+
   const signInWithGoogle = async (): Promise<string | null> => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -92,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, profile, session, loading,
       tier: profile?.tier ?? "free",
-      signUp, signIn, signInWithGoogle, signOut, resetPassword, refreshProfile,
+      signUp, signIn, signInWithMagicLink, signInWithGoogle, signOut, resetPassword, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

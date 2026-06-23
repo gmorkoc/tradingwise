@@ -144,7 +144,7 @@ export const OnboardingWizard: React.FC<Props> = ({ onComplete, onSkip }) => {
 
         {onSkip && (
           <button className="onb-skip" onClick={onSkip} aria-label="Skip onboarding">
-            Skip
+            Skip Now
           </button>
         )}
 
