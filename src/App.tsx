@@ -48,7 +48,7 @@ import { SectionBanner } from "./components/SectionBanner";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
 import { ZoneResult } from "./components/PriceChart.types";
-import { hasAccess, Tier, saveTermsAgreement } from "./services/supabase";
+import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
@@ -811,16 +811,12 @@ function AppDashboard({
               <span className="mob-nav-name">
                 {profile?.full_name || user?.email?.split("@")[0] || "Account"}
               </span>
-              {user?.email && (
-                <span className="mob-nav-email">{user.email}</span>
-              )}
+              <span className={`mob-nav-tier mob-nav-tier--${tier}`}>{tier.toUpperCase()}</span>
             </div>
           </div>
 
           <div className="icon-strip-nav">
             {NAV_ITEMS.filter((item) => !item.hidden).map((item) => {
-              const locked =
-                !!item.requiredTier && !hasAccess(tier, item.requiredTier);
               return (
                 <button
                   key={item.id}
@@ -837,24 +833,10 @@ function AppDashboard({
                   </span>
                   <span className="icon-strip-label">{t(item.labelKey)}</span>
                   {/* Desktop badge — after label */}
-                  {locked ? (
-                    <span className="icon-strip-lock nav-badge--desktop">
-                      <svg
-                        width="7"
-                        height="7"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        stroke="none"
-                      >
-                        <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z" />
-                      </svg>
+                  {item.requiredTier === "elite" && (
+                    <span className="icon-strip-elite-badge nav-badge--desktop">
+                      E
                     </span>
-                  ) : (
-                    item.requiredTier === "elite" && (
-                      <span className="icon-strip-elite-badge nav-badge--desktop">
-                        E
-                      </span>
-                    )
                   )}
                 </button>
               );
