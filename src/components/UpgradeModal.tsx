@@ -325,7 +325,6 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 if      (!isCurrent && !isPaid && plan.priceId) ctaLabel = t("upgradeModal.cta.upgradeTo", { plan: planLabel });
                 else if (isHigher)  ctaLabel = t("upgradeModal.cta.upgradeTo", { plan: planLabel });
                 else if (isLower && plan.id !== "free") ctaLabel = t("upgradeModal.cta.switchTo", { plan: planLabel });
-                else if (isLower && plan.id === "free") ctaLabel = t("upgradeModal.cta.cancelPlan");
 
                 return (
                   <div
@@ -374,6 +373,17 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 : t("upgradeModal.footer.cancelAnytime")
               }{t("upgradeModal.footer.securePayment")}
             </p>
+            {isPaid && (
+              <p className="upgrade-footer upgrade-footer--cancel">
+                Want to cancel?{" "}
+                <button
+                  className="upgrade-manage-link upgrade-manage-link--danger"
+                  onClick={() => handlePlanClick(PLANS[0])}
+                >
+                  Cancel subscription
+                </button>
+              </p>
+            )}
           </>
         )}
       </div>

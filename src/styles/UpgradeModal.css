@@ -269,6 +269,9 @@
   padding: 0;
 }
 .upgrade-manage-link:disabled { opacity: 0.5; cursor: default; }
+.upgrade-manage-link--danger { color: #ef4444; }
+.upgrade-manage-link--danger:hover { color: #dc2626; }
+.upgrade-footer--cancel { margin-top: 8px; opacity: 0.7; }
 
 /* Confirmation screen */
 .upgrade-confirm {

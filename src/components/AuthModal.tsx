@@ -47,7 +47,7 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
   const [showPw,      setShowPw]      = useState(false);
   const [showCfm,     setShowCfm]     = useState(false);
   const alreadyAgreed = !!localStorage.getItem("terms_agreed_at");
-  const [termsAgreed, setTermsAgreed] = useState(alreadyAgreed);
+  const [termsAgreed, setTermsAgreed] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
