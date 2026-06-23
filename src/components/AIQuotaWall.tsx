@@ -37,7 +37,7 @@ const PLANS = [
   },
 ];
 
-export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle, featureDesc }) => {
+export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -51,13 +51,53 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
     setLoadingPlan(null);
   };
 
+  /* ── Gate mode: single horizontal banner ── */
+  if (planId) {
+    const plan = visiblePlans[0];
+    return (
+      <div className="aiqw-gate-row" style={{ "--gate-color": plan.color } as React.CSSProperties}>
+        <div className="aiqw-gate-left">
+          <div className="aiqw-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+            </svg>
+          </div>
+          <div className="aiqw-gate-info">
+            <span className="aiqw-gate-title">{featureTitle}</span>
+            <div className="aiqw-gate-features">
+              {plan.features.map(f => (
+                <span key={f} className="aiqw-gate-feature">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="aiqw-gate-right">
+          <span className="aiqw-gate-price" style={{ color: plan.color }}>
+            {plan.price}<span className="aiqw-gate-per">{plan.per}</span>
+          </span>
+          <button
+            className="aiqw-gate-btn"
+            style={{ background: `linear-gradient(135deg, ${plan.color}cc, ${plan.color}88)`, borderColor: `${plan.color}55` }}
+            onClick={() => handleUpgrade(plan)}
+            disabled={loadingPlan === plan.id}
+          >
+            {loadingPlan === plan.id ? t("quotaWall.redirecting") : t("quotaWall.getBtn", { plan: plan.label })}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Full quota wall (multi-plan) ── */
   return (
     <div className="aiqw-root">
       <div className="aiqw-bg-orb aiqw-bg-orb--1" />
       <div className="aiqw-bg-orb aiqw-bg-orb--2" />
 
       <div className="aiqw-inner">
-        {/* Header */}
         <div className="aiqw-top">
           <div className="aiqw-icon-wrap">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -65,12 +105,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
             </svg>
           </div>
           <div className="aiqw-text">
-            {featureTitle ? (
-              <>
-                <h3 className="aiqw-title">{featureTitle}</h3>
-                {featureDesc && <p className="aiqw-desc">{featureDesc}</p>}
-              </>
-            ) : isFreeBlock ? (
+            {isFreeBlock ? (
               <>
                 <h3 className="aiqw-title">{t("quotaWall.freeTitle")}</h3>
                 <p className="aiqw-desc">{t("quotaWall.freeDesc")}</p>
@@ -86,8 +121,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           </div>
         </div>
 
-        {/* Usage pips — only shown for paid tiers that hit their cap, not in gate mode */}
-        {!isFreeBlock && !planId && (
+        {!isFreeBlock && (
           <div className="aiqw-usage">
             {Array.from({ length: limit }).map((_, i) => (
               <span key={i} className={`aiqw-pip ${i < used ? "aiqw-pip--used" : ""}`} />
@@ -96,11 +130,9 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           </div>
         )}
 
-        {/* Plan cards */}
-        <div className={`aiqw-plans${visiblePlans.length === 1 ? " aiqw-plans--single" : ""}`}>
-          {visiblePlans.map(plan => (
-            <div key={plan.id} className={`aiqw-plan${plan.popular ? " aiqw-plan--popular" : ""}`} style={{ "--plan-color": plan.color } as React.CSSProperties}>
-              {plan.popular && <span className="aiqw-plan-badge">Most Popular</span>}
+        <div className="aiqw-plans">
+          {PLANS.map(plan => (
+            <div key={plan.id} className="aiqw-plan" style={{ "--plan-color": plan.color } as React.CSSProperties}>
               <div className="aiqw-plan-header">
                 <span className="aiqw-plan-label" style={{ color: plan.color }}>{plan.label}</span>
                 <span className="aiqw-plan-price">
@@ -127,12 +159,9 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           ))}
         </div>
 
-        {/* Sign in link */}
-        {!planId && (
-          <button className="aiqw-signin" onClick={onOpenAuth}>
-            {t("quotaWall.signin")}
-          </button>
-        )}
+        <button className="aiqw-signin" onClick={onOpenAuth}>
+          {t("quotaWall.signin")}
+        </button>
       </div>
     </div>
   );

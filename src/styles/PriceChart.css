@@ -238,8 +238,9 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-dblclick-wrap::after {
   content: "⛶  Double-click for fullscreen";
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: rgba(15, 23, 42, 0.82);
   color: #94a3b8;
   font-size: 0.68rem;
