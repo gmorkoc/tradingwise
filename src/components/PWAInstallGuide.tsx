@@ -93,7 +93,7 @@ const CONFIG: Record<Platform, {
       { icon: "🔗", text: "Make sure you're on coinhintz.io" },
       { icon: "⊕",  text: "Click the install icon (⊕) in the right side of the address bar" },
       { icon: "📦", text: 'Click "Install" in the popup that appears' },
-      { icon: "✅", text: "CoinHintz opens as its own window — no browser UI, full screen!" },
+      { icon: "✅", text: "coinhintz opens as its own window — no browser UI, full screen!" },
     ],
   },
   "edge-desktop": {
@@ -103,7 +103,7 @@ const CONFIG: Record<Platform, {
       { icon: "🔗", text: "Make sure you're on coinhintz.io" },
       { icon: "⊕",  text: "Click the install icon (⊕) in the right side of the address bar" },
       { icon: "📦", text: 'Click "Install" in the popup that appears' },
-      { icon: "✅", text: "CoinHintz opens as its own window — no browser UI, full screen!" },
+      { icon: "✅", text: "coinhintz opens as its own window — no browser UI, full screen!" },
     ],
   },
   "safari-mac": {
@@ -113,7 +113,7 @@ const CONFIG: Record<Platform, {
       { icon: "🌐", text: "Open coinhintz.io in Safari" },
       { icon: "📂", text: 'In the menu bar click File → "Add to Dock…"' },
       { icon: "📝", text: "Confirm the name and click Add" },
-      { icon: "✅", text: "CoinHintz appears in your Dock as a standalone app!" },
+      { icon: "✅", text: "coinhintz appears in your Dock as a standalone app!" },
     ],
   },
   "other-desktop": {
@@ -123,7 +123,7 @@ const CONFIG: Record<Platform, {
       { icon: "🌐", text: "Open coinhintz.io in Chrome or Edge for the best experience" },
       { icon: "⊕",  text: "Look for an install icon (⊕) in the address bar" },
       { icon: "📦", text: 'Click it and select "Install"' },
-      { icon: "✅", text: "CoinHintz opens as a standalone desktop app!" },
+      { icon: "✅", text: "coinhintz opens as a standalone desktop app!" },
     ],
   },
 };
@@ -145,7 +145,7 @@ export function PWAInstallGuide({ onClose, onNativeInstall, canInstall }: GuideP
         <div className="pwa-handle" />
 
         <div className="pwa-header">
-          <img src="/icon.svg" alt="CoinHintz" className="pwa-app-icon" />
+          <img src="/icon.svg" alt="coinhintz" className="pwa-app-icon" />
           <div className="pwa-header-text">
             <h2 className="pwa-title">Add to Home Screen</h2>
             <p className="pwa-sub">{label} · {hint}</p>
@@ -156,7 +156,7 @@ export function PWAInstallGuide({ onClose, onNativeInstall, canInstall }: GuideP
         {/* Native install button for Android / Chrome / Edge */}
         {supportsNative && canInstall && onNativeInstall && (
           <button className="pwa-install-btn" onClick={onNativeInstall}>
-            Install CoinHintz
+            Install coinhintz
           </button>
         )}
 

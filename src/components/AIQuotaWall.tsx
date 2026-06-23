@@ -9,6 +9,9 @@ interface Props {
   limit: number;
   onOpenUpgrade: () => void;
   onOpenAuth: () => void;
+  planId?: "pro" | "elite";
+  featureTitle?: string;
+  featureDesc?: string;
 }
 
 const PLANS = [
@@ -34,11 +37,12 @@ const PLANS = [
   },
 ];
 
-export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
+export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle, featureDesc }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const isFreeBlock = limit === 0;
+  const visiblePlans = planId ? PLANS.filter(p => p.id === planId) : PLANS;
 
   const handleUpgrade = async (plan: typeof PLANS[number]) => {
     if (!user) { onOpenAuth(); return; }
@@ -56,12 +60,17 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
         {/* Header */}
         <div className="aiqw-top">
           <div className="aiqw-icon-wrap">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
             </svg>
           </div>
           <div className="aiqw-text">
-            {isFreeBlock ? (
+            {featureTitle ? (
+              <>
+                <h3 className="aiqw-title">{featureTitle}</h3>
+                {featureDesc && <p className="aiqw-desc">{featureDesc}</p>}
+              </>
+            ) : isFreeBlock ? (
               <>
                 <h3 className="aiqw-title">{t("quotaWall.freeTitle")}</h3>
                 <p className="aiqw-desc">{t("quotaWall.freeDesc")}</p>
@@ -88,8 +97,8 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
         )}
 
         {/* Plan cards */}
-        <div className="aiqw-plans">
-          {PLANS.map(plan => (
+        <div className={`aiqw-plans${visiblePlans.length === 1 ? " aiqw-plans--single" : ""}`}>
+          {visiblePlans.map(plan => (
             <div key={plan.id} className={`aiqw-plan${plan.popular ? " aiqw-plan--popular" : ""}`} style={{ "--plan-color": plan.color } as React.CSSProperties}>
               {plan.popular && <span className="aiqw-plan-badge">Most Popular</span>}
               <div className="aiqw-plan-header">
@@ -119,9 +128,11 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth }) => {
         </div>
 
         {/* Sign in link */}
-        <button className="aiqw-signin" onClick={onOpenAuth}>
-          {t("quotaWall.signin")}
-        </button>
+        {!planId && (
+          <button className="aiqw-signin" onClick={onOpenAuth}>
+            {t("quotaWall.signin")}
+          </button>
+        )}
       </div>
     </div>
   );

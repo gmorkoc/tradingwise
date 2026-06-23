@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}× es extremadamente alto riesgo. Un movimiento del {{pct}}% liquida tu posición."
   },
   "drawer": {
-    "logo": "📊 CoinHintz",
+    "logo": "📊 coinhintz",
     "settings": "⚙️ Configuración",
     "profile": "Perfil",
     "tools": "🛠 Herramientas",
@@ -294,10 +294,10 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} CoinHintz.io. Todos los derechos reservados."
+    "copyright": "© {{year}} coinhintz.io. Todos los derechos reservados."
   },
   "auth": {
-    "logoText": "CoinHintz",
+    "logoText": "coinhintz",
     "continueWithGoogle": "Continuar con Google",
     "divider": "o",
     "login": {
@@ -785,11 +785,11 @@
       "sub": "Únete ahora — gratis para siempre, sin tarjeta de crédito.",
       "btn": "Crear cuenta gratis →"
     },
-    "footer": "© 2025 CoinHintz.io · Hecho para traders serios",
+    "footer": "© 2025 coinhintz.io · Hecho para traders serios",
     "signin": "Iniciar sesión",
     "getStarted": "Empezar gratis",
     "noCard": "Sin tarjeta requerida",
-    "copyright": "© {{year}} CoinHintz.io. Todos los derechos reservados."
+    "copyright": "© {{year}} coinhintz.io. Todos los derechos reservados."
   },
   "positions": {
     "title": "Posicionamiento de traders",
@@ -1010,7 +1010,7 @@
   "etf": {
     "pageTitle": "Rastreador de ETF de Bitcoin al Contado",
     "chartTitle": "Flujo neto diario — 30 días (USD)",
-    "source": "vía CoinGlass",
+    "source": "vía coinhintz",
     "loading": "Cargando datos ETF…",
     "error": "Sin datos disponibles.",
     "retry": "Reintentar",
@@ -1180,7 +1180,7 @@
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
-    "logo": "📊 CoinHintz.AI"
+    "logo": "📊 coinhintz.AI"
   },
   "tradeManager": {
     "long": "▲ Largo",
@@ -1383,7 +1383,7 @@
     "bearish": "Patrones Bajistas"
   },
   "onboarding": {
-    "welcomeTitle": "Bienvenido a CoinHintz",
+    "welcomeTitle": "Bienvenido a coinhintz",
     "welcomeSub": "Responde 4 preguntas rápidas para que podamos personalizar tu panel y mostrarte las señales más relevantes.",
     "getStarted": "Comenzar",
     "back": "Atrás",

@@ -317,6 +317,30 @@
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
+.drawer-tier-badge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.drawer-tier-badge--free {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+.drawer-tier-badge--pro {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+.drawer-tier-badge--elite {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
 /* ── Trading Guide toggle ─────────────────────────────────────────────────── */
 .drawer-guide-toggle {
   width: 100%;

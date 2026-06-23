@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}x is extremely high risk. A {{pct}}% move liquidates your position."
   },
   "drawer": {
-    "logo": "📊 CoinHintz",
+    "logo": "📊 coinhintz",
     "settings": "⚙️ Settings",
     "profile": "Profile",
     "tools": "🛠 Tools",
@@ -294,10 +294,10 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} CoinHintz.io. All rights reserved."
+    "copyright": "© {{year}} coinhintz.io. All rights reserved."
   },
   "auth": {
-    "logoText": "CoinHintz",
+    "logoText": "coinhintz",
     "continueWithGoogle": "Continue with Google",
     "divider": "or",
     "login": {
@@ -785,11 +785,11 @@
       "sub": "Join now — free forever, no credit card required.",
       "btn": "Create free account →"
     },
-    "footer": "© 2025 CoinHintz.io · Built for serious traders",
+    "footer": "© 2025 coinhintz.io · Built for serious traders",
     "signin": "Sign In",
     "getStarted": "Get Started Free",
     "noCard": "No card required",
-    "copyright": "© {{year}} CoinHintz.io. All rights reserved."
+    "copyright": "© {{year}} coinhintz.io. All rights reserved."
   },
   "positions": {
     "title": "Trader Positioning",
@@ -1010,7 +1010,7 @@
   "etf": {
     "pageTitle": "Bitcoin Spot ETF Tracker",
     "chartTitle": "Daily Net Inflow — 30 Days (USD)",
-    "source": "via CoinGlass",
+    "source": "via coinhintz",
     "loading": "Loading ETF data…",
     "error": "No data available.",
     "retry": "Retry",
@@ -1180,7 +1180,7 @@
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
-    "logo": "📊 CoinHintz.AI"
+    "logo": "📊 coinhintz.AI"
   },
   "tradeManager": {
     "long": "▲ Long",
@@ -1383,7 +1383,7 @@
     "bearish": "Bearish Patterns"
   },
   "onboarding": {
-    "welcomeTitle": "Welcome to CoinHintz",
+    "welcomeTitle": "Welcome to coinhintz",
     "welcomeSub": "Answer 4 quick questions so we can personalise your dashboard and surface the signals that matter most to you.",
     "getStarted": "Get Started",
     "back": "Back",

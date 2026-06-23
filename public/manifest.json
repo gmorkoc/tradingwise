@@ -1,6 +1,6 @@
 {
-  "name": "CoinHintz",
-  "short_name": "CoinHintz",
+  "name": "coinhintz",
+  "short_name": "coinhintz",
   "description": "Crypto Trading Intelligence",
   "start_url": "/",
   "display": "standalone",

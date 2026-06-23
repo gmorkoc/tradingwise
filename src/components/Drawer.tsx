@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { CoinHintzLogo } from "./CoinHintzLogo";
+import { useAuth } from "../contexts/AuthContext";
 import "../styles/Drawer.css";
 
 interface DrawerProps {
@@ -37,6 +38,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, traderLevel,
 }) => {
   const { t } = useTranslation();
+  const { tier } = useAuth();
   const [guideOpen, setGuideOpen] = useState(false);
   const [openDoc, setOpenDoc]     = useState<number | null>(null);
 
@@ -72,7 +74,12 @@ export const Drawer: React.FC<DrawerProps> = ({
 
             <div className="drawer-row drawer-row--clickable" onClick={onOpenProfile}>
               <span className="drawer-row-label">{t("drawer.profile")}</span>
-              <span className="drawer-row-arrow">›</span>
+              <div className="drawer-row-right">
+                <span className={`drawer-tier-badge drawer-tier-badge--${tier}`}>
+                  {tier.toUpperCase()}
+                </span>
+                <span className="drawer-row-arrow">›</span>
+              </div>
             </div>
 
             <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenWizard(); }}>
@@ -160,7 +167,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* ── Footer ────────────────────────────────────── */}
           <div className="drawer-footer-block">
-            <p className="drawer-version">v0.1.0 · Binance · CoinGlass · OpenAI GPT</p>
+            <p className="drawer-version">v0.1.0 · Binance · coinhintz · OpenAI GPT</p>
             <p className="drawer-footer">{t("drawer.disclaimer")}</p>
           </div>
 

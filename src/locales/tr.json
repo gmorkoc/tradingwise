@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}× son derece yüksek risk. %{{pct}}'lik bir hareket pozisyonunu tasfiye eder."
   },
   "drawer": {
-    "logo": "📊 CoinHintz",
+    "logo": "📊 coinhintz",
     "settings": "⚙️ Ayarlar",
     "profile": "Profil",
     "tools": "🛠 Araçlar",
@@ -294,10 +294,10 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} CoinHintz.io. Tüm hakları saklıdır."
+    "copyright": "© {{year}} coinhintz.io. Tüm hakları saklıdır."
   },
   "auth": {
-    "logoText": "CoinHintz",
+    "logoText": "coinhintz",
     "continueWithGoogle": "Google ile devam et",
     "divider": "veya",
     "login": {
@@ -785,11 +785,11 @@
       "sub": "Şimdi katılın — sonsuza dek ücretsiz, kredi kartı gerekmez.",
       "btn": "Ücretsiz hesap oluştur →"
     },
-    "footer": "© 2025 CoinHintz.io · Ciddi yatırımcılar için tasarlandı",
+    "footer": "© 2025 coinhintz.io · Ciddi yatırımcılar için tasarlandı",
     "signin": "Giriş Yap",
     "getStarted": "Ücretsiz Başla",
     "noCard": "Kart gerekmez",
-    "copyright": "© {{year}} CoinHintz.io. Tüm hakları saklıdır."
+    "copyright": "© {{year}} coinhintz.io. Tüm hakları saklıdır."
   },
   "positions": {
     "title": "Yatırımcı Pozisyonlaması",
@@ -1010,7 +1010,7 @@
   "etf": {
     "pageTitle": "Bitcoin Spot ETF Takipçisi",
     "chartTitle": "Günlük Net Giriş — 30 Gün (USD)",
-    "source": "CoinGlass aracılığıyla",
+    "source": "coinhintz aracılığıyla",
     "loading": "ETF verileri yükleniyor…",
     "error": "Veri yok.",
     "retry": "Yeniden Dene",
@@ -1180,7 +1180,7 @@
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
     "swipeHint": "Menüyü açmak için kaydır",
-    "logo": "📊 CoinHintz.AI"
+    "logo": "📊 coinhintz.AI"
   },
   "tradeManager": {
     "long": "▲ Long",
@@ -1383,7 +1383,7 @@
     "bearish": "Düşüş Formasyonları"
   },
   "onboarding": {
-    "welcomeTitle": "CoinHintz'e Hoş Geldiniz",
+    "welcomeTitle": "coinhintz'e Hoş Geldiniz",
     "welcomeSub": "Panelinizi kişiselleştirebilmemiz ve sizin için en önemli sinyalleri gösterebilmemiz için 4 hızlı soruyu yanıtlayın.",
     "getStarted": "Başla",
     "back": "Geri",

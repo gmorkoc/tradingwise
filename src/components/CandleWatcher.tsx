@@ -4,6 +4,8 @@ import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextDa
 import { openai, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
+import { useAuth } from "../contexts/AuthContext";
+import { hasAccess } from "../services/supabase";
 import "../styles/CandleWatcher.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -1315,6 +1317,8 @@ function IndicatorPill({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady }) => {
+  const { tier } = useAuth();
+  const isElite = hasAccess(tier, "elite");
   const [intervalIdx, setIntervalIdx] = useState(3);  // default 1h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1728,7 +1732,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // Stamp a small watermark onto the captured canvas
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const stamp = `CoinHintz · ${coin}/USD ${interval.label} · ${new Date().toLocaleString()}`;
+      const stamp = `coinhintz · ${coin}/USD ${interval.label} · ${new Date().toLocaleString()}`;
       ctx.font = '500 11px ui-monospace, monospace';
       ctx.textAlign = 'right';
       ctx.fillStyle = 'rgba(148,163,184,0.55)';
@@ -1862,11 +1866,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => { cancelled = true; };
   }, [coin, intervalIdx, retryKey]);
 
-  // Auto-refresh
+  // Auto-refresh — elite only
   useEffect(() => {
+    if (!isElite) return;
     const id = setInterval(() => fetchCandles(false), interval.refresh);
     return () => clearInterval(id);
-  }, [fetchCandles, interval.refresh]);
+  }, [fetchCandles, interval.refresh, isElite]);
 
   // Candle close countdown — ticks every second
   useEffect(() => {
@@ -1891,8 +1896,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, []);
 
-  // Daily close banner — show for 1 hour after UTC midnight
+  // Daily close banner — elite only
   useEffect(() => {
+    if (!isElite) return;
     const BINANCE_SYM: Record<string, string> = {
       BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
       DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
@@ -1929,16 +1935,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [coin]);
 
-  // MTF biases — fetch on coin change
+  // MTF biases — elite only
   useEffect(() => {
+    if (!isElite) return;
     fetchMTFBiases(coin as string).then(setMtfBiases).catch(() => {});
     setWizardIntent(null);
     setPredData(null);
-  }, [coin]);
+  }, [coin, isElite]);
 
-  // Run AI + macro fetch when flagged
+  // Run AI + macro fetch when flagged — elite only
   useEffect(() => {
-    if (!triggerAI.current || candles.length < 20) return;
+    if (!isElite || !triggerAI.current || candles.length < 20) return;
     triggerAI.current = false;
 
     const ind     = buildIndicators(candles);

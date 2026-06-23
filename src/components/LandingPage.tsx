@@ -221,7 +221,7 @@ function AIChatMock() {
     <div className="lp-chat-window">
       <div className="lp-chat-header">
         <span className="lp-chat-header-logo">✦</span>
-        <span className="lp-chat-header-title">CoinHintz AI</span>
+        <span className="lp-chat-header-title">coinhintz AI</span>
         <span className="lp-chat-header-live"><span className="lp-chat-live-dot" />Live</span>
       </div>
       <div className="lp-chat-body">

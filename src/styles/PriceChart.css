@@ -346,6 +346,29 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   }
 }
 
+.zone-signal-gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #818cf8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.zone-signal-gate:hover {
+  opacity: 0.75;
+}
+.zone-signal-live--gate {
+  background: #818cf8;
+  color: #818cf8;
+}
+
 .zone-signal--strong-buy {
   color: #22c55e;
 }
@@ -409,32 +432,32 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   opacity: 0.7;
 }
 
-.chart-reset-row {
+.chart-reset-view-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.chart-reset-view-btn {
-  padding: 5px 14px;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: transparent;
-  border-radius: 8px;
+  background: var(--color-card-bg);
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+  transition: background 0.15s, color 0.15s;
 }
-
+.chart-reset-view-btn::before {
+  content: '⤢';
+  font-size: 0.82rem;
+  line-height: 1;
+}
 .chart-reset-view-btn:hover {
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 
 .interval-select {
@@ -719,8 +742,7 @@ html[data-theme="light"] .chart-loading-overlay {
   }
 
   .predict-btn,
-  .predict-clear-btn,
-  .chart-reset-view-btn {
+  .predict-clear-btn {
     font-size: 0.72rem;
     padding: 5px 10px;
   }

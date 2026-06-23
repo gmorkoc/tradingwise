@@ -53,15 +53,11 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
     );
   }
 
-  const initials = (() => {
-    if (profile?.full_name) {
-      const parts = profile.full_name.trim().split(/\s+/);
-      return parts.length >= 2
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : parts[0][0].toUpperCase();
-    }
-    return (user.email?.[0] ?? "U").toUpperCase();
+  const firstName = (() => {
+    if (profile?.full_name) return profile.full_name.trim().split(/\s+/)[0];
+    return user.email?.split("@")[0] ?? "Account";
   })();
+  const firstInitial = firstName[0].toUpperCase();
 
   const tm = TIER_META[tier] ?? TIER_META.free;
   const quotaPct = isPaid ? 100 : Math.min(100, (used / limit) * 100);
@@ -69,7 +65,8 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
   return (
     <div className="acct-wrap">
       <button className="acct-avatar" ref={avatarRef} onClick={openMenu}>
-        <span className="acct-initials">{initials}</span>
+        <span className="nav-icon-wrap acct-initial-icon">{firstInitial}</span>
+        <span className="icon-strip-label">{firstName}</span>
       </button>
 
       {open && createPortal(

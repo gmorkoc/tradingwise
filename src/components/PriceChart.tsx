@@ -16,9 +16,7 @@ import { ZoneResult, ZoneSignal } from "./PriceChart.types";
 import {
   getCandlePatternAnalysis,
   CandlePatternResult,
-  getChartPrediction,
   ChartPrediction,
-  TechnicalContext,
 } from "../services/openai";
 import { PredictionOverlay, PredictionPath } from "./DrawingOverlay";
 import { OrderBookProfileModal } from "./OrderBookProfile";
@@ -1144,7 +1142,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [predictionPath, setPredictionPath] = useState<PredictionPath | null>(
     null,
   );
-  const [predictionLoading, setPredictionLoading] = useState(false);
   const [chartPrediction, setChartPrediction] =
     useState<ChartPrediction | null>(null);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
@@ -1345,104 +1342,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, [isLight]);
 
   // ── Predict handler ───────────────────────────────────────────────────────
-  const handlePredict = async () => {
-    if (!isElite) {
-      onOpenUpgrade();
-      return;
-    }
-    const candles = lastCandlesRef.current;
-    if (!candles.length || predictionLoading) return;
-    setPredictionLoading(true);
-    setPredictionPath(null);
-    setChartPrediction(null);
-    try {
-      // ── Pre-calculate all technical indicators ────────────────────────────
-      const rsiData = calcRSI(candles);
-      const rsi = rsiData[rsiData.length - 1]?.value ?? null;
-
-      const { macdLine, signalLine, histogram } = calcMACD(candles);
-      const macdVal = macdLine[macdLine.length - 1]?.value ?? null;
-      const signalVal = signalLine[signalLine.length - 1]?.value ?? null;
-      const histVal = histogram[histogram.length - 1]?.value ?? null;
-
-      const { upper, lower } = calcBollingerBands(candles);
-      const lastClose = candles[candles.length - 1].close;
-      const bbU = upper[upper.length - 1]?.value;
-      const bbL = lower[lower.length - 1]?.value;
-      const bbPos =
-        bbU && bbL && bbU !== bbL ? (lastClose - bbL) / (bbU - bbL) : null;
-
-      const ema20d = calcEMALine(candles, 20);
-      const ema50d = calcEMALine(candles, 50);
-      const ema200d = calcEMALine(candles, 200);
-      const ema20v = ema20d[ema20d.length - 1]?.value ?? null;
-      const ema50v = ema50d[ema50d.length - 1]?.value ?? null;
-      const ema200v = ema200d[ema200d.length - 1]?.value ?? null;
-
-      const { resistance, support } = calcSupportResistance(candles);
-      const pattern = detectCandlePattern(candles);
-
-      const trend: TechnicalContext["trend"] =
-        ema20v && ema50v
-          ? lastClose > ema20v && ema20v > ema50v
-            ? "uptrend"
-            : lastClose < ema20v && ema20v < ema50v
-              ? "downtrend"
-              : "sideways"
-          : "unknown";
-
-      const tech: TechnicalContext = {
-        rsi,
-        macdLine: macdVal,
-        macdSignal: signalVal,
-        macdHist: histVal,
-        bbPosition: bbPos,
-        ema20: ema20v,
-        ema50: ema50v,
-        ema200: ema200v,
-        trend,
-        pattern: pattern ? { name: pattern.name, type: pattern.type } : null,
-        support: support.slice(0, 4).map((s) => s.price),
-        resistance: resistance.slice(0, 4).map((r) => r.price),
-      };
-
-      const res = await getChartPrediction(coin, interval, candles, tech);
-      if (!res.success || !res.result) return;
-      const pred = res.result;
-      setChartPrediction(pred);
-      const lastTime = candles[candles.length - 1].time;
-      const path: PredictionPath = {
-        direction: pred.direction,
-        targetPrice: pred.targetPrice,
-        stopLoss: pred.stopLoss,
-        scenario: pred.scenario,
-        waypoints: pred.waypoints.map((wp) => ({
-          time: lastTime + wp.offsetSeconds,
-          price: wp.price,
-        })),
-      };
-      setPredictionPath(path);
-      setShowPredictionModal(true);
-      // Extend visible range on main chart to show future waypoints
-      const chart = chartRef.current;
-      if (chart && path.waypoints.length > 0) {
-        const lastWp = path.waypoints[path.waypoints.length - 1];
-        try {
-          const visRange = chart.timeScale().getVisibleRange();
-          if (visRange) {
-            chart.timeScale().setVisibleRange({
-              from: visRange.from,
-              to: (lastWp.time +
-                (lastWp.time - lastTime) *
-                  0.1) as import("lightweight-charts").Time,
-            });
-          }
-        } catch {}
-      }
-    } finally {
-      setPredictionLoading(false);
-    }
-  };
 
   // ── Update chart colours on theme change ────────────────────────────────
   useEffect(() => {
@@ -2329,7 +2228,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {(interval === "1sec" || interval === "1min") && isLive && (
                   <span className="live-badge">{t("chart.live")}</span>
                 )}
-                {zone && (
+                {zone && isPaid && (
                   <span className={`zone-signal zone-signal--${zone.signal}`}>
                     <span className="zone-signal-live" />
                     {zone.signal === "strong-buy" && t("chart.strongBuy")}
@@ -2340,6 +2239,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     {zone.signal === "sell" && t("chart.sell")}
                     {zone.signal === "strong-sell" && t("chart.strongSell")}
                   </span>
+                )}
+                {zone && !isPaid && (
+                  <button
+                    className="zone-signal-gate"
+                    onClick={() => onOpenUpgrade?.("pro")}
+                  >
+                    <span className="zone-signal-live zone-signal-live--gate" />
+                    Unlock Status
+                  </button>
                 )}
                 {isFullscreen && (
                   <div className="chart-title-actions">
@@ -2605,7 +2513,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <select
                   className="interval-select"
                   value={interval}
-                  onChange={(e) => setInterval(e.target.value as TimeInterval)}
+                  onChange={(e) => {
+                    if (e.target.value === "all" && !isPaid) { onOpenUpgrade?.("pro"); return; }
+                    setInterval(e.target.value as TimeInterval);
+                  }}
                 >
                   {INTERVALS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -2759,19 +2670,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
 
         {!isPaid && (
-          <div className="ib-gate-card">
-            <button className="ib-gate-card-cta" onClick={() => onOpenUpgrade?.("pro")}>
-              Upgrade to Pro
-            </button>
-            <div className="ib-gate-card-body">
-              <div className="ib-gate-card-top">
-                <span className="ib-gate-card-icon">✦</span>
-                <span className="ib-gate-card-title">AI Interval Analysis</span>
-                <span className="ib-gate-card-badge">Pro</span>
-              </div>
-              <p className="ib-gate-card-desc">Real-time interval sentiment, trend context &amp; key level insights for every timeframe.</p>
-            </div>
-          </div>
+          <AIQuotaWall
+            used={used} limit={limit}
+            onOpenUpgrade={onOpenUpgrade ?? (() => {})} onOpenAuth={onOpenAuth ?? (() => {})}
+            planId="pro"
+            featureTitle="AI Interval Analysis"
+            featureDesc="Real-time interval sentiment, trend context & key level insights for every timeframe."
+          />
         )}
 
         {error && lastCandlesRef.current.length === 0 && (
@@ -2809,6 +2714,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             visible={isFullscreen}
             persistRef={drawingsPersistRef}
           />
+          <button
+            className="chart-reset-view-btn"
+            onClick={() => {
+              chartRef.current?.timeScale().fitContent();
+              rsiChartRef.current?.timeScale().fitContent();
+              macdChartRef.current?.timeScale().fitContent();
+            }}
+          >
+            {t("chart.reset")}
+          </button>
         </div>
 
         {showDepthProfile && (
@@ -2893,54 +2808,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
 
-        <div className="chart-reset-row">
-          {predictionPath ? (
-            <>
-              <button
-                className="predict-btn"
-                onClick={() => setShowPredictionModal(true)}
-              >
-                {t("chart.aiPrediction")}
-              </button>
-            </>
-          ) : (
-            <button
-              className={`predict-btn${predictionLoading ? " predict-btn--loading" : ""}`}
-              onClick={handlePredict}
-              disabled={predictionLoading}
-            >
-              {predictionLoading ? t("chart.analyzing") : t("chart.predict")}
-              {!predictionLoading && (
-                <span className="predict-ai-label">{t("chart.aiPowered")}</span>
-              )}
-            </button>
-          )}
-          <button
-            className="chart-reset-view-btn"
-            onClick={() => {
-              chartRef.current?.timeScale().fitContent();
-              rsiChartRef.current?.timeScale().fitContent();
-              macdChartRef.current?.timeScale().fitContent();
-            }}
-          >
-            {t("chart.reset")}
-          </button>
-        </div>
-
         {!loading && !isElite ? (
-          <div className="pi-gate-card">
-            <div className="pi-gate-card-body">
-              <div className="pi-gate-card-top">
-                <span className="pi-gate-card-icon">✦</span>
-                <span className="pi-gate-card-title">AI Pattern Analysis</span>
-                <span className="pi-gate-card-badge">Elite</span>
-              </div>
-              <p className="pi-gate-card-desc">Real-time pattern detection, narrative analysis &amp; next-move predictions.</p>
-            </div>
-            <button className="pi-gate-card-cta" onClick={() => onOpenUpgrade?.("elite")}>
-              Upgrade to Elite
-            </button>
-          </div>
+          <AIQuotaWall
+            used={used} limit={limit}
+            onOpenUpgrade={onOpenUpgrade ?? (() => {})} onOpenAuth={onOpenAuth ?? (() => {})}
+            planId="elite"
+            featureTitle="AI Pattern Analysis"
+            featureDesc="Real-time pattern detection, narrative analysis & next-move predictions."
+          />
         ) : !loading && exceeded ? (
           <div className="pattern-insight pattern-insight--neutral">
             <div className="pattern-insight-header">

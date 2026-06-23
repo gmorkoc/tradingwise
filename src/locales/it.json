@@ -222,7 +222,7 @@
     "warningCritical": "⛔ {{lev}}× è un rischio estremamente elevato. Un movimento del {{pct}}% liquida la tua posizione."
   },
   "drawer": {
-    "logo": "📊 CoinHintz",
+    "logo": "📊 coinhintz",
     "settings": "⚙️ Impostazioni",
     "profile": "Profilo",
     "tools": "🛠 Strumenti",
@@ -294,10 +294,10 @@
     }
   },
   "footer": {
-    "copyright": "© {{year}} CoinHintz.io. Tutti i diritti riservati."
+    "copyright": "© {{year}} coinhintz.io. Tutti i diritti riservati."
   },
   "auth": {
-    "logoText": "CoinHintz",
+    "logoText": "coinhintz",
     "continueWithGoogle": "Continua con Google",
     "divider": "o",
     "login": {
@@ -785,11 +785,11 @@
       "sub": "Unisciti ora — gratis per sempre, nessuna carta di credito richiesta.",
       "btn": "Crea account gratuito →"
     },
-    "footer": "© 2025 CoinHintz.io · Costruito per trader seri",
+    "footer": "© 2025 coinhintz.io · Costruito per trader seri",
     "signin": "Accedi",
     "getStarted": "Inizia Gratis",
     "noCard": "Nessuna carta richiesta",
-    "copyright": "© {{year}} CoinHintz.io. Tutti i diritti riservati."
+    "copyright": "© {{year}} coinhintz.io. Tutti i diritti riservati."
   },
   "positions": {
     "title": "Posizionamento Trader",
@@ -1010,7 +1010,7 @@
   "etf": {
     "pageTitle": "Tracker ETF Bitcoin Spot",
     "chartTitle": "Flusso Netto Giornaliero — 30 Giorni (USD)",
-    "source": "tramite CoinGlass",
+    "source": "tramite coinhintz",
     "loading": "Caricamento dati ETF…",
     "error": "Nessun dato disponibile.",
     "retry": "Riprova",
@@ -1180,7 +1180,7 @@
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
     "swipeHint": "Scorri per aprire il menu",
-    "logo": "📊 CoinHintz.AI"
+    "logo": "📊 coinhintz.AI"
   },
   "tradeManager": {
     "long": "▲ Long",
@@ -1383,7 +1383,7 @@
     "bearish": "Pattern Ribassisti"
   },
   "onboarding": {
-    "welcomeTitle": "Benvenuto su CoinHintz",
+    "welcomeTitle": "Benvenuto su coinhintz",
     "welcomeSub": "Rispondi a 4 domande rapide per personalizzare il tuo pannello e mostrarti i segnali più rilevanti.",
     "getStarted": "Inizia",
     "back": "Indietro",

@@ -77,8 +77,8 @@ export const ContactForm: React.FC<Props> = ({ isOpen, onClose }) => {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           access_key:  w3fKey,
-          subject:     `[CoinHintz] ${categoryLabel} from ${email.trim()}`,
-          from_name:   "CoinHintz Contact Form",
+          subject:     `[coinhintz] ${categoryLabel} from ${email.trim()}`,
+          from_name:   "coinhintz Contact Form",
           replyto:     email.trim(),
           category:    categoryLabel,
           message:     message.trim(),

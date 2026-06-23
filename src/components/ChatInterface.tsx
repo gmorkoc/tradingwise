@@ -26,7 +26,7 @@ interface DisplayMessage extends ChatMessage {
   images?: string[]; // display-only, not persisted to localStorage
 }
 
-const CHAT_STORAGE_KEY = "coinglassChatMessages";
+const CHAT_STORAGE_KEY = "coinhintzChatMessages";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

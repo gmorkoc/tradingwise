@@ -1204,7 +1204,7 @@ function AppDashboard({
             </div>
 
             {btcData && (
-              <span className="price-source-badge">via CoinGlass</span>
+              <span className="price-source-badge">via coinhintz</span>
             )}
 
             <div className="mch-right">

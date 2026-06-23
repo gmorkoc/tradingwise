@@ -33,10 +33,12 @@ const EyeOff = () => (
   </svg>
 );
 
-export const AuthModal: React.FC<Props> = ({ onClose }) => {
+export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const { signIn, signUp, signInWithMagicLink, signInWithGoogle, resetPassword } = useAuth();
 
-  const [view,        setView]        = useState<View>("magic");
+  const [view, setView] = useState<View>(
+    initialView === "signup" ? "signup" : initialView === "login" ? "login" : "magic"
+  );
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
   const [confirm,     setConfirm]     = useState("");
@@ -103,10 +105,10 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
         || err.toLowerCase().includes("already been registered")
         || err.toLowerCase().includes("user already exists");
       setError(isDupe ? "sso_exists" : err);
+      setBusy(false);
     } else {
-      setInfo("Account created! Check your email to confirm, then sign in.");
+      onClose();
     }
-    setBusy(false);
   };
 
   const handleReset = async (e: React.FormEvent) => {
@@ -129,11 +131,11 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
     <div className="auth-disclaimer">
       <div className="auth-disclaimer-scroll">
         <p className="auth-disclaimer-heading">⚠️ Risk Disclaimer &amp; Terms of Use</p>
-        <p>CoinHintz provides market data, analytical tools, and AI-generated signals for <strong>informational and educational purposes only</strong>. Nothing on this platform constitutes financial, investment, legal, or tax advice of any kind.</p>
+        <p>coinhintz provides market data, analytical tools, and AI-generated signals for <strong>informational and educational purposes only</strong>. Nothing on this platform constitutes financial, investment, legal, or tax advice of any kind.</p>
         <p><strong>Cryptocurrency trading involves substantial risk of loss.</strong> Digital asset markets are highly volatile and largely unregulated. You may lose some or all of your invested capital. Never invest money you cannot afford to lose.</p>
         <p>All AI predictions, signals, funding rate analyses, and market insights are generated algorithmically and are <strong>not guaranteed to be accurate, complete, or timely</strong>. Past performance does not guarantee future results.</p>
-        <p>Market data may be delayed, incomplete, or inaccurate. CoinHintz makes no representations regarding data accuracy and is not liable for errors or omissions.</p>
-        <p><strong>You are solely responsible for any financial decisions you make.</strong> CoinHintz bears no liability for any losses or damages arising from your use of this platform.</p>
+        <p>Market data may be delayed, incomplete, or inaccurate. coinhintz makes no representations regarding data accuracy and is not liable for errors or omissions.</p>
+        <p><strong>You are solely responsible for any financial decisions you make.</strong> coinhintz bears no liability for any losses or damages arising from your use of this platform.</p>
         <p>This platform is for users of legal age who are legally permitted to engage with cryptocurrency services in their jurisdiction.</p>
       </div>
       <label className="auth-terms-check">
@@ -281,7 +283,8 @@ export const AuthModal: React.FC<Props> = ({ onClose }) => {
               <button className="auth-submit" disabled={!canSubmit}>{busy ? "Creating…" : "Create Account"}</button>
             </form>
             <p className="auth-switch">
-              <button className="auth-link-btn" onClick={() => setView("magic")}>← Use magic link instead</button>
+              Prefer no password?{" "}
+              <button className="auth-link-btn" onClick={() => setView("magic")}>Send magic link instead</button>
               {" · "}
               Already have an account?{" "}
               <button className="auth-link-btn" onClick={() => setView("login")}>Sign in</button>

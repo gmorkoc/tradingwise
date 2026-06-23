@@ -1,21 +1,24 @@
 .acct-signin-btn {
   appearance: none;
   -webkit-appearance: none;
-  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px 5px 11px;
   border-radius: 10px;
-  border: 1px solid var(--color-border);
+  border: none;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: background 0.15s, color 0.15s;
   white-space: nowrap;
 }
 .acct-signin-btn:hover {
-  background: transparent;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  background: var(--color-hover);
+  color: var(--color-text);
 }
 .acct-signin-btn:focus { outline: none; }
 
@@ -25,47 +28,46 @@
 .icon-strip-acct {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 6px 0;
   width: 100%;
-}
-@media (min-width: 641px) {
-  .icon-strip:hover .icon-strip-acct {
-    justify-content: flex-start;
-    padding-left: 14px;
-  }
-}
-
-.icon-strip-acct .acct-avatar,
-.icon-strip-acct .acct-signin-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 2px 0;
 }
 
 .acct-avatar {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px 5px 11px;
   background: transparent;
   border: none;
+  border-radius: 10px;
   cursor: pointer;
+  transition: background 0.15s;
+  color: var(--color-text-secondary);
+  position: relative;
+}
+.acct-avatar:hover {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.acct-initial-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  font-size: 1.4rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
-.acct-initials {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--color-text);
-  line-height: 1;
-  letter-spacing: -0.02em;
+.icon-strip-acct .icon-strip-label {
+  font-size: 0.92rem;
 }
 
 .acct-tier-dot {
