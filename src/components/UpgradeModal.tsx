@@ -7,6 +7,7 @@ import {
   previewUpgrade,
   upgradePlan,
   cancelSubscription,
+  reactivateSubscription,
   PRICE_IDS,
 } from "../services/stripeService";
 import { TIER_RANK } from "../services/supabase";
@@ -84,7 +85,10 @@ function formatDate(iso: string) {
 
 export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   const { t } = useTranslation();
-  const { user, tier } = useAuth();
+  const { user, tier, profile } = useAuth();
+  const subStatus = profile?.subscription_status ?? "none";
+  const isCanceling = subStatus === "canceling";
+  const isPastDue   = subStatus === "past_due";
   const [loading,    setLoading]    = useState<string | null>(null);
   const [error,      setError]      = useState("");
   const [confirm,    setConfirm]    = useState<ConfirmState | null>(null);
@@ -195,6 +199,22 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     setError("");
     try { await redirectToBillingPortal(); }
     catch (e: any) { setError(e.message ?? t("upgradeModal.error")); setLoading(null); }
+  };
+
+  const handleReactivate = async () => {
+    setLoading("reactivate");
+    setError("");
+    try {
+      await reactivateSubscription();
+      setDone({
+        message: t("upgradeModal.success.reactivateMessage"),
+        sub:     t("upgradeModal.success.reactivateSub"),
+      });
+    } catch (e: any) {
+      setError(e.message ?? t("upgradeModal.error"));
+    } finally {
+      setLoading(null);
+    }
   };
 
   const backdropClick = (e: React.MouseEvent) => {
@@ -374,6 +394,19 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
               })}
             </div>
 
+            {isPastDue && (
+              <div className="upgrade-pastdue-banner">
+                <span>⚠️ {t("upgradeModal.pastDue.message")}</span>
+                <button
+                  className="upgrade-pastdue-btn"
+                  onClick={handleManageBilling}
+                  disabled={loading === "portal"}
+                >
+                  {loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.pastDue.cta")}
+                </button>
+              </div>
+            )}
+
             {error && <p className="upgrade-error">{error}</p>}
 
             <p className="upgrade-footer">
@@ -384,15 +417,29 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             </p>
             <p className="upgrade-footer upgrade-footer--policy">{t("upgradeModal.footer.noRefundNote")}</p>
             {isPaid && (
-              <p className="upgrade-footer upgrade-footer--cancel">
-                Want to cancel?{" "}
-                <button
-                  className="upgrade-manage-link upgrade-manage-link--danger"
-                  onClick={() => handlePlanClick(PLANS[0])}
-                >
-                  Cancel subscription
-                </button>
-              </p>
+              isCanceling ? (
+                <p className="upgrade-footer upgrade-footer--cancel">
+                  {t("upgradeModal.canceling.note")}{" "}
+                  <button
+                    className="upgrade-manage-link"
+                    style={{ color: "#4ade80" }}
+                    onClick={handleReactivate}
+                    disabled={loading === "reactivate"}
+                  >
+                    {loading === "reactivate" ? t("upgradeModal.cta.loading") : t("upgradeModal.canceling.reactivate")}
+                  </button>
+                </p>
+              ) : (
+                <p className="upgrade-footer upgrade-footer--cancel">
+                  {t("upgradeModal.footer.wantToCancel")}{" "}
+                  <button
+                    className="upgrade-manage-link upgrade-manage-link--danger"
+                    onClick={() => handlePlanClick(PLANS[0])}
+                  >
+                    {t("upgradeModal.footer.cancelLink")}
+                  </button>
+                </p>
+              )
             )}
           </>
         )}

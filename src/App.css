@@ -782,6 +782,37 @@ select {
   padding: 30px 20px 40px;
 }
 
+.pastdue-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-left: 4px solid #fbbf24;
+  color: #fbbf24;
+  padding: 10px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.pastdue-banner-btn {
+  background: #fbbf24;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.pastdue-banner-btn:hover { opacity: 0.85; }
+
 .error-banner {
   background: rgba(251, 113, 133, 0.12);
   border: 1px solid rgba(251, 113, 133, 0.25);

@@ -1246,6 +1246,14 @@ function AppDashboard({
           <div
             className={`main-content${activeSection === "chart" ? " chart-active" : ""}`}
           >
+            {profile?.subscription_status === "past_due" && (
+              <div className="pastdue-banner">
+                <span>⚠️ {t("billing.pastDue.message")}</span>
+                <button className="pastdue-banner-btn" onClick={onOpenUpgrade}>
+                  {t("billing.pastDue.cta")}
+                </button>
+              </div>
+            )}
             {error && (
               <div className="error-banner">
                 <strong>⚠️ {t("main.error")}:</strong> {error}

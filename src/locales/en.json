@@ -521,6 +521,12 @@
       "trust": "Cancel anytime · Includes everything in Pro"
     }
   },
+  "billing": {
+    "pastDue": {
+      "message": "Your payment failed. Update your payment method to keep your access.",
+      "cta": "Fix payment"
+    }
+  },
   "upgradeModal": {
     "titleChoose": "Choose your plan",
     "titleManage": "Manage your plan",
@@ -587,6 +593,8 @@
       "upgradeSub": "Your new features are active immediately. Only the prorated difference was charged — your renewal date hasn't changed.",
       "downgradeMessage": "Downgrade Scheduled",
       "downgradeSub": "Your current plan access continues until {{date}}, then automatically switches to {{newPlan}}. No refund is issued.",
+      "reactivateMessage": "Subscription Reactivated",
+      "reactivateSub": "Your subscription will continue automatically. No changes to your billing cycle.",
       "done": "Done"
     },
     "badges": {
@@ -599,7 +607,17 @@
       "loadingPortal": "Loading…",
       "cancelAnytime": "Cancel anytime",
       "securePayment": " · Secure payment via Stripe",
-      "noRefundNote": "No refunds are issued. If you cancel, you keep full access until the end of your billing period."
+      "noRefundNote": "No refunds are issued. If you cancel, you keep full access until the end of your billing period.",
+      "wantToCancel": "Want to cancel?",
+      "cancelLink": "Cancel subscription"
+    },
+    "pastDue": {
+      "message": "Your payment failed. Update your payment method to keep your access.",
+      "cta": "Fix payment"
+    },
+    "canceling": {
+      "note": "Your subscription ends at the billing period — access continues until then.",
+      "reactivate": "Reactivate"
     },
     "error": "Something went wrong",
     "perMonth": "/mo",

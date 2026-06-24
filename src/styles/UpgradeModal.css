@@ -273,6 +273,43 @@
 .upgrade-manage-link--danger:hover { color: #dc2626; }
 .upgrade-footer--cancel { margin-top: 8px; opacity: 0.7; }
 
+.upgrade-pastdue-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.upgrade-pastdue-btn {
+  background: #fbbf24;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.upgrade-pastdue-btn:hover { opacity: 0.85; }
+.upgrade-pastdue-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.upgrade-footer--policy {
+  margin-top: 10px;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  line-height: 1.5;
+}
+
 /* Confirmation screen */
 .upgrade-confirm {
   display: flex;

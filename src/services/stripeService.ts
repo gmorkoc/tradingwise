@@ -64,6 +64,17 @@ export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: bool
   return { isUpgrade, scheduledAt };
 }
 
+export async function reactivateSubscription(): Promise<void> {
+  const headers = await authHeaders();
+  const res = await fetch(`${FN_BASE}/reactivate-subscription`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({}),
+  });
+  const { error } = await res.json();
+  if (error) throw new Error(error);
+}
+
 export async function cancelSubscription(): Promise<{ accessUntil: string }> {
   const headers = await authHeaders();
   const res = await fetch(`${FN_BASE}/cancel-subscription`, {
