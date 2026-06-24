@@ -525,7 +525,7 @@
     "titleChoose": "Scegli il tuo piano",
     "titleManage": "Gestisci il tuo piano",
     "subChoose": "Sblocca approfondimenti basati sull'IA e analisi avanzate",
-    "subManage": "Gli aggiornamenti vengono addebitati immediatamente (prorata). I declassamenti vengono accreditati sulla prossima fattura.",
+    "subManage": "Gli aggiornamenti addebitano solo la differenza in prorata — la data di rinnovo non cambia. I declassamenti vengono accreditati sulla prossima fattura.",
     "plans": {
       "free": {
         "label": "Gratuito",
@@ -571,9 +571,10 @@
       "downgradeTitle": "Passa a {{plan}}",
       "cancelTitle": "Annulla il piano {{plan}}",
       "cancelBody": "Il tuo abbonamento verrà annullato al termine del periodo di fatturazione corrente. Manterrai tutte le funzionalità attuali fino ad allora — non viene emesso alcun rimborso parziale.",
-      "upgradeBody": "Ti verrà addebitato {{amount}} ora — la differenza in prorata per i giorni rimanenti nel tuo ciclo di fatturazione. Le tue nuove funzionalità sono disponibili immediatamente.",
+      "upgradeBody": "Ti verrà addebitato {{amount}} ora — il costo in prorata per i giorni rimanenti nel ciclo corrente. La data di rinnovo non cambia, viene addebitata solo la differenza.",
       "downgradeBodyCredit": "Un credito in prorata di {{amount}} verrà applicato alla tua prossima fattura. Il tuo piano cambia immediatamente.",
       "downgradeBodyNoAmount": "Un credito in prorata verrà applicato alla tua prossima fattura. Il tuo piano cambia immediatamente.",
+      "downgradeBodyScheduled": "Il tuo accesso al piano attuale continua fino al {{date}}. In quella data l'abbonamento passa automaticamente a {{newPlan}}. Non vengono emessi rimborsi.",
       "lostFeaturesLabel": "Perderai l'accesso a:",
       "payAndUpgrade": "Paga {{amount}} e Aggiorna",
       "processing": "Elaborazione…",
@@ -583,9 +584,9 @@
       "cancelMessage": "Piano annullato",
       "cancelSub": "Manterrai l'accesso {{plan}} fino al {{date}}, poi passerai al Gratuito.",
       "upgradeMessage": "Benvenuto in {{plan}}!",
-      "upgradeSub": "Le tue nuove funzionalità sono attive immediatamente. L'addebito in prorata è stato applicato alla tua carta.",
-      "downgradeMessage": "Passato a {{plan}}",
-      "downgradeSub": "Il tuo piano è stato aggiornato. Un credito in prorata verrà applicato alla tua prossima fattura.",
+      "upgradeSub": "Le tue nuove funzionalità sono attive immediatamente. È stata addebitata solo la differenza in prorata — la data di rinnovo non è cambiata.",
+      "downgradeMessage": "Downgrade Pianificato",
+      "downgradeSub": "Il tuo accesso attuale continua fino al {{date}}, poi passa automaticamente a {{newPlan}}. Non vengono emessi rimborsi.",
       "done": "Fatto"
     },
     "badges": {

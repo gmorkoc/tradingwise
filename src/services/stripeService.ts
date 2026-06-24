@@ -40,28 +40,28 @@ export async function redirectToBillingPortal(): Promise<void> {
   window.location.href = url;
 }
 
-export async function previewUpgrade(newPriceId: string): Promise<{ amountDue: number; currency: string }> {
+export async function previewUpgrade(newPriceId: string): Promise<{ amountDue: number; currency: string; scheduledAt?: string }> {
   const headers = await authHeaders();
   const res = await fetch(`${FN_BASE}/preview-upgrade`, {
     method: "POST",
     headers,
     body: JSON.stringify({ newPriceId }),
   });
-  const { amountDue, currency, error } = await res.json();
+  const { amountDue, currency, scheduledAt, error } = await res.json();
   if (error) throw new Error(error);
-  return { amountDue, currency };
+  return { amountDue, currency, scheduledAt };
 }
 
-export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: boolean }> {
+export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: boolean; scheduledAt?: string }> {
   const headers = await authHeaders();
   const res = await fetch(`${FN_BASE}/upgrade-plan`, {
     method: "POST",
     headers,
     body: JSON.stringify({ newPriceId }),
   });
-  const { error, isUpgrade } = await res.json();
+  const { error, isUpgrade, scheduledAt } = await res.json();
   if (error) throw new Error(error);
-  return { isUpgrade };
+  return { isUpgrade, scheduledAt };
 }
 
 export async function cancelSubscription(): Promise<{ accessUntil: string }> {

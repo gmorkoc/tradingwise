@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const TIER_RANK: Record<string, number> = {
+  [Deno.env.get("STRIPE_PRO_PRICE_ID")   ?? ""]: 1,
+  [Deno.env.get("STRIPE_ELITE_PRICE_ID") ?? ""]: 2,
+  "price_1ThB2pCanYhArG7jTUUYjnSy": 1,
+  "price_1ThB3ACanYhArG7jDp33W6xS": 2,
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -67,8 +74,24 @@ Deno.serve(async (req) => {
     }
 
     const subscription = subscriptions.data[0];
-    const itemId = subscription.items.data[0]?.id;
+    const currentRank  = TIER_RANK[subscription.items.data[0]?.price.id ?? ""] ?? 0;
+    const newRank      = TIER_RANK[newPriceId] ?? 0;
+    const isDowngrade  = newRank < currentRank;
 
+    // Downgrades: no charge, no credit — scheduled at period end.
+    if (isDowngrade) {
+      return new Response(
+        JSON.stringify({
+          amountDue:   0,
+          currency:    "usd",
+          scheduledAt: new Date(subscription.current_period_end * 1000).toISOString(),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Upgrades: compute prorated charge preview.
+    const itemId = subscription.items.data[0]?.id;
     const upcoming = await stripe.invoices.retrieveUpcoming({
       customer: profile.stripe_customer_id,
       subscription: subscription.id,
@@ -76,7 +99,6 @@ Deno.serve(async (req) => {
       subscription_proration_behavior: "create_prorations",
     });
 
-    // Sum only the proration line items — amount_due includes next period's full charge too
     const proratedAmount = upcoming.lines.data
       .filter((line) => line.proration)
       .reduce((sum, line) => sum + line.amount, 0);

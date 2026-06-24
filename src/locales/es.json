@@ -525,7 +525,7 @@
     "titleChoose": "Elige tu plan",
     "titleManage": "Gestiona tu plan",
     "subChoose": "Accede a insights con IA y analíticas avanzadas",
-    "subManage": "Las mejoras se cobran inmediatamente (prorrateo). Los descensos se acreditan en tu próxima factura.",
+    "subManage": "Las mejoras solo cobran la diferencia prorrateada — tu fecha de renovación no cambia. Los descensos se acreditan en tu próxima factura.",
     "plans": {
       "free": {
         "label": "Gratis",
@@ -571,9 +571,10 @@
       "downgradeTitle": "Cambiar a {{plan}}",
       "cancelTitle": "Cancelar tu plan {{plan}}",
       "cancelBody": "Tu suscripción se cancelará al final del período de facturación actual. Conservarás todas las funciones hasta entonces — no se emiten reembolsos parciales.",
-      "upgradeBody": "Se te cobrará {{amount}} ahora — la diferencia prorrateada por los días restantes en tu ciclo de facturación. Tus nuevas funciones están disponibles inmediatamente.",
+      "upgradeBody": "Se te cobrará {{amount}} ahora — el costo prorrateado por los días restantes en tu ciclo actual. Tu fecha de renovación no cambia, solo se cobra la diferencia.",
       "downgradeBodyCredit": "Se aplicará un crédito prorrateado de {{amount}} a tu próxima factura. Tu plan cambia inmediatamente.",
       "downgradeBodyNoAmount": "Se aplicará un crédito prorrateado a tu próxima factura. Tu plan cambia inmediatamente.",
+      "downgradeBodyScheduled": "Tu acceso al plan actual continúa hasta el {{date}}. En esa fecha tu suscripción cambia automáticamente a {{newPlan}}. No se emiten reembolsos.",
       "lostFeaturesLabel": "Perderás acceso a:",
       "payAndUpgrade": "Pagar {{amount}} y mejorar",
       "processing": "Procesando…",
@@ -583,9 +584,9 @@
       "cancelMessage": "Plan cancelado",
       "cancelSub": "Conservarás el acceso {{plan}} hasta {{date}}, luego pasarás a Gratis.",
       "upgradeMessage": "¡Bienvenido a {{plan}}!",
-      "upgradeSub": "Tus nuevas funciones están activas inmediatamente. El cargo prorrateado ha sido aplicado a tu tarjeta.",
-      "downgradeMessage": "Cambiado a {{plan}}",
-      "downgradeSub": "Tu plan ha sido actualizado. Se aplicará un crédito prorrateado a tu próxima factura.",
+      "upgradeSub": "Tus nuevas funciones están activas inmediatamente. Solo se cobró la diferencia prorrateada — tu fecha de renovación no ha cambiado.",
+      "downgradeMessage": "Cambio Programado",
+      "downgradeSub": "Tu acceso actual continúa hasta el {{date}}, luego cambia automáticamente a {{newPlan}}. No se emiten reembolsos.",
       "done": "Listo"
     },
     "badges": {

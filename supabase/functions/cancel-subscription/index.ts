@@ -60,6 +60,21 @@ Deno.serve(async (req) => {
 
     const subscription = subscriptions.data[0];
 
+    // Release any active subscription schedule before cancelling.
+    // A schedule locks the subscription and will reject cancel_at_period_end otherwise.
+    const schedules = await stripe.subscriptionSchedules.list({
+      customer: profile.stripe_customer_id,
+      limit: 10,
+    });
+    for (const s of schedules.data) {
+      if (
+        s.subscription === subscription.id &&
+        (s.status === "active" || s.status === "not_started")
+      ) {
+        await stripe.subscriptionSchedules.release(s.id);
+      }
+    }
+
     // Cancel at the end of the billing period — user keeps access until then.
     const updated = await stripe.subscriptions.update(subscription.id, {
       cancel_at_period_end: true,

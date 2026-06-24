@@ -525,7 +525,7 @@
     "titleChoose": "Choose your plan",
     "titleManage": "Manage your plan",
     "subChoose": "Unlock AI-powered insights and advanced analytics",
-    "subManage": "Upgrades are charged immediately (prorated). Downgrades credit your next bill.",
+    "subManage": "Upgrades charge only the prorated difference — your renewal date never changes. Downgrades take effect at the end of your current billing period.",
     "plans": {
       "free": {
         "label": "Free",
@@ -571,9 +571,10 @@
       "downgradeTitle": "Switch to {{plan}}",
       "cancelTitle": "Cancel your {{plan}} plan",
       "cancelBody": "Your subscription will be cancelled at the end of your current billing period. You'll keep all your current features until then — no partial refund is issued.",
-      "upgradeBody": "You'll be charged {{amount}} now — the prorated difference for the remaining days in your billing cycle. Your new features are available immediately.",
+      "upgradeBody": "You'll be charged {{amount}} now — the prorated cost for the remaining days in your current billing cycle. Your renewal date stays the same, only the difference is charged.",
       "downgradeBodyCredit": "A prorated credit of {{amount}} will be applied to your next bill. Your plan changes immediately.",
       "downgradeBodyNoAmount": "A prorated credit will be applied to your next bill. Your plan changes immediately.",
+      "downgradeBodyScheduled": "Your current plan access continues until {{date}}. On that date your subscription automatically switches to {{newPlan}}. No refund is issued.",
       "lostFeaturesLabel": "You'll lose access to:",
       "payAndUpgrade": "Pay {{amount}} & Upgrade",
       "processing": "Processing…",
@@ -583,9 +584,9 @@
       "cancelMessage": "Plan cancelled",
       "cancelSub": "You'll keep your {{plan}} access until {{date}}, then switch to Free.",
       "upgradeMessage": "Welcome to {{plan}}!",
-      "upgradeSub": "Your new features are active immediately. The prorated charge has been applied to your card.",
-      "downgradeMessage": "Switched to {{plan}}",
-      "downgradeSub": "Your plan has been updated. A prorated credit will be applied to your next bill.",
+      "upgradeSub": "Your new features are active immediately. Only the prorated difference was charged — your renewal date hasn't changed.",
+      "downgradeMessage": "Downgrade Scheduled",
+      "downgradeSub": "Your current plan access continues until {{date}}, then automatically switches to {{newPlan}}. No refund is issued.",
       "done": "Done"
     },
     "badges": {
@@ -597,7 +598,8 @@
       "manageBilling": "Manage billing",
       "loadingPortal": "Loading…",
       "cancelAnytime": "Cancel anytime",
-      "securePayment": " · Secure payment via Stripe"
+      "securePayment": " · Secure payment via Stripe",
+      "noRefundNote": "No refunds are issued. If you cancel, you keep full access until the end of your billing period."
     },
     "error": "Something went wrong",
     "perMonth": "/mo",

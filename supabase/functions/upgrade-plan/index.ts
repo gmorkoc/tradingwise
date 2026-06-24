@@ -9,11 +9,15 @@ const corsHeaders = {
 const PRICE_TIER: Record<string, string> = {
   [Deno.env.get("STRIPE_PRO_PRICE_ID")   ?? ""]: "pro",
   [Deno.env.get("STRIPE_ELITE_PRICE_ID") ?? ""]: "elite",
+  "price_1ThB2pCanYhArG7jTUUYjnSy": "pro",
+  "price_1ThB3ACanYhArG7jDp33W6xS": "elite",
 };
 
 const TIER_RANK: Record<string, number> = {
   [Deno.env.get("STRIPE_PRO_PRICE_ID")   ?? ""]: 1,
   [Deno.env.get("STRIPE_ELITE_PRICE_ID") ?? ""]: 2,
+  "price_1ThB2pCanYhArG7jTUUYjnSy": 1,
+  "price_1ThB3ACanYhArG7jDp33W6xS": 2,
 };
 
 Deno.serve(async (req) => {
@@ -91,28 +95,75 @@ Deno.serve(async (req) => {
     const newRank     = TIER_RANK[newPriceId] ?? 0;
     const isUpgrade   = newRank > currentRank;
 
-    // Upgrades: charge the prorated difference immediately.
-    // Downgrades: create a proration credit applied at next renewal — no immediate charge.
-    const updated = await stripe.subscriptions.update(subscription.id, {
-      items: [{ id: itemId, price: newPriceId }],
-      proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
-      billing_cycle_anchor: "unchanged",
-    });
+    if (isUpgrade) {
+      // Immediate upgrade: charge prorated difference, keep renewal date unchanged.
+      const updated = await stripe.subscriptions.update(subscription.id, {
+        items: [{ id: itemId, price: newPriceId }],
+        proration_behavior: "always_invoice",
+        billing_cycle_anchor: "unchanged",
+      });
 
-    const newTier = PRICE_TIER[newPriceId] ?? "free";
-    await supabaseAdmin
-      .from("profiles")
-      .update({
-        tier:                newTier,
-        subscription_status: updated.status,
-        subscription_end_at: new Date(updated.current_period_end * 1000).toISOString(),
-      })
-      .eq("id", user.id);
+      const newTier = PRICE_TIER[newPriceId] ?? "free";
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          tier:                newTier,
+          subscription_status: updated.status,
+          subscription_end_at: new Date(updated.current_period_end * 1000).toISOString(),
+        })
+        .eq("id", user.id);
 
-    return new Response(
-      JSON.stringify({ success: true, tier: newTier, isUpgrade }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      return new Response(
+        JSON.stringify({ success: true, tier: newTier, isUpgrade: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      // Downgrade: schedule plan change at end of current billing period.
+      // No refund, no credit — user keeps current tier until expiry.
+
+      // Release any existing schedule on this subscription first.
+      const existingSchedules = await stripe.subscriptionSchedules.list({
+        customer: profile.stripe_customer_id,
+        limit: 10,
+      });
+      for (const s of existingSchedules.data) {
+        if (
+          s.subscription === subscription.id &&
+          (s.status === "active" || s.status === "not_started")
+        ) {
+          await stripe.subscriptionSchedules.release(s.id);
+        }
+      }
+
+      // Create a schedule and add a second phase for the downgraded plan.
+      const schedule = await stripe.subscriptionSchedules.create({
+        from_subscription: subscription.id,
+      });
+
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        end_behavior: "release",
+        proration_behavior: "none",
+        phases: [
+          {
+            start_date: subscription.current_period_start,
+            end_date:   subscription.current_period_end,
+            items: [{ price: currentItem.price.id, quantity: 1 }],
+          },
+          {
+            items: [{ price: newPriceId, quantity: 1 }],
+          },
+        ],
+      });
+
+      const scheduledAt = new Date(subscription.current_period_end * 1000).toISOString();
+
+      // Profile tier stays unchanged — user keeps current access until period end.
+      // The Stripe webhook will update the tier when the schedule executes.
+      return new Response(
+        JSON.stringify({ success: true, isUpgrade: false, scheduledAt }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

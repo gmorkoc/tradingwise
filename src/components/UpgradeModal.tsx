@@ -20,13 +20,14 @@ interface Props {
 type FlowKind = "upgrade" | "downgrade" | "cancel";
 
 interface ConfirmState {
-  kind:       FlowKind;
-  planId:     string;
-  planLabel:  string;
-  priceId?:   string;
-  color:      string;
-  amountDue?: number;
-  currency?:  string;
+  kind:         FlowKind;
+  planId:       string;
+  planLabel:    string;
+  priceId?:     string;
+  color:        string;
+  amountDue?:   number;
+  currency?:    string;
+  scheduledAt?: string;
   lostFeatures: string[];
 }
 
@@ -138,10 +139,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     // Existing subscriber → fetch proration preview first
     setLoading(plan.id);
     try {
-      const { amountDue, currency } = await previewUpgrade(priceId);
+      const { amountDue, currency, scheduledAt } = await previewUpgrade(priceId);
       setConfirm({
         kind, planId: plan.id, planLabel, priceId, color: plan.color,
-        amountDue, currency,
+        amountDue, currency, scheduledAt,
         lostFeatures: lostFeaturesFor(tier, plan.id),
       });
     } catch (e: any) {
@@ -167,7 +168,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
           }),
         });
       } else {
-        const { isUpgrade } = await upgradePlan(confirm.priceId!);
+        const { isUpgrade, scheduledAt } = await upgradePlan(confirm.priceId!);
         if (isUpgrade) {
           setDone({
             message: t("upgradeModal.success.upgradeMessage", { plan: confirm.planLabel }),
@@ -176,7 +177,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
         } else {
           setDone({
             message: t("upgradeModal.success.downgradeMessage", { plan: confirm.planLabel }),
-            sub:     t("upgradeModal.success.downgradeSub"),
+            sub:     t("upgradeModal.success.downgradeSub", {
+              date:    formatDate(scheduledAt!),
+              newPlan: confirm.planLabel,
+            }),
           });
         }
       }
@@ -255,9 +259,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             {confirm.kind === "downgrade" && (
               <p className="upgrade-sub"
                 dangerouslySetInnerHTML={{ __html:
-                  confirm.amountDue && confirm.amountDue > 0
-                    ? t("upgradeModal.confirm.downgradeBodyCredit", { amount: `<strong>${formatAmount(confirm.amountDue, confirm.currency!)}</strong>` })
-                    : t("upgradeModal.confirm.downgradeBodyNoAmount")
+                  t("upgradeModal.confirm.downgradeBodyScheduled", {
+                    date: `<strong>${formatDate(confirm.scheduledAt!)}</strong>`,
+                    newPlan: confirm.planLabel,
+                  })
                 }}
               />
             )}
@@ -272,6 +277,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                   ))}
                 </ul>
               </div>
+            )}
+
+            {confirm.kind === "upgrade" && (
+              <p className="upgrade-footer upgrade-footer--policy" style={{ marginBottom: 8 }}>{t("upgradeModal.footer.noRefundNote")}</p>
             )}
 
             <div className="upgrade-confirm-actions">
@@ -373,6 +382,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                 : t("upgradeModal.footer.cancelAnytime")
               }{t("upgradeModal.footer.securePayment")}
             </p>
+            <p className="upgrade-footer upgrade-footer--policy">{t("upgradeModal.footer.noRefundNote")}</p>
             {isPaid && (
               <p className="upgrade-footer upgrade-footer--cancel">
                 Want to cancel?{" "}

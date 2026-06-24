@@ -11,8 +11,12 @@ const supabaseAdmin = createClient(
 );
 
 const PRICE_TIER: Record<string, string> = {
-  [Deno.env.get("STRIPE_PRO_PRICE_ID")  ?? ""]: "pro",
+  // Current price IDs
+  [Deno.env.get("STRIPE_PRO_PRICE_ID")   ?? ""]: "pro",
   [Deno.env.get("STRIPE_ELITE_PRICE_ID") ?? ""]: "elite",
+  // Legacy price IDs — existing subscribers on old prices must still resolve correctly
+  "price_1ThB2pCanYhArG7jTUUYjnSy": "pro",
+  "price_1ThB3ACanYhArG7jDp33W6xS": "elite",
 };
 
 async function updateProfileByCustomer(customerId: string, fields: Record<string, unknown>) {
