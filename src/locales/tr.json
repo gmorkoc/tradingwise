@@ -508,7 +508,7 @@
     },
     "blurGate": {
       "planLabel": "Elite",
-      "planPrice": "$29.99",
+      "planPrice": "$59.99",
       "perMonth": "/ay",
       "features": [
         "Pro'daki her şey — sınırsız",
@@ -747,7 +747,7 @@
         },
         {
           "label": "Pro",
-          "price": "$10.99",
+          "price": "$30.99",
           "per": "/ay",
           "cta": "Pro'ya Başla",
           "features": [
@@ -762,7 +762,7 @@
         },
         {
           "label": "Elite",
-          "price": "$29.99",
+          "price": "$59.99",
           "per": "/ay",
           "cta": "Elite'e Geç",
           "features": [

@@ -38,7 +38,7 @@ const PLANS = [
   },
   {
     id:      "pro",
-    price:   "$10.99",
+    price:   "$30.99",
     per:     "/mo",
     color:   "#38bdf8",
     popular: true,
@@ -46,7 +46,7 @@ const PLANS = [
   },
   {
     id:    "elite",
-    price: "$29.99",
+    price: "$59.99",
     per:   "/mo",
     color: "#a78bfa",
     priceId: () => PRICE_IDS.elite,

@@ -480,7 +480,7 @@
           "desc": "Ask anything — strategy, setups, risk — and get institutional-grade answers."
         }
       ],
-      "cta": "Unlock Pro — $10.99/mo",
+      "cta": "Unlock Pro — $30.99/mo",
       "trust": "35 AI requests/week · Cancel anytime · Instant access"
     },
     "elite": {
@@ -503,12 +503,12 @@
           "desc": "Institutional flow vs retail divergence interpreted in real time."
         }
       ],
-      "cta": "Unlock Elite — $29.99/mo",
+      "cta": "Unlock Elite — $59.99/mo",
       "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro"
     },
     "blurGate": {
       "planLabel": "Elite",
-      "planPrice": "$29.99",
+      "planPrice": "$59.99",
       "perMonth": "/mo",
       "features": [
         "Everything in Pro — unlimited",
@@ -747,7 +747,7 @@
         },
         {
           "label": "Pro",
-          "price": "$10.99",
+          "price": "$30.99",
           "per": "/mo",
           "cta": "Start Pro",
           "features": [
@@ -762,7 +762,7 @@
         },
         {
           "label": "Elite",
-          "price": "$29.99",
+          "price": "$59.99",
           "per": "/mo",
           "cta": "Go Elite",
           "features": [
