@@ -4,6 +4,7 @@ import type { BtcMoveAlert } from "../hooks/useBtcMoveAlert";
 import "../styles/BtcMoveToast.css";
 
 const DURATION = 6000;
+const SWIPE_THRESHOLD = 48;
 
 interface Props {
   alert: BtcMoveAlert | null;
@@ -13,14 +14,17 @@ interface Props {
 export function BtcMoveToast({ alert, onDismiss }: Props) {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
+  const [dragY, setDragY] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
+  const touchStartYRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!alert) { setVisible(false); return; }
 
     setVisible(true);
     setProgress(100);
+    setDragY(0);
     startRef.current = performance.now();
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -44,12 +48,46 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
   const fmtPrice = alert.price.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const fmtChange = Math.round(alert.change).toLocaleString("en-US");
 
+  const dismiss = () => { setVisible(false); onDismiss(); };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartYRef.current === null) return;
+    const dy = e.touches[0].clientY - touchStartYRef.current;
+    if (dy < 0) setDragY(dy); // only allow upward drag
+  };
+
+  const onTouchEnd = () => {
+    if (dragY < -SWIPE_THRESHOLD) {
+      dismiss();
+    } else {
+      setDragY(0);
+    }
+    touchStartYRef.current = null;
+  };
+
+  const dragging = dragY !== 0;
+  const extraStyle: React.CSSProperties = {
+    "--btc-color": color,
+    ...(dragging ? {
+      transform: `translateX(-50%) translateY(${dragY}px)`,
+      transition: "none",
+      opacity: Math.max(0, 1 + dragY / 120),
+    } : {}),
+  } as React.CSSProperties;
+
   return ReactDOM.createPortal(
     <div
       className={`btc-toast${visible ? " btc-toast--visible" : ""} ${isUp ? "btc-toast--up" : "btc-toast--down"}`}
-      onClick={() => { setVisible(false); onDismiss(); }}
+      onClick={() => { if (!dragging) dismiss(); }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
       role="alert"
-      style={{ "--btc-color": color } as React.CSSProperties}
+      style={extraStyle}
     >
       {/* glow blob */}
       <div className="btc-toast-glow" />
@@ -91,7 +129,7 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
         {/* Close */}
         <button
           className="btc-toast-close"
-          onClick={(e) => { e.stopPropagation(); setVisible(false); onDismiss(); }}
+          onClick={(e) => { e.stopPropagation(); dismiss(); }}
           aria-label="Dismiss"
         >✕</button>
       </div>
