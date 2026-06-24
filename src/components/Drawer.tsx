@@ -39,6 +39,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 }) => {
   const { t } = useTranslation();
   const { tier } = useAuth();
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [openDoc, setOpenDoc]     = useState<number | null>(null);
 
@@ -112,23 +113,29 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* ── Tools ─────────────────────────────────────── */}
           <section className="drawer-section">
-            <h4 className="drawer-section-title">Tools</h4>
+            <button className="drawer-guide-toggle" onClick={() => setToolsOpen(!toolsOpen)}>
+              <span>Tools</span>
+              <span className="drawer-guide-chevron">{toolsOpen ? "▲" : "▼"}</span>
+            </button>
 
-            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLeverage(); }}>
-              <span className="drawer-row-label">{t("drawer.leverageBtn")}</span>
-              <span className="drawer-row-right"><span className="drawer-row-icon">⚡</span><span className="drawer-row-arrow">›</span></span>
-            </div>
+            {toolsOpen && (
+              <div className="drawer-docs">
+                <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLeverage(); }}>
+                  <span className="drawer-row-label">{t("drawer.leverageBtn")}</span>
+                  <span className="drawer-row-right"><span className="drawer-row-icon">⚡</span><span className="drawer-row-arrow">›</span></span>
+                </div>
 
-            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLearn(); }}>
-              <span className="drawer-row-label">{t("drawer.patternsBtn")}</span>
-              <span className="drawer-row-right"><span className="drawer-row-icon">📚</span><span className="drawer-row-arrow">›</span></span>
-            </div>
+                <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenLearn(); }}>
+                  <span className="drawer-row-label">{t("drawer.patternsBtn")}</span>
+                  <span className="drawer-row-right"><span className="drawer-row-icon">📚</span><span className="drawer-row-arrow">›</span></span>
+                </div>
 
-            <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenTutorials(); }}>
-              <span className="drawer-row-label">Trading Tutorials</span>
-              <span className="drawer-row-right"><span className="drawer-row-icon">🎓</span><span className="drawer-row-arrow">›</span></span>
-
-            </div>
+                <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenTutorials(); }}>
+                  <span className="drawer-row-label">Trading Tutorials</span>
+                  <span className="drawer-row-right"><span className="drawer-row-icon">🎓</span><span className="drawer-row-arrow">›</span></span>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* ── Trading Guide (collapsible) ────────────────── */}
