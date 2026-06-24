@@ -2654,6 +2654,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="interval-banner-header">
               <span className="interval-banner-title">{banner.title}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="aiqw-live-badge">
+                  <span className="aiqw-live-dot" />
+                  LIVE
+                </span>
                 <span className="pattern-insight-ai-badge">
                   {t("chart.aiPowered")}
                 </span>
@@ -2849,6 +2853,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {patternInsight.name}
               </span>
               <div className="pattern-insight-header-right">
+                <span className="aiqw-live-badge">
+                  <span className="aiqw-live-dot" />
+                  LIVE
+                </span>
                 <span className="pattern-insight-ai-badge">
                   {t("chart.aiPowered")}
                 </span>
