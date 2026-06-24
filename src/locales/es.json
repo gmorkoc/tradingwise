@@ -1176,8 +1176,8 @@
     "orderflow": "Dinero Inteligente",
     "signals": "Confluencia",
     "fundingbot": "Bot Funding",
-    "candleai":   "Velas IA",
-    "markets":    "Mercados Globales",
+    "candleai": "Velas IA",
+    "markets": "Mercados Globales",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
@@ -1569,19 +1569,141 @@
     "insightDown": "{{coin}} baja {{pct}}% desde apertura — vendedores presionando en los niveles actuales."
   },
   "sectionBanner": {
-    "ai":        { "title": "Predicción de Precio IA",        "desc": "Análisis de nivel institucional que combina acción del precio, tasas de financiación, volumen, RSI y datos de liquidación en una única señal direccional con objetivos de precio.", "tags": ["Objetivos de Precio", "Puntuación de Confianza", "Escenarios Alcistas/Bajistas"] },
-    "heatmap":   { "title": "Mapa de Calor de Liquidaciones", "desc": "Visualiza dónde serán liquidadas forzosamente las posiciones apalancadas. Estos grupos actúan como imanes de precio — los mercados barren rutinariamente las zonas de liquidez antes de revertir, dándote puntos de entrada y salida predecibles.", "tags": ["Zonas de Liquidez", "Niveles de Stop-Hunt", "Objetivos de Reversión"] },
-    "feargreed": { "title": "Índice de Miedo y Codicia",     "desc": "Un compuesto de seis señales de mercado que mide la emoción de la multitud en tiempo real. Históricamente, el miedo extremo marca las mejores oportunidades de compra y la codicia extrema señala mayor riesgo de corrección.", "tags": ["Sentimiento de Mercado", "Señal Contraria", "Timing de Ciclo"] },
-    "onchain":   { "title": "Métricas On-Chain",              "desc": "Rastrea lo que las billeteras realmente están haciendo en la blockchain — no lo que dicen los analistas. Las salidas de exchanges, la acumulación de ballenas y el comportamiento de los mineros consistentemente lideran el precio días o semanas antes.", "tags": ["Movimientos de Ballenas", "Flujos de Exchange", "Dinero Inteligente"] },
-    "alerts":    { "title": "Alertas de Precio",              "desc": "Define condiciones de activación una vez y deja que el mercado venga a ti. Nunca pierdas una ruptura clave, prueba de soporte o cruce de indicador — recibe notificación en el momento en que se cumplan las condiciones.", "tags": ["Disparadores de Precio", "Alertas de Indicadores", "Nunca Pierdas un Nivel"] },
-    "etf":       { "title": "Entradas y Salidas de ETF",      "desc": "Los ETF de Bitcoin al contado ahora canalizan miles de millones en demanda institucional directamente al mercado. Los días de fuertes entradas históricamente correlacionan con apreciación del precio; las salidas sostenidas señalan distribución.", "tags": ["Demanda Institucional", "Flujos ETF BTC", "Indicador Adelantado"] },
-    "positions": { "title": "Posiciones Largo / Corto",       "desc": "Muestra la relación de largos a cortos en los principales exchanges de derivados. Cuando todos están posicionados del mismo modo, el mercado los penaliza — los desequilibrios extremos son señales contrarias poderosas.", "tags": ["Ratio Largo/Corto", "Posicionamiento de Multitud", "Riesgo de Squeeze"] },
-    "htf":       { "title": "Análisis de Marco Temporal Alto","desc": "La estructura semanal y mensual define a dónde se dirige el precio en última instancia. Operar en la dirección de la tendencia macro en HTF mejora drásticamente las tasas de éxito en entradas de marcos temporales más bajos.", "tags": ["Semanal / Mensual", "Tendencia Macro", "Niveles de Estructura"] },
-    "orderflow": { "title": "Flujo de Órdenes",               "desc": "La cinta en tiempo real de las grandes operaciones que llegan al libro. Las órdenes institucionales agresivas revelan convicción antes de que el precio reaccione — dándote una ventana sobre lo que el dinero inteligente está haciendo ahora mismo.", "tags": ["Cinta en Tiempo Real", "Grandes Órdenes", "Actividad Institucional"] },
-    "signals":   { "title": "Señales IA",                     "desc": "Señales de consenso multi-exchange que filtran el ruido del verdadero momentum. Combina tasas de financiación, RSI, MACD, perfil de volumen y datos de liquidación entre exchanges en llamadas claras y accionables.", "tags": ["Multi-Exchange", "Señales de Momentum", "Puntuación de Consenso"] },
-    "fundingbot":{ "title": "Bot de Financiación IA",         "desc": "Las tasas de financiación de futuros perpetuos revelan extremos de apalancamiento en tiempo real. Los largos masificados pagando más del 0.05% por 8h (más del 50% anualizado) casi siempre preceden a una purga. Los cortos atrapados en tasas negativas preparan squeezes violentos.", "tags": ["Tasas de Financiación", "Extremos de Apalancamiento", "Señales de Carry Trade"] },
-    "gann":      { "title": "Análisis Gann", "desc": "Las relaciones geométricas precio/tiempo de W.D. Gann identifican zonas de reversión de alta probabilidad.", "tags": ["Precio / Tiempo", "Niveles Geométricos", "Zonas de Reversión"] },
-    "candleai":  { "title": "Velas IA", "desc": "Análisis de velas en tiempo real con IA. Lee cada vela, identifica qué hacen los creadores de mercado y predice el próximo movimiento.", "tags": ["Patrones de Velas", "Lectura de Mercado", "Solo Elite"] }
+    "ai": {
+      "title": "Predicción de Precio IA",
+      "desc": "Análisis de nivel institucional que combina acción del precio, tasas de financiación, volumen, RSI y datos de liquidación en una única señal direccional con objetivos de precio.",
+      "tags": [
+        "Objetivos de Precio",
+        "Puntuación de Confianza",
+        "Escenarios Alcistas/Bajistas"
+      ]
+    },
+    "heatmap": {
+      "title": "Mapa de Calor de Liquidaciones",
+      "desc": "Visualiza dónde serán liquidadas forzosamente las posiciones apalancadas. Estos grupos actúan como imanes de precio — los mercados barren rutinariamente las zonas de liquidez antes de revertir, dándote puntos de entrada y salida predecibles.",
+      "tags": [
+        "Zonas de Liquidez",
+        "Niveles de Stop-Hunt",
+        "Objetivos de Reversión"
+      ]
+    },
+    "feargreed": {
+      "title": "Índice de Miedo y Codicia",
+      "desc": "Un compuesto de seis señales de mercado que mide la emoción de la multitud en tiempo real. Históricamente, el miedo extremo marca las mejores oportunidades de compra y la codicia extrema señala mayor riesgo de corrección.",
+      "tags": [
+        "Sentimiento de Mercado",
+        "Señal Contraria",
+        "Timing de Ciclo"
+      ]
+    },
+    "onchain": {
+      "title": "Métricas On-Chain",
+      "desc": "Rastrea lo que las billeteras realmente están haciendo en la blockchain — no lo que dicen los analistas. Las salidas de exchanges, la acumulación de ballenas y el comportamiento de los mineros consistentemente lideran el precio días o semanas antes.",
+      "tags": [
+        "Movimientos de Ballenas",
+        "Flujos de Exchange",
+        "Dinero Inteligente"
+      ]
+    },
+    "alerts": {
+      "title": "Alertas de Precio",
+      "desc": "Define condiciones de activación una vez y deja que el mercado venga a ti. Nunca pierdas una ruptura clave, prueba de soporte o cruce de indicador — recibe notificación en el momento en que se cumplan las condiciones.",
+      "tags": [
+        "Disparadores de Precio",
+        "Alertas de Indicadores",
+        "Nunca Pierdas un Nivel"
+      ]
+    },
+    "etf": {
+      "title": "Entradas y Salidas de ETF",
+      "desc": "Los ETF de Bitcoin al contado ahora canalizan miles de millones en demanda institucional directamente al mercado. Los días de fuertes entradas históricamente correlacionan con apreciación del precio; las salidas sostenidas señalan distribución.",
+      "tags": [
+        "Demanda Institucional",
+        "Flujos ETF BTC",
+        "Indicador Adelantado"
+      ]
+    },
+    "positions": {
+      "title": "Posiciones Largo / Corto",
+      "desc": "Muestra la relación de largos a cortos en los principales exchanges de derivados. Cuando todos están posicionados del mismo modo, el mercado los penaliza — los desequilibrios extremos son señales contrarias poderosas.",
+      "tags": [
+        "Ratio Largo/Corto",
+        "Posicionamiento de Multitud",
+        "Riesgo de Squeeze"
+      ]
+    },
+    "htf": {
+      "title": "Análisis de Marco Temporal Alto",
+      "desc": "La estructura semanal y mensual define a dónde se dirige el precio en última instancia. Operar en la dirección de la tendencia macro en HTF mejora drásticamente las tasas de éxito en entradas de marcos temporales más bajos.",
+      "tags": [
+        "Semanal / Mensual",
+        "Tendencia Macro",
+        "Niveles de Estructura"
+      ]
+    },
+    "orderflow": {
+      "title": "Flujo de Órdenes",
+      "desc": "La cinta en tiempo real de las grandes operaciones que llegan al libro. Las órdenes institucionales agresivas revelan convicción antes de que el precio reaccione — dándote una ventana sobre lo que el dinero inteligente está haciendo ahora mismo.",
+      "tags": [
+        "Cinta en Tiempo Real",
+        "Grandes Órdenes",
+        "Actividad Institucional"
+      ]
+    },
+    "signals": {
+      "title": "Señales IA",
+      "desc": "Señales de consenso multi-exchange que filtran el ruido del verdadero momentum. Combina tasas de financiación, RSI, MACD, perfil de volumen y datos de liquidación entre exchanges en llamadas claras y accionables.",
+      "tags": [
+        "Multi-Exchange",
+        "Señales de Momentum",
+        "Puntuación de Consenso"
+      ]
+    },
+    "fundingbot": {
+      "title": "Bot de Financiación IA",
+      "desc": "Las tasas de financiación de futuros perpetuos revelan extremos de apalancamiento en tiempo real. Los largos masificados pagando más del 0.05% por 8h (más del 50% anualizado) casi siempre preceden a una purga. Los cortos atrapados en tasas negativas preparan squeezes violentos.",
+      "tags": [
+        "Tasas de Financiación",
+        "Extremos de Apalancamiento",
+        "Señales de Carry Trade"
+      ]
+    },
+    "gann": {
+      "title": "Análisis Gann",
+      "desc": "Las relaciones geométricas precio/tiempo de W.D. Gann identifican zonas de reversión de alta probabilidad.",
+      "tags": [
+        "Precio / Tiempo",
+        "Niveles Geométricos",
+        "Zonas de Reversión"
+      ]
+    },
+    "candleai": {
+      "title": "Velas IA",
+      "desc": "Análisis de velas en tiempo real con IA. Lee cada vela, identifica qué hacen los creadores de mercado y predice el próximo movimiento.",
+      "tags": [
+        "Patrones de Velas",
+        "Lectura de Mercado",
+        "Solo Elite"
+      ]
+    },
+    "markets": {
+      "title": "Mercados Globales",
+      "desc": "Visión general en tiempo real de los principales mercados cripto — precios, cambios 24h, capitalizaciones y volumen en cientos de activos. Detecta oportunidades y compara el rendimiento por sector de un vistazo.",
+      "tags": [
+        "Visión del Mercado",
+        "Rendimiento por Sector",
+        "Líderes de Volumen"
+      ]
+    },
+    "altanalysis": {
+      "title": "Análisis de Altcoins",
+      "desc": "Análisis profundo impulsado por IA para criptomonedas alternativas. Combina price action, indicadores técnicos, tasas de financiamiento y contexto macro de BTC para generar predicciones direccionales con objetivos de precio.",
+      "tags": [
+        "Predicción IA",
+        "Análisis Técnico",
+        "Correlación BTC"
+      ]
+    }
   },
   "fundingBot": {
     "title": "Bot de Financiación IA",

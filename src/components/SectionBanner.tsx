@@ -3,19 +3,21 @@ import { useTranslation } from "react-i18next";
 import "../styles/SectionBanner.css";
 
 const ICONS: Partial<Record<string, string>> = {
-  ai:         "✦",
-  heatmap:    "◈",
-  feargreed:  "◉",
-  onchain:    "⬡",
-  alerts:     "◎",
-  etf:        "▣",
-  positions:  "⇅",
-  htf:        "▲",
-  orderflow:  "∿",
-  signals:    "★",
-  fundingbot: "%",
-  gann:       "✕",
-  candleai:   "🕯",
+  ai:          "✦",
+  heatmap:     "◈",
+  feargreed:   "◉",
+  onchain:     "⬡",
+  alerts:      "◎",
+  etf:         "▣",
+  positions:   "⇅",
+  htf:         "▲",
+  orderflow:   "∿",
+  signals:     "★",
+  fundingbot:  "%",
+  gann:        "✕",
+  candleai:    "🕯",
+  markets:     "⊕",
+  altanalysis: "◆",
 };
 
 interface Props { section: string }

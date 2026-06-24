@@ -1176,8 +1176,8 @@
     "orderflow": "Smart Money",
     "signals": "Confluenza",
     "fundingbot": "Bot Funding",
-    "candleai":   "Candele IA",
-    "markets":    "Mercati Globali",
+    "candleai": "Candele IA",
+    "markets": "Mercati Globali",
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
     "swipeHint": "Scorri per aprire il menu",
@@ -1569,19 +1569,141 @@
     "insightDown": "{{coin}} è sceso del {{pct}}% dall'apertura — venditori che applicano pressione ai livelli attuali."
   },
   "sectionBanner": {
-    "ai":        { "title": "Previsione Prezzo IA",          "desc": "Analisi di livello istituzionale che combina price action, tassi di finanziamento, volume, RSI e dati di liquidazione in un'unica indicazione direzionale con target di prezzo.", "tags": ["Target di Prezzo", "Punteggio di Confidenza", "Scenari Bull / Bear"] },
-    "heatmap":   { "title": "Mappa di Calore Liquidazioni",  "desc": "Visualizza dove le posizioni a leva saranno liquidate forzatamente. Questi cluster fungono da magneti di prezzo — i mercati spazzano abitualmente le zone di liquidità prima di invertire, offrendoti punti di ingresso e uscita prevedibili.", "tags": ["Zone di Liquidità", "Livelli Stop-Hunt", "Target di Inversione"] },
-    "feargreed": { "title": "Indice Paura e Avidità",        "desc": "Un composito di sei segnali di mercato che misura l'emozione della folla in tempo reale. Storicamente, la paura estrema segna le migliori opportunità di acquisto e l'avidità estrema segnala un aumento del rischio di correzione.", "tags": ["Sentiment di Mercato", "Segnale Contrarian", "Timing del Ciclo"] },
-    "onchain":   { "title": "Metriche On-Chain",             "desc": "Traccia ciò che i wallet stanno effettivamente facendo sulla blockchain — non ciò che dicono gli analisti. I deflussi dagli exchange, l'accumulo dei whale e il comportamento dei miner anticipano costantemente il prezzo di giorni o settimane.", "tags": ["Movimenti Whale", "Flussi Exchange", "Smart Money"] },
-    "alerts":    { "title": "Avvisi di Prezzo",              "desc": "Definisci le condizioni di attivazione una volta sola e lascia che il mercato venga da te. Non perdere mai più una rottura chiave, un test di supporto o un incrocio di indicatori — ricevi una notifica nel momento in cui le condizioni vengono soddisfatte.", "tags": ["Trigger di Prezzo", "Avvisi Indicatori", "Non Perdere un Livello"] },
-    "etf":       { "title": "Afflussi e Deflussi ETF",       "desc": "Gli ETF Bitcoin spot ora convogliano miliardi di domanda istituzionale direttamente nel mercato. I giorni di forti afflussi correlano storicamente con l'apprezzamento del prezzo; i deflussi sostenuti segnalano distribuzione.", "tags": ["Domanda Istituzionale", "Flussi ETF BTC", "Indicatore Anticipatore"] },
-    "positions": { "title": "Posizioni Long / Short",        "desc": "Mostra il rapporto tra long e short nei principali exchange di derivati. Quando tutti sono posizionati allo stesso modo, il mercato li penalizza — gli squilibri estremi sono potenti segnali contrarian.", "tags": ["Rapporto Long/Short", "Posizionamento della Folla", "Rischio Squeeze"] },
-    "htf":       { "title": "Analisi Timeframe Superiori",   "desc": "La struttura settimanale e mensile definisce dove il prezzo si sta dirigendo in ultima analisi. Operare nella direzione del trend macro sull'HTF migliora drasticamente i tassi di successo sugli ingressi di timeframe inferiori.", "tags": ["Settimanale / Mensile", "Trend Macro", "Livelli Strutturali"] },
-    "orderflow": { "title": "Flusso Ordini",                 "desc": "Il nastro in tempo reale delle grandi operazioni che colpiscono il book. Gli ordini istituzionali aggressivi rivelano convinzione prima che il prezzo reagisca — offrendoti una finestra su ciò che lo smart money sta facendo in questo momento.", "tags": ["Nastro in Tempo Reale", "Ordini Grandi", "Attività Istituzionale"] },
-    "signals":   { "title": "Segnali IA",                    "desc": "Segnali di consenso multi-exchange che filtrano il rumore dal vero momentum. Combina tassi di finanziamento, RSI, MACD, profilo di volume e dati di liquidazione tra exchange in chiamate chiare e azionabili.", "tags": ["Multi-Exchange", "Segnali Momentum", "Punteggio di Consenso"] },
-    "fundingbot":{ "title": "Bot di Finanziamento IA",       "desc": "I tassi di finanziamento dei futures perpetui rivelano gli eccessi di leva in tempo reale. I long affollati che pagano oltre lo 0,05% ogni 8h (oltre il 50% annualizzato) quasi sempre precedono uno svuotamento. Gli short intrappolati in tassi negativi preparano squeeze violenti.", "tags": ["Tassi di Finanziamento", "Eccessi di Leva", "Segnali Carry Trade"] },
-    "gann":      { "title": "Analisi Gann", "desc": "Le relazioni geometriche prezzo/tempo di W.D. Gann identificano zone di inversione ad alta probabilità.", "tags": ["Prezzo / Tempo", "Livelli Geometrici", "Zone di Inversione"] },
-    "candleai":  { "title": "Candele IA", "desc": "Analisi in tempo reale delle candele con IA. Legge ogni candela, identifica cosa stanno facendo i market maker e prevede la prossima mossa.", "tags": ["Pattern Candele", "Lettura Mercato", "Solo Elite"] }
+    "ai": {
+      "title": "Previsione Prezzo IA",
+      "desc": "Analisi di livello istituzionale che combina price action, tassi di finanziamento, volume, RSI e dati di liquidazione in un'unica indicazione direzionale con target di prezzo.",
+      "tags": [
+        "Target di Prezzo",
+        "Punteggio di Confidenza",
+        "Scenari Bull / Bear"
+      ]
+    },
+    "heatmap": {
+      "title": "Mappa di Calore Liquidazioni",
+      "desc": "Visualizza dove le posizioni a leva saranno liquidate forzatamente. Questi cluster fungono da magneti di prezzo — i mercati spazzano abitualmente le zone di liquidità prima di invertire, offrendoti punti di ingresso e uscita prevedibili.",
+      "tags": [
+        "Zone di Liquidità",
+        "Livelli Stop-Hunt",
+        "Target di Inversione"
+      ]
+    },
+    "feargreed": {
+      "title": "Indice Paura e Avidità",
+      "desc": "Un composito di sei segnali di mercato che misura l'emozione della folla in tempo reale. Storicamente, la paura estrema segna le migliori opportunità di acquisto e l'avidità estrema segnala un aumento del rischio di correzione.",
+      "tags": [
+        "Sentiment di Mercato",
+        "Segnale Contrarian",
+        "Timing del Ciclo"
+      ]
+    },
+    "onchain": {
+      "title": "Metriche On-Chain",
+      "desc": "Traccia ciò che i wallet stanno effettivamente facendo sulla blockchain — non ciò che dicono gli analisti. I deflussi dagli exchange, l'accumulo dei whale e il comportamento dei miner anticipano costantemente il prezzo di giorni o settimane.",
+      "tags": [
+        "Movimenti Whale",
+        "Flussi Exchange",
+        "Smart Money"
+      ]
+    },
+    "alerts": {
+      "title": "Avvisi di Prezzo",
+      "desc": "Definisci le condizioni di attivazione una volta sola e lascia che il mercato venga da te. Non perdere mai più una rottura chiave, un test di supporto o un incrocio di indicatori — ricevi una notifica nel momento in cui le condizioni vengono soddisfatte.",
+      "tags": [
+        "Trigger di Prezzo",
+        "Avvisi Indicatori",
+        "Non Perdere un Livello"
+      ]
+    },
+    "etf": {
+      "title": "Afflussi e Deflussi ETF",
+      "desc": "Gli ETF Bitcoin spot ora convogliano miliardi di domanda istituzionale direttamente nel mercato. I giorni di forti afflussi correlano storicamente con l'apprezzamento del prezzo; i deflussi sostenuti segnalano distribuzione.",
+      "tags": [
+        "Domanda Istituzionale",
+        "Flussi ETF BTC",
+        "Indicatore Anticipatore"
+      ]
+    },
+    "positions": {
+      "title": "Posizioni Long / Short",
+      "desc": "Mostra il rapporto tra long e short nei principali exchange di derivati. Quando tutti sono posizionati allo stesso modo, il mercato li penalizza — gli squilibri estremi sono potenti segnali contrarian.",
+      "tags": [
+        "Rapporto Long/Short",
+        "Posizionamento della Folla",
+        "Rischio Squeeze"
+      ]
+    },
+    "htf": {
+      "title": "Analisi Timeframe Superiori",
+      "desc": "La struttura settimanale e mensile definisce dove il prezzo si sta dirigendo in ultima analisi. Operare nella direzione del trend macro sull'HTF migliora drasticamente i tassi di successo sugli ingressi di timeframe inferiori.",
+      "tags": [
+        "Settimanale / Mensile",
+        "Trend Macro",
+        "Livelli Strutturali"
+      ]
+    },
+    "orderflow": {
+      "title": "Flusso Ordini",
+      "desc": "Il nastro in tempo reale delle grandi operazioni che colpiscono il book. Gli ordini istituzionali aggressivi rivelano convinzione prima che il prezzo reagisca — offrendoti una finestra su ciò che lo smart money sta facendo in questo momento.",
+      "tags": [
+        "Nastro in Tempo Reale",
+        "Ordini Grandi",
+        "Attività Istituzionale"
+      ]
+    },
+    "signals": {
+      "title": "Segnali IA",
+      "desc": "Segnali di consenso multi-exchange che filtrano il rumore dal vero momentum. Combina tassi di finanziamento, RSI, MACD, profilo di volume e dati di liquidazione tra exchange in chiamate chiare e azionabili.",
+      "tags": [
+        "Multi-Exchange",
+        "Segnali Momentum",
+        "Punteggio di Consenso"
+      ]
+    },
+    "fundingbot": {
+      "title": "Bot di Finanziamento IA",
+      "desc": "I tassi di finanziamento dei futures perpetui rivelano gli eccessi di leva in tempo reale. I long affollati che pagano oltre lo 0,05% ogni 8h (oltre il 50% annualizzato) quasi sempre precedono uno svuotamento. Gli short intrappolati in tassi negativi preparano squeeze violenti.",
+      "tags": [
+        "Tassi di Finanziamento",
+        "Eccessi di Leva",
+        "Segnali Carry Trade"
+      ]
+    },
+    "gann": {
+      "title": "Analisi Gann",
+      "desc": "Le relazioni geometriche prezzo/tempo di W.D. Gann identificano zone di inversione ad alta probabilità.",
+      "tags": [
+        "Prezzo / Tempo",
+        "Livelli Geometrici",
+        "Zone di Inversione"
+      ]
+    },
+    "candleai": {
+      "title": "Candele IA",
+      "desc": "Analisi in tempo reale delle candele con IA. Legge ogni candela, identifica cosa stanno facendo i market maker e prevede la prossima mossa.",
+      "tags": [
+        "Pattern Candele",
+        "Lettura Mercato",
+        "Solo Elite"
+      ]
+    },
+    "markets": {
+      "title": "Mercati Globali",
+      "desc": "Panoramica in tempo reale dei principali mercati crypto — prezzi, variazioni 24h, capitalizzazioni e volumi su centinaia di asset. Individua opportunità e confronta le performance per settore a colpo d'occhio.",
+      "tags": [
+        "Panoramica Mercato",
+        "Performance Settori",
+        "Leader di Volume"
+      ]
+    },
+    "altanalysis": {
+      "title": "Analisi Altcoin",
+      "desc": "Analisi approfondita basata su AI per criptovalute alternative. Combina price action, indicatori tecnici, tassi di finanziamento e contesto macro BTC per generare previsioni direzionali con target di prezzo.",
+      "tags": [
+        "Previsione AI",
+        "Analisi Tecnica",
+        "Correlazione BTC"
+      ]
+    }
   },
   "fundingBot": {
     "title": "Bot di Finanziamento IA",
