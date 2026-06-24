@@ -58,7 +58,7 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
         {/* Left: BTC icon + direction */}
         <div className="btc-toast-left">
           <div className="btc-toast-btc-icon">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/>
               <line x1="9" y1="8" x2="9" y2="16"/>
               <line x1="10.5" y1="6" x2="10.5" y2="8"/>
