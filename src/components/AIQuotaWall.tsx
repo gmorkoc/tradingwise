@@ -61,6 +61,9 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
             <div className="aiqw-gate-title-row">
               <span className="aiqw-gate-ai-badge">AI</span>
               <span className="aiqw-gate-title">{featureTitle}</span>
+              <span className="aiqw-gate-tier-badge" style={{ color: plan.color, borderColor: `${plan.color}55`, background: `${plan.color}18` }}>
+                {plan.label.toUpperCase()}
+              </span>
               <span className="aiqw-live-badge">
                 <span className="aiqw-live-dot" />
                 LIVE

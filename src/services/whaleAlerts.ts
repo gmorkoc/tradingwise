@@ -10,8 +10,8 @@ export interface WhaleTx {
   sentiment: "bullish" | "bearish" | "neutral";
 }
 
-const THRESHOLD_BTC = 100;
-const MAX_PER_MINUTE = 5;
+const THRESHOLD_BTC = 25;
+const MAX_PER_MINUTE = 20;
 
 // Well-known exchange / institutional BTC hot wallet addresses
 const KNOWN_ENTITIES: Record<string, string> = {
@@ -153,7 +153,7 @@ function connect() {
 
     ws.onclose = () => {
       ws = null;
-      if (listeners.size > 0) reconnectTimer = setTimeout(connect, 8_000);
+      if (listeners.size > 0) reconnectTimer = setTimeout(connect, 3_000);
     };
   } catch {}
 }

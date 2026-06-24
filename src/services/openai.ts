@@ -819,3 +819,180 @@ OUTPUT FORMAT (valid JSON only, no markdown)
     return { success: false, error: err.message || "Failed to get chart prediction" };
   }
 }
+
+export interface AltPricePrediction {
+  direction:      "bullish" | "bearish" | "neutral";
+  confidence:     "high" | "medium" | "low";
+  targetPrice:    number;
+  targetChange:   number;   // % move from current price
+  entryZone:      string;   // e.g. "$2,800 – $3,100"
+  stopLoss:       string;   // e.g. "$2,400"
+  supports:       string[]; // 2 levels
+  resistances:    string[]; // 2 levels
+  reasons:        string[]; // 3 short bullets why
+  summary:        string;   // 1 bold sentence
+  reasoning:      string;   // 2-3 sentence explanation of the full technical logic
+}
+
+interface TechnicalSummary {
+  periodHigh: string;
+  periodLow: string;
+  posInRange: string;
+  pctFromHigh: string;
+  pctFromLow: string;
+  momentum: string;
+  ma20: string;
+  ma50: string;
+  trend: string;
+  volatilityPct: string;
+  streak: number;
+  candleCount: number;
+  rsi: string;
+  macdHistogram: string;
+  macdSignal: string;
+  volumeTrend: string | null;
+  hhhl: string;
+  btcTrend: string;
+  fundingContext: string;
+}
+
+export async function getAltPricePrediction(
+  symbol: string,
+  name: string,
+  sector: string,
+  price: number,
+  change24h: number,
+  marketCapB: number,
+  timeframe: string,
+  tech: TechnicalSummary | null,
+): Promise<{ success: boolean; result?: AltPricePrediction; error?: string }> {
+  // ── 4-year halving cycle context ──────────────────────────────────────────
+  const HALVINGS = [
+    new Date("2012-11-28"),
+    new Date("2016-07-09"),
+    new Date("2020-05-11"),
+    new Date("2024-04-19"),
+  ];
+  const CYCLE_DAYS = 4 * 365.25;
+  const now = new Date();
+  const lastHalving = HALVINGS[HALVINGS.length - 1];
+  const nextHalving = new Date(lastHalving.getTime() + CYCLE_DAYS * 24 * 60 * 60 * 1000);
+  const daysSinceLast = Math.floor((now.getTime() - lastHalving.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilNext = Math.floor((nextHalving.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const monthsSinceLast = Math.floor(daysSinceLast / 30.44);
+  const cyclePosition = daysSinceLast / CYCLE_DAYS; // 0–1
+
+  let cyclePhase: string;
+  let cycleBias: string;
+  if (cyclePosition < 0.25) {
+    cyclePhase = `Early bull phase (${monthsSinceLast}mo post-halving)`;
+    cycleBias  = "Historically bullish — price tends to grind upward in first year post-halving";
+  } else if (cyclePosition < 0.50) {
+    cyclePhase = `Peak bull phase (${monthsSinceLast}mo post-halving)`;
+    cycleBias  = "Historically the strongest returns phase, but also where blow-off tops form — high risk of sharp corrections";
+  } else if (cyclePosition < 0.75) {
+    cyclePhase = `Bear market phase (${monthsSinceLast}mo post-halving)`;
+    cycleBias  = "Historically bearish — most alts lose 70-90% from peak in this phase";
+  } else {
+    cyclePhase = `Accumulation/bottom phase (${monthsSinceLast}mo post-halving)`;
+    cycleBias  = "Historically the best time to accumulate — market near cycle lows";
+  }
+
+  const cycleBlock = `
+4-YEAR HALVING CYCLE:
+- Last halving: April 19, 2024 (${monthsSinceLast} months ago, ${daysSinceLast} days)
+- Next halving: ~${nextHalving.toLocaleDateString("en-US", { month: "long", year: "numeric" })} (${daysUntilNext} days away)
+- Current phase: ${cyclePhase}
+- Historical bias: ${cycleBias}
+- Cycle position: ${(cyclePosition * 100).toFixed(0)}% through the current 4-year cycle`;
+
+  const horizonLabel: Record<string, string> = {
+    "1W": "1 week",
+    "1M": "1 month",
+    "3M": "3 months",
+    "6M": "6 months",
+    "1Y": "12 months",
+    "ALL": "2+ years",
+  };
+  const horizon = horizonLabel[timeframe] ?? "3 months";
+
+  const techBlock = tech ? `
+TECHNICAL DATA (${tech.candleCount} candles):
+Price structure:
+- Period range: ${tech.periodLow} – ${tech.periodHigh} | Price at ${tech.posInRange}% of range
+- Distance from high: ${tech.pctFromHigh}% | Distance from low: +${tech.pctFromLow}%
+- Trend: ${tech.trend}
+- Price structure: ${tech.hhhl}
+
+Momentum indicators:
+- RSI(14): ${tech.rsi} ${parseFloat(tech.rsi) > 70 ? "⚠ OVERBOUGHT" : parseFloat(tech.rsi) < 30 ? "⚠ OVERSOLD" : "(neutral zone)"}
+- MACD histogram: ${tech.macdHistogram} → ${tech.macdSignal}
+- Recent candle momentum (last 5 vs prior 5): ${parseFloat(tech.momentum) >= 0 ? "+" : ""}${tech.momentum}%
+- Consecutive streak: ${tech.streak > 0 ? `+${tech.streak} up candles` : tech.streak < 0 ? `${Math.abs(tech.streak)} down candles` : "mixed"}
+${tech.volumeTrend !== null ? `- Volume trend (last 5 vs prior 5): ${parseFloat(tech.volumeTrend) >= 0 ? "+" : ""}${tech.volumeTrend}%` : "- Volume: not available"}
+
+Market context:
+- BTC macro: ${tech.btcTrend}
+- Funding rate: ${tech.fundingContext}
+- Avg candle volatility: ${tech.volatilityPct}% of price` : `
+TECHNICAL DATA: Not available — base prediction on market cap, sector, and 24h momentum only.`;
+
+  try {
+    const prompt = `You are a quantitative crypto analyst. Your job is to give OBJECTIVE, DATA-DRIVEN price predictions — not cheerleading. You must let the data determine the direction. If technicals are bearish, say bearish. If neutral, say neutral.
+
+COIN: ${name} (${symbol})
+SECTOR: ${sector}
+CURRENT PRICE: $${price.toLocaleString("en-US", { maximumFractionDigits: 6 })}
+24H CHANGE: ${change24h >= 0 ? "+" : ""}${change24h.toFixed(2)}%
+MARKET CAP: ~$${marketCapB.toFixed(2)}B
+PREDICTION HORIZON: ${horizon}
+${cycleBlock}
+${techBlock}
+
+INSTRUCTIONS:
+- Direction MUST be determined by the data above — do NOT default to bullish
+- RSI > 70 + near period high → strongly consider bearish or neutral
+- RSI < 30 + near period low → consider bullish
+- Price below both MAs + bearish MACD → lean bearish
+- Negative BTC macro (BTC below MAs) → reduces bullish probability for any alt
+- Very high positive funding rate → overleveraged longs → bearish contrarian signal
+- Negative funding → potential short squeeze → bullish signal
+- Volume rising with price = confirmed move; volume falling with price = weak move
+- Lower highs + lower lows structure → bearish regardless of short-term bounces
+- Target price must be realistic: scale with volatility (${tech?.volatilityPct ?? "?"}% avg candle range × horizon)
+- Confidence should be "high" only if 4+ signals agree; "low" if mixed signals
+- Weight the 4-year cycle appropriately: for short horizons (1W/1M) technicals dominate; for longer horizons (6M/1Y/ALL) the cycle phase should heavily influence the direction and target
+- In bear phase of the cycle, even technically bullish setups have lower probability — adjust confidence and targets accordingly
+- In reasoning, explicitly mention which cycle phase we are in and how it affects the prediction
+
+Return JSON:
+{
+  "direction": "bullish" | "bearish" | "neutral",
+  "confidence": "high" | "medium" | "low",
+  "targetPrice": <number>,
+  "targetChange": <number — signed %, e.g. -18.5 or +34.2>,
+  "entryZone": "<string>",
+  "stopLoss": "<string>",
+  "supports": ["<price>", "<price>"],
+  "resistances": ["<price>", "<price>"],
+  "reasons": ["<data-driven reason 1>", "<data-driven reason 2>", "<data-driven reason 3>"],
+  "summary": "<1 direct sentence stating the call and why>",
+  "reasoning": "<2-3 sentences explaining the full technical logic behind this call — reference specific indicators like RSI, MACD, BTC macro, funding rate, and price structure. Be specific about which signals were bullish, which were bearish, and how they were weighted to reach this conclusion.>"
+}`;
+
+    const response = await callOpenAI({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+      max_tokens: 500,
+      response_format: { type: "json_object" },
+    });
+
+    const raw = response?.choices?.[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw) as AltPricePrediction;
+    if (!parsed.direction || !parsed.targetPrice) return { success: false, error: "Invalid response format" };
+    return { success: true, result: parsed };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Prediction failed" };
+  }
+}

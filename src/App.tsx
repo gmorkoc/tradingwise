@@ -47,6 +47,9 @@ import { PriceChart } from "./components/PriceChart";
 import { SectionBanner } from "./components/SectionBanner";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
+import { AltAnalysis } from "./components/AltAnalysis";
+import { BtcMoveToast } from "./components/BtcMoveToast";
+import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { ZoneResult } from "./components/PriceChart.types";
 import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
@@ -68,7 +71,8 @@ type SectionId =
   | "signals"
   | "fundingbot"
   | "candleai"
-  | "markets";
+  | "markets"
+  | "altanalysis";
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -162,6 +166,19 @@ const NAV_ITEMS: {
       "M12.5 3a17 17 0 0 1 0 18",
     ],
   },
+  {
+    id: "altanalysis",
+    labelKey: "nav.altanalysis",
+    requiredTier: "elite",
+    d: [
+      "M8 3v3",
+      "M6 6h4v6H6z",
+      "M8 12v3",
+      "M16 5v2",
+      "M14 7h4v7h-4z",
+      "M16 14v4",
+    ],
+  },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -230,6 +247,7 @@ function AppDashboard({
     const hash = window.location.hash.slice(1) as SectionId;
     return NAV_ITEMS.some((n) => n.id === hash) ? hash : "chart";
   });
+  const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const onboardingCheckedRef = useRef(false);
   const [showWatchlist, setShowWatchlist] = useState(
@@ -720,6 +738,7 @@ function AppDashboard({
   }, [autoRefresh, coin]);
 
   return (
+    <>
     <div className="app-shell">
       {showOnboarding && (
         <OnboardingWizard
@@ -1390,6 +1409,12 @@ function AppDashboard({
               />
             )}
             {activeSection === "markets" && <GlobalMarkets />}
+            {activeSection === "altanalysis" && (
+              <AltAnalysis
+                onOpenUpgrade={onOpenUpgrade ?? (() => {})}
+                onOpenAuth={onOpenAuth ?? (() => {})}
+              />
+            )}
           </div>
         </div>
 
@@ -1828,6 +1853,8 @@ function AppDashboard({
           );
         })()}
     </div>
+    <BtcMoveToast alert={btcMoveAlert} onDismiss={dismissBtcAlert} />
+    </>
   );
 }
 

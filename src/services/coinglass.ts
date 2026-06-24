@@ -1339,4 +1339,19 @@ export async function fetchCoin24hTickers(
   return map;
 }
 
+export async function fetchFundingRate(coin: string): Promise<number | null> {
+  try {
+    const symbol = coin === 'BTC' ? 'BTCUSDT' : `${coin}USDT`;
+    const res = await api.get('futures/funding-rate/history', {
+      params: { symbol, interval: '8h', limit: 1, exchange: 'Binance' },
+    });
+    if (res?.data?.code === '0' && res.data.data?.[0]) {
+      return parseFloat(res.data.data[0].close ?? '0');
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export type { BTCData, PriceDataPoint, CandleDataPoint };

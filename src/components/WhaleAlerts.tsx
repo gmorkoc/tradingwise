@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
 import "../styles/WhaleAlerts.css";
 
-const DISMISS_MS = 12_000;
+const DISMISS_MS = 2_000;
 
 function playWhaleSound() {
   try {
