@@ -37,7 +37,7 @@ const PLANS = [
   },
 ];
 
-export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle }) => {
+export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle, featureDesc }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -57,13 +57,16 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
     return (
       <div className="aiqw-gate-row" style={{ "--gate-color": plan.color } as React.CSSProperties}>
         <div className="aiqw-gate-left">
-          <div className="aiqw-icon-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
-            </svg>
-          </div>
           <div className="aiqw-gate-info">
-            <span className="aiqw-gate-title">{featureTitle}</span>
+            <div className="aiqw-gate-title-row">
+              <span className="aiqw-gate-ai-badge">AI</span>
+              <span className="aiqw-gate-title">{featureTitle}</span>
+              <span className="aiqw-live-badge">
+                <span className="aiqw-live-dot" />
+                LIVE
+              </span>
+            </div>
+            {featureDesc && <span className="aiqw-gate-desc">{featureDesc}</span>}
             <div className="aiqw-gate-features">
               {plan.features.map(f => (
                 <span key={f} className="aiqw-gate-feature">
@@ -75,12 +78,12 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           </div>
         </div>
         <div className="aiqw-gate-right">
-          <span className="aiqw-gate-price" style={{ color: plan.color }}>
+          <span className="aiqw-gate-price">
             {plan.price}<span className="aiqw-gate-per">{plan.per}</span>
           </span>
           <button
             className="aiqw-gate-btn"
-            style={{ background: `linear-gradient(135deg, ${plan.color}cc, ${plan.color}88)`, borderColor: `${plan.color}55` }}
+            style={{ background: plan.color, borderColor: plan.color }}
             onClick={() => handleUpgrade(plan)}
             disabled={loadingPlan === plan.id}
           >
