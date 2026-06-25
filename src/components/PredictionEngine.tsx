@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol, ExchangeActivity } from "../services/coinglass";
+import { BlurGate } from "./MembershipGate";
 import "../styles/PredictionEngine.css";
 
 const EXCH_WEIGHTS: Record<string, number> = { Binance: 54, OKX: 27, Bybit: 8, Bitget: 5, Coinbase: 6 };
@@ -26,6 +27,8 @@ interface Props {
   btcData: Partial<{ rsi: number; macd: number; macdSignal: number; fundingRate: number; longShortRatio: number; price: number }> | null;
   coin: CoinSymbol;
   livePrice: number | null;
+  onOpenAuth?: () => void;
+  onOpenUpgrade?: () => void;
 }
 
 interface Signal {
@@ -131,7 +134,7 @@ function calcPOC(candles: { high: number; low: number; volume?: number }[]): num
   return poc;
 }
 
-export function PredictionEngine({ btcData, coin, livePrice }: Props) {
+export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenUpgrade }: Props) {
   const { t, i18n } = useTranslation();
   const [fearGreed,       setFearGreed]       = useState<FearGreed | null>(null);
   const [atr4h,           setAtr4h]           = useState(0);
@@ -341,31 +344,40 @@ export function PredictionEngine({ btcData, coin, livePrice }: Props) {
       <div className="pe-body">
 
         <div className="pe-targets-col">
-          <div className="pe-targets-label">{t("predEngine.priceTargets")}</div>
-          {targets.map(tgt => {
-            const bullPct = price > 0 ? ((tgt.bull - price) / price * 100).toFixed(1) : "0";
-            const bearPct = price > 0 ? ((tgt.bear - price) / price * 100).toFixed(1) : "0";
-            return (
-              <div key={tgt.label} className="pe-target-card">
-                <div className="pe-target-label">{tgt.label}</div>
-                <div className="pe-target-values">
-                  <div className="pe-target-bull">
-                    <span className="pe-target-arrow">▲</span>
-                    {fmtPrice(tgt.bull)}
+          <div className="pe-targets-label">
+            {t("predEngine.priceTargets")}
+            <span className="pe-pro-badge">PRO</span>
+          </div>
+          <BlurGate requiredTier="pro" featureName="Price Targets" onOpenAuth={onOpenAuth ?? (() => {})} onOpenUpgrade={onOpenUpgrade ?? (() => {})}>
+            <div className="pe-targets-note">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              These are <strong>not AI predictions</strong>. Targets are calculated using <strong>ATR (Average True Range)</strong> — a volatility measure derived from the last 14 periods of 4H candle data. Bull &amp; bear levels are set at 1×–1.5× ATR from the current price, scaled to 4H, Daily, and Weekly timeframes.
+            </div>
+            {targets.map(tgt => {
+              const bullPct = price > 0 ? ((tgt.bull - price) / price * 100).toFixed(1) : "0";
+              const bearPct = price > 0 ? ((tgt.bear - price) / price * 100).toFixed(1) : "0";
+              return (
+                <div key={tgt.label} className="pe-target-card">
+                  <div className="pe-target-label">{tgt.label}</div>
+                  <div className="pe-target-values">
+                    <div className="pe-target-bull">
+                      <span className="pe-target-arrow">▲</span>
+                      {fmtPrice(tgt.bull)}
+                    </div>
+                    <div className="pe-target-bear">
+                      <span className="pe-target-arrow">▼</span>
+                      {fmtPrice(tgt.bear)}
+                    </div>
                   </div>
-                  <div className="pe-target-bear">
-                    <span className="pe-target-arrow">▼</span>
-                    {fmtPrice(tgt.bear)}
+                  <div className="pe-target-pct">
+                    <span className="pe-target-pct-bull">+{bullPct}%</span>
+                    <span className="pe-target-pct-bear">{bearPct}%</span>
                   </div>
+                  <div className="pe-target-atr">{t("predEngine.atrLabel")} {fmtPrice(tgt.atr)}</div>
                 </div>
-                <div className="pe-target-pct">
-                  <span className="pe-target-pct-bull">+{bullPct}%</span>
-                  <span className="pe-target-pct-bear">{bearPct}%</span>
-                </div>
-                <div className="pe-target-atr">{t("predEngine.atrLabel")} {fmtPrice(tgt.atr)}</div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </BlurGate>
         </div>
 
         <div className="pe-signals-card">

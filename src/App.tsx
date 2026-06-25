@@ -1390,6 +1390,8 @@ function AppDashboard({
                 btcData={btcData}
                 coin={coin}
                 livePrice={livePrice}
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
               />
             )}
             {activeSection === "fundingbot" && (

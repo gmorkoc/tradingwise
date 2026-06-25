@@ -1685,4 +1685,24 @@
   .cw-pill { padding: 5px 7px; min-width: 48px; }
   .cw-header-right { width: 100%; }
   .cw-candle-close--daily { flex: 1; }
+
+  /* Live tape: let names and descriptions wrap fully on mobile, smaller fonts */
+  .cw-tape-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: 0.74rem;
+  }
+  .cw-tape-desc {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: 0.7rem;
+  }
+  .cw-tape-time {
+    font-size: 0.58rem;
+  }
+  .cw-tape-emoji {
+    font-size: 0.88rem;
+  }
 }
