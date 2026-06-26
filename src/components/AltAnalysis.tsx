@@ -93,9 +93,11 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   const sectorColor = SECTOR_COLORS[sector] ?? "#818cf8";
 
   const filtered = COINS.filter(c =>
-    query.length === 0 ||
-    c.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    c.name.toLowerCase().includes(query.toLowerCase())
+    c.symbol !== "BTC" && (
+      query.length === 0 ||
+      c.symbol.toLowerCase().includes(query.toLowerCase()) ||
+      c.name.toLowerCase().includes(query.toLowerCase())
+    )
   ).slice(0, 20);
 
   // Load chart candles
@@ -204,6 +206,39 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
     setShowDropdown(false);
   };
 
+  const detectCandlePattern = (cs: CandleDataPoint[]): string => {
+    if (cs.length < 3) return "insufficient data";
+    const [c3, c2, c1] = cs.slice(-3);
+    const body1 = Math.abs(c1.close - c1.open);
+    const range1 = c1.high - c1.low || 0.0001;
+    const upper1 = c1.high - Math.max(c1.close, c1.open);
+    const lower1 = Math.min(c1.close, c1.open) - c1.low;
+    const body2 = Math.abs(c2.close - c2.open);
+    const range2 = c2.high - c2.low || 0.0001;
+    const body3 = Math.abs(c3.close - c3.open);
+
+    if (body1 / range1 < 0.1) return "Doji — market at equilibrium, indecision";
+    if (lower1 > body1 * 2 && upper1 < body1 * 0.5 && c1.close >= c1.open)
+      return "Hammer — buyers rejected lower prices, bullish reversal signal";
+    if (upper1 > body1 * 2 && lower1 < body1 * 0.5 && c1.close <= c1.open)
+      return "Shooting Star — sellers rejected higher prices, bearish reversal signal";
+    if (c2.close < c2.open && c1.close > c1.open && c1.open <= c2.close && c1.close >= c2.open)
+      return "Bullish Engulfing — buyers overwhelmed sellers, strong reversal";
+    if (c2.close > c2.open && c1.close < c1.open && c1.open >= c2.close && c1.close <= c2.open)
+      return "Bearish Engulfing — sellers overwhelmed buyers, strong reversal";
+    if (c3.close < c3.open && body3 > range2 * 0.4 && body2 / range2 < 0.3
+        && c1.close > c1.open && c1.close > (c3.open + c3.close) / 2)
+      return "Morning Star — 3-candle bullish reversal, buyers took control";
+    if (c3.close > c3.open && body3 > range2 * 0.4 && body2 / range2 < 0.3
+        && c1.close < c1.open && c1.close < (c3.open + c3.close) / 2)
+      return "Evening Star — 3-candle bearish reversal, sellers took control";
+    if (c1.close > c1.open && body1 / range1 > 0.7)
+      return "Strong bullish candle — full-body close, buyers fully in control";
+    if (c1.close < c1.open && body1 / range1 > 0.7)
+      return "Strong bearish candle — full-body close, sellers fully in control";
+    return c1.close > c1.open ? "Mild bullish candle" : "Mild bearish candle";
+  };
+
   const buildTechnicalSummary = () => {
     if (candles.length < 10) return null;
 
@@ -296,6 +331,27 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
       ? (price > ma20 ? "above MA20 and MA50 (uptrend)" : "below MA20 but above MA50 (weakening)")
       : (price > ma20 ? "above MA20 but below MA50 (recovery attempt)" : "below MA20 and MA50 (downtrend)");
 
+    // ── Current price action from chart ──────────────────────────────────────
+    const candlePattern = detectCandlePattern(candles);
+
+    const last = candles[candles.length - 1];
+    const lastRange = last.high - last.low || 0.0001;
+    const lastUpper = last.high - Math.max(last.close, last.open);
+    const lastLower = Math.min(last.close, last.open) - last.low;
+    const upperPct  = (lastUpper / lastRange * 100).toFixed(0);
+    const lowerPct  = (lastLower / lastRange * 100).toFixed(0);
+    let wickAnalysis = "";
+    if (parseInt(upperPct) > 35) wickAnalysis += `Upper wick ${upperPct}% of range (sellers rejecting highs). `;
+    if (parseInt(lowerPct) > 35) wickAnalysis += `Lower wick ${lowerPct}% of range (buyers rejecting lows). `;
+    if (!wickAnalysis) wickAnalysis = `Balanced candle — upper wick ${upperPct}%, lower wick ${lowerPct}% of range.`;
+
+    const recentCandles = candles.slice(-6).map((c, i, arr) => {
+      const dir = c.close >= c.open ? "▲" : "▼";
+      const chg = ((c.close - c.open) / c.open * 100).toFixed(2);
+      const label = i === arr.length - 1 ? " ← current" : "";
+      return `  O:${fmtPrice(c.open)} H:${fmtPrice(c.high)} L:${fmtPrice(c.low)} C:${fmtPrice(c.close)} ${dir}${chg}%${label}`;
+    }).join("\n");
+
     return {
       periodHigh:    fmtPrice(periodHigh),
       periodLow:     fmtPrice(periodLow),
@@ -316,6 +372,9 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
       hhhl,
       btcTrend,
       fundingContext,
+      candlePattern,
+      wickAnalysis,
+      recentCandles,
     };
   };
 
@@ -344,7 +403,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
           {/* search */}
           <div className="alt-search-wrap">
             <button className="alt-search-trigger" onClick={() => setShowDropdown(v => !v)}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <span>{coin.symbol}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6"/></svg>
             </button>
@@ -422,77 +481,58 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
           </div>
         </div>
 
-        {/* ── Always-visible compact signals strip ── */}
-        <div className="alt-info-strip">
-          <div className="alt-info-strip-header">Signals used in this prediction</div>
-          <div className="alt-info-chips">
-            {([
-              {
-                tag: "RSI (14)", desc: "Overbought >70 / oversold <30", color: "#f59e0b",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg>,
-              },
-              {
-                tag: "MACD", desc: "12/26/9 EMA crossover momentum", color: "#818cf8",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg>,
-              },
-              {
-                tag: "MA20 / MA50", desc: "Price vs short & mid-term averages", color: "#38bdf8",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg>,
-              },
-              {
-                tag: "Price Structure", desc: "Higher highs/lows, range position", color: "#34d399",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg>,
-              },
-              {
-                tag: "Momentum", desc: "5-candle momentum + streak", color: "#fb923c",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
-              },
-              {
-                tag: "Volume", desc: "Rising/falling volume confirmation", color: "#a78bfa",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg>,
-              },
-              {
-                tag: "BTC Macro", desc: "Bitcoin MA/RSI — alts follow BTC", color: "#f97316",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10" y1="6" x2="10" y2="8"/><line x1="13" y1="6" x2="13" y2="8"/><line x1="10" y1="16" x2="10" y2="18"/><line x1="13" y1="16" x2="13" y2="18"/></svg>,
-              },
-              {
-                tag: "Funding Rate", desc: "8h Binance perp — overleveraged signal", color: "#f43f5e",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg>,
-              },
-              {
-                tag: "4Y Cycle", desc: "Halving phase — weights long horizons", color: "#2dd4bf",
-                icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12" /><line x1="12" y1="12" x2="15" y2="14"/></svg>,
-              },
-            ] as { tag: string; desc: string; color: string; icon: React.ReactNode }[]).map(({ tag, desc, color, icon }) => (
-              <div key={tag} className="alt-info-chip" style={{ "--chip-color": color } as React.CSSProperties}>
-                <span className="alt-info-chip-icon">{icon}</span>
-                <span className="alt-info-chip-name">{tag}</span>
-                <span className="alt-info-chip-desc">{desc}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* ── Chart + Signals side by side ── */}
+        <div className="alt-chart-signals-row" style={{ borderBottomColor: `${sectorColor}25` }}>
 
-        {/* embedded chart */}
-        <div className="alt-chart-inner" style={{ borderBottomColor: `${sectorColor}25` }}>
-          <div className="alt-chart-header">
-            <div className="alt-chart-pair">
-              <span className="alt-chart-base" style={{ color: sectorColor }}>{coin.symbol}</span>
-              <span className="alt-chart-quote">/USDT</span>
-              {loadingChart && <span className="alt-loading-dot" />}
+          {/* 80% chart */}
+          <div className="alt-chart-inner">
+            <div className="alt-chart-header">
+              <div className="alt-chart-pair">
+                <span className="alt-chart-base" style={{ color: sectorColor }}>{coin.symbol}</span>
+                <span className="alt-chart-quote">/USDT</span>
+                {loadingChart && <span className="alt-loading-dot" />}
+              </div>
+              <div className="alt-tf-row">
+                {(["1W", "1M", "3M", "6M", "1Y", "ALL"] as Timeframe[]).map(t => (
+                  <button
+                    key={t}
+                    className={`alt-tf-btn${tf === t ? " active" : ""}`}
+                    style={tf === t ? { background: sectorColor, borderColor: sectorColor, color: "#fff" } : {}}
+                    onClick={() => setTf(t)}
+                  >{t}</button>
+                ))}
+              </div>
             </div>
-            <div className="alt-tf-row">
-              {(["1W", "1M", "3M", "6M", "1Y", "ALL"] as Timeframe[]).map(t => (
-                <button
-                  key={t}
-                  className={`alt-tf-btn${tf === t ? " active" : ""}`}
-                  style={tf === t ? { background: sectorColor, borderColor: sectorColor, color: "#fff" } : {}}
-                  onClick={() => setTf(t)}
-                >{t}</button>
+            <div className="alt-chart-container" ref={chartContainerRef} style={{ height: 380 }} />
+          </div>
+
+          {/* 20% signals panel */}
+          <div className="alt-signal-panel">
+            <div className="alt-signal-panel-title">Signals used</div>
+            <div className="alt-signal-list">
+              {([
+                { n: 1, tag: "RSI (14)",       desc: "Overbought >70 / oversold <30",          color: "#f59e0b", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12 Q5 4 8 12 Q11 20 14 12 Q17 4 20 12"/><line x1="2" y1="7" x2="22" y2="7" strokeDasharray="2 2" strokeWidth="1"/><line x1="2" y1="17" x2="22" y2="17" strokeDasharray="2 2" strokeWidth="1"/></svg> },
+                { n: 2, tag: "MACD",            desc: "12/26/9 EMA crossover momentum",         color: "#818cf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 18 Q7 6 12 10 Q17 14 22 4"/><path d="M2 14 Q7 10 12 12 Q17 14 22 10" strokeDasharray="3 2"/></svg> },
+                { n: 3, tag: "MA20 / MA50",     desc: "Short & mid-term averages",              color: "#38bdf8", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 16 Q6 8 12 11 Q18 14 22 7"/><path d="M2 19 Q6 14 12 15 Q18 16 22 12" strokeDasharray="3 2"/></svg> },
+                { n: 4, tag: "Price Structure", desc: "Higher highs/lows, range pos",           color: "#34d399", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="3" x2="8" y2="6"/><rect x="6" y="6" width="4" height="6" rx="0.5"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="16" y1="6" x2="16" y2="8"/><rect x="14" y="8" width="4" height="7" rx="0.5"/><line x1="16" y1="15" x2="16" y2="18"/></svg> },
+                { n: 5, tag: "Momentum",        desc: "5-candle streak + momentum",             color: "#fb923c", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> },
+                { n: 6, tag: "Volume",          desc: "Rising/falling confirmation",            color: "#a78bfa", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="14" width="4" height="7" rx="0.5"/><rect x="10" y="9" width="4" height="12" rx="0.5"/><rect x="17" y="5" width="4" height="16" rx="0.5"/></svg> },
+                { n: 7, tag: "BTC Macro",       desc: "Bitcoin MA/RSI context",                color: "#f97316", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/><line x1="9" y1="8" x2="9" y2="16"/><line x1="10.5" y1="6" x2="10.5" y2="8"/><line x1="13.5" y1="6" x2="13.5" y2="8"/><line x1="10.5" y1="16" x2="10.5" y2="18"/><line x1="13.5" y1="16" x2="13.5" y2="18"/></svg> },
+                { n: 8, tag: "Funding Rate",    desc: "8h Binance perp signal",                color: "#f43f5e", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></svg> },
+                { n: 9, tag: "4Y Cycle",        desc: "Halving phase weighting",               color: "#2dd4bf", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/></svg> },
+              ] as { n: number; tag: string; desc: string; color: string; icon: React.ReactNode }[]).map(({ n, tag, desc, color, icon }) => (
+                <div key={tag} className="alt-signal-row">
+                  <span className="alt-signal-num">{n}</span>
+                  <span className="alt-signal-icon" style={{ color }}>{icon}</span>
+                  <div className="alt-signal-text">
+                    <span className="alt-signal-name">{tag}</span>
+                    <span className="alt-signal-desc">{desc}</span>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-          <div className="alt-chart-container" ref={chartContainerRef} style={{ height: 420 }} />
+
         </div>
 
         {/* AI content */}

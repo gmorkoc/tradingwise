@@ -768,6 +768,303 @@ function generateForecastCandles(
   return { candles: result, targetPrice: target, bias, conviction: score, bullPath, bearPath };
 }
 
+// ── Elliott Wave ─────────────────────────────────────────────────────────────
+
+interface EWPivot { time: UTCTimestamp; price: number; label: string; pivotType: "high" | "low" }
+interface EWProjection { label: string; price: number; color: string; isMain: boolean }
+interface EWResult { pattern: "impulse" | "corrective" | "none"; direction: "bullish" | "bearish" | "unknown"; pivots: EWPivot[]; currentWave: string; description: string; complete: boolean; projections: EWProjection[]; projectionPath: Array<{ time: UTCTimestamp; value: number }> }
+
+function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
+  const empty: EWResult = { pattern: "none", direction: "unknown", pivots: [], currentWave: "—", description: "Insufficient data", complete: false, projections: [], projectionPath: [] };
+  if (candles.length < 20) return empty;
+
+  const lastCandle = candles[candles.length - 1];
+  const now = lastCandle.time as UTCTimestamp;
+  const nowPrice = lastCandle.close;
+
+  // Minimum swing to filter micro-noise (0.15% of price — small enough for all timeframes)
+  const minSwing = nowPrice * 0.0015;
+
+  const lb = 3;
+  type Pivot = { idx: number; price: number; time: UTCTimestamp; type: "high" | "low" };
+
+  // Build local pivot highs/lows
+  const rawPivots: Pivot[] = [];
+  for (let i = lb; i < candles.length - lb; i++) {
+    const hi = candles[i].high, lo = candles[i].low;
+    const isH = candles.slice(i-lb,i).every(c=>c.high<hi) && candles.slice(i+1,i+lb+1).every(c=>c.high<hi);
+    const isL = candles.slice(i-lb,i).every(c=>c.low>lo)  && candles.slice(i+1,i+lb+1).every(c=>c.low>lo);
+    if (isH) rawPivots.push({ idx: i, price: hi, time: candles[i].time as UTCTimestamp, type: "high" });
+    if (isL) rawPivots.push({ idx: i, price: lo, time: candles[i].time as UTCTimestamp, type: "low" });
+  }
+  rawPivots.sort((a,b) => a.idx - b.idx);
+
+  // Zigzag: deduplicate consecutive same-type, keep most extreme
+  const zz: Pivot[] = [];
+  for (const p of rawPivots) {
+    const last = zz[zz.length - 1];
+    if (!last || last.type !== p.type) { zz.push(p); }
+    else if (p.type === "high" && p.price > last.price) zz[zz.length-1] = p;
+    else if (p.type === "low"  && p.price < last.price) zz[zz.length-1] = p;
+  }
+
+  // Filter out tiny swings that don't meet minimum move
+  const filt: Pivot[] = [];
+  for (const p of zz) {
+    const prev = filt[filt.length - 1];
+    if (!prev || Math.abs(p.price - prev.price) >= minSwing) filt.push(p);
+  }
+
+  if (filt.length < 4) return empty;
+
+  const toEW = (p: Pivot, label: string): EWPivot => ({ time: p.time, price: p.price, label, pivotType: p.type });
+
+  // Fibonacci scoring (lower = better fit to ideal ratios)
+  const fibDev = (actual: number, ideal: number) => Math.abs(actual - ideal);
+
+  function validBull(ps: Pivot[]): boolean {
+    const [p0,p1,p2,p3,p4,p5] = ps;
+    if (!(p0.type==="low"&&p1.type==="high"&&p2.type==="low"&&p3.type==="high"&&p4.type==="low"&&p5.type==="high")) return false;
+    const w1=p1.price-p0.price, w3=p3.price-p2.price, w5=p5.price-p4.price;
+    if (p2.price <= p0.price) return false;          // W2 can't breach W0
+    if (p3.price <= p1.price) return false;          // W3 must exceed W1 high
+    if (p4.price <= p1.price) return false;          // W4 can't overlap W1 territory (strict rule)
+    if (w3 < w1 && w3 < w5)  return false;          // W3 can't be shortest
+    const r2 = (p1.price-p2.price)/w1, r4 = (p3.price-p4.price)/w3;
+    if (r2 < 0.2 || r2 > 0.99) return false;
+    if (r4 < 0.1 || r4 > 0.75) return false;
+    if (w3/w1 < 0.8) return false;                  // W3 at least 80% of W1
+    return true;
+  }
+
+  function scoreBull(ps: Pivot[]): number {
+    const [p0,p1,p2,p3,p4,p5] = ps;
+    const w1=p1.price-p0.price, w3=p3.price-p2.price, w5=p5.price-p4.price;
+    return fibDev((p1.price-p2.price)/w1, 0.618)
+         + fibDev(w3/w1, 1.618) * 0.5
+         + fibDev((p3.price-p4.price)/w3, 0.382)
+         + fibDev(w5/w1, 1.0) * 0.5;
+  }
+
+  function validBear(ps: Pivot[]): boolean {
+    const [p0,p1,p2,p3,p4,p5] = ps;
+    if (!(p0.type==="high"&&p1.type==="low"&&p2.type==="high"&&p3.type==="low"&&p4.type==="high"&&p5.type==="low")) return false;
+    const w1=p0.price-p1.price, w3=p2.price-p3.price, w5=p4.price-p5.price;
+    if (p2.price >= p0.price) return false;
+    if (p3.price >= p1.price) return false;
+    if (p4.price >= p1.price) return false;          // W4 overlap rule
+    if (w3 < w1 && w3 < w5)  return false;
+    const r2 = (p2.price-p1.price)/w1, r4 = (p4.price-p3.price)/w3;
+    if (r2 < 0.2 || r2 > 0.99) return false;
+    if (r4 < 0.1 || r4 > 0.75) return false;
+    if (w3/w1 < 0.8) return false;
+    return true;
+  }
+
+  function scoreBear(ps: Pivot[]): number {
+    const [p0,p1,p2,p3,p4,p5] = ps;
+    const w1=p0.price-p1.price, w3=p2.price-p3.price, w5=p4.price-p5.price;
+    return fibDev((p2.price-p1.price)/w1, 0.618)
+         + fibDev(w3/w1, 1.618) * 0.5
+         + fibDev((p4.price-p3.price)/w3, 0.382)
+         + fibDev(w5/w1, 1.0) * 0.5;
+  }
+
+  // Scan last 14 pivots for best-scoring complete 5-wave
+  const SCORE_THRESHOLD = 1.8;
+  let bestBullIdx = -1, bestBullScore = Infinity;
+  let bestBearIdx = -1, bestBearScore = Infinity;
+
+  for (let s = Math.max(0, filt.length - 14); s <= filt.length - 6; s++) {
+    const ps = filt.slice(s, s + 6);
+    if (validBull(ps)) { const sc = scoreBull(ps); if (sc < bestBullScore) { bestBullScore = sc; bestBullIdx = s; } }
+    if (validBear(ps)) { const sc = scoreBear(ps); if (sc < bestBearScore) { bestBearScore = sc; bestBearIdx = s; } }
+  }
+
+  if (bestBullIdx >= 0 && bestBullScore < SCORE_THRESHOLD && (bestBearIdx < 0 || bestBullScore <= bestBearScore)) {
+    const [p0,p1,p2,p3,p4,p5] = filt.slice(bestBullIdx, bestBullIdx + 6);
+    const total = p5.price - p0.price;
+    const avgDur = Math.round((p5.time - p0.time) / 5);
+    const aT = p5.price - total*0.618, bT = aT + (p5.price-aT)*0.5, cT = aT - (p5.price-aT)*0.618;
+    return { pattern:"impulse", direction:"bullish", complete:true, currentWave:"5",
+      description:`Bullish 5-wave complete — correction expected (score ${bestBullScore.toFixed(2)})`,
+      pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4"),toEW(p5,"5")],
+      projections:[
+        { label:"A 38.2%", price: p5.price-total*0.382, color:"#fcd34d", isMain:false },
+        { label:"A 61.8%", price: p5.price-total*0.618, color:"#f97316", isMain:true },
+        { label:"C = A",   price: p5.price-total*1.0,   color:"#ef4444", isMain:false },
+      ],
+      projectionPath:[
+        { time: now, value: nowPrice },
+        { time: (now+avgDur) as UTCTimestamp, value: aT },
+        { time: (now+Math.round(avgDur*1.6)) as UTCTimestamp, value: bT },
+        { time: (now+Math.round(avgDur*2.6)) as UTCTimestamp, value: cT },
+      ] };
+  }
+
+  if (bestBearIdx >= 0 && bestBearScore < SCORE_THRESHOLD) {
+    const [p0,p1,p2,p3,p4,p5] = filt.slice(bestBearIdx, bestBearIdx + 6);
+    const total = p0.price - p5.price;
+    const avgDur = Math.round((p5.time - p0.time) / 5);
+    const aT = p5.price+total*0.618, bT = aT-(aT-p5.price)*0.5, cT = aT+(aT-p5.price)*0.618;
+    return { pattern:"impulse", direction:"bearish", complete:true, currentWave:"5",
+      description:`Bearish 5-wave complete — correction expected (score ${bestBearScore.toFixed(2)})`,
+      pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4"),toEW(p5,"5")],
+      projections:[
+        { label:"A 38.2%", price: p5.price+total*0.382, color:"#86efac", isMain:false },
+        { label:"A 61.8%", price: p5.price+total*0.618, color:"#22c55e", isMain:true },
+        { label:"C = A",   price: p5.price+total*1.0,   color:"#16a34a", isMain:false },
+      ],
+      projectionPath:[
+        { time: now, value: nowPrice },
+        { time: (now+avgDur) as UTCTimestamp, value: aT },
+        { time: (now+Math.round(avgDur*1.6)) as UTCTimestamp, value: bT },
+        { time: (now+Math.round(avgDur*2.6)) as UTCTimestamp, value: cT },
+      ] };
+  }
+
+  // In-progress: wave 4 complete → wave 5 forming (5 pivots)
+  if (filt.length >= 5) {
+    const [p0,p1,p2,p3,p4] = filt.slice(-5);
+    // Bullish
+    if (p0.type==="low"&&p1.type==="high"&&p2.type==="low"&&p3.type==="high"&&p4.type==="low") {
+      const w1=p1.price-p0.price, w3=p3.price-p2.price;
+      const r2=(p1.price-p2.price)/w1, r4=(p3.price-p4.price)/w3;
+      if (p2.price>p0.price && p3.price>p1.price && p4.price>p1.price &&
+          r2>=0.2 && r2<=0.99 && r4>=0.1 && r4<=0.75 && w3>=w1*0.8) {
+        const avgDur = Math.round((p4.time-p0.time)/4);
+        const t618=p4.price+w1*0.618, t100=p4.price+w1, t162=p4.price+w1*1.618, t262=p4.price+w1*2.618;
+        return { pattern:"impulse", direction:"bullish", complete:false, currentWave:"5",
+          description:"Wave 4 complete — wave 5 forming",
+          pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4")],
+          projections:[
+            { label:"W5 min (0.618)",  price:t618, color:"#c4b5fd", isMain:false },
+            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:false },
+            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:true },
+            { label:"W5 ext (2.618)",  price:t262, color:"#ddd6fe", isMain:false },
+          ],
+          projectionPath:[
+            { time: now, value: nowPrice },
+            { time: (now+avgDur) as UTCTimestamp, value: t162 },
+          ] };
+      }
+    }
+    // Bearish
+    if (p0.type==="high"&&p1.type==="low"&&p2.type==="high"&&p3.type==="low"&&p4.type==="high") {
+      const w1=p0.price-p1.price, w3=p2.price-p3.price;
+      const r2=(p2.price-p1.price)/w1, r4=(p4.price-p3.price)/w3;
+      if (p2.price<p0.price && p3.price<p1.price && p4.price<p1.price &&
+          r2>=0.2 && r2<=0.99 && r4>=0.1 && r4<=0.75 && w3>=w1*0.8) {
+        const avgDur = Math.round((p4.time-p0.time)/4);
+        const t618=p4.price-w1*0.618, t100=p4.price-w1, t162=p4.price-w1*1.618, t262=p4.price-w1*2.618;
+        return { pattern:"impulse", direction:"bearish", complete:false, currentWave:"5",
+          description:"Wave 4 complete — wave 5 forming",
+          pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3"),toEW(p4,"4")],
+          projections:[
+            { label:"W5 min (0.618)",  price:t618, color:"#c4b5fd", isMain:false },
+            { label:"W5 equal (1.0)",  price:t100, color:"#a78bfa", isMain:false },
+            { label:"W5 target (1.618)", price:t162, color:"#7c3aed", isMain:true },
+            { label:"W5 ext (2.618)",  price:t262, color:"#ddd6fe", isMain:false },
+          ],
+          projectionPath:[
+            { time: now, value: nowPrice },
+            { time: (now+avgDur) as UTCTimestamp, value: t162 },
+          ] };
+      }
+    }
+  }
+
+  // In-progress: wave 3 complete → wave 4 retracing (4 pivots)
+  if (filt.length >= 4) {
+    const [p0,p1,p2,p3] = filt.slice(-4);
+    // Bullish
+    if (p0.type==="low"&&p1.type==="high"&&p2.type==="low"&&p3.type==="high") {
+      const w1=p1.price-p0.price, w3=p3.price-p2.price;
+      const r2=(p1.price-p2.price)/w1;
+      if (p2.price>p0.price && p3.price>p1.price && r2>=0.2 && r2<=0.99 && w3>=w1*0.8) {
+        const avgDur = Math.round((p3.time-p0.time)/3);
+        const t382=p3.price-w3*0.382, t5=p3.price-w3*0.5, t618=p3.price-w3*0.618;
+        const w5proj = t382 + w1;
+        return { pattern:"impulse", direction:"bullish", complete:false, currentWave:"4",
+          description:"Wave 3 complete — wave 4 retracement expected",
+          pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3")],
+          projections:[
+            { label:"W4 38.2%", price:t382,   color:"#fbbf24", isMain:false },
+            { label:"W4 50%",   price:t5,     color:"#f59e0b", isMain:true },
+            { label:"W4 61.8%", price:t618,   color:"#d97706", isMain:false },
+            { label:"W5 proj",  price:w5proj, color:"#a78bfa", isMain:false },
+          ],
+          projectionPath:[
+            { time: now, value: nowPrice },
+            { time: (now+avgDur) as UTCTimestamp, value: t382 },
+            { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: w5proj },
+          ] };
+      }
+    }
+    // Bearish
+    if (p0.type==="high"&&p1.type==="low"&&p2.type==="high"&&p3.type==="low") {
+      const w1=p0.price-p1.price, w3=p2.price-p3.price;
+      const r2=(p2.price-p1.price)/w1;
+      if (p2.price<p0.price && p3.price<p1.price && r2>=0.2 && r2<=0.99 && w3>=w1*0.8) {
+        const avgDur = Math.round((p3.time-p0.time)/3);
+        const t382=p3.price+w3*0.382, t5=p3.price+w3*0.5, t618=p3.price+w3*0.618;
+        const w5proj = t382 - w1;
+        return { pattern:"impulse", direction:"bearish", complete:false, currentWave:"4",
+          description:"Wave 3 complete — wave 4 retracement expected",
+          pivots:[toEW(p0,"0"),toEW(p1,"1"),toEW(p2,"2"),toEW(p3,"3")],
+          projections:[
+            { label:"W4 38.2%", price:t382,   color:"#fbbf24", isMain:false },
+            { label:"W4 50%",   price:t5,     color:"#f59e0b", isMain:true },
+            { label:"W4 61.8%", price:t618,   color:"#d97706", isMain:false },
+            { label:"W5 proj",  price:w5proj, color:"#a78bfa", isMain:false },
+          ],
+          projectionPath:[
+            { time: now, value: nowPrice },
+            { time: (now+avgDur) as UTCTimestamp, value: t382 },
+            { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: w5proj },
+          ] };
+      }
+    }
+
+    // A-B-C corrective
+    const [q0,qa,qb,qc] = filt.slice(-4);
+    if (q0.type==="high"&&qa.type==="low"&&qb.type==="high"&&qc.type==="low" && qb.price<q0.price && qc.price<qa.price) {
+      const drop=q0.price-qc.price, avgDur=Math.round((qc.time-q0.time)/3);
+      return { pattern:"corrective", direction:"bearish", complete:true, currentWave:"C",
+        description:"Bearish A-B-C complete — expect bullish reversal",
+        pivots:[toEW(q0,"0"),toEW(qa,"A"),toEW(qb,"B"),toEW(qc,"C")],
+        projections:[
+          { label:"Rev 38.2%", price:qc.price+drop*0.382, color:"#86efac", isMain:false },
+          { label:"Rev 61.8%", price:qc.price+drop*0.618, color:"#22c55e", isMain:true },
+          { label:"Rev 100%",  price:q0.price,            color:"#4ade80", isMain:false },
+        ],
+        projectionPath:[
+          { time: now, value: nowPrice },
+          { time: (now+avgDur) as UTCTimestamp, value: qc.price+drop*0.618 },
+          { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: q0.price },
+        ] };
+    }
+    if (q0.type==="low"&&qa.type==="high"&&qb.type==="low"&&qc.type==="high" && qb.price>q0.price && qc.price>qa.price) {
+      const rise=qc.price-q0.price, avgDur=Math.round((qc.time-q0.time)/3);
+      return { pattern:"corrective", direction:"bullish", complete:true, currentWave:"C",
+        description:"Bullish A-B-C complete — expect bearish reversal",
+        pivots:[toEW(q0,"0"),toEW(qa,"A"),toEW(qb,"B"),toEW(qc,"C")],
+        projections:[
+          { label:"Rev 38.2%", price:qc.price-rise*0.382, color:"#fca5a5", isMain:false },
+          { label:"Rev 61.8%", price:qc.price-rise*0.618, color:"#ef4444", isMain:true },
+          { label:"Rev 100%",  price:q0.price,            color:"#f87171", isMain:false },
+        ],
+        projectionPath:[
+          { time: now, value: nowPrice },
+          { time: (now+avgDur) as UTCTimestamp, value: qc.price-rise*0.618 },
+          { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: q0.price },
+        ] };
+    }
+  }
+
+  return empty;
+}
+
 // ── ICT / Smart Money Concepts ───────────────────────────────────────────────
 
 interface OBZone  { type: "bull" | "bear"; high: number; low: number; time: number }
@@ -977,6 +1274,10 @@ async function getMMAnalysis(
   const volLabel  = ind.volRatio == null ? "N/A" : `${ind.volRatio.toFixed(2)}× avg (${ind.volRatio >= 2 ? "volume spike — strong conviction" : ind.volRatio >= 1.3 ? "above avg" : ind.volRatio < 0.7 ? "low — weak move" : "normal"})`;
   const ema20rel  = ind.ema20 != null ? (last.close > ind.ema20 ? `ABOVE $${ind.ema20.toFixed(2)} ✓` : `BELOW $${ind.ema20.toFixed(2)} ✗`) : "N/A";
   const ema50rel  = ind.ema50 != null ? (last.close > ind.ema50 ? `ABOVE $${ind.ema50.toFixed(2)} ✓` : `BELOW $${ind.ema50.toFixed(2)} ✗`) : "N/A";
+  const ew = detectElliottWaves(candles);
+  const ewLabel = ew.pattern !== "none"
+    ? `${ew.pattern === "impulse" ? "Impulse" : "Corrective"} ${ew.direction} — ${ew.description}`
+    : "No clear pattern detected";
 
   const prompt = `You are an elite crypto market analyst who specializes in reading market maker (MM) and institutional order flow from raw candlestick action. Your job is to decode what the smart money is doing on this ${intervalLabel} chart of ${coin}/USD right now and predict what happens next.
 
@@ -998,6 +1299,7 @@ TECHNICAL SNAPSHOT:
 - Key Resistance: ${ind.resistance.length ? ind.resistance.map(r => "$" + r.toFixed(0)).join(", ") : "none detected"}
 - Key Support: ${ind.support.length ? ind.support.map(s => "$" + s.toFixed(0)).join(", ") : "none detected"}
 - Wyckoff Phase: ${wyckoff?.phase ?? "Unknown"}${wyckoff?.springs.length ? ` | Springs detected (${wyckoff.springs.length})` : ""}${wyckoff?.upthrusts.length ? ` | Upthrusts detected (${wyckoff.upthrusts.length})` : ""}
+- Elliott Wave: ${ewLabel}
 - SMC Order Blocks: ${ict?.orderBlocks.length ? ict.orderBlocks.map(ob => `${ob.type} OB $${ob.low.toFixed(2)}–$${ob.high.toFixed(2)}`).join(", ") : "none"}
 - SMC Fair Value Gaps: ${ict?.fvgs.length ? ict.fvgs.map(f => `${f.type} FVG $${f.bottom.toFixed(2)}–$${f.top.toFixed(2)}`).join(", ") : "none"}
 - SMC Structure: ${ict?.structure.length ? ict.structure.slice(-3).map(s => `${s.kind.toUpperCase()} ${s.dir}`).join(", ") : "none"}
@@ -1321,6 +1623,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const isElite = hasAccess(tier, "elite");
   const [intervalIdx, setIntervalIdx] = useState(3);  // default 1h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
+  const candlesRef = useRef<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
@@ -1364,6 +1667,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const bbLowerRef       = useRef<ISeriesApi<"Line", any> | null>(null);
   const ema20Ref         = useRef<ISeriesApi<"Line", any> | null>(null);
   const ema50Ref         = useRef<ISeriesApi<"Line", any> | null>(null);
+  const elliottSeriesRef     = useRef<ISeriesApi<"Line", any> | null>(null);
+  const elliottProjSeriesRef = useRef<ISeriesApi<"Line", any> | null>(null);
+  const elliottPriceLinesRef = useRef<IPriceLine[]>([]);
+  const elliottResultRef     = useRef<EWResult | null>(null);
+  const showElliottRef       = useRef(false);
+  const [showElliott, setShowElliott] = useState(false);
+  const [elliottResult, setElliottResult] = useState<EWResult | null>(null);
 
   const interval = INTERVALS[intervalIdx];
   const isDark   = theme === "dark";
@@ -1407,8 +1717,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const bbLower  = chart.addSeries(LineSeries, { color: "rgba(99,102,241,0.5)", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false });
     const ema20    = chart.addSeries(LineSeries, { color: "#38bdf8", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
     const ema50    = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    const elliott      = chart.addSeries(LineSeries, { color: "#a78bfa", lineWidth: 2, lineStyle: 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const elliottProj  = chart.addSeries(LineSeries, { color: "#a78bfa", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
 
-    chartRef.current        = chart;
+    chartRef.current           = chart;
+    elliottSeriesRef.current   = elliott;
+    elliottProjSeriesRef.current = elliottProj;
     candleSeriesRef.current = candleSeries;
     divMarkersRef.current   = createSeriesMarkers(candleSeries, []);
     volSeriesRef.current    = volSeries;
@@ -1444,6 +1758,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       if (chartContainerRef.current) chart.applyOptions({ width: chartContainerRef.current.clientWidth });
     });
     ro.observe(chartContainerRef.current);
+
+    // Re-feed existing candle data when chart is rebuilt (e.g. theme switch)
+    if (candlesRef.current.length > 0) feedChart(candlesRef.current);
 
     return () => {
       ro.disconnect();
@@ -1682,7 +1999,51 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       });
     });
 
-    // Divergence markers — all merged and sorted by time
+    // Elliott Wave detection & chart overlay
+    const ew = detectElliottWaves(data);
+    setElliottResult(ew);
+    elliottResultRef.current = ew;
+    const ewVisible = showElliottRef.current;
+
+    if (elliottSeriesRef.current) {
+      if (ew.pivots.length >= 2) {
+        elliottSeriesRef.current.setData(ew.pivots.map(p => ({ time: p.time as any, value: p.price })));
+        elliottSeriesRef.current.applyOptions({ visible: ewVisible });
+      } else {
+        elliottSeriesRef.current.setData([]);
+      }
+    }
+
+    // Clear old price lines
+    elliottPriceLinesRef.current.forEach(pl => { try { elliottSeriesRef.current?.removePriceLine(pl); } catch {} });
+    elliottPriceLinesRef.current = [];
+
+    // Projection dashed path
+    if (elliottProjSeriesRef.current) {
+      if (ew.projectionPath.length >= 2) {
+        elliottProjSeriesRef.current.setData(ew.projectionPath.map(p => ({ time: p.time as any, value: p.value })));
+      } else {
+        elliottProjSeriesRef.current.setData([]);
+      }
+      elliottProjSeriesRef.current.applyOptions({ visible: ewVisible });
+    }
+
+    // Fibonacci target price lines (only when already visible)
+    if (ewVisible && ew.projections.length > 0 && elliottSeriesRef.current) {
+      ew.projections.forEach(proj => {
+        const pl = elliottSeriesRef.current!.createPriceLine({
+          price: proj.price,
+          color: proj.color,
+          lineWidth: proj.isMain ? 4 : 3,
+          lineStyle: proj.isMain ? LineStyle.Solid : LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: proj.label,
+        });
+        elliottPriceLinesRef.current.push(pl);
+      });
+    }
+
+    // Divergence + Elliott markers — all merged and sorted by time
     if (divMarkersRef.current) {
       const divs = detectRSIDivergences(data);
       const divMarkers: SeriesMarker<UTCTimestamp>[] = divs.map(d => ({
@@ -1693,7 +2054,18 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         text:     d.type === "bull" ? "Bull Div" : "Bear Div",
         size: 1,
       }));
-      const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers, ...retestMarkers]
+      const ewColor = ew.direction === "bullish" ? "#a78bfa" : "#f472b6";
+      const ewMarkers: SeriesMarker<UTCTimestamp>[] = showElliott && ew.pivots.length >= 2
+        ? ew.pivots.filter(p => p.label !== "0").map(p => ({
+            time: p.time,
+            position: (p.pivotType === "high" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
+            color: ewColor,
+            shape: "circle" as const,
+            text: `W${p.label}`,
+            size: 1,
+          }))
+        : [];
+      const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers, ...retestMarkers, ...ewMarkers]
         .sort((a, b) => (a.time as number) - (b.time as number));
       divMarkersRef.current.setMarkers(allMarkers);
     }
@@ -1811,6 +2183,53 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setShowForecast(true);
   }, [showForecast, clearForecast, candles, aiRead, interval]);
 
+  // ── Elliott Wave toggle ───────────────────────────────────────────────────────
+
+  const toggleElliott = useCallback(() => {
+    const next = !showElliott;
+    setShowElliott(next);
+    showElliottRef.current = next;
+
+    elliottSeriesRef.current?.applyOptions({ visible: next });
+    elliottProjSeriesRef.current?.applyOptions({ visible: next });
+
+    // Remove old price lines
+    elliottPriceLinesRef.current.forEach(pl => { try { elliottSeriesRef.current?.removePriceLine(pl); } catch {} });
+    elliottPriceLinesRef.current = [];
+
+    if (next && elliottResultRef.current && elliottSeriesRef.current) {
+      // Recreate price lines
+      elliottResultRef.current.projections.forEach(proj => {
+        const pl = elliottSeriesRef.current!.createPriceLine({
+          price: proj.price,
+          color: proj.color,
+          lineWidth: proj.isMain ? 4 : 3,
+          lineStyle: proj.isMain ? LineStyle.Solid : LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: proj.label,
+        });
+        elliottPriceLinesRef.current.push(pl);
+      });
+
+      // Pan chart to show full wave: first detected pivot → last projection point
+      const ew = elliottResultRef.current;
+      if (ew.pivots.length >= 2 && chartRef.current) {
+        const firstTime = ew.pivots[0].time as number;
+        const lastProjTime = ew.projectionPath.length > 0
+          ? ew.projectionPath[ew.projectionPath.length - 1].time as number
+          : ew.pivots[ew.pivots.length - 1].time as number;
+        const span = lastProjTime - firstTime;
+        chartRef.current.timeScale().setVisibleRange({
+          from: (firstTime - span * 0.08) as UTCTimestamp,
+          to:   (lastProjTime + span * 0.05) as UTCTimestamp,
+        });
+      }
+    } else if (!next && chartRef.current) {
+      // Restore to show recent candle data
+      chartRef.current.timeScale().fitContent();
+    }
+  }, [showElliott]);
+
   // ── Fetch candles ────────────────────────────────────────────────────────────
 
   const triggerAI = useRef(false);
@@ -1819,6 +2238,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const data = await coinglass.getCandles(coin, interval.value, interval.limit);
     if (!data.length) return;
     setCandles(data);
+    candlesRef.current = data;
     feedChart(data);
     setRefreshedAt(new Date());
 
@@ -1850,6 +2270,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           return;
         }
         setCandles(data);
+        candlesRef.current = data;
         feedChart(data);
         setRefreshedAt(new Date());
         setLastCandleTime(data[data.length - 1].time);
@@ -2212,6 +2633,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     }
                   />
                 )}
+                {elliottResult && elliottResult.pattern !== "none" && (
+                  <IndicatorPill
+                    label="Elliott"
+                    value={`${elliottResult.pattern === "impulse" ? "W" : "Corr"} ${elliottResult.currentWave}`}
+                    status={elliottResult.direction === "bullish" ? "bull" : elliottResult.direction === "bearish" ? "bear" : "neutral"}
+                  />
+                )}
               </div>
             )}
 
@@ -2276,6 +2704,121 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   )}
                 </button>
               )}
+
+              {/* ── Elliott Wave toggle ── */}
+              {elliottResult && elliottResult.pattern !== "none" && (
+                <button
+                  className={`cw-elliott-btn${showElliott ? " cw-elliott-btn--active" : ""}`}
+                  onClick={toggleElliott}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
+                  {showElliott ? "✕ Hide Elliott Wave" : "〜 Elliott Wave"}
+                  <span className="cw-elliott-btn-badge">Wave {elliottResult.currentWave}</span>
+                </button>
+              )}
+              {elliottResult && (
+                <p className="cw-elliott-hint">
+                  Best on <strong>4H · Daily · Weekly</strong> — noisy below 1H
+                </p>
+              )}
+
+              {/* ── Elliott Wave Analysis Narrative ── */}
+              {elliottResult && elliottResult.pattern !== "none" && (() => {
+                const ew = elliottResult;
+                const fmt = (p: number) => "$" + p.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                const pct = (a: number, b: number) => Math.abs((b - a) / a * 100).toFixed(1) + "%";
+
+                // Build wave rows from pivot pairs
+                const waveRows = ew.pivots.slice(1).map((p, i) => {
+                  const prev = ew.pivots[i];
+                  const up = p.price > prev.price;
+                  const waveDescriptions: Record<string, string> = {
+                    "1": "Impulse — first push",
+                    "2": `Retraced ${pct(p.price, prev.price)} of W1`,
+                    "3": `Extended impulse — ${up ? "+" : "-"}${pct(prev.price, p.price)} move`,
+                    "4": `Consolidation — retraced ${pct(p.price, prev.price)} of W3`,
+                    "5": "Final push — impulse complete",
+                    "A": "Correction wave A",
+                    "B": `Rebound — recovered ${pct(prev.price, p.price)}`,
+                    "C": `Wave C — final correction leg`,
+                  };
+                  return { label: p.label, up, pct: pct(prev.price, p.price), price: p.price, desc: waveDescriptions[p.label] ?? "" };
+                });
+
+                // Situation + outlook text
+                let situation = "";
+                let outlook = "";
+                if (ew.pattern === "impulse" && ew.complete) {
+                  const last = ew.pivots[ew.pivots.length - 1];
+                  situation = `5-wave ${ew.direction} impulse completed its full structure at ${fmt(last.price)}. Classic Elliott theory says this exhausts the trend — a corrective A-B-C move typically follows before the next impulse.`;
+                  const mainProj = ew.projections.find(p => p.isMain);
+                  const cProj = ew.projections.find(p => p.label.startsWith("C"));
+                  outlook = `Watch for a Wave A ${ew.direction === "bullish" ? "pullback" : "bounce"} toward ${mainProj ? fmt(mainProj.price) : "—"}. If that level holds, expect a Wave B rebound before Wave C targets ${cProj ? fmt(cProj.price) : "—"}. A break of Wave C = A signals trend continuation.`;
+                } else if (ew.pattern === "impulse" && ew.currentWave === "5") {
+                  const w4 = ew.pivots[4];
+                  const mainProj = ew.projections.find(p => p.isMain);
+                  const minProj = ew.projections.find(p => p.label.includes("min"));
+                  situation = `Waves 1–4 are complete. Wave 4 ${ew.direction === "bullish" ? "dipped" : "peaked"} at ${fmt(w4.price)}, respecting the no-overlap rule. Wave 5 — the final impulse leg — is now forming.`;
+                  outlook = `Minimum Wave 5 target (0.618× W1) is ${minProj ? fmt(minProj.price) : "—"}. The classic target (1.618× W1) sits at ${mainProj ? fmt(mainProj.price) : "—"}. Look for ${ew.direction === "bullish" ? "bullish" : "bearish"} momentum confirmation before entries — Wave 5s can be extended or truncated.`;
+                } else if (ew.pattern === "impulse" && ew.currentWave === "4") {
+                  const w3 = ew.pivots[ew.pivots.length - 1];
+                  const t382 = ew.projections.find(p => p.label.includes("38.2"));
+                  const t618 = ew.projections.find(p => p.label.includes("61.8"));
+                  const w5proj = ew.projections.find(p => p.label.includes("W5"));
+                  situation = `Wave 3 peaked at ${fmt(w3.price)} — the strongest wave of the sequence. Wave 4 correction is now underway. It must NOT enter Wave 1 territory.`;
+                  outlook = `Key Wave 4 support: ${t382 ? fmt(t382.price) : "—"} (38.2%) to ${t618 ? fmt(t618.price) : "—"} (61.8%). Once Wave 4 completes, expect Wave 5 to target ${w5proj ? fmt(w5proj.price) : "—"}. A shallow Wave 4 (38.2%) often signals a strong Wave 5.`;
+                } else if (ew.pattern === "corrective") {
+                  const pc = ew.pivots[ew.pivots.length - 1];
+                  const mainProj = ew.projections.find(p => p.isMain);
+                  const full = ew.projections.find(p => p.label.includes("100"));
+                  situation = `A-B-C ${ew.direction} correction completed at ${fmt(pc.price)}. Three-wave corrections exhaust counter-trend moves — a reversal back into the primary trend is expected.`;
+                  outlook = `Primary reversal target: ${mainProj ? fmt(mainProj.price) : "—"} (61.8% recovery). Full recovery to ${full ? fmt(full.price) : "—"} (100%) would signal a fresh impulse is underway. Watch for a strong ${ew.direction === "bearish" ? "bullish" : "bearish"} candle to confirm the reversal.`;
+                }
+
+                return (
+                  <div className="cw-ew-analysis">
+                    <div className="cw-ew-analysis-header">
+                      Elliott Wave Analysis
+                      <span className={`cw-ew-dir cw-ew-dir--${ew.direction}`}>
+                        {ew.direction === "bullish" ? "▲ BULLISH" : ew.direction === "bearish" ? "▼ BEARISH" : "◆ NEUTRAL"}
+                      </span>
+                    </div>
+
+                    {/* Wave history */}
+                    <div className="cw-ew-waves">
+                      {waveRows.map(r => (
+                        <div key={r.label} className="cw-ew-wave-row">
+                          <span className="cw-ew-wave-lbl">W{r.label}</span>
+                          <span className="cw-ew-wave-desc">{r.desc}</span>
+                          <span className={`cw-ew-wave-pct cw-ew-wave-pct--${r.up ? "up" : "down"}`}>{r.up ? "▲" : "▼"} {r.pct}</span>
+                          <span className="cw-ew-wave-price">{fmt(r.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Current situation */}
+                    {situation && <p className="cw-ew-situation">{situation}</p>}
+
+                    {/* Outlook + targets */}
+                    {outlook && (
+                      <div className="cw-ew-outlook">
+                        <div className="cw-ew-outlook-title">↳ Next Move</div>
+                        <p className="cw-ew-outlook-text">{outlook}</p>
+                        {ew.projections.length > 0 && (
+                          <div className="cw-ew-targets">
+                            {ew.projections.map(p => (
+                              <div key={p.label} className={`cw-ew-target-row${p.isMain ? " cw-ew-target-row--main" : ""}`}>
+                                <span className="cw-ew-target-lbl">{p.label}</span>
+                                <span className="cw-ew-target-price" style={{ color: p.color }}>{fmt(p.price)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── MTF Alignment ── */}
               {mtfBiases.length > 0 && (() => {
@@ -2578,6 +3121,84 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         )}
                       </div>
                       <p className="cw-our-take-text">{predData.ourTake}</p>
+
+                      {/* Elliott Wave addendum */}
+                      {elliottResult && elliottResult.pattern !== "none" && (() => {
+                        const ew = elliottResult;
+                        const fmt = (p: number) => "$" + p.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                        const lastPrice = candles[candles.length - 1]?.close ?? 0;
+                        const mainProj = ew.projections.find(p => p.isMain);
+                        const allProj  = ew.projections;
+
+                        // Direction of next move
+                        let nextDir = "";
+                        let nextSummary = "";
+                        let actionHint = "";
+
+                        if (ew.pattern === "impulse" && ew.complete) {
+                          const isBull = ew.direction === "bullish";
+                          nextDir = isBull ? "down" : "up";
+                          nextSummary = `5-wave ${ew.direction} impulse is done. Expect a counter-trend A-B-C ${isBull ? "correction" : "bounce"}.`;
+                          actionHint = isBull
+                            ? `Look for short entries if price bounces into ${mainProj ? fmt(mainProj.price) : "resistance"} — that's where the correction could stall.`
+                            : `Look for long entries near current levels — the bounce targets ${mainProj ? fmt(mainProj.price) : "resistance"}.`;
+                        } else if (ew.pattern === "impulse" && ew.currentWave === "5") {
+                          const isBull = ew.direction === "bullish";
+                          nextDir = isBull ? "up" : "down";
+                          nextSummary = `Wave 4 complete. Wave 5 — the final ${ew.direction} leg — is launching now.`;
+                          actionHint = isBull
+                            ? `Ride the wave toward ${mainProj ? fmt(mainProj.price) : "target"}. Tighten stops if price stalls near there — wave 5s often end abruptly.`
+                            : `Bearish momentum likely continues to ${mainProj ? fmt(mainProj.price) : "target"}. Avoid longs until wave 5 completes.`;
+                        } else if (ew.pattern === "impulse" && ew.currentWave === "4") {
+                          const isBull = ew.direction === "bullish";
+                          const t382 = ew.projections.find(p => p.label.includes("38.2"));
+                          const t618 = ew.projections.find(p => p.label.includes("61.8"));
+                          nextDir = isBull ? "down" : "up";
+                          nextSummary = `Wave 3 finished. Wave 4 pullback in progress — ${isBull ? "dip" : "pop"} expected before the final Wave 5 push.`;
+                          actionHint = isBull
+                            ? `Watch ${t382 ? fmt(t382.price) : "support"}–${t618 ? fmt(t618.price) : "support"} for a Wave 4 low — that zone is a high-probability long entry for the Wave 5 rally.`
+                            : `Watch ${t382 ? fmt(t382.price) : "resistance"}–${t618 ? fmt(t618.price) : "resistance"} for the Wave 4 peak — a rejection there sets up the Wave 5 drop.`;
+                        } else if (ew.pattern === "corrective") {
+                          const isBear = ew.direction === "bearish";
+                          nextDir = isBear ? "up" : "down";
+                          nextSummary = `A-B-C ${ew.direction} correction complete. Counter-trend reversal expected.`;
+                          actionHint = isBear
+                            ? `A-B-C correction is done — new ${isBear ? "bullish" : "bearish"} impulse likely starting. ${mainProj ? fmt(mainProj.price) : "—"} is the first target.`
+                            : `Correction finished — price should reverse. First target: ${mainProj ? fmt(mainProj.price) : "—"}.`;
+                        }
+
+                        if (!nextSummary) return null;
+
+                        return (
+                          <div className="cw-our-take-ew">
+                            <div className="cw-our-take-ew-header">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
+                              Elliott Wave · Wave {ew.currentWave}
+                              <span className={`cw-our-take-ew-dir cw-our-take-ew-dir--${nextDir}`}>
+                                {nextDir === "up" ? "▲ UP" : "▼ DOWN"}
+                              </span>
+                            </div>
+                            <p className="cw-our-take-ew-summary">{nextSummary}</p>
+                            {allProj.length > 0 && (
+                              <div className="cw-our-take-ew-levels">
+                                {allProj.map(p => {
+                                  const dist = lastPrice > 0 ? ((p.price - lastPrice) / lastPrice * 100) : 0;
+                                  return (
+                                    <div key={p.label} className={`cw-our-take-ew-level${p.isMain ? " cw-our-take-ew-level--main" : ""}`}>
+                                      <span className="cw-our-take-ew-level-lbl">{p.label}</span>
+                                      <span className="cw-our-take-ew-level-price" style={{ color: p.color }}>{fmt(p.price)}</span>
+                                      <span className={`cw-our-take-ew-level-dist${dist >= 0 ? " up" : " dn"}`}>
+                                        {dist >= 0 ? "+" : ""}{dist.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <p className="cw-our-take-ew-hint">{actionHint}</p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 

@@ -462,6 +462,177 @@
   color: #a78bfa;
 }
 
+.cw-elliott-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(167,139,250,0.3);
+  background: rgba(167,139,250,0.07);
+  color: #a78bfa;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.cw-elliott-btn:hover {
+  background: rgba(167,139,250,0.14);
+  border-color: rgba(167,139,250,0.55);
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.08);
+}
+.cw-elliott-btn--active {
+  background: rgba(167,139,250,0.14);
+  border-color: rgba(167,139,250,0.6);
+}
+.cw-elliott-btn-badge {
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  background: rgba(167,139,250,0.18);
+  color: #a78bfa;
+  margin-left: auto;
+}
+
+.cw-elliott-hint {
+  margin: 5px 0 0;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+.cw-elliott-hint strong {
+  color: #a78bfa;
+  font-weight: 700;
+}
+
+/* ── Elliott Wave Analysis Panel ─────────────────────────────────────────── */
+.cw-ew-analysis {
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(167,139,250,0.2);
+  background: rgba(167,139,250,0.05);
+  overflow: hidden;
+}
+.cw-ew-analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 6px;
+  border-bottom: 1px solid rgba(167,139,250,0.12);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cw-ew-dir {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.06em;
+}
+.cw-ew-dir--bullish { background: rgba(34,197,94,0.15); color: #4ade80; }
+.cw-ew-dir--bearish { background: rgba(239,68,68,0.15);  color: #f87171; }
+.cw-ew-dir--unknown { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+.cw-ew-waves {
+  padding: 6px 10px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cw-ew-wave-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.64rem;
+  line-height: 1.3;
+}
+.cw-ew-wave-lbl {
+  font-weight: 800;
+  color: #a78bfa;
+  font-size: 0.62rem;
+}
+.cw-ew-wave-desc {
+  color: var(--color-text-muted);
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cw-ew-wave-pct {
+  font-weight: 700;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+.cw-ew-wave-pct--up   { color: #4ade80; }
+.cw-ew-wave-pct--down { color: #f87171; }
+.cw-ew-wave-price {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cw-ew-situation {
+  margin: 0 10px 0;
+  padding: 5px 8px;
+  background: rgba(167,139,250,0.08);
+  border-radius: 6px;
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+  border-left: 2px solid #a78bfa;
+}
+
+.cw-ew-outlook {
+  padding: 6px 10px 8px;
+}
+.cw-ew-outlook-title {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
+}
+.cw-ew-outlook-text {
+  font-size: 0.63rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 7px;
+}
+.cw-ew-targets {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cw-ew-target-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.62rem;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.03);
+}
+.cw-ew-target-row--main {
+  background: rgba(167,139,250,0.1);
+  font-weight: 700;
+}
+.cw-ew-target-lbl { color: var(--color-text-muted); }
+.cw-ew-target-price { font-weight: 600; }
+
 .cw-forecast-badge {
   position: absolute;
   top: 8px;
@@ -1601,6 +1772,76 @@
 .cw-our-take-action--watch { background: rgba(148,163,184,0.15); color: #94a3b8; }
 .cw-our-take-text {
   font-size: 0.73rem; line-height: 1.55; color: var(--color-text-secondary); margin: 0;
+}
+
+/* ── Our Take — Elliott Wave addendum ────────────────────────────────────── */
+.cw-our-take-ew {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(167,139,250,0.15);
+}
+.cw-our-take-ew-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #a78bfa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+.cw-our-take-ew-dir {
+  margin-left: auto;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.cw-our-take-ew-dir--up   { background: rgba(34,197,94,0.15);  color: #4ade80; }
+.cw-our-take-ew-dir--down { background: rgba(239,68,68,0.15);   color: #f87171; }
+
+.cw-our-take-ew-summary {
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px;
+}
+.cw-our-take-ew-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.cw-our-take-ew-level {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.62rem;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.02);
+}
+.cw-our-take-ew-level--main {
+  background: rgba(167,139,250,0.1);
+  font-weight: 700;
+}
+.cw-our-take-ew-level-lbl   { color: var(--color-text-muted); }
+.cw-our-take-ew-level-price { font-weight: 600; text-align: right; }
+.cw-our-take-ew-level-dist  { font-size: 0.58rem; text-align: right; }
+.cw-our-take-ew-level-dist.up { color: #4ade80; }
+.cw-our-take-ew-level-dist.dn { color: #f87171; }
+
+.cw-our-take-ew-hint {
+  font-size: 0.65rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin: 0;
+  font-style: italic;
+  border-left: 2px solid rgba(167,139,250,0.4);
+  padding-left: 7px;
 }
 
 /* ── Price Range Forecast ─────────────────────────────────────────────────── */

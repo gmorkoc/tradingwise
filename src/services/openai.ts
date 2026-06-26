@@ -854,6 +854,9 @@ interface TechnicalSummary {
   hhhl: string;
   btcTrend: string;
   fundingContext: string;
+  candlePattern: string;
+  wickAnalysis: string;
+  recentCandles: string;
 }
 
 export async function getAltPricePrediction(
@@ -934,7 +937,13 @@ ${tech.volumeTrend !== null ? `- Volume trend (last 5 vs prior 5): ${parseFloat(
 Market context:
 - BTC macro: ${tech.btcTrend}
 - Funding rate: ${tech.fundingContext}
-- Avg candle volatility: ${tech.volatilityPct}% of price` : `
+- Avg candle volatility: ${tech.volatilityPct}% of price
+
+Current price action (from displayed chart):
+- Last candle pattern: ${tech.candlePattern}
+- Wick analysis: ${tech.wickAnalysis}
+- Recent 6 candles (oldest → newest):
+${tech.recentCandles}` : `
 TECHNICAL DATA: Not available — base prediction on market cap, sector, and 24h momentum only.`;
 
   try {
@@ -959,6 +968,11 @@ INSTRUCTIONS:
 - Negative funding → potential short squeeze → bullish signal
 - Volume rising with price = confirmed move; volume falling with price = weak move
 - Lower highs + lower lows structure → bearish regardless of short-term bounces
+- Candle pattern (Bearish Engulfing, Shooting Star, Evening Star) → weight toward bearish
+- Candle pattern (Hammer, Bullish Engulfing, Morning Star) → weight toward bullish
+- Strong upper wick rejection → sellers active at highs, bearish short-term pressure
+- Strong lower wick rejection → buyers defending lows, bullish short-term pressure
+- Use the last 6 candles OHLC to judge recent price action momentum and conviction
 - Target price must be realistic: scale with volatility (${tech?.volatilityPct ?? "?"}% avg candle range × horizon)
 - Confidence should be "high" only if 4+ signals agree; "low" if mixed signals
 - Weight the 4-year cycle appropriately: for short horizons (1W/1M) technicals dominate; for longer horizons (6M/1Y/ALL) the cycle phase should heavily influence the direction and target
