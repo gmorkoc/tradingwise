@@ -484,41 +484,113 @@
       "trust": "35 richieste IA/settimana · Annulla quando vuoi · Accesso immediato"
     },
     "elite": {
-      "headline": "Il Vantaggio dei Professionisti",
-      "sub": "Analisi Gann, Coinbase Premium e IA illimitata — il kit istituzionale completo, senza limiti.",
+      "headline": "Il Kit Istituzionale Completo",
+      "sub": "Tutte le funzionalità IA sbloccate, accesso illimitato, nessun limite settimanale — il vantaggio professionale completo.",
       "features": [
         {
-          "icon": "📐",
-          "title": "Analisi Gann IA",
-          "desc": "Quadrato di 9, angoli Gann e previsioni ciclo interpretati da GPT-4o — esclusivo Elite."
+          "icon": "🕯️",
+          "title": "CandleAI — Full Chart Analysis",
+          "desc": "Elliott Wave, ICT/SMC, Wyckoff — GPT-4o interprets every move on your chart."
         },
         {
-          "icon": "⚡",
-          "title": "Richieste IA Illimitate",
-          "desc": "Nessun limite settimanale — usa tutte le funzionalità IA quanto vuoi."
+          "icon": "〰️",
+          "title": "Elliott Wave Projections",
+          "desc": "5-wave auto-detection with Fibonacci price targets for the next 1–2 waves."
+        },
+        {
+          "icon": "📐",
+          "title": "Gann Analysis AI",
+          "desc": "Square of 9, Gann angles, cycle forecasts — exclusive to Elite."
         },
         {
           "icon": "🏦",
-          "title": "Coinbase Premium IA",
-          "desc": "Flusso istituzionale vs divergenza retail interpretato in tempo reale."
+          "title": "Coinbase Premium AI",
+          "desc": "Institutional flow vs retail divergence in real time."
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI Requests",
+          "desc": "No weekly cap — all features, unlimited use."
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "Deep AI analysis for 100+ altcoins."
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe AI",
+          "desc": "Daily, weekly, monthly structure alignment."
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap with AI commentary on cascade zones."
         }
       ],
-      "cta": "Sblocca Elite — $29,99/mese",
-      "trust": "IA illimitata · Annulla quando vuoi · Include tutto di Pro"
+      "cta": "Sblocca Elite — $59.99/mese",
+      "trust": "IA illimitata · Annulla quando vuoi · Include tutto di Pro",
+      "pro_headline": "Un Passo da Elite",
+      "pro_sub": "Hai già tutto ciò che è in Pro. Aggiungi 8 strumenti Elite esclusivi per soli $29 in più al mese.",
+      "pro_cta": "Aggiorna da Pro — $59.99/mese",
+      "pro_trust": "+$29/mese · Annulla quando vuoi · Mantieni tutte le funzioni Pro"
     },
     "blurGate": {
       "planLabel": "Elite",
       "planPrice": "$59.99",
       "perMonth": "/mese",
       "features": [
-        "Tutto in Pro — illimitato",
-        "HTF Multi-Timeframe IA",
-        "Coinbase Premium IA"
+        {
+          "icon": "🕯️",
+          "title": "CandleAI",
+          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
+        },
+        {
+          "icon": "〰️",
+          "title": "Elliott Wave",
+          "desc": "5-wave detection · Fibonacci targets"
+        },
+        {
+          "icon": "📐",
+          "title": "Gann Analysis AI",
+          "desc": "Square of 9 · angles · cycle forecasts"
+        },
+        {
+          "icon": "🏦",
+          "title": "Coinbase Premium AI",
+          "desc": "Institutional vs retail flow"
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI",
+          "desc": "No weekly cap on any feature"
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "100+ altcoins · deep AI analysis"
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe",
+          "desc": "Daily · weekly · monthly alignment"
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap · AI commentary"
+        }
       ],
       "signInBtn": "Accedi per aggiornare",
-      "upgradeBtn": "Aggiorna a Elite",
+      "upgradeBtn": "Sblocca Elite — $59.99/mese",
       "redirecting": "Reindirizzamento…",
-      "trust": "Annulla quando vuoi · Include tutto di Pro"
+      "trust": "Annulla quando vuoi · Accesso immediato · Include tutto di Pro",
+      "free_headline": "Il Kit Istituzionale Completo",
+      "free_sub": "Tutte le funzionalità IA, accesso illimitato, nessun limite settimanale.",
+      "pro_headline": "Un Passo da Elite",
+      "pro_sub": "Sei su Pro. Sblocca 8 strumenti esclusivi con un aggiornamento — $29 in più al mese.",
+      "pro_upgradeBtn": "Aggiorna da Pro — $59.99/mese",
+      "pro_trust": "+$29/mese · Annulla quando vuoi · Mantieni tutte le funzioni Pro"
     }
   },
   "upgradeModal": {

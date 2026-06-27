@@ -484,41 +484,113 @@
       "trust": "35 AI requests/week · Cancel anytime · Instant access"
     },
     "elite": {
-      "headline": "The Edge Professionals Use",
-      "sub": "Gann Analysis, Coinbase Premium, and unlimited AI — the full institutional toolkit, no caps.",
+      "headline": "The Full Institutional Toolkit",
+      "sub": "Every AI feature unlocked, unlimited access, no weekly caps — the complete professional edge.",
       "features": [
+        {
+          "icon": "🕯️",
+          "title": "CandleAI — Full Chart Analysis",
+          "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — GPT-4o reads your chart and explains every move in plain language."
+        },
+        {
+          "icon": "〰️",
+          "title": "Elliott Wave Projections",
+          "desc": "Auto-detects 5-wave impulse & ABC patterns with Fibonacci price targets for the next 1–2 waves ahead."
+        },
         {
           "icon": "📐",
           "title": "Gann Analysis AI",
           "desc": "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite."
         },
         {
-          "icon": "⚡",
-          "title": "Unlimited AI Requests",
-          "desc": "No weekly cap — use every AI feature as much as you need."
-        },
-        {
           "icon": "🏦",
           "title": "Coinbase Premium AI",
-          "desc": "Institutional flow vs retail divergence interpreted in real time."
+          "desc": "Institutional flow vs retail divergence tracked in real time — know what smart money is doing."
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI Requests",
+          "desc": "No weekly cap — use every AI feature as much as you need, all day, every day."
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "Deep AI analysis for 100+ altcoins — same institutional depth as BTC/ETH, for the whole market."
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe AI",
+          "desc": "Alignment check across daily, weekly, and monthly structure — confirm or challenge your bias."
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap with AI commentary on where leveraged positions will cascade next."
         }
       ],
       "cta": "Unlock Elite — $59.99/mo",
-      "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro"
+      "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro",
+      "pro_headline": "One Upgrade Away From Elite",
+      "pro_sub": "You already have everything in Pro. Add 8 exclusive Elite tools for just $29 more per month.",
+      "pro_cta": "Upgrade from Pro — $59.99/mo",
+      "pro_trust": "+$29/mo · Cancel anytime · Keep all your Pro features"
     },
     "blurGate": {
       "planLabel": "Elite",
       "planPrice": "$59.99",
       "perMonth": "/mo",
       "features": [
-        "Everything in Pro — unlimited",
-        "HTF Multi-Timeframe AI",
-        "Coinbase Premium AI"
+        {
+          "icon": "🕯️",
+          "title": "CandleAI",
+          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
+        },
+        {
+          "icon": "〰️",
+          "title": "Elliott Wave",
+          "desc": "5-wave detection · Fibonacci targets"
+        },
+        {
+          "icon": "📐",
+          "title": "Gann Analysis AI",
+          "desc": "Square of 9 · angles · cycle forecasts"
+        },
+        {
+          "icon": "🏦",
+          "title": "Coinbase Premium AI",
+          "desc": "Institutional vs retail flow"
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI",
+          "desc": "No weekly cap on any feature"
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "100+ altcoins · deep AI analysis"
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe",
+          "desc": "Daily · weekly · monthly alignment"
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap · AI commentary"
+        }
       ],
       "signInBtn": "Sign in to upgrade",
       "upgradeBtn": "Upgrade to Elite",
       "redirecting": "Redirecting…",
-      "trust": "Cancel anytime · Includes everything in Pro"
+      "trust": "Cancel anytime · Instant access · Includes everything in Pro",
+      "free_headline": "The Full Institutional Toolkit",
+      "free_sub": "Every AI feature, unlimited access, no weekly caps.",
+      "pro_headline": "One Step From Elite",
+      "pro_sub": "You're on Pro. Unlock 8 exclusive tools with one upgrade — $29 more per month.",
+      "pro_upgradeBtn": "Upgrade from Pro — $59.99/mo",
+      "pro_trust": "+$29/mo · Cancel anytime · Keep all Pro features"
     }
   },
   "billing": {

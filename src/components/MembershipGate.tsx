@@ -75,6 +75,7 @@ export const MembershipGate: React.FC<Props> = ({
     const color = TIER_COLOR[requiredTier];
     const ns = requiredTier as "pro" | "elite";
     const features = t(`membershipGate.${ns}.features`, { returnObjects: true }) as Array<{ icon: string; title: string; desc: string }>;
+    const isPro = tier === "pro" && ns === "elite";
 
     return (
       <div className="mg-wall">
@@ -84,9 +85,21 @@ export const MembershipGate: React.FC<Props> = ({
 
           {/* Headline */}
           <div className="mg-headline-block">
-            <h3 className="mg-title">{t(`membershipGate.${ns}.headline`)}</h3>
-            <p className="mg-sub">{t(`membershipGate.${ns}.sub`)}</p>
+            <h3 className="mg-title">
+              {isPro ? t("membershipGate.elite.pro_headline") : t(`membershipGate.${ns}.headline`)}
+            </h3>
+            <p className="mg-sub">
+              {isPro ? t("membershipGate.elite.pro_sub") : t(`membershipGate.${ns}.sub`)}
+            </p>
           </div>
+
+          {/* Pro callout banner */}
+          {isPro && (
+            <div className="mg-pro-callout">
+              <CheckIcon color="#38bdf8" />
+              <span>You're on <strong>Pro</strong> — all your current features carry over</span>
+            </div>
+          )}
 
           {/* Feature cards */}
           <div className="mg-feature-grid">
@@ -107,10 +120,12 @@ export const MembershipGate: React.FC<Props> = ({
             style={{ "--mg-color": color } as React.CSSProperties}
             onClick={onOpenUpgrade}
           >
-            {t(`membershipGate.${ns}.cta`)}
+            {isPro ? t("membershipGate.elite.pro_cta") : t(`membershipGate.${ns}.cta`)}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
-          <p className="mg-trust">{t(`membershipGate.${ns}.trust`)}</p>
+          <p className="mg-trust">
+            {isPro ? t("membershipGate.elite.pro_trust") : t(`membershipGate.${ns}.trust`)}
+          </p>
 
         </div>
       </div>
@@ -129,11 +144,17 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
   if (loading) return <>{children}</>;
   if (user && hasAccess(tier, requiredTier)) return <>{children}</>;
 
+  const isPro = user !== null && tier === "pro";
+
   const handleUpgrade = async () => {
     setLoadingPlan(true);
     await redirectToCheckout(PRICE_IDS.elite);
     setLoadingPlan(false);
   };
+
+  const features = t("membershipGate.blurGate.features", { returnObjects: true }) as Array<{
+    icon: string; title: string; desc: string;
+  }>;
 
   return (
     <div className="bg-root">
@@ -141,28 +162,70 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth }
         {children}
       </div>
       <div className="bg-overlay">
-        <div className="aiqw-plan bg-plan-card" style={{ "--plan-color": "#a78bfa" } as React.CSSProperties}>
-          <div className="aiqw-plan-header">
-            <span className="aiqw-plan-label" style={{ color: "#a78bfa" }}>{t("membershipGate.blurGate.planLabel")}</span>
-            <span className="aiqw-plan-price">{t("membershipGate.blurGate.planPrice")}<span className="aiqw-plan-per">{t("membershipGate.blurGate.perMonth")}</span></span>
+        <div className="bg-elite-card">
+
+          {/* Top bar: badge + price */}
+          <div className="bg-elite-top">
+            <div className="bg-elite-badge">✦ ELITE</div>
+            <div className="bg-elite-price-wrap">
+              <span className="bg-elite-price">{t("membershipGate.blurGate.planPrice")}</span>
+              <span className="bg-elite-per">{t("membershipGate.blurGate.perMonth")}</span>
+            </div>
           </div>
-          <ul className="aiqw-plan-features">
-            {(t("membershipGate.blurGate.features", { returnObjects: true }) as string[]).map(f => (
-              <li key={f}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                {f}
-              </li>
+
+          {/* Headline */}
+          <div className="bg-elite-headline">
+            <h3>{isPro ? t("membershipGate.blurGate.pro_headline") : t("membershipGate.blurGate.free_headline")}</h3>
+            <p>{isPro ? t("membershipGate.blurGate.pro_sub") : t("membershipGate.blurGate.free_sub")}</p>
+          </div>
+
+          {/* Pro user callout */}
+          {isPro && (
+            <div className="bg-elite-pro-banner">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              <span>You're on <strong>Pro</strong> · $30.99/mo — all features carry over</span>
+            </div>
+          )}
+
+          {/* 8-feature grid */}
+          <div className="bg-elite-features">
+            {features.map(f => (
+              <div key={f.title} className="bg-elite-feature">
+                <span className="bg-elite-feat-icon">{f.icon}</span>
+                <div>
+                  <p className="bg-elite-feat-title">{f.title}</p>
+                  <p className="bg-elite-feat-desc">{f.desc}</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
+
+          {/* CTA button */}
           <button
-            className="aiqw-plan-btn"
-            style={{ background: "linear-gradient(135deg, #a78bfacc, #a78bfa88)", borderColor: "#a78bfa55" }}
+            className="bg-elite-cta"
             onClick={!user ? onOpenAuth : handleUpgrade}
             disabled={loadingPlan}
           >
-            {!user ? t("membershipGate.blurGate.signInBtn") : loadingPlan ? t("membershipGate.blurGate.redirecting") : t("membershipGate.blurGate.upgradeBtn")}
+            {!user
+              ? t("membershipGate.blurGate.signInBtn")
+              : loadingPlan
+                ? t("membershipGate.blurGate.redirecting")
+                : isPro
+                  ? t("membershipGate.blurGate.pro_upgradeBtn")
+                  : t("membershipGate.blurGate.upgradeBtn")}
+            {!loadingPlan && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            )}
           </button>
-          <p className="bg-card-trust">{t("membershipGate.blurGate.trust")}</p>
+
+          <p className="bg-card-trust">
+            {isPro ? t("membershipGate.blurGate.pro_trust") : t("membershipGate.blurGate.trust")}
+          </p>
+
         </div>
       </div>
     </div>

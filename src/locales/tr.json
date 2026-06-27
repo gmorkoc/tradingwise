@@ -484,41 +484,113 @@
       "trust": "Haftada 35 YZ isteği · İstediğin zaman iptal · Anında erişim"
     },
     "elite": {
-      "headline": "Profesyonellerin Kullandığı Avantaj",
-      "sub": "Gann Analizi, Coinbase Premium ve sınırsız YZ — tam kurumsal araç seti, limit yok.",
+      "headline": "Tam Kurumsal Araç Seti",
+      "sub": "Her YZ özelliği açık, sınırsız erişim, haftalık limit yok — eksiksiz profesyonel avantaj.",
       "features": [
         {
-          "icon": "📐",
-          "title": "Gann Analizi YZ",
-          "desc": "Kare 9, Gann açıları ve döngü tahminleri GPT-4o tarafından yorumlanır — yalnızca Elite'e özel."
+          "icon": "🕯️",
+          "title": "CandleAI — Full Chart Analysis",
+          "desc": "Elliott Wave, ICT/SMC, Wyckoff — GPT-4o interprets every move on your chart."
         },
         {
-          "icon": "⚡",
-          "title": "Sınırsız YZ İsteği",
-          "desc": "Haftalık limit yok — tüm YZ özelliklerini istediğin kadar kullan."
+          "icon": "〰️",
+          "title": "Elliott Wave Projections",
+          "desc": "5-wave auto-detection with Fibonacci price targets for the next 1–2 waves."
+        },
+        {
+          "icon": "📐",
+          "title": "Gann Analysis AI",
+          "desc": "Square of 9, Gann angles, cycle forecasts — exclusive to Elite."
         },
         {
           "icon": "🏦",
-          "title": "Coinbase Premium YZ",
-          "desc": "Kurumsal akış ile perakende sapması gerçek zamanlı yorumlanır."
+          "title": "Coinbase Premium AI",
+          "desc": "Institutional flow vs retail divergence in real time."
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI Requests",
+          "desc": "No weekly cap — all features, unlimited use."
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "Deep AI analysis for 100+ altcoins."
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe AI",
+          "desc": "Daily, weekly, monthly structure alignment."
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap with AI commentary on cascade zones."
         }
       ],
-      "cta": "Elite'i Aç — $29,99/ay",
-      "trust": "Sınırsız YZ · İstediğin zaman iptal · Pro'daki her şeyi içerir"
+      "cta": "Elite'i Aç — $59.99/ay",
+      "trust": "Sınırsız YZ · İstediğin zaman iptal · Pro'daki her şeyi içerir",
+      "pro_headline": "Elite'e Bir Adım Uzaklıkta",
+      "pro_sub": "Pro'daki her şeye sahipsin. Ayda sadece $29 daha fazla ile 8 özel Elite aracı ekle.",
+      "pro_cta": "Pro'dan Yükselt — $59.99/ay",
+      "pro_trust": "+$29/ay · İstediğin zaman iptal · Pro özelliklerini koru"
     },
     "blurGate": {
       "planLabel": "Elite",
       "planPrice": "$59.99",
       "perMonth": "/ay",
       "features": [
-        "Pro'daki her şey — sınırsız",
-        "HTF Çok Zaman Dilimli YZ",
-        "Coinbase Premium YZ"
+        {
+          "icon": "🕯️",
+          "title": "CandleAI",
+          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
+        },
+        {
+          "icon": "〰️",
+          "title": "Elliott Wave",
+          "desc": "5-wave detection · Fibonacci targets"
+        },
+        {
+          "icon": "📐",
+          "title": "Gann Analysis AI",
+          "desc": "Square of 9 · angles · cycle forecasts"
+        },
+        {
+          "icon": "🏦",
+          "title": "Coinbase Premium AI",
+          "desc": "Institutional vs retail flow"
+        },
+        {
+          "icon": "⚡",
+          "title": "Unlimited AI",
+          "desc": "No weekly cap on any feature"
+        },
+        {
+          "icon": "📊",
+          "title": "Alt Coin Analysis",
+          "desc": "100+ altcoins · deep AI analysis"
+        },
+        {
+          "icon": "📈",
+          "title": "HTF Multi-Timeframe",
+          "desc": "Daily · weekly · monthly alignment"
+        },
+        {
+          "icon": "🔥",
+          "title": "Liquidation Heatmap",
+          "desc": "Full heatmap · AI commentary"
+        }
       ],
       "signInBtn": "Yükseltmek için giriş yap",
-      "upgradeBtn": "Elite'e Yükselt",
+      "upgradeBtn": "Elite'i Aç — $59.99/ay",
       "redirecting": "Yönlendiriliyor…",
-      "trust": "İstediğin zaman iptal · Pro'daki her şeyi içerir"
+      "trust": "İstediğin zaman iptal · Anında erişim · Pro'daki her şeyi içerir",
+      "free_headline": "Tam Kurumsal Araç Seti",
+      "free_sub": "Her YZ özelliği, sınırsız erişim, haftalık limit yok.",
+      "pro_headline": "Elite'e Bir Adım",
+      "pro_sub": "Pro'dasın. Ayda $29 daha fazla ile 8 özel aracın kilidini aç.",
+      "pro_upgradeBtn": "Pro'dan Yükselt — $59.99/ay",
+      "pro_trust": "+$29/ay · İstediğin zaman iptal · Pro özelliklerini koru"
     }
   },
   "upgradeModal": {
