@@ -481,7 +481,7 @@
         }
       ],
       "cta": "Pro'yu Aç — $10,99/ay",
-      "trust": "Haftada 35 YZ isteği · İstediğin zaman iptal · Anında erişim"
+      "trust": "Haftada 35 YZ isteği · Anında erişim"
     },
     "elite": {
       "headline": "Tam Kurumsal Araç Seti",
@@ -529,11 +529,11 @@
         }
       ],
       "cta": "Elite'i Aç — $59.99/ay",
-      "trust": "Sınırsız YZ · İstediğin zaman iptal · Pro'daki her şeyi içerir",
+      "trust": "Sınırsız YZ · Pro'daki her şeyi içerir",
       "pro_headline": "Elite'e Bir Adım Uzaklıkta",
       "pro_sub": "Pro'daki her şeye sahipsin. Ayda sadece $29 daha fazla ile 8 özel Elite aracı ekle.",
       "pro_cta": "Pro'dan Yükselt — $59.99/ay",
-      "pro_trust": "+$29/ay · İstediğin zaman iptal · Pro özelliklerini koru"
+      "pro_trust": "+$29/ay · Pro özelliklerini koru"
     },
     "blurGate": {
       "planLabel": "Elite",
@@ -584,13 +584,13 @@
       "signInBtn": "Yükseltmek için giriş yap",
       "upgradeBtn": "Elite'i Aç — $59.99/ay",
       "redirecting": "Yönlendiriliyor…",
-      "trust": "İstediğin zaman iptal · Anında erişim · Pro'daki her şeyi içerir",
+      "trust": "Anında erişim · Pro'daki her şeyi içerir",
       "free_headline": "Tam Kurumsal Araç Seti",
       "free_sub": "Her YZ özelliği, sınırsız erişim, haftalık limit yok.",
       "pro_headline": "Elite'e Bir Adım",
       "pro_sub": "Pro'dasın. Ayda $29 daha fazla ile 8 özel aracın kilidini aç.",
       "pro_upgradeBtn": "Pro'dan Yükselt — $59.99/ay",
-      "pro_trust": "+$29/ay · İstediğin zaman iptal · Pro özelliklerini koru"
+      "pro_trust": "+$29/ay · Pro özelliklerini koru"
     }
   },
   "upgradeModal": {

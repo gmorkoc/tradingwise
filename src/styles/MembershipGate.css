@@ -625,6 +625,71 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
 .bg-elite-cta:active { transform: scale(0.98); }
 .bg-elite-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+/* ── BlurGate Elite card — light theme ──────────────────────────────────── */
+html[data-theme="light"] .bg-elite-card {
+  background: linear-gradient(160deg, #faf5ff 0%, #f3f0ff 50%, #eff6ff 100%);
+  border-color: rgba(124, 58, 237, 0.2);
+  box-shadow:
+    0 24px 64px rgba(124, 58, 237, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(167, 139, 250, 0.15) inset;
+}
+
+html[data-theme="light"] .bg-elite-card::before {
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.35), transparent);
+}
+
+html[data-theme="light"] .bg-elite-badge {
+  color: #6d28d9;
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+html[data-theme="light"] .bg-elite-price {
+  color: #1e1b4b;
+}
+
+html[data-theme="light"] .bg-elite-per {
+  color: rgba(100, 116, 139, 0.8);
+}
+
+html[data-theme="light"] .bg-elite-headline h3 {
+  color: #1e1b4b;
+}
+
+html[data-theme="light"] .bg-elite-headline p {
+  color: #475569;
+}
+
+html[data-theme="light"] .bg-elite-pro-banner {
+  background: rgba(56, 189, 248, 0.07);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+html[data-theme="light"] .bg-elite-feature {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(124, 58, 237, 0.12);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+html[data-theme="light"] .bg-elite-feature:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(124, 58, 237, 0.28);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+}
+
+html[data-theme="light"] .bg-elite-feat-title {
+  color: #1e293b;
+}
+
+html[data-theme="light"] .bg-elite-feat-desc {
+  color: #64748b;
+}
+
+html[data-theme="light"] .bg-card-trust {
+  color: rgba(100, 116, 139, 0.7);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 540px) {
   .mg-feature-grid  { grid-template-columns: 1fr; }

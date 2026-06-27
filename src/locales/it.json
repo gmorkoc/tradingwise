@@ -481,7 +481,7 @@
         }
       ],
       "cta": "Sblocca Pro — $10,99/mese",
-      "trust": "35 richieste IA/settimana · Annulla quando vuoi · Accesso immediato"
+      "trust": "35 richieste IA/settimana · Accesso immediato"
     },
     "elite": {
       "headline": "Il Kit Istituzionale Completo",
@@ -529,11 +529,11 @@
         }
       ],
       "cta": "Sblocca Elite — $59.99/mese",
-      "trust": "IA illimitata · Annulla quando vuoi · Include tutto di Pro",
+      "trust": "IA illimitata · Include tutto di Pro",
       "pro_headline": "Un Passo da Elite",
       "pro_sub": "Hai già tutto ciò che è in Pro. Aggiungi 8 strumenti Elite esclusivi per soli $29 in più al mese.",
       "pro_cta": "Aggiorna da Pro — $59.99/mese",
-      "pro_trust": "+$29/mese · Annulla quando vuoi · Mantieni tutte le funzioni Pro"
+      "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     },
     "blurGate": {
       "planLabel": "Elite",
@@ -584,13 +584,13 @@
       "signInBtn": "Accedi per aggiornare",
       "upgradeBtn": "Sblocca Elite — $59.99/mese",
       "redirecting": "Reindirizzamento…",
-      "trust": "Annulla quando vuoi · Accesso immediato · Include tutto di Pro",
+      "trust": "Accesso immediato · Include tutto di Pro",
       "free_headline": "Il Kit Istituzionale Completo",
       "free_sub": "Tutte le funzionalità IA, accesso illimitato, nessun limite settimanale.",
       "pro_headline": "Un Passo da Elite",
       "pro_sub": "Sei su Pro. Sblocca 8 strumenti esclusivi con un aggiornamento — $29 in più al mese.",
       "pro_upgradeBtn": "Aggiorna da Pro — $59.99/mese",
-      "pro_trust": "+$29/mese · Annulla quando vuoi · Mantieni tutte le funzioni Pro"
+      "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     }
   },
   "upgradeModal": {

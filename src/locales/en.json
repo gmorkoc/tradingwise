@@ -481,7 +481,7 @@
         }
       ],
       "cta": "Unlock Pro — $30.99/mo",
-      "trust": "35 AI requests/week · Cancel anytime · Instant access"
+      "trust": "35 AI requests/week · Instant access"
     },
     "elite": {
       "headline": "The Full Institutional Toolkit",
@@ -529,11 +529,11 @@
         }
       ],
       "cta": "Unlock Elite — $59.99/mo",
-      "trust": "Unlimited AI · Cancel anytime · Includes everything in Pro",
+      "trust": "Unlimited AI · Includes everything in Pro",
       "pro_headline": "One Upgrade Away From Elite",
       "pro_sub": "You already have everything in Pro. Add 8 exclusive Elite tools for just $29 more per month.",
       "pro_cta": "Upgrade from Pro — $59.99/mo",
-      "pro_trust": "+$29/mo · Cancel anytime · Keep all your Pro features"
+      "pro_trust": "+$29/mo · Keep all your Pro features"
     },
     "blurGate": {
       "planLabel": "Elite",
@@ -584,13 +584,13 @@
       "signInBtn": "Sign in to upgrade",
       "upgradeBtn": "Upgrade to Elite",
       "redirecting": "Redirecting…",
-      "trust": "Cancel anytime · Instant access · Includes everything in Pro",
+      "trust": "Instant access · Includes everything in Pro",
       "free_headline": "The Full Institutional Toolkit",
       "free_sub": "Every AI feature, unlimited access, no weekly caps.",
       "pro_headline": "One Step From Elite",
       "pro_sub": "You're on Pro. Unlock 8 exclusive tools with one upgrade — $29 more per month.",
       "pro_upgradeBtn": "Upgrade from Pro — $59.99/mo",
-      "pro_trust": "+$29/mo · Cancel anytime · Keep all Pro features"
+      "pro_trust": "+$29/mo · Keep all Pro features"
     }
   },
   "billing": {
