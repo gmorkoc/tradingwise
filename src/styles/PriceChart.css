@@ -261,6 +261,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .price-chart-container:fullscreen .chart-dblclick-wrap::after {
   display: none;
 }
+/* Hide desktop hint on touch screens */
+@media (hover: none) {
+  .chart-dblclick-wrap::after { display: none; }
+}
 
 .day-hl-badge {
   display: inline-flex;

@@ -1695,6 +1695,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       crosshair: { mode: 1 },
       rightPriceScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0" },
       timeScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0", timeVisible: true, secondsVisible: false },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true },
       width:  chartContainerRef.current.clientWidth,
       height: 460,
     });

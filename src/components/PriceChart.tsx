@@ -2069,6 +2069,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
 
     const onMove = (e: TouchEvent) => {
+      // Two-finger pinch — let TradingView handle zoom natively
+      if (e.touches.length >= 2) return;
       e.preventDefault();
       const curX = e.touches[0].clientX;
       const curY = e.touches[0].clientY;
