@@ -145,17 +145,18 @@
 }
 
 .aiqw-gate-price {
-  font-size: 0.78rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   white-space: nowrap;
+  letter-spacing: -0.03em;
 }
 
 .aiqw-gate-per {
-  font-size: 0.6rem;
-  font-weight: 400;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--color-text-muted);
-  margin-left: 1px;
+  margin-left: 2px;
 }
 
 .aiqw-gate-btn {
