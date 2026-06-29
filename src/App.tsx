@@ -1363,6 +1363,7 @@ function AppDashboard({
                 featureName="Gann Analysis"
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
+                className="bg-root--top"
               >
                 <GannAnalysis
                   coin={coin}
@@ -1417,6 +1418,7 @@ function AppDashboard({
                 featureName="Alt Analysis"
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
+                className="bg-root--top"
               >
                 <AltAnalysis
                   onOpenUpgrade={onOpenUpgrade ?? (() => {})}
