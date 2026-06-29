@@ -43,7 +43,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded = false, onOpenAuth, onOpenUpgrade }) => {
   const { t } = useTranslation();
-  const { exceeded, consume } = useAIQuota();
+  const { exceeded, consume, limit, remaining } = useAIQuota();
   const { tier, user } = useAuth();
   const hasPro = hasAccess(tier, "pro");
 
@@ -330,16 +330,42 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
     setIsOpen(v => !v);
   };
 
+  const isElite    = tier === "elite";
+  const quotaDot   = exceeded ? "exceeded" : isElite ? "elite" : "";
+  const quotaChip  = exceeded ? "exceeded" : isElite ? "elite" : "";
+
   return (
     <>
       {isOpen && hasPro && panel}
-      <button
-        className={`chat-fab ${isOpen ? "open" : ""}`}
-        onClick={handleFabClick}
-        title={hasPro ? t("chat.title") : "AI Chat · Pro required"}
-      >
-        {isOpen && hasPro ? "✕" : "💬"}
-      </button>
+      <div className="chat-fab-wrap">
+        {hasPro && (
+          <div className={`chat-fab-quota-chip ${quotaChip}`}>
+            <span className={`chat-fab-quota-dot ${quotaDot}`} />
+            {isElite
+              ? "∞ · Elite"
+              : exceeded
+                ? "Quota full"
+                : `${remaining}/${limit} AI left`}
+          </div>
+        )}
+        <button
+          className={`chat-fab ${isOpen ? "open" : ""}`}
+          onClick={handleFabClick}
+          title={hasPro ? t("chat.title") : "AI Chat · Pro required"}
+        >
+          {isOpen && hasPro ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          ) : (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L13.8 9.3L21 12L13.8 14.7L12 22L10.2 14.7L3 12L10.2 9.3Z"/>
+              <path d="M19.5 4.5L20.2 6.8L22.5 7.5L20.2 8.2L19.5 10.5L18.8 8.2L16.5 7.5L18.8 6.8Z" opacity="0.8"/>
+            </svg>
+          )}
+        </button>
+      </div>
     </>
   );
 };

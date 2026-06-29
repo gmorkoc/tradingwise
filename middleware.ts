@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/api/openai'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*'] };
 
 export default async function middleware(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
@@ -13,27 +13,6 @@ export default async function middleware(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
-
-  // ── OpenAI proxy ─────────────────────────────────────────────────────────
-  if (url.pathname === '/api/openai') {
-    const body = await req.text();
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.VITE_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? ''}`,
-      },
-      body,
-    });
-    const text = await response.text();
-    return new Response(text, {
-      status: response.status,
-      headers: {
-        'content-type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  }
 
   // ── CoinGlass SDK proxy (preserves /api/ prefix for SDK-generated paths) ─
   if (url.pathname.startsWith('/cg-sdk/')) {

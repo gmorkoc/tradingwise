@@ -1,34 +1,77 @@
-/* ── FAB ─────────────────────────────────────────────────────────────────── */
-.chat-fab {
+/* ── FAB wrapper ─────────────────────────────────────────────────────────── */
+.chat-fab-wrap {
   position: fixed;
   bottom: 24px;
   right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 99;
+}
+
+/* Quota pill above FAB */
+.chat-fab-quota-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 20px;
+  padding: 4px 10px 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #38bdf8;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.chat-fab-quota-chip.exceeded { color: #fb7185; border-color: rgba(251,113,133,0.35); background: rgba(251,113,133,0.1); }
+.chat-fab-quota-chip.elite    { color: #a78bfa; border-color: rgba(167,139,250,0.35); background: rgba(167,139,250,0.08); }
+
+.chat-fab-quota-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+.chat-fab-quota-dot.exceeded { background: #fb7185; }
+.chat-fab-quota-dot.elite    { background: #a78bfa; }
+
+/* ── FAB button ─────────────────────────────────────────────────────────── */
+@keyframes chat-fab-ring {
+  0%, 100% { box-shadow: 0 8px 28px rgba(14,165,233,0.45), 0 0 0 0 rgba(56,189,248,0.35); }
+  60%       { box-shadow: 0 8px 28px rgba(14,165,233,0.45), 0 0 0 10px rgba(56,189,248,0); }
+}
+
+.chat-fab {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: none;
-  font-size: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
   cursor: pointer;
-  z-index: 99;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-  box-shadow: 0 8px 28px rgba(56, 189, 248, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  color: #0f172a;
-  font-weight: 700;
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  box-shadow: 0 8px 28px rgba(14, 165, 233, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  color: white;
+  animation: chat-fab-ring 3.5s ease-in-out infinite;
 }
 
 .chat-fab:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 36px rgba(56, 189, 248, 0.55);
+  box-shadow: 0 14px 38px rgba(14, 165, 233, 0.6);
+  animation: none;
 }
 
 .chat-fab.open {
   background: linear-gradient(135deg, #475569 0%, #334155 100%);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  font-size: 16px;
+  border-color: rgba(255, 255, 255, 0.1);
+  animation: none;
 }
 
 /* ── Floating panel ──────────────────────────────────────────────────────── */
@@ -466,5 +509,5 @@ html[data-theme="dark"] .chat-panel--embedded { background: var(--color-surface)
     border-radius: 0;
     border: none;
   }
-  .chat-fab { right: 12px; bottom: 20px; }
+  .chat-fab-wrap { right: 12px; bottom: 20px; }
 }
