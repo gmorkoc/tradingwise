@@ -2268,7 +2268,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     {zone.signal === "strong-sell" && t("chart.strongSell")}
                   </span>
                 )}
-                {zone && !isPaid && (
+                {!isPaid && (
                   <button
                     className="zone-signal-gate"
                     onClick={() => onOpenUpgrade?.("pro")}
