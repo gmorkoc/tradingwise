@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData } from "../services/coinglass";
-import { openai, PredictionResponse } from "../services/openai";
+import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
 import { useAuth } from "../contexts/AuthContext";
@@ -1337,19 +1337,13 @@ Respond ONLY with valid JSON:
 }`;
 
   try {
-    const res = await fetch("/api/openai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.4,
-        max_tokens: 900,
-      }),
+    const data = await callOpenAI({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.4,
+      max_tokens: 900,
     });
-    if (!res.ok) return null;
-    const data = await res.json();
     const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}") as AIRead;
     if (!parsed.mmReading) return null;
     if (!Array.isArray(parsed.keyLevels)) parsed.keyLevels = [];

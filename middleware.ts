@@ -1,15 +1,19 @@
 export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*'] };
 
+const ALLOWED_ORIGINS = ['https://www.coinhintz.io', 'https://coinhintz.io', 'http://localhost:5173', 'http://localhost:4173'];
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') ?? '';
+  return {
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
+
 export default async function middleware(req: Request): Promise<Response> {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
+    return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
 
   const url = new URL(req.url);
@@ -25,7 +29,7 @@ export default async function middleware(req: Request): Promise<Response> {
     const text = await response.text();
     return new Response(text, {
       status: response.status,
-      headers: { 'content-type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'content-type': 'application/json', ...corsHeaders(req) },
     });
   }
 
@@ -44,9 +48,6 @@ export default async function middleware(req: Request): Promise<Response> {
   const text = await response.text();
   return new Response(text, {
     status: response.status,
-    headers: {
-      'content-type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
+    headers: { 'content-type': 'application/json', ...corsHeaders(req) },
   });
 }
