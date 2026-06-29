@@ -101,6 +101,8 @@
   right: auto;
   bottom: auto;
   z-index: 99999;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 
 @keyframes acct-pop {

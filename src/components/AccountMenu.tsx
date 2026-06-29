@@ -29,7 +29,18 @@ export const AccountMenu: React.FC<Props> = ({ onOpenAuth, onOpenUpgrade, onOpen
   const openMenu = () => {
     if (avatarRef.current) {
       const r = avatarRef.current.getBoundingClientRect();
-      setDropPos({ top: r.top, left: r.right + 12 });
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const DROPDOWN_W = 240;
+      const DROPDOWN_H = 280;
+
+      let left = r.right + 12;
+      let top  = r.top;
+
+      if (left + DROPDOWN_W > vw - 8) left = Math.max(8, r.left - DROPDOWN_W - 12);
+      if (top  + DROPDOWN_H > vh - 8) top  = Math.max(8, vh - DROPDOWN_H - 8);
+
+      setDropPos({ top, left });
     }
     setOpen(v => !v);
   };
