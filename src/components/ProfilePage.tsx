@@ -55,14 +55,6 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
-function getNextMonday(): string {
-  const now  = new Date();
-  const day  = now.getDay();
-  const diff = day === 0 ? 1 : 8 - day;
-  const next = new Date(now);
-  next.setDate(now.getDate() + diff);
-  return next.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpenUpgrade }) => {
   const { t } = useTranslation();
@@ -259,7 +251,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                           used: `<strong>${used}</strong>`, limit: `<strong>${limit}</strong>`,
                         }) }}
                       />
-                      <span className="pp-ai-reset">{t("profile.aiUsage.resetsOn", { date: getNextMonday() })}</span>
+                      <span className="pp-ai-reset">{t("profile.aiUsage.resetsOn")}</span>
                     </div>
                     <div className="pp-ai-track">
                       <div className={`pp-ai-fill${used/limit >= 0.9 ? " pp-ai-fill--red" : used/limit >= 0.6 ? " pp-ai-fill--amber" : " pp-ai-fill--green"}`}

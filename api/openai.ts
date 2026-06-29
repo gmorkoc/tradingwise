@@ -1,14 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const TIER_LIMITS: Record<string, number> = { free: 0, pro: 70, elite: Infinity };
+const TIER_LIMITS: Record<string, number> = { free: 0, pro: 25, elite: Infinity };
 
-function getWeekKey(): string {
-  const now  = new Date();
-  const day  = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const mon  = new Date(now);
-  mon.setDate(now.getDate() + diff);
-  return mon.toISOString().slice(0, 10);
+function getDayKey(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -80,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── 5. Quota gate (Elite unlimited) ──────────────────────────────────────
   if (tier !== "elite") {
     const limit   = TIER_LIMITS[tier] ?? 0;
-    const weekKey = getWeekKey();
+    const weekKey = getDayKey();
     const used    = profileWeek === weekKey ? profileUsed : 0;
     if (used >= limit)
       return res.status(429).json({ error: "Weekly AI quota exceeded. Upgrade to Elite for unlimited access." });

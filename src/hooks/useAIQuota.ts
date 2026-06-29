@@ -2,23 +2,17 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, Tier } from "../services/supabase";
 
-const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 70, elite: Infinity };
+const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 25, elite: Infinity };
 
-function getWeekKey(): string {
-  const now  = new Date();
-  const day  = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const mon  = new Date(now);
-  mon.setDate(now.getDate() + diff);
-  return mon.toISOString().slice(0, 10);
+function getDayKey(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function useAIQuota() {
   const { tier, profile } = useAuth();
   const [localUsed, setLocalUsed] = useState<number | null>(null);
 
-  // Memoize weekKey so it doesn't recreate consume() on every render
-  const weekKey = useMemo(() => getWeekKey(), []);
+  const weekKey = useMemo(() => getDayKey(), []);
 
   const limit       = TIER_LIMITS[tier] ?? 5;
   const profileUsed = (profile?.ai_requests_week === weekKey)

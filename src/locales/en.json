@@ -376,10 +376,10 @@
     },
     "aiUsage": {
       "unlimited": "Unlimited AI requests",
-      "requestsUsed": "{{used}} of {{limit}} requests used this week",
-      "resetsOn": "Resets {{date}}",
+      "requestsUsed": "{{used}} of {{limit}} requests used today",
+      "resetsOn": "Resets tomorrow",
       "upgradePro": "Upgrade to Pro",
-      "proHint": " for 70 AI requests/week, or Elite for unlimited.",
+      "proHint": " for 25 AI requests/day, or Elite for unlimited.",
       "upgradeElite": "Upgrade to Elite",
       "eliteHint": " for unlimited AI requests."
     },
@@ -434,8 +434,8 @@
   "quotaWall": {
     "freeTitle": "AI features require a paid plan",
     "freeDesc": "Upgrade to unlock AI-powered market analysis, predictions, and insights across every section.",
-    "capTitle": "Weekly AI limit reached",
-    "capDesc": "You've used {{used}}/{{limit}} AI requests this week. Upgrade for unlimited access.",
+    "capTitle": "Daily AI limit reached",
+    "capDesc": "You've used {{used}}/{{limit}} AI requests today. Resets tomorrow — upgrade for unlimited access.",
     "getBtn": "Get {{plan}}",
     "redirecting": "Redirecting…",
     "usagePips": "{{used}}/{{limit}} used · resets Monday",
