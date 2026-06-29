@@ -2734,13 +2734,44 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
 
         {!isPaid && (
-          <AIQuotaWall
-            used={used} limit={limit}
-            onOpenUpgrade={onOpenUpgrade ?? (() => {})} onOpenAuth={onOpenAuth ?? (() => {})}
-            planId="pro"
-            featureTitle="AI Chart Features"
-            featureDesc="Interval sentiment, pattern detection, trend context & next-move predictions."
-          />
+          <div className="chart-ai-placeholder">
+            <div className="chart-ai-placeholder-preview" aria-hidden="true">
+              <div className="chart-ai-placeholder-header">
+                <div className="cap-badge" />
+                <div className="cap-title" />
+                <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
+                  <div className="cap-pill" />
+                  <div className="cap-pill" />
+                </div>
+              </div>
+              <div className="cap-line cap-line--full" />
+              <div className="cap-line cap-line--three-quarter" />
+            </div>
+            <div className="chart-ai-placeholder-overlay">
+              <div className="cap-overlay-left">
+                <div className="cap-overlay-header">
+                  <span className="cap-overlay-title">AI Chart Features</span>
+                  <span className="cap-overlay-ai-badge">AI</span>
+                  <span className="cap-overlay-tier-badge">PRO</span>
+                  <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                </div>
+                <div className="cap-overlay-features">
+                  {["Interval sentiment & trend context", "Candlestick pattern detection", "Next-move predictions"].map(f => (
+                    <span key={f} className="cap-overlay-feature">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                className="cap-overlay-btn"
+                onClick={() => onOpenUpgrade?.("pro")}
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
         )}
 
         {error && lastCandlesRef.current.length === 0 && (
@@ -2872,7 +2903,47 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
 
-        {!loading && exceeded ? (
+        {!isPaid ? (
+          <div className="chart-ai-placeholder">
+            <div className="chart-ai-placeholder-preview" aria-hidden="true">
+              <div className="chart-ai-placeholder-header">
+                <div className="cap-badge" />
+                <div className="cap-title" />
+                <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                  <div className="cap-pill" />
+                  <div className="cap-pill" />
+                </div>
+              </div>
+              <div className="cap-line cap-line--full" />
+              <div className="cap-line cap-line--three-quarter" />
+              <div className="cap-line" style={{ width: "88%" }} />
+            </div>
+            <div className="chart-ai-placeholder-overlay">
+              <div className="cap-overlay-left">
+                <div className="cap-overlay-header">
+                  <span className="cap-overlay-title">AI Pattern Analysis</span>
+                  <span className="cap-overlay-ai-badge">AI</span>
+                  <span className="cap-overlay-tier-badge">PRO</span>
+                  <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                </div>
+                <div className="cap-overlay-features">
+                  {["Candlestick pattern recognition", "Bullish / bearish confidence score", "Next-move narrative & outlook"].map(f => (
+                    <span key={f} className="cap-overlay-feature">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                className="cap-overlay-btn"
+                onClick={() => onOpenUpgrade?.("pro")}
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        ) : !loading && exceeded ? (
           <div className="pattern-insight pattern-insight--neutral">
             <div className="pattern-insight-header">
               <span className="pattern-insight-badge">

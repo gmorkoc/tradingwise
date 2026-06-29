@@ -1226,8 +1226,6 @@ function AppDashboard({
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
-                <span className="mch-search-label">Search</span>
-                <kbd className="mch-search-kbd">⌘K</kbd>
               </button>
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
               <div
@@ -1440,7 +1438,7 @@ function AppDashboard({
           <Watchlist />
         </aside>
 
-        <ChatInterface btcData={btcData} />
+        <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
 
         {coinPickerOpen &&
           ReactDOM.createPortal(

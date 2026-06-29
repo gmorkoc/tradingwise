@@ -34,8 +34,8 @@ export function useAIQuota() {
   }, [profile?.ai_requests_used, profile?.ai_requests_week]);
 
   const consume = useCallback((): boolean => {
-    if (tier === "elite") return true;
     const current = localUsed ?? profileUsed;
+    // Elite limit is Infinity so this check never blocks them, but tracking still runs
     if (current >= limit) return false;
 
     const next = current + 1;

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol, ExchangeActivity } from "../services/coinglass";
 import { BlurGate } from "./MembershipGate";
+import { useAuth } from "../contexts/AuthContext";
+import { hasAccess } from "../services/supabase";
 import "../styles/PredictionEngine.css";
 
 const EXCH_WEIGHTS: Record<string, number> = { Binance: 54, OKX: 27, Bybit: 8, Bitget: 5, Coinbase: 6 };
@@ -136,6 +138,8 @@ function calcPOC(candles: { high: number; low: number; volume?: number }[]): num
 
 export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenUpgrade }: Props) {
   const { t, i18n } = useTranslation();
+  const { tier } = useAuth();
+  const hasPro = hasAccess(tier, "pro");
   const [fearGreed,       setFearGreed]       = useState<FearGreed | null>(null);
   const [atr4h,           setAtr4h]           = useState(0);
   const [poc4h,           setPoc4h]           = useState(0);
@@ -362,18 +366,18 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
                   <div className="pe-target-values">
                     <div className="pe-target-bull">
                       <span className="pe-target-arrow">▲</span>
-                      {fmtPrice(tgt.bull)}
+                      {hasPro ? fmtPrice(tgt.bull) : "———"}
                     </div>
                     <div className="pe-target-bear">
                       <span className="pe-target-arrow">▼</span>
-                      {fmtPrice(tgt.bear)}
+                      {hasPro ? fmtPrice(tgt.bear) : "———"}
                     </div>
                   </div>
                   <div className="pe-target-pct">
-                    <span className="pe-target-pct-bull">+{bullPct}%</span>
-                    <span className="pe-target-pct-bear">{bearPct}%</span>
+                    <span className="pe-target-pct-bull">{hasPro ? `+${bullPct}%` : "—"}</span>
+                    <span className="pe-target-pct-bear">{hasPro ? `${bearPct}%` : "—"}</span>
                   </div>
-                  <div className="pe-target-atr">{t("predEngine.atrLabel")} {fmtPrice(tgt.atr)}</div>
+                  <div className="pe-target-atr">{t("predEngine.atrLabel")} {hasPro ? fmtPrice(tgt.atr) : "———"}</div>
                 </div>
               );
             })}

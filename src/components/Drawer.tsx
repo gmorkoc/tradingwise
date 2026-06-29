@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../i18n";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import { useAuth } from "../contexts/AuthContext";
+import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/Drawer.css";
 
 interface DrawerProps {
@@ -38,7 +39,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, traderLevel,
 }) => {
   const { t } = useTranslation();
-  const { tier } = useAuth();
+  const { tier, user } = useAuth();
+  const { used, limit } = useAIQuota();
   const [toolsOpen, setToolsOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [openDoc, setOpenDoc]     = useState<number | null>(null);
@@ -82,6 +84,28 @@ export const Drawer: React.FC<DrawerProps> = ({
                 <span className="drawer-row-arrow">›</span>
               </div>
             </div>
+
+            {user && (
+              <div className="drawer-ai-usage">
+                <div className="drawer-ai-usage-top">
+                  <span className="drawer-row-label">AI Requests</span>
+                  <span className="drawer-ai-usage-count">
+                    {tier === "free"
+                      ? <span className="drawer-ai-usage-locked">Upgrade to Pro</span>
+                      : <>{used}<span className="drawer-ai-usage-limit"> / {tier === "elite" ? "∞" : limit}</span></>
+                    }
+                  </span>
+                </div>
+                {tier === "pro" && (
+                  <div className="drawer-ai-usage-bar">
+                    <div
+                      className="drawer-ai-usage-fill"
+                      style={{ width: `${Math.min((used / limit) * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenWizard(); }}>
               <span className="drawer-row-label">Trading Level</span>

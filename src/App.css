@@ -1938,17 +1938,17 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .mch-search-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 32px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0;
   background: var(--color-input-bg);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text-secondary);
-  font-size: 0.78rem;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 .mch-search-btn:hover {
   border-color: rgba(56,189,248,0.4);

@@ -4,16 +4,55 @@ import "../styles/Watchlist.css";
 
 interface CatalogEntry { id: string; symbol: string; name: string }
 
-interface CoinMarket {
-  id: string;
-  symbol: string;
-  name: string;
-  image: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
-  total_volume: number;
-  sparkline_in_7d: { price: number[] };
+interface PriceEntry { price: number; pct: number; vol: number }
+
+// Some symbols trade under a different name on Binance
+const BINANCE_OVERRIDE: Record<string, string> = {
+  POL:   "MATIC",  // Polygon still lists as MATIC
+  MIOTA: "IOTA",
+};
+
+function toBinanceSym(symbol: string): string {
+  return (BINANCE_OVERRIDE[symbol] ?? symbol) + "USDT";
+}
+
+async function fetchBinancePrices(symbols: string[]): Promise<Map<string, PriceEntry>> {
+  try {
+    const res = await fetch(
+      "https://data-api.binance.vision/api/v3/ticker/24hr",
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return new Map();
+    const all: { symbol: string; lastPrice: string; priceChangePercent: string; quoteVolume: string }[] =
+      await res.json();
+    const lookup = new Map(all.map(t => [t.symbol, t]));
+    const result = new Map<string, PriceEntry>();
+    for (const sym of symbols) {
+      const t = lookup.get(toBinanceSym(sym));
+      if (t) result.set(sym, {
+        price: parseFloat(t.lastPrice),
+        pct:   parseFloat(t.priceChangePercent),
+        vol:   parseFloat(t.quoteVolume),
+      });
+    }
+    return result;
+  } catch { return new Map(); }
+}
+
+async function fetchSparklines(symbols: string[]): Promise<Map<string, number[]>> {
+  const result = new Map<string, number[]>();
+  await Promise.all(symbols.map(async sym => {
+    try {
+      const res = await fetch(
+        `https://data-api.binance.vision/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!res.ok) return;
+      const data: (string | number)[][] = await res.json();
+      result.set(sym, data.map(c => parseFloat(String(c[4])))); // close prices
+    } catch { /* symbol may not exist on Binance */ }
+  }));
+  return result;
 }
 
 const CATALOG: CatalogEntry[] = [
@@ -160,7 +199,8 @@ const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
 function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }) {
   if (prices.length < 2) return null;
   const W = 60, H = 26;
-  const sample = prices.filter((_, i) => i % 4 === 0);
+  // Only downsample large series (e.g. CoinGecko 168-pt); Binance gives 7 pts already
+  const sample = prices.length > 20 ? prices.filter((_, i) => i % 4 === 0) : prices;
   const min = Math.min(...sample);
   const max = Math.max(...sample);
   const range = max - min || 1;
@@ -200,34 +240,41 @@ export function Watchlist() {
       return Array.isArray(saved) && saved.length > 0 ? saved : DEFAULT_IDS;
     } catch { return DEFAULT_IDS; }
   });
-  const [coinData, setCoinData] = useState<Map<string, CoinMarket>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [priceData,  setPriceData]  = useState<Map<string, PriceEntry>>(new Map());
+  const [sparklines, setSparklines] = useState<Map<string, number[]>>(new Map());
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [imgErrors,  setImgErrors]  = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem("watchlistCoins_v1", JSON.stringify(watchedIds));
   }, [watchedIds]);
 
+  // Price refresh every 30s
   useEffect(() => {
     if (watchedIds.length === 0) { setLoading(false); return; }
+    const symbols = watchedIds.map(id => CATALOG.find(c => c.id === id)?.symbol ?? "").filter(Boolean);
 
-    async function fetchData() {
-      try {
-        const ids = watchedIds.join(",");
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h&order=market_cap_desc`
-        );
-        if (!res.ok) return;
-        const data: CoinMarket[] = await res.json();
-        setCoinData(new Map(data.map(c => [c.id, c])));
-        setLoading(false);
-      } catch { /* silently fail */ }
+    async function refresh() {
+      const data = await fetchBinancePrices(symbols);
+      setPriceData(data);
+      setLoading(false);
     }
 
-    fetchData();
-    const id = setInterval(fetchData, 60_000);
+    refresh();
+    const id = setInterval(refresh, 30_000);
+    return () => clearInterval(id);
+  }, [watchedIds]);
+
+  // Sparklines refresh every 10 min (daily candles, no need to hammer)
+  useEffect(() => {
+    if (watchedIds.length === 0) return;
+    const symbols = watchedIds.map(id => CATALOG.find(c => c.id === id)?.symbol ?? "").filter(Boolean);
+
+    fetchSparklines(symbols).then(setSparklines);
+    const id = setInterval(() => fetchSparklines(symbols).then(setSparklines), 10 * 60_000);
     return () => clearInterval(id);
   }, [watchedIds]);
 
@@ -263,9 +310,7 @@ export function Watchlist() {
         <h3 className="wl-title">{t("watchlist.title")}</h3>
         <span className="wl-subtitle">
           {t("watchlist.updated")} ·{" "}
-          <a className="wl-source-badge" href="https://www.coingecko.com" target="_blank" rel="noopener noreferrer">
-            Powered by CoinGecko
-          </a>
+          <span className="wl-source-badge">Binance</span>
         </span>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
@@ -311,33 +356,41 @@ export function Watchlist() {
       {!loading && watchedIds.length > 0 && (
         <div className="wl-list">
           {watchedIds.map(id => {
-            const coin = coinData.get(id);
-            const meta = CATALOG.find(c => c.id === id);
-            const pct = coin?.price_change_percentage_24h ?? 0;
-            const up = pct >= 0;
-            const symbol = (coin?.symbol ?? meta?.symbol ?? "").toUpperCase();
+            const meta   = CATALOG.find(c => c.id === id);
+            const symbol = (meta?.symbol ?? "").toUpperCase();
+            const entry  = priceData.get(symbol);
+            const spark  = sparklines.get(symbol) ?? [];
+            const pct    = entry?.pct ?? 0;
+            const up     = pct >= 0;
             return (
               <div key={id} className="wl-row">
                 <div className="wl-row-icon">
-                  {coin?.image
-                    ? <img className="wl-coin-img" src={coin.image} alt={symbol} loading="lazy" />
-                    : <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
-                  }
+                  {!imgErrors.has(symbol) ? (
+                    <img
+                      className="wl-coin-img"
+                      src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
+                      alt={symbol}
+                      loading="lazy"
+                      onError={() => setImgErrors(prev => new Set([...prev, symbol]))}
+                    />
+                  ) : (
+                    <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
+                  )}
                 </div>
 
                 <div className="wl-row-info">
                   <span className="wl-row-symbol">{symbol}-USD</span>
-                  <span className="wl-row-vol">{t("watchlist.vol")} {coin ? fmtVol(coin.total_volume) : "—"}</span>
+                  <span className="wl-row-vol">{t("watchlist.vol")} {entry ? fmtVol(entry.vol) : "—"}</span>
                 </div>
 
-                {coin?.sparkline_in_7d?.price && (
+                {spark.length > 1 && (
                   <div className="wl-row-spark">
-                    <Sparkline prices={coin.sparkline_in_7d.price} positive={up} />
+                    <Sparkline prices={spark} positive={up} />
                   </div>
                 )}
 
                 <div className="wl-row-right">
-                  <span className="wl-row-price">${coin ? fmtPrice(coin.current_price) : "—"}</span>
+                  <span className="wl-row-price">${entry ? fmtPrice(entry.price) : "—"}</span>
                   <span className={`wl-row-pct${up ? " up" : " down"}`}>
                     {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
                   </span>

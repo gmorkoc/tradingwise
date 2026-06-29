@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 import { openai, ChatMessage } from "../services/openai";
 import { BTCData, coinglass } from "../services/coinglass";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { useAuth } from "../contexts/AuthContext";
+import { hasAccess } from "../services/supabase";
 import "../styles/ChatInterface.css";
 
 interface ChatInterfaceProps {
   btcData: Partial<BTCData> | null;
   embedded?: boolean;
+  onOpenAuth?: () => void;
+  onOpenUpgrade?: () => void;
 }
 
 const predictionTriggers = [
@@ -37,9 +41,11 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded = false }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded = false, onOpenAuth, onOpenUpgrade }) => {
   const { t } = useTranslation();
   const { exceeded, consume } = useAIQuota();
+  const { tier, user } = useAuth();
+  const hasPro = hasAccess(tier, "pro");
 
   const defaultMessages = (): DisplayMessage[] => [
     { id: "0", role: "assistant", content: t("chat.defaultMessage", { coin: "BTC" }) },
@@ -123,6 +129,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() && !images.length) return;
+    if (!hasPro) { onOpenUpgrade?.(); return; }
+
+    // Gate quota BEFORE touching UI state
+    if (exceeded || !consume()) {
+      setError(t("chat.quotaExceeded", "Weekly AI limit reached. Upgrade to Elite for unlimited access."));
+      return;
+    }
 
     const snap = [...images];
     const userMsg: DisplayMessage = {
@@ -142,12 +155,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
       .filter(m => m.role !== "system")
       .slice(0, -1) // exclude the message we just added (sent separately with images)
       .map(m => ({ role: m.role, content: m.content }) as ChatMessage);
-
-    if (exceeded || !consume()) {
-      setError(t("chat.quotaExceeded", "Weekly AI limit reached. Upgrade for unlimited access."));
-      setLoading(false);
-      return;
-    }
 
     const marketData = shouldFetchFreshMarketData(input) || !btcData
       ? await coinglass.getAllBTCData().catch(() => btcData)
@@ -315,15 +322,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
 
   if (embedded) return panel;
 
+  const handleFabClick = () => {
+    if (!hasPro) {
+      if (!user) { onOpenAuth?.(); } else { onOpenUpgrade?.(); }
+      return;
+    }
+    setIsOpen(v => !v);
+  };
+
   return (
     <>
-      {isOpen && panel}
+      {isOpen && hasPro && panel}
       <button
         className={`chat-fab ${isOpen ? "open" : ""}`}
-        onClick={() => setIsOpen((v) => !v)}
-        title={t("chat.title")}
+        onClick={handleFabClick}
+        title={hasPro ? t("chat.title") : "AI Chat · Pro required"}
       >
-        {isOpen ? "✕" : "💬"}
+        {isOpen && hasPro ? "✕" : "💬"}
       </button>
     </>
   );
