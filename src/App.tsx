@@ -84,6 +84,7 @@ const NAV_ITEMS: {
   {
     id: "chart",
     labelKey: "nav.chart",
+    requiredTier: "pro",
     d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"],
   },
   {
@@ -103,19 +104,19 @@ const NAV_ITEMS: {
   {
     id: "heatmap",
     labelKey: "nav.heatmap",
-    requiredTier: "elite",
+    requiredTier: "pro",
     d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"],
   },
   {
     id: "onchain",
     labelKey: "nav.onchain",
-    requiredTier: "elite",
+    requiredTier: "pro",
     d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
   },
   {
     id: "gann",
     labelKey: "nav.gann",
-    requiredTier: "elite",
+    requiredTier: "pro",
     hidden: true,
     d: "M22 12h-4l-3 9L9 3l-3 9H2",
   },
@@ -137,7 +138,7 @@ const NAV_ITEMS: {
   {
     id: "htf",
     labelKey: "nav.htf",
-    requiredTier: "elite",
+    requiredTier: "pro",
     d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"],
   },
   { id: "orderflow", labelKey: "nav.orderflow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
@@ -844,17 +845,19 @@ function AppDashboard({
                   title={t(item.labelKey)}
                 >
                   {/* Mobile badge — left of icon */}
-                  {item.requiredTier === "elite" && (
-                    <span className="nav-badge--mobile">E</span>
+                  {item.requiredTier && (
+                    <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
+                      {item.requiredTier === "elite" ? "E" : "P"}
+                    </span>
                   )}
                   <span className="nav-icon-wrap">
                     <NavIcon d={item.d} />
                   </span>
                   <span className="icon-strip-label">{t(item.labelKey)}</span>
                   {/* Desktop badge — after label */}
-                  {item.requiredTier === "elite" && (
-                    <span className="icon-strip-elite-badge nav-badge--desktop">
-                      E
+                  {item.requiredTier && (
+                    <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
+                      {item.requiredTier === "elite" ? "E" : "P"}
                     </span>
                   )}
                 </button>
@@ -1204,9 +1207,6 @@ function AppDashboard({
                 })()}
             </div>
 
-            {btcData && (
-              <span className="price-source-badge">via coinhintz</span>
-            )}
 
             <div className="mch-right">
               <button
@@ -1359,7 +1359,7 @@ function AppDashboard({
             )}
             {activeSection === "gann" && (
               <BlurGate
-                requiredTier="elite"
+                requiredTier="pro"
                 featureName="Gann Analysis"
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
@@ -1412,10 +1412,17 @@ function AppDashboard({
             )}
             {activeSection === "markets" && <GlobalMarkets />}
             {activeSection === "altanalysis" && (
-              <AltAnalysis
-                onOpenUpgrade={onOpenUpgrade ?? (() => {})}
-                onOpenAuth={onOpenAuth ?? (() => {})}
-              />
+              <BlurGate
+                requiredTier="elite"
+                featureName="Alt Analysis"
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+              >
+                <AltAnalysis
+                  onOpenUpgrade={onOpenUpgrade ?? (() => {})}
+                  onOpenAuth={onOpenAuth ?? (() => {})}
+                />
+              </BlurGate>
             )}
           </div>
         </div>

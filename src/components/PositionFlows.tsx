@@ -550,7 +550,7 @@ export function PositionFlows({ coin = "BTC" }: Props) {
       {/* ── Section 5: Multi-coin futures table ── */}
       {multiCoin.length > 0 && <MultiCoinTable rows={multiCoin} />}
 
-      <p className="ls2-disclaimer">Data via coinhintz · Binance / OKX / Bybit Futures · Educational only</p>
+      <p className="ls2-disclaimer">Data · Binance / OKX / Bybit Futures · Educational only</p>
     </div>
   );
 }

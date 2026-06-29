@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchOnChainData, OnChainData, fmtHashrate, fmtDifficulty } from "../services/onchain";
 import { getOnChainAIAnalysis, OnChainAIResult } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { useAIQuota } from "../hooks/useAIQuota";
-import { CoinbasePremium } from "./CoinbasePremium";
+import { CoinbasePremium, PremiumAIResult } from "./CoinbasePremium";
 import "../styles/OnChainMetrics.css";
 
 function fmt$(n: number): string {
@@ -120,6 +120,16 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
   const [aiLoading, setAILoading] = useState(false);
   const [aiError, setAIError]     = useState(false);
 
+  const [cbpAI, setCbpAI]               = useState<PremiumAIResult | null>(null);
+  const [cbpAILoading, setCbpAILoading] = useState(false);
+  const [cbpAIError, setCbpAIError]     = useState(false);
+
+  const handleCbpAI = useCallback((result: PremiumAIResult | null, loading: boolean, error: boolean) => {
+    setCbpAI(result);
+    setCbpAILoading(loading);
+    setCbpAIError(error);
+  }, []);
+
   useEffect(() => {
     // Skip fetch entirely if cache is fresh
     if (isFresh) { setLoading(false); return; }
@@ -183,32 +193,16 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
         </div>
       )}
 
-      {/* ── Coinbase Premium Index ────────────────────────────────────────── */}
-      <CoinbasePremium onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+      {/* ── Coinbase Premium Chart ────────────────────────────────────────── */}
+      <CoinbasePremium onAIData={handleCbpAI} />
 
-      {/* ── AI Analysis ───────────────────────────────────────────────────── */}
+      {/* ── Combined AI Analysis ──────────────────────────────────────────── */}
       <div className="onchain-ai">
         <div className="onchain-ai-header">
           <div className="onchain-ai-title-row">
             <span className="onchain-ai-logo">✦</span>
-            <span className="onchain-ai-title">AI Network Analysis</span>
+            <span className="onchain-ai-title">AI Analysis</span>
             <span className="pattern-insight-ai-badge">✦ AI Powered</span>
-            {ai && (() => {
-              const h = HEALTH_CFG[ai.networkHealth];
-              return (
-                <span className="onchain-ai-health-badge" style={{ color: h.color, background: h.bg }}>
-                  {t("onchain.networkStrength", { label: t(h.key) })}
-                </span>
-              );
-            })()}
-            {ai && (() => {
-              const a = ACTION_CFG[ai.action];
-              return (
-                <span className="onchain-ai-action-badge" style={{ color: a.color, background: a.bg }}>
-                  {t(a.key)}
-                </span>
-              );
-            })()}
           </div>
         </div>
 
@@ -216,39 +210,85 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
           <AIQuotaWall used={used} limit={limit} onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth} />
         )}
 
-        {!exceeded && aiLoading && (
-          <div className="onchain-ai-loading">
-            <span className="onchain-ai-spinner" />
-            Analyzing network metrics…
-          </div>
-        )}
-
-        {!exceeded && aiError && !aiLoading && (
-          <div className="onchain-ai-error">Unable to generate AI analysis</div>
-        )}
-
-        {!exceeded && ai && !aiLoading && (
+        {!exceeded && (
           <>
-            <p className="onchain-ai-summary">{ai.summary}</p>
-
-            <div className="onchain-ai-signals">
-              {ai.signals.map((sig) => (
-                <div key={sig.metric} className="onchain-ai-signal">
-                  <div className="onchain-ai-signal-top">
-                    <span className={`onchain-ai-signal-indicator ${sig.bullish ? "onchain-ai-signal-indicator--bull" : "onchain-ai-signal-indicator--bear"}`}>
-                      {sig.bullish ? "↑" : "↓"}
-                    </span>
-                    <span className="onchain-ai-signal-metric">{sig.metric}</span>
-                    <span className="onchain-ai-signal-value">{sig.value}</span>
+            {/* Coinbase Premium Sentiment */}
+            <div className="onchain-ai-subsection">
+              <div className="onchain-ai-sub-title">
+                Coinbase Premium
+                {cbpAI && (() => {
+                  const SENTIMENT_CFG = {
+                    bullish: { color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
+                    neutral: { color: "#38bdf8", bg: "rgba(56,189,248,0.12)" },
+                    bearish: { color: "#fb7185", bg: "rgba(251,113,133,0.12)" },
+                  };
+                  const s = SENTIMENT_CFG[cbpAI.sentiment];
+                  return <span className="cbp-ai-badge" style={{ color: s.color, background: s.bg }}>{cbpAI.sentiment}</span>;
+                })()}
+              </div>
+              {cbpAILoading && <div className="onchain-ai-loading"><span className="onchain-ai-spinner" />Analysing premium data…</div>}
+              {cbpAIError && !cbpAILoading && <div className="onchain-ai-error">Unable to generate analysis</div>}
+              {cbpAI && !cbpAILoading && (
+                <>
+                  <p className="onchain-ai-summary">{cbpAI.summary}</p>
+                  <div className="onchain-ai-signals">
+                    {cbpAI.signals.map(sig => (
+                      <div key={sig.label} className="onchain-ai-signal">
+                        <div className="onchain-ai-signal-top">
+                          <span className={`onchain-ai-signal-indicator ${sig.bullish ? "onchain-ai-signal-indicator--bull" : "onchain-ai-signal-indicator--bear"}`}>{sig.bullish ? "↑" : "↓"}</span>
+                          <span className="onchain-ai-signal-metric">{sig.label}</span>
+                          <span className="onchain-ai-signal-value">{sig.value}</span>
+                        </div>
+                        <p className="onchain-ai-signal-text">{sig.interpretation}</p>
+                      </div>
+                    ))}
                   </div>
-                  <p className="onchain-ai-signal-text">{sig.interpretation}</p>
-                </div>
-              ))}
+                  <div className="onchain-ai-outlook">
+                    <span className="onchain-ai-outlook-label">Outlook</span>
+                    <p className="onchain-ai-outlook-text">{cbpAI.outlook}</p>
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="onchain-ai-outlook">
-              <span className="onchain-ai-outlook-label">Outlook</span>
-              <p className="onchain-ai-outlook-text">{ai.outlook}</p>
+            {/* BTC Network Analysis */}
+            <div className="onchain-ai-subsection">
+              <div className="onchain-ai-sub-title">
+                BTC Network
+                {ai && (() => {
+                  const h = HEALTH_CFG[ai.networkHealth];
+                  const a = ACTION_CFG[ai.action];
+                  return (
+                    <>
+                      <span className="onchain-ai-health-badge" style={{ color: h.color, background: h.bg }}>{t("onchain.networkStrength", { label: t(h.key) })}</span>
+                      <span className="onchain-ai-action-badge" style={{ color: a.color, background: a.bg }}>{t(a.key)}</span>
+                    </>
+                  );
+                })()}
+              </div>
+              {aiLoading && <div className="onchain-ai-loading"><span className="onchain-ai-spinner" />Analyzing network metrics…</div>}
+              {aiError && !aiLoading && <div className="onchain-ai-error">Unable to generate analysis</div>}
+              {ai && !aiLoading && (
+                <>
+                  <p className="onchain-ai-summary">{ai.summary}</p>
+                  <div className="onchain-ai-signals">
+                    {ai.signals.map(sig => (
+                      <div key={sig.metric} className="onchain-ai-signal">
+                        <div className="onchain-ai-signal-top">
+                          <span className={`onchain-ai-signal-indicator ${sig.bullish ? "onchain-ai-signal-indicator--bull" : "onchain-ai-signal-indicator--bear"}`}>{sig.bullish ? "↑" : "↓"}</span>
+                          <span className="onchain-ai-signal-metric">{sig.metric}</span>
+                          <span className="onchain-ai-signal-value">{sig.value}</span>
+                        </div>
+                        <p className="onchain-ai-signal-text">{sig.interpretation}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="onchain-ai-outlook">
+                    <span className="onchain-ai-outlook-label">Outlook</span>
+                    <p className="onchain-ai-outlook-text">{ai.outlook}</p>
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}

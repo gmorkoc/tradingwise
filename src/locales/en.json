@@ -379,7 +379,7 @@
       "requestsUsed": "{{used}} of {{limit}} requests used this week",
       "resetsOn": "Resets {{date}}",
       "upgradePro": "Upgrade to Pro",
-      "proHint": " for 35 AI requests/week, or Elite for unlimited.",
+      "proHint": " for 70 AI requests/week, or Elite for unlimited.",
       "upgradeElite": "Upgrade to Elite",
       "eliteHint": " for unlimited AI requests."
     },
@@ -481,7 +481,7 @@
         }
       ],
       "cta": "Unlock Pro — $30.99/mo",
-      "trust": "35 AI requests/week · Instant access"
+      "trust": "70 AI requests/week · Instant access"
     },
     "elite": {
       "headline": "The Full Institutional Toolkit",
@@ -624,7 +624,7 @@
           "On-Chain AI Analysis",
           "Price Prediction Chart",
           "Liquidation Heatmap AI",
-          "35 AI requests / week"
+          "70 AI requests / week"
         ]
       },
       "elite": {
@@ -702,7 +702,7 @@
       "onchain": "On-Chain AI Analysis",
       "predChart": "Price Prediction Chart",
       "liqHeatmap": "Liquidation Heatmap AI",
-      "aiReqs": "35 AI requests / week"
+      "aiReqs": "70 AI requests / week"
     }
   },
   "landing": {
@@ -849,7 +849,7 @@
             "On-Chain AI Analysis",
             "Price Prediction with scenarios",
             "Liquidation Heatmap AI",
-            "35 AI requests / week"
+            "70 AI requests / week"
           ]
         },
         {

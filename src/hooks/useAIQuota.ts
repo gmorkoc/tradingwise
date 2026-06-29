@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, Tier } from "../services/supabase";
 
-const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 35, elite: Infinity };
+const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 70, elite: Infinity };
 
 function getWeekKey(): string {
   const now  = new Date();

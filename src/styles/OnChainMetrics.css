@@ -116,6 +116,24 @@
 
 .onchain-ai-header { display: flex; flex-direction: column; gap: 6px; }
 
+.onchain-ai-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.onchain-ai-sub-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .onchain-ai-title-row {
   display: flex;
   align-items: center;

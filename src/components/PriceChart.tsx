@@ -24,8 +24,6 @@ import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools } from "./ChartDrawingTools";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { AIQuotaWall } from "./AIQuotaWall";
-import { useAuth } from "../contexts/AuthContext";
-import { hasAccess } from "../services/supabase";
 import "../styles/PriceChart.css";
 
 type TimeInterval =
@@ -986,8 +984,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, used, limit, consume, isPaid } = useAIQuota();
-  const { tier } = useAuth();
-  const isElite = hasAccess(tier, "elite");
   const isLight = theme === "light";
 
   const [interval, setInterval] = useState<TimeInterval>("1h");
@@ -1557,11 +1553,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             rsiSeriesRef.current.setData(rsiData);
           }
 
-          // RSI divergence detection + markers
+          // RSI divergence detection + markers (markers are Pro+ only)
           const div = detectRSIDivergence(data, rsiData);
           setDivergence(div);
           if (candleRef.current) {
-            const priceMarkers: SeriesMarker<number>[] = div
+            const priceMarkers: SeriesMarker<number>[] = (div && isPaid)
               ? div.pivots.map((p) => ({
                   time: p.time,
                   position:
@@ -2354,12 +2350,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </span>
                   </span>
                 )}
-                {divergence && (
+                {divergence && isPaid && (
                   <span className={`div-badge div-badge--${divergence.type}`}>
-                    {divergence.type === "bullish"
-                      ? "↑ Bull Div"
-                      : "↓ Bear Div"}
+                    {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
                   </span>
+                )}
+                {!isPaid && (
+                  <button
+                    className="zone-signal-gate"
+                    onClick={() => onOpenUpgrade?.("pro")}
+                  >
+                    <span className="zone-signal-live zone-signal-live--gate" />
+                    Unlock Divergence
+                  </button>
                 )}
               </div>
             </div>
@@ -2478,7 +2481,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           type="checkbox"
                           checked={showGann}
                           onChange={(e) => {
-                            if (!isElite) { onOpenUpgrade?.("elite"); return; }
+                            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
                             setShowGann(e.target.checked);
                           }}
                         />
@@ -2487,7 +2490,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           style={{ background: "#f97316" }}
                         />
                         <span>Gann Pivots</span>
-                        <span className="tier-badge tier-badge--elite">E</span>
+                        <span className="tier-badge tier-badge--pro">P</span>
                       </label>
                       <label className="indicators-menu-item">
                         <input
@@ -2735,8 +2738,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             used={used} limit={limit}
             onOpenUpgrade={onOpenUpgrade ?? (() => {})} onOpenAuth={onOpenAuth ?? (() => {})}
             planId="pro"
-            featureTitle="AI Interval Analysis"
-            featureDesc="Real-time interval sentiment, trend context & key level insights for every timeframe."
+            featureTitle="AI Chart Features"
+            featureDesc="Interval sentiment, pattern detection, trend context & next-move predictions."
           />
         )}
 
@@ -2869,15 +2872,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
 
-        {!loading && !isElite ? (
-          <AIQuotaWall
-            used={used} limit={limit}
-            onOpenUpgrade={onOpenUpgrade ?? (() => {})} onOpenAuth={onOpenAuth ?? (() => {})}
-            planId="elite"
-            featureTitle="AI Pattern Analysis"
-            featureDesc="Real-time pattern detection, narrative analysis & next-move predictions."
-          />
-        ) : !loading && exceeded ? (
+        {!loading && exceeded ? (
           <div className="pattern-insight pattern-insight--neutral">
             <div className="pattern-insight-header">
               <span className="pattern-insight-badge">

@@ -2,9 +2,10 @@ import { createChart, ColorType, HistogramSeries, LineSeries, IChartApi, ISeries
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getPremiumAIAnalysis, PremiumAIResult } from "../services/openai";
-import { AIQuotaWall } from "./AIQuotaWall";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/CoinbasePremium.css";
+
+export type { PremiumAIResult };
 
 const GRANULARITY = 3600;
 const POLL_MS     = 5_000;
@@ -100,22 +101,18 @@ function calcTrend(premiums: number[]): "rising" | "falling" | "flat" {
   return "flat";
 }
 
-const SENTIMENT_CFG = {
-  bullish: { color: "#22c55e", bg: "rgba(34,197,94,0.12)",   tKey: "common.bullish" },
-  neutral: { color: "#38bdf8", bg: "rgba(56,189,248,0.12)",  tKey: "common.neutral" },
-  bearish: { color: "#fb7185", bg: "rgba(251,113,133,0.12)", tKey: "common.bearish" },
-};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface OnChainMetricsProps {
   onOpenAuth?: () => void;
   onOpenUpgrade?: () => void;
+  onAIData?: (ai: PremiumAIResult | null, loading: boolean, error: boolean) => void;
 }
 
-export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {} }: OnChainMetricsProps) {
+export function CoinbasePremium({ onAIData }: OnChainMetricsProps) {
   const { t } = useTranslation();
-  const { exceeded, used, limit, consume } = useAIQuota();
+  const { exceeded, consume } = useAIQuota();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
@@ -130,9 +127,7 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
   const [histLoading, setHistLoading] = useState(true);
   const [liveError,   setLiveError]   = useState(false);
 
-  const [ai,        setAI]        = useState<PremiumAIResult | null>(null);
-  const [aiLoading, setAILoading] = useState(false);
-  const [aiError,   setAIError]   = useState(false);
+  const onAIDataRef = useRef(onAIData);
 
   // Create chart once
   useEffect(() => {
@@ -225,9 +220,13 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
     return () => clearInterval(id);
   }, []);
 
-  // Trigger AI once historical + live data are ready
+  // Trigger AI once historical + live data are ready — results passed up via onAIData
   useEffect(() => {
-    if (histLoading || current === null || cbPrice === null || ai || aiLoading || exceeded) return;
+    onAIDataRef.current = onAIData;
+  });
+
+  useEffect(() => {
+    if (histLoading || current === null || cbPrice === null || exceeded) return;
     if (!consume()) return;
 
     const pts      = histPointsRef.current;
@@ -239,13 +238,10 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
     const low7d  = Math.min(...premiums);
     const trend  = calcTrend(premiums);
 
-    setAILoading(true);
-    setAIError(false);
+    onAIDataRef.current?.(null, true, false);
     getPremiumAIAnalysis({ current, avg7d, high7d, low7d, trend, refSource, btcPrice: cbPrice })
       .then(result => {
-        if (result) setAI(result);
-        else setAIError(true);
-        setAILoading(false);
+        onAIDataRef.current?.(result, false, !result);
       });
   }, [histLoading, current]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -286,61 +282,6 @@ export function CoinbasePremium({ onOpenAuth = () => {}, onOpenUpgrade = () => {
         </div>
       )}
 
-      {/* ── AI Analysis ── */}
-      {!histLoading && (
-        <div className="cbp-ai">
-          <div className="cbp-ai-title-row">
-            <span className="cbp-ai-logo">✦</span>
-            <span className="cbp-ai-title">AI Analysis</span>
-            <span className="pattern-insight-ai-badge">✦ AI Powered</span>
-            {ai && (() => {
-              const s = SENTIMENT_CFG[ai.sentiment];
-              return <span className="cbp-ai-badge" style={{ color: s.color, background: s.bg }}>{t(s.tKey)}</span>;
-            })()}
-          </div>
-
-          {exceeded && (
-            <AIQuotaWall used={used} limit={limit} onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth} />
-          )}
-
-          {!exceeded && aiLoading && (
-            <div className="cbp-ai-loading">
-              <span className="cbp-ai-spinner" />
-              Analysing premium data…
-            </div>
-          )}
-
-          {!exceeded && aiError && !aiLoading && (
-            <div className="cbp-ai-error">Unable to generate AI analysis</div>
-          )}
-
-          {!exceeded && ai && !aiLoading && (
-            <>
-              <p className="cbp-ai-summary">{ai.summary}</p>
-
-              <div className="cbp-ai-signals">
-                {ai.signals.map(sig => (
-                  <div key={sig.label} className="cbp-ai-signal">
-                    <div className="cbp-ai-signal-top">
-                      <span className={`cbp-ai-signal-indicator ${sig.bullish ? "bull" : "bear"}`}>
-                        {sig.bullish ? "↑" : "↓"}
-                      </span>
-                      <span className="cbp-ai-signal-label">{sig.label}</span>
-                      <span className="cbp-ai-signal-value">{sig.value}</span>
-                    </div>
-                    <p className="cbp-ai-signal-text">{sig.interpretation}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="cbp-ai-outlook">
-                <span className="cbp-ai-outlook-label">Outlook</span>
-                <p className="cbp-ai-outlook-text">{ai.outlook}</p>
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }

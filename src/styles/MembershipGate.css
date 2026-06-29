@@ -476,11 +476,12 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
 }
 
 .bg-elite-card--pro {
+  background: linear-gradient(160deg, rgba(12, 24, 42, 0.97) 0%, rgba(8, 18, 34, 0.97) 100%);
   border-color: rgba(56, 189, 248, 0.22);
   box-shadow:
     0 32px 80px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255,255,255,0.04) inset,
-    0 0 60px rgba(14, 165, 233, 0.15);
+    0 0 60px rgba(14, 165, 233, 0.18);
 }
 
 /* top glow streak */
@@ -606,6 +607,11 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   border-color: rgba(167, 139, 250, 0.28);
 }
 
+.bg-elite-card--pro .bg-elite-feature:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
 .bg-elite-feat-icon {
   font-size: 1.1rem;
   line-height: 1;
@@ -729,6 +735,58 @@ html[data-theme="light"] .bg-elite-feat-desc {
 
 html[data-theme="light"] .bg-card-trust {
   color: rgba(100, 116, 139, 0.7);
+}
+
+/* ── BlurGate Pro card — light theme ────────────────────────────────────── */
+html[data-theme="light"] .bg-elite-card--pro {
+  background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 50%, #eff6ff 100%);
+  border-color: rgba(14, 165, 233, 0.2);
+  box-shadow:
+    0 24px 64px rgba(14, 165, 233, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(56, 189, 248, 0.15) inset;
+}
+
+html[data-theme="light"] .bg-elite-card--pro::before {
+  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.35), transparent);
+}
+
+html[data-theme="light"] .bg-elite-badge--pro {
+  color: #0369a1;
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-price {
+  color: #0c4a6e;
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-headline h3 {
+  color: #0c4a6e;
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-headline p {
+  color: #475569;
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-feature {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(14, 165, 233, 0.12);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-feature:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(14, 165, 233, 0.3);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-feat-title {
+  color: #1e293b;
+}
+
+html[data-theme="light"] .bg-elite-card--pro .bg-elite-feat-desc {
+  color: #64748b;
 }
 
 /* ── Inline proration confirm ────────────────────────────────────────────── */

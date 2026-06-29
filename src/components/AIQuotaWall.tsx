@@ -23,7 +23,7 @@ const PLANS = [
     color: "#38bdf8",
     popular: true,
     priceId: () => PRICE_IDS.pro,
-    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "35 AI requests / week"],
+    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "70 AI requests / week"],
   },
   {
     id: "elite",

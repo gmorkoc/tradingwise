@@ -1409,6 +1409,10 @@ body {
   opacity: 0;
   transition: opacity 0.15s ease;
 }
+.icon-strip-elite-badge.nav-badge--pro {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);
+}
 
 @media (min-width: 641px) {
   .icon-strip:hover .icon-strip-elite-badge,
