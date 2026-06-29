@@ -1335,7 +1335,7 @@ function AppDashboard({
                       <polyline points="58,20 62,24 58,28" />
                     </svg>
                   </div>
-                  <OrderBook coin={coin} />
+                  <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                 </div>
               </>
             )}

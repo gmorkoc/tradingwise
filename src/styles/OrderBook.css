@@ -86,6 +86,11 @@
   color: var(--color-accent, #3b82f6);
 }
 
+.ob-filter-btn--locked {
+  opacity: 0.7;
+}
+
+
 .ob-loading {
   flex: 1;
   display: flex;

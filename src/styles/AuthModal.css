@@ -276,6 +276,17 @@
   color: #f59e0b !important;
 }
 
+.auth-disclaimer-section {
+  font-size: 0.69rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text) !important;
+  opacity: 0.55;
+  margin-top: 10px !important;
+  margin-bottom: 2px !important;
+}
+
 .auth-terms-check {
   display: flex;
   align-items: flex-start;

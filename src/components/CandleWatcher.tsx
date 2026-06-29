@@ -2431,7 +2431,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const secondsAgo = refreshedAt ? Math.floor((Date.now() - refreshedAt.getTime()) / 1000) : null;
 
   return (
-    <BlurGate requiredTier="elite" featureName="Candle AI" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade}>
+    <BlurGate requiredTier="elite" featureName="Candle AI" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
       <div className="cw-page">
 
         {/* ── Header ── */}

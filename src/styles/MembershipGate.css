@@ -249,6 +249,14 @@ html[data-theme="light"] .mg-feature-card {
   opacity: 0.45;
 }
 
+.bg-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+}
+
 .bg-overlay {
   position: absolute;
   inset: 0;
@@ -256,6 +264,11 @@ html[data-theme="light"] .mg-feature-card {
   align-items: center;
   justify-content: center;
   z-index: 10;
+}
+
+.bg-root--top .bg-overlay {
+  align-items: flex-start;
+  padding-top: 24px;
 }
 
 .bg-card {
@@ -462,6 +475,14 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   overflow: hidden;
 }
 
+.bg-elite-card--pro {
+  border-color: rgba(56, 189, 248, 0.22);
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 0 60px rgba(14, 165, 233, 0.15);
+}
+
 /* top glow streak */
 .bg-elite-card::before {
   content: "";
@@ -471,6 +492,10 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   width: 60%;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(167,139,250,0.7), transparent);
+}
+
+.bg-elite-card--pro::before {
+  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.7), transparent);
 }
 
 /* ── Top bar: badge + price ──────────────────────────────────────────────── */
@@ -492,6 +517,12 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   border: 1px solid rgba(167, 139, 250, 0.4);
   border-radius: 999px;
   padding: 6px 16px;
+}
+
+.bg-elite-badge--pro {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
 }
 
 .bg-elite-price-wrap {
@@ -625,6 +656,16 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
 .bg-elite-cta:active { transform: scale(0.98); }
 .bg-elite-cta:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+.bg-elite-cta--pro {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(135deg, rgba(56,189,248,0.8), rgba(14,165,233,0.5));
+  box-shadow: 0 6px 28px rgba(14, 165, 233, 0.5), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.bg-elite-cta--pro:hover {
+  box-shadow: 0 12px 40px rgba(14, 165, 233, 0.6), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
 /* ── BlurGate Elite card — light theme ──────────────────────────────────── */
 html[data-theme="light"] .bg-elite-card {
   background: linear-gradient(160deg, #faf5ff 0%, #f3f0ff 50%, #eff6ff 100%);
@@ -689,6 +730,63 @@ html[data-theme="light"] .bg-elite-feat-desc {
 html[data-theme="light"] .bg-card-trust {
   color: rgba(100, 116, 139, 0.7);
 }
+
+/* ── Inline proration confirm ────────────────────────────────────────────── */
+.bg-proration {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bg-proration-body {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.bg-proration-body strong { color: #e2e8f0; }
+
+.bg-proration-back {
+  background: none;
+  border: none;
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.bg-proration-back:hover { color: rgba(148, 163, 184, 0.9); }
+.bg-proration-back:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.bg-proration-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.bg-proration-check {
+  font-size: 2.4rem;
+  color: #4ade80;
+}
+
+.bg-proration-success p {
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.85);
+  margin: 0;
+}
+
+.bg-proration-success strong { color: #a78bfa; }
+
+html[data-theme="light"] .bg-proration-body { color: #334155; }
+html[data-theme="light"] .bg-proration-body strong { color: #1e293b; }
+html[data-theme="light"] .bg-proration-back { color: #94a3b8; }
+html[data-theme="light"] .bg-proration-success p { color: #334155; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 540px) {

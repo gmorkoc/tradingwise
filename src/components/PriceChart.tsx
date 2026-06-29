@@ -76,6 +76,22 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "all": "ALL (full history)",
 };
 
+const INTERVAL_SHORT: Record<TimeInterval, string> = {
+  "1sec": "1s",
+  "1min": "1m",
+  "5min": "5m",
+  "15min": "15m",
+  "1h": "1H",
+  "4h": "4H",
+  "6h": "6H",
+  "1day": "1D",
+  "1week": "1W",
+  "all": "ALL",
+};
+
+// Intervals that require at least Pro
+const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
+
 const FIB_LEVELS = [
   { ratio: 0, label: "0", color: "rgba(251,191,36,0.85)" },
   { ratio: 0.236, label: "0.236", color: "rgba(167,139,250,0.85)" },
@@ -2461,25 +2477,33 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <input
                           type="checkbox"
                           checked={showGann}
-                          onChange={(e) => setShowGann(e.target.checked)}
+                          onChange={(e) => {
+                            if (!isElite) { onOpenUpgrade?.("elite"); return; }
+                            setShowGann(e.target.checked);
+                          }}
                         />
                         <span
                           className="indicators-menu-dot"
                           style={{ background: "#f97316" }}
                         />
                         <span>Gann Pivots</span>
+                        <span className="tier-badge tier-badge--elite">E</span>
                       </label>
                       <label className="indicators-menu-item">
                         <input
                           type="checkbox"
                           checked={showFib}
-                          onChange={(e) => setShowFib(e.target.checked)}
+                          onChange={(e) => {
+                            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                            setShowFib(e.target.checked);
+                          }}
                         />
                         <span
                           className="indicators-menu-dot"
                           style={{ background: "rgba(251,191,36,0.85)" }}
                         />
                         <span>Fibonacci Levels</span>
+                        <span className="tier-badge tier-badge--pro">P</span>
                       </label>
                       <div className="indicators-menu-divider" />
                       <div className="indicators-menu-group-label">
@@ -2512,24 +2536,55 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </div>
                   )}
                 </div>
+                {/* Desktop: fancy pill buttons */}
+                <div className="interval-pills">
+                  {INTERVALS.map((opt) => {
+                    const needsPro = PRO_INTERVALS.has(opt);
+                    const locked   = needsPro && !isPaid;
+                    const trend    = trends[opt];
+                    return (
+                      <button
+                        key={opt}
+                        className={`interval-pill${interval === opt ? " interval-pill--active" : ""}${locked ? " interval-pill--locked" : ""}`}
+                        title={INTERVAL_LABELS[opt]}
+                        onClick={() => {
+                          if (locked) { onOpenUpgrade?.("pro"); return; }
+                          setInterval(opt);
+                        }}
+                      >
+                        {INTERVAL_SHORT[opt]}
+                        {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                          : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                          : null}
+                        {needsPro && (
+                          <span className="tier-badge tier-badge--pro">P</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile: native dropdown */}
                 <select
-                  className="interval-select"
+                  className="interval-select interval-select--mobile"
                   value={interval}
                   onChange={(e) => {
-                    if (e.target.value === "all" && !isPaid) { onOpenUpgrade?.("pro"); return; }
-                    setInterval(e.target.value as TimeInterval);
+                    const val = e.target.value as TimeInterval;
+                    if (PRO_INTERVALS.has(val) && !isPaid) { onOpenUpgrade?.("pro"); return; }
+                    setInterval(val);
                   }}
                 >
-                  {INTERVALS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {INTERVAL_LABELS[opt]}
-                      {trends[opt] === "bullish"
-                        ? " ↑"
-                        : trends[opt] === "bearish"
-                          ? " ↓"
-                          : ""}
-                    </option>
-                  ))}
+                  {INTERVALS.map((opt) => {
+                    const needsPro = PRO_INTERVALS.has(opt);
+                    const trend    = trends[opt];
+                    const arrow    = trend === "bullish" ? " ↑" : trend === "bearish" ? " ↓" : "";
+                    const pro      = needsPro ? " · PRO" : "";
+                    return (
+                      <option key={opt} value={opt}>
+                        {INTERVAL_LABELS[opt]}{arrow}{pro}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>

@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CoinSymbol } from "../services/coinglass";
+import { useAuth } from "../contexts/AuthContext";
+import { hasAccess } from "../services/supabase";
 import "../styles/OrderBook.css";
 
 interface OrderBookProps {
   coin: CoinSymbol;
   onHide?: () => void;
+  onOpenUpgrade?: () => void;
 }
 
 interface Level {
@@ -133,7 +136,9 @@ function fmtUsd(v: number): string {
   return `$${v.toFixed(0)}`;
 }
 
-export function OrderBook({ coin, onHide }: OrderBookProps) {
+export function OrderBook({ coin, onHide, onOpenUpgrade }: OrderBookProps) {
+  const { tier } = useAuth();
+  const isPaid = hasAccess(tier, "pro");
   const { t } = useTranslation();
   const [exchange, setExchange] = useState<Exchange>("Binance");
   const [minUsd, setMinUsd] = useState(0);
@@ -204,15 +209,22 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
       </div>
 
       <div className="ob-filter-row">
-        {SIZE_FILTERS.map(f => (
-          <button
-            key={f.value}
-            className={`ob-filter-btn${minUsd === f.value ? " active" : ""}`}
-            onClick={() => setMinUsd(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
+        {SIZE_FILTERS.map(f => {
+          const locked = f.value >= 50_000 && !isPaid;
+          return (
+            <button
+              key={f.value}
+              className={`ob-filter-btn${minUsd === f.value ? " active" : ""}${locked ? " ob-filter-btn--locked" : ""}`}
+              onClick={() => {
+                if (locked) { onOpenUpgrade?.(); return; }
+                setMinUsd(f.value);
+              }}
+            >
+              {f.label}
+              {f.value >= 50_000 && <span className="tier-badge tier-badge--pro">P</span>}
+            </button>
+          );
+        })}
       </div>
 
       {loading && <div className="ob-loading">{t("orderBook.loading")}</div>}
