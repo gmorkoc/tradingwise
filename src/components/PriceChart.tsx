@@ -2768,7 +2768,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className="cap-overlay-btn"
                 onClick={() => onOpenUpgrade?.("pro")}
               >
-                Upgrade Now
+                <span className="cap-btn-full">Upgrade Now</span>
+                <span className="cap-btn-short">Upgrade</span>
               </button>
             </div>
           </div>
@@ -2939,7 +2940,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className="cap-overlay-btn"
                 onClick={() => onOpenUpgrade?.("pro")}
               >
-                Upgrade Now
+                <span className="cap-btn-full">Upgrade Now</span>
+                <span className="cap-btn-short">Upgrade</span>
               </button>
             </div>
           </div>

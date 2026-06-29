@@ -379,6 +379,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   background: none;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
   transition: opacity 0.15s;
 }
 .zone-signal-gate:hover {
@@ -879,6 +880,9 @@ html[data-theme="light"] .cap-overlay-feature {
   box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
 }
 
+.cap-btn-short { display: none; }
+.cap-btn-full  { display: inline; }
+
 .chart-ai-placeholder-header {
   display: flex;
   align-items: center;
@@ -1028,11 +1032,78 @@ html[data-theme="light"] .cap-overlay-feature {
     padding: 3px 6px;
   }
 
+  .zone-signal-gate {
+    white-space: nowrap;
+    font-size: 0.65rem;
+  }
+
   .predict-btn,
   .predict-clear-btn {
     font-size: 0.72rem;
     padding: 5px 10px;
   }
+
+  /* AI placeholder — preview becomes absolute backdrop, overlay in normal flow */
+  .chart-ai-placeholder {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-ai-placeholder-preview {
+    position: absolute;
+    inset: 0;
+    padding: 12px 12px 10px;
+    min-height: unset;
+  }
+
+  .chart-ai-placeholder-overlay {
+    position: relative;
+    z-index: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cap-overlay-left {
+    gap: 3px;
+    width: 100%;
+  }
+
+  .cap-overlay-header {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .cap-overlay-title {
+    font-size: 0.7rem;
+  }
+
+  .cap-overlay-ai-badge,
+  .cap-overlay-tier-badge {
+    font-size: 0.57rem;
+  }
+
+  .cap-overlay-features {
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+
+  .cap-overlay-feature {
+    font-size: 0.62rem;
+  }
+
+  .cap-overlay-btn {
+    padding: 5px 14px;
+    font-size: 0.68rem;
+    align-self: flex-end;
+  }
+
+  .cap-btn-full { display: none; }
+  .cap-btn-short { display: inline; }
 }
 
 /* ── Indicators toggle + menu ────────────────────────────────────────── */
