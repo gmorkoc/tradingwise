@@ -131,8 +131,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
     if (!input.trim() && !images.length) return;
     if (!hasPro) { onOpenUpgrade?.(); return; }
 
-    // Gate quota BEFORE touching UI state
-    if (exceeded || !consume()) {
+    // Gate quota BEFORE touching UI state — await to catch DB write failures
+    if (exceeded || !(await consume())) {
       setError(t("chat.quotaExceeded", "Weekly AI limit reached. Upgrade to Elite for unlimited access."));
       return;
     }

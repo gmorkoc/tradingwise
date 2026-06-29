@@ -141,7 +141,7 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
         setUpdatedAt(new Date());
         setIsStale(false);
         writeCache(ONCHAIN_CACHE_KEY, d);
-        if (!exceeded && consume()) {
+        if (!exceeded && (await consume())) {
           setAILoading(true);
           setAIError(false);
           const result = await getOnChainAIAnalysis(d);

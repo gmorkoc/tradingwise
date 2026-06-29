@@ -1005,7 +1005,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showMA50, setShowMA50] = useState(false);
   const [showMA200, setShowMA200] = useState(false);
   const [showGann, setShowGann] = useState(false);
-  const [showFib, setShowFib] = useState(true);
+  const [showFib, setShowFib] = useState(false);
+  const fibDefaultSet = useRef(false);
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCME, setShowCME] = useState(true);
@@ -1032,6 +1033,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#0f172a";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
+
+  // Set Fib default to true only for Pro+ users, once tier is known
+  useEffect(() => {
+    if (fibDefaultSet.current) return;
+    fibDefaultSet.current = true;
+    if (isPaid) setShowFib(true);
+  }, [isPaid]);
 
   useEffect(() => {
     const onChange = () => {
@@ -1445,29 +1453,34 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             if (pl) priceLineRefs.current.push(pl);
           }
 
-          // Buy/sell zone lines
-          const zones = calcBuySellZones(data);
+          // Buy/sell zone lines — Pro+ only (never expose data or chart lines to free users)
           const lastPrice = data[data.length - 1].close;
-          setZone(zones);
-          onZoneChange?.(zones, lastPrice);
-          if (zones) {
-            const zoneLines: [number, string, string][] = [
-              [zones.buyZone.upper, "rgba(34,197,94,0.5)", "Buy Zone ▲"],
-              [zones.buyZone.lower, "rgba(34,197,94,0.5)", "Buy Zone ▼"],
-              [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
-              [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
-            ];
-            for (const [price, color, title] of zoneLines) {
-              const pl = candleRef.current?.createPriceLine({
-                price,
-                color,
-                title,
-                lineWidth: 1,
-                lineStyle: 3,
-                axisLabelVisible: true,
-              });
-              if (pl) priceLineRefs.current.push(pl);
+          if (isPaid) {
+            const zones = calcBuySellZones(data);
+            setZone(zones);
+            onZoneChange?.(zones, lastPrice);
+            if (zones) {
+              const zoneLines: [number, string, string][] = [
+                [zones.buyZone.upper, "rgba(34,197,94,0.5)", "Buy Zone ▲"],
+                [zones.buyZone.lower, "rgba(34,197,94,0.5)", "Buy Zone ▼"],
+                [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
+                [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
+              ];
+              for (const [price, color, title] of zoneLines) {
+                const pl = candleRef.current?.createPriceLine({
+                  price,
+                  color,
+                  title,
+                  lineWidth: 1,
+                  lineStyle: 3,
+                  axisLabelVisible: true,
+                });
+                if (pl) priceLineRefs.current.push(pl);
+              }
             }
+          } else {
+            setZone(null);
+            onZoneChange?.(null, lastPrice);
           }
 
           // 24H high / low price lines
@@ -1530,12 +1543,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             cached ?? trendAwarePattern(data, newBanner?.sentiment ?? null),
           );
           // Only call AI if quota allows
-          if (!exceeded && consume()) {
-            getCandlePatternAnalysis(coin, interval, data).then((res) => {
-              if (res.success && res.result) {
-                setPatternInsight(res.result);
-                writePatternCache(coin, interval, res.result);
-              }
+          if (!exceeded) {
+            consume().then((ok) => {
+              if (!ok) return;
+              getCandlePatternAnalysis(coin, interval, data).then((res) => {
+                if (res.success && res.result) {
+                  setPatternInsight(res.result);
+                  writePatternCache(coin, interval, res.result);
+                }
+              });
             });
           }
 
@@ -1553,8 +1569,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             rsiSeriesRef.current.setData(rsiData);
           }
 
-          // RSI divergence detection + markers (markers are Pro+ only)
-          const div = detectRSIDivergence(data, rsiData);
+          // RSI divergence — Pro+ only (never compute or store for free users)
+          const div = isPaid ? detectRSIDivergence(data, rsiData) : null;
           setDivergence(div);
           if (candleRef.current) {
             const priceMarkers: SeriesMarker<number>[] = (div && isPaid)

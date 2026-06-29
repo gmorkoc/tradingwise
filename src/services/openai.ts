@@ -1,5 +1,6 @@
 import { BTCData } from './coinglass';
 import { FearGreedData } from './feargreed';
+import { supabase } from './supabase';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -44,14 +45,18 @@ export interface ScenarioItem {
 }
 
 async function callOpenAI(body: object): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+
   const res = await fetch("/api/openai", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `OpenAI proxy error ${res.status}`);
+    throw new Error(err?.error || err?.error?.message || `OpenAI proxy error ${res.status}`);
   }
   return res.json();
 }

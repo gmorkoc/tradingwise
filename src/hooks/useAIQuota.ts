@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, Tier } from "../services/supabase";
 
@@ -17,8 +17,10 @@ export function useAIQuota() {
   const { tier, profile } = useAuth();
   const [localUsed, setLocalUsed] = useState<number | null>(null);
 
-  const limit      = TIER_LIMITS[tier] ?? 5;
-  const weekKey    = getWeekKey();
+  // Memoize weekKey so it doesn't recreate consume() on every render
+  const weekKey = useMemo(() => getWeekKey(), []);
+
+  const limit       = TIER_LIMITS[tier] ?? 5;
   const profileUsed = (profile?.ai_requests_week === weekKey)
     ? (profile?.ai_requests_used ?? 0)
     : 0;
@@ -33,26 +35,29 @@ export function useAIQuota() {
     setLocalUsed(null);
   }, [profile?.ai_requests_used, profile?.ai_requests_week]);
 
-  const consume = useCallback((): boolean => {
+  const consume = useCallback(async (): Promise<boolean> => {
     const current = localUsed ?? profileUsed;
-    // Elite limit is Infinity so this check never blocks them, but tracking still runs
+    // Elite: Infinity limit, never blocked — but still tracks usage
     if (current >= limit) return false;
 
     const next = current + 1;
-    setLocalUsed(next);
+    setLocalUsed(next); // Optimistic increment
 
     if (profile?.id) {
-      supabase
+      const { error } = await supabase
         .from("profiles")
         .update({ ai_requests_used: next, ai_requests_week: weekKey })
-        .eq("id", profile.id)
-        .then(({ error }) => {
-          if (error) console.error("AI quota sync failed:", error.message);
-        });
+        .eq("id", profile.id);
+
+      if (error) {
+        console.error("AI quota sync failed:", error.message);
+        setLocalUsed(current); // Rollback on failure
+        return false;
+      }
     }
 
     return true;
-  }, [tier, localUsed, profileUsed, limit, weekKey, profile]);
+  }, [localUsed, profileUsed, limit, weekKey, profile]);
 
   return { exceeded, remaining, used, limit, consume, isPaid };
 }
