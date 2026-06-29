@@ -23,7 +23,6 @@ import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools } from "./ChartDrawingTools";
 import { useAIQuota } from "../hooks/useAIQuota";
-import { AIQuotaWall } from "./AIQuotaWall";
 import "../styles/PriceChart.css";
 
 type TimeInterval =
@@ -979,11 +978,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   theme = "dark",
   coin = "BTC",
   onZoneChange,
-  onOpenAuth = () => {},
   onOpenUpgrade = () => {},
 }) => {
   const { t, i18n } = useTranslation();
-  const { exceeded, used, limit, consume, isPaid } = useAIQuota();
+  const { exceeded, consume, isPaid } = useAIQuota();
   const isLight = theme === "light";
 
   const [interval, setInterval] = useState<TimeInterval>("1h");
@@ -2960,23 +2958,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="cap-btn-short">Upgrade</span>
               </button>
             </div>
-          </div>
-        ) : !loading && exceeded ? (
-          <div className="pattern-insight pattern-insight--neutral">
-            <div className="pattern-insight-header">
-              <span className="pattern-insight-badge">
-                {t("chart.aiPatternBadge")}
-              </span>
-              <span className="pattern-insight-label">
-                {t("chart.currentPattern")}
-              </span>
-            </div>
-            <AIQuotaWall
-              used={used}
-              limit={limit}
-              onOpenUpgrade={onOpenUpgrade}
-              onOpenAuth={onOpenAuth}
-            />
           </div>
         ) : !loading && patternInsight ? (
           <div
