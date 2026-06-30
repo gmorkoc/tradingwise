@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const stripeKey      = process.env.STRIPE_SECRET_KEY ?? "";
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return res.status(500).json({ error: `Missing env vars: url=${!!supabaseUrl} anon=${!!anonKey} srk=${!!serviceRoleKey}` });
+    return res.status(500).json({ error: "Server misconfigured" });
   }
 
   const authHeader = (req.headers["authorization"] ?? "") as string;
@@ -75,12 +75,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (!deleteRes.ok) {
-      const body = await deleteRes.text();
-      return res.status(500).json({ error: `Supabase error: ${body}` });
+      return res.status(500).json({ error: "Account deletion failed" });
     }
 
     return res.status(200).json({ success: true });
-  } catch (e: any) {
-    return res.status(500).json({ error: String(e?.message ?? e) });
+  } catch {
+    return res.status(500).json({ error: "Account deletion failed" });
   }
 }

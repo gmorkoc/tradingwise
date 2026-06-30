@@ -34,6 +34,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({ results });
   } catch (e) {
-    return res.status(502).json({ error: "Funding data fetch failed", detail: String(e) });
+    return res.status(502).json({ error: "Funding data fetch failed" });
   }
 }
