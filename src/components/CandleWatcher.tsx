@@ -2701,22 +2701,29 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </button>
               )}
 
-              {/* ── Elliott Wave toggle ── */}
-              {elliottResult && elliottResult.pattern !== "none" && (
-                <button
-                  className={`cw-elliott-btn${showElliott ? " cw-elliott-btn--active" : ""}`}
-                  onClick={toggleElliott}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
-                  {showElliott ? "✕ Hide Elliott Wave" : "〜 Elliott Wave"}
-                  <span className="cw-elliott-btn-badge">Wave {elliottResult.currentWave}</span>
-                </button>
-              )}
-              {elliottResult && (
-                <p className="cw-elliott-hint">
-                  Best on <strong>4H · Daily · Weekly</strong> — noisy below 1H
-                </p>
-              )}
+              {/* ── Elliott Wave toggle — always visible for Elite once candles load ── */}
+              {elliottResult && (() => {
+                const hasPattern = elliottResult.pattern !== "none";
+                return (
+                  <>
+                    <button
+                      className={`cw-elliott-btn${showElliott && hasPattern ? " cw-elliott-btn--active" : ""}${!hasPattern ? " cw-elliott-btn--unavailable" : ""}`}
+                      onClick={hasPattern ? toggleElliott : undefined}
+                      title={!hasPattern ? "No wave pattern detected — try 4H, Daily or Weekly" : undefined}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
+                      {showElliott && hasPattern ? "✕ Hide Elliott Wave" : "〜 Elliott Wave"}
+                      {hasPattern
+                        ? <span className="cw-elliott-btn-badge">Wave {elliottResult.currentWave}</span>
+                        : <span className="cw-elliott-btn-badge cw-elliott-btn-badge--none">No pattern</span>
+                      }
+                    </button>
+                    <p className="cw-elliott-hint">
+                      Best on <strong>4H · Daily · Weekly</strong> — noisy below 1H
+                    </p>
+                  </>
+                );
+              })()}
 
               {/* ── Elliott Wave Analysis Narrative ── */}
               {elliottResult && elliottResult.pattern !== "none" && (() => {
