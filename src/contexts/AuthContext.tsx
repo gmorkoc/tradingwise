@@ -62,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: `${window.location.origin}/`,
       },
     });
+    if (!error) {
+      supabase.functions.invoke("notify-admin", { body: { event: "signup", email } }).catch(() => {});
+    }
     return error?.message ?? null;
   };
 

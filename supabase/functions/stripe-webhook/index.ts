@@ -25,6 +25,21 @@ async function updateProfileByCustomer(customerId: string, fields: Record<string
     .eq("stripe_customer_id", customerId);
 }
 
+async function notifyAdmin(payload: { event: "signup" | "purchase"; email: string; tier?: string }) {
+  try {
+    await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("notifyAdmin failed:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   const body = await req.text();
   const sig  = req.headers.get("stripe-signature") ?? "";
@@ -54,6 +69,9 @@ Deno.serve(async (req) => {
       };
       if (tier) fields.tier = tier;
       await updateProfileByCustomer(customerId(session), fields);
+      if (tier && session.customer_details?.email) {
+        await notifyAdmin({ event: "purchase", email: session.customer_details.email, tier });
+      }
       break;
     }
 
