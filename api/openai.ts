@@ -46,24 +46,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Session verification failed" });
   }
 
-  // ── 3. Fetch profile and check tier ──────────────────────────────────────
+  // ── 3. Fetch profile tier ────────────────────────────────────────────────
   let tier = "free";
-  let profileUsed = 0;
-  let profileWeek: string | null = null;
-
   if (serviceKey) {
     try {
       const profileRes = await fetch(
-        `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=tier,ai_requests_used,ai_requests_week`,
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=tier`,
         { headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey } }
       );
       if (profileRes.ok) {
         const [profile] = await profileRes.json();
-        if (profile) {
-          tier        = profile.tier        ?? "free";
-          profileUsed = profile.ai_requests_used  ?? 0;
-          profileWeek = profile.ai_requests_week  ?? null;
-        }
+        if (profile) tier = profile.tier ?? "free";
       }
     } catch { /* fallback to free */ }
   }
@@ -72,14 +65,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (tier === "free")
     return res.status(403).json({ error: "Pro subscription required for AI features" });
 
-  // ── 5. Quota gate (Elite unlimited) ──────────────────────────────────────
-  const dayKey = getDayKey();
-  let usedToday = 0;
+  // ── 5. Atomic quota check + increment (Pro only, Elite unlimited) ─────────
   if (tier !== "elite") {
+    if (!serviceKey)
+      return res.status(500).json({ error: "Server misconfigured" });
+
     const limit = TIER_LIMITS[tier] ?? 0;
-    usedToday   = profileWeek === dayKey ? profileUsed : 0;
-    if (usedToday >= limit)
-      return res.status(429).json({ error: "Daily AI quota exceeded. Upgrade to Elite for unlimited access." });
+    try {
+      const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/try_increment_ai_quota`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_user_id: userId, p_day_key: getDayKey(), p_limit: limit }),
+      });
+      const allowed = await rpcRes.json();
+      if (!allowed)
+        return res.status(429).json({ error: "Daily AI quota exceeded. Upgrade to Elite for unlimited access." });
+    } catch {
+      return res.status(500).json({ error: "Quota check failed" });
+    }
   }
 
   // ── 6. Forward to OpenAI ─────────────────────────────────────────────────
@@ -93,25 +100,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify(req.body),
     });
     const data = await upstream.json();
-
-    // ── 7. Increment quota server-side (Pro only) ─────────────────────────
-    if (upstream.ok && tier !== "elite" && serviceKey) {
-      const nextUsed = usedToday + 1;
-      fetch(
-        `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${serviceKey}`,
-            apikey: serviceKey,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
-          },
-          body: JSON.stringify({ ai_requests_used: nextUsed, ai_requests_week: dayKey }),
-        }
-      ).catch(() => {});
-    }
-
     res.status(upstream.status).json(data);
   } catch {
     res.status(502).json({ error: "OpenAI request failed" });
