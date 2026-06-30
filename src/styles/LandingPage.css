@@ -59,6 +59,7 @@
   border-radius: 9px;
   font-size: 0.85rem; font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: border-color 0.15s, color 0.15s;
 }
 .lp-btn-ghost:hover { border-color: var(--color-text-secondary); color: var(--color-text); }
@@ -69,6 +70,7 @@
   padding: 7px 18px;
   border-radius: 9px;
   font-size: 0.85rem; font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   transition: opacity 0.15s, transform 0.1s;
 }
@@ -596,6 +598,9 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 @media (max-width: 768px) {
   .lp-nav { padding: 0 16px; }
   .lp-nav-logo span { display: none; }
+  .lp-nav-actions { gap: 6px; }
+  .lp-nav-actions .lp-btn-ghost  { padding: 6px 10px; font-size: 0.75rem; }
+  .lp-nav-actions .lp-btn-primary { padding: 6px 12px; font-size: 0.75rem; }
 
   /* Hero: keep overlay layout, extend gradient so chart only shows at bottom */
   .lp-hero-card { min-height: 580px; }
