@@ -62,6 +62,19 @@ html[data-theme="light"] body {
   justify-content: center;
 }
 
+.app-boot-screen .st-logo {
+  gap: 12px;
+}
+
+.app-boot-screen .st-logo-icon {
+  width: 72px;
+  height: 72px;
+}
+
+.app-boot-screen .st-logo-wordmark {
+  font-size: 32px;
+}
+
 html,
 body {
   margin: 0;

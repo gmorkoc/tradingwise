@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
 import "../styles/WhaleAlerts.css";
 
-const DISMISS_MS = 2_000;
+const DISMISS_MS = 4_000;
 
 function playWhaleSound() {
   try {
@@ -62,6 +62,9 @@ export function WhaleAlerts({ btcPrice }: Props) {
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
+  const queueRef = useRef<WhaleTx[]>([]);
+  const processingRef = useRef(false);
+
   const toggleMute = useCallback(() => {
     setMuted(m => {
       const next = !m;
@@ -74,13 +77,24 @@ export function WhaleAlerts({ btcPrice }: Props) {
     setAlerts(prev => prev.filter(a => a.id !== id));
   }, []);
 
+  const processNext = useCallback(() => {
+    const tx = queueRef.current.shift();
+    if (!tx) { processingRef.current = false; return; }
+    if (!mutedRef.current) playWhaleSound();
+    setAlerts(prev => [tx, ...prev].slice(0, 4));
+    setTimeout(() => dismiss(tx.id), DISMISS_MS);
+    setTimeout(processNext, 2_000);
+  }, [dismiss]);
+
   useEffect(() => {
     return subscribeWhaleAlerts(tx => {
-      if (!mutedRef.current) playWhaleSound();
-      setAlerts(prev => [tx, ...prev].slice(0, 3));
-      setTimeout(() => dismiss(tx.id), DISMISS_MS);
+      queueRef.current.push(tx);
+      if (!processingRef.current) {
+        processingRef.current = true;
+        processNext();
+      }
     });
-  }, [dismiss]);
+  }, [processNext]);
 
   if (!alerts.length) return null;
 

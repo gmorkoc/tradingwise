@@ -1871,6 +1871,11 @@ function AppDashboard({
 /* ── Auth gate — decides what to render based on auth state ── */
 function AppGate() {
   const { user, profile, profileLoading, loading: authLoading, refreshProfile } = useAuth();
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimeElapsed(true), 1000);
+    return () => clearTimeout(t);
+  }, []);
   const [showAuth, setShowAuth] = useState(false);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -1915,7 +1920,7 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading || (user && profileLoading))
+  if (authLoading || (user && profileLoading) || (user && !minTimeElapsed))
     return (
       <div className="app-boot-screen">
         <CoinHintzLogo loading={true} />

@@ -2568,9 +2568,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
                           : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
                           : null}
-                        {needsPro && (
-                          <span className="tier-badge tier-badge--pro">P</span>
-                        )}
                       </button>
                     );
                   })}

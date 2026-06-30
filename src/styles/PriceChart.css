@@ -607,6 +607,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .interval-pill-trend--down { color: #f87171; }
 
 
+
 /* light theme */
 html[data-theme="light"] .interval-pills {
   background: rgba(0, 0, 0, 0.025);
