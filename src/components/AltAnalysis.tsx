@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, CandlestickSeries } from "lightweight-charts";
-import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchFundingRate, CandleDataPoint } from "../services/coinglass";
+import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchCoinChanges24h, fetchFundingRate, CandleDataPoint, CoinSnapshot } from "../services/coinglass";
 import { getAltPricePrediction, AltPricePrediction } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { useAuth } from "../contexts/AuthContext";
@@ -83,6 +83,7 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   const [analysis, setAnalysis]   = useState<AltPricePrediction | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError]     = useState("");
+  const [allChanges, setAllChanges] = useState<Map<string, CoinSnapshot>>(new Map());
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef          = useRef<IChartApi | null>(null);
@@ -153,6 +154,11 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
     setFundingRate(null);
     fetchFundingRate(coin.symbol).then(setFundingRate).catch(() => {});
   }, [coin.symbol]);
+
+  // All-coin 24h changes for winners/losers (CoinGecko, same call as market caps)
+  useEffect(() => {
+    fetchCoinChanges24h().then(setAllChanges).catch(() => {});
+  }, []);
 
   // Build/update chart
   useEffect(() => {
@@ -392,6 +398,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   };
 
   const isUp = change24h >= 0;
+
+  const sortedByChange = COINS
+    .filter(c => allChanges.has(c.symbol))
+    .map(c => ({ ...c, ...allChanges.get(c.symbol)! }))
+    .sort((a, b) => b.change - a.change);
+  const winners = sortedByChange.slice(0, 10);
+  const losers  = sortedByChange.slice(-10).reverse();
 
   return (
     <div className="alt-root" style={{ "--sector-color": sectorColor } as React.CSSProperties}>
@@ -653,6 +666,66 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
           </div>
         )}
       </div>
+
+      {/* ── Winners & Losers ── */}
+      <div className="alt-wl-section">
+        <div className="alt-wl-header">
+          <span className="alt-wl-title">24h Winners &amp; Losers</span>
+          {sortedByChange.length > 0 && (
+            <span className="alt-wl-sub">Top movers across {sortedByChange.length} alts</span>
+          )}
+        </div>
+        {sortedByChange.length === 0 ? (
+          <div className="alt-wl-loading">Loading market data…</div>
+        ) : (
+          <div className="alt-wl-columns">
+
+            {/* Winners */}
+            <div className="alt-wl-col">
+              <div className="alt-wl-col-header alt-wl-col-header--win">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                Winners
+              </div>
+              {winners.map((c, i) => {
+                const color = SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8";
+                return (
+                  <button key={c.symbol} className="alt-wl-row" onClick={() => handleSelectCoin(c)}>
+                    <span className="alt-wl-rank">{i + 1}</span>
+                    <span className="alt-wl-dot" style={{ background: color }} />
+                    <span className="alt-wl-symbol" style={{ color }}>{c.symbol}</span>
+                    <span className="alt-wl-name">{c.name}</span>
+                    <span className="alt-wl-price">{fmtPrice(c.price)}</span>
+                    <span className="alt-wl-change alt-pos">+{c.change.toFixed(2)}%</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Losers */}
+            <div className="alt-wl-col">
+              <div className="alt-wl-col-header alt-wl-col-header--lose">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                Losers
+              </div>
+              {losers.map((c, i) => {
+                const color = SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8";
+                return (
+                  <button key={c.symbol} className="alt-wl-row" onClick={() => handleSelectCoin(c)}>
+                    <span className="alt-wl-rank">{i + 1}</span>
+                    <span className="alt-wl-dot" style={{ background: color }} />
+                    <span className="alt-wl-symbol" style={{ color }}>{c.symbol}</span>
+                    <span className="alt-wl-name">{c.name}</span>
+                    <span className="alt-wl-price">{fmtPrice(c.price)}</span>
+                    <span className="alt-wl-change alt-neg">{c.change.toFixed(2)}%</span>
+                  </button>
+                );
+              })}
+            </div>
+
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

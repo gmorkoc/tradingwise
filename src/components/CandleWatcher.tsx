@@ -75,6 +75,10 @@ const INTERVALS: Interval[] = [
   { label: "8h",  value: "8h",  refresh: 900_000,  limit: 100, durationSec: 28_800  },
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
   { label: "1w",  value: "1w",  refresh: 3600_000, limit: 100, durationSec: 604_800 },
+  { label: "1M",  value: "1d",  refresh: 3600_000, limit: 30,  durationSec: 86_400  },
+  { label: "3M",  value: "1d",  refresh: 3600_000, limit: 90,  durationSec: 86_400  },
+  { label: "6M",  value: "1d",  refresh: 3600_000, limit: 180, durationSec: 86_400  },
+  { label: "1Y",  value: "1w",  refresh: 3600_000, limit: 52,  durationSec: 604_800 },
 ];
 
 function fmtCountdown(sec: number): string {
@@ -2444,18 +2448,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             )}
           </div>
 
-          <div className="cw-interval-tabs">
-            {INTERVALS.map((iv, i) => (
-              <button
-                key={iv.label}
-                className={`cw-iv-tab${i === intervalIdx ? " cw-iv-tab--active" : ""}`}
-                onClick={() => setIntervalIdx(i)}
-              >
-                {iv.label}
-              </button>
-            ))}
-          </div>
-
           <div className="cw-header-right">
             {dailyCountdown && (
               <div className="cw-candle-close cw-candle-close--daily">
@@ -2518,6 +2510,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
           {/* Left: chart + indicators */}
           <div className="cw-left">
+            <div className="cw-interval-tabs">
+              {INTERVALS.map((iv, i) => (
+                <button
+                  key={iv.label}
+                  className={`cw-iv-tab${i === intervalIdx ? " cw-iv-tab--active" : ""}`}
+                  onClick={() => setIntervalIdx(i)}
+                >
+                  {iv.label}
+                </button>
+              ))}
+            </div>
             <div className="cw-chart-wrap" ref={chartContainerRef}>
               {loading && !loadError && <div className="cw-chart-loader">Loading candles…</div>}
               {loadError && (

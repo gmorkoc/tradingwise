@@ -1278,28 +1278,69 @@ export function clearCandleCache(): void {
 // ── Market caps from CoinGecko public API ─────────────────────────────────────
 
 let marketCapCache: Map<string, number> | null = null;
+let change24hCache: Map<string, number> | null = null;
+let price24hCache: Map<string, number> | null = null;
 let marketCapFetchedAt = 0;
 const MARKET_CAP_TTL = 5 * 60 * 1000; // 5 min
+
+interface CoinGeckoMarket {
+  symbol: string;
+  market_cap: number;
+  current_price: number;
+  price_change_percentage_24h: number;
+}
+
+async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarket[]> {
+  const res = await fetch(
+    'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false',
+    { headers: { accept: 'application/json' } }
+  );
+  return res.json();
+}
+
+function populateCoinGeckoCaches(data: CoinGeckoMarket[]) {
+  const capMap = new Map<string, number>();
+  const chgMap = new Map<string, number>();
+  const priceMap = new Map<string, number>();
+  for (const coin of data) {
+    const sym = coin.symbol.toUpperCase();
+    capMap.set(sym, coin.market_cap);
+    chgMap.set(sym, coin.price_change_percentage_24h ?? 0);
+    priceMap.set(sym, coin.current_price ?? 0);
+  }
+  marketCapCache = capMap;
+  change24hCache = chgMap;
+  price24hCache  = priceMap;
+  marketCapFetchedAt = Date.now();
+}
 
 export async function fetchCoinMarketCaps(): Promise<Map<string, number>> {
   if (marketCapCache && Date.now() - marketCapFetchedAt < MARKET_CAP_TTL) {
     return marketCapCache;
   }
   try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false',
-      { headers: { accept: 'application/json' } }
-    );
-    const data = await res.json() as { symbol: string; market_cap: number }[];
-    const map = new Map<string, number>();
-    for (const coin of data) {
-      map.set(coin.symbol.toUpperCase(), coin.market_cap);
-    }
-    marketCapCache = map;
-    marketCapFetchedAt = Date.now();
-    return map;
+    populateCoinGeckoCaches(await fetchCoinGeckoMarkets());
+    return marketCapCache!;
   } catch {
     return marketCapCache ?? new Map();
+  }
+}
+
+export interface CoinSnapshot { change: number; price: number; }
+
+export async function fetchCoinChanges24h(): Promise<Map<string, CoinSnapshot>> {
+  if (change24hCache && Date.now() - marketCapFetchedAt < MARKET_CAP_TTL) {
+    const map = new Map<string, CoinSnapshot>();
+    change24hCache.forEach((chg, sym) => map.set(sym, { change: chg, price: price24hCache?.get(sym) ?? 0 }));
+    return map;
+  }
+  try {
+    populateCoinGeckoCaches(await fetchCoinGeckoMarkets());
+    const map = new Map<string, CoinSnapshot>();
+    change24hCache!.forEach((chg, sym) => map.set(sym, { change: chg, price: price24hCache?.get(sym) ?? 0 }));
+    return map;
+  } catch {
+    return new Map();
   }
 }
 
