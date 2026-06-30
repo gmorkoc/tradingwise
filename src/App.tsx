@@ -1891,6 +1891,7 @@ function AppGate() {
     if (!pending) return;
     saveTermsAgreement(user.id, pending).then(() => {
       localStorage.removeItem("terms_agreed_at");
+      refreshProfile();
     });
   }, [user]);
 

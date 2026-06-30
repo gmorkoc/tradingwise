@@ -49,7 +49,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const [showPw,      setShowPw]      = useState(false);
   const [showCfm,     setShowCfm]     = useState(false);
   const alreadyAgreed = !!localStorage.getItem("terms_agreed_at");
-  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(alreadyAgreed);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -170,7 +170,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <h2 className="auth-title">Sign in or create account</h2>
             <p className="auth-sub">No password needed — we'll email you a magic link</p>
 
-            <Disclaimer />
+            {!alreadyAgreed && <Disclaimer />}
 
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
               {GOOGLE_ICON} Continue with Google
@@ -254,7 +254,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <h2 className="auth-title">Create account</h2>
             <p className="auth-sub">Start with a free plan — upgrade anytime</p>
 
-            <Disclaimer />
+            {!alreadyAgreed && <Disclaimer />}
 
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
               {GOOGLE_ICON} Continue with Google
