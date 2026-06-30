@@ -40,7 +40,15 @@ export const CoinHintzLogo: React.FC<Props> = ({ loading = false, variant = "def
 
   return (
     <span className={`st-logo${loading ? " st-logo--wave" : ""}`}>
-      <LogoIcon size={52} />
+      {loading ? (
+        <span className="boot-logo-wrap">
+          <span className="boot-glow" />
+          <span className="boot-spinner-ring" />
+          <LogoIcon size={52} />
+        </span>
+      ) : (
+        <LogoIcon size={52} />
+      )}
       <span className="st-logo-wordmark">
         <span className="st-logo-simply">coinhint</span>
         <span className="st-logo-ai">z</span>
