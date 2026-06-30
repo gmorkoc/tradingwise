@@ -67,12 +67,12 @@ html[data-theme="light"] body {
 }
 
 .app-boot-screen .st-logo-icon {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
 }
 
 .app-boot-screen .st-logo-wordmark {
-  font-size: 32px;
+  font-size: 26px;
 }
 
 html,
