@@ -103,18 +103,24 @@ Deno.serve(async (req) => {
         billing_cycle_anchor: "unchanged",
       });
 
+      // Check if the proration invoice was paid immediately.
+      // Only grant new tier if payment succeeded — never grant access on failed payment.
+      const invoices = await stripe.invoices.list({ subscription: subscription.id, limit: 1 });
+      const latestInvoice = invoices.data[0];
+      const paymentSucceeded = latestInvoice?.status === "paid";
+
       const newTier = PRICE_TIER[newPriceId];
       await supabaseAdmin
         .from("profiles")
         .update({
-          ...(newTier ? { tier: newTier } : {}),
+          ...(newTier && paymentSucceeded ? { tier: newTier } : {}),
           subscription_status: updated.status,
           subscription_end_at: new Date(updated.current_period_end * 1000).toISOString(),
         })
         .eq("id", user.id);
 
       return new Response(
-        JSON.stringify({ success: true, tier: newTier, isUpgrade: true }),
+        JSON.stringify({ success: true, isUpgrade: true, paymentSucceeded }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {

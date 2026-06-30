@@ -52,16 +52,16 @@ export async function previewUpgrade(newPriceId: string): Promise<{ amountDue: n
   return { amountDue, currency, scheduledAt };
 }
 
-export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: boolean; scheduledAt?: string }> {
+export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: boolean; scheduledAt?: string; paymentSucceeded?: boolean }> {
   const headers = await authHeaders();
   const res = await fetch(`${FN_BASE}/upgrade-plan`, {
     method: "POST",
     headers,
     body: JSON.stringify({ newPriceId }),
   });
-  const { error, isUpgrade, scheduledAt } = await res.json();
+  const { error, isUpgrade, scheduledAt, paymentSucceeded } = await res.json();
   if (error) throw new Error(error);
-  return { isUpgrade, scheduledAt };
+  return { isUpgrade, scheduledAt, paymentSucceeded };
 }
 
 export async function reactivateSubscription(): Promise<void> {

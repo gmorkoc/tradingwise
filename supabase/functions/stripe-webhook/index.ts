@@ -81,6 +81,22 @@ Deno.serve(async (req) => {
       break;
     }
 
+    case "invoice.payment_succeeded": {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.subscription) {
+        const sub = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        const priceId = sub.items.data[0]?.price.id ?? "";
+        const tier = PRICE_TIER[priceId];
+        const fields: Record<string, unknown> = {
+          subscription_status: sub.status,
+          subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
+        };
+        if (tier) fields.tier = tier;
+        await updateProfileByCustomer(customerId(sub), fields);
+      }
+      break;
+    }
+
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
       await updateProfileByCustomer(customerId(invoice), {

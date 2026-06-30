@@ -172,8 +172,13 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
           }),
         });
       } else {
-        const { isUpgrade, scheduledAt } = await upgradePlan(confirm.priceId!);
-        if (isUpgrade) {
+        const { isUpgrade, scheduledAt, paymentSucceeded } = await upgradePlan(confirm.priceId!);
+        if (isUpgrade && paymentSucceeded === false) {
+          setDone({
+            message: "Payment failed — your plan was not upgraded.",
+            sub:     "Please update your payment method in billing settings and try again.",
+          });
+        } else if (isUpgrade) {
           setDone({
             message: t("upgradeModal.success.upgradeMessage", { plan: confirm.planLabel }),
             sub:     t("upgradeModal.success.upgradeSub"),
