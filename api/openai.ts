@@ -8,7 +8,7 @@ function getDayKey(): string {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const origin  = req.headers.origin ?? "";
-  const allowed = ["https://www.coinhintz.io", "http://localhost:5173", "http://localhost:4173"];
+  const allowed = ["https://www.coinhintz.io", "https://coinhintz.io", "http://localhost:5173", "http://localhost:4173"];
   res.setHeader("Access-Control-Allow-Origin", allowed.includes(origin) ? origin : allowed[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -73,12 +73,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(403).json({ error: "Pro subscription required for AI features" });
 
   // ── 5. Quota gate (Elite unlimited) ──────────────────────────────────────
+  const dayKey = getDayKey();
+  let usedToday = 0;
   if (tier !== "elite") {
-    const limit   = TIER_LIMITS[tier] ?? 0;
-    const weekKey = getDayKey();
-    const used    = profileWeek === weekKey ? profileUsed : 0;
-    if (used >= limit)
-      return res.status(429).json({ error: "Weekly AI quota exceeded. Upgrade to Elite for unlimited access." });
+    const limit = TIER_LIMITS[tier] ?? 0;
+    usedToday   = profileWeek === dayKey ? profileUsed : 0;
+    if (usedToday >= limit)
+      return res.status(429).json({ error: "Daily AI quota exceeded. Upgrade to Elite for unlimited access." });
   }
 
   // ── 6. Forward to OpenAI ─────────────────────────────────────────────────
@@ -92,6 +93,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify(req.body),
     });
     const data = await upstream.json();
+
+    // ── 7. Increment quota server-side (Pro only) ─────────────────────────
+    if (upstream.ok && tier !== "elite" && serviceKey) {
+      const nextUsed = usedToday + 1;
+      fetch(
+        `${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            apikey: serviceKey,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ ai_requests_used: nextUsed, ai_requests_week: dayKey }),
+        }
+      ).catch(() => {});
+    }
+
     res.status(upstream.status).json(data);
   } catch {
     res.status(502).json({ error: "OpenAI request failed" });
