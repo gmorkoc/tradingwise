@@ -10,7 +10,7 @@ export interface WhaleTx {
   sentiment: "bullish" | "bearish" | "neutral";
 }
 
-const THRESHOLD_BTC = 10;
+const THRESHOLD_BTC = 25;
 const MAX_PER_MINUTE = 20;
 
 // Well-known exchange / institutional BTC hot wallet addresses
@@ -55,8 +55,8 @@ const EXCHANGES = new Set([
 function sentiment(fromLabel: string, toLabel: string): WhaleTx["sentiment"] {
   const fromEx = EXCHANGES.has(fromLabel);
   const toEx   = EXCHANGES.has(toLabel);
-  if (toEx && !fromEx) return "bearish";
-  if (fromEx && !toEx) return "bullish";
+  if (toEx && !fromEx) return "bearish";  // deposit → exchange (selling intent)
+  if (fromEx && !toEx) return "bullish";  // withdrawal from exchange (self-custody)
   return "neutral";
 }
 
@@ -66,108 +66,86 @@ function truncate(addr: string): string {
   return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
 }
 
-function labelAddr(addr: string): string {
+function label(addr: string): string {
   return KNOWN_ENTITIES[addr] || truncate(addr);
 }
 
-// mempool.space transaction format
-interface MempoolVin {
-  prevout?: {
-    scriptpubkey_address?: string;
-    value?: number;
-  };
-}
-interface MempoolVout {
-  scriptpubkey_address?: string;
-  value?: number;
-}
-interface MempoolTx {
-  txid: string;
-  vin: MempoolVin[];
-  vout: MempoolVout[];
-}
+function parseAlert(tx: Record<string, unknown>): WhaleTx | null {
+  const inputs = (tx.inputs as { prev_out?: { addr?: string; value?: number } }[]) ?? [];
+  const outputs = (tx.out as { addr?: string; value?: number }[]) ?? [];
 
-function parseAlert(tx: MempoolTx): WhaleTx | null {
-  const inputs  = tx.vin  ?? [];
-  const outputs = tx.vout ?? [];
-
+  // Total BTC moved (sum of outputs)
   const amount = outputs.reduce((s, o) => s + (o.value ?? 0), 0) / 1e8;
   if (amount < THRESHOLD_BTC) return null;
 
-  // From = input with the largest value
-  const mainInput = inputs.reduce<MempoolVin | null>((best, inp) => {
-    const v = inp.prevout?.value ?? 0;
-    return v > ((best?.prevout?.value) ?? 0) ? inp : best;
+  // From = address with the largest input value
+  const mainInput = inputs.reduce<typeof inputs[number] | null>((best, inp) => {
+    const v = inp.prev_out?.value ?? 0;
+    return v > ((best?.prev_out?.value) ?? 0) ? inp : best;
   }, null);
-  const fromAddr = mainInput?.prevout?.scriptpubkey_address ?? "";
+  const fromAddr = mainInput?.prev_out?.addr ?? "";
 
-  // To = largest output that is not a change address
-  const inputAddrs = new Set(inputs.map(i => i.prevout?.scriptpubkey_address).filter(Boolean));
-  const recipients = outputs.filter(o => o.scriptpubkey_address && !inputAddrs.has(o.scriptpubkey_address));
+  // To = largest output that is NOT a change address (i.e. not an input address)
+  const inputAddrs = new Set(inputs.map(i => i.prev_out?.addr).filter(Boolean));
+  const recipients = outputs.filter(o => o.addr && !inputAddrs.has(o.addr));
   const pool = recipients.length > 0 ? recipients : outputs;
-  const mainOutput = pool.reduce<MempoolVout | null>((best, o) => {
+  const mainOutput = pool.reduce<typeof outputs[number] | null>((best, o) => {
     return (o.value ?? 0) > ((best?.value) ?? 0) ? o : best;
   }, null);
-  const toAddr = mainOutput?.scriptpubkey_address ?? "";
+  const toAddr = mainOutput?.addr ?? "";
 
-  const fromLbl = labelAddr(fromAddr);
-  const toLbl   = labelAddr(toAddr);
+  const fromLabel = label(fromAddr);
+  const toLabel   = label(toAddr);
   return {
-    id: `${tx.txid.slice(0, 10)}-${Date.now()}`,
-    hash: tx.txid,
+    id: `${(tx.hash as string).slice(0, 10)}-${Date.now()}`,
+    hash: tx.hash as string,
     amount,
     time: Date.now(),
-    from: fromLbl,
-    to: toLbl,
+    from: fromLabel,
+    to: toLabel,
     fromRaw: fromAddr,
     toRaw: toAddr,
-    sentiment: sentiment(fromLbl, toLbl),
+    sentiment: sentiment(fromLabel, toLabel),
   };
 }
 
 // ── WebSocket singleton ──────────────────────────────────────────────────────
 
 type Callback = (tx: WhaleTx) => void;
-type StatusCallback = (connected: boolean) => void;
 
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let rateLimitTimer: ReturnType<typeof setTimeout> | null = null;
 let recentCount = 0;
 const listeners = new Set<Callback>();
-const statusListeners = new Set<StatusCallback>();
-
-function notifyStatus(connected: boolean) {
-  statusListeners.forEach(cb => cb(connected));
-}
 
 function connect() {
   if (ws && ws.readyState !== WebSocket.CLOSED) return;
   try {
-    ws = new WebSocket("wss://mempool.space/api/v1/ws");
+    ws = new WebSocket("wss://ws.blockchain.info/inv");
 
     ws.onopen = () => {
-      ws!.send(JSON.stringify({ action: "want", data: ["transactions"] }));
-      notifyStatus(true);
+      ws!.send(JSON.stringify({ op: "unconfirmed_sub" }));
     };
 
     ws.onmessage = ({ data }) => {
       try {
         const msg = JSON.parse(data as string);
-        const txList: MempoolTx[] = msg["transactions"] ?? [];
-        for (const tx of txList) {
-          if (recentCount >= MAX_PER_MINUTE) break;
-          const alert = parseAlert(tx);
-          if (!alert) continue;
-          recentCount++;
-          if (!rateLimitTimer) {
-            rateLimitTimer = setTimeout(() => {
-              recentCount = 0;
-              rateLimitTimer = null;
-            }, 60_000);
-          }
-          listeners.forEach(cb => cb(alert));
+        if (msg.op !== "utx") return;
+        if (recentCount >= MAX_PER_MINUTE) return;
+
+        const alert = parseAlert(msg.x);
+        if (!alert) return;
+
+        recentCount++;
+        if (!rateLimitTimer) {
+          rateLimitTimer = setTimeout(() => {
+            recentCount = 0;
+            rateLimitTimer = null;
+          }, 60_000);
         }
+
+        listeners.forEach(cb => cb(alert));
       } catch {}
     };
 
@@ -175,16 +153,9 @@ function connect() {
 
     ws.onclose = () => {
       ws = null;
-      notifyStatus(false);
       if (listeners.size > 0) reconnectTimer = setTimeout(connect, 3_000);
     };
-  } catch { notifyStatus(false); }
-}
-
-export function subscribeWhaleStatus(cb: StatusCallback): () => void {
-  statusListeners.add(cb);
-  cb(ws?.readyState === WebSocket.OPEN);
-  return () => statusListeners.delete(cb);
+  } catch {}
 }
 
 export function subscribeWhaleAlerts(cb: Callback): () => void {
