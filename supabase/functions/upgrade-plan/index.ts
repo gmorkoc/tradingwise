@@ -103,11 +103,11 @@ Deno.serve(async (req) => {
         billing_cycle_anchor: "unchanged",
       });
 
-      const newTier = PRICE_TIER[newPriceId] ?? "free";
+      const newTier = PRICE_TIER[newPriceId];
       await supabaseAdmin
         .from("profiles")
         .update({
-          tier:                newTier,
+          ...(newTier ? { tier: newTier } : {}),
           subscription_status: updated.status,
           subscription_end_at: new Date(updated.current_period_end * 1000).toISOString(),
         })
