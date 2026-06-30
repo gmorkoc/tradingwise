@@ -64,6 +64,9 @@
 }
 
 .ob-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   padding: 3px 5px;
   font-size: 0.61rem;
   font-weight: 600;

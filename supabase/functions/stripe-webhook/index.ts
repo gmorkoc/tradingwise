@@ -11,7 +11,6 @@ const supabaseAdmin = createClient(
 );
 
 const PRICE_TIER: Record<string, string> = {
-  // Current price IDs
   [Deno.env.get("STRIPE_PRO_PRICE_ID")   ?? ""]: "pro",
   [Deno.env.get("STRIPE_ELITE_PRICE_ID") ?? ""]: "elite",
   // Legacy price IDs — existing subscribers on old prices must still resolve correctly
@@ -48,11 +47,13 @@ Deno.serve(async (req) => {
       if (session.mode !== "subscription") break;
       const sub = await stripe.subscriptions.retrieve(session.subscription as string);
       const priceId = sub.items.data[0]?.price.id ?? "";
-      await updateProfileByCustomer(customerId(session), {
-        tier:                PRICE_TIER[priceId] ?? "free",
+      const tier = PRICE_TIER[priceId];
+      const fields: Record<string, unknown> = {
         subscription_status: sub.status,
         subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
-      });
+      };
+      if (tier) fields.tier = tier;
+      await updateProfileByCustomer(customerId(session), fields);
       break;
     }
 
@@ -60,11 +61,13 @@ Deno.serve(async (req) => {
       const raw = event.data.object as Stripe.Subscription;
       const sub = await stripe.subscriptions.retrieve(raw.id);
       const priceId = sub.items.data[0]?.price.id ?? "";
-      await updateProfileByCustomer(customerId(raw), {
-        tier:                PRICE_TIER[priceId] ?? "free",
+      const tier = PRICE_TIER[priceId];
+      const fields: Record<string, unknown> = {
         subscription_status: sub.status,
         subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
-      });
+      };
+      if (tier) fields.tier = tier;
+      await updateProfileByCustomer(customerId(raw), fields);
       break;
     }
 

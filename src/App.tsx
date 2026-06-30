@@ -54,6 +54,7 @@ import { ZoneResult } from "./components/PriceChart.types";
 import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
+import TermsGateModal from "./components/TermsGateModal";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
 import "./App.css";
 
@@ -1869,7 +1870,7 @@ function AppDashboard({
 
 /* ── Auth gate — decides what to render based on auth state ── */
 function AppGate() {
-  const { user, loading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, profileLoading, loading: authLoading, refreshProfile } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -1913,12 +1914,17 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading)
+  if (authLoading || (user && profileLoading))
     return (
       <div className="app-boot-screen">
         <CoinHintzLogo loading={true} />
       </div>
     );
+
+  // Gate: signed in but hasn't agreed to terms yet (covers first-time OAuth users)
+  if (user && profile && !profile.terms_agreed_at) {
+    return <TermsGateModal userId={user.id} onAgreed={refreshProfile} />;
+  }
 
   if (!user) {
     return (

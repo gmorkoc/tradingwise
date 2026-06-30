@@ -8,6 +8,7 @@ interface AuthContextValue {
   profile:     Profile | null;
   session:     Session | null;
   loading:     boolean;
+  profileLoading: boolean;
   tier:        Tier;
   signUp:      (email: string, password: string, fullName: string) => Promise<string | null>;
   signIn:      (email: string, password: string) => Promise<string | null>;
@@ -21,14 +22,17 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,    setUser]    = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user,           setUser]           = useState<User | null>(null);
+  const [profile,        setProfile]        = useState<Profile | null>(null);
+  const [session,        setSession]        = useState<Session | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const loadProfile = async (u: User) => {
+    setProfileLoading(true);
     const p = await fetchProfile(u.id);
     setProfile(p);
+    setProfileLoading(false);
   };
 
   useEffect(() => {
@@ -100,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, profile, session, loading,
+      user, profile, session, loading, profileLoading,
       tier: profile?.tier ?? "free",
       signUp, signIn, signInWithMagicLink, signInWithGoogle, signOut, resetPassword, refreshProfile,
     }}>
