@@ -1451,34 +1451,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             if (pl) priceLineRefs.current.push(pl);
           }
 
-          // Buy/sell zone lines — Pro+ only (never expose data or chart lines to free users)
+          // Buy/sell zone — always calculate for signal direction; chart lines only for Pro+
           const lastPrice = data[data.length - 1].close;
-          if (isPaid) {
-            const zones = calcBuySellZones(data);
-            setZone(zones);
-            onZoneChange?.(zones, lastPrice);
-            if (zones) {
-              const zoneLines: [number, string, string][] = [
-                [zones.buyZone.upper, "rgba(34,197,94,0.5)", "Buy Zone ▲"],
-                [zones.buyZone.lower, "rgba(34,197,94,0.5)", "Buy Zone ▼"],
-                [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
-                [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
-              ];
-              for (const [price, color, title] of zoneLines) {
-                const pl = candleRef.current?.createPriceLine({
-                  price,
-                  color,
-                  title,
-                  lineWidth: 1,
-                  lineStyle: 3,
-                  axisLabelVisible: true,
-                });
-                if (pl) priceLineRefs.current.push(pl);
-              }
+          const zones = calcBuySellZones(data);
+          setZone(zones);
+          onZoneChange?.(isPaid ? zones : null, lastPrice);
+          if (isPaid && zones) {
+            const zoneLines: [number, string, string][] = [
+              [zones.buyZone.upper, "rgba(34,197,94,0.5)", "Buy Zone ▲"],
+              [zones.buyZone.lower, "rgba(34,197,94,0.5)", "Buy Zone ▼"],
+              [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
+              [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
+            ];
+            for (const [price, color, title] of zoneLines) {
+              const pl = candleRef.current?.createPriceLine({
+                price,
+                color,
+                title,
+                lineWidth: 1,
+                lineStyle: 3,
+                axisLabelVisible: true,
+              });
+              if (pl) priceLineRefs.current.push(pl);
             }
-          } else {
-            setZone(null);
-            onZoneChange?.(null, lastPrice);
           }
 
           // 24H high / low price lines
@@ -1567,8 +1562,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             rsiSeriesRef.current.setData(rsiData);
           }
 
-          // RSI divergence — Pro+ only (never compute or store for free users)
-          const div = isPaid ? detectRSIDivergence(data, rsiData) : null;
+          // RSI divergence — always calculate for signal direction; markers only for Pro+
+          const div = detectRSIDivergence(data, rsiData);
           setDivergence(div);
           if (candleRef.current) {
             const priceMarkers: SeriesMarker<number>[] = (div && isPaid)
@@ -2270,10 +2265,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 )}
                 {!isPaid && (
                   <button
-                    className="zone-signal-gate"
+                    className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
                     onClick={() => onOpenUpgrade?.("pro")}
                   >
-                    <span className="zone-signal-live zone-signal-live--gate" />
+                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
                     Unlock Status
                   </button>
                 )}
@@ -2371,10 +2366,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 )}
                 {!isPaid && (
                   <button
-                    className="zone-signal-gate"
+                    className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
                     onClick={() => onOpenUpgrade?.("pro")}
                   >
-                    <span className="zone-signal-live zone-signal-live--gate" />
+                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
                     Unlock Divergence
                   </button>
                 )}

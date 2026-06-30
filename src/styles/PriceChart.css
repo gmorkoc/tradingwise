@@ -375,20 +375,40 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: #0ea5e9;
   background: none;
   border: none;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.15s;
 }
-.zone-signal-gate:hover {
-  opacity: 0.75;
-}
-.zone-signal-live--gate {
-  background: #0ea5e9;
-  color: #0ea5e9;
-}
+.zone-signal-gate:hover { opacity: 0.75; }
+
+/* Status signal colors */
+.zone-signal-gate--strong-buy,
+.zone-signal-gate--buy,
+.zone-signal-gate--oversold  { color: #22c55e; }
+.zone-signal-gate--strong-sell,
+.zone-signal-gate--sell,
+.zone-signal-gate--overbought { color: #ef4444; }
+.zone-signal-gate--neutral   { color: #94a3b8; }
+
+/* Divergence colors */
+.zone-signal-gate--div-bullish { color: #22c55e; }
+.zone-signal-gate--div-bearish { color: #ef4444; }
+.zone-signal-gate--div-neutral { color: #94a3b8; }
+
+/* Dot */
+.zone-signal-live--gate { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.zone-signal-live--gate-strong-buy,
+.zone-signal-live--gate-buy,
+.zone-signal-live--gate-oversold  { background: #22c55e; }
+.zone-signal-live--gate-strong-sell,
+.zone-signal-live--gate-sell,
+.zone-signal-live--gate-overbought { background: #ef4444; }
+.zone-signal-live--gate-neutral   { background: #94a3b8; }
+.zone-signal-live--gate-div-bullish { background: #22c55e; }
+.zone-signal-live--gate-div-bearish { background: #ef4444; }
+.zone-signal-live--gate-div-neutral { background: #94a3b8; }
 
 .zone-signal--strong-buy {
   color: #22c55e;
