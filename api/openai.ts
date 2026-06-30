@@ -2,6 +2,16 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const TIER_LIMITS: Record<string, number> = { free: 0, pro: 25, elite: Infinity };
 
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "gpt-4o":      { input: 2.50,  output: 10.00 },
+  "gpt-4o-mini": { input: 0.15,  output: 0.60  },
+};
+
+function calcCost(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = MODEL_PRICING[model] ?? MODEL_PRICING["gpt-4o"];
+  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
+}
+
 function getDayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -101,6 +111,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     const data = await upstream.json();
     res.status(upstream.status).json(data);
+
+    // Log usage async — don't block the response
+    if (upstream.ok && data.usage && serviceKey) {
+      const model        = data.model ?? req.body?.model ?? "gpt-4o";
+      const inputTokens  = data.usage.prompt_tokens     ?? 0;
+      const outputTokens = data.usage.completion_tokens ?? 0;
+      const costUsd      = calcCost(model, inputTokens, outputTokens);
+
+      fetch(`${supabaseUrl}/rest/v1/ai_usage_log`, {
+        method: "POST",
+        headers: {
+          Authorization:  `Bearer ${serviceKey}`,
+          apikey:         serviceKey,
+          "Content-Type": "application/json",
+          Prefer:         "return=minimal",
+        },
+        body: JSON.stringify({ user_id: userId, model, input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: costUsd }),
+      }).catch(() => {/* ignore logging errors */});
+    }
   } catch {
     res.status(502).json({ error: "OpenAI request failed" });
   }
