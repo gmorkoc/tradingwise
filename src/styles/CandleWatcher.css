@@ -285,6 +285,7 @@
   border: 1px solid var(--color-border);
   background: var(--color-card-bg);
   height: 460px;
+  touch-action: none;
 }
 
 .cw-chart-loader {
