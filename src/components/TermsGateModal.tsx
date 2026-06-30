@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveTermsAgreement } from "../services/supabase";
+import "../styles/AuthModal.css";
 
 interface Props {
   userId: string;
