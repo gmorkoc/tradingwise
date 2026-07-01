@@ -300,6 +300,21 @@
     "logoText": "coinhintz",
     "continueWithGoogle": "Continue with Google",
     "divider": "or",
+    "magic": {
+      "title": "Sign in or create account",
+      "sub": "No password needed — we'll email you a magic link",
+      "sendBtn": "Send Magic Link ✉",
+      "sending": "Sending…",
+      "preferPassword": "Prefer a password?",
+      "signinWithPassword": "Sign in with password"
+    },
+    "sent": {
+      "title": "Check your inbox",
+      "sub": "We sent a magic link to <1>{{email}}</1>. Click it to sign in instantly — no password needed.",
+      "hint": "Don't see it? Check your spam folder or",
+      "tryAgain": "try again",
+      "close": "Close"
+    },
     "login": {
       "title": "Welcome back",
       "sub": "Sign in to your account",
@@ -309,7 +324,11 @@
       "signinBtn": "Sign In",
       "signingIn": "Signing in…",
       "noAccount": "Don't have an account?",
-      "signupFree": "Sign up free"
+      "signupFree": "Sign up free",
+      "noAccountFound": "No account found.",
+      "signupFreeArrow": "Sign up free →",
+      "useMagicLink": "← Use magic link instead",
+      "createAccount": "Create account"
     },
     "signup": {
       "title": "Create account",
@@ -319,10 +338,14 @@
       "passwordLabel": "Password",
       "confirmLabel": "Confirm password",
       "createBtn": "Create Account",
-      "creating": "Creating account…",
+      "creating": "Creating…",
       "confirmEmail": "Check your email to confirm your account, then sign in.",
       "alreadyAccount": "Already have an account?",
-      "signinLink": "Sign in"
+      "signinLink": "Sign in",
+      "ssoExists": "This email is linked to a Google account.",
+      "signinWithGoogle": "Sign in with Google →",
+      "preferNoPassword": "Prefer no password?",
+      "sendMagicLink": "Send magic link instead"
     },
     "reset": {
       "title": "Reset password",

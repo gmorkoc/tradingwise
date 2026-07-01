@@ -1,7 +1,61 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "../i18n";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import "../styles/LandingPage.css";
+
+const LANGUAGES = [
+  { code: "en", flag: "🇬🇧", label: "EN", name: "English" },
+  { code: "es", flag: "🇪🇸", label: "ES", name: "Español" },
+  { code: "tr", flag: "🇹🇷", label: "TR", name: "Türkçe" },
+  { code: "it", flag: "🇮🇹", label: "IT", name: "Italiano" },
+];
+
+function changeLang(code: string) {
+  i18n.changeLanguage(code);
+  try { localStorage.setItem("lang", code); } catch { /* noop */ }
+}
+
+function LangPicker() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = LANGUAGES.find(l => l.code === i18n.language) ?? LANGUAGES[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="lp-lang-picker" ref={ref}>
+      <button className="lp-lang-trigger" onClick={() => setOpen(o => !o)}>
+        {current.flag} {current.label}
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ marginLeft: 3, opacity: 0.6 }}>
+          <path d="M1 3l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="lp-lang-dropdown">
+          {LANGUAGES.map(l => (
+            <button
+              key={l.code}
+              className={`lp-lang-option${l.code === current.code ? " lp-lang-option--active" : ""}`}
+              onClick={() => { changeLang(l.code); setOpen(false); }}
+            >
+              <span>{l.flag}</span>
+              <span>{l.name}</span>
+              {l.code === current.code && <span className="lp-lang-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   onSignIn: () => void;
@@ -284,8 +338,12 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
         <CoinHintzLogo variant="nav" />
       </div>
       <div className="lp-nav-actions">
-        <button className="lp-btn-ghost" onClick={onSignIn}>{t("landing.signin")}</button>
-        <button className="lp-btn-primary" onClick={onSignUp}>{t("landing.getStarted")}</button>
+        <button className="lp-btn-ghost lp-nav-signin" onClick={onSignIn}>{t("landing.signin")}</button>
+        <button className="lp-btn-primary" onClick={onSignUp}>
+          <span className="lp-cta-long">{t("landing.getStarted")}</span>
+          <span className="lp-cta-short">Start Free</span>
+        </button>
+        <LangPicker />
         <button className="lp-theme-toggle" onClick={onToggleTheme} title="Toggle theme" aria-label="Toggle theme">{theme === "dark" ? "☀" : "☽"}</button>
       </div>
     </nav>

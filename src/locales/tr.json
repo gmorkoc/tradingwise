@@ -300,6 +300,21 @@
     "logoText": "coinhintz",
     "continueWithGoogle": "Google ile devam et",
     "divider": "veya",
+    "magic": {
+      "title": "Giriş yap veya hesap oluştur",
+      "sub": "Şifre gerekmiyor — sana sihirli bağlantı göndereceğiz",
+      "sendBtn": "Sihirli Bağlantı Gönder ✉",
+      "sending": "Gönderiliyor…",
+      "preferPassword": "Şifre mi tercih edersin?",
+      "signinWithPassword": "Şifre ile giriş yap"
+    },
+    "sent": {
+      "title": "Gelen kutunu kontrol et",
+      "sub": "<1>{{email}}</1> adresine sihirli bağlantı gönderdik. Anında giriş yapmak için tıkla — şifre gerekmez.",
+      "hint": "Göremiyor musun? Spam klasörünü kontrol et ya da",
+      "tryAgain": "tekrar dene",
+      "close": "Kapat"
+    },
     "login": {
       "title": "Tekrar hoş geldiniz",
       "sub": "Hesabınıza giriş yapın",
@@ -309,7 +324,11 @@
       "signinBtn": "Giriş Yap",
       "signingIn": "Giriş yapılıyor…",
       "noAccount": "Hesabınız yok mu?",
-      "signupFree": "Ücretsiz kaydol"
+      "signupFree": "Ücretsiz kaydol",
+      "noAccountFound": "Hesap bulunamadı.",
+      "signupFreeArrow": "Ücretsiz kaydol →",
+      "useMagicLink": "← Bunun yerine sihirli bağlantı kullan",
+      "createAccount": "Hesap oluştur"
     },
     "signup": {
       "title": "Hesap oluştur",
@@ -319,10 +338,14 @@
       "passwordLabel": "Şifre",
       "confirmLabel": "Şifreyi onayla",
       "createBtn": "Hesap Oluştur",
-      "creating": "Hesap oluşturuluyor…",
+      "creating": "Oluşturuluyor…",
       "confirmEmail": "Hesabınızı onaylamak için e-postanızı kontrol edin, ardından giriş yapın.",
       "alreadyAccount": "Zaten hesabınız var mı?",
-      "signinLink": "Giriş yap"
+      "signinLink": "Giriş yap",
+      "ssoExists": "Bu e-posta bir Google hesabına bağlı.",
+      "signinWithGoogle": "Google ile giriş yap →",
+      "preferNoPassword": "Şifresiz mi tercih edersin?",
+      "sendMagicLink": "Bunun yerine sihirli bağlantı gönder"
     },
     "reset": {
       "title": "Şifre sıfırla",

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import "../styles/AuthModal.css";
@@ -34,6 +35,7 @@ const EyeOff = () => (
 );
 
 export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
+  const { t } = useTranslation();
   const { signIn, signUp, signInWithMagicLink, signInWithGoogle, resetPassword } = useAuth();
 
   const [view, setView] = useState<View>(
@@ -167,27 +169,27 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         {/* ── Magic link (default) ── */}
         {view === "magic" && (
           <>
-            <h2 className="auth-title">Sign in or create account</h2>
-            <p className="auth-sub">No password needed — we'll email you a magic link</p>
+            <h2 className="auth-title">{t("auth.magic.title")}</h2>
+            <p className="auth-sub">{t("auth.magic.sub")}</p>
 
             {!alreadyAgreed && <Disclaimer />}
 
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
-              {GOOGLE_ICON} Continue with Google
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
             </button>
-            <div className="auth-divider"><span>or</span></div>
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleMagicLink}>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.login.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
               </label>
               {error && <p className="auth-error">{error}</p>}
               <button className="auth-submit" disabled={!canSubmit}>
-                {busy ? "Sending…" : "Send Magic Link ✉"}
+                {busy ? t("auth.magic.sending") : t("auth.magic.sendBtn")}
               </button>
             </form>
             <p className="auth-switch">
-              Prefer a password?{" "}
-              <button className="auth-link-btn" onClick={() => setView("login")}>Sign in with password</button>
+              {t("auth.magic.preferPassword")}{" "}
+              <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.magic.signinWithPassword")}</button>
             </p>
           </>
         )}
@@ -196,33 +198,34 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         {view === "sent" && (
           <div className="auth-sent">
             <div className="auth-sent-icon">✉️</div>
-            <h2 className="auth-title">Check your inbox</h2>
+            <h2 className="auth-title">{t("auth.sent.title")}</h2>
             <p className="auth-sub">
-              We sent a magic link to <strong>{email}</strong>.
-              Click it to sign in instantly — no password needed.
+              {t("auth.sent.sub", { email }).replace("<1>", "").replace("</1>", "").split(email).map((part, i, arr) =>
+                i < arr.length - 1 ? <span key={i}>{part}<strong>{email}</strong></span> : <span key={i}>{part}</span>
+              )}
             </p>
             <p className="auth-sent-hint">
-              Don't see it? Check your spam folder or{" "}
-              <button className="auth-link-btn" onClick={() => { setView("magic"); setError(""); }}>try again</button>
+              {t("auth.sent.hint")}{" "}
+              <button className="auth-link-btn" onClick={() => { setView("magic"); setError(""); }}>{t("auth.sent.tryAgain")}</button>
             </p>
-            <button className="auth-close-btn" onClick={onClose}>Close</button>
+            <button className="auth-close-btn" onClick={onClose}>{t("auth.sent.close")}</button>
           </div>
         )}
 
         {/* ── Password login ── */}
         {view === "login" && (
           <>
-            <h2 className="auth-title">Sign in</h2>
-            <p className="auth-sub">Welcome back</p>
+            <h2 className="auth-title">{t("auth.login.title")}</h2>
+            <p className="auth-sub">{t("auth.login.sub")}</p>
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
-              {GOOGLE_ICON} Continue with Google
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
             </button>
-            <div className="auth-divider"><span>or</span></div>
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleLogin}>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.login.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
               </label>
-              <label className="auth-label">Password
+              <label className="auth-label">{t("auth.login.passwordLabel")}
                 <div className="auth-input-wrap">
                   <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
@@ -230,20 +233,20 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                   </button>
                 </div>
               </label>
-              <button type="button" className="auth-link-btn" onClick={() => setView("reset")}>Forgot password?</button>
+              <button type="button" className="auth-link-btn" onClick={() => setView("reset")}>{t("auth.login.forgotPassword")}</button>
               {error === "no_account" ? (
                 <p className="auth-error">
-                  No account found.{" "}
-                  <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>Sign up free →</button>
+                  {t("auth.login.noAccountFound")}{" "}
+                  <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>{t("auth.login.signupFreeArrow")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}
               {info && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? "Signing in…" : "Sign In"}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.login.signingIn") : t("auth.login.signinBtn")}</button>
             </form>
             <p className="auth-switch">
-              <button className="auth-link-btn" onClick={() => setView("magic")}>← Use magic link instead</button>
+              <button className="auth-link-btn" onClick={() => setView("magic")}>{t("auth.login.useMagicLink")}</button>
               {" · "}
-              <button className="auth-link-btn" onClick={() => setView("signup")}>Create account</button>
+              <button className="auth-link-btn" onClick={() => setView("signup")}>{t("auth.login.createAccount")}</button>
             </p>
           </>
         )}
@@ -251,23 +254,23 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         {/* ── Password signup ── */}
         {view === "signup" && (
           <>
-            <h2 className="auth-title">Create account</h2>
-            <p className="auth-sub">Start with a free plan — upgrade anytime</p>
+            <h2 className="auth-title">{t("auth.signup.title")}</h2>
+            <p className="auth-sub">{t("auth.signup.sub")}</p>
 
             {!alreadyAgreed && <Disclaimer />}
 
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
-              {GOOGLE_ICON} Continue with Google
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
             </button>
-            <div className="auth-divider"><span>or</span></div>
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleSignup}>
-              <label className="auth-label">Full name
+              <label className="auth-label">{t("auth.signup.fullNameLabel")}
                 <input className="auth-input" type="text" value={name} onChange={e => setName(e.target.value)} required autoFocus />
               </label>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.signup.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
               </label>
-              <label className="auth-label">Password
+              <label className="auth-label">{t("auth.signup.passwordLabel")}
                 <div className="auth-input-wrap">
                   <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
@@ -275,7 +278,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                   </button>
                 </div>
               </label>
-              <label className="auth-label">Confirm password
+              <label className="auth-label">{t("auth.signup.confirmLabel")}
                 <div className="auth-input-wrap">
                   <input className="auth-input" type={showCfm ? "text" : "password"} value={confirm} onChange={e => setConfirm(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowCfm(v => !v)} tabIndex={-1}>
@@ -285,19 +288,19 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               </label>
               {error === "sso_exists" ? (
                 <p className="auth-error">
-                  This email is linked to a Google account.{" "}
-                  <button type="button" className="auth-link-btn" onClick={handleGoogle}>Sign in with Google →</button>
+                  {t("auth.signup.ssoExists")}{" "}
+                  <button type="button" className="auth-link-btn" onClick={handleGoogle}>{t("auth.signup.signinWithGoogle")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}
               {info && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={!canSubmit}>{busy ? "Creating…" : "Create Account"}</button>
+              <button className="auth-submit" disabled={!canSubmit}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
             </form>
             <p className="auth-switch">
-              Prefer no password?{" "}
-              <button className="auth-link-btn" onClick={() => setView("magic")}>Send magic link instead</button>
+              {t("auth.signup.preferNoPassword")}{" "}
+              <button className="auth-link-btn" onClick={() => setView("magic")}>{t("auth.signup.sendMagicLink")}</button>
               {" · "}
-              Already have an account?{" "}
-              <button className="auth-link-btn" onClick={() => setView("login")}>Sign in</button>
+              {t("auth.signup.alreadyAccount")}{" "}
+              <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.signup.signinLink")}</button>
             </p>
           </>
         )}
@@ -305,18 +308,18 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         {/* ── Password reset ── */}
         {view === "reset" && (
           <>
-            <h2 className="auth-title">Reset password</h2>
-            <p className="auth-sub">We'll send you a reset link</p>
+            <h2 className="auth-title">{t("auth.reset.title")}</h2>
+            <p className="auth-sub">{t("auth.reset.sub")}</p>
             <form className="auth-form" onSubmit={handleReset}>
-              <label className="auth-label">Email
+              <label className="auth-label">{t("auth.reset.emailLabel")}
                 <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
               </label>
               {error && <p className="auth-error">{error}</p>}
               {info  && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={busy}>{busy ? "Sending…" : "Send Reset Link"}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.reset.sending") : t("auth.reset.sendBtn")}</button>
             </form>
             <p className="auth-switch">
-              <button className="auth-link-btn" onClick={() => setView("login")}>← Back to sign in</button>
+              <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.reset.backToSignin")}</button>
             </p>
           </>
         )}

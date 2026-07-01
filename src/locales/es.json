@@ -300,6 +300,21 @@
     "logoText": "coinhintz",
     "continueWithGoogle": "Continuar con Google",
     "divider": "o",
+    "magic": {
+      "title": "Inicia sesión o crea una cuenta",
+      "sub": "Sin contraseña — te enviaremos un enlace mágico",
+      "sendBtn": "Enviar enlace mágico ✉",
+      "sending": "Enviando…",
+      "preferPassword": "¿Prefieres contraseña?",
+      "signinWithPassword": "Iniciar sesión con contraseña"
+    },
+    "sent": {
+      "title": "Revisa tu bandeja de entrada",
+      "sub": "Enviamos un enlace mágico a <1>{{email}}</1>. Haz clic para iniciar sesión — sin contraseña.",
+      "hint": "¿No lo ves? Revisa tu carpeta de spam o",
+      "tryAgain": "inténtalo de nuevo",
+      "close": "Cerrar"
+    },
     "login": {
       "title": "Bienvenido de vuelta",
       "sub": "Inicia sesión en tu cuenta",
@@ -309,7 +324,11 @@
       "signinBtn": "Iniciar sesión",
       "signingIn": "Iniciando sesión…",
       "noAccount": "¿No tienes cuenta?",
-      "signupFree": "Regístrate gratis"
+      "signupFree": "Regístrate gratis",
+      "noAccountFound": "No se encontró ninguna cuenta.",
+      "signupFreeArrow": "Regístrate gratis →",
+      "useMagicLink": "← Usar enlace mágico",
+      "createAccount": "Crear cuenta"
     },
     "signup": {
       "title": "Crear cuenta",
@@ -319,10 +338,14 @@
       "passwordLabel": "Contraseña",
       "confirmLabel": "Confirmar contraseña",
       "createBtn": "Crear cuenta",
-      "creating": "Creando cuenta…",
+      "creating": "Creando…",
       "confirmEmail": "Revisa tu correo para confirmar tu cuenta, luego inicia sesión.",
       "alreadyAccount": "¿Ya tienes cuenta?",
-      "signinLink": "Inicia sesión"
+      "signinLink": "Inicia sesión",
+      "ssoExists": "Este correo está vinculado a una cuenta de Google.",
+      "signinWithGoogle": "Iniciar sesión con Google →",
+      "preferNoPassword": "¿Prefieres sin contraseña?",
+      "sendMagicLink": "Enviar enlace mágico"
     },
     "reset": {
       "title": "Restablecer contraseña",

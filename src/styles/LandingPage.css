@@ -51,6 +51,63 @@
 /* theme toggle pushed right with a visual gap */
 .lp-nav-actions .lp-theme-toggle { margin-left: 8px; }
 
+/* Language picker */
+.lp-lang-picker { position: relative; }
+
+.lp-lang-trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+.lp-lang-trigger:hover { border-color: var(--color-text-secondary); color: var(--color-text); }
+
+.lp-lang-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  z-index: 200;
+  animation: lp-lang-in 0.12s ease both;
+}
+@keyframes lp-lang-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lp-lang-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.lp-lang-option:hover { background: var(--color-border); color: var(--color-text); }
+.lp-lang-option--active { color: var(--color-text); font-weight: 600; }
+.lp-lang-check { margin-left: auto; color: #4f46e5; font-size: 0.75rem; }
+
 .lp-btn-ghost {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -542,7 +599,9 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
   border: 1px solid var(--color-border);
   border-radius: 20px; padding: 26px 22px 22px;
   position: relative; transition: border-color 0.2s;
+  display: flex; flex-direction: column;
 }
+.lp-plan-cta { margin-top: auto; }
 .lp-plan:hover { border-color: var(--color-text-muted); }
 .lp-plan--popular {
   border-color: rgba(56,189,248,0.4);
@@ -560,7 +619,7 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 .lp-plan-price  { display: flex; align-items: baseline; gap: 3px; margin-bottom: 18px; }
 .lp-plan-amount { font-size: 2.2rem; font-weight: 900; color: var(--color-text); letter-spacing: -0.04em; }
 .lp-plan-per    { font-size: 0.82rem; color: var(--color-text-muted); font-weight: 600; }
-.lp-plan-features { list-style: none; padding: 0; margin: 0 0 20px; display: flex; flex-direction: column; gap: 8px; }
+.lp-plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 8px; }
 .lp-plan-features li { font-size: 0.8rem; color: var(--color-text-secondary); display: flex; align-items: center; gap: 7px; }
 .lp-plan-cta {
   width: 100%; padding: 10px; border-radius: 11px;
@@ -595,12 +654,19 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
   .lp-sidekick-inner { flex-direction: column; }
   .lp-sidekick-visual { width: 100%; }
 }
+/* default: show long CTA, hide short */
+.lp-cta-short { display: none; }
+.lp-cta-long  { display: inline; }
+
 @media (max-width: 768px) {
   .lp-nav { padding: 0 16px; }
   .lp-nav-logo span { display: none; }
   .lp-nav-actions { gap: 6px; }
   .lp-nav-actions .lp-btn-ghost  { padding: 6px 10px; font-size: 0.75rem; }
   .lp-nav-actions .lp-btn-primary { padding: 6px 12px; font-size: 0.75rem; }
+  .lp-lang-trigger { padding: 6px 8px; font-size: 0.85rem; gap: 2px; }
+  .lp-lang-trigger svg { display: none; }
+  .lp-lang-dropdown { right: 0; min-width: 130px; }
 
   /* Hero: keep overlay layout, extend gradient so chart only shows at bottom */
   .lp-hero-card { min-height: 580px; }
@@ -643,4 +709,13 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
   .lp-pricing { padding: 48px 16px; }
   .lp-plans { grid-template-columns: 1fr; }
   .lp-cta { padding: 56px 16px; }
+}
+
+@media (max-width: 400px) {
+  .lp-nav-actions { gap: 4px; }
+  .lp-nav-actions .lp-btn-ghost  { padding: 5px 8px; font-size: 0.68rem; }
+  .lp-nav-actions .lp-btn-primary { padding: 5px 9px; font-size: 0.68rem; }
+  .lp-lang-trigger { padding: 5px 6px; font-size: 0.78rem; }
+  .lp-cta-long  { display: none; }
+  .lp-cta-short { display: inline; }
 }

@@ -300,6 +300,21 @@
     "logoText": "coinhintz",
     "continueWithGoogle": "Continua con Google",
     "divider": "o",
+    "magic": {
+      "title": "Accedi o crea un account",
+      "sub": "Nessuna password — ti invieremo un link magico",
+      "sendBtn": "Invia link magico ✉",
+      "sending": "Invio in corso…",
+      "preferPassword": "Preferisci una password?",
+      "signinWithPassword": "Accedi con password"
+    },
+    "sent": {
+      "title": "Controlla la tua casella di posta",
+      "sub": "Abbiamo inviato un link magico a <1>{{email}}</1>. Clicca per accedere — nessuna password.",
+      "hint": "Non lo vedi? Controlla la cartella spam o",
+      "tryAgain": "riprova",
+      "close": "Chiudi"
+    },
     "login": {
       "title": "Bentornato",
       "sub": "Accedi al tuo account",
@@ -309,7 +324,11 @@
       "signinBtn": "Accedi",
       "signingIn": "Accesso in corso…",
       "noAccount": "Non hai un account?",
-      "signupFree": "Registrati gratis"
+      "signupFree": "Registrati gratis",
+      "noAccountFound": "Nessun account trovato.",
+      "signupFreeArrow": "Registrati gratis →",
+      "useMagicLink": "← Usa il link magico",
+      "createAccount": "Crea account"
     },
     "signup": {
       "title": "Crea account",
@@ -319,10 +338,14 @@
       "passwordLabel": "Password",
       "confirmLabel": "Conferma password",
       "createBtn": "Crea Account",
-      "creating": "Creazione account…",
+      "creating": "Creazione…",
       "confirmEmail": "Controlla la tua email per confermare l'account, poi accedi.",
       "alreadyAccount": "Hai già un account?",
-      "signinLink": "Accedi"
+      "signinLink": "Accedi",
+      "ssoExists": "Questa email è collegata a un account Google.",
+      "signinWithGoogle": "Accedi con Google →",
+      "preferNoPassword": "Preferisci senza password?",
+      "sendMagicLink": "Invia link magico"
     },
     "reset": {
       "title": "Reimposta password",
