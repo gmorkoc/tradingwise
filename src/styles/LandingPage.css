@@ -629,6 +629,34 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 }
 .lp-plan-cta:hover { opacity: 0.82; border-color: var(--color-text-secondary); }
 .lp-plan-cta--primary { background: linear-gradient(135deg, #38bdf8, #0284c7); color: white; border: none; }
+.lp-plan-cta--elite   { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: white; border: none; }
+
+.lp-plan--elite {
+  border-color: rgba(167,139,250,0.5);
+  background: linear-gradient(160deg, rgba(167,139,250,0.07) 0%, var(--color-surface-alt, var(--color-surface)) 60%);
+  box-shadow: 0 0 0 1px rgba(167,139,250,0.25), 0 0 48px rgba(139,92,246,0.14);
+}
+.lp-plan--elite:hover { border-color: rgba(167,139,250,0.75); }
+
+.lp-plan-elite-tag {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: white; font-size: 0.65rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+}
+
+.lp-plan-elite-banner {
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(167,139,250,0.1);
+  border: 1px solid rgba(167,139,250,0.2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #c4b5fd;
+  text-align: center;
+}
 
 /* ── CTA ─────────────────────────────────────────────────────────────── */
 .lp-cta {

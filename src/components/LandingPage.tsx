@@ -112,6 +112,7 @@ const HMAP_LABELS = ["$109K","$107K","$105K","$103K","$101K","$99K","$97K","$95K
 const FEATURE_COLORS = ["#38bdf8", "#818cf8", "#22c55e", "#fb7185", "#f59e0b", "#a78bfa"];
 const PLAN_COLORS = ["#94a3b8", "#38bdf8", "#a78bfa"];
 const PLAN_PRIMARY = [false, true, false];
+const PLAN_ELITE   = [false, false, true];
 
 // ── Sub-components ──────────────────────────────────────────────────────
 
@@ -481,12 +482,14 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
       <h2 className="lp-section-title">{t("landing.pricing.sectionTitle")}</h2>
       <div className="lp-plans">
         {pricingPlans.map((plan, i) => (
-          <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}`} style={{"--pc": PLAN_COLORS[i]} as React.CSSProperties}>
+          <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}${PLAN_ELITE[i] ? " lp-plan--elite" : ""}`} style={{"--pc": PLAN_COLORS[i]} as React.CSSProperties}>
             {PLAN_PRIMARY[i] && <div className="lp-plan-popular-tag">{t("landing.pricing.popularTag")}</div>}
+            {PLAN_ELITE[i]   && <div className="lp-plan-elite-tag">✦ BEST VALUE</div>}
             <div className="lp-plan-label" style={{color: PLAN_COLORS[i]}}>{plan.label}</div>
             <div className="lp-plan-price"><span className="lp-plan-amount">{plan.price}</span>{plan.per && <span className="lp-plan-per">{plan.per}</span>}</div>
             <ul className="lp-plan-features">{plan.features.map(f => <li key={f}><span style={{color: PLAN_COLORS[i]}}>✓</span> {f}</li>)}</ul>
-            <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary" : ""}`} style={PLAN_PRIMARY[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
+            {PLAN_ELITE[i] && <div className="lp-plan-elite-banner">🔓 Unlimited AI predictions</div>}
+            <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary" : ""}${PLAN_ELITE[i] ? " lp-plan-cta--elite" : ""}`} style={PLAN_PRIMARY[i] || PLAN_ELITE[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
           </div>
         ))}
       </div>
