@@ -817,6 +817,16 @@
   padding: 3px 8px;
 }
 
+.cw-ew-card {
+  border-color: rgba(56,189,248,0.2);
+}
+
+.cw-ew-badge {
+  color: #38bdf8;
+  background: rgba(56,189,248,0.1);
+  border-color: rgba(56,189,248,0.25);
+}
+
 .cw-pattern-tag {
   font-size: 0.7rem;
   font-weight: 700;
@@ -1087,6 +1097,180 @@
   padding: 16px 0;
   color: var(--color-text-muted);
   font-size: 0.78rem;
+}
+
+/* ── AI Scan Overlay ──────────────────────────────────────────────────── */
+.cw-ai-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 9, 15, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: cw-overlay-in 0.3s ease both;
+}
+
+@keyframes cw-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cw-ai-overlay-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: min(480px, 90vw);
+  background: rgba(13, 17, 28, 0.96);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  border-radius: 24px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 0 80px rgba(79, 70, 229, 0.2), 0 0 1px rgba(129, 140, 248, 0.4);
+  animation: cw-card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cw-card-in {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cw-ai-overlay-ring-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cw-ai-overlay-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #4f46e5, #818cf8, #4ade80, #2563eb, #4f46e5);
+  animation: cw-ring-spin 1.4s linear infinite;
+  mask: radial-gradient(circle at center, transparent 84%, white 86%);
+  -webkit-mask: radial-gradient(circle at center, transparent 84%, white 86%);
+}
+
+@keyframes cw-ring-spin { to { transform: rotate(360deg); } }
+
+.cw-ai-overlay-star {
+  font-size: 1.6rem;
+  color: #818cf8;
+  line-height: 1;
+  animation: cw-star-pulse 2s ease-in-out infinite;
+}
+
+@keyframes cw-star-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.12); }
+}
+
+.cw-ai-overlay-heading {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.cw-ai-overlay-sub {
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin-top: -10px;
+}
+
+.cw-ai-overlay-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 72px;
+  justify-content: center;
+  border-top: 1px solid rgba(129, 140, 248, 0.12);
+  border-bottom: 1px solid rgba(129, 140, 248, 0.12);
+  padding: 16px 0;
+}
+
+.cw-ai-overlay-stage-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6b7280;
+  animation: cw-stage-fade 0.35s ease both;
+}
+
+.cw-ai-overlay-stage-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e5e7eb;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  animation: cw-stage-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cw-stage-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes cw-stage-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cw-ai-overlay-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  width: 100%;
+}
+
+.cw-ai-overlay-chip {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(129, 140, 248, 0.15);
+  color: #374151;
+  background: rgba(255,255,255,0.03);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.cw-ai-overlay-chip--done {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.06);
+}
+
+.cw-ai-overlay-chip--active {
+  color: #818cf8;
+  border-color: rgba(129, 140, 248, 0.5);
+  background: rgba(129, 140, 248, 0.1);
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.25);
+}
+
+.cw-ai-overlay-bar {
+  width: 100%;
+  height: 3px;
+  background: rgba(129, 140, 248, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.cw-ai-overlay-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #818cf8, #4ade80);
+  border-radius: 99px;
+  transition: width 0.4s ease;
 }
 
 .cw-ai-spinner {

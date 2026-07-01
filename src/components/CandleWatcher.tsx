@@ -17,6 +17,7 @@ interface Props {
   onOpenUpgrade: () => void;
   onReady?: () => void;
   refreshTrigger?: number;
+  visible?: boolean;
 }
 
 type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number };
@@ -76,9 +77,6 @@ const INTERVALS: Interval[] = [
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
   { label: "1w",  value: "1w",  refresh: 3600_000, limit: 100, durationSec: 604_800 },
   { label: "1M",  value: "1d",  refresh: 3600_000, limit: 30,  durationSec: 86_400  },
-  { label: "3M",  value: "1d",  refresh: 3600_000, limit: 90,  durationSec: 86_400  },
-  { label: "6M",  value: "1d",  refresh: 3600_000, limit: 180, durationSec: 86_400  },
-  { label: "1Y",  value: "1w",  refresh: 3600_000, limit: 52,  durationSec: 604_800 },
 ];
 
 function fmtCountdown(sec: number): string {
@@ -1267,7 +1265,7 @@ async function getMMAnalysis(
   ict?: ICTResult | null,
 ): Promise<AIRead | null> {
   const last = candles[candles.length - 1];
-  const recent20 = candles.slice(-20).map(c => ({
+  const recent50 = candles.slice(-50).map(c => ({
     o: c.open.toFixed(2), h: c.high.toFixed(2), l: c.low.toFixed(2), cl: c.close.toFixed(2),
     v: c.volume ? (c.volume / 1000).toFixed(1) + "K" : "?",
   }));
@@ -1283,48 +1281,49 @@ async function getMMAnalysis(
     ? `${ew.pattern === "impulse" ? "Impulse" : "Corrective"} ${ew.direction} — ${ew.description}`
     : "No clear pattern detected";
 
-  const prompt = `You are an elite crypto market analyst who specializes in reading market maker (MM) and institutional order flow from raw candlestick action. Your job is to decode what the smart money is doing on this ${intervalLabel} chart of ${coin}/USD right now and predict what happens next.
+  const prompt = `You are an elite crypto market analyst specializing in reading market maker (MM) and institutional order flow from raw candlestick action. Your job: decode what smart money is doing on this ${intervalLabel} chart of ${coin}/USD and predict the next move with conviction.
 
 CURRENT PRICE: $${last.close.toFixed(2)}
 
-LAST 20 CANDLES (oldest→newest, OHLCV):
-${JSON.stringify(recent20)}
+LAST 50 CANDLES (oldest→newest, OHLCV):
+${JSON.stringify(recent50)}
 
 PATTERN DETECTED ON LAST 3 CANDLES: ${pattern.name} (${pattern.type})
 
 TECHNICAL SNAPSHOT:
 - RSI(14): ${rsiLabel}
 - MACD: ${macdLabel}
-- Bollinger Band Position: ${bbLabel}
+- Bollinger Band %: ${bbLabel}
 - Volume: ${volLabel}
 - EMA 20: ${ema20rel}
 - EMA 50: ${ema50rel}
 - ATR(14): ${ind.atr ? "$" + ind.atr.toFixed(2) : "N/A"}
 - Key Resistance: ${ind.resistance.length ? ind.resistance.map(r => "$" + r.toFixed(0)).join(", ") : "none detected"}
 - Key Support: ${ind.support.length ? ind.support.map(s => "$" + s.toFixed(0)).join(", ") : "none detected"}
-- Wyckoff Phase: ${wyckoff?.phase ?? "Unknown"}${wyckoff?.springs.length ? ` | Springs detected (${wyckoff.springs.length})` : ""}${wyckoff?.upthrusts.length ? ` | Upthrusts detected (${wyckoff.upthrusts.length})` : ""}
+- Wyckoff Phase: ${wyckoff?.phase ?? "Unknown"}${wyckoff?.springs.length ? ` | Springs: ${wyckoff.springs.length}` : ""}${wyckoff?.upthrusts.length ? ` | Upthrusts: ${wyckoff.upthrusts.length}` : ""}
 - Elliott Wave: ${ewLabel}
 - SMC Order Blocks: ${ict?.orderBlocks.length ? ict.orderBlocks.map(ob => `${ob.type} OB $${ob.low.toFixed(2)}–$${ob.high.toFixed(2)}`).join(", ") : "none"}
 - SMC Fair Value Gaps: ${ict?.fvgs.length ? ict.fvgs.map(f => `${f.type} FVG $${f.bottom.toFixed(2)}–$${f.top.toFixed(2)}`).join(", ") : "none"}
 - SMC Structure: ${ict?.structure.length ? ict.structure.slice(-3).map(s => `${s.kind.toUpperCase()} ${s.dir}`).join(", ") : "none"}
 - Liquidity Pools: ${ict?.liquidityPools.length ? ict.liquidityPools.map(lp => `${lp.type === "buy" ? "BSL" : "SSL"} $${lp.price.toFixed(2)} (×${lp.count})`).join(", ") : "none"}
-- Premium/Discount: ${ict?.pd ? `Range $${ict.pd.low.toFixed(2)}–$${ict.pd.high.toFixed(2)}, EQ $${ict.pd.mid.toFixed(2)}, price is in ${candles[candles.length-1]?.close > ict.pd.mid ? "PREMIUM (sell bias)" : "DISCOUNT (buy bias)"}` : "N/A"}
+- Premium/Discount: ${ict?.pd ? `Range $${ict.pd.low.toFixed(2)}–$${ict.pd.high.toFixed(2)}, EQ $${ict.pd.mid.toFixed(2)}, price is in ${last.close > ict.pd.mid ? "PREMIUM (sell bias)" : "DISCOUNT (buy bias)"}` : "N/A"}
 - OTE Zone: ${ict?.ote ? `${ict.ote.type} $${ict.ote.bottom.toFixed(2)}–$${ict.ote.top.toFixed(2)} (0.618–0.705 fib)` : "none"}
 
-INSTRUCTIONS:
-1. Read the candle sequence like a story — what are the wicks telling you? Where did price get rejected or absorbed?
-2. Identify if market makers are accumulating, distributing, running stops, or squeezing.
-3. Look for manipulation signatures: fake breakouts, wick sweeps of liquidity, volume divergence.
-4. Give a clear, decisive directional call for the next 1–3 candles.
-5. Name specific price levels a trader must watch.
-6. Be direct — no hedging, no "could go either way." Give your best read.
+ANALYSIS PROCESS — follow these steps in your "thinking" field before finalizing any output:
+1. Narrate the last 50 candles as a story: where did volume spike, where were wicks absorbed, where did price stall?
+2. Cross-reference the candle story with SMC structure, liquidity pools, and Wyckoff phase — do they agree or conflict?
+3. Check Elliott Wave context: are we in an impulse or corrective leg? What does the current wave imply about the next move?
+4. Identify the single most important price level right now and why smart money would care about it.
+5. Weigh bull vs bear case honestly. Only assign "high" confidence if at least 3 independent signals agree.
+6. Commit to a decisive directional call — no hedging.
 
-Respond ONLY with valid JSON:
+Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill it first, then derive everything else from it):
 {
+  "thinking": "Step-by-step reasoning through the 6 analysis steps above. 4-6 sentences minimum. This is your chain-of-thought before committing to any output field.",
   "pattern": "the dominant candle pattern or structure name",
   "patternType": "bullish" | "bearish" | "neutral",
-  "mmReading": "2-3 sentences: what market makers / smart money are doing right now — accumulating below support, distributing at resistance, running stops above highs, squeezing shorts, etc. Cite the specific candle wicks and volume behavior that tells you this.",
-  "nextMove": "2-3 sentences: exactly what price is likely to do next and why. Give specific price targets and the trigger that would confirm or invalidate.",
+  "mmReading": "2-3 sentences: what smart money is doing right now. Cite specific wick behavior and volume.",
+  "nextMove": "2-3 sentences: exactly what price does next, specific targets, and what confirms or invalidates.",
   "keyLevels": [
     { "label": "Resistance", "price": <number>, "side": "above" },
     { "label": "Support",    "price": <number>, "side": "below" }
@@ -1332,10 +1331,10 @@ Respond ONLY with valid JSON:
   "bias": "bullish" | "bearish" | "neutral",
   "confidence": "high" | "medium" | "low",
   "scenario": {
-    "headline": "One bold sentence summarizing the most probable outcome right now — direct, no hedging.",
-    "bullCase": "One sentence: exactly what happens price-wise if buyers take control — include a specific target price.",
-    "bearCase": "One sentence: exactly what happens price-wise if sellers take control — include a specific target price.",
-    "trigger": "One sentence: the specific price level, candle close, or volume event that will confirm which scenario plays out.",
+    "headline": "One bold sentence — the single most probable outcome. No hedging.",
+    "bullCase": "One sentence: what happens if buyers take control — include specific target price.",
+    "bearCase": "One sentence: what happens if sellers take control — include specific target price.",
+    "trigger": "One sentence: the exact price, candle close, or volume event that confirms the scenario.",
     "probability": "bulls favored" | "bears favored" | "50/50"
   }
 }`;
@@ -1345,8 +1344,8 @@ Respond ONLY with valid JSON:
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 0.4,
-      max_tokens: 900,
+      temperature: 0.3,
+      max_tokens: 2000,
     });
     const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}") as AIRead;
     if (!parsed.mmReading) return null;
@@ -1616,16 +1615,18 @@ function IndicatorPill({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady }) => {
+export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true }) => {
   const { tier } = useAuth();
   const isElite = hasAccess(tier, "elite");
-  const [intervalIdx, setIntervalIdx] = useState(3);  // default 1h
+  const [intervalIdx, setIntervalIdx] = useState(6);  // default 4h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const candlesRef = useRef<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const aiScanIctRef = useRef<ICTResult | null>(null);
+  const [scanStep, setScanStep] = useState(-1);
   const [lastCandleTime, setLastCandleTime] = useState<number | null>(null);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [candleCountdown, setCandleCountdown] = useState<string>("");
@@ -1649,6 +1650,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const forecastBullRef      = useRef<ISeriesApi<"Line", any> | null>(null);
   const forecastBearRef      = useRef<ISeriesApi<"Line", any> | null>(null);
   const forecastTargetRef    = useRef<IPriceLine | null>(null);
+  const htfLiqLinesRef       = useRef<IPriceLine[]>([]);
   const indRef               = useRef<Indicators | null>(null);
   const macroCtxRef          = useRef<MacroContextData | null>(null);
   const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
@@ -2120,37 +2122,38 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setTimeout(() => setJustSaved(false), 1800);
   }, [coin, interval]);
 
-  const toggleForecast = useCallback(() => {
-    if (showForecast) { clearForecast(); return; }
+  const drawForecastNow = useCallback((currentAiRead: AIRead | null = aiRead) => {
     if (!chartRef.current || !candleSeriesRef.current || !candles.length) return;
 
     const wyk = detectWyckoff(candles);
     const ict = detectICT(candles);
     const { candles: fc, targetPrice, bias, conviction, bullPath, bearPath } = generateForecastCandles(
-      candles, aiRead, indRef.current, interval.durationSec, 6, wyk, ict, macroCtxRef.current, coin as string
+      candles, currentAiRead, indRef.current, interval.durationSec, 6, wyk, ict, macroCtxRef.current, coin as string
     );
     if (!fc.length) return;
     setForecastConviction(conviction);
 
-    const isBull   = bias === "bullish";
-    const isBear   = bias === "bearish";
-    const upColor  = isBull ? "rgba(56,189,248,0.45)"  : "rgba(167,139,250,0.35)";
-    const dnColor  = isBear ? "rgba(167,139,250,0.45)" : "rgba(56,189,248,0.35)";
-    const brdUp    = isBull ? "#38bdf8" : "#a78bfa";
-    const brdDn    = isBear ? "#a78bfa" : "#38bdf8";
+    const isBull = bias === "bullish";
+    const isBear = bias === "bearish";
+
+    // Black forecast candles — clearly distinct from real candles
+    const upColor = "#000000";
+    const dnColor = "#000000";
+    const brdUp   = isBull ? "#7dd3fc" : "#fca5a5";
+    const brdDn   = isBear ? "#fca5a5" : "#7dd3fc";
 
     const series = chartRef.current.addSeries(CandlestickSeries, {
       upColor, downColor: dnColor,
       borderUpColor: brdUp, borderDownColor: brdDn,
-      wickUpColor: brdUp, wickDownColor: brdDn,
+      wickUpColor:   brdUp, wickDownColor:   brdDn,
     });
     series.setData(fc);
     forecastSeriesRef.current = series;
 
-    // Fan bounds — uncertainty cone widening over forecast horizon
+    // Uncertainty fan — bolder lines
     if (bullPath.length) {
       const bs = chartRef.current.addSeries(LineSeries, {
-        color: "rgba(34,197,94,0.22)", lineWidth: 1, lineStyle: LineStyle.Dashed,
+        color: "rgba(34,197,94,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed,
         priceLineVisible: false, lastValueVisible: false,
       });
       bs.setData(bullPath);
@@ -2158,30 +2161,45 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }
     if (bearPath.length) {
       const bs = chartRef.current.addSeries(LineSeries, {
-        color: "rgba(239,68,68,0.22)", lineWidth: 1, lineStyle: LineStyle.Dashed,
+        color: "rgba(239,68,68,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed,
         priceLineVisible: false, lastValueVisible: false,
       });
       bs.setData(bearPath);
       forecastBearRef.current = bs;
     }
 
-    const targetColor = isBull ? "#38bdf8" : isBear ? "#a78bfa" : "#94a3b8";
-    const lastClose = candles[candles.length - 1].close;
-    const pctMove = ((targetPrice - lastClose) / lastClose * 100);
-    const pctLabel = (pctMove >= 0 ? "+" : "") + pctMove.toFixed(1) + "%";
+    // Target price line — thick, solid, prominent
+    const targetColor = isBull ? "#38bdf8" : isBear ? "#f87171" : "#94a3b8";
+    const lastClose   = candles[candles.length - 1].close;
+    const pctMove     = (targetPrice - lastClose) / lastClose * 100;
+    const pctLabel    = (pctMove >= 0 ? "+" : "") + pctMove.toFixed(2) + "%";
     const tl = candleSeriesRef.current.createPriceLine({
       price: targetPrice,
       color: targetColor,
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
+      lineWidth: 2,
+      lineStyle: LineStyle.Solid,
       axisLabelVisible: true,
-      title: `Target ${pctLabel}  $${targetPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
+      title: `AI Target ${pctLabel}  $${targetPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
     });
     forecastTargetRef.current = tl;
 
     chartRef.current.timeScale().fitContent();
     setShowForecast(true);
-  }, [showForecast, clearForecast, candles, aiRead, interval]);
+  }, [candles, aiRead, interval, coin]);
+
+  // Auto-draw forecast whenever a new AI read arrives
+  useEffect(() => {
+    if (!aiRead) return;
+    clearForecast();
+    const t = setTimeout(() => drawForecastNow(aiRead), 120);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiRead]);
+
+  const toggleForecast = useCallback(() => {
+    if (showForecast) { clearForecast(); return; }
+    drawForecastNow();
+  }, [showForecast, clearForecast, drawForecastNow]);
 
   // ── Elliott Wave toggle ───────────────────────────────────────────────────────
 
@@ -2294,6 +2312,19 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [fetchCandles, interval.refresh, isElite]);
 
+  // Resize chart when tab becomes visible again (component stays mounted while hidden)
+  useEffect(() => {
+    if (!visible || !chartRef.current || !chartContainerRef.current) return;
+    requestAnimationFrame(() => {
+      if (!chartRef.current || !chartContainerRef.current) return;
+      const w = chartContainerRef.current.clientWidth;
+      if (w > 0) {
+        chartRef.current.resize(w, 460);
+        chartRef.current.timeScale().fitContent();
+      }
+    });
+  }, [visible]);
+
   // Candle close countdown — ticks every second
   useEffect(() => {
     if (!candles.length) return;
@@ -2372,15 +2403,59 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const ind     = buildIndicators(candles);
     const pattern = detectPattern(candles);
 
+    const ict = detectICT(candles);
+    aiScanIctRef.current = ict;
     setAiLoading(true);
+
+    // Fetch HTF candles for multi-timeframe liquidity pockets
+    const HTF_FRAMES = [
+      { tf: "12h", label: "12H", limit: 40,  color: "#818cf8" },
+      { tf: "1d",  label: "1D",  limit: 30,  color: "#38bdf8" },
+      { tf: "3d",  label: "3D",  limit: 20,  color: "#f59e0b" },
+      { tf: "1w",  label: "1W",  limit: 20,  color: "#f97316" },
+    ];
+    const htfFetches = HTF_FRAMES.map(f =>
+      coinglass.getCandles(coin as string, f.tf, f.limit)
+        .then(c => ({ ...f, pools: detectICT(c).liquidityPools }))
+        .catch(() => ({ ...f, pools: [] as LiqPool[] }))
+    );
+
     Promise.all([
-      getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, detectICT(candles)),
+      getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict),
       getMacroContext(coin as string).catch(() => null),
       coinglass.getAllBTCData(coin as string).catch(() => null),
       fetchFearGreed().catch(() => null),
-    ]).then(([res, macro, btcLive, fearGreed]) => {
+      Promise.all(htfFetches),
+    ]).then(([res, macro, btcLive, fearGreed, htfResults]) => {
       if (res)   setAiRead(res);
       if (macro) setMacroCtx(macro);
+
+      // Draw HTF liquidity lines on chart
+      if (candleSeriesRef.current) {
+        // Clear old HTF lines
+        htfLiqLinesRef.current.forEach(l => { try { candleSeriesRef.current!.removePriceLine(l); } catch {} });
+        htfLiqLinesRef.current = [];
+        // Draw new ones
+        const drawn = new Set<string>();
+        for (const frame of htfResults) {
+          for (const pool of frame.pools) {
+            const key = `${pool.price.toFixed(0)}-${pool.type}`;
+            if (drawn.has(key)) continue;
+            drawn.add(key);
+            const isBuy = pool.type === "buy";
+            const line = candleSeriesRef.current.createPriceLine({
+              price: pool.price,
+              color: frame.color,
+              lineWidth: 1,
+              lineStyle: 3, // Dashed
+              axisLabelVisible: true,
+              title: `${frame.label} ${isBuy ? "BSL" : "SSL"} ×${pool.count}`,
+            });
+            htfLiqLinesRef.current.push(line);
+          }
+        }
+      }
+
       setAiLoading(false);
       if (btcLive) {
         setPredLoading(true);
@@ -2391,6 +2466,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       }
     });
   }, [candles]);
+
+  // Cycle scan step while AI is loading
+  useEffect(() => {
+    if (!aiLoading) { setScanStep(-1); return; }
+    setScanStep(0);
+    const t = setInterval(() => setScanStep(s => s + 1), 420);
+    return () => clearInterval(t);
+  }, [aiLoading]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
@@ -2431,6 +2514,63 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   return (
     <BlurGate requiredTier="elite" featureName="Candle AI" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
       <div className="cw-page">
+
+        {/* ── AI Scan Overlay ── */}
+        {aiLoading && (() => {
+          const scanIct = aiScanIctRef.current;
+          const scanInd = ind;
+          const lastClose = candles[candles.length - 1]?.close ?? 0;
+          const bsl = scanIct?.liquidityPools.filter(l => l.type === "buy") ?? [];
+          const ssl = scanIct?.liquidityPools.filter(l => l.type === "sell") ?? [];
+          type ScanRow = { label: string; value: string; color?: string };
+          const rows: ScanRow[] = [
+            { label: "RSI (14)", value: scanInd?.rsi != null ? `${scanInd.rsi.toFixed(1)}${scanInd.rsi >= 70 ? " — overbought" : scanInd.rsi <= 30 ? " — oversold" : ""}` : "—", color: scanInd?.rsi != null ? (scanInd.rsi >= 70 ? "#ef4444" : scanInd.rsi <= 30 ? "#22c55e" : "#818cf8") : undefined },
+            { label: "MACD Histogram", value: scanInd?.macdHist != null ? `${scanInd.macdHist > 0 ? "+" : ""}${scanInd.macdHist.toFixed(4)}` : "—", color: scanInd?.macdHist != null ? (scanInd.macdHist > 0 ? "#22c55e" : "#ef4444") : undefined },
+            { label: "Bollinger %", value: scanInd?.bbPct != null ? `${(scanInd.bbPct * 100).toFixed(0)}%${scanInd.bbPct >= 0.8 ? " — upper band" : scanInd.bbPct <= 0.2 ? " — lower band" : ""}` : "—", color: scanInd?.bbPct != null ? (scanInd.bbPct >= 0.8 ? "#ef4444" : scanInd.bbPct <= 0.2 ? "#22c55e" : "#818cf8") : undefined },
+            { label: "Volume Ratio", value: scanInd?.volRatio != null ? `${scanInd.volRatio.toFixed(2)}× average` : "—", color: scanInd?.volRatio != null ? (scanInd.volRatio >= 1.5 ? "#818cf8" : "#6b7280") : undefined },
+            { label: "EMA 20", value: scanInd?.ema20 != null ? `$${scanInd.ema20.toFixed(2)} — price ${lastClose > scanInd.ema20 ? "above ↑" : "below ↓"}` : "—", color: scanInd?.ema20 != null ? (lastClose > scanInd.ema20 ? "#22c55e" : "#ef4444") : undefined },
+            { label: "EMA 50", value: scanInd?.ema50 != null ? `$${scanInd.ema50.toFixed(2)} — price ${lastClose > scanInd.ema50 ? "above ↑" : "below ↓"}` : "—", color: scanInd?.ema50 != null ? (lastClose > scanInd.ema50 ? "#22c55e" : "#ef4444") : undefined },
+            { label: "ATR (14)", value: scanInd?.atr != null ? `$${scanInd.atr.toFixed(2)} volatility` : "—", color: "#f59e0b" },
+            { label: "Elliott Wave", value: (() => { const ew = detectElliottWaves(candles); return ew.pattern !== "none" ? ew.description : "No clear pattern"; })(), color: "#818cf8" },
+            { label: "Wyckoff Phase", value: wyckoff?.phase ?? "Ranging", color: "#38bdf8" },
+            { label: "SMC Order Blocks", value: scanIct?.orderBlocks.length ? `${scanIct.orderBlocks.length} detected` : "None found", color: scanIct?.orderBlocks.length ? "#f59e0b" : undefined },
+            { label: "Fair Value Gaps", value: scanIct?.fvgs.length ? `${scanIct.fvgs.length} open gaps` : "None open", color: scanIct?.fvgs.length ? "#38bdf8" : undefined },
+            { label: "SMC Structure", value: scanIct?.structure.length ? scanIct.structure.slice(-3).map(s => `${s.kind.toUpperCase()} ${s.dir}`).join(" · ") : "—", color: "#a78bfa" },
+            { label: "Buy-Side Liquidity", value: bsl.length ? bsl.map(l => `$${l.price.toLocaleString(undefined, { maximumFractionDigits: 0 })} ×${l.count}`).join(" · ") : "None detected", color: bsl.length ? "#4ade80" : undefined },
+            { label: "Sell-Side Liquidity", value: ssl.length ? ssl.map(l => `$${l.price.toLocaleString(undefined, { maximumFractionDigits: 0 })} ×${l.count}`).join(" · ") : "None detected", color: ssl.length ? "#ef4444" : undefined },
+            { label: "OTE Zone", value: scanIct?.ote ? `$${scanIct.ote.bottom.toFixed(0)} – $${scanIct.ote.top.toFixed(0)} (0.618–0.705)` : "Not identified", color: scanIct?.ote ? "#818cf8" : undefined },
+            { label: "Premium / Discount", value: scanIct?.pd ? (lastClose > scanIct.pd.mid ? `PREMIUM — sell bias (EQ $${scanIct.pd.mid.toFixed(0)})` : `DISCOUNT — buy bias (EQ $${scanIct.pd.mid.toFixed(0)})`) : "—", color: scanIct?.pd ? (lastClose > scanIct.pd.mid ? "#ef4444" : "#22c55e") : undefined },
+          ];
+          const active = ((scanStep % rows.length) + rows.length) % rows.length;
+          const current = rows[active];
+          return (
+            <div className="cw-ai-overlay">
+              <div className="cw-ai-overlay-card">
+                <div className="cw-ai-overlay-ring-wrap">
+                  <div className="cw-ai-overlay-ring" />
+                  <span className="cw-ai-overlay-star">✦</span>
+                </div>
+                <div className="cw-ai-overlay-heading">Analyzing {coin}/{interval.label}</div>
+                <div className="cw-ai-overlay-sub">Processing {rows.length} factors for AI prediction</div>
+
+                <div className="cw-ai-overlay-stage">
+                  <div key={`${active}-label`} className="cw-ai-overlay-stage-label">{current.label}</div>
+                  <div key={`${active}-value`} className="cw-ai-overlay-stage-value" style={current.color ? { color: current.color } : undefined}>{current.value}</div>
+                </div>
+
+                <div className="cw-ai-overlay-chips">
+                  {rows.map((r, i) => (
+                    <span key={r.label} className={`cw-ai-overlay-chip${i === active ? " cw-ai-overlay-chip--active" : i < active ? " cw-ai-overlay-chip--done" : ""}`}>{r.label}</span>
+                  ))}
+                </div>
+
+                <div className="cw-ai-overlay-bar">
+                  <div className="cw-ai-overlay-bar-fill" style={{ width: `${((active + 1) / rows.length) * 100}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Header ── */}
         <div className="cw-header">
@@ -2681,52 +2821,30 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
           {/* Right: AI analysis */}
           <div className="cw-right">
-            <div className="cw-ai-card">
-              <div className="cw-ai-header">
-                <span className="cw-ai-badge">✦ AI READ</span>
-                {pattern && (
-                  <span className={`cw-pattern-tag cw-pattern-tag--${pattern.type}`}>
-                    {pattern.emoji} {pattern.name}
-                  </span>
-                )}
-              </div>
 
-              {/* ── Forecast button — always at top when aiRead available ── */}
-              {!aiLoading && aiRead && (
-                <button
-                  className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
-                  onClick={toggleForecast}
-                >
-                  {showForecast ? "✕ Hide Prediction" : "✦ Predict Next Move on Chart"}
-                  {showForecast && (
-                    <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
-                  )}
-                </button>
-              )}
-
-              {/* ── Elliott Wave toggle — always visible for Elite once candles load ── */}
-              {elliottResult && (() => {
-                const hasPattern = elliottResult.pattern !== "none";
-                return (
-                  <>
-                    <button
-                      className={`cw-elliott-btn${showElliott && hasPattern ? " cw-elliott-btn--active" : ""}${!hasPattern ? " cw-elliott-btn--unavailable" : ""}`}
-                      onClick={hasPattern ? toggleElliott : undefined}
-                      title={!hasPattern ? "No wave pattern detected — try 4H, Daily or Weekly" : undefined}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
-                      {showElliott && hasPattern ? "✕ Hide Elliott Wave" : "〜 Elliott Wave"}
-                      {hasPattern
-                        ? <span className="cw-elliott-btn-badge">Wave {elliottResult.currentWave}</span>
-                        : <span className="cw-elliott-btn-badge cw-elliott-btn-badge--none">No pattern</span>
-                      }
-                    </button>
-                    <p className="cw-elliott-hint">
-                      Best on <strong>4H · Daily · Weekly</strong> — noisy below 1H
-                    </p>
-                  </>
-                );
-              })()}
+            {/* ── Elliott Wave card ── */}
+            {elliottResult && (() => {
+              const hasPattern = elliottResult.pattern !== "none";
+              return (
+                <div className="cw-ai-card cw-ew-card">
+                  <div className="cw-ai-header">
+                    <span className="cw-ai-badge cw-ew-badge">〜 Elliott Wave</span>
+                    {hasPattern && (
+                      <span className={`cw-elliott-btn-badge`}>Wave {elliottResult.currentWave}</span>
+                    )}
+                  </div>
+                  <button
+                    className={`cw-elliott-btn${showElliott && hasPattern ? " cw-elliott-btn--active" : ""}${!hasPattern ? " cw-elliott-btn--unavailable" : ""}`}
+                    onClick={hasPattern ? toggleElliott : undefined}
+                    title={!hasPattern ? "No wave pattern detected — try 4H, Daily or Weekly" : undefined}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="2 17 8 11 13 16 22 7"/></svg>
+                    {showElliott && hasPattern ? "✕ Hide Elliott Wave" : "Show on Chart"}
+                    {!hasPattern && <span className="cw-elliott-btn-badge cw-elliott-btn-badge--none">No pattern</span>}
+                  </button>
+                  <p className="cw-elliott-hint">
+                    Best on <strong>4H · Daily · Weekly</strong> — noisy below 1H
+                  </p>
 
               {/* ── Elliott Wave Analysis Narrative ── */}
               {elliottResult && elliottResult.pattern !== "none" && (() => {
@@ -2849,11 +2967,37 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   </div>
                 );
               })()}
+            </div>
+          );
+        })()}
+
+            {/* ── AI READ card ── */}
+            <div className="cw-ai-card">
+              <div className="cw-ai-header">
+                <span className="cw-ai-badge">✦ AI READ</span>
+                {pattern && (
+                  <span className={`cw-pattern-tag cw-pattern-tag--${pattern.type}`}>
+                    {pattern.emoji} {pattern.name}
+                  </span>
+                )}
+              </div>
+
+              {!aiLoading && aiRead && (
+                <button
+                  className={`cw-forecast-btn${showForecast ? ` cw-forecast-btn--active${aiRead.bias === "bearish" ? " cw-forecast-btn--bear" : ""}` : ""}`}
+                  onClick={toggleForecast}
+                >
+                  {showForecast ? "✕ Hide Prediction" : "✦ Predict Next Move on Chart"}
+                  {showForecast && (
+                    <span className="cw-forecast-btn-bias">{aiRead.bias.toUpperCase()}</span>
+                  )}
+                </button>
+              )}
 
               {aiLoading && (
                 <div className="cw-ai-loading">
                   <div className="cw-ai-spinner" />
-                  <span>Reading market makers…</span>
+                  <span>Reading market structure…</span>
                 </div>
               )}
 

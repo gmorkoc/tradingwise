@@ -1402,14 +1402,15 @@ function AppDashboard({
                 onOpenUpgrade={onOpenUpgrade}
               />
             )}
-            {activeSection === "candleai" && (
+            <div style={{ display: activeSection === "candleai" ? "contents" : "none" }}>
               <CandleWatcher
                 coin={coin}
                 theme={theme}
+                visible={activeSection === "candleai"}
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
               />
-            )}
+            </div>
             {activeSection === "markets" && <GlobalMarkets />}
             {activeSection === "altanalysis" && (
               <BlurGate
