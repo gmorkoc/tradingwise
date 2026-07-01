@@ -1,30 +1,42 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="ch-grad" x1="536" y1="186" x2="664" y2="314" gradientUnits="userSpaceOnUse">
+    <linearGradient id="ch-grad" x1="510" y1="150" x2="690" y2="330" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#4f46e5"/>
       <stop offset="100%" stop-color="#2563eb"/>
     </linearGradient>
-    <radialGradient id="bg-glow" cx="50%" cy="35%" r="55%" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.18"/>
+    <radialGradient id="bg-glow" cx="50%" cy="40%" r="50%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#0f1a2a" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="1200" height="630" fill="#0f1a2a"/>
+  <rect width="1200" height="630" fill="#0f1117"/>
   <rect width="1200" height="630" fill="url(#bg-glow)"/>
 
-  <!-- Logo icon centered at (600, 245) — scaled 4x from viewBox -->
-  <circle cx="600" cy="245" r="64" fill="url(#ch-grad)"/>
-  <path d="M 621 229 A 30 30 0 0 0 570 245" stroke="#4ade80" stroke-width="20" stroke-linecap="round" fill="none"/>
-  <path d="M 570 245 A 30 30 0 0 0 621 261" stroke="white" stroke-width="20" stroke-linecap="round" fill="none"/>
-  <circle cx="600" cy="245" r="64" stroke="#818cf8" stroke-width="8" fill="none"/>
+  <!--
+    Logo scaled 5× from viewBox 36×36, centred at (600, 240)
+    offset = (600 − 18×5, 240 − 18×5) = (510, 150)
+    circle r = 16×5 = 80
+    arc r   = 7.5×5 = 37.5
+    stroke  = 5×5 = 25
+    ring sw = 2×5 = 10
+
+    Upper arc: M(23.3×5+510, 12.7×5+150) = (626.5, 213.5)
+               to (10.5×5+510, 18×5+150) = (562.5, 240)
+    Lower arc: from (562.5, 240)
+               to (23.3×5+510, 23.3×5+150) = (626.5, 266.5)
+  -->
+  <circle cx="600" cy="240" r="80" fill="url(#ch-grad)"/>
+  <path d="M 626.5 213.5 A 37.5 37.5 0 0 0 562.5 240" stroke="#4ade80" stroke-width="25" stroke-linecap="round" fill="none"/>
+  <path d="M 562.5 240 A 37.5 37.5 0 0 0 626.5 266.5" stroke="white" stroke-width="25" stroke-linecap="round" fill="none"/>
+  <circle cx="600" cy="240" r="80" stroke="#818cf8" stroke-width="10" fill="none"/>
 
   <!-- Wordmark -->
-  <text x="600" y="385" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-2">
+  <text x="600" y="390" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="80" font-weight="800" letter-spacing="-2">
     <tspan fill="#ffffff">coinhint</tspan><tspan fill="#4ade80">z</tspan>
   </text>
 
   <!-- Tagline -->
-  <text x="600" y="448" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="25" font-weight="400" fill="rgba(255,255,255,0.45)" letter-spacing="5">CRYPTO TRADING INTELLIGENCE</text>
+  <text x="600" y="448" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="400" fill="rgba(255,255,255,0.4)" letter-spacing="5">CRYPTO TRADING INTELLIGENCE</text>
 </svg>
