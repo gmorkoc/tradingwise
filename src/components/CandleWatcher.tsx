@@ -1625,6 +1625,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
   const [scanStep, setScanStep] = useState(-1);
   const [lastCandleTime, setLastCandleTime] = useState<number | null>(null);
@@ -2251,6 +2252,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // ── Fetch candles ────────────────────────────────────────────────────────────
 
   const triggerAI = useRef(false);
+  const suppressAIRef = useRef(false); // true when page returns from background — don't auto-run AI
 
   const fetchCandles = useCallback(async (triggerAnalysis = false) => {
     const data = await coinglass.getCandles(coin, interval.value, interval.limit);
@@ -2265,7 +2267,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setLastCandleTime(newLastTime);
 
     if (data.length) setLoadError(false);
-    if (triggerAnalysis || isNewCandle) triggerAI.current = true;
+    if (triggerAnalysis || (isNewCandle && !suppressAIRef.current)) triggerAI.current = true;
+    suppressAIRef.current = false;
   }, [coin, interval, feedChart, lastCandleTime]);
 
   const [loadError, setLoadError] = useState(false);
@@ -2311,6 +2314,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const id = setInterval(() => fetchCandles(false), interval.refresh);
     return () => clearInterval(id);
   }, [fetchCandles, interval.refresh, isElite]);
+
+  // Suppress AI auto-trigger when page returns from background (idle/lock screen)
+  useEffect(() => {
+    const onVisibility = () => { if (document.hidden) suppressAIRef.current = true; };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   // Resize chart when tab becomes visible again (component stays mounted while hidden)
   useEffect(() => {
@@ -2405,6 +2415,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
     const ict = detectICT(candles);
     aiScanIctRef.current = ict;
+    aiCancelledRef.current = false;
     setAiLoading(true);
 
     // Fetch HTF candles for multi-timeframe liquidity pockets
@@ -2427,6 +2438,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       fetchFearGreed().catch(() => null),
       Promise.all(htfFetches),
     ]).then(([res, macro, btcLive, fearGreed, htfResults]) => {
+      if (aiCancelledRef.current) return;
       if (res)   setAiRead(res);
       if (macro) setMacroCtx(macro);
 
@@ -2567,6 +2579,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 <div className="cw-ai-overlay-bar">
                   <div className="cw-ai-overlay-bar-fill" style={{ width: `${((active + 1) / rows.length) * 100}%` }} />
                 </div>
+
+                <button
+                  className="cw-ai-overlay-close"
+                  onClick={() => { aiCancelledRef.current = true; setAiLoading(false); }}
+                  aria-label="Cancel prediction"
+                >
+                  ✕
+                </button>
               </div>
             </div>
           );

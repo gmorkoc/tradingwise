@@ -1119,6 +1119,7 @@
 }
 
 .cw-ai-overlay-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1271,6 +1272,23 @@
   background: linear-gradient(90deg, #4f46e5, #818cf8, #4ade80);
   border-radius: 99px;
   transition: width 0.4s ease;
+}
+
+.cw-ai-overlay-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: none;
+  color: rgba(255,255,255,0.35);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.cw-ai-overlay-close:hover {
+  color: #fca5a5;
 }
 
 .cw-ai-spinner {
