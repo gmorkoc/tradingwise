@@ -1265,7 +1265,7 @@ async function getMMAnalysis(
   ict?: ICTResult | null,
 ): Promise<AIRead | null> {
   const last = candles[candles.length - 1];
-  const recent50 = candles.slice(-50).map(c => ({
+  const recent50 = candles.slice(-35).map(c => ({
     o: c.open.toFixed(2), h: c.high.toFixed(2), l: c.low.toFixed(2), cl: c.close.toFixed(2),
     v: c.volume ? (c.volume / 1000).toFixed(1) + "K" : "?",
   }));
@@ -1285,7 +1285,7 @@ async function getMMAnalysis(
 
 CURRENT PRICE: $${last.close.toFixed(2)}
 
-LAST 50 CANDLES (oldest→newest, OHLCV):
+LAST 35 CANDLES (oldest→newest, OHLCV):
 ${JSON.stringify(recent50)}
 
 PATTERN DETECTED ON LAST 3 CANDLES: ${pattern.name} (${pattern.type})
@@ -1345,7 +1345,7 @@ Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill i
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 1400,
     });
     const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}") as AIRead;
     if (!parsed.mmReading) return null;
