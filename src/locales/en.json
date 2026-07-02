@@ -1293,6 +1293,7 @@
     "candleai": "Candle AI",
     "markets": "Global Markets",
     "altanalysis": "Alt Analysis",
+    "riskcalc": "Position Size Calc",
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
@@ -1783,6 +1784,15 @@
         "Carry Trade Signals"
       ]
     },
+    "riskcalc": {
+      "title": "Position Size Calculator",
+      "desc": "Know exactly how many contracts to buy before you place a trade. Enter your account size, risk tolerance, entry, and stop — the calculator tells you your position size, dollar risk, and R:R ratio for every target. Beginners get a guided step-by-step wizard. Experienced traders get a visual trade map with AI review.",
+      "tags": [
+        "Position Sizing",
+        "Risk Management",
+        "AI Trade Review"
+      ]
+    },
     "gann": {
       "title": "Gann Analysis",
       "desc": "W.D. Gann's geometric price/time relationships identify high-probability reversal zones that most traders never see. When price and time square off, reversals become highly probable.",
@@ -1866,5 +1876,136 @@
     "tipNeutralBody": "{{sym}} funding rate is near zero ({{rate}}%). Neither longs nor shorts are overcrowded — the market is fairly neutral on leverage.",
     "tipNeutralAction": "No funding-based edge. Look at price action, RSI, and liquidation clusters for direction.",
     "refresh": "↻"
+  },
+  "posCalc": {
+    "picker": {
+      "title": "Position Size Calculator",
+      "sub": "Choose your trading experience level so we can show you the right interface.",
+      "beginnerName": "Beginner",
+      "beginnerDesc": "New to trading or want step-by-step guidance with explanations at each stage.",
+      "beginnerCta": "Step-by-step guide →",
+      "expName": "Experienced",
+      "expDesc": "You know your levels. Fast input with visual trade map and AI analysis.",
+      "expCta": "Pro interface →"
+    },
+    "mode": {
+      "beginner": "Beginner mode",
+      "switchToPro": "Switch to Pro",
+      "experienced": "Experienced mode",
+      "switchToBeginner": "Switch to Beginner"
+    },
+    "steps": {
+      "account": "Account",
+      "direction": "Direction",
+      "levels": "Levels",
+      "targets": "Targets",
+      "review": "Review"
+    },
+    "s1": {
+      "title": "How big is your trading account?",
+      "desc": "This lets us calculate the exact position size that keeps your risk controlled — no guessing.",
+      "accountSize": "Account Size (USD)",
+      "riskPerTrade": "Risk per trade",
+      "riskLow": "Conservative — professional standard. Protects your account long-term.",
+      "riskMid": "Moderate — acceptable but don't do this on every trade.",
+      "riskHigh": "Aggressive — one bad streak can seriously hurt your account.",
+      "wouldRisk": "You'd risk ${{amount}} on this trade."
+    },
+    "s2": {
+      "title": "Which way do you think price moves?",
+      "desc": "A <strong>Long</strong> trade profits when price rises. A <strong>Short</strong> trade profits when price falls.",
+      "longName": "Long (Buy)",
+      "longDesc": "You expect price to go <strong>UP</strong>. You buy now and sell higher later.",
+      "shortName": "Short (Sell)",
+      "shortDesc": "You expect price to go <strong>DOWN</strong>. You sell now and buy back cheaper."
+    },
+    "s3": {
+      "title": "Set your entry and stop loss",
+      "desc": "<strong>Entry</strong> is the price you'll trade at. <strong>Stop Loss</strong> is the price where you automatically exit to limit your loss — never skip this.",
+      "entryLabel": "Entry Price",
+      "entryHintLong": "The price at which you buy.",
+      "entryHintShort": "The price at which you sell.",
+      "slLabel": "Stop Loss",
+      "slHint": "If price hits this, your trade closes automatically.",
+      "slBelowEntry": "Must be BELOW your entry.",
+      "slAboveEntry": "Must be ABOVE your entry.",
+      "invLabel": "Invalidation Level",
+      "invOptional": "(optional — hard close)",
+      "invWarn": "⚠ Invalidation must be beyond your stop loss",
+      "invHint": "The \"no matter what\" exit — beyond this price the trade thesis is broken.",
+      "stopDist": "Stop distance:",
+      "dollarRisk": "Dollar risk:"
+    },
+    "s4": {
+      "title": "Where do you want to take profit?",
+      "desc": "Set price targets where you'll exit with profit. Aim for at least <strong>2:1 R:R</strong> — risk $1 to potentially make $2. The <strong>% column</strong> is what portion of your position you close at each target.",
+      "targetLabel": "Target Price {{n}}",
+      "closeLabel": "Close %",
+      "above": "Above entry",
+      "below": "Below entry",
+      "addTarget": "+ Add Target",
+      "pctWarn": "Your % allocations add up to {{total}}% — they should total 100%."
+    },
+    "s5": {
+      "title": "Your trade plan is ready",
+      "desc": "Review your trade below. Use the AI Take to get a professional critique of the setup.",
+      "posSummary": "Position Summary",
+      "direction": "Direction",
+      "entry": "Entry",
+      "stopLoss": "Stop Loss",
+      "dollarAtRisk": "Dollar at Risk",
+      "positionSize": "Position Size",
+      "units": "Units",
+      "tpTargets": "Take Profit Targets",
+      "long": "▲ Long",
+      "short": "▼ Short"
+    },
+    "ai": {
+      "askStep": "Ask AI about this step",
+      "askingAi": "Asking AI…",
+      "aiTake": "Get AI Trade Review",
+      "analyzing": "Analyzing…",
+      "reviewTitle": "AI Trade Review",
+      "solid": "Solid",
+      "adjust": "Adjust",
+      "risky": "Risky",
+      "rrLabel": "R:R",
+      "sizeLabel": "Size",
+      "targetsLabel": "Targets",
+      "riskLabel": "Risk",
+      "tipLabel": "Tip"
+    },
+    "wcNav": {
+      "back": "← Back",
+      "continue": "Continue →",
+      "reviewPlan": "Review Plan →",
+      "startOver": "Start Over"
+    },
+    "exp": {
+      "acctRisk": "Account & Risk",
+      "accountSize": "Account Size",
+      "riskPct": "Risk %",
+      "tradeLevels": "Trade Levels",
+      "entry": "Entry",
+      "stopLoss": "Stop Loss",
+      "inv": "Invalidation",
+      "hardClose": "(hard close)",
+      "invWarn": "⚠ Invalidation must be beyond your stop",
+      "takeProfits": "Take Profits",
+      "aiTake": "Get AI Take",
+      "aiAnalyzing": "Analyzing…",
+      "fillHint": "Fill Entry + Stop Loss to enable",
+      "addTarget": "+ Target",
+      "tradeMap": "Trade Map",
+      "mapEmpty": "Fill in your trade levels to see the visual map",
+      "positionSize": "Position Size",
+      "units": "Units",
+      "dollarAtRisk": "Dollar at Risk",
+      "stopDist": "Stop Distance",
+      "targetBreakdown": "Target Breakdown",
+      "tpHint": "Fill in take profit prices to see breakdown",
+      "stopLabel": "Stop",
+      "invLabel": "Inv"
+    }
   }
 }

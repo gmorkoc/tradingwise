@@ -1273,6 +1273,7 @@
     "fundingbot": "Bot Funding",
     "candleai": "Velas IA",
     "markets": "Mercados Globales",
+    "riskcalc": "Calc. Posición",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
@@ -1763,6 +1764,15 @@
         "Señales de Carry Trade"
       ]
     },
+    "riskcalc": {
+      "title": "Calculadora de Riesgo y Tamaño de Posición",
+      "desc": "Sabe exactamente cuántos contratos comprar antes de abrir una operación. Introduce el tamaño de tu cuenta, tolerancia al riesgo, entrada y stop — la calculadora te da el tamaño de posición, riesgo en dólares y ratio R:R para cada objetivo. Los principiantes tienen un asistente paso a paso; los experimentados una mapa visual con análisis de IA.",
+      "tags": [
+        "Tamaño de Posición",
+        "Gestión de Riesgo",
+        "Revisión IA de Operación"
+      ]
+    },
     "gann": {
       "title": "Análisis Gann",
       "desc": "Las relaciones geométricas precio/tiempo de W.D. Gann identifican zonas de reversión de alta probabilidad.",
@@ -1845,5 +1855,136 @@
     "tipNeutralBody": "La tasa de financiación de {{sym}} está cerca de cero ({{rate}}%). Ni los largos ni los cortos están sobresaturados — el mercado está bastante neutral en apalancamiento.",
     "tipNeutralAction": "Sin ventaja basada en financiación. Mira la acción del precio, el RSI y los grupos de liquidación para encontrar dirección.",
     "refresh": "↻"
+  },
+  "posCalc": {
+    "picker": {
+      "title": "Calculadora de Tamaño de Posición",
+      "sub": "Elige tu nivel de experiencia en trading para mostrate la interfaz adecuada.",
+      "beginnerName": "Principiante",
+      "beginnerDesc": "Nuevo en trading o quieres orientación paso a paso con explicaciones en cada etapa.",
+      "beginnerCta": "Guía paso a paso →",
+      "expName": "Experimentado",
+      "expDesc": "Conoces tus niveles. Entrada rápida con mapa visual y análisis de IA.",
+      "expCta": "Interfaz Pro →"
+    },
+    "mode": {
+      "beginner": "Modo principiante",
+      "switchToPro": "Cambiar a Pro",
+      "experienced": "Modo experimentado",
+      "switchToBeginner": "Cambiar a principiante"
+    },
+    "steps": {
+      "account": "Cuenta",
+      "direction": "Dirección",
+      "levels": "Niveles",
+      "targets": "Objetivos",
+      "review": "Revisión"
+    },
+    "s1": {
+      "title": "¿Cuán grande es tu cuenta de trading?",
+      "desc": "Esto nos permite calcular el tamaño de posición exacto que mantiene tu riesgo controlado — sin adivinar.",
+      "accountSize": "Tamaño de Cuenta (USD)",
+      "riskPerTrade": "Riesgo por operación",
+      "riskLow": "Conservador — estándar profesional. Protege tu cuenta a largo plazo.",
+      "riskMid": "Moderado — aceptable, pero no lo hagas en cada operación.",
+      "riskHigh": "Agresivo — una mala racha puede dañar gravemente tu cuenta.",
+      "wouldRisk": "Arriesgarías ${{amount}} en esta operación."
+    },
+    "s2": {
+      "title": "¿En qué dirección crees que se mueve el precio?",
+      "desc": "Una operación <strong>Long</strong> gana cuando el precio sube. Una operación <strong>Short</strong> gana cuando el precio baja.",
+      "longName": "Long (Comprar)",
+      "longDesc": "Esperas que el precio vaya <strong>ARRIBA</strong>. Compras ahora y vendes más alto.",
+      "shortName": "Short (Vender)",
+      "shortDesc": "Esperas que el precio vaya <strong>ABAJO</strong>. Vendes ahora y recompras más barato."
+    },
+    "s3": {
+      "title": "Establece tu entrada y stop loss",
+      "desc": "<strong>Entrada</strong> es el precio al que operarás. <strong>Stop Loss</strong> es el precio donde saldrás automáticamente para limitar tu pérdida — nunca omitas esto.",
+      "entryLabel": "Precio de Entrada",
+      "entryHintLong": "El precio al que compras.",
+      "entryHintShort": "El precio al que vendes.",
+      "slLabel": "Stop Loss",
+      "slHint": "Si el precio llega aquí, tu operación se cierra automáticamente.",
+      "slBelowEntry": "Debe estar POR DEBAJO de tu entrada.",
+      "slAboveEntry": "Debe estar POR ENCIMA de tu entrada.",
+      "invLabel": "Nivel de Invalidación",
+      "invOptional": "(opcional — cierre forzado)",
+      "invWarn": "⚠ La invalidación debe estar más allá de tu stop loss",
+      "invHint": "La salida \"pase lo que pase\" — más allá de este precio la tesis queda rota.",
+      "stopDist": "Distancia del stop:",
+      "dollarRisk": "Riesgo en dólares:"
+    },
+    "s4": {
+      "title": "¿Dónde quieres tomar ganancias?",
+      "desc": "Establece objetivos de precio donde saldrás con ganancia. Apunta al menos a <strong>2:1 R:R</strong>. La <strong>columna %</strong> es qué parte de tu posición cierras en cada objetivo.",
+      "targetLabel": "Precio Objetivo {{n}}",
+      "closeLabel": "Cerrar %",
+      "above": "Por encima de la entrada",
+      "below": "Por debajo de la entrada",
+      "addTarget": "+ Añadir Objetivo",
+      "pctWarn": "Tus asignaciones % suman {{total}}% — deben totalizar 100%."
+    },
+    "s5": {
+      "title": "Tu plan de trading está listo",
+      "desc": "Revisa tu operación abajo. Usa el análisis de IA para obtener una crítica profesional.",
+      "posSummary": "Resumen de Posición",
+      "direction": "Dirección",
+      "entry": "Entrada",
+      "stopLoss": "Stop Loss",
+      "dollarAtRisk": "Dólares en Riesgo",
+      "positionSize": "Tamaño de Posición",
+      "units": "Unidades",
+      "tpTargets": "Objetivos de Take Profit",
+      "long": "▲ Long",
+      "short": "▼ Short"
+    },
+    "ai": {
+      "askStep": "Preguntarle a la IA sobre este paso",
+      "askingAi": "Preguntando a la IA…",
+      "aiTake": "Obtener Revisión de Operación IA",
+      "analyzing": "Analizando…",
+      "reviewTitle": "Revisión de Operación IA",
+      "solid": "Sólido",
+      "adjust": "Ajustar",
+      "risky": "Arriesgado",
+      "rrLabel": "R:R",
+      "sizeLabel": "Tamaño",
+      "targetsLabel": "Objetivos",
+      "riskLabel": "Riesgo",
+      "tipLabel": "Consejo"
+    },
+    "wcNav": {
+      "back": "← Atrás",
+      "continue": "Continuar →",
+      "reviewPlan": "Revisar Plan →",
+      "startOver": "Empezar de Nuevo"
+    },
+    "exp": {
+      "acctRisk": "Cuenta & Riesgo",
+      "accountSize": "Tamaño de Cuenta",
+      "riskPct": "Riesgo %",
+      "tradeLevels": "Niveles de Operación",
+      "entry": "Entrada",
+      "stopLoss": "Stop Loss",
+      "inv": "Invalidación",
+      "hardClose": "(cierre forzado)",
+      "invWarn": "⚠ La invalidación debe estar más allá de tu stop",
+      "takeProfits": "Take Profits",
+      "aiTake": "Obtener Análisis IA",
+      "aiAnalyzing": "Analizando…",
+      "fillHint": "Rellena Entrada + Stop Loss para activar",
+      "addTarget": "+ Objetivo",
+      "tradeMap": "Mapa de Operación",
+      "mapEmpty": "Rellena tus niveles para ver el mapa visual",
+      "positionSize": "Tamaño de Posición",
+      "units": "Unidades",
+      "dollarAtRisk": "Dólares en Riesgo",
+      "stopDist": "Distancia del Stop",
+      "targetBreakdown": "Desglose de Objetivos",
+      "tpHint": "Rellena los precios de take profit para ver el desglose",
+      "stopLabel": "Stop",
+      "invLabel": "Inv."
+    }
   }
 }

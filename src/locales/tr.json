@@ -1273,6 +1273,7 @@
     "fundingbot": "Fonlama Botu",
     "candleai": "Mum YZ",
     "markets": "Küresel Piyasalar",
+    "riskcalc": "Pozisyon Hesaplayıcı",
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
     "swipeHint": "Menüyü açmak için kaydır",
@@ -1763,6 +1764,15 @@
         "Carry Trade Sinyalleri"
       ]
     },
+    "riskcalc": {
+      "title": "Risk & Pozisyon Büyüklüğü Hesaplayıcı",
+      "desc": "İşlem açmadan önce tam olarak kaç kontrat alacağınızı bilin. Hesap büyüklüğünüzü, risk toleransınızı, giriş ve stop seviyenizi girin — hesaplayıcı pozisyon büyüklüğünüzü, dolar riskini ve her hedef için R:R oranını gösterir. Yeni başlayanlar için rehberli adım adım sihirbaz, deneyimli yatırımcılar için görsel işlem haritası ve YZ analizi.",
+      "tags": [
+        "Pozisyon Boyutlandırma",
+        "Risk Yönetimi",
+        "YZ İşlem Analizi"
+      ]
+    },
     "gann": {
       "title": "Gann Analizi",
       "desc": "W.D. Gann'ın geometrik fiyat/zaman ilişkileri, çoğu yatırımcının hiç görmediği yüksek olasılıklı dönüş bölgelerini tanımlar. Fiyat ve zaman karşılaştığında, dönüşler son derece olası hale gelir.",
@@ -1845,5 +1855,136 @@
     "tipNeutralBody": "{{sym}} fonlama oranı sıfıra yakın (%{{rate}}). Ne longlar ne de shortlar aşırı kalabalık — piyasa kaldıraç açısından oldukça nötr.",
     "tipNeutralAction": "Fonlamaya dayalı avantaj yok. Yön bulmak için fiyat hareketine, RSI'ye ve tasfiye kümelerine bak.",
     "refresh": "↻"
+  },
+  "posCalc": {
+    "picker": {
+      "title": "Pozisyon Büyüklüğü Hesaplayıcı",
+      "sub": "Doğru arayüzü göstermek için işlem deneyim seviyenizi seçin.",
+      "beginnerName": "Başlangıç",
+      "beginnerDesc": "İşleme yeniyseniz veya her adımda açıklamalarla rehberlik istiyorsanız.",
+      "beginnerCta": "Adım adım rehber →",
+      "expName": "Deneyimli",
+      "expDesc": "Seviyelerinizi biliyorsunuz. Görsel harita ve yapay zeka analizi ile hızlı giriş.",
+      "expCta": "Pro arayüz →"
+    },
+    "mode": {
+      "beginner": "Başlangıç modu",
+      "switchToPro": "Pro'ya Geç",
+      "experienced": "Deneyimli modu",
+      "switchToBeginner": "Başlangıca Geç"
+    },
+    "steps": {
+      "account": "Hesap",
+      "direction": "Yön",
+      "levels": "Seviyeler",
+      "targets": "Hedefler",
+      "review": "İnceleme"
+    },
+    "s1": {
+      "title": "İşlem hesabınız ne kadar büyük?",
+      "desc": "Bu, riskinizi kontrol altında tutan tam pozisyon boyutunu hesaplamamızı sağlar — tahmin yok.",
+      "accountSize": "Hesap Büyüklüğü (USD)",
+      "riskPerTrade": "İşlem başına risk",
+      "riskLow": "Muhafazakar — profesyonel standart. Hesabınızı uzun vadede korur.",
+      "riskMid": "Orta — kabul edilebilir, ama her işlemde bunu yapmayın.",
+      "riskHigh": "Agresif — bir kötü seri hesabınıza ciddi zarar verebilir.",
+      "wouldRisk": "Bu işlemde ${{amount}} risk alırsınız."
+    },
+    "s2": {
+      "title": "Fiyatın hangi yönde hareket edeceğini düşünüyorsunuz?",
+      "desc": "Bir <strong>Long</strong> işlem fiyat yükseldiğinde kâr eder. Bir <strong>Short</strong> işlem fiyat düştüğünde kâr eder.",
+      "longName": "Long (Al)",
+      "longDesc": "Fiyatın <strong>YUKARI</strong> gitmesini bekliyorsunuz. Şimdi alıp daha yüksekte satarsınız.",
+      "shortName": "Short (Sat)",
+      "shortDesc": "Fiyatın <strong>AŞAĞI</strong> gitmesini bekliyorsunuz. Şimdi satıp daha ucuza geri alırsınız."
+    },
+    "s3": {
+      "title": "Giriş ve stop loss'unuzu belirleyin",
+      "desc": "<strong>Giriş</strong> işlem yapacağınız fiyattır. <strong>Stop Loss</strong> zararı sınırlamak için otomatik çıkış yaptığınız fiyattır — bunu atlamayın.",
+      "entryLabel": "Giriş Fiyatı",
+      "entryHintLong": "Alım yaptığınız fiyat.",
+      "entryHintShort": "Satış yaptığınız fiyat.",
+      "slLabel": "Stop Loss",
+      "slHint": "Fiyat buna ulaşırsa işleminiz otomatik kapanır.",
+      "slBelowEntry": "Giriş fiyatının ALTINDA olmalı.",
+      "slAboveEntry": "Giriş fiyatının ÜSTÜNDE olmalı.",
+      "invLabel": "Geçersizleştirme Seviyesi",
+      "invOptional": "(isteğe bağlı — kesin kapanış)",
+      "invWarn": "⚠ Geçersizleştirme stop loss'unuzun ötesinde olmalı",
+      "invHint": "\"Her ne olursa olsun\" çıkış — bu fiyatın ötesinde işlem tezi bozulur.",
+      "stopDist": "Stop mesafesi:",
+      "dollarRisk": "Dolar riski:"
+    },
+    "s4": {
+      "title": "Kârı nerede almak istiyorsunuz?",
+      "desc": "Kârla çıkacağınız fiyat hedefleri belirleyin. En az <strong>2:1 R:R</strong> hedefleyin. <strong>% sütunu</strong> her hedefte pozisyonunuzun kaçını kapattığınızdır.",
+      "targetLabel": "Hedef Fiyat {{n}}",
+      "closeLabel": "Kapat %",
+      "above": "Girişin üstünde",
+      "below": "Girişin altında",
+      "addTarget": "+ Hedef Ekle",
+      "pctWarn": "% tahsisatlarınız toplamı {{total}}% — 100% olmalı."
+    },
+    "s5": {
+      "title": "İşlem planınız hazır",
+      "desc": "İşleminizi aşağıda inceleyin. Profesyonel eleştiri için Yapay Zeka Değerlendirmesi'ni kullanın.",
+      "posSummary": "Pozisyon Özeti",
+      "direction": "Yön",
+      "entry": "Giriş",
+      "stopLoss": "Stop Loss",
+      "dollarAtRisk": "Risk Edilen Dolar",
+      "positionSize": "Pozisyon Büyüklüğü",
+      "units": "Birim",
+      "tpTargets": "Kâr Al Hedefleri",
+      "long": "▲ Long",
+      "short": "▼ Short"
+    },
+    "ai": {
+      "askStep": "Bu adım hakkında YZ'ye sor",
+      "askingAi": "YZ'ye soruluyor…",
+      "aiTake": "YZ İşlem Değerlendirmesi Al",
+      "analyzing": "Analiz ediliyor…",
+      "reviewTitle": "YZ İşlem Değerlendirmesi",
+      "solid": "Sağlam",
+      "adjust": "Ayarla",
+      "risky": "Riskli",
+      "rrLabel": "R:R",
+      "sizeLabel": "Boyut",
+      "targetsLabel": "Hedefler",
+      "riskLabel": "Risk",
+      "tipLabel": "İpucu"
+    },
+    "wcNav": {
+      "back": "← Geri",
+      "continue": "Devam →",
+      "reviewPlan": "Planı İncele →",
+      "startOver": "Baştan Başla"
+    },
+    "exp": {
+      "acctRisk": "Hesap & Risk",
+      "accountSize": "Hesap Büyüklüğü",
+      "riskPct": "Risk %",
+      "tradeLevels": "İşlem Seviyeleri",
+      "entry": "Giriş",
+      "stopLoss": "Stop Loss",
+      "inv": "Geçersizleştirme",
+      "hardClose": "(kesin kapanış)",
+      "invWarn": "⚠ Geçersizleştirme stop'unuzun ötesinde olmalı",
+      "takeProfits": "Kâr Al",
+      "aiTake": "YZ Analizi Al",
+      "aiAnalyzing": "Analiz ediliyor…",
+      "fillHint": "Etkinleştirmek için Giriş + Stop Loss doldurun",
+      "addTarget": "+ Hedef",
+      "tradeMap": "İşlem Haritası",
+      "mapEmpty": "Görsel haritayı görmek için işlem seviyelerinizi doldurun",
+      "positionSize": "Pozisyon Büyüklüğü",
+      "units": "Birim",
+      "dollarAtRisk": "Risk Edilen Dolar",
+      "stopDist": "Stop Mesafesi",
+      "targetBreakdown": "Hedef Dökümü",
+      "tpHint": "Dökümü görmek için kâr al fiyatlarını doldurun",
+      "stopLabel": "Stop",
+      "invLabel": "Geçersiz."
+    }
   }
 }
