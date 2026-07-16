@@ -14,6 +14,7 @@ const ICONS: Partial<Record<string, string>> = {
   orderflow:   "∿",
   signals:     "★",
   fundingbot:  "%",
+  riskcalc:    "⛨",
   gann:        "✕",
   candleai:    "🕯",
   markets:     "⊕",

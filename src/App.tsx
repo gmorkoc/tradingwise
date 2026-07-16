@@ -43,6 +43,7 @@ import { PTickerBgChart } from "./components/PTickerBgChart";
 import { PredictionEngine } from "./components/PredictionEngine";
 import { FundingBot } from "./components/FundingBot";
 import { CandleWatcher } from "./components/CandleWatcher";
+import { TradeManager } from "./components/TradeManager";
 import { PriceChart } from "./components/PriceChart";
 import { SectionBanner } from "./components/SectionBanner";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -73,7 +74,8 @@ type SectionId =
   | "fundingbot"
   | "candleai"
   | "markets"
-  | "altanalysis";
+  | "altanalysis"
+  | "riskcalc";
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -156,6 +158,12 @@ const NAV_ITEMS: {
       "M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0",
       "M17.5 17.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0",
     ],
+  },
+  {
+    id: "riskcalc",
+    labelKey: "nav.riskcalc",
+    requiredTier: "pro",
+    d: ["M21 4H8", "M3 4h.01", "M21 12H11", "M3 12h.01", "M21 20H8", "M3 20h.01", "M8 2v4", "M11 10v4", "M8 18v4"],
   },
   {
     id: "markets",
@@ -1401,6 +1409,17 @@ function AppDashboard({
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
               />
+            )}
+            {activeSection === "riskcalc" && (
+              <BlurGate
+                requiredTier="pro"
+                featureName="Position Size Calculator"
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+                className="bg-root--top"
+              >
+                <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+              </BlurGate>
             )}
             <div style={{ display: activeSection === "candleai" ? "contents" : "none" }}>
               <CandleWatcher

@@ -1015,3 +1015,95 @@ Return JSON:
     return { success: false, error: err.message || "Prediction failed" };
   }
 }
+
+// ─── Trade Setup AI Review ────────────────────────────────────────────────────
+
+export interface TradeReviewInput {
+  direction: "long" | "short";
+  entry: number;
+  stopLoss: number;
+  riskPct?: number;
+  positionSize?: number;
+  dollarRisk?: number;
+  invalidation?: number;
+  tps: Array<{ price: number; allocationPct: number; rr: number; profit?: number }>;
+}
+
+export interface TradeReviewResult {
+  verdict: "solid" | "adjust" | "risky";
+  grade: "A" | "B" | "C" | "D";
+  rrAssessment: string;
+  positionFeedback: string;
+  tpStructureFeedback: string;
+  keyRisk: string;
+  suggestion: string;
+  summary: string;
+}
+
+export async function getTradeReview(
+  input: TradeReviewInput
+): Promise<{ success: boolean; result?: TradeReviewResult; error?: string }> {
+  try {
+    const fmt = (n: number) =>
+      n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const stopDist = Math.abs(input.entry - input.stopLoss);
+    const stopPct  = (stopDist / input.entry) * 100;
+    const dir      = input.direction.toUpperCase();
+
+    const tpLines = input.tps
+      .map((tp, i) => {
+        const profitStr = tp.profit != null ? `, +$${fmt(tp.profit)} profit` : "";
+        return `TP${i + 1}: $${fmt(tp.price)} → ${tp.rr.toFixed(2)}R | ${tp.allocationPct}% position${profitStr}`;
+      })
+      .join("\n");
+
+    const sizeLines = [
+      input.riskPct != null ? `Risk per Trade: ${input.riskPct}%` : null,
+      input.positionSize != null ? `Position Size: $${fmt(input.positionSize)}` : null,
+      input.dollarRisk  != null ? `Dollar at Risk: $${fmt(input.dollarRisk)}`  : null,
+      input.invalidation != null ? `Invalidation Level: $${fmt(input.invalidation)}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const prompt = `You are a professional crypto trading risk manager. Critique this trade setup honestly and concisely.
+
+Direction: ${dir}
+Entry: $${fmt(input.entry)}
+Stop Loss: $${fmt(input.stopLoss)} (${stopPct.toFixed(2)}% below entry)
+${sizeLines}
+
+Take Profit Targets:
+${tpLines}
+
+Respond ONLY with valid JSON:
+{
+  "thinking": "<2-sentence internal reasoning>",
+  "verdict": "solid" | "adjust" | "risky",
+  "grade": "A" | "B" | "C" | "D",
+  "rrAssessment": "<1 sentence on R:R quality>",
+  "positionFeedback": "<1 sentence on position size / dollar risk>",
+  "tpStructureFeedback": "<1 sentence on TP allocation>",
+  "keyRisk": "<the single biggest flaw or risk>",
+  "suggestion": "<one concrete improvement, or 'Setup looks good as-is'>",
+  "summary": "<2-sentence overall verdict>"
+}`;
+
+    const response = await callOpenAI({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 450,
+      response_format: { type: "json_object" },
+    });
+
+    const raw    = response?.choices?.[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw) as TradeReviewResult & { thinking?: string };
+    if (!parsed.verdict || !parsed.grade) return { success: false, error: "Invalid response" };
+    const { thinking: _t, ...result } = parsed;
+    return { success: true, result: result as TradeReviewResult };
+  } catch (err: any) {
+    return { success: false, error: err.message || "AI review failed" };
+  }
+}

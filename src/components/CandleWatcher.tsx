@@ -20,7 +20,7 @@ interface Props {
   visible?: boolean;
 }
 
-type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number };
+type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number; nextClose?: (nowSec: number) => number };
 
 interface Indicators {
   rsi: number | null;
@@ -76,7 +76,12 @@ const INTERVALS: Interval[] = [
   { label: "8h",  value: "8h",  refresh: 900_000,  limit: 100, durationSec: 28_800  },
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
   { label: "1w",  value: "1w",  refresh: 3600_000, limit: 100, durationSec: 604_800 },
-  { label: "1M",  value: "1d",  refresh: 3600_000, limit: 30,  durationSec: 86_400  },
+  { label: "1M",  value: "1d",  refresh: 3600_000, limit: 30,  durationSec: 86_400,
+    nextClose: (nowSec) => {
+      const d = new Date(nowSec * 1000);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) / 1000;
+    },
+  },
 ];
 
 function fmtCountdown(sec: number): string {
@@ -84,6 +89,17 @@ function fmtCountdown(sec: number): string {
   if (sec < 60)   return `${sec}s`;
   if (sec < 3600) { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}m ${String(s).padStart(2,"0")}s`; }
   const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60);
+  return `${h}h ${String(m).padStart(2,"0")}m`;
+}
+
+// Remaining time until the next UTC candle close for a given interval.
+function fmtTabBadge(iv: Interval, nowSec: number): string {
+  const nextCloseSec = iv.nextClose ? iv.nextClose(nowSec) : Math.ceil(nowSec / iv.durationSec) * iv.durationSec;
+  const remaining = nextCloseSec - nowSec;
+  if (remaining <= 0) return "closing…";
+  if (remaining < 60) return `${remaining}s`;
+  if (remaining < 3600) return `${Math.floor(remaining / 60)}m`;
+  const h = Math.floor(remaining / 3600); const m = Math.floor((remaining % 3600) / 60);
   return `${h}h ${String(m).padStart(2,"0")}m`;
 }
 
@@ -1632,6 +1648,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [candleCountdown, setCandleCountdown] = useState<string>("");
   const [dailyCountdown, setDailyCountdown]   = useState<string>("");
+  const [intervalCountdowns, setIntervalCountdowns] = useState<string[]>(() => INTERVALS.map(() => ""));
   const [dailyCloseBanner, setDailyCloseBanner] = useState<{
     direction: "bullish" | "bearish";
     open: number; close: number; high: number; low: number;
@@ -2346,6 +2363,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [candles, interval]);
 
+  // Per-interval tab countdowns — UTC boundary math, ticks every second
+  useEffect(() => {
+    const tick = () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      setIntervalCountdowns(INTERVALS.map(iv => fmtTabBadge(iv, nowSec)));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // Daily close countdown — always UTC midnight
   useEffect(() => {
     const tick = () => {
@@ -2677,7 +2705,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   className={`cw-iv-tab${i === intervalIdx ? " cw-iv-tab--active" : ""}`}
                   onClick={() => setIntervalIdx(i)}
                 >
-                  {iv.label}
+                  <span className="cw-iv-tab-label">{iv.label}</span>
+                  {intervalCountdowns[i] && (
+                    <span className="cw-iv-tab-countdown">{intervalCountdowns[i]}</span>
+                  )}
                 </button>
               ))}
             </div>
