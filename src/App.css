@@ -228,12 +228,12 @@ select {
 .coin-picker-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: 300000;
 }
 
 .coin-picker-menu {
   position: fixed;
-  z-index: 9999;
+  z-index: 300001;
   margin: 0;
   padding: 5px;
   background: var(--color-card-bg);
@@ -2273,7 +2273,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
     background: rgba(255, 255, 255, 0.82) !important;
   }
   .icon-strip.mobile-open {
-    z-index: 300;
+    z-index: 300001;
   }
 
   /* Hide desktop logo on mobile */
@@ -2530,7 +2530,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
     left: 260px;
     right: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 200;
+    z-index: 300000;
   }
 
   .news-ticker-tag {

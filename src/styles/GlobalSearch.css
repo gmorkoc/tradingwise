@@ -2,7 +2,7 @@
 .gs-overlay {
   position: fixed;
   inset: 0;
-  z-index: 99999;
+  z-index: 300000;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
   display: flex;
