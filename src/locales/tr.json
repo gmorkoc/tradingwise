@@ -1986,5 +1986,17 @@
       "stopLabel": "Stop",
       "invLabel": "Geçersiz."
     }
+  },
+  "dailyBrief": {
+    "title": "Günlük Özetiniz",
+    "loading": "Günlük özetiniz yükleniyor…",
+    "categoryCrypto": "Kripto",
+    "categoryMarkets": "Piyasalar",
+    "categoryGeopolitics": "Makro",
+    "minutesAgo": "{{count}}dk önce",
+    "hoursAgo": "{{count}}sa önce",
+    "daysAgo": "{{count}}g önce",
+    "showMore": "Daha fazla göster",
+    "showLess": "Daha az göster"
   }
 }

@@ -1986,5 +1986,17 @@
       "stopLabel": "Stop",
       "invLabel": "Inv."
     }
+  },
+  "dailyBrief": {
+    "title": "Tu Resumen Diario",
+    "loading": "Cargando tu resumen diario…",
+    "categoryCrypto": "Cripto",
+    "categoryMarkets": "Mercados",
+    "categoryGeopolitics": "Macro",
+    "minutesAgo": "hace {{count}}m",
+    "hoursAgo": "hace {{count}}h",
+    "daysAgo": "hace {{count}}d",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   }
 }

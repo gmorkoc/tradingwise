@@ -258,6 +258,18 @@ function calcMACD(candles: CandleDataPoint[]): { line: number | null; signal: nu
   return { line, signal, hist: line - signal };
 }
 
+// Chain-safe EMA + TEMA for the weekly cycle chart (no NaN padding).
+function calcTEMA(values: number[], period: number): number[] {
+  const ema = (vs: number[]): number[] => {
+    const k = 2 / (period + 1);
+    const out = [vs[0]];
+    for (let i = 1; i < vs.length; i++) out.push(vs[i] * k + out[i - 1] * (1 - k));
+    return out;
+  };
+  const e1 = ema(values), e2 = ema(e1), e3 = ema(e2);
+  return values.map((_, i) => 3 * e1[i] - 3 * e2[i] + e3[i]);
+}
+
 function calcBB(candles: CandleDataPoint[], period = 20): { upper: number; middle: number; lower: number; pct: number } | null {
   if (candles.length < period) return null;
   const closes = candles.slice(-period).map(c => c.close);
@@ -1672,6 +1684,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const indRef               = useRef<Indicators | null>(null);
   const macroCtxRef          = useRef<MacroContextData | null>(null);
   const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
+  const [weeklyCycle, setWeeklyCycle] = useState<{ candles: CandleDataPoint[]; tema14: number[]; tema21: number[] } | null>(null);
+  const [cycleExpanded, setCycleExpanded] = useState(false);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
   const [macroCtx, setMacroCtx] = useState<MacroContextData | null>(null);
@@ -2433,6 +2447,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setPredData(null);
   }, [coin, isElite]);
 
+  // Weekly TEMA cycle data — fetched once per coin, cached by Binance layer
+  useEffect(() => {
+    if (!isElite || !coin) return;
+    coinglass.getCandles(coin as string, "1w", 500).then(cs => {
+      if (cs.length < 60) return;
+      const closes = cs.map(c => c.close);
+      setWeeklyCycle({ candles: cs, tema14: calcTEMA(closes, 14), tema21: calcTEMA(closes, 21) });
+    }).catch(() => {});
+  }, [coin, isElite]);
+
   // Run AI + macro fetch when flagged — elite only
   useEffect(() => {
     if (!isElite || !triggerAI.current || candles.length < 20) return;
@@ -3015,6 +3039,95 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       ))}
                     </div>
                     <p className="cw-mtf-explanation">{mtf.explanation}</p>
+                  </div>
+                );
+              })()}
+
+              {/* ── Weekly TEMA Cycle ── */}
+              {weeklyCycle && (() => {
+                const { candles: wc, tema14, tema21 } = weeklyCycle;
+                const warmup = 63;
+                const startIdx = Math.max(warmup, wc.length - 420);
+                const slice = wc.slice(startIdx);
+                const t14 = tema14.slice(startIdx);
+                const t21 = tema21.slice(startIdx);
+                const sN = slice.length;
+                const closes = slice.map(c => c.close);
+
+                const W = 400, H = 96;
+                const logVals = [...closes, ...t14, ...t21].map(Math.log);
+                const logMin = Math.min(...logVals) - 0.05;
+                const logMax = Math.max(...logVals) + 0.05;
+                const xOf = (i: number) => ((i / (sN - 1)) * W).toFixed(2);
+                const yOf = (p: number) => (H - ((Math.log(p) - logMin) / (logMax - logMin)) * H).toFixed(2);
+
+                const priceD  = slice.map((c, i) => `${i===0?'M':'L'}${xOf(i)},${yOf(c.close)}`).join(' ');
+                const t14D    = t14.map((t, i)   => `${i===0?'M':'L'}${xOf(i)},${yOf(t)}`).join(' ');
+                const t21D    = t21.map((t, i)   => `${i===0?'M':'L'}${xOf(i)},${yOf(t)}`).join(' ');
+
+                // Orange zones: ≥3 consecutive weeks where close < TEMA-14
+                const zones: { x1: string; x2: string }[] = [];
+                let zs: number | null = null;
+                for (let i = 0; i < sN; i++) {
+                  const below = closes[i] < t14[i];
+                  if (below && zs === null) zs = i;
+                  if (!below && zs !== null) {
+                    if (i - zs >= 3) zones.push({ x1: xOf(zs), x2: xOf(i) });
+                    zs = null;
+                  }
+                }
+                if (zs !== null && sN - zs >= 3) zones.push({ x1: xOf(zs), x2: xOf(sN - 1) });
+
+                // Cycle phase
+                const lastClose = closes[sN - 1];
+                const lt14 = t14[sN - 1];
+                const lt21 = t21[sN - 1];
+                const pctFromT14 = ((lastClose / lt14) - 1) * 100;
+                const aboveT14 = lastClose >= lt14;
+                const phase = aboveT14
+                  ? (lt14 >= lt21 ? "Bull Run" : "Recovery")
+                  : (lt14 >= lt21 ? "Mid-Cycle Correction" : "Bear Market");
+                const phaseColor = aboveT14 ? "#22c55e" : lt14 >= lt21 ? "#f97316" : "#ef4444";
+
+                return (
+                  <div
+                    className={`cw-cycle-panel${cycleExpanded ? " cw-cycle-panel--expanded" : ""}`}
+                    onDoubleClick={() => setCycleExpanded(v => !v)}
+                    title="Double-click to expand"
+                  >
+                    <div className="cw-cycle-header">
+                      <span className="cw-cycle-title">Macro Cycle · Weekly TEMA</span>
+                      <span className="cw-cycle-phase" style={{ color: phaseColor }}>
+                        {phase}
+                      </span>
+                    </div>
+                    <svg
+                      className="cw-cycle-chart"
+                      viewBox={`0 0 ${W} ${H}`}
+                      preserveAspectRatio="none"
+                    >
+                      {zones.map((z, i) => (
+                        <rect key={i} x={z.x1} y="0"
+                          width={(parseFloat(z.x2) - parseFloat(z.x1)).toFixed(2)}
+                          height={H} fill="rgba(249,115,22,0.18)" />
+                      ))}
+                      <path d={priceD} fill="none" stroke="rgba(148,163,184,0.45)" strokeWidth="1" />
+                      <path d={t21D}  fill="none" stroke="#818cf8" strokeWidth="1.5" />
+                      <path d={t14D}  fill="none" stroke="#34d399" strokeWidth="1.5" />
+                      {/* Current price dot */}
+                      <circle
+                        cx={xOf(sN - 1)} cy={yOf(lastClose)} r="2.5"
+                        fill={phaseColor} />
+                    </svg>
+                    <div className="cw-cycle-footer">
+                      <span className="cw-cycle-legend">
+                        <span className="cw-cycle-dot" style={{ background: "#34d399" }} /> TEMA-14
+                        <span className="cw-cycle-dot" style={{ background: "#818cf8" }} /> TEMA-21
+                      </span>
+                      <span className="cw-cycle-dist" style={{ color: phaseColor }}>
+                        {pctFromT14 >= 0 ? "+" : ""}{pctFromT14.toFixed(1)}% vs TEMA-14
+                      </span>
+                    </div>
                   </div>
                 );
               })()}

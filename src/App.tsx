@@ -33,6 +33,7 @@ import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
+import { DailyBrief } from "./components/DailyBrief";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
@@ -1701,6 +1702,8 @@ function AppDashboard({
         )}
       </div>
       {/* end app-shell-body */}
+
+      <DailyBrief />
 
       {priceTicker &&
         (() => {

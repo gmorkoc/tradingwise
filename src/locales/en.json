@@ -2007,5 +2007,17 @@
       "stopLabel": "Stop",
       "invLabel": "Inv"
     }
+  },
+  "dailyBrief": {
+    "title": "Your Daily Brief",
+    "loading": "Loading your daily brief…",
+    "categoryCrypto": "Crypto",
+    "categoryMarkets": "Markets",
+    "categoryGeopolitics": "Macro",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "showMore": "Show more",
+    "showLess": "Show less"
   }
 }

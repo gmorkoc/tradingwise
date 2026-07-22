@@ -1689,6 +1689,74 @@
   padding-top: 2px;
 }
 
+/* ── Weekly TEMA Cycle panel ─────────────────────────────────────────────── */
+
+.cw-cycle-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card-bg);
+  padding: 10px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  cursor: zoom-in;
+  transition: all 0.2s ease;
+}
+.cw-cycle-panel--expanded {
+  cursor: zoom-out;
+}
+.cw-cycle-panel--expanded .cw-cycle-chart {
+  height: 260px;
+}
+.cw-cycle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cw-cycle-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.cw-cycle-phase {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.cw-cycle-chart {
+  width: 100%;
+  height: 96px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: block;
+}
+.cw-cycle-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cw-cycle-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+.cw-cycle-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 3px;
+}
+.cw-cycle-dist {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Macro context panel ─────────────────────────────────────────────────── */
 
 .cw-macro-panel {
