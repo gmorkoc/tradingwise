@@ -64,6 +64,7 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
   const queueRef = useRef<WhaleTx[]>([]);
   const processingRef = useRef(false);
+  const soundPlayedRef = useRef(false);
 
   const toggleMute = useCallback(() => {
     setMuted(m => {
@@ -79,8 +80,11 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
   const processNext = useCallback(() => {
     const tx = queueRef.current.shift();
-    if (!tx) { processingRef.current = false; return; }
-    if (!mutedRef.current) playWhaleSound();
+    if (!tx) { processingRef.current = false; soundPlayedRef.current = false; return; }
+    if (!mutedRef.current && !soundPlayedRef.current) {
+      playWhaleSound();
+      soundPlayedRef.current = true;
+    }
     setAlerts(prev => [tx, ...prev].slice(0, 4));
     setTimeout(() => dismiss(tx.id), DISMISS_MS);
     setTimeout(processNext, 2_000);
