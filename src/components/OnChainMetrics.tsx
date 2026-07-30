@@ -5,6 +5,7 @@ import { getOnChainAIAnalysis, OnChainAIResult } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { CoinbasePremium, PremiumAIResult } from "./CoinbasePremium";
+import { FearGreedGauge } from "./FearGreedGauge";
 import "../styles/OnChainMetrics.css";
 
 function fmt$(n: number): string {
@@ -176,6 +177,8 @@ export function OnChainMetrics({ onOpenAuth = () => {}, onOpenUpgrade = () => {}
             : t("onchain.loading")}
         </span>
       </div>
+
+      <FearGreedGauge />
 
       {loading ? (
         <div className="onchain-loading">{t("onchain.loading")}</div>

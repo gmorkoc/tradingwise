@@ -983,6 +983,10 @@
         "title": "Scenarios",
         "sub": "Bull · Base · Bear paths"
       },
+      "etf": {
+        "title": "ETF Flows",
+        "sub": "Spot ETF in/outflows"
+      },
       "ai": {
         "title": "AI Outlook",
         "sub": "GPT-4o macro analysis"
@@ -1275,7 +1279,6 @@
   },
   "nav": {
     "ai": "AI Analysis",
-    "feargreed": "Sentiment",
     "market": "Market Data",
     "onchain": "On-Chain",
     "chart": "Chart",
@@ -1284,7 +1287,6 @@
     "watchlist": "Watchlist",
     "gann": "Gann",
     "live": "LIVE",
-    "etf": "ETF Flows",
     "positions": "Traders",
     "htf": "HTF Analysis",
     "orderflow": "Smart Money",
@@ -1294,6 +1296,8 @@
     "markets": "Global Markets",
     "altanalysis": "Alt Analysis",
     "riskcalc": "Position Size Calc",
+    "options": "Options",
+    "correlation": "Correlation",
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
@@ -1461,6 +1465,45 @@
     "label": "Whale Alert · BTC",
     "bullish": "▲ Bullish",
     "bearish": "▼ Bearish"
+  },
+  "optionsAnalytics": {
+    "loading": "Loading options data…",
+    "error": "Failed to load options data",
+    "subtitle": "Where BTC/ETH options traders have their money right now, live from Deribit. Pick an expiry date below to see how it's positioned.",
+    "whyTitle": "Why this matters",
+    "whyPoints": [
+      "Big open interest at a strike often acts like a magnet or a wall — market makers hedging those positions can slow price down or speed it up as expiry gets close.",
+      "A Put/Call Ratio that's climbing while price is flat is often the first sign traders are quietly hedging or turning bearish, before it shows up in the chart.",
+      "Rising ATM IV means the market is paying up for protection — a signal to expect bigger swings and size positions accordingly, even if price looks calm right now.",
+      "Comparing expiries lets you see whether the big money is positioned for a move this week or is looking months out — useful context before you pick your own timeframe."
+    ],
+    "maxPain": "Max Pain",
+    "maxPainDesc": "The price where option buyers, as a group, would lose the most money if the expiry landed there right now. Price sometimes drifts toward this level as expiry approaches, but it's a magnet, not a guarantee.",
+    "putCallRatio": "Put/Call Ratio",
+    "putCallRatioDesc": "Put contracts (bets on the price falling) divided by call contracts (bets on it rising) for this expiry. Above 1.00 = more bearish bets open. Below 1.00 = more bullish bets open.",
+    "atmIv": "ATM IV",
+    "atmIvDesc": "At-the-money Implied Volatility — how big a price swing (up or down, annualized) the options market is currently pricing in. Higher % = traders expect bigger moves.",
+    "totalOI": "Total OI",
+    "totalOIDesc": "Total Open Interest — the number of option contracts (calls + puts) currently open for this expiry, across every strike price.",
+    "calls": "Calls (bets price rises)",
+    "puts": "Puts (bets price falls)",
+    "chartCaption": "Each bar is the open interest at that strike price. The dashed line is Max Pain; the solid line is the current spot price."
+  },
+  "correlationMatrix": {
+    "loading": "Loading correlation data…",
+    "error": "Failed to load correlation data",
+    "subtitle": "How closely each asset's daily price moves track the others. Hover any cell for the exact reading — this doesn't tell you which one causes the other, only how often they move together.",
+    "whyTitle": "Why this matters",
+    "whyPoints": [
+      "When BTC's correlation to the S&P 500 climbs, crypto is trading like a risk asset — a stock market sell-off is more likely to drag it down too, not just crypto-specific news.",
+      "A strengthening negative correlation to the US Dollar Index is the classic 'flight to alternative assets' setup — worth watching closely around Fed meetings and rate decisions.",
+      "If an altcoin's correlation to BTC suddenly drops, that's often the earliest sign of a rotation starting — either money moving into it specifically, or out of it independent of the market.",
+      "Holding several assets that all move together doesn't actually spread your risk — this table shows you where your portfolio is more concentrated than it might feel."
+    ],
+    "unavailable": "Unavailable right now: {{assets}}",
+    "legendNeg": "-1.0 (opposite)",
+    "legendPos": "+1.0 (together)",
+    "legendCaption": "+1.00 = the two always move together · 0.00 = no relationship · -1.00 = they always move in opposite directions."
   },
   "orderBook": {
     "title": "Order Book",
@@ -1703,15 +1746,6 @@
         "Reversal Targets"
       ]
     },
-    "feargreed": {
-      "title": "Fear & Greed Index",
-      "desc": "A composite of six market signals measuring crowd emotion in real time. Historically, extreme fear marks the best buying opportunities and extreme greed signals increased risk of correction.",
-      "tags": [
-        "Market Sentiment",
-        "Contrarian Signal",
-        "Cycle Timing"
-      ]
-    },
     "onchain": {
       "title": "On-Chain Metrics",
       "desc": "Tracks what wallets are actually doing on the blockchain — not what analysts are saying. Exchange outflows, whale accumulation, and miner behavior consistently lead price by days or weeks.",
@@ -1728,15 +1762,6 @@
         "Price Triggers",
         "Indicator Alerts",
         "Never Miss a Level"
-      ]
-    },
-    "etf": {
-      "title": "ETF Inflows & Outflows",
-      "desc": "Bitcoin spot ETFs now channel billions in institutional demand directly into the market. Days of strong inflows historically correlate with price appreciation; sustained outflows signal distribution.",
-      "tags": [
-        "Institutional Demand",
-        "BTC ETF Flows",
-        "Leading Indicator"
       ]
     },
     "positions": {
@@ -1791,6 +1816,24 @@
         "Position Sizing",
         "Risk Management",
         "AI Trade Review"
+      ]
+    },
+    "options": {
+      "title": "Options Analytics",
+      "desc": "BTC and ETH options data straight from Deribit — open interest by strike, max pain, put/call ratio, and at-the-money implied volatility for every active expiry. See where the market is positioned before it moves.",
+      "tags": [
+        "Max Pain",
+        "Open Interest",
+        "Implied Volatility"
+      ]
+    },
+    "correlation": {
+      "title": "Correlation Matrix",
+      "desc": "How BTC, ETH, and top alts actually move relative to each other — and to the US Dollar Index, Gold, and the S&P 500. Spot regime shifts (like BTC decoupling from stocks) before they show up in your charts.",
+      "tags": [
+        "Cross-Asset",
+        "Macro",
+        "Regime Detection"
       ]
     },
     "gann": {

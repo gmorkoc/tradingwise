@@ -6,6 +6,7 @@ import { openaiHTF, HTFAIResponse, getTabInsight, TabInsightInput } from "../ser
 import { useAIQuota } from "../hooks/useAIQuota";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { MonthlyReturns } from "./MonthlyReturns";
+import { ETFInflows } from "./ETFInflows";
 import "../styles/HTFAnalysis.css";
 
 interface Props {
@@ -23,7 +24,7 @@ const HALVINGS = [
 const LAST_HALVING_TS = 1713571200;
 const WEEK_SEC = 7 * 24 * 3600;
 
-type SectionId = "monthly" | "ma200" | "cycle" | "pi" | "fib" | "scenario" | "ai";
+type SectionId = "monthly" | "ma200" | "cycle" | "pi" | "fib" | "scenario" | "etf" | "ai";
 
 const SECTIONS: { id: SectionId; d: string | string[] }[] = [
   {
@@ -49,6 +50,10 @@ const SECTIONS: { id: SectionId; d: string | string[] }[] = [
   {
     id: "scenario",
     d: ["M3 12h3l3-9 4 18 3-9h6"],
+  },
+  {
+    id: "etf",
+    d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"],
   },
   {
     id: "ai",
@@ -669,7 +674,7 @@ export const HTFAnalysis: React.FC<Props> = ({
 
   // Auto-fetch per-tab AI insight when tab switches
   useEffect(() => {
-    if (active === "ai" || !stats || exceeded) return;
+    if (active === "ai" || active === "etf" || !stats || exceeded) return;
     if (tabInsights[active] !== undefined) return;
     if (!consume()) return;
     const input: TabInsightInput = {
@@ -837,6 +842,11 @@ export const HTFAnalysis: React.FC<Props> = ({
             aiText={tabInsights.scenario}
             aiLoading={tabInsightLoading && active === "scenario"}
           />
+        )}
+        {active === "etf" && (
+          <div className="htf-panel-inner">
+            <ETFInflows />
+          </div>
         )}
         {active === "ai" && (
           <PanelAI

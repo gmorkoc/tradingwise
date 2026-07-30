@@ -24,10 +24,8 @@ import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
 import { GannAnalysis } from "./components/GannAnalysis";
 import { HTFAnalysis } from "./components/HTFAnalysis";
-import { FearGreedGauge } from "./components/FearGreedGauge";
 import { OnChainMetrics } from "./components/OnChainMetrics";
 import { OrderBook } from "./components/OrderBook";
-import { ETFInflows } from "./components/ETFInflows";
 import { PositionFlows } from "./components/PositionFlows";
 import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
@@ -50,6 +48,8 @@ import { SectionBanner } from "./components/SectionBanner";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
 import { AltAnalysis } from "./components/AltAnalysis";
+import { OptionsAnalytics } from "./components/OptionsAnalytics";
+import { CorrelationMatrix } from "./components/CorrelationMatrix";
 import { BtcMoveToast } from "./components/BtcMoveToast";
 import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { ZoneResult } from "./components/PriceChart.types";
@@ -63,12 +63,10 @@ import "./App.css";
 type SectionId =
   | "chart"
   | "heatmap"
-  | "feargreed"
   | "onchain"
   | "gann"
   | "htf"
   | "chat"
-  | "etf"
   | "positions"
   | "orderflow"
   | "signals"
@@ -76,7 +74,9 @@ type SectionId =
   | "candleai"
   | "markets"
   | "altanalysis"
-  | "riskcalc";
+  | "riskcalc"
+  | "options"
+  | "correlation";
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -98,14 +98,6 @@ const NAV_ITEMS: {
     d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"],
   },
   {
-    id: "feargreed",
-    labelKey: "nav.feargreed",
-    d: [
-      "M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z",
-      "M12 6v6l4 2",
-    ],
-  },
-  {
     id: "heatmap",
     labelKey: "nav.heatmap",
     requiredTier: "pro",
@@ -123,11 +115,6 @@ const NAV_ITEMS: {
     requiredTier: "pro",
     hidden: true,
     d: "M22 12h-4l-3 9L9 3l-3 9H2",
-  },
-  {
-    id: "etf",
-    labelKey: "nav.etf",
-    d: ["M12 2v20", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"],
   },
   {
     id: "positions",
@@ -188,6 +175,25 @@ const NAV_ITEMS: {
       "M16 5v2",
       "M14 7h4v7h-4z",
       "M16 14v4",
+    ],
+  },
+  {
+    id: "options",
+    labelKey: "nav.options",
+    requiredTier: "pro",
+    d: [
+      "M12 21a9 9 0 1 0 0 -18 9 9 0 0 0 0 18",
+      "M12 17a5 5 0 1 0 0 -10 5 5 0 0 0 0 10",
+      "M12 13a1 1 0 1 0 0 -2 1 1 0 0 0 0 2",
+    ],
+  },
+  {
+    id: "correlation",
+    labelKey: "nav.correlation",
+    requiredTier: "pro",
+    d: [
+      "M9 18a6 6 0 1 0 0 -12 6 6 0 0 0 0 12",
+      "M15 18a6 6 0 1 0 0 -12 6 6 0 0 0 0 12",
     ],
   },
 ];
@@ -1358,7 +1364,6 @@ function AppDashboard({
                 onOpenUpgrade={onOpenUpgrade}
               />
             )}
-            {activeSection === "feargreed" && <FearGreedGauge />}
             {activeSection === "onchain" && (
               <OnChainMetrics
                 onOpenAuth={onOpenAuth}
@@ -1389,7 +1394,6 @@ function AppDashboard({
                 onOpenUpgrade={onOpenUpgrade}
               />
             )}
-            {activeSection === "etf" && <ETFInflows />}
             {activeSection === "positions" && <PositionFlows coin={coin} />}
             {activeSection === "orderflow" && (
               <OrderFlowFramework coin={coin} />
@@ -1444,6 +1448,28 @@ function AppDashboard({
                   onOpenUpgrade={onOpenUpgrade ?? (() => {})}
                   onOpenAuth={onOpenAuth ?? (() => {})}
                 />
+              </BlurGate>
+            )}
+            {activeSection === "options" && (
+              <BlurGate
+                requiredTier="pro"
+                featureName="Options Analytics"
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+                className="bg-root--top"
+              >
+                <OptionsAnalytics />
+              </BlurGate>
+            )}
+            {activeSection === "correlation" && (
+              <BlurGate
+                requiredTier="pro"
+                featureName="Correlation Matrix"
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+                className="bg-root--top"
+              >
+                <CorrelationMatrix />
               </BlurGate>
             )}
           </div>

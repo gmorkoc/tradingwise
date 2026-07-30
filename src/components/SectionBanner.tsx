@@ -5,10 +5,8 @@ import "../styles/SectionBanner.css";
 const ICONS: Partial<Record<string, string>> = {
   ai:          "✦",
   heatmap:     "◈",
-  feargreed:   "◉",
   onchain:     "⬡",
   alerts:      "◎",
-  etf:         "▣",
   positions:   "⇅",
   htf:         "▲",
   orderflow:   "∿",
@@ -19,6 +17,8 @@ const ICONS: Partial<Record<string, string>> = {
   candleai:    "🕯",
   markets:     "⊕",
   altanalysis: "◆",
+  options:     "Ω",
+  correlation: "⋈",
 };
 
 interface Props { section: string }

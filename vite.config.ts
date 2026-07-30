@@ -74,6 +74,11 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/gecko-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        '/fred-api': {
+          target: 'https://fred.stlouisfed.org',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/fred-api/, ''),
+        },
         '/api/openai': {
           target: 'https://api.openai.com',
           changeOrigin: true,
