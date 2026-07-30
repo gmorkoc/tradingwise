@@ -14,10 +14,12 @@ const BINANCE_SYM: Record<string, string> = {
   DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
 };
 
-async function fetchDepth(coin: string) {
+const DEPTH_LEVELS = [50, 100, 500, 1000] as const;
+
+async function fetchDepth(coin: string, limit: number) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
   const res = await fetch(
-    `https://data-api.binance.vision/api/v3/depth?symbol=${sym}&limit=50`
+    `https://data-api.binance.vision/api/v3/depth?symbol=${sym}&limit=${limit}`
   );
   if (!res.ok) throw new Error();
   const d = await res.json();
@@ -237,6 +239,7 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
   const [stats, setStats] = useState<{
     bidUsd: number; askUsd: number; spread: number; spreadPct: number;
   } | null>(null);
+  const [depthLimit, setDepthLimit] = useState<number>(100);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -274,7 +277,7 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
     let cancelled = false;
     async function poll() {
       try {
-        const book = await fetchDepth(coin);
+        const book = await fetchDepth(coin, depthLimit);
         if (cancelled) return;
         bidsRef.current = book.bids;
         asksRef.current = book.asks;
@@ -288,7 +291,7 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
     poll();
     const id = setInterval(poll, 3000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [coin]);
+  }, [coin, depthLimit]);
 
   useEffect(() => {
     const onFsChange = () => {
@@ -317,6 +320,18 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
           <div className="obp-header-left">
             <span className="obp-title">Order Depth Chart</span>
             <span className="obp-coin">{coin}/USDT</span>
+          </div>
+          <div className="obp-levels" title="Number of bid/ask price levels pulled from the order book per side — higher values show a wider price range">
+            <span className="obp-levels-label">Levels</span>
+            {DEPTH_LEVELS.map(lvl => (
+              <button
+                key={lvl}
+                className={`obp-level-btn${lvl === depthLimit ? " obp-level-btn--active" : ""}`}
+                onClick={() => setDepthLimit(lvl)}
+              >
+                {lvl}
+              </button>
+            ))}
           </div>
           <button className="obp-exit" onClick={onClose}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

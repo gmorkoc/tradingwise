@@ -254,8 +254,8 @@ export const DailyBrief: React.FC = () => {
             <span className="db-head-title-row">
               <span className="db-head-title">{t("dailyBrief.title")}</span>
               <span className="db-live">
-                <span className="db-live-dot" />
                 {t("nav.live")}
+                <span className="db-live-dot" />
               </span>
             </span>
             {!expanded && (
@@ -270,8 +270,8 @@ export const DailyBrief: React.FC = () => {
             <div className="db-card-top">
               <span className={`db-source db-source--${current.category}`}>{current.source}</span>
               <span className="db-live">
-                <span className="db-live-dot" />
                 {t("nav.live")}
+                <span className="db-live-dot" />
               </span>
             </div>
             <a

@@ -106,6 +106,51 @@ html[data-theme="light"] .obp-title { color: #1e293b; }
   border: 1px solid rgba(56, 189, 248, 0.18);
 }
 
+.obp-levels {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+html[data-theme="light"] .obp-levels { background: rgba(226, 232, 240, 0.7); }
+
+.obp-levels-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  padding: 0 8px 0 6px;
+  white-space: nowrap;
+}
+
+html[data-theme="light"] .obp-levels-label { color: #94a3b8; }
+
+.obp-level-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 5px;
+  transition: color 0.15s, background 0.15s;
+  font-variant-numeric: tabular-nums;
+}
+
+.obp-level-btn:hover { color: #cbd5e1; }
+.obp-level-btn--active { background: #38bdf8; color: #04222f; }
+.obp-level-btn--active:hover { color: #04222f; }
+
+html[data-theme="light"] .obp-level-btn { color: #94a3b8; }
+html[data-theme="light"] .obp-level-btn:hover { color: #1e293b; }
+html[data-theme="light"] .obp-level-btn--active { color: #04222f; }
+html[data-theme="light"] .obp-level-btn--active:hover { color: #04222f; }
+
 .obp-close {
   background: none;
   border: none;

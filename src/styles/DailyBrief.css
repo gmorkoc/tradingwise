@@ -161,8 +161,8 @@
 }
 
 .db-live-dot {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #22c55e;
   animation: db-pulse 1.4s ease-in-out infinite;
