@@ -45,6 +45,7 @@ import { CandleWatcher } from "./components/CandleWatcher";
 import { TradeManager } from "./components/TradeManager";
 import { PriceChart } from "./components/PriceChart";
 import { SectionBanner } from "./components/SectionBanner";
+import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
 import { AltAnalysis } from "./components/AltAnalysis";
@@ -1061,7 +1062,7 @@ function AppDashboard({
                           </span>
                         </div>
                       )}
-                      <div className="mch-stat">
+                      <HoverTip className="mch-stat" text={t("stats.liqAboveDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.liqAbove")}
                         </span>
@@ -1073,8 +1074,8 @@ function AppDashboard({
                         <span className="mch-stat-signal mch-stat-signal--bear">
                           {t("stats.sigRisk")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.liqBelowDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.liqBelow")}
                         </span>
@@ -1086,8 +1087,8 @@ function AppDashboard({
                         <span className="mch-stat-signal mch-stat-signal--bull">
                           {t("stats.sigSupport")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.openInterestDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.openInterest")}
                         </span>
@@ -1099,8 +1100,8 @@ function AppDashboard({
                         <span className="mch-stat-signal mch-stat-signal--neutral">
                           {t("stats.sigNeutral")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.fundingRateDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.fundingRate")}
                         </span>
@@ -1118,8 +1119,8 @@ function AppDashboard({
                               ? t("stats.sigCrowded")
                               : t("stats.sigNeutral")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.rsi14Desc")}>
                         <span className="mch-stat-label">
                           {t("stats.rsi14")}
                         </span>
@@ -1139,8 +1140,8 @@ function AppDashboard({
                                 ? t("stats.sigWeak")
                                 : t("stats.sigNeutral")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.macdDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.macd")}
                         </span>
@@ -1156,8 +1157,8 @@ function AppDashboard({
                             ? t("stats.sigBullish")
                             : t("stats.sigBearish")}
                         </span>
-                      </div>
-                      <div className="mch-stat">
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.lsRatioDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.lsRatio")}
                         </span>
@@ -1173,13 +1174,13 @@ function AppDashboard({
                             ? t("stats.sigLongsLead")
                             : t("stats.sigShortsLead")}
                         </span>
-                      </div>
+                      </HoverTip>
                       {(() => {
                         const g = btcData.cmeGap;
                         const fmt = (v: number) => `$${(v / 1000).toFixed(1)}K`;
                         return (
                           <>
-                            <div className="mch-stat">
+                            <HoverTip className="mch-stat" text={t("stats.cmeAboveDesc")}>
                               <span className="mch-stat-label">
                                 {t("stats.cmeAbove")}
                               </span>
@@ -1196,8 +1197,8 @@ function AppDashboard({
                                   ? t("stats.sigAbove")
                                   : t("stats.sigNone")}
                               </span>
-                            </div>
-                            <div className="mch-stat">
+                            </HoverTip>
+                            <HoverTip className="mch-stat" text={t("stats.cmeBelowDesc")}>
                               <span className="mch-stat-label">
                                 {t("stats.cmeBelow")}
                               </span>
@@ -1214,7 +1215,7 @@ function AppDashboard({
                                   ? t("stats.sigBelow")
                                   : t("stats.sigNone")}
                               </span>
-                            </div>
+                            </HoverTip>
                           </>
                         );
                       })()}

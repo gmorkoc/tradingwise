@@ -1,0 +1,25 @@
+.hovertip-bubble {
+  position: fixed;
+  transform: translateX(-50%);
+  max-width: 260px;
+  background: var(--color-surface-strong, #1e293b);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  z-index: 100000;
+  pointer-events: none;
+  animation: hovertip-in 0.08s ease;
+}
+
+@keyframes hovertip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
