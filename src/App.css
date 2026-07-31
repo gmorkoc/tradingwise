@@ -2871,6 +2871,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
   flex-direction: column;
   gap: 2px;
   text-align: left;
+  flex: 1;
+  min-width: 0;
 }
 .pticker-insight-label {
   font-size: 0.65rem;
@@ -2885,9 +2887,8 @@ html[data-theme="light"] .icon-strip-quota-bar {
   font-weight: 600;
   color: currentColor;
   line-height: 1.5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.35s ease, transform 0.35s ease;
