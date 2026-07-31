@@ -44,6 +44,15 @@ export default defineConfig(({ mode }) => {
             'CG-API-KEY': env.VITE_COINGLASS_API_KEY,
           },
         },
+        '/coinalyze-api': {
+          target: 'https://api.coinalyze.net',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/coinalyze-api/, ''),
+          headers: {
+            'accept': 'application/json',
+            'api_key': env.VITE_COINALYZE_API_KEY,
+          },
+        },
         '/okx-api': {
           target: 'https://www.okx.com',
           changeOrigin: true,

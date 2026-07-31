@@ -496,8 +496,11 @@ export const coinglass = {
     try {
       const symbol = toCgSymbol(coin);
 
+      const lsFrom = Math.floor(Date.now() / 1000) - 21600;
+      const lsTo   = Math.floor(Date.now() / 1000);
+
       // 200 candles: RSI needs 14 warmup + history, MACD needs 26+9; 200 gives accurate results
-      const [candlesRes, oiRes, frRes, cmeRes, lsRes] = await Promise.all([
+      const [candlesRes, oiRes, frRes, cmeRes, lsRes, bnFRDirectRes, bnLSDirectRes, coinalyzeFRRes, coinalyzeLSRes] = await Promise.all([
         fetchBinanceKlines(coin, '4h', 200),
         api.get('futures/open-interest/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
@@ -509,6 +512,15 @@ export const coinglass = {
         api.get('futures/global-long-short-account-ratio/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
+        // Direct-exchange + Coinalyze fallbacks — same pattern as
+        // getExchangeActivity. Without these, funding rate and L/S ratio
+        // silently default to a fake neutral (0 / 1.00) whenever CoinGlass's
+        // plan blocks these endpoints, which always scores as neutral in
+        // the Confluence Engine regardless of real market conditions.
+        fetch(`/bnf-api/fapi/v1/premiumIndex?symbol=${symbol}`).then(r => r.json()).catch(() => null),
+        fetch(`/bnf-api/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=4h&limit=1`).then(r => r.json()).catch(() => null),
+        fetch(`/coinalyze-api/v1/funding-rate?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null),
+        fetch(`/coinalyze-api/v1/long-short-ratio-history?symbols=${symbol}_PERP.A&interval=1hour&from=${lsFrom}&to=${lsTo}`).then(r => r.json()).catch(() => null),
       ]);
 
       const candles = candlesRes;
@@ -527,22 +539,50 @@ export const coinglass = {
         ? parseFloat(oiRes.data.data?.[0]?.close ?? '0')
         : 0;
 
-      const fundingRate = frRes?.data?.code === '0'
-        ? parseFloat(frRes.data.data?.[0]?.close ?? '0')
+      // ── Funding rate: CoinGlass, then direct Binance API, then Coinalyze ──
+      const fundingRateCg = frRes?.data?.code === '0'
+        ? parseFloat(frRes.data.data?.[0]?.close ?? '')
+        : NaN;
+      const fundingRateDirect = parseFloat(bnFRDirectRes?.lastFundingRate ?? '');
+      const fundingRateCoinalyze = (() => {
+        const row = Array.isArray(coinalyzeFRRes) ? coinalyzeFRRes[0] : null;
+        return typeof row?.value === 'number' ? row.value / 100 : NaN;
+      })();
+      const fundingRate = isFinite(fundingRateCg) ? fundingRateCg
+        : isFinite(fundingRateDirect) ? fundingRateDirect
+        : isFinite(fundingRateCoinalyze) ? fundingRateCoinalyze
         : 0;
 
       const closes = candles.map(c => c.close);
       const rsi = coinglass.calculateRSI(closes);
       const macdData = coinglass.calculateMACD(closes);
 
-      // Real L/S ratio from CoinGlass; fall back to funding-rate estimate if unavailable
+      // ── L/S ratio: CoinGlass, then direct Binance API, then Coinalyze,
+      // then (only if all three fail) the old funding-rate-derived estimate.
       const lsPoint = lsRes?.data?.code === '0' ? lsRes.data.data?.[0] : null;
-      const longShortRatio = lsPoint
+      const lsRatioCg = lsPoint
         ? (() => {
             const longPct  = parseFloat(lsPoint.global_account_long_percent  ?? lsPoint.longAccount  ?? '0');
             const shortPct = parseFloat(lsPoint.global_account_short_percent ?? lsPoint.shortAccount ?? '0');
-            return shortPct > 0 ? Math.round((longPct / shortPct) * 100) / 100 : 1;
+            return shortPct > 0 ? Math.round((longPct / shortPct) * 100) / 100 : NaN;
           })()
+        : NaN;
+      const lsRatioDirect = (() => {
+        const row = Array.isArray(bnLSDirectRes) ? bnLSDirectRes[0] : null;
+        const ratio = parseFloat(row?.longShortRatio ?? '');
+        return isFinite(ratio) ? Math.round(ratio * 100) / 100 : NaN;
+      })();
+      const lsRatioCoinalyze = (() => {
+        const entry = Array.isArray(coinalyzeLSRes)
+          ? coinalyzeLSRes.find((s: { symbol?: string }) => s.symbol === `${symbol}_PERP.A`)
+          : null;
+        const hist = entry?.history;
+        const last = Array.isArray(hist) && hist.length ? hist[hist.length - 1] : null;
+        return typeof last?.r === 'number' ? Math.round(last.r * 100) / 100 : NaN;
+      })();
+      const longShortRatio = isFinite(lsRatioCg) ? lsRatioCg
+        : isFinite(lsRatioDirect) ? lsRatioDirect
+        : isFinite(lsRatioCoinalyze) ? lsRatioCoinalyze
         : (fundingRate >= 0
             ? 1 + Math.min(fundingRate * 200, 0.5)
             : 1 / (1 + Math.min(Math.abs(fundingRate) * 200, 0.5)));
@@ -722,23 +762,53 @@ export const coinglass = {
       return parseFloat(res.data.data?.[0]?.close ?? '');
     };
 
-    const [bnRes, bybitCgRes, okxRes, bitgetRes, cbCgRes, cbIntxRes] = await Promise.all([
+    const [bnRes, bybitCgRes, okxRes, bitgetRes, cbCgRes, cbIntxRes, bnDirectRes, bybitDirectRes, coinalyzeRes] = await Promise.all([
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Binance' } }).catch(() => null),
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Bybit' }   }).catch(() => null),
       fetch(`/okx-api/api/v5/public/funding-rate?instId=${coin}-USDT-SWAP`).then(r => r.json()).catch(() => null),
       fetch(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${sym}&productType=USDT-FUTURES`).then(r => r.json()).catch(() => null),
       api.get('futures/funding-rate/history', { params: { symbol: sym, interval: '8h', limit: 1, exchange: 'Coinbase' } }).catch(() => null),
       fetch(`/coinbase-api/api/v1/instruments/${coin}-PERP/quote`).then(r => r.json()).catch(() => null),
+      // Direct-exchange fallbacks (/bnf-api, /bybit-api proxy through our own
+      // infra) for when CoinGlass's plan blocks funding-rate/history — this
+      // endpoint currently 401s ("Upgrade plan") for every exchange it's
+      // asked for, so without these, Binance/Bybit silently rendered as a
+      // fake "0.0000% Neutral" instead of failing loudly or falling back.
+      fetch(`/bnf-api/fapi/v1/premiumIndex?symbol=${sym}`).then(r => r.json()).catch(() => null),
+      fetch(`/bybit-api/v5/market/tickers?category=linear&symbol=${sym}`).then(r => r.json()).catch(() => null),
+      // Coinalyze: neutral aggregator, not region-restricted the way Binance/
+      // Bybit's own APIs are (they block US-based requests, which is what
+      // this app's hosting currently is) — last-resort fallback so Binance/
+      // Bybit still show real data instead of a fake neutral placeholder.
+      fetch(`/coinalyze-api/v1/funding-rate?symbols=${sym}_PERP.A,${sym}.6`).then(r => r.json()).catch(() => null),
     ]);
 
-    // ── Binance via CoinGlass ────────────────────────────────────────────────
+    // Coinalyze's `value` is already a percentage (e.g. 0.0094 means
+    // 0.0094%), unlike every other source here which returns a raw fraction
+    // (e.g. Binance's 0.0001 means 0.01%) — divide by 100 to match.
+    const coinalyzeMap = new Map<string, number>();
+    if (Array.isArray(coinalyzeRes)) {
+      for (const row of coinalyzeRes) {
+        if (typeof row?.symbol === 'string' && typeof row?.value === 'number') {
+          coinalyzeMap.set(row.symbol, row.value / 100);
+        }
+      }
+    }
+
+    // ── Binance: CoinGlass, then direct Binance API, then Coinalyze ─────────
     let binance = mkNeutral('Binance');
-    const bnFR = parseCgFR(bnRes);
+    const bnFRcg = parseCgFR(bnRes);
+    const bnFRdirect = parseFloat(bnDirectRes?.lastFundingRate ?? '');
+    const bnFRcoinalyze = coinalyzeMap.get(`${sym}_PERP.A`) ?? NaN;
+    const bnFR = isFinite(bnFRcg) ? bnFRcg : isFinite(bnFRdirect) ? bnFRdirect : bnFRcoinalyze;
     if (isFinite(bnFR)) binance = { exchange: 'Binance', fundingRate: bnFR, fundingPct: fmt(bnFR), priceChange, signal: classify(bnFR) };
 
-    // ── Bybit via CoinGlass (falls back to neutral if hobbyist plan blocks) ──
+    // ── Bybit: CoinGlass, then direct Bybit v5 API, then Coinalyze ───────────
     let bybit = mkNeutral('Bybit');
-    const bybitFR = parseCgFR(bybitCgRes);
+    const bybitFRcg = parseCgFR(bybitCgRes);
+    const bybitFRdirect = parseFloat(bybitDirectRes?.result?.list?.[0]?.fundingRate ?? '');
+    const bybitFRcoinalyze = coinalyzeMap.get(`${sym}.6`) ?? NaN;
+    const bybitFR = isFinite(bybitFRcg) ? bybitFRcg : isFinite(bybitFRdirect) ? bybitFRdirect : bybitFRcoinalyze;
     if (isFinite(bybitFR)) bybit = { exchange: 'Bybit', fundingRate: bybitFR, fundingPct: fmt(bybitFR), priceChange, signal: classify(bybitFR) };
 
     // ── OKX via /okx-api proxy ───────────────────────────────────────────────
