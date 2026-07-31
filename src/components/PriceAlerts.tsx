@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol } from "../services/coinglass";
+import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/PriceAlerts.css";
 
 interface PriceAlert {
@@ -84,6 +85,9 @@ function syncPanelPos(el: HTMLElement) {
 
 export function PriceAlerts({ coin, currentPrice }: Props) {
   const { t } = useTranslation();
+  const [notificationsEnabled] = useNotificationsEnabled();
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  notificationsEnabledRef.current = notificationsEnabled;
   const [open, setOpen]         = useState(false);
   const [alerts, setAlerts]     = useState<PriceAlert[]>(loadAlerts);
   const [input, setInput]       = useState("");
@@ -92,6 +96,11 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
   const prevPriceRef            = useRef<number | null>(null);
   const toastTimerRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bellRef                 = useRef<HTMLButtonElement>(null);
+
+  // Global switch hides an already-showing toast too, not just future ones.
+  useEffect(() => {
+    if (!notificationsEnabled) setToast(null);
+  }, [notificationsEnabled]);
 
   // Keep resize/scroll in sync while open
   useEffect(() => {
@@ -139,10 +148,12 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
             ? prev < alert.targetPrice && livePrice >= alert.targetPrice
             : prev > alert.targetPrice && livePrice <= alert.targetPrice;
         if (hit) {
-          playAlertSound();
-          setToast(alert);
-          if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-          toastTimerRef.current = setTimeout(() => setToast(null), 6000);
+          if (notificationsEnabledRef.current) {
+            playAlertSound();
+            setToast(alert);
+            if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+            toastTimerRef.current = setTimeout(() => setToast(null), 6000);
+          }
           return { ...alert, triggered: true };
         }
         return alert;
@@ -188,8 +199,8 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
         title={t("priceAlerts.title")}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          <line x1="12" y1="1" x2="12" y2="23" />
+          <path d="M17 5.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
         </svg>
 
         {activeCount > 0 && <span className="alerts-bell-count">{activeCount}</span>}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
+import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/WhaleAlerts.css";
 
 const DISMISS_MS = 4_000;
@@ -57,6 +58,9 @@ interface Props {
 
 export function WhaleAlerts({ btcPrice }: Props) {
   const { t } = useTranslation();
+  const [notificationsEnabled] = useNotificationsEnabled();
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  notificationsEnabledRef.current = notificationsEnabled;
   const [alerts, setAlerts] = useState<WhaleTx[]>([]);
   const [muted, setMuted] = useState(() => localStorage.getItem("whale-muted") !== "0");
   const mutedRef = useRef(muted);
@@ -65,6 +69,11 @@ export function WhaleAlerts({ btcPrice }: Props) {
   const queueRef = useRef<WhaleTx[]>([]);
   const processingRef = useRef(false);
   const soundPlayedRef = useRef(false);
+
+  // Global switch hides any alert already on screen too, not just future ones.
+  useEffect(() => {
+    if (!notificationsEnabled) setAlerts([]);
+  }, [notificationsEnabled]);
 
   const toggleMute = useCallback(() => {
     setMuted(m => {
@@ -92,6 +101,7 @@ export function WhaleAlerts({ btcPrice }: Props) {
 
   useEffect(() => {
     return subscribeWhaleAlerts(tx => {
+      if (!notificationsEnabledRef.current) return;
       queueRef.current.push(tx);
       if (!processingRef.current) {
         processingRef.current = true;

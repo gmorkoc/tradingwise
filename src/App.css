@@ -2026,6 +2026,16 @@ html[data-theme="light"] .icon-strip-quota-bar {
   color: var(--color-text);
 }
 .mch-search-label { font-weight: 500; }
+
+/* ── Notifications toggle (icon button, matches .mch-search-btn) ─────────── */
+.mch-notif-btn--off {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+.mch-notif-btn--off:hover {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.5);
+}
 .mch-search-kbd {
   font-family: inherit;
   font-size: 0.6rem;

@@ -53,6 +53,7 @@ import { OptionsAnalytics } from "./components/OptionsAnalytics";
 import { CorrelationMatrix } from "./components/CorrelationMatrix";
 import { BtcMoveToast } from "./components/BtcMoveToast";
 import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
+import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
 import { ZoneResult } from "./components/PriceChart.types";
 import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
@@ -266,6 +267,7 @@ function AppDashboard({
     return NAV_ITEMS.some((n) => n.id === hash) ? hash : "chart";
   });
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
+  const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const onboardingCheckedRef = useRef(false);
   const [showWatchlist, setShowWatchlist] = useState(
@@ -1245,6 +1247,29 @@ function AppDashboard({
                 </svg>
               </button>
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
+              <button
+                className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
+                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                role="switch"
+                aria-checked={notificationsEnabled}
+                aria-label="Notifications"
+                title={notificationsEnabled ? "Notifications on — click to disable all alerts" : "Notifications off — click to enable"}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  {!notificationsEnabled && <line x1="3" y1="3" x2="21" y2="21" />}
+                </svg>
+              </button>
               <div
                 className="mch-portfolio"
                 onClick={() => setAssetPanelOpen((v) => !v)}
@@ -1913,7 +1938,7 @@ function AppDashboard({
           );
         })()}
     </div>
-    <BtcMoveToast alert={btcMoveAlert} onDismiss={dismissBtcAlert} />
+    <BtcMoveToast alert={notificationsEnabled ? btcMoveAlert : null} onDismiss={dismissBtcAlert} />
     </>
   );
 }
