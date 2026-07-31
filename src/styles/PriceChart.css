@@ -1585,6 +1585,18 @@ html[data-theme="light"] .cap-overlay-feature {
   color: var(--color-text);
 }
 
+/* ── Pattern insight fade-in ───────────────────────────────────────────────── */
+.pi-fade-in {
+  animation: pi-fade-in 0.5s ease both;
+}
+.pi-fade-in--d1 { animation-delay: 0.12s; }
+.pi-fade-in--d2 { animation-delay: 0.24s; }
+
+@keyframes pi-fade-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Drawing Toolbar Row ───────────────────────────────────────────────────── */
 
 .chart-drawing-toolbar-row {

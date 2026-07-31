@@ -2715,10 +2715,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {banner && isPaid && (
           <div
+            key={banner.title}
             className={`interval-banner interval-banner--${banner.sentiment}`}
           >
             <div className="interval-banner-header">
-              <span className="interval-banner-title">{banner.title}</span>
+              <span className="interval-banner-title pi-fade-in">{banner.title}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="aiqw-live-badge">
                   <span className="aiqw-live-dot" />
@@ -2735,7 +2736,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </button>
               </div>
             </div>
-            <p className="interval-banner-body">{banner.body}</p>
+            <p className="interval-banner-body pi-fade-in pi-fade-in--d1">{banner.body}</p>
           </div>
         )}
 
@@ -2976,15 +2977,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
               </div>
             </div>
-            <p className="pattern-insight-summary">{patternInsight.summary}</p>
-            <p className="pattern-insight-narrative">
+            <p
+              key={`summary-${patternInsight.name}`}
+              className="pattern-insight-summary pi-fade-in"
+            >
+              {patternInsight.summary}
+            </p>
+            <p
+              key={`narrative-${patternInsight.name}`}
+              className="pattern-insight-narrative pi-fade-in pi-fade-in--d1"
+            >
               {patternInsight.narrative}
             </p>
             <div className="pattern-insight-next">
               <span className="pattern-insight-next-label">
                 {t("chart.nextMove")}
               </span>
-              <p className="pattern-insight-next-text">
+              <p
+                key={`nextmove-${patternInsight.name}`}
+                className="pattern-insight-next-text pi-fade-in pi-fade-in--d2"
+              >
                 {patternInsight.nextMove}
               </p>
             </div>
