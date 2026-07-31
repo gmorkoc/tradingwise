@@ -1,0 +1,214 @@
+.astro-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: radial-gradient(ellipse at 50% 35%, rgba(0,8,24,0.55) 0%, rgba(0,0,0,0.65) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: astro-fade-in 0.2s ease;
+}
+
+@keyframes astro-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.astro-modal-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid #a78bfa;
+  border-radius: 14px;
+  padding: 14px 18px 18px;
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.astro-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.astro-modal-close:hover { color: var(--color-text); background: var(--color-primary-soft); }
+
+.astro-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.astro-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+
+.astro-title-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.astro-bias {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.astro-bias--bullish { color: #22c55e; background: rgba(34, 197, 94, 0.12); }
+.astro-bias--bearish { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+.astro-bias--neutral { color: var(--color-text-muted); background: var(--color-input-bg); }
+
+.astro-disclaimer {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.astro-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.astro-nav-btn {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary, var(--color-text));
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.astro-nav-btn:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+
+.astro-day-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 110px;
+  text-align: center;
+}
+
+.astro-canvas {
+  width: 100%;
+  height: 220px;
+  display: block;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+
+.astro-ohlc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.astro-ohlc strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.astro-ohlc strong.astro-neg { color: #ef4444; }
+.astro-ohlc strong.astro-pos { color: #22c55e; }
+
+.astro-invert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.astro-invert-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary, var(--color-text));
+  cursor: pointer;
+}
+
+.astro-time-input {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 11px;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.astro-time-input:disabled { opacity: 0.5; }
+
+.astro-invert-sep { color: var(--color-text-muted); font-size: 11px; }
+
+.astro-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.astro-chevron {
+  font-size: 11px;
+  transition: transform 0.15s;
+}
+.astro-chevron--open { transform: rotate(180deg); }
+
+.astro-factors {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.astro-factors li {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, var(--color-text));
+}
+
+.astro-factor--pos::marker { color: #22c55e; }
+.astro-factor--neg::marker { color: #ef4444; }
+
+html[data-theme="light"] .astro-bias--bullish { color: #16a34a; }
+html[data-theme="light"] .astro-bias--bearish { color: #dc2626; }

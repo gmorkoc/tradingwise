@@ -22,6 +22,7 @@ import { PredictionOverlay, PredictionPath } from "./DrawingOverlay";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools } from "./ChartDrawingTools";
+import { AstroSuggestions } from "./AstroSuggestions";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/PriceChart.css";
 
@@ -1016,6 +1017,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const dayLineRefs = useRef<any[]>([]);
 
   const [showDepthProfile, setShowDepthProfile] = useState(false);
+  const [showAstroChart, setShowAstroChart] = useState(false);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const textColor = isLight
@@ -2654,6 +2656,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
               </button>
               <button
+                className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
+                onClick={() => setShowAstroChart(true)}
+                title={t("astro.title", "Astro Suggestions")}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z" />
+                  <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
+                </svg>
+                <span className="chart-icon-label">
+                  {t("astro.title", "Astro Suggestions")}
+                </span>
+              </button>
+              <button
                 className="chart-screenshot-btn"
                 onClick={handleScreenshot}
                 title="Save chart as PNG"
@@ -2841,6 +2865,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 setIsFullscreen(false);
               }
             }}
+          />
+        )}
+
+        {showAstroChart && (
+          <AstroSuggestions
+            coin={coin}
+            theme={theme}
+            onClose={() => setShowAstroChart(false)}
           />
         )}
 
