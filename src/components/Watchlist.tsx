@@ -1,197 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, arrayMove, verticalListSortingStrategy,
+  sortableKeyboardCoordinates, useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import "../styles/Watchlist.css";
-
-interface CatalogEntry { id: string; symbol: string; name: string }
-
-interface PriceEntry { price: number; pct: number; vol: number }
-
-// Some symbols trade under a different name on Binance
-const BINANCE_OVERRIDE: Record<string, string> = {
-  POL:   "MATIC",  // Polygon still lists as MATIC
-  MIOTA: "IOTA",
-};
-
-function toBinanceSym(symbol: string): string {
-  return (BINANCE_OVERRIDE[symbol] ?? symbol) + "USDT";
-}
-
-async function fetchBinancePrices(symbols: string[]): Promise<Map<string, PriceEntry>> {
-  try {
-    const res = await fetch(
-      "https://data-api.binance.vision/api/v3/ticker/24hr",
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return new Map();
-    const all: { symbol: string; lastPrice: string; priceChangePercent: string; quoteVolume: string }[] =
-      await res.json();
-    const lookup = new Map(all.map(t => [t.symbol, t]));
-    const result = new Map<string, PriceEntry>();
-    for (const sym of symbols) {
-      const t = lookup.get(toBinanceSym(sym));
-      if (t) result.set(sym, {
-        price: parseFloat(t.lastPrice),
-        pct:   parseFloat(t.priceChangePercent),
-        vol:   parseFloat(t.quoteVolume),
-      });
-    }
-    return result;
-  } catch { return new Map(); }
-}
-
-async function fetchSparklines(symbols: string[]): Promise<Map<string, number[]>> {
-  const result = new Map<string, number[]>();
-  await Promise.all(symbols.map(async sym => {
-    try {
-      const res = await fetch(
-        `https://data-api.binance.vision/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
-        { signal: AbortSignal.timeout(5000) }
-      );
-      if (!res.ok) return;
-      const data: (string | number)[][] = await res.json();
-      result.set(sym, data.map(c => parseFloat(String(c[4])))); // close prices
-    } catch { /* symbol may not exist on Binance */ }
-  }));
-  return result;
-}
-
-const CATALOG: CatalogEntry[] = [
-  // ── Layer 1 ──────────────────────────────────────────────────────────────
-  { id: "bitcoin",                   symbol: "BTC",    name: "Bitcoin"             },
-  { id: "ethereum",                  symbol: "ETH",    name: "Ethereum"            },
-  { id: "binancecoin",               symbol: "BNB",    name: "BNB"                 },
-  { id: "ripple",                    symbol: "XRP",    name: "XRP"                 },
-  { id: "solana",                    symbol: "SOL",    name: "Solana"              },
-  { id: "cardano",                   symbol: "ADA",    name: "Cardano"             },
-  { id: "dogecoin",                  symbol: "DOGE",   name: "Dogecoin"            },
-  { id: "tron",                      symbol: "TRX",    name: "TRON"                },
-  { id: "avalanche-2",               symbol: "AVAX",   name: "Avalanche"           },
-  { id: "the-open-network",          symbol: "TON",    name: "Toncoin"             },
-  { id: "polkadot",                  symbol: "DOT",    name: "Polkadot"            },
-  { id: "bitcoin-cash",              symbol: "BCH",    name: "Bitcoin Cash"        },
-  { id: "near",                      symbol: "NEAR",   name: "NEAR Protocol"       },
-  { id: "litecoin",                  symbol: "LTC",    name: "Litecoin"            },
-  { id: "internet-computer",         symbol: "ICP",    name: "Internet Computer"   },
-  { id: "aptos",                     symbol: "APT",    name: "Aptos"               },
-  { id: "sui",                       symbol: "SUI",    name: "Sui"                 },
-  { id: "ethereum-classic",          symbol: "ETC",    name: "Ethereum Classic"    },
-  { id: "cosmos",                    symbol: "ATOM",   name: "Cosmos"              },
-  { id: "hedera-hashgraph",          symbol: "HBAR",   name: "Hedera"              },
-  { id: "stellar",                   symbol: "XLM",    name: "Stellar"             },
-  { id: "monero",                    symbol: "XMR",    name: "Monero"              },
-  { id: "kaspa",                     symbol: "KAS",    name: "Kaspa"               },
-  { id: "vechain",                   symbol: "VET",    name: "VeChain"             },
-  { id: "eos",                       symbol: "EOS",    name: "EOS"                 },
-  { id: "algorand",                  symbol: "ALGO",   name: "Algorand"            },
-  { id: "dash",                      symbol: "DASH",   name: "Dash"                },
-  { id: "zcash",                     symbol: "ZEC",    name: "Zcash"               },
-  { id: "iota",                      symbol: "MIOTA",  name: "IOTA"                },
-  { id: "neo",                       symbol: "NEO",    name: "Neo"                 },
-  { id: "fantom",                    symbol: "FTM",    name: "Fantom"              },
-  { id: "elrond-erd-2",              symbol: "EGLD",   name: "MultiversX"          },
-  { id: "harmony",                   symbol: "ONE",    name: "Harmony"             },
-  { id: "kava",                      symbol: "KAVA",   name: "Kava"                },
-  { id: "bittensor",                 symbol: "TAO",    name: "Bittensor"           },
-  { id: "ronin",                     symbol: "RON",    name: "Ronin"               },
-  { id: "ondo-finance",              symbol: "ONDO",   name: "Ondo"                },
-  { id: "bitcoin-sv",                symbol: "BSV",    name: "Bitcoin SV"          },
-  { id: "waves",                     symbol: "WAVES",  name: "Waves"               },
-  { id: "zilliqa",                   symbol: "ZIL",    name: "Zilliqa"             },
-  { id: "icon",                      symbol: "ICX",    name: "ICON"                },
-  { id: "ontology",                  symbol: "ONT",    name: "Ontology"            },
-  // ── Layer 2 / Scaling ────────────────────────────────────────────────────
-  { id: "matic-network",             symbol: "POL",    name: "Polygon"             },
-  { id: "arbitrum",                  symbol: "ARB",    name: "Arbitrum"            },
-  { id: "optimism",                  symbol: "OP",     name: "Optimism"            },
-  { id: "starknet",                  symbol: "STRK",   name: "Starknet"            },
-  { id: "immutable-x",               symbol: "IMX",    name: "Immutable"           },
-  { id: "mantle",                    symbol: "MNT",    name: "Mantle"              },
-  { id: "loopring",                  symbol: "LRC",    name: "Loopring"            },
-  { id: "metis-token",               symbol: "METIS",  name: "Metis"               },
-  // ── DeFi ─────────────────────────────────────────────────────────────────
-  { id: "chainlink",                 symbol: "LINK",   name: "Chainlink"           },
-  { id: "uniswap",                   symbol: "UNI",    name: "Uniswap"             },
-  { id: "aave",                      symbol: "AAVE",   name: "Aave"                },
-  { id: "maker",                     symbol: "MKR",    name: "Maker"               },
-  { id: "curve-dao-token",           symbol: "CRV",    name: "Curve"               },
-  { id: "compound-governance-token", symbol: "COMP",   name: "Compound"            },
-  { id: "yearn-finance",             symbol: "YFI",    name: "yearn.finance"       },
-  { id: "synthetix-network-token",   symbol: "SNX",    name: "Synthetix"           },
-  { id: "lido-dao",                  symbol: "LDO",    name: "Lido DAO"            },
-  { id: "pancakeswap-token",         symbol: "CAKE",   name: "PancakeSwap"         },
-  { id: "1inch",                     symbol: "1INCH",  name: "1inch"               },
-  { id: "sushi",                     symbol: "SUSHI",  name: "SushiSwap"           },
-  { id: "balancer",                  symbol: "BAL",    name: "Balancer"            },
-  { id: "dydx-chain",                symbol: "DYDX",   name: "dYdX"               },
-  { id: "gmx",                       symbol: "GMX",    name: "GMX"                 },
-  { id: "pendle",                    symbol: "PENDLE", name: "Pendle"              },
-  { id: "thorchain",                 symbol: "RUNE",   name: "THORChain"           },
-  { id: "the-graph",                 symbol: "GRT",    name: "The Graph"           },
-  { id: "injective-protocol",        symbol: "INJ",    name: "Injective"           },
-  { id: "convex-finance",            symbol: "CVX",    name: "Convex Finance"      },
-  { id: "blur",                      symbol: "BLUR",   name: "Blur"                },
-  { id: "ethena",                    symbol: "ENA",    name: "Ethena"              },
-  { id: "hyperliquid",               symbol: "HYPE",   name: "Hyperliquid"         },
-  { id: "raydium",                   symbol: "RAY",    name: "Raydium"             },
-  { id: "jupiter-exchange-solana",   symbol: "JUP",    name: "Jupiter"             },
-  { id: "jito-governance-token",     symbol: "JTO",    name: "Jito"                },
-  // ── AI / Data / Infra ────────────────────────────────────────────────────
-  { id: "fetch-ai",                  symbol: "FET",    name: "Fetch.ai"            },
-  { id: "render-token",              symbol: "RNDR",   name: "Render"              },
-  { id: "worldcoin-wld",             symbol: "WLD",    name: "Worldcoin"           },
-  { id: "ocean-protocol",            symbol: "OCEAN",  name: "Ocean Protocol"      },
-  { id: "grass",                     symbol: "GRASS",  name: "Grass"               },
-  { id: "io-net",                    symbol: "IO",     name: "io.net"              },
-  { id: "akash-network",             symbol: "AKT",    name: "Akash Network"       },
-  { id: "singularitynet",            symbol: "AGIX",   name: "SingularityNET"      },
-  { id: "pyth-network",              symbol: "PYTH",   name: "Pyth Network"        },
-  { id: "wormhole",                  symbol: "W",      name: "Wormhole"            },
-  { id: "celestia",                  symbol: "TIA",    name: "Celestia"            },
-  { id: "eigenlayer",                symbol: "EIGEN",  name: "EigenLayer"          },
-  { id: "filecoin",                  symbol: "FIL",    name: "Filecoin"            },
-  { id: "helium",                    symbol: "HNT",    name: "Helium"              },
-  { id: "storj",                     symbol: "STORJ",  name: "Storj"               },
-  { id: "golem",                     symbol: "GLM",    name: "Golem"               },
-  { id: "ankr",                      symbol: "ANKR",   name: "Ankr"                },
-  // ── Oracles / Middleware ──────────────────────────────────────────────────
-  { id: "basic-attention-token",     symbol: "BAT",    name: "Basic Attention"     },
-  { id: "0x",                        symbol: "ZRX",    name: "0x Protocol"         },
-  { id: "band-protocol",             symbol: "BAND",   name: "Band Protocol"       },
-  { id: "api3",                      symbol: "API3",   name: "API3"                },
-  // ── Gaming / NFT / Metaverse ─────────────────────────────────────────────
-  { id: "axie-infinity",             symbol: "AXS",    name: "Axie Infinity"       },
-  { id: "decentraland",              symbol: "MANA",   name: "Decentraland"        },
-  { id: "the-sandbox",               symbol: "SAND",   name: "The Sandbox"         },
-  { id: "gala",                      symbol: "GALA",   name: "Gala"                },
-  { id: "flow",                      symbol: "FLOW",   name: "Flow"                },
-  { id: "theta-token",               symbol: "THETA",  name: "Theta"               },
-  { id: "enjincoin",                 symbol: "ENJ",    name: "Enjin Coin"          },
-  { id: "chiliz",                    symbol: "CHZ",    name: "Chiliz"              },
-  { id: "illuvium",                  symbol: "ILV",    name: "Illuvium"            },
-  { id: "gods-unchained",            symbol: "GODS",   name: "Gods Unchained"      },
-  { id: "superfarm",                 symbol: "SUPER",  name: "SuperVerse"          },
-  // ── Memes ────────────────────────────────────────────────────────────────
-  { id: "shiba-inu",                 symbol: "SHIB",   name: "Shiba Inu"           },
-  { id: "pepe",                      symbol: "PEPE",   name: "Pepe"                },
-  { id: "bonk",                      symbol: "BONK",   name: "Bonk"               },
-  { id: "dogwifcoin",                symbol: "WIF",    name: "dogwifhat"           },
-  { id: "floki",                     symbol: "FLOKI",  name: "Floki"               },
-  { id: "cat-in-a-dogs-world",       symbol: "MEW",    name: "cat in a dogs world" },
-  { id: "book-of-meme",              symbol: "BOME",   name: "Book of Meme"        },
-  { id: "mog-coin",                  symbol: "MOG",    name: "Mog Coin"            },
-  { id: "brett",                     symbol: "BRETT",  name: "Brett"               },
-  { id: "degen-base",                symbol: "DEGEN",  name: "Degen"               },
-  { id: "popcat",                    symbol: "POPCAT", name: "Popcat"              },
-  { id: "dogs-token",                symbol: "DOGS",   name: "DOGS"                },
-  { id: "notcoin",                   symbol: "NOT",    name: "Notcoin"             },
-  { id: "baby-doge-coin",            symbol: "BABYDOGE",name: "Baby Doge Coin"     },
-  // ── Ecosystem / Misc ─────────────────────────────────────────────────────
-  { id: "sei-network",               symbol: "SEI",    name: "Sei"                 },
-  { id: "berachain-bera",            symbol: "BERA",   name: "Berachain"           },
-  { id: "rocket-pool",               symbol: "RPL",    name: "Rocket Pool"         },
-  { id: "nervos-network",            symbol: "CKB",    name: "Nervos Network"      },
-  { id: "qtum",                      symbol: "QTUM",   name: "Qtum"                },
-];
+import { CATALOG, type CatalogEntry } from "../services/coinCatalog";
+import { fetchBinancePrices, fetchSparklines, type PriceEntry } from "../services/binancePrices";
 
 const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
 
@@ -231,6 +51,79 @@ function fmtVol(v: number): string {
   return `${v.toFixed(0)}`;
 }
 
+/* ── Row ────────────────────────────────────────────────────────────────── */
+interface RowProps {
+  id: string;
+  meta?: CatalogEntry;
+  entry?: PriceEntry;
+  spark: number[];
+  imgError: boolean;
+  onImgError: (symbol: string) => void;
+  onRemove: (id: string) => void;
+  dragTitle: string;
+  removeTitle: string;
+  volLabel: string;
+}
+
+function WatchlistRow({
+  id, meta, entry, spark, imgError, onImgError, onRemove, dragTitle, removeTitle, volLabel,
+}: RowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const symbol = (meta?.symbol ?? "").toUpperCase();
+  const pct = entry?.pct ?? 0;
+  const up = pct >= 0;
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="wl-row">
+      <button className="wl-row-handle" title={dragTitle} {...attributes} {...listeners}>
+        ⋮⋮
+      </button>
+
+      <div className="wl-row-icon">
+        {!imgError ? (
+          <img
+            className="wl-coin-img"
+            src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
+            alt={symbol}
+            loading="lazy"
+            onError={() => onImgError(symbol)}
+          />
+        ) : (
+          <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
+        )}
+      </div>
+
+      <div className="wl-row-info">
+        <span className="wl-row-symbol">{symbol}-USD</span>
+        <span className="wl-row-vol">{volLabel} {entry ? fmtVol(entry.vol) : "—"}</span>
+      </div>
+
+      {spark.length > 1 && (
+        <div className="wl-row-spark">
+          <Sparkline prices={spark} positive={up} />
+        </div>
+      )}
+
+      <div className="wl-row-right">
+        <span className="wl-row-price">${entry ? fmtPrice(entry.price) : "—"}</span>
+        <span className={`wl-row-pct${up ? " up" : " down"}`}>
+          {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
+        </span>
+      </div>
+
+      <button className="wl-row-star" onClick={() => onRemove(id)} title={removeTitle}>
+        ★
+      </button>
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────────────────────── */
 export function Watchlist() {
   const { t } = useTranslation();
@@ -264,7 +157,7 @@ export function Watchlist() {
     }
 
     refresh();
-    const id = setInterval(refresh, 30_000);
+    const id = setInterval(refresh, 5_000);
     return () => clearInterval(id);
   }, [watchedIds]);
 
@@ -297,6 +190,21 @@ export function Watchlist() {
   };
 
   const removeCoin = (id: string) => setWatchedIds(prev => prev.filter(x => x !== id));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setWatchedIds(prev => {
+      const oldIndex = prev.indexOf(String(active.id));
+      const newIndex = prev.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  };
 
   const filteredCatalog = CATALOG.filter(c =>
     !watchedIds.includes(c.id) &&
@@ -354,59 +262,31 @@ export function Watchlist() {
       )}
 
       {!loading && watchedIds.length > 0 && (
-        <div className="wl-list">
-          {watchedIds.map(id => {
-            const meta   = CATALOG.find(c => c.id === id);
-            const symbol = (meta?.symbol ?? "").toUpperCase();
-            const entry  = priceData.get(symbol);
-            const spark  = sparklines.get(symbol) ?? [];
-            const pct    = entry?.pct ?? 0;
-            const up     = pct >= 0;
-            return (
-              <div key={id} className="wl-row">
-                <div className="wl-row-icon">
-                  {!imgErrors.has(symbol) ? (
-                    <img
-                      className="wl-coin-img"
-                      src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
-                      alt={symbol}
-                      loading="lazy"
-                      onError={() => setImgErrors(prev => new Set([...prev, symbol]))}
-                    />
-                  ) : (
-                    <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
-                  )}
-                </div>
-
-                <div className="wl-row-info">
-                  <span className="wl-row-symbol">{symbol}-USD</span>
-                  <span className="wl-row-vol">{t("watchlist.vol")} {entry ? fmtVol(entry.vol) : "—"}</span>
-                </div>
-
-                {spark.length > 1 && (
-                  <div className="wl-row-spark">
-                    <Sparkline prices={spark} positive={up} />
-                  </div>
-                )}
-
-                <div className="wl-row-right">
-                  <span className="wl-row-price">${entry ? fmtPrice(entry.price) : "—"}</span>
-                  <span className={`wl-row-pct${up ? " up" : " down"}`}>
-                    {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
-                  </span>
-                </div>
-
-                <button
-                  className="wl-row-star"
-                  onClick={() => removeCoin(id)}
-                  title={t("watchlist.removeTitle")}
-                >
-                  ★
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={watchedIds} strategy={verticalListSortingStrategy}>
+            <div className="wl-list">
+              {watchedIds.map(id => {
+                const meta   = CATALOG.find(c => c.id === id);
+                const symbol = (meta?.symbol ?? "").toUpperCase();
+                return (
+                  <WatchlistRow
+                    key={id}
+                    id={id}
+                    meta={meta}
+                    entry={priceData.get(symbol)}
+                    spark={sparklines.get(symbol) ?? []}
+                    imgError={imgErrors.has(symbol)}
+                    onImgError={sym => setImgErrors(prev => new Set([...prev, sym]))}
+                    onRemove={removeCoin}
+                    dragTitle={t("watchlist.dragTitle")}
+                    removeTitle={t("watchlist.removeTitle")}
+                    volLabel={t("watchlist.vol")}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

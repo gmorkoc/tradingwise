@@ -179,6 +179,25 @@ html[data-theme="light"] .wl-row:hover {
   background: rgba(0, 0, 0, 0.025);
 }
 
+/* Drag handle */
+.wl-row-handle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: grab;
+  touch-action: none;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  letter-spacing: -2px;
+  padding: 4px 2px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.wl-row-handle:hover { opacity: 0.8; }
+.wl-row-handle:active { cursor: grabbing; }
+
 /* Coin icon */
 .wl-row-icon { flex-shrink: 0; }
 

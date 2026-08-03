@@ -60,9 +60,11 @@
     "title": "💼 Calcolatore Asset",
     "amountLabel": "Quantità {{coin}}",
     "costLabel": "Costo per {{coin}}",
-    "totalLabel": "Valore totale asset",
-    "basedOn": "Basato sul prezzo attuale di {{coin}}: {{price}}",
-    "costBasis": "Costo base: {{amount}}"
+    "priceAt": "@ {{price}}",
+    "totalLabel": "Valore totale del portafoglio",
+    "costBasis": "Costo base: {{amount}}",
+    "addPosition": "+ Aggiungi posizione",
+    "removePosition": "Rimuovi posizione"
   },
   "alert": {
     "signalLabel": "Segnale prezzo",
@@ -1218,7 +1220,7 @@
   },
   "watchlist": {
     "title": "Lista Osservazione",
-    "updated": "Aggiornato ogni minuto",
+    "updated": "Aggiornato ogni 5 secondi",
     "addCoin": "+ Aggiungi Moneta",
     "searchPlaceholder": "Cerca per nome o simbolo…",
     "loading": "Caricamento dati di mercato…",
@@ -1226,6 +1228,7 @@
     "emptyText": "Nessuna moneta nella tua lista",
     "emptyHint": "Clicca \"+ Aggiungi Moneta\" per iniziare a seguire",
     "removeTitle": "Rimuovi dalla lista",
+    "dragTitle": "Trascina per riordinare",
     "vol": "Vol"
   },
   "alerts": {

@@ -60,9 +60,11 @@
     "title": "💼 Calculadora de activos",
     "amountLabel": "Cantidad de {{coin}}",
     "costLabel": "Costo por {{coin}}",
-    "totalLabel": "Valor total del activo",
-    "basedOn": "Basado en el precio actual de {{coin}}: {{price}}",
-    "costBasis": "Costo base: {{amount}}"
+    "priceAt": "@ {{price}}",
+    "totalLabel": "Valor total de la cartera",
+    "costBasis": "Costo base: {{amount}}",
+    "addPosition": "+ Añadir posición",
+    "removePosition": "Eliminar posición"
   },
   "alert": {
     "signalLabel": "Señal de precio",
@@ -1218,7 +1220,7 @@
   },
   "watchlist": {
     "title": "Lista de Seguimiento",
-    "updated": "Actualizado cada minuto",
+    "updated": "Actualizado cada 5 segundos",
     "addCoin": "+ Agregar moneda",
     "searchPlaceholder": "Buscar por nombre o símbolo…",
     "loading": "Cargando datos de mercado…",
@@ -1226,6 +1228,7 @@
     "emptyText": "No hay monedas en tu lista",
     "emptyHint": "Haz clic en \"+ Agregar moneda\" para empezar a seguir",
     "removeTitle": "Eliminar de la lista",
+    "dragTitle": "Arrastra para reordenar",
     "vol": "Vol"
   },
   "alerts": {

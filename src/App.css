@@ -561,42 +561,6 @@ select {
   box-shadow: 0 18px 50px var(--color-shadow);
 }
 
-.asset-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1 1 220px;
-  min-width: 180px;
-  max-width: 280px;
-}
-
-.asset-input-group label {
-  color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-
-.asset-input-group input {
-  width: 100%;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  color: var(--color-text);
-  padding: 12px 14px;
-  font-size: 14px;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.asset-input-group input:focus {
-  outline: none;
-  border-color: rgba(56, 189, 248, 0.8);
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
-}
-
 .asset-value-card {
   display: flex;
   flex-direction: column;
@@ -605,10 +569,8 @@ select {
   flex: 1 1 100%;
   min-width: 0;
   max-width: none;
-  padding: 16px 18px;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--color-border);
 }
 
 .asset-value-card span {
@@ -646,6 +608,131 @@ select {
 
 .asset-value-card .asset-pnl.negative {
   color: var(--color-danger);
+}
+
+.asset-positions-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.asset-position-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.asset-position-row:last-child {
+  border-bottom: none;
+}
+
+.coin-select.asset-position-coin {
+  min-width: 0;
+  flex: 1 1 130px;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 20px 4px 0;
+  font-size: 13px;
+}
+
+.coin-select.asset-position-coin:hover,
+.coin-select.asset-position-coin:focus {
+  box-shadow: none;
+  border: none;
+  background-color: transparent;
+}
+
+.asset-position-input {
+  flex: 1 1 90px;
+  min-width: 70px;
+  max-width: 120px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 13px;
+  padding: 4px 2px;
+  transition: border-color 0.15s ease;
+}
+
+.asset-position-input::placeholder {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.asset-position-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.7);
+}
+
+.asset-position-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 80px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.asset-position-live-price {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-position-pnl {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-position-pnl.positive { color: var(--color-success); }
+.asset-position-pnl.negative { color: var(--color-danger); }
+
+.asset-position-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0.5;
+  padding: 4px 0 4px 6px;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.asset-position-remove:hover:not(:disabled) {
+  color: var(--color-danger);
+  opacity: 1;
+}
+
+.asset-position-remove:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+.asset-add-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.asset-add-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .coin-select {
@@ -826,6 +913,9 @@ select {
   padding: 22px 24px 28px;
   overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .auto-refresh-toggle {
@@ -1043,13 +1133,21 @@ select {
     font-size: 14px;
   }
 
-  .asset-summary {
+  .asset-position-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .asset-input-group,
-  .asset-value-card {
+  .asset-position-result {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .asset-position-input,
+  .asset-value-card,
+  .asset-position-coin {
     width: 100%;
     max-width: none;
     flex: 0 0 auto;

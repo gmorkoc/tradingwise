@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,6 +11,8 @@ import {
   fetchCoin24hTickers,
   Ticker24h,
 } from "./services/coinglass";
+import { CATALOG } from "./services/coinCatalog";
+import { fetchBinancePrices } from "./services/binancePrices";
 import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
@@ -80,6 +82,11 @@ type SectionId =
   | "riskcalc"
   | "options"
   | "correlation";
+
+interface Position { id: string; catalogId: string; amount: string; cost: string }
+
+let positionIdSeq = 0;
+const makePositionId = () => `pos-${Date.now()}-${positionIdSeq++}`;
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -297,12 +304,26 @@ function AppDashboard({
   const [error, setError] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [btcAmount, setBtcAmount] = useState(
-    () => localStorage.getItem("btcAmount") || "0",
-  );
-  const [btcCost, setBtcCost] = useState(
-    () => localStorage.getItem("btcCost") || "0",
-  );
+  const [positions, setPositions] = useState<Position[]>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("portfolioPositions_v1") ?? "null");
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch { /* ignore malformed data */ }
+
+    // Migrate the old single-coin (BTC-only) amount/cost fields, if present.
+    const legacyAmount = localStorage.getItem("btcAmount");
+    if (legacyAmount && Number(legacyAmount) > 0) {
+      const legacySymbol = localStorage.getItem("coin") || "BTC";
+      const meta = CATALOG.find(c => c.symbol === legacySymbol);
+      return [{
+        id: makePositionId(),
+        catalogId: meta?.id ?? "bitcoin",
+        amount: legacyAmount,
+        cost: localStorage.getItem("btcCost") || "0",
+      }];
+    }
+    return [{ id: makePositionId(), catalogId: "bitcoin", amount: "0", cost: "0" }];
+  });
   const btcDataRef = useRef<Partial<BTCData> | null>(null);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [priceTicker, setPriceTicker] = useState(false);
@@ -441,17 +462,58 @@ function AppDashboard({
   }, [livePrice, priceTicker, tickerMuted]);
 
   useEffect(() => {
-    localStorage.setItem("btcAmount", btcAmount);
-  }, [btcAmount]);
-  useEffect(() => {
-    localStorage.setItem("btcCost", btcCost);
-  }, [btcCost]);
+    localStorage.setItem("portfolioPositions_v1", JSON.stringify(positions));
+  }, [positions]);
 
-  const btcAmountValue = Number(btcAmount) || 0;
-  const btcCostValue = Number(btcCost) || 0;
-  const [totalAssetValue, setTotalAssetValue] = useState(0);
-  const [totalCostBasis, setTotalCostBasis] = useState(0);
-  const [profitLoss, setProfitLoss] = useState(0);
+  const positionSymbols = useMemo(
+    () => Array.from(new Set(
+      positions.map(p => CATALOG.find(c => c.id === p.catalogId)?.symbol).filter(Boolean),
+    )) as string[],
+    [positions],
+  );
+  const positionSymbolsKey = positionSymbols.join(",");
+
+  const [positionPrices, setPositionPrices] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (positionSymbols.length === 0) { setPositionPrices(new Map()); return; }
+    let cancelled = false;
+    const refresh = async () => {
+      const data = await fetchBinancePrices(positionSymbols);
+      if (!cancelled) setPositionPrices(new Map(Array.from(data, ([sym, e]) => [sym, e.price])));
+    };
+    refresh();
+    const id = setInterval(refresh, 5_000);
+    return () => { cancelled = true; clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positionSymbolsKey]);
+
+  const portfolioTotals = useMemo(() => {
+    let totalAssetValue = 0;
+    let totalCostBasis = 0;
+    for (const p of positions) {
+      const symbol = CATALOG.find(c => c.id === p.catalogId)?.symbol;
+      const price = symbol ? positionPrices.get(symbol) : undefined;
+      const amount = Number(p.amount) || 0;
+      const cost = Number(p.cost) || 0;
+      totalAssetValue += price ? amount * price : 0;
+      totalCostBasis += amount * cost;
+    }
+    return { totalAssetValue, totalCostBasis, profitLoss: totalAssetValue - totalCostBasis };
+  }, [positions, positionPrices]);
+  const { totalAssetValue, totalCostBasis, profitLoss } = portfolioTotals;
+  const hasAnyPosition = positions.some(p => (Number(p.amount) || 0) > 0);
+
+  const updatePosition = useCallback((id: string, patch: Partial<Position>) => {
+    setPositions(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p)));
+  }, []);
+  const addPosition = useCallback(() => {
+    const usedIds = new Set(positions.map(p => p.catalogId));
+    const nextCoin = CATALOG.find(c => !usedIds.has(c.id)) ?? CATALOG[0];
+    setPositions(prev => [...prev, { id: makePositionId(), catalogId: nextCoin.id, amount: "0", cost: "0" }]);
+  }, [positions]);
+  const removePosition = useCallback((id: string) => {
+    setPositions(prev => (prev.length > 1 ? prev.filter(p => p.id !== id) : prev));
+  }, []);
 
   const { tier, user, profile, signOut } = useAuth();
   useEffect(() => {
@@ -685,14 +747,6 @@ function AppDashboard({
       prevPriceStatusRef.current = current;
     }
   }, [chartZone]);
-
-  useEffect(() => {
-    const assetValue = btcData?.price ? btcAmountValue * btcData.price : 0;
-    const costBasis = btcAmountValue * btcCostValue;
-    setTotalAssetValue(assetValue);
-    setTotalCostBasis(costBasis);
-    setProfitLoss(assetValue - costBasis);
-  }, [btcAmountValue, btcCostValue, btcData?.price]);
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("en-US", {
@@ -1283,7 +1337,7 @@ function AppDashboard({
                 <span
                   className={`mch-portfolio-value${profitLoss >= 0 ? " positive" : " negative"}`}
                 >
-                  {btcAmountValue > 0
+                  {hasAnyPosition
                     ? `${profitLoss >= 0 ? "+" : ""}${formatCurrency(profitLoss)}`
                     : "—"}
                 </span>
@@ -1650,60 +1704,103 @@ function AppDashboard({
                 </button>
               </div>
               <div className="asset-modal-content">
-                <div className="asset-summary">
-                  <div className="asset-input-group">
-                    <label htmlFor="btc-amount">
-                      {t("assetCalc.amountLabel", { coin })}
-                    </label>
-                    <input
-                      id="btc-amount"
-                      type="number"
-                      min="0"
-                      step="0.0001"
-                      value={btcAmount}
-                      onFocus={() => btcAmount === "0" && setBtcAmount("")}
-                      onChange={(e) => setBtcAmount(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="asset-input-group">
-                    <label htmlFor="btc-cost">
-                      {t("assetCalc.costLabel", { coin })}
-                    </label>
-                    <input
-                      id="btc-cost"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={btcCost}
-                      onFocus={() => btcCost === "0" && setBtcCost("")}
-                      onChange={(e) => setBtcCost(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div className="asset-value-card">
-                    <span>{t("assetCalc.totalLabel")}</span>
-                    <strong>{formatCurrency(totalAssetValue)}</strong>
-                    <p>
-                      {t("assetCalc.basedOn", {
-                        coin,
-                        price: btcData?.price
-                          ? formatCurrency(btcData.price)
-                          : "-",
-                      })}
-                    </p>
-                    <p className="asset-cost">
-                      {t("assetCalc.costBasis", {
-                        amount: formatCurrency(totalCostBasis),
-                      })}
-                    </p>
-                    <p
-                      className={`asset-pnl ${profitLoss >= 0 ? "positive" : "negative"}`}
-                    >
-                      {profitLoss >= 0 ? "+" : ""}
-                      {formatCurrency(profitLoss)}
-                    </p>
-                  </div>
+                <div className="asset-positions-list">
+                  {positions.map((pos) => {
+                    const meta = CATALOG.find((c) => c.id === pos.catalogId);
+                    const symbol = meta?.symbol ?? "";
+                    const price = positionPrices.get(symbol);
+                    const amount = Number(pos.amount) || 0;
+                    const cost = Number(pos.cost) || 0;
+                    const value = price ? amount * price : 0;
+                    const pnl = value - amount * cost;
+                    return (
+                      <div className="asset-position-row" key={pos.id}>
+                        <select
+                          className="coin-select asset-position-coin"
+                          value={pos.catalogId}
+                          onChange={(e) =>
+                            updatePosition(pos.id, { catalogId: e.target.value })
+                          }
+                        >
+                          {CATALOG.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.symbol} — {c.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          className="asset-position-input"
+                          value={pos.amount}
+                          onFocus={() =>
+                            pos.amount === "0" && updatePosition(pos.id, { amount: "" })
+                          }
+                          onChange={(e) =>
+                            updatePosition(pos.id, { amount: e.target.value })
+                          }
+                          placeholder={t("assetCalc.amountLabel", { coin: symbol })}
+                        />
+
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="asset-position-input"
+                          value={pos.cost}
+                          onFocus={() =>
+                            pos.cost === "0" && updatePosition(pos.id, { cost: "" })
+                          }
+                          onChange={(e) =>
+                            updatePosition(pos.id, { cost: e.target.value })
+                          }
+                          placeholder={t("assetCalc.costLabel", { coin: symbol })}
+                        />
+
+                        <div className="asset-position-result">
+                          <span className="asset-position-live-price">
+                            {price ? t("assetCalc.priceAt", { price: formatCurrency(price) }) : "—"}
+                          </span>
+                          <span
+                            className={`asset-position-pnl${pnl >= 0 ? " positive" : " negative"}`}
+                          >
+                            {amount > 0 ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}` : "—"}
+                          </span>
+                        </div>
+
+                        <button
+                          className="asset-position-remove"
+                          onClick={() => removePosition(pos.id)}
+                          disabled={positions.length === 1}
+                          title={t("assetCalc.removePosition")}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button className="asset-add-btn" onClick={addPosition}>
+                  {t("assetCalc.addPosition")}
+                </button>
+
+                <div className="asset-value-card">
+                  <span>{t("assetCalc.totalLabel")}</span>
+                  <strong>{formatCurrency(totalAssetValue)}</strong>
+                  <p className="asset-cost">
+                    {t("assetCalc.costBasis", {
+                      amount: formatCurrency(totalCostBasis),
+                    })}
+                  </p>
+                  <p
+                    className={`asset-pnl ${profitLoss >= 0 ? "positive" : "negative"}`}
+                  >
+                    {profitLoss >= 0 ? "+" : ""}
+                    {formatCurrency(profitLoss)}
+                  </p>
                 </div>
               </div>
             </div>

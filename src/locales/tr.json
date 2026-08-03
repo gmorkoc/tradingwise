@@ -60,9 +60,11 @@
     "title": "💼 Varlık Hesaplayıcısı",
     "amountLabel": "{{coin}} Miktarı",
     "costLabel": "{{coin}} Başına Maliyet",
-    "totalLabel": "Toplam Varlık Değeri",
-    "basedOn": "{{coin}} güncel fiyatına göre: {{price}}",
-    "costBasis": "Maliyet tabanı: {{amount}}"
+    "priceAt": "@ {{price}}",
+    "totalLabel": "Toplam Portföy Değeri",
+    "costBasis": "Maliyet tabanı: {{amount}}",
+    "addPosition": "+ Pozisyon Ekle",
+    "removePosition": "Pozisyonu kaldır"
   },
   "alert": {
     "signalLabel": "Fiyat Sinyali",
@@ -1218,7 +1220,7 @@
   },
   "watchlist": {
     "title": "İzleme Listesi",
-    "updated": "Her dakika güncellenir",
+    "updated": "Her 5 saniyede güncellenir",
     "addCoin": "+ Coin Ekle",
     "searchPlaceholder": "Ad veya sembolle ara…",
     "loading": "Piyasa verileri yükleniyor…",
@@ -1226,6 +1228,7 @@
     "emptyText": "İzleme listenizde coin yok",
     "emptyHint": "Takibe başlamak için \"+ Coin Ekle\"ye tıkla",
     "removeTitle": "Listeden kaldır",
+    "dragTitle": "Yeniden sıralamak için sürükle",
     "vol": "Hacim"
   },
   "alerts": {

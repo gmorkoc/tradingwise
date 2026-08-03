@@ -60,9 +60,11 @@
     "title": "💼 Asset Calculator",
     "amountLabel": "{{coin}} Amount",
     "costLabel": "Cost per {{coin}}",
-    "totalLabel": "Total Asset Value",
-    "basedOn": "Based on current {{coin}} price of {{price}}",
-    "costBasis": "Cost basis: {{amount}}"
+    "priceAt": "@ {{price}}",
+    "totalLabel": "Total Portfolio Value",
+    "costBasis": "Cost basis: {{amount}}",
+    "addPosition": "+ Add Position",
+    "removePosition": "Remove position"
   },
   "alert": {
     "signalLabel": "Price Signal",
@@ -1241,7 +1243,7 @@
   },
   "watchlist": {
     "title": "Watchlist",
-    "updated": "Updated every minute",
+    "updated": "Updated every 5 seconds",
     "addCoin": "+ Add Coin",
     "searchPlaceholder": "Search by name or symbol…",
     "loading": "Loading market data…",
@@ -1249,6 +1251,7 @@
     "emptyText": "No coins in your watchlist",
     "emptyHint": "Click \"+ Add Coin\" to start tracking",
     "removeTitle": "Remove from watchlist",
+    "dragTitle": "Drag to reorder",
     "vol": "Vol"
   },
   "alerts": {
