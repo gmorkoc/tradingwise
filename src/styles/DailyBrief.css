@@ -357,6 +357,11 @@
 @media (max-width: 640px) {
   .db-card-featured { display: none; }
   .db-card-list { display: flex; flex-direction: column; }
+
+  /* Bigger sliver on touch screens so it's easy to tap/drag back open */
+  .db-sheet--minimized {
+    transform: translateY(calc(100% - 28px + var(--db-drag-y)));
+  }
 }
 
 @media (max-width: 480px) {
