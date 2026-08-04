@@ -2073,6 +2073,7 @@
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "minimize": "Minimize"
   }
 }

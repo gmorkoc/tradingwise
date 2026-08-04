@@ -163,11 +163,13 @@ const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({
   </div>
 );
 
+type SheetState = "minimized" | "collapsed" | "expanded";
+
 export const DailyBrief: React.FC = () => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
   const [index, setIndex] = useState(0);
-  const [expanded, setExpanded] = useState(false);
+  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
@@ -199,8 +201,12 @@ export const DailyBrief: React.FC = () => {
   const onPointerMove = (e: React.PointerEvent) => {
     if (dragStartY.current === null) return;
     const delta = e.clientY - dragStartY.current;
-    // Resist dragging past the sheet's natural resting bounds
-    const clamped = expanded ? Math.max(0, delta) : Math.min(0, delta);
+    // Resist dragging past the sheet's natural resting bounds — collapsed can
+    // go either way (up to expand, down to minimize), the other two states
+    // can only be dragged back toward collapsed.
+    let clamped = delta;
+    if (sheetState === "expanded") clamped = Math.max(0, delta);
+    if (sheetState === "minimized") clamped = Math.min(0, delta);
     setDragY(clamped);
   };
 
@@ -212,11 +218,13 @@ export const DailyBrief: React.FC = () => {
     setDragY(0);
 
     if (Math.abs(delta) < TAP_THRESHOLD) {
-      setExpanded((v) => !v);
+      setSheetState((s) => (s === "collapsed" ? "expanded" : "collapsed"));
     } else if (delta < -DRAG_THRESHOLD) {
-      setExpanded(true);
+      // dragged up
+      setSheetState((s) => (s === "minimized" ? "collapsed" : "expanded"));
     } else if (delta > DRAG_THRESHOLD) {
-      setExpanded(false);
+      // dragged down
+      setSheetState((s) => (s === "expanded" ? "collapsed" : "minimized"));
     }
   };
 
@@ -236,11 +244,25 @@ export const DailyBrief: React.FC = () => {
 
   return (
     <>
-      {expanded && <div className="db-backdrop" onClick={() => setExpanded(false)} />}
+      {sheetState === "expanded" && (
+        <div className="db-backdrop" onClick={() => setSheetState("collapsed")} />
+      )}
       <div
-        className={`db-sheet${expanded ? " db-sheet--expanded" : ""}`}
-        style={dragY !== 0 ? { transform: `translateY(${dragY}px)` } : undefined}
+        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}`}
+        style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
       >
+        {sheetState !== "minimized" && (
+          <button
+            className="db-minimize-btn"
+            onClick={() => setSheetState("minimized")}
+            aria-label={t("dailyBrief.minimize")}
+            title={t("dailyBrief.minimize")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
         <div
           className="db-drag-zone"
           onPointerDown={onPointerDown}
@@ -258,7 +280,7 @@ export const DailyBrief: React.FC = () => {
                 <span className="db-live-dot" />
               </span>
             </span>
-            {!expanded && (
+            {sheetState !== "expanded" && (
               <span className="db-head-teaser">{current.title}</span>
             )}
           </div>

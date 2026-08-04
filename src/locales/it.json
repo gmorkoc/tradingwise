@@ -2000,6 +2000,7 @@
     "hoursAgo": "{{count}}h fa",
     "daysAgo": "{{count}}g fa",
     "showMore": "Mostra altro",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "minimize": "Riduci a icona"
   }
 }

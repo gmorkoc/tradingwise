@@ -2000,6 +2000,7 @@
     "hoursAgo": "{{count}}sa önce",
     "daysAgo": "{{count}}g önce",
     "showMore": "Daha fazla göster",
-    "showLess": "Daha az göster"
+    "showLess": "Daha az göster",
+    "minimize": "Küçült"
   }
 }

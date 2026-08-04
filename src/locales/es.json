@@ -2000,6 +2000,7 @@
     "hoursAgo": "hace {{count}}h",
     "daysAgo": "hace {{count}}d",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "minimize": "Minimizar"
   }
 }
