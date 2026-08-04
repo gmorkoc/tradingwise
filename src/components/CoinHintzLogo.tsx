@@ -3,7 +3,7 @@ interface Props {
   variant?: "default" | "nav";
 }
 
-const LogoIcon = ({ size = 36 }: { size?: number }) => (
+const LogoIcon = ({ size = 36, animated = false }: { size?: number; animated?: boolean }) => (
   <svg
     className="st-logo-icon"
     width={size}
@@ -20,8 +20,18 @@ const LogoIcon = ({ size = 36 }: { size?: number }) => (
       </linearGradient>
     </defs>
     <circle cx="18" cy="18" r="16" fill="url(#ch-grad)" />
-    <path d="M 23.3 12.7 A 7.5 7.5 0 0 0 10.5 18" stroke="#4ade80" strokeWidth="5" strokeLinecap="round" fill="none" />
-    <path d="M 10.5 18 A 7.5 7.5 0 0 0 23.3 23.3" stroke="white" strokeWidth="5" strokeLinecap="round" fill="none" />
+    <path
+      d="M 23.3 12.7 A 7.5 7.5 0 0 0 10.5 18"
+      pathLength={1}
+      className={animated ? "logo-c-arc logo-c-arc-1" : undefined}
+      stroke="#4ade80" strokeWidth="4" strokeLinecap="round" fill="none"
+    />
+    <path
+      d="M 10.5 18 A 7.5 7.5 0 0 0 23.3 23.3"
+      pathLength={1}
+      className={animated ? "logo-c-arc logo-c-arc-2" : undefined}
+      stroke="white" strokeWidth="4" strokeLinecap="round" fill="none"
+    />
     <circle cx="18" cy="18" r="16" stroke="#818cf8" strokeWidth="2" fill="none" />
   </svg>
 );
@@ -44,7 +54,7 @@ export const CoinHintzLogo: React.FC<Props> = ({ loading = false, variant = "def
         <span className="boot-logo-wrap">
           <span className="boot-glow" />
           <span className="boot-spinner-ring" />
-          <LogoIcon size={52} />
+          <LogoIcon size={52} animated />
         </span>
       ) : (
         <LogoIcon size={52} />

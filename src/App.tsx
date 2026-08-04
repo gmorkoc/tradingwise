@@ -1897,14 +1897,30 @@ function AppGate() {
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const [theme, setTheme] = useState<"dark" | "light">(
-    () => (localStorage.getItem("theme") as "dark" | "light") || "light",
-  );
+  const [theme, setThemeState] = useState<"dark" | "light">(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored === "dark" || stored === "light") return stored;
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
   }, [theme]);
+
+  // Follow the OS theme live until the user makes an explicit choice
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem("theme")) setThemeState(e.matches ? "dark" : "light");
+    };
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  const setTheme = (t: "dark" | "light") => {
+    localStorage.setItem("theme", t);
+    setThemeState(t);
+  };
 
   // Sync pending terms agreement to DB once user is authenticated
   useEffect(() => {
