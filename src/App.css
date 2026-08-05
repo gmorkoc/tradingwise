@@ -957,15 +957,18 @@ select {
 }
 
 .asset-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--color-text-secondary);
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
   transition:
     background 0.2s ease,
     color 0.2s ease;
@@ -1200,24 +1203,85 @@ select {
     font-size: 14px;
   }
 
+  /* Compact 2-row grid per position instead of stacking every field on its
+     own line — keeps the list scannable without a long scroll. */
   .asset-position-row {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    grid-template-areas:
+      "coin   coin   remove"
+      "amount cost   result";
+    column-gap: 8px;
+    row-gap: 4px;
   }
 
-  .asset-position-result {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+  .coin-select.asset-position-coin {
+    grid-area: coin;
     width: 100%;
   }
 
-  .asset-position-input,
-  .asset-value-card,
-  .asset-position-coin {
+  .asset-position-input {
     width: 100%;
     max-width: none;
-    flex: 0 0 auto;
+  }
+
+  .asset-position-input:nth-of-type(1) { grid-area: amount; }
+  .asset-position-input:nth-of-type(2) { grid-area: cost; }
+
+  .asset-position-result {
+    grid-area: result;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .asset-position-remove {
+    grid-area: remove;
+    justify-self: end;
+  }
+
+  .asset-value-card {
+    width: 100%;
+    max-width: none;
+    order: -1;
+  }
+
+  .asset-panel-header {
+    padding: 14px 16px 12px;
+    gap: 8px;
+  }
+
+  .asset-panel-header h2 {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .asset-panel-header-actions {
+    gap: 4px;
+    align-items: center;
+  }
+
+  .asset-icon-btn {
+    height: 22px;
+    padding: 0 6px;
+    font-size: 9px;
+  }
+
+  .asset-icon-btn-glyph {
+    font-size: 10px;
+  }
+
+  .asset-close-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .header-content {
