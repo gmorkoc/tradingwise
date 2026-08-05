@@ -1686,6 +1686,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
   const [weeklyCycle, setWeeklyCycle] = useState<{ candles: CandleDataPoint[]; tema14: number[]; tema21: number[] } | null>(null);
   const [cycleExpanded, setCycleExpanded] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = Number(localStorage.getItem("cwSidebarWidth"));
+    return saved >= 300 && saved <= 720 ? saved : 440;
+  });
+  const resizeStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
   const [macroCtx, setMacroCtx] = useState<MacroContextData | null>(null);
@@ -2228,6 +2233,26 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiRead]);
 
+  useEffect(() => {
+    localStorage.setItem("cwSidebarWidth", String(sidebarWidth));
+  }, [sidebarWidth]);
+
+  const handleResizePointerDown = useCallback((e: React.PointerEvent) => {
+    resizeStartRef.current = { startX: e.clientX, startWidth: sidebarWidth };
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+  }, [sidebarWidth]);
+
+  const handleResizePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!resizeStartRef.current) return;
+    const { startX, startWidth } = resizeStartRef.current;
+    const next = Math.min(720, Math.max(300, startWidth + (startX - e.clientX)));
+    setSidebarWidth(next);
+  }, []);
+
+  const handleResizePointerUp = useCallback(() => {
+    resizeStartRef.current = null;
+  }, []);
+
   const toggleForecast = useCallback(() => {
     if (showForecast) { clearForecast(); return; }
     drawForecastNow();
@@ -2718,7 +2743,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         )}
 
         {/* ── Main grid ── */}
-        <div className="cw-grid">
+        <div className="cw-grid" style={{ "--cw-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}>
 
           {/* Left: chart + indicators */}
           <div className="cw-left">
@@ -2892,6 +2917,18 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Drag handle to resize the sidebar */}
+          <div
+            className="cw-resize-handle"
+            onPointerDown={handleResizePointerDown}
+            onPointerMove={handleResizePointerMove}
+            onPointerUp={handleResizePointerUp}
+            onPointerCancel={handleResizePointerUp}
+            title="Drag to resize"
+          >
+            <span className="cw-resize-handle-grip" />
           </div>
 
           {/* Right: AI analysis */}

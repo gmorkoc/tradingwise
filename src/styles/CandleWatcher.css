@@ -286,9 +286,30 @@
 
 .cw-grid {
   display: grid;
-  grid-template-columns: 1fr 440px;
+  grid-template-columns: 1fr 6px var(--cw-sidebar-w, 440px);
   gap: 14px;
   align-items: start;
+}
+
+.cw-resize-handle {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  align-self: stretch;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.cw-resize-handle-grip {
+  width: 1px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.cw-resize-handle:hover .cw-resize-handle-grip,
+.cw-resize-handle:active .cw-resize-handle-grip {
+  background: var(--color-primary);
 }
 
 /* ── Left: chart + indicator bar ─────────────────────────────────────────── */
@@ -2221,6 +2242,7 @@
 
 @media (max-width: 900px) {
   .cw-grid { grid-template-columns: 1fr; }
+  .cw-resize-handle { display: none; }
 }
 
 @media (max-width: 600px) {
