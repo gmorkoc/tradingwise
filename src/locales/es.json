@@ -64,6 +64,10 @@
     "totalLabel": "Valor total de la cartera",
     "costBasis": "Costo base: {{amount}}",
     "addPosition": "+ Añadir posición",
+    "export": "Exportar",
+    "exportHint": "Exportar posiciones a un archivo",
+    "import": "Importar",
+    "importHint": "Importar posiciones desde un archivo (reemplaza la lista actual)",
     "removePosition": "Eliminar posición"
   },
   "alert": {

@@ -64,6 +64,10 @@
     "totalLabel": "Toplam Portföy Değeri",
     "costBasis": "Maliyet tabanı: {{amount}}",
     "addPosition": "+ Pozisyon Ekle",
+    "export": "Dışa Aktar",
+    "exportHint": "Pozisyonları dosyaya aktar",
+    "import": "İçe Aktar",
+    "importHint": "Pozisyonları dosyadan içe aktar (mevcut listenin yerini alır)",
     "removePosition": "Pozisyonu kaldır"
   },
   "alert": {

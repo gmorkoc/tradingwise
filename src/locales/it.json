@@ -64,6 +64,10 @@
     "totalLabel": "Valore totale del portafoglio",
     "costBasis": "Costo base: {{amount}}",
     "addPosition": "+ Aggiungi posizione",
+    "export": "Esporta",
+    "exportHint": "Esporta posizioni in un file",
+    "import": "Importa",
+    "importHint": "Importa posizioni da un file (sostituisce l'elenco attuale)",
     "removePosition": "Rimuovi posizione"
   },
   "alert": {

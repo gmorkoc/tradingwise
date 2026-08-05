@@ -64,6 +64,10 @@
     "totalLabel": "Total Portfolio Value",
     "costBasis": "Cost basis: {{amount}}",
     "addPosition": "+ Add Position",
+    "export": "Export",
+    "exportHint": "Export positions to a file",
+    "import": "Import",
+    "importHint": "Import positions from a file (replaces current list)",
     "removePosition": "Remove position"
   },
   "alert": {

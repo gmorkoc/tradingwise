@@ -526,6 +526,59 @@ function AppDashboard({
     setPositions(prev => (prev.length > 1 ? prev.filter(p => p.id !== id) : prev));
   }, []);
 
+  const [exportStatus, setExportStatus] = useState<"idle" | "done" | "error">("idle");
+  const [importStatus, setImportStatus] = useState<"idle" | "done" | "error">("idle");
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  const exportPositions = useCallback(() => {
+    try {
+      const payload = positions.map(p => ({
+        symbol: CATALOG.find(c => c.id === p.catalogId)?.symbol ?? "",
+        amount: p.amount,
+        cost: p.cost,
+      }));
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "coinhintz-portfolio.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportStatus("done");
+    } catch {
+      setExportStatus("error");
+    }
+    setTimeout(() => setExportStatus("idle"), 1800);
+  }, [positions]);
+
+  const importPositionsFromFile = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed: unknown = JSON.parse(text);
+      if (!Array.isArray(parsed)) throw new Error("not an array");
+
+      const next: Position[] = [];
+      for (const item of parsed as Array<{ symbol?: unknown; amount?: unknown; cost?: unknown }>) {
+        const symbol = typeof item?.symbol === "string" ? item.symbol.toUpperCase() : "";
+        const meta = CATALOG.find(c => c.symbol === symbol);
+        if (!meta) continue;
+        next.push({
+          id: makePositionId(),
+          catalogId: meta.id,
+          amount: String(item.amount ?? "0"),
+          cost: String(item.cost ?? "0"),
+        });
+      }
+      if (next.length === 0) throw new Error("nothing recognizable in file");
+
+      setPositions(next);
+      setImportStatus("done");
+    } catch {
+      setImportStatus("error");
+    }
+    setTimeout(() => setImportStatus("idle"), 1800);
+  }, []);
+
   const { tier, user, profile, signOut } = useAuth();
   useEffect(() => {
     if (profile && !onboardingCheckedRef.current) {
@@ -1710,13 +1763,40 @@ function AppDashboard({
             >
               <div className="asset-panel-header">
                 <h2>{t("assetCalc.title")}</h2>
-                <button
-                  className="asset-close-btn"
-                  onClick={() => setAssetPanelOpen(false)}
-                  title="Close"
-                >
-                  ✕
-                </button>
+                <div className="asset-panel-header-actions">
+                  <input
+                    ref={importFileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) importPositionsFromFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    className={`asset-icon-btn${importStatus === "done" ? " success" : importStatus === "error" ? " error" : ""}`}
+                    onClick={() => importFileInputRef.current?.click()}
+                    title={t("assetCalc.importHint")}
+                  >
+                    <span className="asset-icon-btn-glyph">↑</span> {t("assetCalc.import")}
+                  </button>
+                  <button
+                    className={`asset-icon-btn${exportStatus === "done" ? " success" : exportStatus === "error" ? " error" : ""}`}
+                    onClick={exportPositions}
+                    title={t("assetCalc.exportHint")}
+                  >
+                    <span className="asset-icon-btn-glyph">↓</span> {t("assetCalc.export")}
+                  </button>
+                  <button
+                    className="asset-close-btn"
+                    onClick={() => setAssetPanelOpen(false)}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
               <div className="asset-modal-content">
                 <div className="asset-positions-list">
