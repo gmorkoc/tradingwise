@@ -1276,9 +1276,9 @@ select {
   }
 
   .asset-close-btn {
-    width: 22px;
-    height: 22px;
-    font-size: 15px;
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
