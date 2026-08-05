@@ -52,7 +52,7 @@
     "subtitle": "Yapay zeka destekli tahminlerle gerçek zamanlı piyasa verileri",
     "costBasis": "Maliyet Tabanı",
     "currentValue": "Güncel Değer",
-    "pnl": "K/Z",
+    "portfolioValue": "Portföy",
     "clickToRefresh": "Yenilemek için tıkla",
     "openCalculator": "Varlık Hesaplayıcısını Aç"
   },
@@ -1229,6 +1229,7 @@
     "emptyHint": "Takibe başlamak için \"+ Coin Ekle\"ye tıkla",
     "removeTitle": "Listeden kaldır",
     "dragTitle": "Yeniden sıralamak için sürükle",
+    "viewChart": "Grafiği görüntüle",
     "vol": "Hacim"
   },
   "alerts": {

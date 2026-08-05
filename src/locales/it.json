@@ -52,7 +52,7 @@
     "subtitle": "Dati di mercato in tempo reale con previsioni basate sull'IA",
     "costBasis": "Costo base",
     "currentValue": "Valore attuale",
-    "pnl": "P&G",
+    "portfolioValue": "Portafoglio",
     "clickToRefresh": "Clicca per aggiornare",
     "openCalculator": "Apri calcolatore asset"
   },
@@ -1229,6 +1229,7 @@
     "emptyHint": "Clicca \"+ Aggiungi Moneta\" per iniziare a seguire",
     "removeTitle": "Rimuovi dalla lista",
     "dragTitle": "Trascina per riordinare",
+    "viewChart": "Vedi grafico",
     "vol": "Vol"
   },
   "alerts": {

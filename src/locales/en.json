@@ -52,7 +52,7 @@
     "subtitle": "Real-time market data with AI-powered predictions",
     "costBasis": "Cost Basis",
     "currentValue": "Current Value",
-    "pnl": "P&L",
+    "portfolioValue": "Portfolio",
     "clickToRefresh": "Click to refresh",
     "openCalculator": "Open Asset Calculator"
   },
@@ -1252,6 +1252,7 @@
     "emptyHint": "Click \"+ Add Coin\" to start tracking",
     "removeTitle": "Remove from watchlist",
     "dragTitle": "Drag to reorder",
+    "viewChart": "View chart",
     "vol": "Vol"
   },
   "alerts": {

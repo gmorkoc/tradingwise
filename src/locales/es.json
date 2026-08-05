@@ -52,7 +52,7 @@
     "subtitle": "Datos de mercado en tiempo real con predicciones impulsadas por IA",
     "costBasis": "Costo base",
     "currentValue": "Valor actual",
-    "pnl": "P&L",
+    "portfolioValue": "Cartera",
     "clickToRefresh": "Clic para actualizar",
     "openCalculator": "Abrir calculadora de activos"
   },
@@ -1229,6 +1229,7 @@
     "emptyHint": "Haz clic en \"+ Agregar moneda\" para empezar a seguir",
     "removeTitle": "Eliminar de la lista",
     "dragTitle": "Arrastra para reordenar",
+    "viewChart": "Ver gráfico",
     "vol": "Vol"
   },
   "alerts": {

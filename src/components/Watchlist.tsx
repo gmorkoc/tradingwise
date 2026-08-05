@@ -12,8 +12,12 @@ import { CSS } from "@dnd-kit/utilities";
 import "../styles/Watchlist.css";
 import { CATALOG, type CatalogEntry } from "../services/coinCatalog";
 import { fetchBinancePrices, fetchSparklines, type PriceEntry } from "../services/binancePrices";
+import { COINS } from "../services/coinglass";
 
 const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
+
+// Only coins the price chart actually supports (a subset of the full watchlist catalog)
+const CHARTABLE_SYMBOLS = new Set<string>(COINS.map(c => c.symbol));
 
 /* ── Sparkline ──────────────────────────────────────────────────────────── */
 function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }) {
@@ -60,18 +64,22 @@ interface RowProps {
   imgError: boolean;
   onImgError: (symbol: string) => void;
   onRemove: (id: string) => void;
+  onSelect?: (symbol: string) => void;
   dragTitle: string;
   removeTitle: string;
+  chartTitle: string;
   volLabel: string;
 }
 
 function WatchlistRow({
-  id, meta, entry, spark, imgError, onImgError, onRemove, dragTitle, removeTitle, volLabel,
+  id, meta, entry, spark, imgError, onImgError, onRemove, onSelect,
+  dragTitle, removeTitle, chartTitle, volLabel,
 }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const symbol = (meta?.symbol ?? "").toUpperCase();
   const pct = entry?.pct ?? 0;
   const up = pct >= 0;
+  const chartable = onSelect && CHARTABLE_SYMBOLS.has(symbol);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -79,12 +87,8 @@ function WatchlistRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  return (
-    <div ref={setNodeRef} style={style} className="wl-row">
-      <button className="wl-row-handle" title={dragTitle} {...attributes} {...listeners}>
-        ⋮⋮
-      </button>
-
+  const rowContent = (
+    <>
       <div className="wl-row-icon">
         {!imgError ? (
           <img
@@ -116,6 +120,22 @@ function WatchlistRow({
           {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
         </span>
       </div>
+    </>
+  );
+
+  return (
+    <div ref={setNodeRef} style={style} className="wl-row">
+      <button className="wl-row-handle" title={dragTitle} {...attributes} {...listeners}>
+        ⋮⋮
+      </button>
+
+      {chartable ? (
+        <button className="wl-row-main" onClick={() => onSelect!(symbol)} title={chartTitle}>
+          {rowContent}
+        </button>
+      ) : (
+        <div className="wl-row-main wl-row-main--static">{rowContent}</div>
+      )}
 
       <button className="wl-row-star" onClick={() => onRemove(id)} title={removeTitle}>
         ★
@@ -125,7 +145,11 @@ function WatchlistRow({
 }
 
 /* ── Component ──────────────────────────────────────────────────────────── */
-export function Watchlist() {
+interface WatchlistProps {
+  onSelectCoin?: (symbol: string) => void;
+}
+
+export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const { t } = useTranslation();
   const [watchedIds, setWatchedIds] = useState<string[]>(() => {
     try {
@@ -278,8 +302,10 @@ export function Watchlist() {
                     imgError={imgErrors.has(symbol)}
                     onImgError={sym => setImgErrors(prev => new Set([...prev, sym]))}
                     onRemove={removeCoin}
+                    onSelect={onSelectCoin}
                     dragTitle={t("watchlist.dragTitle")}
                     removeTitle={t("watchlist.removeTitle")}
+                    chartTitle={t("watchlist.viewChart")}
                     volLabel={t("watchlist.vol")}
                   />
                 );

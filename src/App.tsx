@@ -503,6 +503,17 @@ function AppDashboard({
   const { totalAssetValue, totalCostBasis, profitLoss } = portfolioTotals;
   const hasAnyPosition = positions.some(p => (Number(p.amount) || 0) > 0);
 
+  // Track tick-to-tick direction so the header badge can flash green/red on change
+  const [portfolioDirection, setPortfolioDirection] = useState<"up" | "down" | null>(null);
+  const prevPortfolioValueRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevPortfolioValueRef.current;
+    if (prev !== null && totalAssetValue !== prev) {
+      setPortfolioDirection(totalAssetValue > prev ? "up" : "down");
+    }
+    prevPortfolioValueRef.current = totalAssetValue;
+  }, [totalAssetValue]);
+
   const updatePosition = useCallback((id: string, patch: Partial<Position>) => {
     setPositions(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
@@ -1333,13 +1344,11 @@ function AppDashboard({
                   <line x1="12" y1="20" x2="12" y2="4" />
                   <line x1="6" y1="20" x2="6" y2="14" />
                 </svg>
-                <span className="mch-portfolio-label">{t("header.pnl")}</span>
+                <span className="mch-portfolio-label">{t("header.portfolioValue")}</span>
                 <span
-                  className={`mch-portfolio-value${profitLoss >= 0 ? " positive" : " negative"}`}
+                  className={`mch-portfolio-value${hasAnyPosition && portfolioDirection ? ` ${portfolioDirection}` : ""}`}
                 >
-                  {hasAnyPosition
-                    ? `${profitLoss >= 0 ? "+" : ""}${formatCurrency(profitLoss)}`
-                    : "—"}
+                  {hasAnyPosition ? formatCurrency(totalAssetValue) : "—"}
                 </span>
               </div>
             </div>
@@ -1552,7 +1561,13 @@ function AppDashboard({
             onClick={() => setShowWatchlist((v) => !v)}
             aria-label={showWatchlist ? "Hide watchlist" : "Show watchlist"}
           />
-          <Watchlist />
+          <Watchlist
+            onSelectCoin={(symbol) => {
+              setCoin(symbol as CoinSymbol);
+              clearCandleCache();
+              setActiveSection("chart");
+            }}
+          />
         </aside>
 
         <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />

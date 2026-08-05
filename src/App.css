@@ -2221,15 +2221,15 @@ html[data-theme="light"] .icon-strip-quota-bar {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
+  transition: color 0.2s ease;
 }
-.mch-portfolio-value.positive {
+.mch-portfolio-value.up {
   color: var(--color-success);
 }
-.mch-portfolio-icon { display: none; }
-
-.mch-portfolio-value.negative {
+.mch-portfolio-value.down {
   color: var(--color-danger);
 }
+.mch-portfolio-icon { display: none; }
 
 /* ── Section content area ───────────────────────────────────────────────── */
 .main-content {

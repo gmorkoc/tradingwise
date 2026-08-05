@@ -198,6 +198,31 @@ html[data-theme="light"] .wl-row:hover {
 .wl-row-handle:hover { opacity: 0.8; }
 .wl-row-handle:active { cursor: grabbing; }
 
+/* Clickable row body — navigates the price chart to this coin */
+.wl-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  border-radius: 6px;
+}
+
+.wl-row-main:hover .wl-row-symbol {
+  color: var(--color-primary);
+}
+
+.wl-row-main--static {
+  cursor: default;
+}
+
 /* Coin icon */
 .wl-row-icon { flex-shrink: 0; }
 
