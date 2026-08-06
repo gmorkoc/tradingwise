@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -50,6 +50,7 @@ import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
+import { StockChart } from "./components/StockChart";
 import { AltAnalysis } from "./components/AltAnalysis";
 import { OptionsAnalytics } from "./components/OptionsAnalytics";
 import { CorrelationMatrix } from "./components/CorrelationMatrix";
@@ -279,6 +280,9 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("coin", coin);
   }, [coin]);
+
+  const [chartAssetClass, setChartAssetClass] = useState<"crypto" | "stocks">("crypto");
+  const [chartNavExpanded, setChartNavExpanded] = useState(false);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -963,11 +967,14 @@ function AppDashboard({
 
           <div className="icon-strip-nav">
             {NAV_ITEMS.filter((item) => !item.hidden).map((item) => {
-              return (
+              const isChart = item.id === "chart";
+              const navButton = (
                 <button
-                  key={item.id}
                   className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    if (isChart) setChartNavExpanded((v) => !v);
+                  }}
                   title={t(item.labelKey)}
                 >
                   {/* Mobile badge — left of icon */}
@@ -980,6 +987,9 @@ function AppDashboard({
                     <NavIcon d={item.d} />
                   </span>
                   <span className="icon-strip-label">{t(item.labelKey)}</span>
+                  {isChart && (
+                    <span className={`icon-strip-label chart-nav-chevron${chartNavExpanded ? " chart-nav-chevron--open" : ""}`}>▾</span>
+                  )}
                   {/* Desktop badge — after label */}
                   {item.requiredTier && (
                     <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
@@ -987,6 +997,40 @@ function AppDashboard({
                     </span>
                   )}
                 </button>
+              );
+
+              if (!isChart) return <Fragment key={item.id}>{navButton}</Fragment>;
+
+              return (
+                <Fragment key={item.id}>
+                  {navButton}
+                  {chartNavExpanded && (
+                    <div className="chart-nav-subitems">
+                      <button
+                        className={`chart-nav-subitem${chartAssetClass === "crypto" ? " chart-nav-subitem--active" : ""}`}
+                        onClick={() => {
+                          setChartAssetClass("crypto");
+                          setActiveSection("chart");
+                          setChartNavExpanded(false);
+                        }}
+                      >
+                        <span className="chart-asset-tab-icon">₿</span>
+                        <span className="icon-strip-label">{t("nav.crypto")}</span>
+                      </button>
+                      <button
+                        className={`chart-nav-subitem${chartAssetClass === "stocks" ? " chart-nav-subitem--active" : ""}`}
+                        onClick={() => {
+                          setChartAssetClass("stocks");
+                          setActiveSection("chart");
+                          setChartNavExpanded(false);
+                        }}
+                      >
+                        <span className="chart-asset-tab-icon">📈</span>
+                        <span className="icon-strip-label">{t("nav.stocks")}</span>
+                      </button>
+                    </div>
+                  )}
+                </Fragment>
               );
             })}
           </div>
@@ -1427,61 +1471,65 @@ function AppDashboard({
             {activeSection === "chart" && (
               <>
                 <FlashNewsBanner />
-                <div
-                  className="chart-section-wrap"
-                  ref={chartWrapRef}
-                  style={
-                    {
-                      "--ob-h": `${obSize.h}px`,
-                      "--ob-w": `${obSize.w}px`,
-                    } as React.CSSProperties
-                  }
-                >
-                  <PriceChart
-                    refreshTrigger={refreshTrigger}
-                    theme={theme}
-                    coin={coin}
-                    onZoneChange={(zone, price) => {
-                      setChartZone(zone);
-                      setChartPrice(price);
-                    }}
-                    onOpenAuth={onOpenAuth}
-                    onOpenUpgrade={onOpenUpgrade}
-                  />
+                {chartAssetClass === "crypto" ? (
                   <div
-                    className="chart-resize-handle"
-                    onPointerDown={onResizePointerDown}
-                    onPointerMove={onResizePointerMove}
-                    onPointerUp={onResizePointerUp}
+                    className="chart-section-wrap"
+                    ref={chartWrapRef}
+                    style={
+                      {
+                        "--ob-h": `${obSize.h}px`,
+                        "--ob-w": `${obSize.w}px`,
+                      } as React.CSSProperties
+                    }
                   >
-                    <svg
-                      className="chart-resize-icon"
-                      width="42"
-                      height="42"
-                      viewBox="0 0 64 64"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                    <PriceChart
+                      refreshTrigger={refreshTrigger}
+                      theme={theme}
+                      coin={coin}
+                      onZoneChange={(zone, price) => {
+                        setChartZone(zone);
+                        setChartPrice(price);
+                      }}
+                      onOpenAuth={onOpenAuth}
+                      onOpenUpgrade={onOpenUpgrade}
+                    />
+                    <div
+                      className="chart-resize-handle"
+                      onPointerDown={onResizePointerDown}
+                      onPointerMove={onResizePointerMove}
+                      onPointerUp={onResizePointerUp}
                     >
-                      {/* Hand / pointer finger */}
-                      <path d="M28 30V14a3 3 0 0 1 6 0v16" />
-                      <path d="M34 20a3 3 0 0 1 6 0v10" />
-                      <path d="M40 23a3 3 0 0 1 6 0v10" />
-                      <path d="M22 32a3 3 0 0 1 6 0v-2" />
-                      <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
-                      {/* Left arrow */}
-                      <line x1="12" y1="24" x2="2" y2="24" />
-                      <polyline points="6,20 2,24 6,28" />
-                      {/* Right arrow */}
-                      <line x1="52" y1="24" x2="62" y2="24" />
-                      <polyline points="58,20 62,24 58,28" />
-                    </svg>
+                      <svg
+                        className="chart-resize-icon"
+                        width="42"
+                        height="42"
+                        viewBox="0 0 64 64"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        {/* Hand / pointer finger */}
+                        <path d="M28 30V14a3 3 0 0 1 6 0v16" />
+                        <path d="M34 20a3 3 0 0 1 6 0v10" />
+                        <path d="M40 23a3 3 0 0 1 6 0v10" />
+                        <path d="M22 32a3 3 0 0 1 6 0v-2" />
+                        <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
+                        {/* Left arrow */}
+                        <line x1="12" y1="24" x2="2" y2="24" />
+                        <polyline points="6,20 2,24 6,28" />
+                        {/* Right arrow */}
+                        <line x1="52" y1="24" x2="62" y2="24" />
+                        <polyline points="58,20 62,24 58,28" />
+                      </svg>
+                    </div>
+                    <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                   </div>
-                  <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
-                </div>
+                ) : (
+                  <StockChart theme={theme} />
+                )}
               </>
             )}
             {activeSection !== "chart" && (

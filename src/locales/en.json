@@ -1306,6 +1306,8 @@
     "riskcalc": "Position Size Calc",
     "options": "Options",
     "correlation": "Correlation",
+    "crypto": "Crypto",
+    "stocks": "Stocks",
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
@@ -2080,5 +2082,13 @@
     "showMore": "Show more",
     "showLess": "Show less",
     "minimize": "Minimize"
+  },
+  "stocks": {
+    "setupTitle": "Stock charts need an API key",
+    "setupBody": "Sign up for a free Twelve Data account, grab your API key, and add it as VITE_TWELVEDATA_API_KEY in your environment.",
+    "searchPlaceholder": "Search by symbol or company…",
+    "noResults": "No results found",
+    "refresh": "Refresh",
+    "loading": "Loading chart…"
   }
 }

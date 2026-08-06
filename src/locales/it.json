@@ -1282,6 +1282,8 @@
     "candleai": "Candele IA",
     "markets": "Mercati Globali",
     "riskcalc": "Calc. Posizione",
+    "crypto": "Cripto",
+    "stocks": "Azioni",
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
     "swipeHint": "Scorri per aprire il menu",
@@ -2007,5 +2009,13 @@
     "showMore": "Mostra altro",
     "showLess": "Mostra meno",
     "minimize": "Riduci a icona"
+  },
+  "stocks": {
+    "setupTitle": "I grafici azionari richiedono una chiave API",
+    "setupBody": "Registrati gratuitamente su Twelve Data, prendi la tua chiave API e aggiungila come VITE_TWELVEDATA_API_KEY nel tuo ambiente.",
+    "searchPlaceholder": "Cerca per simbolo o azienda…",
+    "noResults": "Nessun risultato",
+    "refresh": "Aggiorna",
+    "loading": "Caricamento grafico…"
   }
 }

@@ -1282,6 +1282,8 @@
     "candleai": "Mum YZ",
     "markets": "Küresel Piyasalar",
     "riskcalc": "Pozisyon Hesaplayıcı",
+    "crypto": "Kripto",
+    "stocks": "Hisseler",
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
     "swipeHint": "Menüyü açmak için kaydır",
@@ -2007,5 +2009,13 @@
     "showMore": "Daha fazla göster",
     "showLess": "Daha az göster",
     "minimize": "Küçült"
+  },
+  "stocks": {
+    "setupTitle": "Hisse grafikleri için API anahtarı gerekli",
+    "setupBody": "Ücretsiz bir Twelve Data hesabı oluşturun, API anahtarınızı alın ve ortamınıza VITE_TWELVEDATA_API_KEY olarak ekleyin.",
+    "searchPlaceholder": "Sembol veya şirket adıyla ara…",
+    "noResults": "Sonuç bulunamadı",
+    "refresh": "Yenile",
+    "loading": "Grafik yükleniyor…"
   }
 }
