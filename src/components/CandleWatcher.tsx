@@ -6,6 +6,7 @@ import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
 import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
+import { MMNarrationFeed, MMFeedEntry } from "./MMNarrationFeed";
 import "../styles/CandleWatcher.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -50,6 +51,16 @@ interface AIRead {
   pattern: string;
   patternType: "bullish" | "bearish" | "neutral";
   mmReading: string;
+  mmAction:
+    | "liquidity_grab"
+    | "stop_hunt"
+    | "accumulation"
+    | "distribution"
+    | "breakout"
+    | "retest"
+    | "consolidation"
+    | "continuation"
+    | "reversal";
   nextMove: string;
   keyLevels: { label: string; price: number; side: "above" | "below" }[];
   bias: "bullish" | "bearish" | "neutral";
@@ -1343,7 +1354,18 @@ ANALYSIS PROCESS — follow these steps in your "thinking" field before finalizi
 3. Check Elliott Wave context: are we in an impulse or corrective leg? What does the current wave imply about the next move?
 4. Identify the single most important price level right now and why smart money would care about it.
 5. Weigh bull vs bear case honestly. Only assign "high" confidence if at least 3 independent signals agree.
-6. Commit to a decisive directional call — no hedging.
+6. Commit to a decisive directional call — no hedging. Also commit to exactly ONE mmAction — do not default to "consolidation" unless nothing else genuinely fits.
+
+mmAction definitions — pick exactly ONE that best classifies what MM is doing THIS candle:
+- liquidity_grab: wick sweep of a level then reject
+- stop_hunt: deliberate push through obvious stops before reversing
+- accumulation: range-bound absorption before markup
+- distribution: range-bound offloading before markdown
+- breakout: decisive structure break with volume
+- retest: pullback to a broken level to confirm it
+- consolidation: low-conviction chop, no clear intent
+- continuation: trend resuming after a pause
+- reversal: trend direction change confirmed
 
 Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill it first, then derive everything else from it):
 {
@@ -1351,6 +1373,7 @@ Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill i
   "pattern": "the dominant candle pattern or structure name",
   "patternType": "bullish" | "bearish" | "neutral",
   "mmReading": "2-3 sentences: what smart money is doing right now. Cite specific wick behavior and volume.",
+  "mmAction": "liquidity_grab" | "stop_hunt" | "accumulation" | "distribution" | "breakout" | "retest" | "consolidation" | "continuation" | "reversal",
   "nextMove": "2-3 sentences: exactly what price does next, specific targets, and what confirms or invalidates.",
   "keyLevels": [
     { "label": "Resistance", "price": <number>, "side": "above" },
@@ -1377,6 +1400,7 @@ Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill i
     });
     const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}") as AIRead;
     if (!parsed.mmReading) return null;
+    if (!parsed.mmAction) parsed.mmAction = "consolidation";
     if (!Array.isArray(parsed.keyLevels)) parsed.keyLevels = [];
     return parsed;
   } catch {
@@ -1652,6 +1676,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [loading, setLoading] = useState(true);
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
+  const [mmFeed, setMmFeed] = useState<MMFeedEntry[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
@@ -1695,7 +1720,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [forecastConviction, setForecastConviction] = useState(0);
   const [macroCtx, setMacroCtx] = useState<MacroContextData | null>(null);
   const [predData, setPredData] = useState<PredictionResponse | null>(null);
-  const [predLoading, setPredLoading] = useState(false);
   const [wizardIntent, setWizardIntent] = useState<WizardIntent | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const volSeriesRef     = useRef<ISeriesApi<"Histogram", any> | null>(null);
@@ -2336,6 +2360,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setLoading(true);
     setLoadError(false);
     setAiRead(null);
+    setMmFeed([]);
     setLastCandleTime(null);
 
     coinglass.getCandles(coin, interval.value, interval.limit)
@@ -2516,7 +2541,25 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       Promise.all(htfFetches),
     ]).then(([res, macro, btcLive, fearGreed, htfResults]) => {
       if (aiCancelledRef.current) return;
-      if (res)   setAiRead(res);
+      if (res) {
+        setAiRead(res);
+        const last = candles[candles.length - 1];
+        setMmFeed(prev => {
+          const entry: MMFeedEntry = {
+            id: `${coin}-${last.time}`,
+            time: Number(last.time),
+            price: last.close,
+            mmAction: res.mmAction,
+            mmReading: res.mmReading,
+            bias: res.bias,
+            confidence: res.confidence,
+          };
+          if (prev.length && prev[prev.length - 1].time === entry.time) {
+            return [...prev.slice(0, -1), entry];
+          }
+          return [...prev.slice(-49), entry];
+        });
+      }
       if (macro) setMacroCtx(macro);
 
       // Draw HTF liquidity lines on chart
@@ -2547,11 +2590,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
       setAiLoading(false);
       if (btcLive) {
-        setPredLoading(true);
         openai.getPricePrediction(btcLive, fearGreed ?? undefined)
           .then(pred => { if (pred?.success) setPredData(pred); })
-          .catch(() => {})
-          .finally(() => setPredLoading(false));
+          .catch(() => {});
       }
     });
   }, [candles]);
@@ -3172,6 +3213,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           );
         })()}
 
+            <MMNarrationFeed entries={mmFeed} loading={aiLoading} />
+
             {/* ── AI READ card ── */}
             <div className="cw-ai-card">
               <div className="cw-ai-header">
@@ -3596,52 +3639,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       </div>
                     );
                   })()}
-
-                  {/* ── Intelligence Cards ────────────────────────────────── */}
-                  {predData && (predData.priceDrivers || predData.whoIsBuying || predData.whoIsSelling || predData.marketContext || predData.keyRisks) && (
-                    <div className="cw-ai-section">
-                      <div className="cw-ai-section-label">Market Intelligence</div>
-                      <div className="cw-intel-grid">
-                        {predData.priceDrivers && (
-                          <div className="cw-intel-card">
-                            <div className="cw-intel-card-label">Price Drivers</div>
-                            <p className="cw-intel-card-text">{predData.priceDrivers}</p>
-                          </div>
-                        )}
-                        {predData.whoIsBuying && (
-                          <div className="cw-intel-card cw-intel-card--bull">
-                            <div className="cw-intel-card-label">Who's Buying</div>
-                            <p className="cw-intel-card-text">{predData.whoIsBuying}</p>
-                          </div>
-                        )}
-                        {predData.whoIsSelling && (
-                          <div className="cw-intel-card cw-intel-card--bear">
-                            <div className="cw-intel-card-label">Who's Selling</div>
-                            <p className="cw-intel-card-text">{predData.whoIsSelling}</p>
-                          </div>
-                        )}
-                        {predData.marketContext && (
-                          <div className="cw-intel-card">
-                            <div className="cw-intel-card-label">Macro & News</div>
-                            <p className="cw-intel-card-text">{predData.marketContext}</p>
-                          </div>
-                        )}
-                        {predData.keyRisks && (
-                          <div className="cw-intel-card cw-intel-card--risk">
-                            <div className="cw-intel-card-label">Key Risks</div>
-                            <p className="cw-intel-card-text">{predData.keyRisks}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {predLoading && !predData && (
-                    <div className="cw-intel-loading">
-                      <div className="cw-ai-spinner" />
-                      <span>Fetching market intelligence…</span>
-                    </div>
-                  )}
 
                   <p className="cw-disclaimer">Not financial advice. Trade at your own risk.</p>
                 </>

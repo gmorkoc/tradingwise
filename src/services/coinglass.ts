@@ -676,23 +676,28 @@ export const coinglass = {
       return candles[candles.length - 1].close >= candles[0].close ? 'bullish' : 'bearish';
     };
 
-    const [m1, m4, m6, m1d, m1w] = await Promise.all([
-      fetchBinanceKlines(coin, '1m',  60),
-      fetchBinanceKlines(coin, '4h',  42),
-      fetchBinanceKlines(coin, '6h',  60),
-      fetchBinanceKlines(coin, '1d',  30),
-      fetchBinanceKlines(coin, '1w',  52),
+    // Short lookback per timeframe so the arrow reflects recent momentum,
+    // not a stale baseline from many candles ago.
+    const [m1, m5, m15, m1h, m4, m6, m1d, m1w] = await Promise.all([
+      fetchBinanceKlines(coin, '1m',  10),
+      fetchBinanceKlines(coin, '5m',  10),
+      fetchBinanceKlines(coin, '15m', 10),
+      fetchBinanceKlines(coin, '1h',  10),
+      fetchBinanceKlines(coin, '4h',  10),
+      fetchBinanceKlines(coin, '6h',  10),
+      fetchBinanceKlines(coin, '1d',  10),
+      fetchBinanceKlines(coin, '1w',  10),
     ]);
 
     return {
       '1min':  trend(m1),
+      '5min':  trend(m5),
+      '15min': trend(m15),
+      '1h':    trend(m1h),
       '4h':    trend(m4),
       '6h':    trend(m6),
       '1day':  trend(m1d),
       '1week': trend(m1w),
-      '5min':  trend(m1),
-      '15min': trend(m1),
-      '1h':    trend(m4),
     } as Record<TimeInterval, 'bullish' | 'bearish' | null>;
   },
 
