@@ -1677,6 +1677,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [mmFeed, setMmFeed] = useState<MMFeedEntry[]>([]);
+  const [rightTab, setRightTab] = useState<"wave" | "narration" | "read" | "plan">("read");
   const [aiLoading, setAiLoading] = useState(false);
   const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
@@ -2975,6 +2976,54 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           {/* Right: AI analysis */}
           <div className="cw-right">
 
+          <div className="cw-right-panel">
+            <div className="cw-right-tabs">
+              <button
+                className={`cw-right-tab cw-right-tab--wave${rightTab === "wave" ? " cw-right-tab--active" : ""}`}
+                onClick={() => setRightTab("wave")}
+                title="Elliott Wave"
+              >
+                <span className="cw-right-tab-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17l4-8 4 6 4-10 4 7 4-5" /></svg>
+                </span>
+                <span>Elliott Wave</span>
+              </button>
+              <button
+                className={`cw-right-tab cw-right-tab--narration${rightTab === "narration" ? " cw-right-tab--active" : ""}`}
+                onClick={() => setRightTab("narration")}
+                title="MM Narration"
+              >
+                <span className="cw-right-tab-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                </span>
+                <span>MM Narration</span>
+              </button>
+              <button
+                className={`cw-right-tab cw-right-tab--read${rightTab === "read" ? " cw-right-tab--active" : ""}`}
+                onClick={() => setRightTab("read")}
+                title="AI Read"
+              >
+                <span className="cw-right-tab-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v7M12 14v7M3 12h7M14 12h7" /></svg>
+                </span>
+                <span>AI Read</span>
+              </button>
+              <button
+                className={`cw-right-tab cw-right-tab--plan${rightTab === "plan" ? " cw-right-tab--active" : ""}`}
+                onClick={() => setRightTab("plan")}
+                title="Trade Plan"
+              >
+                <span className="cw-right-tab-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
+                </span>
+                <span>Trade Plan</span>
+              </button>
+            </div>
+
+            <div className="cw-right-panel-body">
+
+            {rightTab === "wave" && (
+              <>
             {/* ── Elliott Wave card ── */}
             {elliottResult && (() => {
               const hasPattern = elliottResult.pattern !== "none";
@@ -3212,10 +3261,19 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             </div>
           );
         })()}
+            {!elliottResult && (
+              <div className="cw-ai-card cw-ai-empty">
+                <p>No Elliott Wave signal yet — best on 4H, Daily or Weekly timeframes.</p>
+              </div>
+            )}
+              </>
+            )}
 
-            <MMNarrationFeed entries={mmFeed} loading={aiLoading} />
+            {rightTab === "narration" && (
+              <MMNarrationFeed entries={mmFeed} loading={aiLoading} />
+            )}
 
-            {/* ── AI READ card ── */}
+            {rightTab === "read" && (
             <div className="cw-ai-card">
               <div className="cw-ai-header">
                 <span className="cw-ai-badge">✦ AI READ</span>
@@ -3339,6 +3397,102 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   )}
 
 
+                  {/* ── Likely Scenario ── */}
+                  {aiRead.scenario && (
+                    <div className="cw-scenario">
+                      <div className="cw-scenario-headline">{aiRead.scenario.headline}</div>
+                      <div className="cw-scenario-rows">
+                        <div className="cw-scenario-row cw-scenario-row--bull">
+                          <span className="cw-scenario-side">▲ Bull case</span>
+                          <span className="cw-scenario-text">{aiRead.scenario.bullCase}</span>
+                        </div>
+                        <div className="cw-scenario-row cw-scenario-row--bear">
+                          <span className="cw-scenario-side">▼ Bear case</span>
+                          <span className="cw-scenario-text">{aiRead.scenario.bearCase}</span>
+                        </div>
+                        <div className="cw-scenario-row cw-scenario-row--trigger">
+                          <span className="cw-scenario-side">⚡ Watch for</span>
+                          <span className="cw-scenario-text">{aiRead.scenario.trigger}</span>
+                        </div>
+                      </div>
+                      <div className={`cw-scenario-prob cw-scenario-prob--${aiRead.scenario.probability === "bulls favored" ? "bull" : aiRead.scenario.probability === "bears favored" ? "bear" : "neutral"}`}>
+                        {aiRead.scenario.probability}
+                      </div>
+                    </div>
+                  )}
+
+
+                  <div className="cw-ai-section">
+                    <div className="cw-ai-section-label">What smart money is doing</div>
+                    <p className="cw-ai-text">{aiRead.mmReading}</p>
+                    <div className="cw-ai-section-label">Next move</div>
+                    <p className="cw-ai-text">{aiRead.nextMove}</p>
+                  </div>
+
+                  {(aiRead.keyLevels.length > 0 || (ind && (ind.resistance.length > 0 || ind.support.length > 0))) && (
+                    <div className="cw-ai-section">
+                      {aiRead.keyLevels.length > 0 && (
+                        <div className="cw-levels">
+                          <div className="cw-ai-section-label">Key levels</div>
+                          {aiRead.keyLevels.map((lv, i) => (
+                            <div key={i} className={`cw-level-row cw-level-row--${lv.side}`}>
+                              <span className="cw-level-label">{lv.label}</span>
+                              <span className="cw-level-price">${lv.price.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                  {/* S/R from indicators */}
+                  {ind && (ind.resistance.length > 0 || ind.support.length > 0) && (
+                    <div className="cw-levels">
+                      <div className="cw-ai-section-label">Chart levels</div>
+                      {ind.resistance.slice(0, 2).map((r, i) => (
+                        <div key={"r" + i} className="cw-level-row cw-level-row--above">
+                          <div className="cw-level-tag">
+                            <span className="cw-level-label">R{i + 1}</span>
+                            <span className="cw-level-sublabel">{i === 0 ? "nearest resistance" : "2nd resistance"}</span>
+                          </div>
+                          <span className="cw-level-price">${r.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      ))}
+                      {ind.support.slice(0, 2).map((s, i) => (
+                        <div key={"s" + i} className="cw-level-row cw-level-row--below">
+                          <div className="cw-level-tag">
+                            <span className="cw-level-label">S{i + 1}</span>
+                            <span className="cw-level-sublabel">{i === 0 ? "nearest support" : "2nd support"}</span>
+                          </div>
+                          <span className="cw-level-price">${s.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                    </div>
+                  )}
+
+                  <p className="cw-disclaimer">Not financial advice. Trade at your own risk.</p>
+                </>
+              )}
+
+              {!aiLoading && !aiRead && !loading && (
+                <div className="cw-ai-empty">
+                  <p>Click ↻ to run AI analysis</p>
+                </div>
+              )}
+            </div>
+            )}
+
+            {rightTab === "plan" && (
+            <div className="cw-ai-card">
+              {aiLoading && (
+                <div className="cw-ai-loading">
+                  <div className="cw-ai-spinner" />
+                  <span>Reading market structure…</span>
+                </div>
+              )}
+
+              {!aiLoading && aiRead && (
+                <>
                   {/* ── Trade Wizard ── */}
                   <div className="cw-wizard">
                     {wizardIntent === null ? (
@@ -3428,80 +3582,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       );
                     })()}
                   </div>
-
-
-                  {/* ── Likely Scenario ── */}
-                  {aiRead.scenario && (
-                    <div className="cw-scenario">
-                      <div className="cw-scenario-headline">{aiRead.scenario.headline}</div>
-                      <div className="cw-scenario-rows">
-                        <div className="cw-scenario-row cw-scenario-row--bull">
-                          <span className="cw-scenario-side">▲ Bull case</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.bullCase}</span>
-                        </div>
-                        <div className="cw-scenario-row cw-scenario-row--bear">
-                          <span className="cw-scenario-side">▼ Bear case</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.bearCase}</span>
-                        </div>
-                        <div className="cw-scenario-row cw-scenario-row--trigger">
-                          <span className="cw-scenario-side">⚡ Watch for</span>
-                          <span className="cw-scenario-text">{aiRead.scenario.trigger}</span>
-                        </div>
-                      </div>
-                      <div className={`cw-scenario-prob cw-scenario-prob--${aiRead.scenario.probability === "bulls favored" ? "bull" : aiRead.scenario.probability === "bears favored" ? "bear" : "neutral"}`}>
-                        {aiRead.scenario.probability}
-                      </div>
-                    </div>
-                  )}
-
-
-                  <div className="cw-ai-section">
-                    <div className="cw-ai-section-label">What smart money is doing</div>
-                    <p className="cw-ai-text">{aiRead.mmReading}</p>
-                    <div className="cw-ai-section-label">Next move</div>
-                    <p className="cw-ai-text">{aiRead.nextMove}</p>
-                  </div>
-
-                  {(aiRead.keyLevels.length > 0 || (ind && (ind.resistance.length > 0 || ind.support.length > 0))) && (
-                    <div className="cw-ai-section">
-                      {aiRead.keyLevels.length > 0 && (
-                        <div className="cw-levels">
-                          <div className="cw-ai-section-label">Key levels</div>
-                          {aiRead.keyLevels.map((lv, i) => (
-                            <div key={i} className={`cw-level-row cw-level-row--${lv.side}`}>
-                              <span className="cw-level-label">{lv.label}</span>
-                              <span className="cw-level-price">${lv.price.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                  {/* S/R from indicators */}
-                  {ind && (ind.resistance.length > 0 || ind.support.length > 0) && (
-                    <div className="cw-levels">
-                      <div className="cw-ai-section-label">Chart levels</div>
-                      {ind.resistance.slice(0, 2).map((r, i) => (
-                        <div key={"r" + i} className="cw-level-row cw-level-row--above">
-                          <div className="cw-level-tag">
-                            <span className="cw-level-label">R{i + 1}</span>
-                            <span className="cw-level-sublabel">{i === 0 ? "nearest resistance" : "2nd resistance"}</span>
-                          </div>
-                          <span className="cw-level-price">${r.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                        </div>
-                      ))}
-                      {ind.support.slice(0, 2).map((s, i) => (
-                        <div key={"s" + i} className="cw-level-row cw-level-row--below">
-                          <div className="cw-level-tag">
-                            <span className="cw-level-label">S{i + 1}</span>
-                            <span className="cw-level-sublabel">{i === 0 ? "nearest support" : "2nd support"}</span>
-                          </div>
-                          <span className="cw-level-price">${s.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                    </div>
-                  )}
 
                   {/* ── Our Take ─────────────────────────────────────────── */}
                   {predData?.ourTake && (
@@ -3639,17 +3719,19 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       </div>
                     );
                   })()}
-
-                  <p className="cw-disclaimer">Not financial advice. Trade at your own risk.</p>
                 </>
               )}
 
               {!aiLoading && !aiRead && !loading && (
                 <div className="cw-ai-empty">
-                  <p>Click ↻ to run AI analysis</p>
+                  <p>Run AI analysis to see your trade plan</p>
                 </div>
               )}
             </div>
+            )}
+
+            </div>
+          </div>
 
           </div>
         </div>
