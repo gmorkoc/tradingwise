@@ -671,22 +671,23 @@ export const coinglass = {
   },
 
   getIntervalTrends: async (coin: CoinSymbol | string = 'BTC'): Promise<Record<TimeInterval, 'bullish' | 'bearish' | null>> => {
+    // Reflect the color of the current (latest) candle for that timeframe,
+    // matching what's actually drawn on the chart — not a multi-candle drift.
     const trend = (candles: CandleDataPoint[]): 'bullish' | 'bearish' | null => {
-      if (candles.length < 2) return null;
-      return candles[candles.length - 1].close >= candles[0].close ? 'bullish' : 'bearish';
+      if (!candles.length) return null;
+      const last = candles[candles.length - 1];
+      return last.close >= last.open ? 'bullish' : 'bearish';
     };
 
-    // Short lookback per timeframe so the arrow reflects recent momentum,
-    // not a stale baseline from many candles ago.
     const [m1, m5, m15, m1h, m4, m6, m1d, m1w] = await Promise.all([
-      fetchBinanceKlines(coin, '1m',  10),
-      fetchBinanceKlines(coin, '5m',  10),
-      fetchBinanceKlines(coin, '15m', 10),
-      fetchBinanceKlines(coin, '1h',  10),
-      fetchBinanceKlines(coin, '4h',  10),
-      fetchBinanceKlines(coin, '6h',  10),
-      fetchBinanceKlines(coin, '1d',  10),
-      fetchBinanceKlines(coin, '1w',  10),
+      fetchBinanceKlines(coin, '1m',  2),
+      fetchBinanceKlines(coin, '5m',  2),
+      fetchBinanceKlines(coin, '15m', 2),
+      fetchBinanceKlines(coin, '1h',  2),
+      fetchBinanceKlines(coin, '4h',  2),
+      fetchBinanceKlines(coin, '6h',  2),
+      fetchBinanceKlines(coin, '1d',  2),
+      fetchBinanceKlines(coin, '1w',  2),
     ]);
 
     return {
