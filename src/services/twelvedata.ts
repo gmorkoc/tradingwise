@@ -143,7 +143,14 @@ async function fetchFromTwelveData(
       params: { symbol, interval, outputsize, apikey: API_KEY, order: 'ASC' },
     });
     const apiError = parseError(res.data);
-    if (apiError) return { candles: [], error: apiError };
+    if (apiError) {
+      // parseError() already tripped the circuit breaker if this was a quota
+      // response — route through the same internal code so humanizeError()
+      // shows the friendly message on this first detection too, not just on
+      // later calls that hit the isTdQuotaExhausted() fast-path above.
+      if (isTdQuotaExhausted()) return { candles: [], error: 'td_quota_exhausted' };
+      return { candles: [], error: apiError };
+    }
 
     const values: Array<{ datetime: string; open: string; high: string; low: string; close: string; volume?: string }> =
       res.data?.values ?? [];
