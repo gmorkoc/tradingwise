@@ -98,17 +98,14 @@ export async function searchStocks(query: string): Promise<StockSearchResult[]> 
 // with searchStocks() above, so this is a last resort, not routine traffic.
 // Internal-only codes used by fetchFromTwelveData/fetchStockCandles's early
 // exits — never meant to reach the UI directly, only used to decide flow.
-// humanizeError() below translates these (and a missing-AV-fallback case)
-// into an actual message before anything is returned to the caller.
-function humanizeError(code: string | null, avAttempted: boolean): string | null {
+// humanizeError() below translates ANY of these (or a raw provider message
+// that slipped through some path we haven't specifically caught) into one
+// generic, friendly line — never quota counts, provider names, or pricing
+// links, regardless of what the underlying cause actually was.
+function humanizeError(code: string | null, _avAttempted: boolean): string | null {
   if (code === null) return null;
   if (code === 'missing_api_key') return 'Stock data requires a TwelveData API key.';
-  if (code === 'td_quota_exhausted') {
-    return avAttempted
-      ? 'Both data providers have hit their daily request limits. Try again later.'
-      : 'TwelveData has hit its daily request limit. Try again later.';
-  }
-  return code; // a genuine API error message (e.g. "Invalid symbol") — show as-is
+  return 'Sorry, something went wrong. Please try again later.';
 }
 
 export async function fetchStockCandles(
