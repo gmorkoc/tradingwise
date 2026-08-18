@@ -5,6 +5,7 @@ import {
   ColorType,
   CandlestickSeries,
   LineSeries,
+  AreaSeries,
   HistogramSeries,
   IChartApi,
   createSeriesMarkers,
@@ -1132,6 +1133,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bbLowerRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bbFillUpperRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bbFillLowerRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRefs = useRef<any[]>([]);
   const lastCandlesRef = useRef<CandleDataPoint[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1258,6 +1263,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         crosshairMarkerVisible: false,
       };
 
+      // Bollinger Band channel fill — two stacked Area series. The first
+      // fills from the upper band down to the bottom of the pane; the
+      // second "erases" everything below the lower band by repainting it
+      // in the chart's own background color, leaving only the band
+      // between upper and lower visibly tinted. Added before the candles
+      // so the fill sits behind price action, not on top of it.
+      bbFillUpperRef.current = chart.addSeries(AreaSeries, {
+        lineVisible: false,
+        topColor: "rgba(56,189,248,0.10)",
+        bottomColor: "rgba(56,189,248,0.10)",
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      bbFillLowerRef.current = chart.addSeries(AreaSeries, {
+        lineVisible: false,
+        topColor: bgColor,
+        bottomColor: bgColor,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+
       candleRef.current = chart.addSeries(CandlestickSeries, {
         upColor: "#22c55e",
         downColor: "#ef4444",
@@ -1355,6 +1383,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       chartRef.current?.remove();
       chartRef.current = candleRef.current = volumeRef.current = null;
       bbUpperRef.current = bbMiddleRef.current = bbLowerRef.current = null;
+      bbFillUpperRef.current = bbFillLowerRef.current = null;
       ema20Ref.current = ema50Ref.current = ema200Ref.current = null;
       ma20Ref.current = ma50Ref.current = ma200Ref.current = null;
       viewInitializedForRef.current = null;
@@ -1377,6 +1406,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     chartRef.current?.applyOptions(themeOpts);
     rsiChartRef.current?.applyOptions(themeOpts);
     macdChartRef.current?.applyOptions(themeOpts);
+    bbFillLowerRef.current?.applyOptions({ topColor: bgColor, bottomColor: bgColor });
   }, [theme, isFullscreen, bgColor, textColor, gridColor]);
 
   // ── Fetch candles ────────────────────────────────────────────────────────
@@ -1419,6 +1449,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           bbUpperRef.current?.setData(upper);
           bbMiddleRef.current?.setData(middle);
           bbLowerRef.current?.setData(lower);
+          bbFillUpperRef.current?.setData(upper);
+          bbFillLowerRef.current?.setData(lower);
 
           // S/R price lines
           for (const pl of priceLineRefs.current) {
@@ -1742,6 +1774,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     bbUpperRef.current?.applyOptions({ visible: showBB });
     bbMiddleRef.current?.applyOptions({ visible: showBB });
     bbLowerRef.current?.applyOptions({ visible: showBB });
+    bbFillUpperRef.current?.applyOptions({ visible: showBB });
+    bbFillLowerRef.current?.applyOptions({ visible: showBB });
   }, [showBB]);
   useEffect(() => {
     ema20Ref.current?.applyOptions({ visible: showEMA20 });

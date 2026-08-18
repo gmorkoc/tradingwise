@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData } from "../services/coinglass";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
@@ -279,6 +279,68 @@ function calcTEMA(values: number[], period: number): number[] {
   };
   const e1 = ema(values), e2 = ema(e1), e3 = ema(e2);
   return values.map((_, i) => 3 * e1[i] - 3 * e2[i] + e3[i]);
+}
+
+// Historical volatility cone: zero-drift range from weekly log-return stddev,
+// scaled by sqrt(time). Same category of technique as an options-implied
+// price cone — expresses uncertainty, not a directional call. Centered on
+// current price rather than a trend-extrapolated value on purpose: baking in
+// trailing average return as "drift" would make the band look bullish just
+// because BTC has trended up over most 3-year windows.
+// Standard normal CDF (Abramowitz & Stegun approximation) — used to turn
+// historical weekly drift + volatility into a P(price higher) estimate.
+function normalCDF(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989423 * Math.exp(-x * x / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return x > 0 ? 1 - p : p;
+}
+
+function calcVolatilityCone(
+  weeklyCloses: number[],
+  weeksAhead: number,
+  lookbackWeeks = 156,
+): { low: number; high: number; upProb: number; weeklySigma: number } | null {
+  if (weeklyCloses.length < lookbackWeeks + 1) return null;
+  const recent = weeklyCloses.slice(-(lookbackWeeks + 1));
+  const logReturns = recent.slice(1).map((c, i) => Math.log(c / recent[i]));
+  const mean = logReturns.reduce((s, r) => s + r, 0) / logReturns.length;
+  const variance = logReturns.reduce((s, r) => s + (r - mean) ** 2, 0) / (logReturns.length - 1);
+  const sigma = Math.sqrt(variance);
+  const lastClose = recent[recent.length - 1];
+  const spread = sigma * Math.sqrt(weeksAhead);
+  // P(price higher than now) under the same drift+volatility model — unlike
+  // the drift-free low/high band above, this DOES use the historical trend,
+  // since "which is more likely" is inherently a directional question.
+  const upProb = normalCDF(mean * Math.sqrt(weeksAhead) / sigma);
+  return { low: lastClose * Math.exp(-spread), high: lastClose * Math.exp(spread), upProb, weeklySigma: sigma };
+}
+
+// Same 4-year halving-cycle context already used in openai.ts's
+// getAltPricePrediction, reimplemented as a plain deterministic function —
+// no LLM call needed for a fixed historical calendar fact.
+function getHalvingCyclePhase(): { phase: string; daysSinceLast: number; daysUntilNext: number } {
+  const HALVINGS = [
+    new Date("2012-11-28"),
+    new Date("2016-07-09"),
+    new Date("2020-05-11"),
+    new Date("2024-04-19"),
+  ];
+  const CYCLE_DAYS = 4 * 365.25;
+  const now = new Date();
+  const lastHalving = HALVINGS[HALVINGS.length - 1];
+  const nextHalving = new Date(lastHalving.getTime() + CYCLE_DAYS * 24 * 60 * 60 * 1000);
+  const daysSinceLast = Math.floor((now.getTime() - lastHalving.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilNext = Math.floor((nextHalving.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const cyclePosition = daysSinceLast / CYCLE_DAYS; // 0–1
+
+  const phase =
+    cyclePosition < 0.25 ? "Early bull phase" :
+    cyclePosition < 0.50 ? "Peak bull phase" :
+    cyclePosition < 0.75 ? "Bear market phase" :
+    "Accumulation/bottom phase";
+
+  return { phase, daysSinceLast, daysUntilNext };
 }
 
 function calcBB(candles: CandleDataPoint[], period = 20): { upper: number; middle: number; lower: number; pct: number } | null {
@@ -1712,6 +1774,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
   const [weeklyCycle, setWeeklyCycle] = useState<{ candles: CandleDataPoint[]; tema14: number[]; tema21: number[] } | null>(null);
   const [cycleExpanded, setCycleExpanded] = useState(false);
+  const [showVolMethodology, setShowVolMethodology] = useState(false);
+  const volCone = useMemo(() => {
+    if (!weeklyCycle) return null;
+    const closes = weeklyCycle.candles.map(c => c.close);
+    const m3 = calcVolatilityCone(closes, 13);
+    const m6 = calcVolatilityCone(closes, 26);
+    return m3 && m6 ? { m3, m6 } : null;
+  }, [weeklyCycle]);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     const saved = Number(localStorage.getItem("cwSidebarWidth"));
     return saved >= 300 && saved <= 720 ? saved : 440;
@@ -3266,6 +3336,118 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 <p>No Elliott Wave signal yet — best on 4H, Daily or Weekly timeframes.</p>
               </div>
             )}
+
+            {weeklyCycle && volCone && (() => {
+              const currentPrice = weeklyCycle.candles[weeklyCycle.candles.length - 1]?.close ?? 0;
+              const fmtP = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+              const halving = getHalvingCyclePhase();
+              const wc = weeklyCycle;
+              const lt14 = wc.tema14[wc.tema14.length - 1];
+              const lt21 = wc.tema21[wc.tema21.length - 1];
+              const aboveT14 = currentPrice >= lt14;
+              const cyclePhase = aboveT14
+                ? (lt14 >= lt21 ? "Bull Run" : "Recovery")
+                : (lt14 >= lt21 ? "Mid-Cycle Correction" : "Bear Market");
+              const cyclePhaseTone = cyclePhase === "Bull Run" ? "bull" : cyclePhase === "Bear Market" ? "bear" : "neutral";
+              const halvingTone = halving.phase.startsWith("Early") || halving.phase.startsWith("Peak") ? "bull"
+                : halving.phase.startsWith("Bear") ? "bear" : "neutral";
+
+              const HORIZONS = [
+                { key: "m3" as const, label: "3 Months" },
+                { key: "m6" as const, label: "6 Months" },
+              ];
+              // Log-space half-spread recovered from the already-computed low/high,
+              // used only to size each row's bar relative to the widest (6mo) one —
+              // makes the two rows visually fan out into a cone as the horizon grows.
+              const spreads = HORIZONS.map(({ key }) => Math.log(volCone[key].high / volCone[key].low) / 2);
+              const maxSpread = Math.max(...spreads);
+
+              return (
+                <div className="cw-ai-card cw-vol-cone">
+                  <div className="cw-ai-section-label">Historical Volatility Range</div>
+                  <p className="cw-ai-text">
+                    ±1σ historical range based on 3 years of weekly volatility, centered on current price — not a directional prediction.
+                  </p>
+                  <button
+                    className="cw-vol-cone-methodology-toggle"
+                    onClick={() => setShowVolMethodology(v => !v)}
+                  >
+                    {showVolMethodology ? "▾ Hide methodology" : "▸ How is this calculated?"}
+                  </button>
+                  {showVolMethodology && (
+                    <div className="cw-vol-cone-methodology">
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Data</span>
+                        <span>156 weekly BTC/USDT candles (~3 years)</span>
+                      </div>
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Volatility (σ)</span>
+                        <span>{(volCone.m3.weeklySigma * 100).toFixed(2)}% weekly, from stdev of log returns</span>
+                      </div>
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Range formula</span>
+                        <span>price × e^(±σ√weeks)</span>
+                      </div>
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Confidence</span>
+                        <span>±1σ ≈ 68% historical coverage</span>
+                      </div>
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Trend assumption</span>
+                        <span>None — zero-drift, centered on current price</span>
+                      </div>
+                      <div className="cw-vol-cone-methodology-row">
+                        <span>Likelihood %</span>
+                        <span>Same data, but includes historical drift — see note below</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="cw-vol-cone-rows">
+                    {HORIZONS.map(({ key, label }, i) => {
+                      const r = volCone[key];
+                      const widthPct = 88 * (spreads[i] / maxSpread);
+                      const upPct = r.upProb * 100;
+                      const leansUp = upPct >= 50;
+                      return (
+                        <div key={key} className="cw-vol-cone-row">
+                          <span className="cw-vol-cone-row-label">{label}</span>
+                          <div className="cw-vol-cone-bar-wrap">
+                            <div className="cw-vol-cone-bar" style={{ width: `${widthPct}%` }}>
+                              <span className="cw-vol-cone-low">{fmtP(r.low)}</span>
+                              <span className="cw-vol-cone-high">{fmtP(r.high)}</span>
+                            </div>
+                            <div className="cw-vol-cone-center-tick" title={`Current: ${fmtP(currentPrice)}`} />
+                          </div>
+                          <span
+                            className={`cw-vol-cone-prob cw-vol-cone-prob--${leansUp ? "up" : "down"}`}
+                            title={`Historically finished ${leansUp ? "higher" : "lower"} ${(leansUp ? upPct : 100 - upPct).toFixed(0)}% of comparable ${label.toLowerCase()} windows over the last 3 years`}
+                          >
+                            {leansUp ? "▲" : "▼"} {(leansUp ? upPct : 100 - upPct).toFixed(0)}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="cw-ai-text cw-vol-cone-prob-note">
+                    Likelihood uses the same 3-year historical trend the range above deliberately excludes — shown separately so the range stays a pure uncertainty read.
+                  </p>
+                  <p className="cw-range-footer">
+                    <span className="cw-range-dot" /> Now: <strong>{fmtP(currentPrice)}</strong>
+                  </p>
+                  <div className="cw-macro-chips">
+                    <div className={`cw-macro-chip cw-macro-chip--${cyclePhaseTone}`}>
+                      <span className="cw-macro-chip-key">Cycle Phase</span>
+                      <span className="cw-macro-chip-val">{cyclePhase}</span>
+                    </div>
+                    <div className={`cw-macro-chip cw-macro-chip--${halvingTone}`}>
+                      <span className="cw-macro-chip-key">Halving Cycle</span>
+                      <span className="cw-macro-chip-val">{halving.phase} · {halving.daysSinceLast}d post-halving</span>
+                    </div>
+                  </div>
+                  <p className="cw-disclaimer">Statistical range, not a directional prediction — actual prices can and do move outside this band.</p>
+                </div>
+              );
+            })()}
               </>
             )}
 
