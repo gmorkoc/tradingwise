@@ -166,6 +166,13 @@ async function fetchFromTwelveData(
 
     return { candles, error: null };
   } catch (err) {
+    // TwelveData returns HTTP 429 for quota-exhausted, which makes axios throw
+    // before parseError() ever runs — check the same quota shape here too, or
+    // the raw provider message (with request counts, pricing links, etc.)
+    // leaks straight through instead of the friendly humanizeError() text.
+    if (axios.isAxiosError(err) && checkTdQuotaResponse(err.response?.data)) {
+      return { candles: [], error: 'td_quota_exhausted' };
+    }
     const message = axios.isAxiosError(err) ? err.response?.data?.message ?? err.message : 'Network error';
     return { candles: [], error: message };
   }
