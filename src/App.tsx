@@ -50,7 +50,7 @@ import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { GlobalMarkets } from "./components/GlobalMarkets";
-import { StockChart } from "./components/StockChart";
+import { StocksHome } from "./components/StocksHome";
 import { AltAnalysis } from "./components/AltAnalysis";
 import { OptionsAnalytics } from "./components/OptionsAnalytics";
 import { CorrelationMatrix } from "./components/CorrelationMatrix";
@@ -281,7 +281,9 @@ function AppDashboard({
     localStorage.setItem("coin", coin);
   }, [coin]);
 
-  const [chartAssetClass, setChartAssetClass] = useState<"crypto" | "stocks">("crypto");
+  const [chartAssetClass, setChartAssetClass] = useState<"crypto" | "stocks">(
+    () => (new URLSearchParams(window.location.search).get("asset") === "stocks" ? "stocks" : "crypto"),
+  );
   const [chartNavExpanded, setChartNavExpanded] = useState(false);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -714,10 +716,19 @@ function AppDashboard({
     if (btcData) setError("");
   }, [btcData]);
 
-  // Sync URL hash with active section
+  // Sync URL hash (active section) and asset query param (crypto/stocks) together.
+  // Always write an explicit value while on the chart section so both directions
+  // (crypto<->stocks) visibly update the URL, not just the stocks->crypto delete.
   useEffect(() => {
-    window.history.replaceState(null, "", `#${activeSection}`);
-  }, [activeSection]);
+    const params = new URLSearchParams(window.location.search);
+    if (activeSection === "chart") {
+      params.set("asset", chartAssetClass);
+    } else {
+      params.delete("asset");
+    }
+    const search = params.toString();
+    window.history.replaceState(null, "", `${search ? `?${search}` : ""}#${activeSection}`);
+  }, [activeSection, chartAssetClass]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -1470,7 +1481,7 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                <FlashNewsBanner />
+                {chartAssetClass === "crypto" && <FlashNewsBanner />}
                 {chartAssetClass === "crypto" ? (
                   <div
                     className="chart-section-wrap"
@@ -1528,7 +1539,7 @@ function AppDashboard({
                     <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                   </div>
                 ) : (
-                  <StockChart theme={theme} />
+                  <StocksHome theme={theme} />
                 )}
               </>
             )}

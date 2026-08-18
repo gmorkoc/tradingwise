@@ -2008,7 +2008,9 @@
     "daysAgo": "{{count}}g önce",
     "showMore": "Daha fazla göster",
     "showLess": "Daha az göster",
-    "minimize": "Küçült"
+    "minimize": "Küçült",
+    "close": "Kapat",
+    "expand": "Genişlet"
   },
   "stocks": {
     "setupTitle": "Hisse grafikleri için API anahtarı gerekli",

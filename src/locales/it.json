@@ -2008,7 +2008,9 @@
     "daysAgo": "{{count}}g fa",
     "showMore": "Mostra altro",
     "showLess": "Mostra meno",
-    "minimize": "Riduci a icona"
+    "minimize": "Riduci a icona",
+    "close": "Chiudi",
+    "expand": "Espandi"
   },
   "stocks": {
     "setupTitle": "I grafici azionari richiedono una chiave API",

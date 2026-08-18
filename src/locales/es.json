@@ -2008,7 +2008,9 @@
     "daysAgo": "hace {{count}}d",
     "showMore": "Mostrar más",
     "showLess": "Mostrar menos",
-    "minimize": "Minimizar"
+    "minimize": "Minimizar",
+    "close": "Cerrar",
+    "expand": "Expandir"
   },
   "stocks": {
     "setupTitle": "Los gráficos de acciones necesitan una clave API",

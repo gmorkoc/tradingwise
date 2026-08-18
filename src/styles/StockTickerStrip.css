@@ -1,0 +1,124 @@
+.sts-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--color-card-bg);
+  border: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+  border-radius: 0;
+}
+
+.sts-region {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+  padding-right: 12px;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+  white-space: nowrap;
+}
+
+.sts-region-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.sts-region-chevron {
+  font-size: 0.62rem;
+  color: var(--color-text-secondary);
+}
+
+.sts-scroll {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  flex: 1;
+  min-width: 0;
+}
+.sts-scroll::-webkit-scrollbar { display: none; }
+
+.sts-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.sts-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sts-chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sts-chip-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.sts-chip-price {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sts-chip-pct {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sts-chip-pct.up { color: #22c55e; }
+.sts-chip-pct.down { color: #fb7185; }
+.sts-chip-pct--muted { color: var(--color-text-secondary); opacity: 0.5; }
+
+.sts-spark {
+  flex-shrink: 0;
+}
+
+.sts-nav {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+}
+
+.sts-nav-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.sts-nav-btn:hover { background: var(--color-border); color: var(--color-text); }
+
+@media (max-width: 640px) {
+  .sts-strip { gap: 10px; padding: 8px 12px; }
+  .sts-region { display: none; }
+  .sts-chip-price { font-size: 0.78rem; }
+}

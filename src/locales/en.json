@@ -2081,7 +2081,9 @@
     "daysAgo": "{{count}}d ago",
     "showMore": "Show more",
     "showLess": "Show less",
-    "minimize": "Minimize"
+    "minimize": "Minimize",
+    "close": "Close",
+    "expand": "Expand"
   },
   "stocks": {
     "setupTitle": "Stock charts need an API key",

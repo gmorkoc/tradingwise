@@ -88,6 +88,18 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/fred-api/, ''),
         },
+        '/td-api': {
+          target: 'https://api.twelvedata.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/td-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
+        '/av-api': {
+          target: 'https://www.alphavantage.co',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/av-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
         '/api/openai': {
           target: 'https://api.openai.com',
           changeOrigin: true,

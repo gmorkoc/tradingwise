@@ -170,6 +170,7 @@ export const DailyBrief: React.FC = () => {
   const [items, setItems] = useState<BriefItem[]>([]);
   const [index, setIndex] = useState(0);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragStartY = useRef<number | null>(null);
@@ -228,7 +229,7 @@ export const DailyBrief: React.FC = () => {
     }
   };
 
-  if (items.length === 0) return null;
+  if (items.length === 0 || dismissed) return null;
 
   const current = items[index];
   const chips = [t(CATEGORY_LABEL_KEY[current.category]), ...extractChips(current.title)].slice(0, 4);
@@ -252,16 +253,38 @@ export const DailyBrief: React.FC = () => {
         style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
       >
         {sheetState !== "minimized" && (
-          <button
-            className="db-minimize-btn"
-            onClick={() => setSheetState("minimized")}
-            aria-label={t("dailyBrief.minimize")}
-            title={t("dailyBrief.minimize")}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
+          <div className="db-traffic-lights">
+            <button
+              className="db-tl-btn db-tl-btn--close"
+              onClick={(e) => { e.stopPropagation(); setDismissed(true); }}
+              aria-label={t("dailyBrief.close")}
+              title={t("dailyBrief.close")}
+            >
+              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+            <button
+              className="db-tl-btn db-tl-btn--minimize"
+              onClick={(e) => { e.stopPropagation(); setSheetState("minimized"); }}
+              aria-label={t("dailyBrief.minimize")}
+              title={t("dailyBrief.minimize")}
+            >
+              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+            <button
+              className="db-tl-btn db-tl-btn--expand"
+              onClick={(e) => { e.stopPropagation(); setSheetState((s) => (s === "expanded" ? "collapsed" : "expanded")); }}
+              aria-label={t("dailyBrief.expand")}
+              title={t("dailyBrief.expand")}
+            >
+              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5v14" />
+              </svg>
+            </button>
+          </div>
         )}
         <div
           className="db-drag-zone"
