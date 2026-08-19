@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { IChartApi } from 'lightweight-charts';
 import type { CandleDataPoint } from '../services/coinglass';
 import '../styles/ChartDrawingTools.css';
 
 export type DrawingTool =
   | 'cursor' | 'brush' | 'trendline' | 'hline' | 'vline'
-  | 'rect' | 'fib' | 'text' | 'eraser';
+  | 'rect' | 'fib' | 'zone' | 'text' | 'eraser';
 
 interface ChartPt { price: number; time: number }
 interface ScreenPt { x: number; y: number }
@@ -31,14 +31,57 @@ interface Props {
   visible: boolean;
   /** Persist drawings across fullscreen toggle — pass a stable ref from parent */
   persistRef?: React.MutableRefObject<Drawing[]>;
+  /** Fired when a freeform "zone" is drawn, with the candles that fall inside it */
+  onZoneComplete?: (drawing: Drawing, candles: CandleDataPoint[]) => void;
+}
+
+export interface ChartDrawingToolsHandle {
+  /** Switch into zone-draw mode so the next drag on the chart draws a zone */
+  activateZoneTool: () => void;
 }
 
 const TOOL_CLICKS: Record<DrawingTool, number> = {
   cursor: 0, brush: 0, trendline: 2, hline: 1, vline: 1,
-  rect: 2, fib: 2, text: 1, eraser: 0,
+  rect: 2, fib: 2, zone: 0, text: 1, eraser: 0,
 };
 
 const MIN_BRUSH_PX = 4; // skip points closer than this — keeps stroke counts sane
+
+// ── Zone helpers ─────────────────────────────────────────────────────────────
+// Exported so the parent chart can filter candles against a drawn zone polygon.
+
+function pointInPolygon(x: number, y: number, poly: { x: number; y: number }[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    const intersects = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+export function getCandlesInZone(candles: CandleDataPoint[], pts: ChartPt[]): CandleDataPoint[] {
+  if (pts.length < 3) return [];
+  const poly = pts.map(p => ({ x: p.time, y: p.price }));
+  const minT = Math.min(...pts.map(p => p.time));
+  const maxT = Math.max(...pts.map(p => p.time));
+  const minP = Math.min(...pts.map(p => p.price));
+  const maxP = Math.max(...pts.map(p => p.price));
+
+  return candles.filter(c => {
+    const t = c.time as number;
+    if (t < minT || t > maxT) return false;
+    if (c.high < minP || c.low > maxP) return false;
+    return (
+      pointInPolygon(t, c.open, poly) ||
+      pointInPolygon(t, c.high, poly) ||
+      pointInPolygon(t, c.low, poly) ||
+      pointInPolygon(t, c.close, poly)
+    );
+  });
+}
 
 const FIB_LEVELS = [
   { r: 0,     l: '0',     c: 'rgba(251,191,36,0.9)'  },
@@ -127,7 +170,10 @@ const TRASH_ICON = <IconMulti>
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRef, visible, persistRef }: Props) {
+export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete }: Props,
+  ref,
+) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
   const [magnet, setMagnet]     = useState(false);
   const [drawings, setDrawings] = useState<Drawing[]>(() => persistRef?.current ?? []);
@@ -146,7 +192,14 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
   // Brush: accumulate raw screen pixels during drag — no chart API calls per frame
   const brushActiveRef   = useRef(false);
   const brushScreenRef   = useRef<ScreenPt[]>([]); // screen-space live buffer
+  // Zone: same screen-space drag buffer as brush, but committed as a closed polygon
+  const zoneActiveRef    = useRef(false);
+  const zoneScreenRef    = useRef<ScreenPt[]>([]);
+  // DOM refs for each zone's floating "clean" button — positioned imperatively in render()
+  const zoneBtnElsRef    = useRef<Map<string, HTMLButtonElement>>(new Map());
   const handlePointRef   = useRef<((sx: number, sy: number) => void) | null>(null);
+  const onZoneCompleteRef = useRef(onZoneComplete);
+  useEffect(() => { onZoneCompleteRef.current = onZoneComplete; }, [onZoneComplete]);
 
   useEffect(() => {
     drawingsRef.current = drawings;
@@ -249,6 +302,45 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     setDrawings(prev => [...prev, { id: Date.now().toString(), type: 'brush', isBrushNorm: true, pts, color: '#38bdf8' }]);
   }, []);
 
+  // ── Commit zone: closed freeform region, resolved to real time/price so
+  // candles falling inside it can be looked up ──────────────────────────────
+
+  const commitZone = useCallback(() => {
+    zoneActiveRef.current = false;
+    const raw = zoneScreenRef.current;
+    zoneScreenRef.current = [];
+    if (raw.length < 3) return;
+
+    // Distance-throttle to keep the polygon small
+    const kept: ScreenPt[] = [raw[0]];
+    for (let i = 1; i < raw.length; i++) {
+      const prev = kept[kept.length - 1];
+      if (Math.hypot(raw[i].x - prev.x, raw[i].y - prev.y) >= MIN_BRUSH_PX) kept.push(raw[i]);
+    }
+    if (kept.length < 3) return;
+
+    const pts = kept.map(p => toChart(p.x, p.y)).filter((p): p is ChartPt => p !== null);
+    if (pts.length < 3) return;
+
+    // Explicitly connect the end back to the start — makes this an
+    // unambiguous closed region rather than relying on renderer/hit-test
+    // code to each independently wrap the last point back to the first.
+    const start = pts[0];
+    const end = pts[pts.length - 1];
+    if (start.time !== end.time || start.price !== end.price) {
+      pts.push({ time: start.time, price: start.price });
+    }
+
+    const drawing: Drawing = { id: Date.now().toString(), type: 'zone', pts, color: '#f59e0b' };
+    setDrawings(prev => [...prev, drawing]);
+
+    const candles = getCandlesInZone(candlesRef.current ?? [], pts);
+    onZoneCompleteRef.current?.(drawing, candles);
+    // Revert to cursor so the canvas stops intercepting pointer events —
+    // lets the caller's "Explain Zone" trigger UI be clicked immediately.
+    setTool('cursor');
+  }, [toChart, candlesRef]);
+
   // ── Canvas render ────────────────────────────────────────────────────────
 
   const render = useCallback(() => {
@@ -320,6 +412,18 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
           ctx.fillStyle = d.color.replace(/[\d.]+\)$/, '0.08)');
           ctx.fillRect(rx, ry, rw, rh2); ctx.strokeRect(rx, ry, rw, rh2); break;
         }
+        case 'zone': {
+          if (d.pts.length < 3) break;
+          const screenPts = d.pts.map(p => toScreen(p)).filter((p): p is ScreenPt => p !== null);
+          if (screenPts.length < 3) break;
+          ctx.beginPath();
+          ctx.moveTo(screenPts[0].x, screenPts[0].y);
+          for (let i = 1; i < screenPts.length; i++) ctx.lineTo(screenPts[i].x, screenPts[i].y);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(245,158,11,0.14)'; ctx.fill();
+          ctx.strokeStyle = d.color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+          ctx.stroke(); ctx.setLineDash([]); break;
+        }
         case 'fib': {
           if (d.pts.length < 2) break;
           const ph = Math.max(d.pts[0].price, d.pts[1].price);
@@ -345,6 +449,27 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
 
     for (const d of drawingsRef.current) drawShape(d);
 
+    // Position each zone's "clean" button at the topmost point of its shape —
+    // imperative DOM writes (not React state) so this stays cheap during pan/zoom.
+    for (const d of drawingsRef.current) {
+      if (d.type !== 'zone') continue;
+      const btn = zoneBtnElsRef.current.get(d.id);
+      if (!btn) continue;
+      let anchor: ScreenPt | null = null;
+      let minY = Infinity;
+      for (const pt of d.pts) {
+        const s = toScreen(pt);
+        if (s && s.y < minY) { minY = s.y; anchor = s; }
+      }
+      if (anchor) {
+        btn.style.display = 'flex';
+        btn.style.left = `${rect.left + anchor.x}px`;
+        btn.style.top  = `${rect.top + anchor.y - 30}px`;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
     // Live brush: draw from raw screen coords — zero chart API calls
     if (brushActiveRef.current && brushScreenRef.current.length > 1) {
       const pts = brushScreenRef.current;
@@ -356,11 +481,24 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
       ctx.stroke(); ctx.globalAlpha = 1;
     }
 
+    // Live zone drag: draw from raw screen coords, closed + filled
+    if (zoneActiveRef.current && zoneScreenRef.current.length > 1) {
+      const pts = zoneScreenRef.current;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(245,158,11,0.12)'; ctx.fill();
+      ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+      ctx.globalAlpha = 0.85; ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+
     // Preview for click-based tools
     const pending = pendingRef.current;
     const mouse   = mousePosRef.current;
     const curTool = toolRef.current;
-    if (pending.length > 0 && mouse && curTool !== 'brush') {
+    if (pending.length > 0 && mouse && curTool !== 'brush' && curTool !== 'zone') {
       const mp = toChart(mouse.x, mouse.y);
       if (mp) drawShape({ id: '__prev', type: curTool, pts: [...pending, mp], color: '#38bdf8' }, true);
     }
@@ -390,7 +528,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
 
   handlePointRef.current = (sx: number, sy: number) => {
     const curTool = toolRef.current;
-    if (curTool === 'cursor' || curTool === 'brush') return;
+    if (curTool === 'cursor' || curTool === 'brush' || curTool === 'zone') return;
 
     if (curTool === 'eraser') {
       let closest: string | null = null; let minDist = 20;
@@ -430,8 +568,10 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
 
   // Keep latest callbacks in refs — touch effect only depends on [visible]
   const commitBrushRef   = useRef(commitBrush);
+  const commitZoneRef    = useRef(commitZone);
   const scheduleRenderRef = useRef(scheduleRender);
   useEffect(() => { commitBrushRef.current   = commitBrush;   }, [commitBrush]);
+  useEffect(() => { commitZoneRef.current    = commitZone;    }, [commitZone]);
   useEffect(() => { scheduleRenderRef.current = scheduleRender; }, [scheduleRender]);
 
   useEffect(() => {
@@ -450,8 +590,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         return { x: t.clientX - r.left, y: t.clientY - r.top };
       };
 
-      const addBrushPt = (pos: ScreenPt) => {
-        const buf = brushScreenRef.current;
+      const addBufPt = (buf: ScreenPt[], pos: ScreenPt) => {
         if (!buf.length) { buf.push(pos); return; }
         const last = buf[buf.length - 1];
         if (Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
@@ -465,6 +604,9 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         if (toolRef.current === 'brush') {
           brushActiveRef.current = true;
           brushScreenRef.current = [pos];
+        } else if (toolRef.current === 'zone') {
+          zoneActiveRef.current = true;
+          zoneScreenRef.current = [pos];
         }
         scheduleRenderRef.current();
       };
@@ -474,7 +616,8 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         e.preventDefault(); e.stopPropagation();
         const pos = getPos(e);
         mousePosRef.current = pos;
-        if (brushActiveRef.current && toolRef.current === 'brush') addBrushPt(pos);
+        if (brushActiveRef.current && toolRef.current === 'brush') addBufPt(brushScreenRef.current, pos);
+        if (zoneActiveRef.current && toolRef.current === 'zone') addBufPt(zoneScreenRef.current, pos);
         scheduleRenderRef.current();
       };
 
@@ -484,6 +627,11 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         mousePosRef.current = null;
         if (toolRef.current === 'brush') {
           commitBrushRef.current();
+          scheduleRenderRef.current();
+          return;
+        }
+        if (toolRef.current === 'zone') {
+          commitZoneRef.current();
           scheduleRenderRef.current();
           return;
         }
@@ -519,35 +667,74 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
 
+  // Brush/zone dragging is tracked at the window level (not just on the
+  // canvas) so the user has complete freedom to draw edge-to-edge — mouse
+  // events, unlike touch, don't stay captured to their origin element once
+  // the pointer crosses out of the canvas (over the toolbar, price/time
+  // axis, or chart boundary), so a canvas-only listener would cut the
+  // gesture short there instead of letting it end only on mouseup.
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (toolRef.current !== 'brush') return;
     const pos = canvasCoords(e);
-    brushActiveRef.current = true;
-    brushScreenRef.current = [pos];
+    const startedTool = toolRef.current;
+    if (startedTool !== 'brush' && startedTool !== 'zone') return;
+
+    if (startedTool === 'brush') {
+      brushActiveRef.current = true;
+      brushScreenRef.current = [pos];
+    } else {
+      zoneActiveRef.current = true;
+      zoneScreenRef.current = [pos];
+    }
+
+    const onWindowMove = (ev: MouseEvent) => {
+      const r = canvasRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const p = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+      mousePosRef.current = p;
+      const buf = startedTool === 'brush' ? brushScreenRef.current : zoneScreenRef.current;
+      const last = buf[buf.length - 1];
+      if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= MIN_BRUSH_PX) buf.push(p);
+      scheduleRenderRef.current();
+    };
+    const onWindowUp = () => {
+      window.removeEventListener('mousemove', onWindowMove);
+      window.removeEventListener('mouseup', onWindowUp);
+      if (startedTool === 'brush') commitBrushRef.current();
+      else commitZoneRef.current();
+      scheduleRenderRef.current();
+    };
+    window.addEventListener('mousemove', onWindowMove);
+    window.addEventListener('mouseup', onWindowUp);
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const pos = canvasCoords(e);
-    mousePosRef.current = pos;
-    if (brushActiveRef.current && toolRef.current === 'brush') {
-      const buf = brushScreenRef.current;
-      const last = buf[buf.length - 1];
-      if (!last || Math.hypot(pos.x - last.x, pos.y - last.y) >= MIN_BRUSH_PX) buf.push(pos);
-    }
+    // While a brush/zone drag is active, the window-level listener above
+    // owns tracking exclusively — skip here to avoid double-processing.
+    if (brushActiveRef.current || zoneActiveRef.current) return;
+    mousePosRef.current = canvasCoords(e);
     scheduleRender();
   }, [scheduleRender]);
 
-  const handleMouseUp    = useCallback(() => { if (brushActiveRef.current) commitBrush(); }, [commitBrush]);
+  const handleMouseUp    = useCallback(() => {}, []);
   const handleMouseLeave = useCallback(() => {
+    if (brushActiveRef.current || zoneActiveRef.current) return;
     mousePosRef.current = null;
-    if (brushActiveRef.current) commitBrush();
     scheduleRender();
-  }, [commitBrush, scheduleRender]);
+  }, [scheduleRender]);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasCoords(e);
     handlePointRef.current?.(x, y);
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    activateZoneTool: () => {
+      setTool('zone');
+      setPendingPts([]);
+      brushActiveRef.current = false;
+      zoneActiveRef.current = false;
+    },
+  }), []);
 
   if (!visible || !chartRect) return null;
 
@@ -558,7 +745,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
           <button
             key={t.id}
             className={`cdt-btn${tool === t.id ? ' cdt-btn--active' : ''}`}
-            onClick={() => { setTool(t.id); setPendingPts([]); brushActiveRef.current = false; }}
+            onClick={() => { setTool(t.id); setPendingPts([]); brushActiveRef.current = false; zoneActiveRef.current = false; }}
             title={t.label}
           >
             {t.icon}
@@ -575,7 +762,7 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         <div className="cdt-separator" />
         <button
           className="cdt-btn cdt-btn--danger"
-          onClick={() => { setDrawings([]); setPendingPts([]); brushActiveRef.current = false; }}
+          onClick={() => { setDrawings([]); setPendingPts([]); brushActiveRef.current = false; zoneActiveRef.current = false; }}
           title="Clear All"
         >
           {TRASH_ICON}
@@ -605,6 +792,20 @@ export function ChartDrawingTools({ chartRef, seriesRef, containerRef, candlesRe
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       />
+
+      {drawings.filter(d => d.type === 'zone').map(d => (
+        <button
+          key={d.id}
+          ref={(el) => { if (el) zoneBtnElsRef.current.set(d.id, el); else zoneBtnElsRef.current.delete(d.id); }}
+          className="cdt-zone-clean-btn"
+          style={{ display: 'none' }}
+          onClick={() => setDrawings(prev => prev.filter(x => x.id !== d.id))}
+          title="Clear this zone"
+        >
+          <span className="cdt-zone-clean-btn__icon">✕</span>
+          <span className="cdt-zone-clean-btn__label">Clear</span>
+        </button>
+      ))}
     </>
   );
-}
+});

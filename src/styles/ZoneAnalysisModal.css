@@ -1,0 +1,189 @@
+.zam-modal[data-theme="dark"] {
+  --zam-bg:           #0a1120;
+  --zam-border:       rgba(255,255,255,0.08);
+  --zam-text-primary: #e8edf5;
+  --zam-text-body:    #94a8c2;
+  --zam-text-muted:   #4a6080;
+  --zam-shadow:       0 32px 90px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
+  --zam-surface:      rgba(255,255,255,0.04);
+}
+
+.zam-modal[data-theme="light"] {
+  --zam-bg:           #f7f9fc;
+  --zam-border:       rgba(0,0,0,0.08);
+  --zam-text-primary: #0f172a;
+  --zam-text-body:    #475569;
+  --zam-text-muted:   #94a3b8;
+  --zam-shadow:       0 20px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+  --zam-surface:      rgba(0,0,0,0.03);
+}
+
+.zam-modal--bullish { --zam-accent: #22c55e; --zam-accent-dim: rgba(34,197,94,0.12); }
+.zam-modal--bearish { --zam-accent: #ef4444; --zam-accent-dim: rgba(239,68,68,0.12); }
+.zam-modal--neutral { --zam-accent: #f59e0b; --zam-accent-dim: rgba(245,158,11,0.12); }
+
+.zam-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: zam-fade-in 0.15s ease;
+}
+
+@keyframes zam-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.zam-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--zam-bg);
+  border: 1px solid var(--zam-border);
+  border-radius: 16px;
+  box-shadow: var(--zam-shadow);
+  color: var(--zam-text-primary);
+  font-family: Inter, sans-serif;
+}
+
+.zam-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--zam-border);
+}
+
+.zam-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.zam-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--zam-text-primary);
+  overflow-wrap: break-word;
+}
+
+.zam-subtitle {
+  font-size: 11.5px;
+  color: var(--zam-text-muted);
+}
+
+.zam-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--zam-border);
+  background: transparent;
+  color: var(--zam-text-body);
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zam-close:hover {
+  background: var(--zam-surface);
+}
+
+.zam-body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.zam-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--zam-text-body);
+  padding: 12px 0;
+}
+
+.zam-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--zam-border);
+  border-top-color: var(--zam-accent, #f59e0b);
+  animation: zam-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes zam-spin {
+  to { transform: rotate(360deg); }
+}
+
+.zam-error {
+  font-size: 13px;
+  color: #ef4444;
+  padding: 8px 0;
+}
+
+.zam-verdict-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--zam-accent);
+  background: var(--zam-accent-dim);
+}
+
+.zam-summary {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--zam-text-primary);
+  margin: 0;
+}
+
+.zam-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zam-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--zam-text-muted);
+}
+
+.zam-section-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--zam-text-body);
+  margin: 0;
+}
+
+.zam-section--liquidity {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--zam-accent-dim);
+  border: 1px solid color-mix(in srgb, var(--zam-accent) 30%, transparent);
+}
+
+.zam-section--liquidity .zam-section-label {
+  color: var(--zam-accent);
+}

@@ -18,11 +18,15 @@ import {
   getCandlePatternAnalysis,
   CandlePatternResult,
   ChartPrediction,
+  getZoneAnalysis,
+  ZoneAnalysisResult,
 } from "../services/openai";
 import { PredictionOverlay, PredictionPath } from "./DrawingOverlay";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
-import { ChartDrawingTools } from "./ChartDrawingTools";
+import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDrawingTools";
+import { ZoneAnalysisModal } from "./ZoneAnalysisModal";
+import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/PriceChart.css";
@@ -1159,9 +1163,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const viewInitializedForRef = useRef<string | null>(null);
 
   // Persists drawings across fullscreen toggle (component unmount/remount)
-  const drawingsPersistRef = useRef<import("./ChartDrawingTools").Drawing[]>(
-    [],
-  );
+  const drawingsPersistRef = useRef<Drawing[]>([]);
 
   // Drawing tools state
   const [predictionPath, setPredictionPath] = useState<PredictionPath | null>(
@@ -1170,6 +1172,74 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [chartPrediction, setChartPrediction] =
     useState<ChartPrediction | null>(null);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
+
+  const [zoneAnalysis, setZoneAnalysis] = useState<{
+    candles: CandleDataPoint[];
+    loading: boolean;
+    error?: string;
+    result?: ZoneAnalysisResult;
+  } | null>(null);
+  // True while the user is expected to be dragging out a zone on the chart —
+  // drives the button's "Draw a zone…" state until the draw commits.
+  const [awaitingZoneDraw, setAwaitingZoneDraw] = useState(false);
+  const drawingToolsRef = useRef<ChartDrawingToolsHandle>(null);
+
+  const handleExplainZoneStart = useCallback(() => {
+    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+    drawingToolsRef.current?.activateZoneTool();
+    setAwaitingZoneDraw(true);
+  }, [isPaid, onOpenUpgrade]);
+
+  const handleZoneComplete = useCallback((_drawing: Drawing, candles: CandleDataPoint[]) => {
+    setAwaitingZoneDraw(false);
+    if (candles.length < 2) {
+      setZoneAnalysis({ candles, loading: false, error: "Draw a larger area — need at least 2 candles inside the zone." });
+      return;
+    }
+    if (exceeded) {
+      setZoneAnalysis({ candles, loading: false, error: "Daily AI analysis limit reached." });
+      return;
+    }
+    setZoneAnalysis({ candles, loading: true });
+
+    // Give the AI extra context: a few candles right before the zone (to spot
+    // what prior high/low might get swept) and an estimated liquidation-cluster
+    // picture as of the zone's end, so it can reason about stop hunts / liquidity
+    // grabs instead of only describing candle shapes.
+    const allCandles = lastCandlesRef.current;
+    const zoneStartTime = candles[0].time as number;
+    const zoneEndTime = candles[candles.length - 1].time as number;
+    const startIdx = allCandles.findIndex((c) => (c.time as number) === zoneStartTime);
+    const endIdx = allCandles.findIndex((c) => (c.time as number) === zoneEndTime);
+    const leadIn = startIdx > 0 ? allCandles.slice(Math.max(0, startIdx - 15), startIdx) : [];
+    const liqHistoryEnd = endIdx >= 0 ? endIdx : allCandles.length - 1;
+    const liqHistory = allCandles.slice(Math.max(0, liqHistoryEnd - 300), liqHistoryEnd + 1);
+    const liqResult = liqHistory.length >= 10 ? analyseLiquidations(liqHistory, [...LEVERAGES_ALL]) : null;
+
+    consume().then((ok) => {
+      if (!ok) {
+        setZoneAnalysis((prev) => prev ? { ...prev, loading: false, error: "Daily AI analysis limit reached." } : prev);
+        return;
+      }
+      getZoneAnalysis(coin, interval, candles, {
+        leadIn,
+        liquidation: liqResult
+          ? {
+              dominantSide: liqResult.dominantSide,
+              longClusters: liqResult.longClusters.map((c) => ({ priceCenter: c.priceCenter, strength: c.strength, label: c.label })),
+              shortClusters: liqResult.shortClusters.map((c) => ({ priceCenter: c.priceCenter, strength: c.strength, label: c.label })),
+            }
+          : null,
+      }).then((res) => {
+        setZoneAnalysis((prev) => {
+          if (!prev) return prev;
+          return res.success && res.result
+            ? { ...prev, loading: false, result: res.result }
+            : { ...prev, loading: false, error: res.error || "Failed to analyse zone" };
+        });
+      });
+    });
+  }, [coin, interval, exceeded, consume]);
 
   const [divergence, setDivergence] = useState<DivergenceResult | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2868,12 +2938,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             prediction={predictionPath}
           />
           <ChartDrawingTools
+            ref={drawingToolsRef}
             chartRef={chartRef}
             seriesRef={candleRef}
             containerRef={containerRef}
             candlesRef={lastCandlesRef}
             visible={isFullscreen}
             persistRef={drawingsPersistRef}
+            onZoneComplete={handleZoneComplete}
           />
           <button
             className="chart-reset-view-btn"
@@ -2885,6 +2957,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           >
             {t("chart.reset")}
           </button>
+          {isFullscreen && (
+            <button
+              className={`chart-explain-zone-btn${awaitingZoneDraw ? " chart-explain-zone-btn--active" : ""}`}
+              onClick={handleExplainZoneStart}
+              title="Draw a free area on the chart and get an AI explanation of it"
+            >
+              <span className="chart-explain-zone-btn__icon">
+                {awaitingZoneDraw ? "✏️" : "✨"}
+                {!isPaid && <span className="chart-explain-zone-btn__pro">PRO</span>}
+              </span>
+              <span className="chart-explain-zone-btn__label">
+                {awaitingZoneDraw ? "Draw a zone…" : "Explain Zone"}
+              </span>
+            </button>
+          )}
         </div>
 
         {showDepthProfile && (
@@ -3089,6 +3176,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 : null
             }
             onClose={() => setShowPredictionModal(false)}
+          />
+        )}
+
+        {zoneAnalysis && (
+          <ZoneAnalysisModal
+            coin={coin}
+            interval={interval}
+            candles={zoneAnalysis.candles}
+            loading={zoneAnalysis.loading}
+            error={zoneAnalysis.error}
+            result={zoneAnalysis.result}
+            theme={theme}
+            onClose={() => setZoneAnalysis(null)}
           />
         )}
       </div>

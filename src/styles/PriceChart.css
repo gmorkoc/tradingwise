@@ -501,6 +501,140 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: var(--color-text);
 }
 
+/* HUD-style trigger: a glowing circular icon badge with a text label beside
+   it, rather than a pill button — the badge is the visual anchor, the label
+   just clarifies it. */
+.chart-explain-zone-btn {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  /* Must clear ChartDrawingTools' canvas (z-index 1001) and toolbar (1002) —
+     that canvas has pointer-events:all whenever any draw tool is selected,
+     including right after a zone is drawn, so a lower z-index here would be
+     unclickable. */
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  animation: chart-explain-zone-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chart-explain-zone-btn__icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(199, 210, 254, 0.85);
+  background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 45%, #4338ca 100%);
+  font-size: 1.05rem;
+  box-shadow:
+    0 6px 18px rgba(99, 102, 241, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  animation: chart-explain-zone-glow 2.6s ease-in-out infinite 0.3s;
+}
+
+/* The label tucks in behind the icon (negative margin) so the two read as
+   one connected badge instead of two floating pieces with a gap. */
+.chart-explain-zone-btn__label {
+  position: relative;
+  z-index: 1;
+  margin-left: -18px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #eef2ff;
+  white-space: nowrap;
+  padding: 8px 16px 8px 28px;
+  border-radius: 10px;
+  background: rgba(11, 9, 26, 0.82);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background 0.18s ease;
+}
+
+html[data-theme="light"] .chart-explain-zone-btn__label {
+  color: #1e1b4b;
+  background: rgba(238, 242, 255, 0.95);
+  border: 1px solid rgba(79, 70, 229, 0.4);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.chart-explain-zone-btn:hover .chart-explain-zone-btn__icon {
+  transform: scale(1.1) rotate(-6deg);
+  box-shadow:
+    0 8px 22px rgba(99, 102, 241, 0.7),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.chart-explain-zone-btn:hover .chart-explain-zone-btn__label {
+  background: rgba(20, 16, 42, 0.9);
+}
+html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__label {
+  background: rgba(238, 242, 255, 1);
+}
+.chart-explain-zone-btn:active .chart-explain-zone-btn__icon {
+  transform: scale(0.96);
+}
+.chart-explain-zone-btn--active .chart-explain-zone-btn__icon {
+  background: linear-gradient(135deg, #c7d2fe 0%, #6366f1 50%, #4338ca 100%);
+  animation: chart-explain-zone-pulse 1s ease-in-out infinite;
+}
+@keyframes chart-explain-zone-glow {
+  0%, 100% {
+    box-shadow:
+      0 6px 18px rgba(99, 102, 241, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 6px 26px rgba(99, 102, 241, 0.85),
+      0 2px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  }
+}
+@keyframes chart-explain-zone-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+.chart-explain-zone-btn__pro {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #1e1b4b;
+  color: #c7d2fe;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 2px var(--color-card-bg, #0a0e17), inset 0 0 0 1px rgba(199, 210, 254, 0.5);
+}
+@keyframes chart-explain-zone-pop {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.85); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-explain-zone-btn,
+  .chart-explain-zone-btn__icon,
+  .chart-explain-zone-btn--active .chart-explain-zone-btn__icon {
+    animation: none;
+  }
+}
+
 /* ── Interval pill segmented control ─────────────────────────────────────── */
 .interval-select--mobile { display: none; }
 

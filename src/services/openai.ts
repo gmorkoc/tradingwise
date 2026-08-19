@@ -443,6 +443,114 @@ Focus on the most recent 1-3 candles. Respond ONLY with valid JSON:
   }
 }
 
+export interface ZoneAnalysisResult {
+  title: string;
+  verdict: "bullish" | "bearish" | "neutral";
+  summary: string;
+  narrative: string;
+  liquidityGrabs: string;
+  keyLevels: string;
+}
+
+export interface ZoneLiquidationCluster {
+  priceCenter: number;
+  strength: number; // 0-1
+  label: "extreme" | "high" | "moderate";
+}
+
+export interface ZoneLiquidationContext {
+  dominantSide: "long" | "short" | "balanced";
+  /** Estimated resting long-liquidation clusters below the zone's reference price */
+  longClusters: ZoneLiquidationCluster[];
+  /** Estimated resting short-liquidation clusters above the zone's reference price */
+  shortClusters: ZoneLiquidationCluster[];
+}
+
+type ZoneCandle = { open: number; high: number; low: number; close: number; time: number; volume?: number };
+
+export async function getZoneAnalysis(
+  coin: string,
+  interval: string,
+  candles: ZoneCandle[],
+  context?: {
+    /** A handful of candles immediately before the zone, for reference only — not "in" the zone */
+    leadIn?: ZoneCandle[];
+    liquidation?: ZoneLiquidationContext | null;
+  },
+): Promise<{ success: boolean; result?: ZoneAnalysisResult; error?: string }> {
+  try {
+    if (candles.length < 2) {
+      return { success: false, error: "Draw a larger area to include at least 2 candles" };
+    }
+    // Cap payload size for very wide zones — keep oldest/newest context, sample the middle
+    const trimmed = candles.length > 60
+      ? [...candles.slice(0, 30), ...candles.slice(-30)]
+      : candles;
+    const toRow = (c: ZoneCandle) => ({
+      t: new Date(c.time * 1000).toISOString(),
+      o: c.open.toFixed(2), h: c.high.toFixed(2), l: c.low.toFixed(2), cl: c.close.toFixed(2),
+      ...(c.volume ? { v: Math.round(c.volume) } : {}),
+    });
+    const rows = trimmed.map(toRow);
+    const first = candles[0];
+    const last = candles[candles.length - 1];
+    const zoneHigh = Math.max(...candles.map(c => c.high));
+    const zoneLow = Math.min(...candles.map(c => c.low));
+
+    const leadInRows = context?.leadIn?.length ? context.leadIn.slice(-15).map(toRow) : null;
+
+    const fmtClusters = (clusters: ZoneLiquidationCluster[]) =>
+      clusters.length
+        ? clusters.map(c => `$${c.priceCenter.toFixed(0)} (${c.label}, strength ${Math.round(c.strength * 100)}%)`).join(", ")
+        : "none detected";
+
+    const liq = context?.liquidation;
+    const liquidationBlock = liq
+      ? `
+Estimated resting leveraged-position liquidity as of this zone (synthetic model based on price/volume, not a live order book — use it as a hint, not a certainty):
+- Dominant side: ${liq.dominantSide}
+- Long-liquidation clusters below (longs get stopped out if price drops through these): ${fmtClusters(liq.longClusters)}
+- Short-liquidation clusters above (shorts get stopped out if price rallies through these): ${fmtClusters(liq.shortClusters)}
+Check whether the candles in this zone swept through any of these clusters (wicked past the level, then reversed) — that's the signature of a liquidity grab / stop hunt.`
+      : `
+No liquidation cluster data was available for this zone — reason about liquidity grabs using pure price action instead: long wicks that pierce a prior swing high/low then close back inside, unusually large range or volume on the piercing candle, and a sharp reversal immediately after.`;
+
+    const prompt = `You are a professional crypto market structure analyst who thinks like an institutional order-flow / smart-money trader, not a retail indicator-reader. A trader has hand-drawn a highlighted zone on a ${coin} ${interval} candlestick chart, selecting ${candles.length} candles to have explained in depth.
+
+Your job is not just to describe the candles — figure out what the market maker / dominant side was likely DOING in this zone and WHY: accumulating, distributing, running a stop hunt / liquidity grab before reversing, or continuing a breakout. Ground every claim in the actual OHLCV numbers given; never invent external data or exact liquidation dollar totals that weren't provided.
+
+${leadInRows ? `Candles immediately BEFORE the zone, for context only (helps identify what prior high/low/level the zone's price action may have swept) — oldest→newest: ${JSON.stringify(leadInRows)}\n` : ""}
+Zone range: ${first.time === last.time ? "single candle" : `${new Date(first.time * 1000).toISOString()} to ${new Date(last.time * 1000).toISOString()}`}
+Zone price range: ${zoneLow.toFixed(2)} - ${zoneHigh.toFixed(2)}
+Candles IN the zone to be explained (oldest→newest, ${trimmed.length === candles.length ? "complete" : "sampled: first 30 + last 30"}): ${JSON.stringify(rows)}
+${liquidationBlock}
+
+Respond ONLY with valid JSON:
+{
+  "title": "short headline for what this zone shows (max 60 chars)",
+  "verdict": "bullish" | "bearish" | "neutral",
+  "summary": "one sentence: what happened in this zone (max 140 chars)",
+  "narrative": "3-4 sentences: walk through the price action in this zone candle by candle — moves, reversals, patterns, volume behavior",
+  "liquidityGrabs": "2-4 sentences: was this a liquidity grab / stop hunt? Which side (longs or shorts) likely got trapped or swept, at roughly what level, and does the follow-through after the sweep support that read? If nothing resembling a sweep occurred, say so plainly instead of forcing the narrative.",
+  "keyLevels": "1-2 sentences: support/resistance or price levels this zone touched, swept, or defended"
+}`;
+
+    const response = await callOpenAI({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4,
+      max_tokens: 700,
+      response_format: { type: "json_object" },
+    });
+
+    const raw = response?.choices?.[0]?.message?.content ?? "";
+    const result = JSON.parse(raw) as ZoneAnalysisResult;
+    return { success: true, result };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to analyse zone" };
+  }
+}
+
 export interface LiqAnalysisInput {
   coin: string;
   range: string;
