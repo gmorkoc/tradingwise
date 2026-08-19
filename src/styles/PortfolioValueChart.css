@@ -1,0 +1,99 @@
+.pvc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.pvc-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pvc-change {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pvc-change.positive { color: var(--color-success); }
+.pvc-change.negative { color: var(--color-danger); }
+.pvc-change--empty {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.pvc-change-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pvc-change-pct {
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.pvc-period-label {
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.pvc-chart-wrap {
+  width: 100%;
+  height: 100px;
+}
+
+.pvc-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pvc-chart-empty {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--color-input-bg);
+}
+
+.pvc-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.pvc-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.pvc-tab:hover {
+  color: var(--color-text);
+}
+
+.pvc-tab--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+@media (max-width: 480px) {
+  .pvc-change { font-size: 13px; }
+  .pvc-chart-wrap { height: 80px; }
+}

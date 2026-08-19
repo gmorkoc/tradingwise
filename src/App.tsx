@@ -64,6 +64,7 @@ import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
+import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
 
 type SectionId =
@@ -507,6 +508,14 @@ function AppDashboard({
     return { totalAssetValue, totalCostBasis, profitLoss: totalAssetValue - totalCostBasis };
   }, [positions, positionPrices]);
   const { totalAssetValue, totalCostBasis, profitLoss } = portfolioTotals;
+
+  const portfolioHoldings = useMemo(
+    () => positions.map(p => ({
+      symbol: CATALOG.find(c => c.id === p.catalogId)?.symbol ?? "",
+      amount: Number(p.amount) || 0,
+    })).filter(h => h.symbol),
+    [positions],
+  );
   const hasAnyPosition = positions.some(p => (Number(p.amount) || 0) > 0);
 
   // Track tick-to-tick direction so the header badge can flash green/red on change
@@ -1858,6 +1867,24 @@ function AppDashboard({
                 </div>
               </div>
               <div className="asset-modal-content">
+                <PortfolioValueChart holdings={portfolioHoldings} formatCurrency={formatCurrency} />
+
+                <div className="asset-value-card">
+                  <span>{t("assetCalc.totalLabel")}</span>
+                  <strong>{formatCurrency(totalAssetValue)}</strong>
+                  <p className="asset-cost">
+                    {t("assetCalc.costBasis", {
+                      amount: formatCurrency(totalCostBasis),
+                    })}
+                  </p>
+                  <p
+                    className={`asset-pnl ${profitLoss >= 0 ? "positive" : "negative"}`}
+                  >
+                    {profitLoss >= 0 ? "+" : ""}
+                    {formatCurrency(profitLoss)}
+                  </p>
+                </div>
+
                 <div className="asset-positions-list">
                   {positions.map((pos) => {
                     const meta = CATALOG.find((c) => c.id === pos.catalogId);
@@ -1940,22 +1967,6 @@ function AppDashboard({
                 <button className="asset-add-btn" onClick={addPosition}>
                   {t("assetCalc.addPosition")}
                 </button>
-
-                <div className="asset-value-card">
-                  <span>{t("assetCalc.totalLabel")}</span>
-                  <strong>{formatCurrency(totalAssetValue)}</strong>
-                  <p className="asset-cost">
-                    {t("assetCalc.costBasis", {
-                      amount: formatCurrency(totalCostBasis),
-                    })}
-                  </p>
-                  <p
-                    className={`asset-pnl ${profitLoss >= 0 ? "positive" : "negative"}`}
-                  >
-                    {profitLoss >= 0 ? "+" : ""}
-                    {formatCurrency(profitLoss)}
-                  </p>
-                </div>
               </div>
             </div>
           </div>
