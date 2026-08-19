@@ -51,6 +51,7 @@ interface PriceChartProps {
   onZoneChange?: (zone: ZoneResult | null, price: number) => void;
   onOpenAuth?: () => void;
   onOpenUpgrade?: (plan?: "pro" | "elite") => void;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 const INTERVALS: TimeInterval[] = [
@@ -104,6 +105,12 @@ const FIB_LEVELS = [
   { ratio: 0.786, label: "0.786", color: "rgba(249,115,22,0.85)" },
   { ratio: 1, label: "1", color: "rgba(251,191,36,0.85)" },
 ] as const;
+
+function formatLivePrice(p: number): string {
+  if (p >= 1000) return `$${p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (p >= 1) return `$${p.toFixed(4)}`;
+  return `$${p.toFixed(6)}`;
+}
 
 // ── Utility: Bollinger Bands ────────────────────────────────────────────────
 
@@ -985,6 +992,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   coin = "BTC",
   onZoneChange,
   onOpenUpgrade = () => {},
+  onFullscreenChange,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
@@ -1017,6 +1025,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [isLive, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
+  const prevPriceRef = useRef<number | null>(null);
+  const updateCurrentPrice = useCallback((price: number) => {
+    const prev = prevPriceRef.current;
+    if (prev !== null && price !== prev) {
+      setPriceDirection(price > prev ? "up" : "down");
+    }
+    prevPriceRef.current = price;
+    setCurrentPrice(price);
+  }, []);
   const menuRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayLineRefs = useRef<any[]>([]);
@@ -1025,6 +1044,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showAstroChart, setShowAstroChart] = useState(false);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    onFullscreenChange?.(isFullscreen);
+  }, [isFullscreen, onFullscreenChange]);
   const textColor = isLight
     ? isFullscreen
       ? "#0f172a"
@@ -1182,6 +1204,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // True while the user is expected to be dragging out a zone on the chart —
   // drives the button's "Draw a zone…" state until the draw commits.
   const [awaitingZoneDraw, setAwaitingZoneDraw] = useState(false);
+  // True once a zone shape exists on the chart — shows the "Clear" button
+  // next to "Explain Zone" instead of floating it over the drawn shape.
+  const [hasZone, setHasZone] = useState(false);
   const drawingToolsRef = useRef<ChartDrawingToolsHandle>(null);
 
   const handleExplainZoneStart = useCallback(() => {
@@ -1190,8 +1215,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setAwaitingZoneDraw(true);
   }, [isPaid, onOpenUpgrade]);
 
+  const handleClearZone = useCallback(() => {
+    drawingToolsRef.current?.clearZoneTool();
+    setHasZone(false);
+  }, []);
+
   const handleZoneComplete = useCallback((_drawing: Drawing, candles: CandleDataPoint[]) => {
     setAwaitingZoneDraw(false);
+    setHasZone(true);
     if (candles.length < 2) {
       setZoneAnalysis({ candles, loading: false, error: "Draw a larger area — need at least 2 candles inside the zone." });
       return;
@@ -1425,6 +1456,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       chartRef.current = chart;
       if (lastCandlesRef.current.length > 0) {
         candleRef.current?.setData(lastCandlesRef.current);
+        updateCurrentPrice(lastCandlesRef.current[lastCandlesRef.current.length - 1].close);
       }
 
       const resizeChart = () => {
@@ -1504,6 +1536,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           await waitForSeriesReady();
           if (cancelled) return;
           candleRef.current?.setData(data);
+          updateCurrentPrice(data[data.length - 1].close);
           if (showFibRef.current) redrawFibLines();
           volumeRef.current?.setData(
             data.map((c) => ({
@@ -1793,6 +1826,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           : await coinglass.getLiveMinuteCandle(coin);
         if (candle) {
           candleRef.current?.update(candle);
+          updateCurrentPrice(candle.close);
           if (candle.volume !== undefined) {
             volumeRef.current?.update({
               time: candle.time,
@@ -2354,6 +2388,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="chart-header-left">
               <div className="chart-title-row">
                 <h3>{t("chart.title", { coin })}</h3>
+                {isFullscreen && currentPrice !== null && (
+                  <span className="chart-current-price-group">
+                    <span
+                      className={`chart-current-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
+                    >
+                      {formatLivePrice(currentPrice)}
+                    </span>
+                    <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                  </span>
+                )}
                 {(interval === "1sec" || interval === "1min") && isLive && (
                   <span className="live-badge">{t("chart.live")}</span>
                 )}
@@ -2958,19 +3002,31 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {t("chart.reset")}
           </button>
           {isFullscreen && (
-            <button
-              className={`chart-explain-zone-btn${awaitingZoneDraw ? " chart-explain-zone-btn--active" : ""}`}
-              onClick={handleExplainZoneStart}
-              title="Draw a free area on the chart and get an AI explanation of it"
-            >
-              <span className="chart-explain-zone-btn__icon">
-                {awaitingZoneDraw ? "✏️" : "✨"}
-                {!isPaid && <span className="chart-explain-zone-btn__pro">PRO</span>}
-              </span>
-              <span className="chart-explain-zone-btn__label">
-                {awaitingZoneDraw ? "Draw a zone…" : "Explain Zone"}
-              </span>
-            </button>
+            <div className="chart-zone-btn-row">
+              <button
+                className={`chart-explain-zone-btn${awaitingZoneDraw ? " chart-explain-zone-btn--active" : ""}`}
+                onClick={handleExplainZoneStart}
+                title="Draw a free area on the chart and get an AI explanation of it"
+              >
+                <span className="chart-explain-zone-btn__icon">
+                  {awaitingZoneDraw ? "✏️" : "✨"}
+                  {!isPaid && <span className="chart-explain-zone-btn__pro">PRO</span>}
+                </span>
+                <span className="chart-explain-zone-btn__label">
+                  {awaitingZoneDraw ? "Draw a zone…" : "Explain Zone"}
+                </span>
+              </button>
+              {hasZone && (
+                <button
+                  className="chart-clear-zone-btn"
+                  onClick={handleClearZone}
+                  title="Clear the drawn zone"
+                >
+                  <span className="chart-clear-zone-btn__icon">✕</span>
+                  <span className="chart-clear-zone-btn__label">Clear</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 

@@ -235,6 +235,30 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: var(--color-text);
 }
 
+/* Always-visible current price in the fullscreen header — kept independent
+   of the right price axis, which can get crowded with Fib/EMA/zone labels. */
+.chart-current-price-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-current-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  transition: color 0.25s ease;
+}
+
+.chart-current-price--up {
+  color: #22c55e;
+}
+
+.chart-current-price--down {
+  color: #ef4444;
+}
+
 .chart-dblclick-wrap::after {
   content: "⛶  Double-click for fullscreen";
   position: absolute;
@@ -504,7 +528,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 /* HUD-style trigger: a glowing circular icon badge with a text label beside
    it, rather than a pill button — the badge is the visual anchor, the label
    just clarifies it. */
-.chart-explain-zone-btn {
+.chart-zone-btn-row {
   position: absolute;
   top: 14px;
   left: 50%;
@@ -514,6 +538,12 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
      including right after a zone is drawn, so a lower z-index here would be
      unclickable. */
   z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.chart-explain-zone-btn {
   display: flex;
   align-items: center;
   border: none;
@@ -528,13 +558,13 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   border-radius: 50%;
   border: 2px solid rgba(199, 210, 254, 0.85);
   background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 45%, #4338ca 100%);
-  font-size: 1.05rem;
+  font-size: 0.85rem;
   box-shadow:
     0 6px 18px rgba(99, 102, 241, 0.5),
     0 2px 6px rgba(0, 0, 0, 0.3),
@@ -548,14 +578,14 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-explain-zone-btn__label {
   position: relative;
   z-index: 1;
-  margin-left: -18px;
-  font-size: 0.85rem;
+  margin-left: -14px;
+  font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.01em;
   color: #eef2ff;
   white-space: nowrap;
-  padding: 8px 16px 8px 28px;
-  border-radius: 10px;
+  padding: 5px 12px 5px 20px;
+  border-radius: 8px;
   background: rgba(11, 9, 26, 0.82);
   border: 1px solid rgba(99, 102, 241, 0.45);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -611,9 +641,9 @@ html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__
 }
 .chart-explain-zone-btn__pro {
   position: absolute;
-  top: -6px;
-  right: -8px;
-  padding: 1px 6px;
+  top: -5px;
+  right: -6px;
+  padding: 1px 5px;
   border-radius: 999px;
   background: #1e1b4b;
   color: #c7d2fe;
@@ -623,8 +653,77 @@ html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__
   box-shadow: 0 0 0 2px var(--color-card-bg, #0a0e17), inset 0 0 0 1px rgba(199, 210, 254, 0.5);
 }
 @keyframes chart-explain-zone-pop {
-  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.85); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(-10px) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* "Clear" button — sits side by side with "Explain Zone" in .chart-zone-btn-row,
+   only rendered while a zone shape currently exists. Same size and icon-badge
+   + tucked-label pattern as .chart-explain-zone-btn, just mirrored (label
+   first, icon overlapping on the right) and rose/red to read as "remove". */
+.chart-clear-zone-btn {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  animation: chart-explain-zone-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chart-clear-zone-btn__label {
+  order: 1;
+  position: relative;
+  z-index: 1;
+  margin-right: -14px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #ffe4e6;
+  white-space: nowrap;
+  padding: 5px 20px 5px 12px;
+  border-radius: 8px;
+  background: rgba(20, 6, 9, 0.85);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+html[data-theme="light"] .chart-clear-zone-btn__label {
+  color: #881337;
+  background: rgba(255, 241, 242, 0.95);
+  border: 1px solid rgba(190, 18, 60, 0.35);
+}
+
+.chart-clear-zone-btn__icon {
+  order: 2;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(253, 164, 175, 0.85);
+  background: linear-gradient(135deg, #fda4af 0%, #f43f5e 45%, #be123c 100%);
+  color: #fff1f2;
+  font-size: 0.85rem;
+  box-shadow:
+    0 6px 18px rgba(244, 63, 94, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.chart-clear-zone-btn:hover .chart-clear-zone-btn__icon {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow:
+    0 8px 22px rgba(244, 63, 94, 0.7),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 @media (prefers-reduced-motion: reduce) {

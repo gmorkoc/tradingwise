@@ -38,6 +38,8 @@ interface Props {
 export interface ChartDrawingToolsHandle {
   /** Switch into zone-draw mode so the next drag on the chart draws a zone */
   activateZoneTool: () => void;
+  /** Remove all zone drawings */
+  clearZoneTool: () => void;
 }
 
 const TOOL_CLICKS: Record<DrawingTool, number> = {
@@ -195,8 +197,6 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
   // Zone: same screen-space drag buffer as brush, but committed as a closed polygon
   const zoneActiveRef    = useRef(false);
   const zoneScreenRef    = useRef<ScreenPt[]>([]);
-  // DOM refs for each zone's floating "clean" button — positioned imperatively in render()
-  const zoneBtnElsRef    = useRef<Map<string, HTMLButtonElement>>(new Map());
   const handlePointRef   = useRef<((sx: number, sy: number) => void) | null>(null);
   const onZoneCompleteRef = useRef(onZoneComplete);
   useEffect(() => { onZoneCompleteRef.current = onZoneComplete; }, [onZoneComplete]);
@@ -448,27 +448,6 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
     };
 
     for (const d of drawingsRef.current) drawShape(d);
-
-    // Position each zone's "clean" button at the topmost point of its shape —
-    // imperative DOM writes (not React state) so this stays cheap during pan/zoom.
-    for (const d of drawingsRef.current) {
-      if (d.type !== 'zone') continue;
-      const btn = zoneBtnElsRef.current.get(d.id);
-      if (!btn) continue;
-      let anchor: ScreenPt | null = null;
-      let minY = Infinity;
-      for (const pt of d.pts) {
-        const s = toScreen(pt);
-        if (s && s.y < minY) { minY = s.y; anchor = s; }
-      }
-      if (anchor) {
-        btn.style.display = 'flex';
-        btn.style.left = `${rect.left + anchor.x}px`;
-        btn.style.top  = `${rect.top + anchor.y - 30}px`;
-      } else {
-        btn.style.display = 'none';
-      }
-    }
 
     // Live brush: draw from raw screen coords — zero chart API calls
     if (brushActiveRef.current && brushScreenRef.current.length > 1) {
@@ -734,6 +713,9 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
       brushActiveRef.current = false;
       zoneActiveRef.current = false;
     },
+    clearZoneTool: () => {
+      setDrawings(prev => prev.filter(d => d.type !== 'zone'));
+    },
   }), []);
 
   if (!visible || !chartRect) return null;
@@ -792,20 +774,6 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       />
-
-      {drawings.filter(d => d.type === 'zone').map(d => (
-        <button
-          key={d.id}
-          ref={(el) => { if (el) zoneBtnElsRef.current.set(d.id, el); else zoneBtnElsRef.current.delete(d.id); }}
-          className="cdt-zone-clean-btn"
-          style={{ display: 'none' }}
-          onClick={() => setDrawings(prev => prev.filter(x => x.id !== d.id))}
-          title="Clear this zone"
-        >
-          <span className="cdt-zone-clean-btn__icon">✕</span>
-          <span className="cdt-zone-clean-btn__label">Clear</span>
-        </button>
-      ))}
     </>
   );
 });

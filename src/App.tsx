@@ -704,6 +704,7 @@ function AppDashboard({
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [chartZone, setChartZone] = useState<ZoneResult | null>(null);
   const [chartPrice, setChartPrice] = useState(0);
+  const [chartFullscreen, setChartFullscreen] = useState(false);
 
   const [priceAlert, setPriceAlert] = useState<{
     message: string;
@@ -1512,6 +1513,7 @@ function AppDashboard({
                       }}
                       onOpenAuth={onOpenAuth}
                       onOpenUpgrade={onOpenUpgrade}
+                      onFullscreenChange={setChartFullscreen}
                     />
                     <div
                       className="chart-resize-handle"
@@ -2045,7 +2047,7 @@ function AppDashboard({
             />
           ))}
     </div>
-    <BtcMoveToast alert={notificationsEnabled ? btcMoveAlert : null} onDismiss={dismissBtcAlert} />
+    <BtcMoveToast alert={notificationsEnabled && !chartFullscreen ? btcMoveAlert : null} onDismiss={dismissBtcAlert} />
     </>
   );
 }
