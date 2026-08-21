@@ -27,6 +27,18 @@ function detectPlatform(): Platform {
 // Platforms where the browser can fire beforeinstallprompt
 const SUPPORTS_NATIVE_PROMPT: Platform[] = ["android", "chrome-desktop", "edge-desktop"];
 
+// Fill these in once coinhintz is live on each store — until then they stay
+// empty and mobile visitors keep seeing the "Add to Home Screen" guide
+// below. Once set, the matching platform automatically switches to the
+// "Download the app" prompt instead.
+const APP_STORE_URL = "";
+const PLAY_STORE_URL = "";
+
+const STORE_CONFIG: Partial<Record<Platform, { deviceLabel: string; badge: string; url: string }>> = {
+  ios: { deviceLabel: "iPhone", badge: "Download on the App Store", url: APP_STORE_URL },
+  android: { deviceLabel: "Android", badge: "Get it on Google Play", url: PLAY_STORE_URL },
+};
+
 function usePWAInstall() {
   const promptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
@@ -182,31 +194,77 @@ export function PWAInstallGuide({ onClose, onNativeInstall, canInstall }: GuideP
   );
 }
 
+function AppStorePrompt({ onClose, platform }: { onClose: () => void; platform: "ios" | "android" }) {
+  const store = STORE_CONFIG[platform]!;
+  return ReactDOM.createPortal(
+    <div className="pwa-backdrop" onClick={onClose}>
+      <div className="pwa-sheet" onClick={e => e.stopPropagation()}>
+        <div className="pwa-handle" />
+
+        <div className="pwa-header">
+          <img src="/icon.svg" alt="coinhintz" className="pwa-app-icon" />
+          <div className="pwa-header-text">
+            <h2 className="pwa-title">Get the coinhintz app</h2>
+            <p className="pwa-sub">Built for {store.deviceLabel} — faster and more reliable than the browser</p>
+          </div>
+          <button className="pwa-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+
+        <a className="pwa-install-btn" href={store.url} target="_blank" rel="noopener noreferrer">
+          {store.badge}
+        </a>
+
+        <div className="pwa-footer">
+          <span className="pwa-badge">⚡ Native performance · Push alerts · Always up-to-date</span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 const IOS_GUIDE_SHOWN_KEY = "pwa_ios_guide_shown";
+const STORE_PROMPT_SHOWN_KEY = "app_store_prompt_shown";
 
 export function PWAInstallButton({ onCloseMobileNav }: { onCloseMobileNav?: () => void }) {
   const [open, setOpen] = useState(false);
   const { canInstall, install, installed } = usePWAInstall();
   const platform = detectPlatform();
   const supportsNative = SUPPORTS_NATIVE_PROMPT.includes(platform);
+  const store = (platform === "ios" || platform === "android") ? STORE_CONFIG[platform] : undefined;
+  const storeReady = !!store?.url;
 
-  // Auto-show for iOS Safari on first visit if not already installed as PWA
+  // Auto-show on first visit if not already installed as PWA — points at
+  // the store once it's live, otherwise falls back to the home-screen guide
+  // (iOS only, since Android already gets the browser's own install nudge).
   useEffect(() => {
-    if (platform !== "ios") return;
     if ((navigator as Navigator & { standalone?: boolean }).standalone) return; // already installed
+
+    if (storeReady) {
+      if (localStorage.getItem(STORE_PROMPT_SHOWN_KEY)) return;
+      const t = setTimeout(() => {
+        localStorage.setItem(STORE_PROMPT_SHOWN_KEY, "1");
+        setOpen(true);
+      }, 2500);
+      return () => clearTimeout(t);
+    }
+
+    if (platform !== "ios") return;
     if (localStorage.getItem(IOS_GUIDE_SHOWN_KEY)) return;
     const t = setTimeout(() => {
       localStorage.setItem(IOS_GUIDE_SHOWN_KEY, "1");
       setOpen(true);
     }, 2500);
     return () => clearTimeout(t);
-  }, [platform]);
+  }, [platform, storeReady]);
 
   if (installed) return null;
 
   const handleClick = () => {
     onCloseMobileNav?.();
-    if (supportsNative && canInstall) {
+    if (storeReady) {
+      setOpen(true);
+    } else if (supportsNative && canInstall) {
       install();
     } else {
       setOpen(true);
@@ -220,7 +278,7 @@ export function PWAInstallButton({ onCloseMobileNav }: { onCloseMobileNav?: () =
 
   return (
     <>
-      <button className="icon-strip-btn" onClick={handleClick} title="Install App">
+      <button className="icon-strip-btn" onClick={handleClick} title={storeReady ? "Get the App" : "Install App"}>
         <span className="nav-icon-wrap">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round">
@@ -228,9 +286,15 @@ export function PWAInstallButton({ onCloseMobileNav }: { onCloseMobileNav?: () =
             <path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" />
           </svg>
         </span>
-        <span className="icon-strip-label">Install App</span>
+        <span className="icon-strip-label">{storeReady ? "Get the App" : "Install App"}</span>
       </button>
-      {open && (
+      {open && storeReady && (
+        <AppStorePrompt
+          onClose={() => setOpen(false)}
+          platform={platform as "ios" | "android"}
+        />
+      )}
+      {open && !storeReady && (
         <PWAInstallGuide
           onClose={() => setOpen(false)}
           canInstall={canInstall}

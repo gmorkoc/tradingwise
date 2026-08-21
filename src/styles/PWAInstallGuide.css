@@ -146,11 +146,14 @@
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
+  text-align: center;
+  text-decoration: none;
   border: none;
   border-radius: 14px;
   cursor: pointer;
   margin-bottom: 4px;
   transition: opacity 0.15s;
+  box-sizing: border-box;
 }
 .pwa-install-btn:hover { opacity: 0.88; }
 
