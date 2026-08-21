@@ -2541,7 +2541,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       if (sessionStorage.getItem(dismissKey) === todayStr) return;
 
       try {
-        const res = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${sym}&interval=1d&limit=2`);
+        const res = await fetch(`/bn-api/api/v3/klines?symbol=${sym}&interval=1d&limit=2`);
         const data = await res.json();
         const c = data[0];
         const open = parseFloat(c[1]), high = parseFloat(c[2]);

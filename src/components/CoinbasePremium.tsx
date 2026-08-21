@@ -76,7 +76,7 @@ async function fetchCoinbasePrice(): Promise<number | null> {
 
 async function fetchRefPrice(): Promise<{ price: number; source: string } | null> {
   const candidates = [
-    { source: "Binance",  url: "https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT", extract: (d: any) => parseFloat(d.price) },
+    { source: "Binance",  url: "/bn-api/api/v3/ticker/price?symbol=BTCUSDT", extract: (d: any) => parseFloat(d.price) },
     { source: "Bybit",    url: "https://api.bybit.com/v5/market/ticker?category=spot&symbol=BTCUSDT", extract: (d: any) => parseFloat(d.result?.list?.[0]?.lastPrice) },
     { source: "Kraken",   url: "https://api.kraken.com/0/public/Ticker?pair=XBTUSD",                 extract: (d: any) => parseFloat(d.result?.XXBTZUSD?.c?.[0]) },
     { source: "Bitstamp", url: "https://www.bitstamp.net/api/v2/ticker/btcusd/",                     extract: (d: any) => parseFloat(d.last) },

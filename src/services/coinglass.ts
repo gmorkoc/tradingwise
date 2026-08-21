@@ -20,9 +20,14 @@ addRetry(api);
 
 
 
-// Binance public market data CDN — geo-unrestricted, open CORS
+// Binance public market data CDN, proxied through middleware.ts (/bn-api).
+// Calling data-api.binance.vision directly put every visitor's own IP
+// against Binance's per-IP rate limit — one busy IP (or shared NAT) would
+// get a hard 418 ban that broke charts/prices for every symbol at once. The
+// proxy also lets Vercel's CDN cache identical requests for a few seconds,
+// collapsing concurrent viewers of the same chart into one upstream call.
 const bnApi = axios.create({
-  baseURL: 'https://data-api.binance.vision',
+  baseURL: '/bn-api',
   timeout: 20000,
   headers: { accept: 'application/json' },
 });

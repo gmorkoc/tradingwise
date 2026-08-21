@@ -19,7 +19,7 @@ const DEPTH_LEVELS = [50, 100, 500, 1000] as const;
 async function fetchDepth(coin: string, limit: number) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
   const res = await fetch(
-    `https://data-api.binance.vision/api/v3/depth?symbol=${sym}&limit=${limit}`
+    `/bn-api/api/v3/depth?symbol=${sym}&limit=${limit}`
   );
   if (!res.ok) throw new Error();
   const d = await res.json();

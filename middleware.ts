@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*'] };
 
 const ALLOWED_ORIGINS = ['https://www.coinhintz.io', 'https://coinhintz.io', 'http://localhost:5173', 'http://localhost:4173'];
 
@@ -45,6 +45,34 @@ export default async function middleware(req: Request): Promise<Response> {
     return new Response(text, {
       status: response.status,
       headers: { 'content-type': 'application/json', ...corsHeaders(req) },
+    });
+  }
+
+  // ── Binance klines proxy ──────────────────────────────────────────────────
+  // Binance's public data-api.binance.vision has open CORS, so the client
+  // used to call it directly — but that means every visitor's own IP eats
+  // Binance's per-IP rate limit, and one busy IP (or a shared NAT) gets a
+  // hard 418 ban that fails charts/prices for every symbol at once. Proxying
+  // through here moves the outbound call to Vercel's edge IPs and, more
+  // importantly, lets Vercel's CDN cache identical requests (same symbol +
+  // interval + limit) for a few seconds — collapsing many concurrent
+  // viewers of the same chart into a single upstream Binance call instead of
+  // one per visitor.
+  if (url.pathname.startsWith('/bn-api/')) {
+    const bnPath = url.pathname.replace(/^\/bn-api\//, '');
+    const upstream = new URL(`https://data-api.binance.vision/${bnPath}`);
+    upstream.search = url.search;
+    const response = await fetch(upstream.toString(), {
+      headers: { accept: 'application/json' },
+    });
+    const text = await response.text();
+    return new Response(text, {
+      status: response.status,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'public, s-maxage=3, stale-while-revalidate=15',
+        ...corsHeaders(req),
+      },
     });
   }
 

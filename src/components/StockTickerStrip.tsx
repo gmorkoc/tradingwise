@@ -44,7 +44,7 @@ function fmtPct(n: number): string {
 // user picked elsewhere, and mislabeling it "BTC" here would be wrong.
 async function fetchBtcQuote(): Promise<{ price: number; change: number; percentChange: number } | null> {
   try {
-    const res = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr?symbol=BTCUSDT");
+    const res = await fetch("/bn-api/api/v3/ticker/24hr?symbol=BTCUSDT");
     if (!res.ok) return null;
     const d = await res.json();
     return {
@@ -59,7 +59,7 @@ async function fetchBtcQuote(): Promise<{ price: number; change: number; percent
 
 async function fetchBtcSparkline(): Promise<number[] | null> {
   try {
-    const res = await fetch("https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=26");
+    const res = await fetch("/bn-api/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=26");
     if (!res.ok) return null;
     // Binance kline row shape: [openTime, open, high, low, close, volume, ...] — close is index 4.
     const rows: (string | number)[][] = await res.json();

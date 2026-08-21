@@ -71,6 +71,12 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/bnf-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        '/bn-api': {
+          target: 'https://data-api.binance.vision',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/bn-api/, ''),
+          headers: { 'accept': 'application/json' },
+        },
         '/coinbase-api': {
           target: 'https://api.international.coinbase.com',
           changeOrigin: true,

@@ -13,7 +13,7 @@ export function toBinanceSym(symbol: string): string {
 export async function fetchBinancePrices(symbols: string[]): Promise<Map<string, PriceEntry>> {
   try {
     const res = await fetch(
-      "https://data-api.binance.vision/api/v3/ticker/24hr",
+      "/bn-api/api/v3/ticker/24hr",
       { signal: AbortSignal.timeout(6000) }
     );
     if (!res.ok) return new Map();
@@ -38,7 +38,7 @@ export async function fetchSparklines(symbols: string[]): Promise<Map<string, nu
   await Promise.all(symbols.map(async sym => {
     try {
       const res = await fetch(
-        `https://data-api.binance.vision/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
+        `/bn-api/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
         { signal: AbortSignal.timeout(5000) }
       );
       if (!res.ok) return;

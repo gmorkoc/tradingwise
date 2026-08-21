@@ -57,7 +57,7 @@ function toCumulative(pairs: [number, number][]): Level[] {
 
 async function fetchBinance(coin: string) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
-  const res = await fetch(`https://data-api.binance.vision/api/v3/depth?symbol=${sym}&limit=100`);
+  const res = await fetch(`/bn-api/api/v3/depth?symbol=${sym}&limit=100`);
   if (!res.ok) throw new Error("unavailable");
   const d = await res.json();
   const parse = (raw: [string, string][]) =>

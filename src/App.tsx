@@ -370,7 +370,7 @@ function AppDashboard({
     const poll = async () => {
       try {
         const res = await fetch(
-          `https://data-api.binance.vision/api/v3/ticker/price?symbol=${sym}`,
+          `/bn-api/api/v3/ticker/price?symbol=${sym}`,
         );
         if (!res.ok || cancelled) return;
         const d = await res.json();
