@@ -64,6 +64,12 @@ function pointInPolygon(x: number, y: number, poly: { x: number; y: number }[]):
   return inside;
 }
 
+// Interpolated samples along a candle's high-low range, beyond the 4 OHLC
+// points — a tight, hand-drawn (touch) zone commonly crosses a wick without
+// its boundary ever landing exactly on open/high/low/close, which would
+// otherwise undercount candles that are clearly inside the drawn shape.
+const WICK_SAMPLES = 8;
+
 export function getCandlesInZone(candles: CandleDataPoint[], pts: ChartPt[]): CandleDataPoint[] {
   if (pts.length < 3) return [];
   const poly = pts.map(p => ({ x: p.time, y: p.price }));
@@ -76,12 +82,17 @@ export function getCandlesInZone(candles: CandleDataPoint[], pts: ChartPt[]): Ca
     const t = c.time as number;
     if (t < minT || t > maxT) return false;
     if (c.high < minP || c.low > maxP) return false;
-    return (
+    if (
       pointInPolygon(t, c.open, poly) ||
       pointInPolygon(t, c.high, poly) ||
       pointInPolygon(t, c.low, poly) ||
       pointInPolygon(t, c.close, poly)
-    );
+    ) return true;
+    for (let i = 1; i < WICK_SAMPLES; i++) {
+      const price = c.low + ((c.high - c.low) * i) / WICK_SAMPLES;
+      if (pointInPolygon(t, price, poly)) return true;
+    }
+    return false;
   });
 }
 
