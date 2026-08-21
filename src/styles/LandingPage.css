@@ -13,8 +13,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
-  height: 60px;
+  /* padding-top clears the notch/Dynamic Island when wrapped in the native
+     iOS app — env(safe-area-inset-top) reports 0 in this WKWebView config,
+     so MainViewController.swift injects the real UIKit value as
+     --native-safe-area-top instead; env() is used as the fallback for
+     Android / browsers / installed PWA, where it works normally. */
+  padding: var(--native-safe-area-top, env(safe-area-inset-top)) 32px 0;
+  min-height: 60px;
   border-bottom: 1px solid var(--color-header-border);
   position: sticky;
   top: 0;
@@ -687,7 +692,7 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 .lp-cta-long  { display: inline; }
 
 @media (max-width: 768px) {
-  .lp-nav { padding: 0 16px; }
+  .lp-nav { padding: var(--native-safe-area-top, env(safe-area-inset-top)) 16px 0; }
   .lp-nav-logo span { display: none; }
   .lp-nav-actions { gap: 6px; }
   .lp-nav-actions .lp-btn-ghost  { padding: 6px 10px; font-size: 0.75rem; }

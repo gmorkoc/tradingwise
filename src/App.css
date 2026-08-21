@@ -409,7 +409,12 @@ select {
   background: var(--color-header-bg);
   border-bottom: 1px solid var(--color-header-border);
   backdrop-filter: blur(12px);
-  padding: 24px 24px 20px;
+  /* max() clears the notch/Dynamic Island while keeping the normal 24px
+     elsewhere. env(safe-area-inset-top) reports 0 in the iOS app's
+     WKWebView, so MainViewController.swift injects the real UIKit value as
+     --native-safe-area-top; env() is the fallback for Android / browsers /
+     installed PWA, where it works normally. */
+  padding: max(24px, var(--native-safe-area-top, env(safe-area-inset-top))) 24px 20px;
 }
 
 .header-content {
@@ -1192,7 +1197,7 @@ select {
 
 @media (max-width: 768px) {
   .app-header {
-    padding: 18px;
+    padding: max(18px, var(--native-safe-area-top, env(safe-area-inset-top))) 18px 18px;
   }
 
   .header-content h1 {
@@ -1539,6 +1544,10 @@ body {
 .app-shell-news {
   flex-shrink: 0;
   width: 100%;
+  /* First element in the app shell — reserve the notch/Dynamic Island
+     inset here so nothing below has to. See MainViewController.swift for
+     why --native-safe-area-top exists instead of relying on env() alone. */
+  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
 }
 
 .app-shell-body {
@@ -2578,7 +2587,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 16px 20px 12px 20px;
+    /* .icon-strip is position:fixed;top:0 here and this is its first
+       child — reserve the notch/Dynamic Island inset directly on it. */
+    padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top))) 20px 12px 20px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--color-border);
     margin-bottom: 4px;
@@ -3084,7 +3095,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
 .pticker-price-source {
   position: fixed;
-  top: 20px;
+  top: max(20px, var(--native-safe-area-top, env(safe-area-inset-top)));
   left: 16px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -3207,7 +3218,7 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
 
 .pticker-top-actions {
   position: fixed;
-  top: 16px;
+  top: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)));
   right: 16px;
   display: flex;
   align-items: center;

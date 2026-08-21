@@ -1,6 +1,6 @@
 .btc-toast {
   position: fixed;
-  top: 18px;
+  top: max(18px, var(--native-safe-area-top, env(safe-area-inset-top)));
   left: 50%;
   transform: translateX(-50%) translateY(-140%);
   z-index: 100000;
@@ -181,7 +181,7 @@
 @media (max-width: 480px) {
   .btc-toast {
     width: calc(100vw - 28px);
-    top: 12px;
+    top: max(12px, var(--native-safe-area-top, env(safe-area-inset-top)));
     border-radius: 14px;
   }
 }
