@@ -463,7 +463,7 @@ export const coinglass = {
       const lsTo   = Math.floor(Date.now() / 1000);
 
       // 200 candles: RSI needs 14 warmup + history, MACD needs 26+9; 200 gives accurate results
-      const [candlesRes, oiRes, frRes, cmeRes, lsRes, bnFRDirectRes, bnLSDirectRes, coinalyzeFRRes, coinalyzeLSRes] = await Promise.all([
+      const [candlesRes, oiRes, frRes, cmeRes, lsRes, bnFRDirectRes, bnLSDirectRes, coinalyzeOIRes, coinalyzeFRRes, coinalyzeLSRes] = await Promise.all([
         fetchBinanceKlines(coin, '4h', 200),
         api.get('futures/open-interest/history', {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
@@ -476,12 +476,20 @@ export const coinglass = {
           params: { symbol, interval: '4h', limit: 1, exchange: 'Binance' },
         }).catch(() => null),
         // Direct-exchange + Coinalyze fallbacks — same pattern as
-        // getExchangeActivity. Without these, funding rate and L/S ratio
-        // silently default to a fake neutral (0 / 1.00) whenever CoinGlass's
-        // plan blocks these endpoints, which always scores as neutral in
-        // the Confluence Engine regardless of real market conditions.
+        // getExchangeActivity. Without these, funding rate, L/S ratio, and
+        // open interest silently default to a fake neutral (0 / 1.00 / $0)
+        // whenever CoinGlass's plan blocks these endpoints, which always
+        // scores as neutral in the Confluence Engine regardless of real
+        // market conditions.
         fetch(`/bnf-api/fapi/v1/premiumIndex?symbol=${symbol}`).then(r => r.json()).catch(() => null),
         fetch(`/bnf-api/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=4h&limit=1`).then(r => r.json()).catch(() => null),
+        // Binance Futures (fapi.binance.com, via /bnf-api) is geo-blocked
+        // from this app's hosting region entirely ("restricted location"
+        // per Binance's own error) — confirmed dead for OI specifically, so
+        // this uses Coinalyze instead, already proven reachable above.
+        // Coinalyze reports OI in base-asset units (BTC), not USD — this
+        // gets multiplied by price below to match CoinGlass's convention.
+        fetch(`/coinalyze-api/v1/open-interest?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null),
         fetch(`/coinalyze-api/v1/funding-rate?symbols=${symbol}_PERP.A`).then(r => r.json()).catch(() => null),
         fetch(`/coinalyze-api/v1/long-short-ratio-history?symbols=${symbol}_PERP.A&interval=1hour&from=${lsFrom}&to=${lsTo}`).then(r => r.json()).catch(() => null),
       ]);
@@ -498,8 +506,17 @@ export const coinglass = {
       const liquidationAbove = swingHigh;
       const liquidationBelow = swingLow;
 
-      const openInterest = oiRes?.data?.code === '0'
-        ? parseFloat(oiRes.data.data?.[0]?.close ?? '0')
+      // ── Open interest: CoinGlass, then Coinalyze (converted to USD) ────────
+      const openInterestCg = oiRes?.data?.code === '0'
+        ? parseFloat(oiRes.data.data?.[0]?.close ?? '')
+        : NaN;
+      const openInterestCoinalyze = (() => {
+        const row = Array.isArray(coinalyzeOIRes) ? coinalyzeOIRes[0] : null;
+        const contracts = typeof row?.value === 'number' ? row.value : NaN;
+        return isFinite(contracts) ? contracts * price : NaN;
+      })();
+      const openInterest = isFinite(openInterestCg) ? openInterestCg
+        : isFinite(openInterestCoinalyze) ? openInterestCoinalyze
         : 0;
 
       // ── Funding rate: CoinGlass, then direct Binance API, then Coinalyze ──
@@ -1240,12 +1257,19 @@ export interface MacroContextData {
 
 export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promise<MacroContextData> {
   const sym = toCgSymbol(coin);
+  const oiFrom = Math.floor(Date.now() / 1000) - 43200; // 12h back, comfortably covers two 4h buckets
+  const oiTo   = Math.floor(Date.now() / 1000);
 
-  const [dominanceRes, fundingRes, oiRes, dailyRes] = await Promise.allSettled([
+  const [dominanceRes, fundingRes, oiRes, dailyRes, coinalyzeOIRes] = await Promise.allSettled([
     fetch('https://api.coingecko.com/api/v3/global').then(r => r.json()),
     api.get('futures/funding-rate/history',  { params: { symbol: sym, interval: '8h', limit: 2,  exchange: 'Binance' } }),
     api.get('futures/open-interest/history', { params: { symbol: sym, interval: '4h', limit: 3,  exchange: 'Binance' } }),
     fetchBinanceKlines(coin, '1d', 60),
+    // Coinalyze fallback for when CoinGlass's plan blocks
+    // open-interest/history — same source as getAllBTCData's OI fallback.
+    // Binance Futures direct (fapi.binance.com) is geo-blocked from this
+    // app's hosting region entirely, so that's not an option here.
+    fetch(`/coinalyze-api/v1/open-interest-history?symbols=${sym}_PERP.A&interval=4hour&from=${oiFrom}&to=${oiTo}`).then(r => r.json()),
   ]);
 
   // BTC Dominance
@@ -1263,7 +1287,10 @@ export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promis
     if (!isFinite(fundingRate!)) fundingRate = null;
   }
 
-  // OI delta (% change between latest two points)
+  // OI delta (% change between latest two points) — CoinGlass, then Coinalyze
+  // fallback for when CoinGlass's plan blocks this endpoint. % change is
+  // unit-agnostic, so Coinalyze's base-asset (BTC) values work fine here
+  // without converting to USD.
   let oiDelta: number | null = null;
   if (oiRes.status === 'fulfilled' && oiRes.value?.data?.code === '0') {
     const d = oiRes.value.data.data ?? [];
@@ -1271,6 +1298,17 @@ export async function getMacroContext(coin: CoinSymbol | string = 'BTC'): Promis
       const curr = parseFloat(d[0]?.close ?? '0');
       const prev = parseFloat(d[1]?.close ?? '0');
       if (prev > 0) oiDelta = Math.round(((curr - prev) / prev) * 10000) / 100;
+    }
+  }
+  if (oiDelta === null && coinalyzeOIRes.status === 'fulfilled' && Array.isArray(coinalyzeOIRes.value)) {
+    const entry = coinalyzeOIRes.value.find((s: { symbol?: string }) => s.symbol === `${sym}_PERP.A`);
+    const hist = entry?.history;
+    if (Array.isArray(hist) && hist.length >= 2) {
+      const prev = hist[hist.length - 2]?.c;
+      const curr = hist[hist.length - 1]?.c;
+      if (typeof prev === 'number' && prev > 0 && typeof curr === 'number') {
+        oiDelta = Math.round(((curr - prev) / prev) * 10000) / 100;
+      }
     }
   }
 
