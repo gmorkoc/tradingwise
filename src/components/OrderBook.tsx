@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CoinSymbol } from "../services/coinglass";
+import { CoinSymbol, fetchBn } from "../services/coinglass";
 import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import "../styles/OrderBook.css";
@@ -57,9 +57,7 @@ function toCumulative(pairs: [number, number][]): Level[] {
 
 async function fetchBinance(coin: string) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
-  const res = await fetch(`/bn-api/api/v3/depth?symbol=${sym}&limit=100`);
-  if (!res.ok) throw new Error("unavailable");
-  const d = await res.json();
+  const d = await fetchBn(`/api/v3/depth?symbol=${sym}&limit=100`);
   const parse = (raw: [string, string][]) =>
     toCumulative(raw.map(([p, s]) => [parseFloat(p), parseFloat(s)]));
   return {

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-import { CoinSymbol } from "../services/coinglass";
+import { CoinSymbol, fetchBn } from "../services/coinglass";
 import "../styles/OrderBookProfile.css";
 
 interface Level { price: number; size: number; }
@@ -18,11 +18,7 @@ const DEPTH_LEVELS = [50, 100, 500, 1000] as const;
 
 async function fetchDepth(coin: string, limit: number) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
-  const res = await fetch(
-    `/bn-api/api/v3/depth?symbol=${sym}&limit=${limit}`
-  );
-  if (!res.ok) throw new Error();
-  const d = await res.json();
+  const d = await fetchBn(`/api/v3/depth?symbol=${sym}&limit=${limit}`);
   const parse = (raw: string[][]): Level[] =>
     raw.map(([p, s]) => ({ price: parseFloat(p), size: parseFloat(s) }));
   return {

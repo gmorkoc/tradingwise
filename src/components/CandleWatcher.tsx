@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
-import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData } from "../services/coinglass";
+import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn } from "../services/coinglass";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
@@ -2541,8 +2541,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       if (sessionStorage.getItem(dismissKey) === todayStr) return;
 
       try {
-        const res = await fetch(`/bn-api/api/v3/klines?symbol=${sym}&interval=1d&limit=2`);
-        const data = await res.json();
+        const data = await fetchBn(`/api/v3/klines?symbol=${sym}&interval=1d&limit=2`);
         const c = data[0];
         const open = parseFloat(c[1]), high = parseFloat(c[2]);
         const low = parseFloat(c[3]), close = parseFloat(c[4]);

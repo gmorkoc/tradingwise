@@ -2,12 +2,49 @@ import axios, { type AxiosInstance } from 'axios';
 
 function addRetry(instance: AxiosInstance, retries = 2) {
   instance.interceptors.response.use(undefined, async (err) => {
+    // Binance's 418 ("I'm a teapot") means this IP is already banned — it
+    // includes a "banned until <ms timestamp>" message. Retrying here does
+    // NOT help (there's nothing transient to retry past) and empirically
+    // pushes the ban further out, since Binance counts the retry itself as
+    // more abuse. So: never retry a 418, just surface it immediately.
+    if (axios.isAxiosError(err) && err.response?.status === 418) {
+      return Promise.reject(err);
+    }
     const cfg = err.config;
     if (!cfg) return Promise.reject(err);
     cfg._retry = (cfg._retry ?? 0) + 1;
     if (cfg._retry > retries) return Promise.reject(err);
     await new Promise(r => setTimeout(r, cfg._retry * 1500));
     return instance(cfg);
+  });
+}
+
+// Circuit breaker for Binance bans — once a 418 tells us the exact ms
+// timestamp we're banned until, every further Binance call short-circuits
+// locally (no network request at all) until that time passes, instead of
+// each one independently discovering + potentially extending the same ban.
+let bnBannedUntil = 0;
+
+function parseBanTimestamp(msg: unknown): number {
+  const match = typeof msg === 'string' ? msg.match(/banned until (\d+)/) : null;
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function addBanCircuitBreaker(instance: AxiosInstance) {
+  instance.interceptors.request.use((config) => {
+    const now = Date.now();
+    if (now < bnBannedUntil) {
+      const secs = Math.ceil((bnBannedUntil - now) / 1000);
+      return Promise.reject(new Error(`Binance IP ban active for ${secs}s more — skipping request`));
+    }
+    return config;
+  });
+  instance.interceptors.response.use(undefined, (err) => {
+    if (axios.isAxiosError(err) && err.response?.status === 418) {
+      const until = parseBanTimestamp(err.response.data?.msg);
+      if (until > bnBannedUntil) bnBannedUntil = until;
+    }
+    return Promise.reject(err);
   });
 }
 
@@ -32,6 +69,29 @@ const bnApi = axios.create({
   headers: { accept: 'application/json' },
 });
 addRetry(bnApi);
+addBanCircuitBreaker(bnApi);
+
+// Shared circuit-breaker-aware fetch for the many call sites across the app
+// that hit /bn-api directly with a raw fetch() instead of going through the
+// bnApi axios instance above — without this, those calls would keep
+// hammering Binance (and extending any active ban) even while bnApi calls
+// correctly back off.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchBn(path: string, init?: RequestInit): Promise<any> {
+  const now = Date.now();
+  if (now < bnBannedUntil) {
+    throw new Error(`Binance IP ban active for ${Math.ceil((bnBannedUntil - now) / 1000)}s more`);
+  }
+  const res = await fetch(`/bn-api${path}`, init);
+  if (res.status === 418) {
+    const body = await res.json().catch(() => null);
+    const until = parseBanTimestamp(body?.msg);
+    if (until > bnBannedUntil) bnBannedUntil = until;
+    throw new Error('Binance IP banned');
+  }
+  if (!res.ok) throw new Error(`Binance request failed: ${res.status}`);
+  return res.json();
+}
 
 
 interface CMEGapZone { low: number; high: number; }

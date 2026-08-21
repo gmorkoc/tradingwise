@@ -10,6 +10,7 @@ import {
   fetchCoinMarketCaps,
   fetchCoin24hTickers,
   Ticker24h,
+  fetchBn,
 } from "./services/coinglass";
 import { CATALOG } from "./services/coinCatalog";
 import { fetchBinancePrices } from "./services/binancePrices";
@@ -369,18 +370,19 @@ function AppDashboard({
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await fetch(
-          `/bn-api/api/v3/ticker/price?symbol=${sym}`,
-        );
-        if (!res.ok || cancelled) return;
-        const d = await res.json();
+        const d = await fetchBn(`/api/v3/ticker/price?symbol=${sym}`);
         if (!cancelled) setLivePrice(parseFloat(d.price));
       } catch {
-        /* ignore */
+        /* ignore — includes an active Binance ban, handled by the circuit
+           breaker in fetchBn, which skips the network call entirely */
       }
     };
     poll();
-    const id = setInterval(poll, 1000);
+    // Dev runs this same effect through hot-reloads/StrictMode remounts on
+    // top of every other chart/watchlist poll hitting the same rate limit —
+    // a slower cadence locally meaningfully cuts total request volume
+    // without changing the real-time feel users get in production.
+    const id = setInterval(poll, import.meta.env.DEV ? 5000 : 1000);
     return () => {
       cancelled = true;
       clearInterval(id);

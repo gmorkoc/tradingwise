@@ -1,3 +1,5 @@
+import { fetchBn } from "./coinglass";
+
 export interface PriceEntry { price: number; pct: number; vol: number }
 
 // Some symbols trade under a different name on Binance
@@ -12,13 +14,8 @@ export function toBinanceSym(symbol: string): string {
 
 export async function fetchBinancePrices(symbols: string[]): Promise<Map<string, PriceEntry>> {
   try {
-    const res = await fetch(
-      "/bn-api/api/v3/ticker/24hr",
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (!res.ok) return new Map();
     const all: { symbol: string; lastPrice: string; priceChangePercent: string; quoteVolume: string }[] =
-      await res.json();
+      await fetchBn("/api/v3/ticker/24hr", { signal: AbortSignal.timeout(6000) });
     const lookup = new Map(all.map(t => [t.symbol, t]));
     const result = new Map<string, PriceEntry>();
     for (const sym of symbols) {
@@ -37,12 +34,10 @@ export async function fetchSparklines(symbols: string[]): Promise<Map<string, nu
   const result = new Map<string, number[]>();
   await Promise.all(symbols.map(async sym => {
     try {
-      const res = await fetch(
-        `/bn-api/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
-        { signal: AbortSignal.timeout(5000) }
+      const data: (string | number)[][] = await fetchBn(
+        `/api/v3/klines?symbol=${toBinanceSym(sym)}&interval=1d&limit=7`,
+        { signal: AbortSignal.timeout(5000) },
       );
-      if (!res.ok) return;
-      const data: (string | number)[][] = await res.json();
       result.set(sym, data.map(c => parseFloat(String(c[4])))); // close prices
     } catch { /* symbol may not exist on Binance */ }
   }));

@@ -2,6 +2,7 @@ import { createChart, ColorType, HistogramSeries, LineSeries, IChartApi, ISeries
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getPremiumAIAnalysis, PremiumAIResult } from "../services/openai";
+import { fetchBn } from "../services/coinglass";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/CoinbasePremium.css";
 
@@ -75,8 +76,17 @@ async function fetchCoinbasePrice(): Promise<number | null> {
 }
 
 async function fetchRefPrice(): Promise<{ price: number; source: string } | null> {
+  // Binance goes through fetchBn (not the generic tryFetch below) so an
+  // active IP ban short-circuits instantly instead of wasting a round trip,
+  // and any new 418 here updates the same shared circuit breaker every
+  // other Binance call in the app checks.
+  try {
+    const d = await fetchBn("/api/v3/ticker/price?symbol=BTCUSDT");
+    const price = parseFloat(d.price);
+    if (Number.isFinite(price) && price > 0) return { price, source: "Binance" };
+  } catch { /* fall through to the other exchanges below */ }
+
   const candidates = [
-    { source: "Binance",  url: "/bn-api/api/v3/ticker/price?symbol=BTCUSDT", extract: (d: any) => parseFloat(d.price) },
     { source: "Bybit",    url: "https://api.bybit.com/v5/market/ticker?category=spot&symbol=BTCUSDT", extract: (d: any) => parseFloat(d.result?.list?.[0]?.lastPrice) },
     { source: "Kraken",   url: "https://api.kraken.com/0/public/Ticker?pair=XBTUSD",                 extract: (d: any) => parseFloat(d.result?.XXBTZUSD?.c?.[0]) },
     { source: "Bitstamp", url: "https://www.bitstamp.net/api/v2/ticker/btcusd/",                     extract: (d: any) => parseFloat(d.last) },
