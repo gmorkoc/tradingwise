@@ -371,7 +371,13 @@ function AppDashboard({
     const poll = async () => {
       try {
         const d = await fetchBn(`/api/v3/ticker/price?symbol=${sym}`);
-        if (!cancelled) setLivePrice(parseFloat(d.price));
+        const parsed = parseFloat(d.price);
+        // Never store NaN — {livePrice && <JSX/>} below treats NaN as
+        // falsy like any other falsy value, but unlike null/false/undefined,
+        // React renders a bare NaN as the literal text "NaN" instead of
+        // skipping it, so a malformed response would show broken text
+        // instead of just leaving the last good price on screen.
+        if (!cancelled && Number.isFinite(parsed)) setLivePrice(parsed);
       } catch {
         /* ignore — includes an active Binance ban, handled by the circuit
            breaker in fetchBn, which skips the network call entirely */
@@ -1179,7 +1185,7 @@ function AppDashboard({
                     {coin}
                     <span className="mch-coin-quote">/USD</span>
                   </span>
-                  {(livePrice ?? btcData?.price) && (
+                  {Number.isFinite(livePrice ?? btcData?.price) && (
                     <span className="mch-coin-price">
                       $
                       {(livePrice ?? btcData!.price!).toLocaleString("en-US", {
@@ -1202,10 +1208,13 @@ function AppDashboard({
             <div className="mch-stats">
               {btcData &&
                 (() => {
-                  const fr = btcData.fundingRate ?? 0;
-                  const rsi = btcData.rsi ?? 50;
-                  const macd = btcData.macd ?? 0;
-                  const ls = btcData.longShortRatio ?? 1;
+                  // ?? only falls back on null/undefined — NaN slips through
+                  // and, unlike other falsy values, React renders a bare NaN
+                  // as the literal text "NaN" instead of just being falsy.
+                  const fr = Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0;
+                  const rsi = Number.isFinite(btcData.rsi) ? btcData.rsi! : 50;
+                  const macd = Number.isFinite(btcData.macd) ? btcData.macd! : 0;
+                  const ls = Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1;
                   const frSignal =
                     fr > 0.0005 ? "bear" : fr < -0.0001 ? "bull" : "neutral";
                   const rsiSignal =
@@ -1220,7 +1229,7 @@ function AppDashboard({
                   const lsSignal = ls >= 1 ? "bull" : "bear";
                   return (
                     <>
-                      {(livePrice ?? btcData.price) && (
+                      {Number.isFinite(livePrice ?? btcData.price) && (
                         <div className="mch-stat mch-stat--price-mobile">
                           <span className="mch-stat-label">{coin}/USD</span>
                           <span className="mch-stat-value">

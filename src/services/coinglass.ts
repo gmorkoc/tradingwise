@@ -1,4 +1,15 @@
 import axios, { type AxiosInstance } from 'axios';
+import { Capacitor } from '@capacitor/core';
+
+// The native iOS/Android app loads its bundled web content from a local
+// capacitor://localhost origin, not https://www.coinhintz.io — a relative
+// fetch to /bn-api resolves to nothing on-device, since there's no server
+// there to proxy it. Only the real web deployment has that proxy available,
+// so native falls back to Binance's own CORS-open endpoint directly. This
+// re-exposes native devices to Binance's per-IP rate limit (the whole
+// reason /bn-api exists), but the ban circuit breaker below still protects
+// against retry storms regardless of which URL is used.
+const BN_BASE = Capacitor.isNativePlatform() ? 'https://data-api.binance.vision' : '/bn-api';
 
 function addRetry(instance: AxiosInstance, retries = 2) {
   instance.interceptors.response.use(undefined, async (err) => {
@@ -64,7 +75,7 @@ addRetry(api);
 // proxy also lets Vercel's CDN cache identical requests for a few seconds,
 // collapsing concurrent viewers of the same chart into one upstream call.
 const bnApi = axios.create({
-  baseURL: '/bn-api',
+  baseURL: BN_BASE,
   timeout: 20000,
   headers: { accept: 'application/json' },
 });
@@ -82,7 +93,7 @@ export async function fetchBn(path: string, init?: RequestInit): Promise<any> {
   if (now < bnBannedUntil) {
     throw new Error(`Binance IP ban active for ${Math.ceil((bnBannedUntil - now) / 1000)}s more`);
   }
-  const res = await fetch(`/bn-api${path}`, init);
+  const res = await fetch(`${BN_BASE}${path}`, init);
   if (res.status === 418) {
     const body = await res.json().catch(() => null);
     const until = parseBanTimestamp(body?.msg);
@@ -337,14 +348,21 @@ async function fetchBinanceKlines(
       if (page.length < MAX_PER_REQ) break;
     }
 
-    const data: CandleDataPoint[] = raw.map(c => ({
-      time:   Math.floor((c[0] as number) / 1000),
-      open:   parseFloat(c[1] as string),
-      high:   parseFloat(c[2] as string),
-      low:    parseFloat(c[3] as string),
-      close:  parseFloat(c[4] as string),
-      volume: parseFloat(c[5] as string),
-    }));
+    // A malformed row (missing/non-numeric field from a truncated response,
+    // proxy hiccup, etc.) would otherwise poison every downstream
+    // calculation — RSI, MACD, price — with NaN that then propagates all
+    // the way to the UI as literal "NaN" text. Drop bad rows instead.
+    const data: CandleDataPoint[] = raw
+      .map(c => ({
+        time:   Math.floor((c[0] as number) / 1000),
+        open:   parseFloat(c[1] as string),
+        high:   parseFloat(c[2] as string),
+        low:    parseFloat(c[3] as string),
+        close:  parseFloat(c[4] as string),
+        volume: parseFloat(c[5] as string),
+      }))
+      .filter(c => Number.isFinite(c.time) && Number.isFinite(c.open) &&
+        Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close));
     candleCache.set(key, { data, fetchedAt: Date.now() });
     return data;
   };
