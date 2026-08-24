@@ -1453,6 +1453,11 @@ select {
     flex-shrink: 0;
     overflow-y: auto;
   }
+  /* Only transitioned during the on-load resize-affordance hint — plain
+     drags stay untransitioned so the order book tracks the finger 1:1. */
+  .chart-section-wrap--resize-intro > .ob-card {
+    transition: height 0.6s cubic-bezier(0.34, 1.15, 0.64, 1);
+  }
   .chart-resize-handle {
     display: flex;
     align-items: center;
@@ -2996,6 +3001,11 @@ html[data-theme="light"] .icon-strip-quota-bar {
     height: auto !important;
     min-width: 4px;
     padding: 6px 2px 6px 8px;
+  }
+  /* Only transitioned during the on-load resize-affordance hint — plain
+     drags stay untransitioned so the order book tracks the finger 1:1. */
+  .chart-section-wrap--resize-intro > .ob-card {
+    transition: width 0.6s cubic-bezier(0.34, 1.15, 0.64, 1) !important;
   }
   .chart-resize-handle {
     height: auto;

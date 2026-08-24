@@ -636,6 +636,7 @@ function AppDashboard({
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [obSize, setObSize] = useState({ h: 380, w: 135 });
+  const [obResizeIntro, setObResizeIntro] = useState(false);
   const chartWrapRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({
     active: false,
@@ -687,6 +688,43 @@ function AppDashboard({
     },
     [],
   );
+
+  // Resize-affordance hint — mobile/tablet only (desktop's order book is a
+  // fixed width, not resizable, so there's nothing to hint at there). Opens
+  // at a 70/30 chart/order-book split, then eases to 85/15 shortly after, so
+  // the order book visibly shrinks and draws the eye to the drag handle.
+  useEffect(() => {
+    if (activeSection !== "chart" || chartAssetClass !== "crypto") return;
+    const wrap = chartWrapRef.current;
+    if (!wrap) return;
+    if (window.innerWidth > 960) return; // desktop — order book isn't resizable there
+
+    let cancelled = false;
+    const raf = requestAnimationFrame(() => {
+      if (cancelled) return;
+      const wrap2 = chartWrapRef.current;
+      if (!wrap2) return;
+      const axis = getComputedStyle(wrap2).flexDirection === "row" ? "row" : "col";
+      const handlePx = axis === "row" ? 24 : 32;
+      const total = (axis === "row" ? wrap2.clientWidth : wrap2.clientHeight) - handlePx;
+      if (total <= 0) return;
+
+      const startSize = Math.round(total * 0.30); // 70/30 split
+      const endSize   = Math.round(total * 0.15); // 85/15 split
+      setObSize(prev => (axis === "row" ? { ...prev, w: startSize } : { ...prev, h: startSize }));
+
+      const t1 = setTimeout(() => {
+        if (cancelled) return;
+        setObResizeIntro(true);
+        setObSize(prev => (axis === "row" ? { ...prev, w: endSize } : { ...prev, h: endSize }));
+        const t2 = setTimeout(() => { if (!cancelled) setObResizeIntro(false); }, 700);
+        return () => clearTimeout(t2);
+      }, 500);
+      return () => clearTimeout(t1);
+    });
+
+    return () => { cancelled = true; cancelAnimationFrame(raf); };
+  }, [activeSection, chartAssetClass]);
 
   const openCoinPicker = () => {
     if (coinPickerBtnRef.current) {
@@ -1542,7 +1580,7 @@ function AppDashboard({
                 {chartAssetClass === "crypto" && <FlashNewsBanner />}
                 {chartAssetClass === "crypto" ? (
                   <div
-                    className="chart-section-wrap"
+                    className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
                     ref={chartWrapRef}
                     style={
                       {
