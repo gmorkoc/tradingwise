@@ -703,8 +703,20 @@ function AppDashboard({
   };
 
   const closeCoinPicker = () => {
+    // The search input has autoFocus, which pops the iOS keyboard. In the
+    // native WKWebView app, dismissing it doesn't always fully revert the
+    // viewport shift the keyboard caused, leaving the page stuck scrolled
+    // down with a blank gap at the top. Blurring before the input unmounts
+    // gives iOS a cleaner dismiss, and the scroll reset (after the keyboard
+    // dismiss animation finishes) corrects it if that alone isn't enough.
+    (document.activeElement as HTMLElement | null)?.blur?.();
     setCoinPickerOpen(false);
     setCoinSearch("");
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 300);
   };
 
   const [leverageOpen, setLeverageOpen] = useState(false);
