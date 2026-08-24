@@ -1594,7 +1594,13 @@
 
 .cw-tape-row--latest {
   position: relative;
-  overflow: clip;
+  /* hidden, not clip — clip is newer and renders correctly in desktop/
+     mobile Safari but was collapsing this row's real content (time,
+     candle icon, description, dot) down to almost nothing in the native
+     iOS app's WKWebView. hidden achieves the same goal (containing the
+     ::after sweep animation within the rounded corners) with much older,
+     more universally solid support. */
+  overflow: hidden;
   border-radius: 10px;
 }
 
