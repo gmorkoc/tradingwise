@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import {
   coinglass,
   BTCData,
@@ -646,6 +648,7 @@ function AppDashboard({
   mobileNavOpenRef.current = mobileNavOpen;
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -890,6 +893,16 @@ function AppDashboard({
     setLoading(false);
     setRefreshing(false);
   };
+
+  // Native-only: iOS has no built-in pull-to-refresh for a WKWebView the
+  // way a browser tab does, so this reimplements the gesture — reuses the
+  // same refresh path as the header logo's manual refresh button.
+  const {
+    pullDistance: ptrPullDistance,
+    progress: ptrProgress,
+    refreshing: ptrRefreshing,
+    dragging: ptrDragging,
+  } = usePullToRefresh(mainContentRef, fetchBTCData, { enabled: Capacitor.isNativePlatform() });
 
   useEffect(() => {
     let cached: Partial<BTCData> | null = null;
@@ -1496,8 +1509,20 @@ function AppDashboard({
           </div>
 
           <div
+            ref={mainContentRef}
             className={`main-content${activeSection === "chart" ? " chart-active" : ""}`}
           >
+            <div
+              className={`ptr-indicator${!ptrDragging ? " ptr-indicator--settling" : ""}`}
+              style={{ height: ptrPullDistance }}
+            >
+              {(ptrPullDistance > 0 || ptrRefreshing) && (
+                <div
+                  className={`ptr-spinner${ptrRefreshing ? " ptr-spinner--spinning" : ""}`}
+                  style={!ptrRefreshing ? { transform: `rotate(${ptrProgress * 360}deg)` } : undefined}
+                />
+              )}
+            </div>
             {profile?.subscription_status === "past_due" && (
               <div className="pastdue-banner">
                 <span>⚠️ {t("billing.pastDue.message")}</span>

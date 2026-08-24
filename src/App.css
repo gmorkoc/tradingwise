@@ -2412,6 +2412,38 @@ html[data-theme="light"] .icon-strip-quota-bar {
   scrollbar-color: var(--color-border) transparent;
 }
 
+/* ── Pull-to-refresh indicator ───────────────────────────────────────────
+   First child of .main-content — its height grows with the pull gesture,
+   pushing the real content down via normal flow instead of a transform, so
+   it can't collide with the WebKit grid-sizing bug fixed elsewhere in this
+   session. No transition while actively dragging (tracks the finger 1:1);
+   transitions only for the snap-back/snap-to-refreshing settle. */
+.ptr-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ptr-indicator--settling {
+  transition: height 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.ptr-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid var(--color-border);
+  border-top-color: #6366f1;
+  flex-shrink: 0;
+}
+.ptr-spinner--spinning {
+  animation: ptr-spin 0.75s linear infinite;
+}
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Persistent AI Chat panel ───────────────────────────────────────────── */
 .ai-chat-panel {
   flex-shrink: 0;
