@@ -10,6 +10,13 @@ import {
   reactivateSubscription,
   PRICE_IDS,
 } from "../services/stripeService";
+import {
+  isIAPAvailable,
+  getIAPPlans,
+  purchaseIAPPlan,
+  restorePurchases,
+  type IAPPlan,
+} from "../services/revenuecat";
 import { TIER_RANK } from "../services/supabase";
 import "../styles/UpgradeModal.css";
 
@@ -85,7 +92,7 @@ function formatDate(iso: string) {
 
 export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   const { t } = useTranslation();
-  const { user, tier, profile } = useAuth();
+  const { user, tier, profile, refreshProfile } = useAuth();
   const subStatus = profile?.subscription_status ?? "none";
   const isCanceling = subStatus === "canceling";
   const isPastDue   = subStatus === "past_due";
@@ -94,6 +101,18 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   const [confirm,    setConfirm]    = useState<ConfirmState | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [done,       setDone]       = useState<{ message: string; sub: string } | null>(null);
+  const [iapPlans,   setIapPlans]   = useState<IAPPlan[]>([]);
+  const iap = isIAPAvailable();
+
+  // StoreKit's own purchase sheet replaces Stripe Checkout on iOS — Apple
+  // requires digital subscriptions to go through In-App Purchase, not an
+  // external processor. Only fetched for new subscribers; existing native
+  // subscribers manage/change plans through Apple's own subscription
+  // settings (see handleManageBilling below), same as any other StoreKit app.
+  useEffect(() => {
+    if (!iap || tier !== "free") return;
+    getIAPPlans().then(setIapPlans);
+  }, [iap, tier]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -129,10 +148,30 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       return;
     }
 
+    // New subscriber on iOS → StoreKit's native purchase sheet, not Stripe
+    if (!isPaid && iap) {
+      const iapPlan = iapPlans.find(p => p.tier === plan.id);
+      if (!iapPlan) {
+        setError("This plan isn't available for purchase right now. Please try again shortly.");
+        return;
+      }
+      setLoading(plan.id);
+      const result = await purchaseIAPPlan(iapPlan);
+      setLoading(null);
+      if (result.cancelled) return;
+      if (!result.success) { setError(result.error ?? t("upgradeModal.error")); return; }
+      await refreshProfile();
+      setDone({
+        message: t("upgradeModal.success.upgradeMessage", { plan: planLabel }),
+        sub: t("upgradeModal.success.upgradeSub"),
+      });
+      return;
+    }
+
     const priceId = plan.priceId?.();
     if (!priceId) return;
 
-    // New subscriber → straight to Stripe Checkout
+    // New subscriber (web) → Stripe Checkout
     if (!isPaid) {
       setLoading(plan.id);
       try { await redirectToCheckout(priceId); }
@@ -200,10 +239,29 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   };
 
   const handleManageBilling = async () => {
+    // Apple subscriptions are managed in the OS, not this app — Stripe's
+    // billing portal has no visibility into a StoreKit purchase at all.
+    if (iap) {
+      window.open("https://apps.apple.com/account/subscriptions", "_blank");
+      return;
+    }
     setLoading("portal");
     setError("");
     try { await redirectToBillingPortal(); }
     catch (e: any) { setError(e.message ?? t("upgradeModal.error")); setLoading(null); }
+  };
+
+  const handleRestorePurchases = async () => {
+    setLoading("restore");
+    setError("");
+    const result = await restorePurchases();
+    setLoading(null);
+    if (!result.success) { setError(result.error ?? "Nothing to restore."); return; }
+    await refreshProfile();
+    setDone({
+      message: "Purchases restored",
+      sub: `Your ${result.tier === "elite" ? "Elite" : "Pro"} subscription is active again.`,
+    });
   };
 
   const handleReactivate = async () => {
@@ -371,7 +429,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
                     <div className="upgrade-plan-label" style={{ color: plan.color }}>{planLabel}</div>
                     <div className="upgrade-plan-price">
-                      <span className="upgrade-plan-amount">{plan.price}</span>
+                      {/* Apple sets/rounds prices to its own tiers and requires
+                          accurate display — show the real StoreKit price on
+                          iOS when it's loaded, not the Stripe web price. */}
+                      <span className="upgrade-plan-amount">
+                        {iap ? (iapPlans.find(p => p.tier === plan.id)?.priceString ?? plan.price) : plan.price}
+                      </span>
                       {plan.per && <span className="upgrade-plan-per">{t("upgradeModal.perMonth")}</span>}
                     </div>
                     <ul className="upgrade-plan-features">
@@ -416,12 +479,21 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
             <p className="upgrade-footer">
               {isPaid
-                ? <>{t("upgradeModal.footer.proratedNote")}<button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.footer.manageBilling")}</button></>
+                ? (iap
+                    ? <button className="upgrade-manage-link" onClick={handleManageBilling}>Manage in App Store</button>
+                    : <>{t("upgradeModal.footer.proratedNote")}<button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.footer.manageBilling")}</button></>)
                 : t("upgradeModal.footer.cancelAnytime")
               }{t("upgradeModal.footer.securePayment")}
             </p>
             <p className="upgrade-footer upgrade-footer--policy">{t("upgradeModal.footer.noRefundNote")}</p>
-            {isPaid && (
+            {/* Apple subscriptions cancel/renew through the OS, not Stripe —
+                this app has no visibility to drive that flow itself. */}
+            {isPaid && iap && (
+              <p className="upgrade-footer upgrade-footer--cancel">
+                Cancel or change your plan any time in the App Store's subscription settings.
+              </p>
+            )}
+            {isPaid && !iap && (
               isCanceling ? (
                 <p className="upgrade-footer upgrade-footer--cancel">
                   {t("upgradeModal.canceling.note")}{" "}
@@ -445,6 +517,18 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                   </button>
                 </p>
               )
+            )}
+            {!isPaid && iap && (
+              <p className="upgrade-footer upgrade-footer--cancel">
+                Already subscribed on this Apple ID?{" "}
+                <button
+                  className="upgrade-manage-link"
+                  onClick={handleRestorePurchases}
+                  disabled={loading === "restore"}
+                >
+                  {loading === "restore" ? t("upgradeModal.cta.loading") : "Restore purchases"}
+                </button>
+              </p>
             )}
           </>
         )}

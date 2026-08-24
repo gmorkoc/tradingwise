@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
+import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
 
 
 interface AuthContextValue {
@@ -39,15 +40,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setUser(data.session?.user ?? null);
-      if (data.session?.user) loadProfile(data.session.user);
+      if (data.session?.user) {
+        loadProfile(data.session.user);
+        // Sets RevenueCat's app_user_id = Supabase user id, so a purchase's
+        // webhook lands on the right profiles row with no separate mapping
+        // table. No-op on web/Android — see isIAPAvailable().
+        initRevenueCat(data.session.user.id);
+      }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess);
       setUser(sess?.user ?? null);
-      if (sess?.user) loadProfile(sess.user);
-      else setProfile(null);
+      if (sess?.user) {
+        loadProfile(sess.user);
+        initRevenueCat(sess.user.id);
+      } else {
+        setProfile(null);
+        logOutRevenueCat();
+      }
     });
 
     return () => subscription.unsubscribe();
