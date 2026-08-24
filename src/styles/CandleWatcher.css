@@ -1594,13 +1594,17 @@
 
 .cw-tape-row--latest {
   position: relative;
-  /* hidden, not clip — clip is newer and renders correctly in desktop/
-     mobile Safari but was collapsing this row's real content (time,
-     candle icon, description, dot) down to almost nothing in the native
-     iOS app's WKWebView. hidden achieves the same goal (containing the
-     ::after sweep animation within the rounded corners) with much older,
-     more universally solid support. */
-  overflow: hidden;
+  /* Confirmed via simulator + inspector: .cw-tape-row is display:grid with
+     auto-sized rows (no explicit grid-template-rows), and on this WebKit
+     build, adding `overflow: hidden` (or `clip`) directly to a grid
+     container establishes a new formatting context that makes it collapse
+     the row's auto height down to its smallest fixed-width column instead
+     of the real content — even though the exact same markup/CSS renders
+     correctly in desktop and mobile Safari. clip-path achieves the same
+     visual containment (rounding the sweep animation's corners to match
+     the card) without triggering that formatting-context side effect.
+     Do not swap this back to overflow: hidden/clip. */
+  clip-path: inset(0 round 10px);
   border-radius: 10px;
 }
 
