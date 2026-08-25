@@ -12,8 +12,12 @@ import { Keyboard } from "@capacitor/keyboard";
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
   let node = el?.parentElement ?? null;
   while (node) {
-    const style = getComputedStyle(node);
-    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+    // Match on overflow-y: auto/scroll alone, not "is it already
+    // overflowing" — with resize: 'none' nothing shrinks when the keyboard
+    // shows, so a flex-centered modal (e.g. .auth-backdrop) has no overflow
+    // *yet*. The padding-bottom this function's caller adds is what's
+    // supposed to create the scrollable range in the first place.
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) {
       return node;
     }
     node = node.parentElement;
