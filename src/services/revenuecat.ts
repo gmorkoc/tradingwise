@@ -106,6 +106,14 @@ export async function purchaseIAPPlan(plan: IAPPlan): Promise<PurchaseResult> {
   }
 }
 
+/** Apple requires IAP subscriptions to be cancelled/managed through the
+ *  user's Apple ID, not through the app's own UI (Guideline 3.1.1) — the
+ *  Stripe billing portal has no record of these subscribers at all. This
+ *  opens the native "Manage Subscriptions" screen directly. */
+export function openManageSubscriptions(): void {
+  window.location.href = "itms-apps://apps.apple.com/account/subscriptions";
+}
+
 export async function restorePurchases(): Promise<PurchaseResult> {
   if (!isIAPAvailable()) return { success: false, cancelled: false, error: "Not available" };
   try {

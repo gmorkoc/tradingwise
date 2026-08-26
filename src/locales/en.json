@@ -391,6 +391,7 @@
       "nextBilling": "Next billing",
       "accessUntil": "Access until",
       "manageBilling": "Manage billing / Cancel",
+      "manageAppleSubscription": "Manage Subscription (App Store)",
       "loadingPortal": "Loading…",
       "upgradePlan": "⚡ Upgrade Plan"
     },

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
 import { redirectToBillingPortal } from "../services/stripeService";
+import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/ProfilePage.css";
 
@@ -138,6 +139,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   };
 
   const handleManageBilling = async () => {
+    // Subscriptions bought via IAP have no Stripe customer at all — Apple
+    // requires these be managed through the user's Apple ID, not our UI.
+    if (isIAPAvailable()) { openManageSubscriptions(); return; }
     setPortalLoading(true); setPortalError("");
     try { await redirectToBillingPortal(); }
     catch (e: any) { setPortalError(e.message ?? t("upgradeModal.error")); setPortalLoading(false); }
@@ -279,7 +283,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 <div className="pp-actions">
                   {isPaid ? (
                     <button className="pp-btn pp-btn--ghost" onClick={handleManageBilling} disabled={portalLoading}>
-                      {portalLoading ? t("profile.subscription.loadingPortal") : t("profile.subscription.manageBilling")}
+                      {portalLoading
+                        ? t("profile.subscription.loadingPortal")
+                        : isIAPAvailable()
+                        ? t("profile.subscription.manageAppleSubscription")
+                        : t("profile.subscription.manageBilling")}
                     </button>
                   ) : (
                     <button className="pp-btn pp-btn--primary" onClick={() => { onClose(); onOpenUpgrade(); }}>
