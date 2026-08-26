@@ -83,7 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
       Browser.close().catch(() => {});
       const code = new URL(url).searchParams.get("code");
-      if (code) await supabase.auth.exchangeCodeForSession(code);
+      if (!code) { console.error("OAuth redirect had no code:", url); return; }
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) console.error("OAuth code exchange failed:", error.message);
     });
     return () => { listener.then(l => l.remove()); };
   }, []);
