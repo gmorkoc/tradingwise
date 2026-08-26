@@ -17,8 +17,22 @@ import {
   restorePurchases,
   type IAPPlan,
 } from "../services/revenuecat";
-import { TIER_RANK } from "../services/supabase";
+import { TIER_RANK, fetchProfile, type Tier } from "../services/supabase";
 import "../styles/UpgradeModal.css";
+
+// The RevenueCat webhook that updates profiles.tier fires asynchronously,
+// server-to-server, after the on-device purchase already resolved — a
+// single refreshProfile() right after purchase can easily run before the
+// webhook has landed, leaving the UI showing the old (free) tier until the
+// app is killed and reopened. Poll briefly instead of refreshing once.
+async function waitForTier(userId: string, expectedTier: Tier, maxAttempts = 8): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const p = await fetchProfile(userId);
+    if (p && TIER_RANK[p.tier] >= TIER_RANK[expectedTier]) return true;
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  return false;
+}
 
 interface Props {
   onClose:    () => void;
@@ -157,14 +171,15 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       }
       setLoading(plan.id);
       const result = await purchaseIAPPlan(iapPlan);
-      setLoading(null);
-      if (result.cancelled) return;
-      if (!result.success) { setError(result.error ?? t("upgradeModal.error")); return; }
+      if (result.cancelled) { setLoading(null); return; }
+      if (!result.success) { setLoading(null); setError(result.error ?? t("upgradeModal.error")); return; }
+      // Keep the loading state through the wait — the purchase sheet already
+      // closed, so without this the modal would sit with no feedback while
+      // the webhook catches up.
+      await waitForTier(user!.id, result.tier ?? (plan.id as Tier));
       await refreshProfile();
-      setDone({
-        message: t("upgradeModal.success.upgradeMessage", { plan: planLabel }),
-        sub: t("upgradeModal.success.upgradeSub"),
-      });
+      setLoading(null);
+      onClose();
       return;
     }
 
@@ -255,9 +270,10 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     setLoading("restore");
     setError("");
     const result = await restorePurchases();
-    setLoading(null);
-    if (!result.success) { setError(result.error ?? "Nothing to restore."); return; }
+    if (!result.success) { setLoading(null); setError(result.error ?? "Nothing to restore."); return; }
+    if (result.tier) await waitForTier(user!.id, result.tier);
     await refreshProfile();
+    setLoading(null);
     setDone({
       message: "Purchases restored",
       sub: `Your ${result.tier === "elite" ? "Elite" : "Pro"} subscription is active again.`,
