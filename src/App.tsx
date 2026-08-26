@@ -2213,8 +2213,12 @@ function AppGate() {
       </div>
     );
 
-  // Gate: signed in but hasn't agreed to terms yet (covers first-time OAuth users)
-  if (user && profile && !profile.terms_agreed_at) {
+  // Gate: signed in but hasn't agreed to terms yet (covers first-time OAuth users).
+  // Skip if a pending local agreement is still being flushed to the DB (the
+  // effect above) — otherwise anyone who just checked the box in AuthModal
+  // right before signing in briefly sees this same prompt again.
+  const pendingTermsFlush = !!localStorage.getItem("terms_agreed_at");
+  if (user && profile && !profile.terms_agreed_at && !pendingTermsFlush) {
     return <TermsGateModal userId={user.id} onAgreed={refreshProfile} />;
   }
 

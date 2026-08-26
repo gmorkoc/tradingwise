@@ -217,7 +217,10 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
           <>
             <h2 className="auth-title">{t("auth.login.title")}</h2>
             <p className="auth-sub">{t("auth.login.sub")}</p>
-            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
+
+            {!alreadyAgreed && <Disclaimer />}
+
+            <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
               {GOOGLE_ICON} {t("auth.continueWithGoogle")}
             </button>
             <div className="auth-divider"><span>{t("auth.divider")}</span></div>
@@ -289,7 +292,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               {error === "sso_exists" ? (
                 <p className="auth-error">
                   {t("auth.signup.ssoExists")}{" "}
-                  <button type="button" className="auth-link-btn" onClick={handleGoogle}>{t("auth.signup.signinWithGoogle")}</button>
+                  <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={!canSubmit}>{t("auth.signup.signinWithGoogle")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}
               {info && <p className="auth-info">{info}</p>}
