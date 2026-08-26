@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      console.log(`[auth] ${event}`, sess ? `user=${sess.user.id}` : "no session");
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
@@ -81,11 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!Capacitor.isNativePlatform()) return;
     const listener = CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
       if (!url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
-      Browser.close().catch(() => {});
+      await Browser.close().catch(() => {});
       const code = new URL(url).searchParams.get("code");
       if (!code) { console.error("OAuth redirect had no code:", url); return; }
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) console.error("OAuth code exchange failed:", error.message);
+      else console.log("[auth] exchangeCodeForSession succeeded");
     });
     return () => { listener.then(l => l.remove()); };
   }, []);

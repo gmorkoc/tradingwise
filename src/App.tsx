@@ -2180,7 +2180,11 @@ function AppGate() {
     if (!user) return;
     const pending = localStorage.getItem("terms_agreed_at");
     if (!pending) return;
-    saveTermsAgreement(user.id, pending).then(() => {
+    saveTermsAgreement(user.id, pending).then(({ error }) => {
+      // Keep the pending flag on failure — the fallback TermsGateModal gate
+      // still requires real agreement, and clearing this would silently
+      // lose it. This effect retries next time `user` changes identity.
+      if (error) return;
       localStorage.removeItem("terms_agreed_at");
       refreshProfile();
     });

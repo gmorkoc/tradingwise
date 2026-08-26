@@ -10,13 +10,25 @@ interface Props {
 export default function TermsGateModal({ userId, onAgreed }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [busy,   setBusy]   = useState(false);
+  const [error,  setError]  = useState("");
 
   const handleAgree = async () => {
     if (!agreed || busy) return;
     setBusy(true);
+    setError("");
     const now = new Date().toISOString();
-    await saveTermsAgreement(userId, now);
-    await onAgreed();
+    const { error: saveError } = await saveTermsAgreement(userId, now);
+    if (saveError) {
+      console.error("TermsGateModal: failed to save agreement:", saveError);
+      setError("Couldn't save your agreement — please try again.");
+      setBusy(false);
+      return;
+    }
+    try {
+      await onAgreed();
+    } catch (err) {
+      console.error("TermsGateModal: onAgreed (refreshProfile) threw:", err);
+    }
     setBusy(false);
   };
 
@@ -49,6 +61,8 @@ export default function TermsGateModal({ userId, onAgreed }: Props) {
             <span>I have read and agree to the Risk Disclaimer, Terms of Use, and Billing Policy above</span>
           </label>
         </div>
+
+        {error && <p className="auth-error">{error}</p>}
 
         <button
           className="auth-submit"

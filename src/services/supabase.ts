@@ -75,9 +75,11 @@ export async function saveTraderLevel(userId: string, level: string): Promise<vo
     .eq("id", userId);
 }
 
-export async function saveTermsAgreement(userId: string, agreedAt: string): Promise<void> {
-  await supabase
+export async function saveTermsAgreement(userId: string, agreedAt: string): Promise<{ error: string | null }> {
+  const { error } = await supabase
     .from("profiles")
     .update({ terms_agreed_at: agreedAt })
     .eq("id", userId);
+  if (error) console.error("saveTermsAgreement failed:", error.message);
+  return { error: error?.message ?? null };
 }
