@@ -3,7 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+// PKCE flow is required for the native Google sign-in redirect (a custom
+// URL scheme, not a page load) — the default implicit flow only works
+// when Supabase can read tokens back out of window.location itself.
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { flowType: "pkce" },
+});
 
 export type Tier = "free" | "pro" | "elite";
 

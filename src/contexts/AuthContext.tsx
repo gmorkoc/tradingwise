@@ -1,7 +1,15 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
 import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
+
+// Must exactly match the CFBundleURLSchemes entry in Info.plist / the
+// android:scheme intent-filter, and be added to Supabase's Authentication →
+// URL Configuration → Redirect URLs allowlist.
+const NATIVE_OAUTH_REDIRECT = "io.coinhintz.app://login-callback";
 
 
 interface AuthContextValue {
@@ -65,6 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Google sign-in on native opens an in-app browser session (see
+  // signInWithGoogle below) that Apple/Google eventually redirect to
+  // NATIVE_OAUTH_REDIRECT instead of a web page — iOS/Android hand that URL
+  // back to the app as appUrlOpen instead of leaving it in the browser.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
+      if (!url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
+      Browser.close().catch(() => {});
+      const code = new URL(url).searchParams.get("code");
+      if (code) await supabase.auth.exchangeCodeForSession(code);
+    });
+    return () => { listener.then(l => l.remove()); };
+  }, []);
+
   const signUp = async (email: string, password: string, fullName: string): Promise<string | null> => {
     const { error } = await supabase.auth.signUp({
       email,
@@ -94,6 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async (): Promise<string | null> => {
+    if (Capacitor.isNativePlatform()) {
+      // skipBrowserRedirect: we open the URL ourselves in an in-app browser
+      // session instead of letting Supabase navigate the WebView to it —
+      // otherwise Google's auth page replaces the app UI with no way back.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: NATIVE_OAUTH_REDIRECT, skipBrowserRedirect: true },
+      });
+      if (error) return error.message;
+      if (data?.url) await Browser.open({ url: data.url });
+      return null;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/` },
