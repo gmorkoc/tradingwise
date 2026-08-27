@@ -25,6 +25,7 @@ export interface Profile {
   ai_requests_week: string | null;
   trader_level: string | null;
   terms_agreed_at: string | null;
+  alert_sound: string;
 }
 
 export const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, elite: 2 };
@@ -72,6 +73,16 @@ export async function saveTraderLevel(userId: string, level: string): Promise<vo
   await supabase
     .from("profiles")
     .update({ trader_level: level })
+    .eq("id", userId);
+}
+
+export const ALERT_SOUNDS = ["bell", "chime", "alert", "classic"] as const;
+export type AlertSound = typeof ALERT_SOUNDS[number];
+
+export async function saveAlertSound(userId: string, sound: AlertSound): Promise<void> {
+  await supabase
+    .from("profiles")
+    .update({ alert_sound: sound })
     .eq("id", userId);
 }
 

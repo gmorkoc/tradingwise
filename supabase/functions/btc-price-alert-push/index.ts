@@ -62,14 +62,24 @@ async function getAccessToken(): Promise<string> {
   return access_token;
 }
 
-async function sendPush(accessToken: string, token: string, title: string, body: string): Promise<boolean> {
+// `sound` is the name (no extension) of a .wav file bundled at the iOS app's
+// bundle root (ios/App/App/Sounds/*.wav, added as individual Resources —
+// apns.payload.aps.sound only resolves a plain filename at the bundle root,
+// not a nested path) — see src/utils/alertSound.ts for the matching web copy.
+async function sendPush(accessToken: string, token: string, title: string, body: string, sound: string): Promise<boolean> {
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message: { token, notification: { title, body } } }),
+    body: JSON.stringify({
+      message: {
+        token,
+        notification: { title, body },
+        apns: { payload: { aps: { sound: `${sound}.wav` } } },
+      },
+    }),
   });
   // A token FCM no longer recognizes (app uninstalled, token expired) —
   // stale row, safe to delete so future runs stop paying to retry it.
@@ -83,6 +93,31 @@ async function sendPush(accessToken: string, token: string, title: string, body:
   return res.ok;
 }
 
+// Binance's REST API 451s from some cloud regions (including, apparently,
+// wherever Supabase runs edge functions) — Coinbase's public spot price
+// endpoint doesn't have that restriction, and works for any coin ticker.
+const priceCache = new Map<string, number>();
+async function getPrice(coin: string): Promise<number | null> {
+  if (priceCache.has(coin)) return priceCache.get(coin)!;
+  try {
+    const res = await fetch(`https://api.coinbase.com/v2/prices/${coin}-USD/spot`);
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    const price = parseFloat(data.amount);
+    priceCache.set(coin, price);
+    return price;
+  } catch {
+    return null;
+  }
+}
+
+async function getSoundsByUser(userIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(userIds)];
+  if (unique.length === 0) return new Map();
+  const { data } = await supabaseAdmin.from("profiles").select("id, alert_sound").in("id", unique);
+  return new Map((data ?? []).map(p => [p.id, p.alert_sound]));
+}
+
 Deno.serve(async (req) => {
   // verify_jwt is off for this function (see supabase/config.toml) since its
   // only caller is the pg_cron job, not a signed-in client — this header is
@@ -91,47 +126,72 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // Binance's REST API 451s from some cloud regions (including, apparently,
-  // wherever Supabase runs edge functions) — Coinbase's public spot price
-  // endpoint doesn't have that restriction.
-  const priceRes = await fetch("https://api.coinbase.com/v2/prices/BTC-USD/spot");
-  if (!priceRes.ok) return new Response("Failed to fetch BTC price", { status: 502 });
-  const { data } = await priceRes.json();
-  const price = parseFloat(data.amount);
+  const btcPrice = await getPrice("BTC");
+  if (btcPrice == null) return new Response("Failed to fetch BTC price", { status: 502 });
 
-  const { data: state } = await supabaseAdmin
-    .from("btc_price_alert_state")
-    .select("anchor_price")
-    .eq("id", 1)
-    .single();
+  let accessToken: string | null = null;
+  const ensureAccessToken = async () => accessToken ??= await getAccessToken();
 
-  const anchor = state?.anchor_price;
-  if (anchor == null) {
-    await supabaseAdmin.from("btc_price_alert_state").update({ anchor_price: price, updated_at: new Date().toISOString() }).eq("id", 1);
-    return new Response(JSON.stringify({ price, moved: false, reason: "anchor initialized" }), { headers: { "Content-Type": "application/json" } });
+  // --- Flat $50 BTC move alert (server-side twin of useBtcMoveAlert.ts) ---
+  let btcResult: Record<string, unknown> = { price: btcPrice, moved: false };
+  {
+    const { data: state } = await supabaseAdmin
+      .from("btc_price_alert_state")
+      .select("anchor_price")
+      .eq("id", 1)
+      .single();
+
+    const anchor = state?.anchor_price;
+    if (anchor == null) {
+      await supabaseAdmin.from("btc_price_alert_state").update({ anchor_price: btcPrice, updated_at: new Date().toISOString() }).eq("id", 1);
+      btcResult = { price: btcPrice, moved: false, reason: "anchor initialized" };
+    } else if (Math.abs(btcPrice - anchor) >= THRESHOLD) {
+      const diff = btcPrice - anchor;
+      await supabaseAdmin.from("btc_price_alert_state").update({ anchor_price: btcPrice, updated_at: new Date().toISOString() }).eq("id", 1);
+
+      const { data: tokens } = await supabaseAdmin.from("device_push_tokens").select("token, user_id");
+      if (tokens && tokens.length > 0) {
+        const direction = diff > 0 ? "up" : "down";
+        const title = `BTC ${direction === "up" ? "▲" : "▼"} $${Math.round(btcPrice).toLocaleString("en-US")}`;
+        const body = `${direction === "up" ? "+" : "-"}$${Math.round(Math.abs(diff)).toLocaleString("en-US")} move`;
+        const soundByUser = await getSoundsByUser(tokens.map(t => t.user_id));
+        const token = await ensureAccessToken();
+        const results = await Promise.all(tokens.map(({ token: t, user_id }) => sendPush(token, t, title, body, soundByUser.get(user_id) ?? "bell")));
+        btcResult = { price: btcPrice, moved: true, sent: results.filter(Boolean).length, total: tokens.length };
+      } else {
+        btcResult = { price: btcPrice, moved: true, sent: 0 };
+      }
+    }
   }
 
-  const diff = price - anchor;
-  if (Math.abs(diff) < THRESHOLD) {
-    return new Response(JSON.stringify({ price, moved: false }), { headers: { "Content-Type": "application/json" } });
+  // --- User-set target price alerts, any coin (server-side twin of the
+  // localStorage alerts in PriceAlerts.tsx — "has the price reached the
+  // target" rather than PriceAlerts.tsx's exact crossing check, since this
+  // only samples once a minute) ---
+  const { data: pending } = await supabaseAdmin
+    .from("price_alerts")
+    .select("id, user_id, coin, target_price, direction")
+    .eq("triggered", false);
+
+  let userAlertsFired = 0;
+  for (const alert of pending ?? []) {
+    const price = alert.coin === "BTC" ? btcPrice : await getPrice(alert.coin);
+    if (price == null) continue;
+    const hit = alert.direction === "above" ? price >= alert.target_price : price <= alert.target_price;
+    if (!hit) continue;
+
+    await supabaseAdmin.from("price_alerts").update({ triggered: true }).eq("id", alert.id);
+
+    const { data: userTokens } = await supabaseAdmin.from("device_push_tokens").select("token").eq("user_id", alert.user_id);
+    if (!userTokens || userTokens.length === 0) continue;
+
+    const { data: userProfile } = await supabaseAdmin.from("profiles").select("alert_sound").eq("id", alert.user_id).single();
+    const title = `${alert.coin} ${alert.direction === "above" ? "▲" : "▼"} $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+    const body = `${alert.direction === "above" ? "Went above" : "Dropped below"} your $${alert.target_price.toLocaleString("en-US", { maximumFractionDigits: 2 })} alert`;
+    const token = await ensureAccessToken();
+    await Promise.all(userTokens.map(({ token: t }) => sendPush(token, t, title, body, userProfile?.alert_sound ?? "bell")));
+    userAlertsFired++;
   }
 
-  await supabaseAdmin.from("btc_price_alert_state").update({ anchor_price: price, updated_at: new Date().toISOString() }).eq("id", 1);
-
-  const { data: tokens } = await supabaseAdmin.from("device_push_tokens").select("token");
-  if (!tokens || tokens.length === 0) {
-    return new Response(JSON.stringify({ price, moved: true, sent: 0 }), { headers: { "Content-Type": "application/json" } });
-  }
-
-  const direction = diff > 0 ? "up" : "down";
-  const fmtPrice = Math.round(price).toLocaleString("en-US");
-  const fmtChange = Math.round(Math.abs(diff)).toLocaleString("en-US");
-  const title = `BTC ${direction === "up" ? "▲" : "▼"} $${fmtPrice}`;
-  const body = `${direction === "up" ? "+" : "-"}$${fmtChange} move`;
-
-  const accessToken = await getAccessToken();
-  const results = await Promise.all(tokens.map(({ token }) => sendPush(accessToken, token, title, body)));
-  const sent = results.filter(Boolean).length;
-
-  return new Response(JSON.stringify({ price, moved: true, sent, total: tokens.length }), { headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ btc: btcResult, userAlertsFired }), { headers: { "Content-Type": "application/json" } });
 });

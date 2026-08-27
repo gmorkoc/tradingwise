@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../services/supabase";
+import { supabase, saveAlertSound, ALERT_SOUNDS, type AlertSound } from "../services/supabase";
+import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
 import { useAIQuota } from "../hooks/useAIQuota";
@@ -136,6 +137,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     setPwError(""); setPwSaved(true);
     setNewPw(""); setConfirmPw("");
     setTimeout(() => setPwSaved(false), 2500);
+  };
+
+  const handleAlertSoundChange = async (sound: AlertSound) => {
+    playAlertSoundFile(sound);
+    if (user) { await saveAlertSound(user.id, sound); await refreshProfile(); }
   };
 
   const handleManageBilling = async () => {
@@ -276,6 +282,25 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     )}
                   </>
                 )}
+
+                <div className="pp-divider" />
+
+                <h3 className="pp-pane-title">{t("profile.alertSound.title", "Alert Sound")}</h3>
+                <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                  {t("profile.alertSound.hint", "Plays for price alerts — both in the app and in push notifications.")}
+                </p>
+                <div className="pp-stat-row">
+                  {ALERT_SOUNDS.map((sound) => (
+                    <button
+                      key={sound}
+                      className={`pp-btn${(authProfile?.alert_sound ?? "bell") === sound ? " pp-btn--primary" : " pp-btn--ghost"}`}
+                      onClick={() => handleAlertSoundChange(sound)}
+                    >
+                      {(authProfile?.alert_sound ?? "bell") === sound ? "✓ " : ""}
+                      {t(`profile.alertSound.${sound}`, sound.charAt(0).toUpperCase() + sound.slice(1))}
+                    </button>
+                  ))}
+                </div>
 
                 <div className="pp-divider" />
 

@@ -413,6 +413,14 @@
       "upgradeElite": "Upgrade to Elite",
       "eliteHint": " for unlimited AI requests."
     },
+    "alertSound": {
+      "title": "Alert Sound",
+      "hint": "Plays for price alerts — both in the app and in push notifications.",
+      "bell": "Bell",
+      "chime": "Chime",
+      "alert": "Alert",
+      "classic": "Classic"
+    },
     "info": {
       "displayName": "Display Name",
       "username": "Username",

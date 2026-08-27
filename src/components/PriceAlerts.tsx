@@ -3,6 +3,9 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { coinglass, CoinSymbol } from "../services/coinglass";
 import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../services/supabase";
+import { playAlertSoundFile } from "../utils/alertSound";
 import "../styles/PriceAlerts.css";
 
 interface PriceAlert {
@@ -17,46 +20,6 @@ interface PriceAlert {
 interface Props {
   coin: CoinSymbol;
   currentPrice: number;
-}
-
-function playAlertSound() {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new AudioCtx();
-    const t0 = ctx.currentTime;
-
-    function bell(freq: number, t: number, vol = 0.4) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc2.connect(gain2); gain2.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(vol, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
-      osc.start(t); osc.stop(t + 2.2);
-      osc2.type = "sine";
-      osc2.frequency.setValueAtTime(freq * 2.756, t);
-      gain2.gain.setValueAtTime(vol * 0.4, t);
-      gain2.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
-      osc2.start(t); osc2.stop(t + 1.0);
-    }
-
-    const click = ctx.createOscillator();
-    const clickGain = ctx.createGain();
-    click.connect(clickGain); clickGain.connect(ctx.destination);
-    click.type = "square";
-    click.frequency.setValueAtTime(800, t0);
-    clickGain.gain.setValueAtTime(0.3, t0);
-    clickGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.02);
-    click.start(t0); click.stop(t0 + 0.02);
-
-    bell(987, t0);
-    bell(830, t0 + 0.18, 0.3);
-    bell(659, t0 + 0.34, 0.2);
-  } catch { /* browser may block without user gesture */ }
 }
 
 const STORAGE_KEY = "priceAlerts";
@@ -85,6 +48,9 @@ function syncPanelPos(el: HTMLElement) {
 
 export function PriceAlerts({ coin, currentPrice }: Props) {
   const { t } = useTranslation();
+  const { user, profile } = useAuth();
+  const alertSoundRef = useRef(profile?.alert_sound ?? "bell");
+  alertSoundRef.current = profile?.alert_sound ?? "bell";
   const [notificationsEnabled] = useNotificationsEnabled();
   const notificationsEnabledRef = useRef(notificationsEnabled);
   notificationsEnabledRef.current = notificationsEnabled;
@@ -149,7 +115,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
             : prev > alert.targetPrice && livePrice <= alert.targetPrice;
         if (hit) {
           if (notificationsEnabledRef.current) {
-            playAlertSound();
+            playAlertSoundFile(alertSoundRef.current);
             setToast(alert);
             if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
             toastTimerRef.current = setTimeout(() => setToast(null), 6000);
@@ -171,7 +137,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
     if (!price || isNaN(price) || price <= 0) return;
     const direction: "above" | "below" = price > livePrice ? "above" : "below";
     const alert: PriceAlert = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       targetPrice: price,
       direction,
       label: `${direction === "above" ? "↑" : "↓"} $${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -180,13 +146,26 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
     };
     setAlerts((prev) => [...prev, alert].sort((a, b) => b.targetPrice - a.targetPrice));
     setInput("");
+
+    // Mirrors into Supabase so the price-alert cron can push a notification
+    // for this even with the app closed — the local copy above still drives
+    // the in-app toast/sound while it's open, unchanged.
+    if (user) {
+      supabase.from("price_alerts").insert({
+        id: alert.id, user_id: user.id, coin, target_price: price, direction,
+      }).then(({ error }) => { if (error) console.error("Saving price alert failed:", error.message); });
+    }
   };
 
-  const removeAlert = (id: string) =>
+  const removeAlert = (id: string) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
+    if (user) supabase.from("price_alerts").delete().eq("id", id).then(() => {});
+  };
 
-  const resetAlert = (id: string) =>
+  const resetAlert = (id: string) => {
     setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, triggered: false } : a));
+    if (user) supabase.from("price_alerts").update({ triggered: false }).eq("id", id).then(() => {});
+  };
 
   const activeCount = alerts.filter((a) => !a.triggered).length;
 
