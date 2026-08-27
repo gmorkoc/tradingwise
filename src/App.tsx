@@ -66,8 +66,6 @@ import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
-import { DebugOverlay } from "./components/DebugOverlay";
-import { logDebug } from "./utils/debugLog";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
@@ -2158,10 +2156,7 @@ function AppGate() {
   // AuthModal has no way to close on that completion, so close it here
   // instead: once authenticated, the sign-in modal should never still be up.
   useEffect(() => {
-    if (user) {
-      logDebug(`AppGate: user authenticated, forcing showAuth=false`);
-      setShowAuth(false);
-    }
+    if (user) setShowAuth(false);
   }, [user]);
 
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
@@ -2225,7 +2220,6 @@ function AppGate() {
 
   // Blank screen while Supabase resolves the session — prevents any flicker
   if (authLoading || (user && profileLoading) || (user && !minTimeElapsed)) {
-    logDebug(`AppGate: boot screen (authLoading=${authLoading} user=${!!user} profileLoading=${profileLoading} minTimeElapsed=${minTimeElapsed})`);
     return (
       <div className="app-boot-screen">
         <CoinHintzLogo loading={true} />
@@ -2239,12 +2233,10 @@ function AppGate() {
   // right before signing in briefly sees this same prompt again.
   const pendingTermsFlush = !!localStorage.getItem("terms_agreed_at");
   if (user && profile && !profile.terms_agreed_at && !pendingTermsFlush) {
-    logDebug(`AppGate: TermsGateModal (user=${user.id} terms_agreed_at=${profile.terms_agreed_at})`);
     return <TermsGateModal userId={user.id} onAgreed={refreshProfile} />;
   }
 
   if (!user) {
-    logDebug(`AppGate: LandingPage/AuthModal (user is null, profile=${profile ? "present" : "null"})`);
     return (
       <>
         <LandingPage
@@ -2269,7 +2261,6 @@ function AppGate() {
     );
   }
 
-  logDebug(`AppGate: AppDashboard (user=${user.id})`);
   return (
     <>
       <AppDashboard
@@ -2297,7 +2288,6 @@ function App() {
   return (
     <AuthProvider>
       <AppGate />
-      <DebugOverlay />
     </AuthProvider>
   );
 }
