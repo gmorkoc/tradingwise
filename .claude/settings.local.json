@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash",
       "Bash(npm install *)",
       "Bash(node -e \"const lc = require\\('/Users/mst3r/Desktop/coinglass/node_modules/lightweight-charts'\\); console.log\\(Object.keys\\(lc\\).filter\\(k => k.toLowerCase\\(\\).includes\\('time'\\) || k.toLowerCase\\(\\).includes\\('local'\\)\\)\\)\")",
       "Bash(npx tsc *)",

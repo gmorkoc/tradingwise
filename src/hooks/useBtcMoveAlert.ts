@@ -8,7 +8,7 @@ export interface BtcMoveAlert {
   change: number;
 }
 
-const THRESHOLD = 10;
+const THRESHOLD = 50;
 const POLL_MS = 10_000;
 
 export function useBtcMoveAlert() {

@@ -5,6 +5,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
 import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
+import { initPushNotifications, logOutPushNotifications } from "../services/pushNotifications";
 
 // Must exactly match the CFBundleURLSchemes entry in Info.plist / the
 // android:scheme intent-filter, and be added to Supabase's Authentication →
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // webhook lands on the right profiles row with no separate mapping
         // table. No-op on web/Android — see isIAPAvailable().
         initRevenueCat(data.session.user.id);
+        initPushNotifications(data.session.user.id);
       }
       setLoading(false);
     });
@@ -64,9 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         loadProfile(sess.user);
         initRevenueCat(sess.user.id);
+        initPushNotifications(sess.user.id);
       } else {
         setProfile(null);
         logOutRevenueCat();
+        logOutPushNotifications();
       }
     });
 
