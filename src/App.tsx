@@ -2152,6 +2152,18 @@ function AppGate() {
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
+  // Native Google sign-in opens an in-app browser and returns immediately —
+  // the real session lands later, asynchronously, via a deep-link listener
+  // (see AuthContext's appUrlOpen handler), decoupled from AuthModal itself.
+  // AuthModal has no way to close on that completion, so close it here
+  // instead: once authenticated, the sign-in modal should never still be up.
+  useEffect(() => {
+    if (user) {
+      logDebug(`AppGate: user authenticated, forcing showAuth=false`);
+      setShowAuth(false);
+    }
+  }, [user]);
+
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
     const stored = localStorage.getItem("theme");
     if (stored === "dark" || stored === "light") return stored;
