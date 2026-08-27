@@ -5,6 +5,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
 import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
+import { logDebug } from "../utils/debugLog";
 
 // Must exactly match the CFBundleURLSchemes entry in Info.plist / the
 // android:scheme intent-filter, and be added to Supabase's Authentication →
@@ -39,13 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (u: User) => {
     setProfileLoading(true);
+    logDebug(`loadProfile: fetching for ${u.id}`);
     const p = await fetchProfile(u.id);
+    logDebug(`loadProfile: got profile, terms_agreed_at=${p?.terms_agreed_at ?? "MISSING/NULL"}`);
     setProfile(p);
     setProfileLoading(false);
   };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
+      logDebug(`getSession(): ${data.session ? `user=${data.session.user.id}` : "no session"}`);
       setSession(data.session);
       setUser(data.session?.user ?? null);
       if (data.session?.user) {
@@ -59,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
-      console.log(`[auth] ${event}`, sess ? `user=${sess.user.id}` : "no session");
+      logDebug(`onAuthStateChange: ${event} — ${sess ? `user=${sess.user.id}` : "NO SESSION"}`);
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
@@ -81,13 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const listener = CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
+      logDebug(`appUrlOpen: ${url}`);
       if (!url.startsWith(NATIVE_OAUTH_REDIRECT)) return;
       await Browser.close().catch(() => {});
       const code = new URL(url).searchParams.get("code");
-      if (!code) { console.error("OAuth redirect had no code:", url); return; }
+      if (!code) { logDebug(`OAuth redirect had no code`); return; }
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) console.error("OAuth code exchange failed:", error.message);
-      else console.log("[auth] exchangeCodeForSession succeeded");
+      if (error) logDebug(`exchangeCodeForSession FAILED: ${error.message}`);
+      else logDebug(`exchangeCodeForSession succeeded`);
     });
     return () => { listener.then(l => l.remove()); };
   }, []);

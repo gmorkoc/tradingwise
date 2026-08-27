@@ -66,6 +66,8 @@ import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
+import { DebugOverlay } from "./components/DebugOverlay";
+import { logDebug } from "./utils/debugLog";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
@@ -2210,12 +2212,14 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading || (user && profileLoading) || (user && !minTimeElapsed))
+  if (authLoading || (user && profileLoading) || (user && !minTimeElapsed)) {
+    logDebug(`AppGate: boot screen (authLoading=${authLoading} user=${!!user} profileLoading=${profileLoading} minTimeElapsed=${minTimeElapsed})`);
     return (
       <div className="app-boot-screen">
         <CoinHintzLogo loading={true} />
       </div>
     );
+  }
 
   // Gate: signed in but hasn't agreed to terms yet (covers first-time OAuth users).
   // Skip if a pending local agreement is still being flushed to the DB (the
@@ -2223,10 +2227,12 @@ function AppGate() {
   // right before signing in briefly sees this same prompt again.
   const pendingTermsFlush = !!localStorage.getItem("terms_agreed_at");
   if (user && profile && !profile.terms_agreed_at && !pendingTermsFlush) {
+    logDebug(`AppGate: TermsGateModal (user=${user.id} terms_agreed_at=${profile.terms_agreed_at})`);
     return <TermsGateModal userId={user.id} onAgreed={refreshProfile} />;
   }
 
   if (!user) {
+    logDebug(`AppGate: LandingPage/AuthModal (user is null, profile=${profile ? "present" : "null"})`);
     return (
       <>
         <LandingPage
@@ -2251,6 +2257,7 @@ function AppGate() {
     );
   }
 
+  logDebug(`AppGate: AppDashboard (user=${user.id})`);
   return (
     <>
       <AppDashboard
@@ -2278,6 +2285,7 @@ function App() {
   return (
     <AuthProvider>
       <AppGate />
+      <DebugOverlay />
     </AuthProvider>
   );
 }

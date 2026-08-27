@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveTermsAgreement } from "../services/supabase";
+import { logDebug } from "../utils/debugLog";
 import "../styles/AuthModal.css";
 
 interface Props {
@@ -16,18 +17,21 @@ export default function TermsGateModal({ userId, onAgreed }: Props) {
     if (!agreed || busy) return;
     setBusy(true);
     setError("");
+    logDebug(`TermsGateModal: saving agreement for ${userId}`);
     const now = new Date().toISOString();
     const { error: saveError } = await saveTermsAgreement(userId, now);
     if (saveError) {
-      console.error("TermsGateModal: failed to save agreement:", saveError);
+      logDebug(`TermsGateModal: save FAILED: ${saveError}`);
       setError("Couldn't save your agreement — please try again.");
       setBusy(false);
       return;
     }
+    logDebug(`TermsGateModal: save OK, calling onAgreed (refreshProfile)`);
     try {
       await onAgreed();
+      logDebug(`TermsGateModal: onAgreed resolved`);
     } catch (err) {
-      console.error("TermsGateModal: onAgreed (refreshProfile) threw:", err);
+      logDebug(`TermsGateModal: onAgreed THREW: ${err}`);
     }
     setBusy(false);
   };
