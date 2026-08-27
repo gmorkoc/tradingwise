@@ -55,6 +55,13 @@
   transform: translateY(calc(100% - 16px + var(--db-drag-y)));
 }
 
+/* Fully off-screen while scrolling the page down, sliding back in on any
+   scroll up — only applied in the resting "collapsed" state (see
+   DailyBrief.tsx), not while actively expanded/reading or user-minimized. */
+.db-sheet--scroll-hidden {
+  transform: translateY(120%);
+}
+
 /* macOS-style traffic lights: red/yellow/green dots, top-left corner */
 .db-traffic-lights {
   position: absolute;
@@ -69,35 +76,29 @@
 .db-tl-btn {
   display: grid;
   place-items: center;
-  width: 12px;
-  height: 12px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   margin: 0;
   line-height: 0;
   border-radius: 50%;
   border: none;
   cursor: pointer;
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-  transition: filter 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 
 .db-tl-btn:active {
   transform: scale(0.9);
 }
 
-.db-tl-btn--close    { background: #ff5f57; }
-.db-tl-btn--minimize { background: #febc2e; }
-.db-tl-btn--expand    { background: #28c840; }
-
-.db-traffic-lights:hover .db-tl-btn {
-  filter: brightness(1.05);
-}
+.db-tl-btn--close { background: transparent; color: var(--color-text-muted); }
+.db-tl-btn--close:hover { background: var(--color-border); color: var(--color-text); }
 
 .db-tl-icon {
   display: block;
-  width: 7px;
-  height: 7px;
-  color: rgba(0, 0, 0, 0.75);
+  width: 14px;
+  height: 14px;
+  color: currentColor;
   margin: auto;
 }
 

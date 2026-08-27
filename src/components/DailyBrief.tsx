@@ -173,7 +173,32 @@ export const DailyBrief: React.FC = () => {
   const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [scrollHidden, setScrollHidden] = useState(false);
   const dragStartY = useRef<number | null>(null);
+
+  // Yahoo Finance-style auto-hide: slide the (collapsed, resting) sheet out
+  // of the way while the user scrolls down through the page, back in on any
+  // scroll-up. Listens in the capture phase on document so it picks up
+  // whichever nested panel is actually scrolling (chart, watchlist, etc.)
+  // without needing to know which one that is.
+  useEffect(() => {
+    const SCROLL_HIDE_THRESHOLD = 8;
+    const lastScrollTop = new WeakMap<EventTarget, number>();
+    const onScroll = (e: Event) => {
+      const target = e.target as HTMLElement | Document;
+      const scrollTop = target instanceof Document
+        ? (target.scrollingElement?.scrollTop ?? 0)
+        : target.scrollTop;
+      const prev = lastScrollTop.get(target) ?? scrollTop;
+      lastScrollTop.set(target, scrollTop);
+      const delta = scrollTop - prev;
+      if (Math.abs(delta) < SCROLL_HIDE_THRESHOLD) return;
+      if (delta > 0 && scrollTop > 40) setScrollHidden(true);
+      else if (delta < 0) setScrollHidden(false);
+    };
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
+  }, []);
 
   const load = useCallback(async () => {
     const brief = await fetchBrief();
@@ -249,7 +274,7 @@ export const DailyBrief: React.FC = () => {
         <div className="db-backdrop" onClick={() => setSheetState("collapsed")} />
       )}
       <div
-        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}`}
+        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${sheetState === "collapsed" && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
         style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
       >
         {sheetState !== "minimized" && (
@@ -262,26 +287,6 @@ export const DailyBrief: React.FC = () => {
             >
               <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-            <button
-              className="db-tl-btn db-tl-btn--minimize"
-              onClick={(e) => { e.stopPropagation(); setSheetState("minimized"); }}
-              aria-label={t("dailyBrief.minimize")}
-              title={t("dailyBrief.minimize")}
-            >
-              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14" />
-              </svg>
-            </button>
-            <button
-              className="db-tl-btn db-tl-btn--expand"
-              onClick={(e) => { e.stopPropagation(); setSheetState((s) => (s === "expanded" ? "collapsed" : "expanded")); }}
-              aria-label={t("dailyBrief.expand")}
-              title={t("dailyBrief.expand")}
-            >
-              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5v14" />
               </svg>
             </button>
           </div>
