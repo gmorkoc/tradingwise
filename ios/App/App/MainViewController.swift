@@ -22,6 +22,24 @@ class MainViewController: CAPBridgeViewController {
                 DispatchQueue.main.async { self?.applySafeAreaInsets() }
             }
         }
+
+        // UIKit's automatic contentInset adjustment fights with the manual
+        // safe-area injection above — after a keyboard show/hide cycle it
+        // can leave the webview's own scroll view offset stuck non-zero,
+        // exposing black space above the content until the app restarts.
+        webView?.scrollView.contentInsetAdjustmentBehavior = .never
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(resetWebViewScrollOffset),
+            name: UIResponder.keyboardDidHideNotification, object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func resetWebViewScrollOffset() {
+        webView?.scrollView.setContentOffset(.zero, animated: false)
     }
 
     override func viewSafeAreaInsetsDidChange() {

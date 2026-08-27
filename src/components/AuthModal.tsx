@@ -166,6 +166,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
           <CoinHintzLogo variant="nav" />
         </div>
 
+        <div className="auth-card-body">
+
         {/* ── Magic link (default) ── */}
         {view === "magic" && (
           <>
@@ -327,6 +329,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
           </>
         )}
 
+        </div>
       </div>
     </div>
   );

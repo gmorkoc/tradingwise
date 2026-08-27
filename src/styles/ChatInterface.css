@@ -509,5 +509,12 @@ html[data-theme="dark"] .chat-panel--embedded { background: var(--color-surface)
     border-radius: 0;
     border: none;
   }
+  /* Full-screen on mobile, unlike the desktop side panel — needs its own
+     top inset so the header clears the notch/Dynamic Island instead of
+     sitting under it. --native-safe-area-top is the iOS app's own reading
+     of the safe area (see MainViewController.swift — env() reports 0 here). */
+  .chat-panel:not(.chat-panel--embedded) .chat-header {
+    padding-top: max(14px, var(--native-safe-area-top, env(safe-area-inset-top)));
+  }
   .chat-fab-wrap { right: 12px; bottom: 20px; }
 }

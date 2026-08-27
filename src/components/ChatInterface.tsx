@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
 import { openai, ChatMessage } from "../services/openai";
 import { BTCData, coinglass } from "../services/coinglass";
@@ -72,6 +74,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
   const inputRef       = useRef<HTMLTextAreaElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const isInitialMount = useRef(true);
+  const panelRef        = useRef<HTMLDivElement>(null);
+
+  // capacitor.config.ts sets Keyboard resize:'none' globally (needed
+  // elsewhere to stop a coin-picker popover getting stuck shifted), so this
+  // fixed-position full-height panel never shrinks for the keyboard on its
+  // own — the input row at its bottom just ends up hidden underneath it.
+  // Pulling the panel's own `bottom` up by the keyboard height reflows its
+  // flex column so the input stays above the keyboard, without touching the
+  // global setting other components rely on.
+  useEffect(() => {
+    if (embedded || !Capacitor.isNativePlatform()) return;
+    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
+      if (panelRef.current) panelRef.current.style.bottom = `${info.keyboardHeight}px`;
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (panelRef.current) panelRef.current.style.bottom = "0px";
+    });
+    return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
+  }, [embedded]);
 
   // Persist messages without images (too large for localStorage)
   useEffect(() => {
@@ -183,7 +204,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const panel = (
-    <div className={`chat-panel${embedded ? " chat-panel--embedded" : ""}`}>
+    <div ref={panelRef} className={`chat-panel${embedded ? " chat-panel--embedded" : ""}`}>
       <div className="chat-header">
         <div className="chat-header-title">
           <h2>{t("chat.title")}</h2>

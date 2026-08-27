@@ -692,7 +692,7 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 .lp-cta-long  { display: inline; }
 
 @media (max-width: 768px) {
-  .lp-nav { padding: var(--native-safe-area-top, env(safe-area-inset-top)) 16px 0; }
+  .lp-nav { padding: var(--native-safe-area-top, env(safe-area-inset-top)) 16px 12px; }
   .lp-nav-logo span { display: none; }
   .lp-nav-actions { gap: 6px; }
   .lp-nav-actions .lp-btn-ghost  { padding: 6px 10px; font-size: 0.75rem; }
