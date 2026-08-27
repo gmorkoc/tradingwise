@@ -1,0 +1,69 @@
+{
+  "identifier" : "6A1F5C6A",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21497A15",
+      "localizations" : [],
+      "name" : "coinhintz",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "30.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "9F5A1001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "coinhintz Pro subscription",
+              "displayName" : "Pro",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "coinhintz_pro_test",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "21497A15",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "9F5A1002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "coinhintz Elite subscription",
+              "displayName" : "Elite",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "coinhintz_elite_test",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Elite Monthly",
+          "subscriptionGroupID" : "21497A15",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

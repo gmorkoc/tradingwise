@@ -1,0 +1,139 @@
+PODS:
+  - Capacitor (6.2.1):
+    - CapacitorCordova
+  - CapacitorApp (6.0.3):
+    - Capacitor
+  - CapacitorBrowser (6.0.6):
+    - Capacitor
+  - CapacitorCordova (6.2.1)
+  - CapacitorFirebaseMessaging (6.3.1):
+    - Capacitor
+    - FirebaseMessaging (~> 11.0)
+  - CapacitorKeyboard (6.0.3):
+    - Capacitor
+  - CapacitorStatusBar (6.0.3):
+    - Capacitor
+  - FirebaseCore (11.15.0):
+    - FirebaseCoreInternal (~> 11.15.0)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/Logger (~> 8.1)
+  - FirebaseCoreInternal (11.15.0):
+    - "GoogleUtilities/NSData+zlib (~> 8.1)"
+  - FirebaseInstallations (11.15.0):
+    - FirebaseCore (~> 11.15.0)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/UserDefaults (~> 8.1)
+    - PromisesObjC (~> 2.4)
+  - FirebaseMessaging (11.15.0):
+    - FirebaseCore (~> 11.15.0)
+    - FirebaseInstallations (~> 11.0)
+    - GoogleDataTransport (~> 10.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/Reachability (~> 8.1)
+    - GoogleUtilities/UserDefaults (~> 8.1)
+    - nanopb (~> 3.30910.0)
+  - GoogleDataTransport (10.1.1):
+    - nanopb (~> 3.30910.0)
+    - PromisesObjC (~> 2.4)
+  - GoogleUtilities/AppDelegateSwizzler (8.1.3):
+    - GoogleUtilities/Environment
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Network
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Environment (8.1.3):
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Logger (8.1.3):
+    - GoogleUtilities/Environment
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Network (8.1.3):
+    - GoogleUtilities/Logger
+    - "GoogleUtilities/NSData+zlib"
+    - GoogleUtilities/Privacy
+    - GoogleUtilities/Reachability
+  - "GoogleUtilities/NSData+zlib (8.1.3)":
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/Privacy (8.1.3)
+  - GoogleUtilities/Reachability (8.1.3):
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Privacy
+  - GoogleUtilities/UserDefaults (8.1.3):
+    - GoogleUtilities/Logger
+    - GoogleUtilities/Privacy
+  - nanopb (3.30910.0):
+    - nanopb/decode (= 3.30910.0)
+    - nanopb/encode (= 3.30910.0)
+  - nanopb/decode (3.30910.0)
+  - nanopb/encode (3.30910.0)
+  - PromisesObjC (2.4.1)
+  - PurchasesHybridCommon (13.26.0):
+    - RevenueCat (= 5.20.0)
+  - RevenueCat (5.20.0)
+  - RevenuecatPurchasesCapacitor (9.2.2):
+    - Capacitor
+    - PurchasesHybridCommon (= 13.26.0)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
+  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
+
+SPEC REPOS:
+  trunk:
+    - FirebaseCore
+    - FirebaseCoreInternal
+    - FirebaseInstallations
+    - FirebaseMessaging
+    - GoogleDataTransport
+    - GoogleUtilities
+    - nanopb
+    - PromisesObjC
+    - PurchasesHybridCommon
+    - RevenueCat
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
+  CapacitorBrowser:
+    :path: "../../node_modules/@capacitor/browser"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorFirebaseMessaging:
+    :path: "../../node_modules/@capacitor-firebase/messaging"
+  CapacitorKeyboard:
+    :path: "../../node_modules/@capacitor/keyboard"
+  CapacitorStatusBar:
+    :path: "../../node_modules/@capacitor/status-bar"
+  RevenuecatPurchasesCapacitor:
+    :path: "../../node_modules/@revenuecat/purchases-capacitor"
+
+SPEC CHECKSUMS:
+  Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
+  CapacitorApp: a19ccb4f5f32d2534be5c6f524d5a9b614a1e8a7
+  CapacitorBrowser: 825163a1d6adce944ac7b9e3cab101146b5a9df8
+  CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
+  CapacitorFirebaseMessaging: 05bf93285c8ae5aeaaddaa938ba1db4fda7305ad
+  CapacitorKeyboard: e89189ad398b815b6ff7e52271f0fb4f911a0a0a
+  CapacitorStatusBar: 149cde8f1328ec3aa6cbdd872a55137ae3f98b16
+  FirebaseCore: efb3893e5b94f32b86e331e3bd6dadf18b66568e
+  FirebaseCoreInternal: 9afa45b1159304c963da48addb78275ef701c6b4
+  FirebaseInstallations: 317270fec08a5d418fdbc8429282238cab3ac843
+  FirebaseMessaging: 3b26e2cee503815e01c3701236b020aa9b576f09
+  GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
+  GoogleUtilities: 4e0c2ad9fa0d0d18b5c4df8bf57b461cba35b0bb
+  nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
+  PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
+  PurchasesHybridCommon: fa166fc8b385cf80f581f923c91d8ccffe5dd7f8
+  RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
+  RevenuecatPurchasesCapacitor: 6727a4dc1455bdf2374259420719ce5dfbe957fa
+
+PODFILE CHECKSUM: 80deb7357ccc738e7ac03f7209c70c1c93bf51f2
+
+COCOAPODS: 1.17.0
