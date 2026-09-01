@@ -15,16 +15,17 @@ import {
   getIAPPlans,
   purchaseIAPPlan,
   restorePurchases,
+  syncIAPEntitlement,
   type IAPPlan,
 } from "../services/revenuecat";
 import { TIER_RANK, fetchProfile, subscriptionProvider, type Tier } from "../services/supabase";
 import "../styles/UpgradeModal.css";
 
-// The RevenueCat webhook that updates profiles.tier fires asynchronously,
-// server-to-server, after the on-device purchase already resolved — a
-// single refreshProfile() right after purchase can easily run before the
-// webhook has landed, leaving the UI showing the old (free) tier until the
-// app is killed and reopened. Poll briefly instead of refreshing once.
+// Fallback only — syncIAPEntitlement() (called right after a purchase or
+// restore) verifies against RevenueCat directly and writes profiles.tier
+// synchronously, so normally there's nothing left to wait for. This poll
+// only matters if that call itself failed transiently and the passive
+// webhook ends up landing a little later instead.
 async function waitForTier(userId: string, expectedTier: Tier, maxAttempts = 8): Promise<boolean> {
   for (let i = 0; i < maxAttempts; i++) {
     const p = await fetchProfile(userId);
@@ -188,10 +189,12 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       const result = await purchaseIAPPlan(iapPlan);
       if (result.cancelled) { setLoading(null); return; }
       if (!result.success) { setLoading(null); setError(result.error ?? t("upgradeModal.error")); return; }
-      // Keep the loading state through the wait — the purchase sheet already
-      // closed, so without this the modal would sit with no feedback while
-      // the webhook catches up.
-      await waitForTier(user!.id, result.tier ?? (plan.id as Tier));
+      // Keep the loading state through this — the purchase sheet already
+      // closed, so without it the modal would sit with no feedback.
+      // Verify against RevenueCat directly rather than trusting the webhook
+      // to have landed (or to land at all).
+      const sync = await syncIAPEntitlement();
+      if (!sync.tier) await waitForTier(user!.id, result.tier ?? (plan.id as Tier));
       await refreshProfile();
       setLoading(null);
       onClose();
@@ -287,7 +290,8 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
     setError("");
     const result = await restorePurchases();
     if (!result.success) { setLoading(null); setError(result.error ?? "Nothing to restore."); return; }
-    if (result.tier) await waitForTier(user!.id, result.tier);
+    const sync = await syncIAPEntitlement();
+    if (!sync.tier && result.tier) await waitForTier(user!.id, result.tier);
     await refreshProfile();
     setLoading(null);
     setDone({

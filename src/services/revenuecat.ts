@@ -1,6 +1,8 @@
 import { Capacitor } from "@capacitor/core";
 import { Purchases, LOG_LEVEL, type PurchasesPackage } from "@revenuecat/purchases-capacitor";
-import type { Tier } from "./supabase";
+import { supabase, type Tier } from "./supabase";
+
+const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 // Public SDK key from the RevenueCat dashboard (Project settings → API keys →
 // Apple App Store). Safe to ship in the client — it only permits purchase
@@ -112,6 +114,31 @@ export async function purchaseIAPPlan(plan: IAPPlan): Promise<PurchaseResult> {
  *  opens the native "Manage Subscriptions" screen directly. */
 export function openManageSubscriptions(): void {
   window.location.href = "itms-apps://apps.apple.com/account/subscriptions";
+}
+
+// Confirms the purchase/restore directly against RevenueCat's own servers
+// and writes profiles.tier server-side — called right after a successful
+// purchaseIAPPlan/restorePurchases instead of just waiting on RevenueCat's
+// webhook, which is async and has no delivery guarantee the UI can rely on
+// for "I just paid, why isn't my tier updating?" (see sync-iap-entitlement
+// edge function for the authoritative RevenueCat REST lookup).
+export async function syncIAPEntitlement(): Promise<{ tier: Tier | null; error?: string }> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return { tier: null, error: "Not authenticated" };
+  try {
+    const res = await fetch(`${FN_BASE}/sync-iap-entitlement`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`,
+      },
+    });
+    const data = await res.json();
+    if (data.error) return { tier: null, error: data.error };
+    return { tier: (data.tier as Tier) ?? null };
+  } catch (err: any) {
+    return { tier: null, error: err?.message ?? "Sync failed" };
+  }
 }
 
 export async function restorePurchases(): Promise<PurchaseResult> {

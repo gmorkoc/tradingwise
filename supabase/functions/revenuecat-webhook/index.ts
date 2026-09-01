@@ -15,13 +15,19 @@ const ENTITLEMENT_TIER: Record<string, string> = {
   elite: "elite",
 };
 
+const TIER_RANK: Record<string, number> = { pro: 1, elite: 2 };
+
+// Prefer the highest-ranked entitlement rather than whichever comes first
+// in the array — a subscriber can briefly hold more than one active
+// entitlement (e.g. mid-upgrade), and elite should always win over pro.
 function tierFromEntitlements(entitlementIds: string[] | undefined): string | null {
   if (!entitlementIds) return null;
+  let best: string | null = null;
   for (const id of entitlementIds) {
     const tier = ENTITLEMENT_TIER[id];
-    if (tier) return tier;
+    if (tier && (TIER_RANK[tier] ?? 0) > (best ? TIER_RANK[best] : -1)) best = tier;
   }
-  return null;
+  return best;
 }
 
 interface RevenueCatEvent {
