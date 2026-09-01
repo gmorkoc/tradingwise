@@ -18,7 +18,9 @@ function getDayKey(): string {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const origin  = req.headers.origin ?? "";
-  const allowed = ["https://www.coinhintz.io", "https://coinhintz.io", "http://localhost:5173", "http://localhost:4173"];
+  // capacitor://localhost is the native iOS app's real Origin header — see
+  // api/deleteAccount.ts for why this has to be here.
+  const allowed = ["https://www.coinhintz.io", "https://coinhintz.io", "capacitor://localhost", "http://localhost:5173", "http://localhost:4173"];
   res.setHeader("Access-Control-Allow-Origin", allowed.includes(origin) ? origin : allowed[0]);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");

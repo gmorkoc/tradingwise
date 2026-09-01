@@ -1,6 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const ALLOWED_ORIGINS = ["https://www.coinhintz.io", "https://coinhintz.io", "http://localhost:5173", "http://localhost:4173"];
+// capacitor://localhost is the native iOS app's real Origin header (its
+// WKWebView doesn't run from the coinhintz.io domain at all) — without it
+// here, every request from the app gets a CORS-mismatched response and
+// fails as an opaque "Load failed" in WebKit, even though the request URL
+// itself is the correct absolute https://www.coinhintz.io one.
+const ALLOWED_ORIGINS = ["https://www.coinhintz.io", "https://coinhintz.io", "capacitor://localhost", "http://localhost:5173", "http://localhost:4173"];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin ?? "";
