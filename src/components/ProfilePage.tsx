@@ -163,7 +163,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   // round trip is otherwise the only thing that updates authProfile, so
   // without this the switch just sits unchanged (or visibly reverts) for
   // however long that request takes instead of flipping immediately on tap.
+  // Cleared only once authProfile actually confirms the new value (see the
+  // sync effect below), not right after the save call returns — WKWebView
+  // can deliver a duplicate/ghost click shortly after a real tap, and since
+  // the handler decides its next value from whatever's currently displayed,
+  // clearing the override too early let that second phantom click read the
+  // just-flipped value and immediately flip it right back.
   const [notifOverrides, setNotifOverrides] = useState<Partial<Record<NotificationPrefKey, boolean>>>({});
+  const notifSavingRef = useRef<Partial<Record<NotificationPrefKey, boolean>>>({});
 
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -246,17 +253,47 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     notifOverrides[key] ?? authProfile?.[key] ?? true;
 
   const handleNotifPrefChange = async (key: NotificationPrefKey, value: boolean) => {
+    // A save for this key is already in flight and unconfirmed — ignore.
+    // Without this, a WKWebView ghost/duplicate click firing while the
+    // first save is still pending reads the already-flipped optimistic
+    // value and immediately toggles it right back.
+    if (notifSavingRef.current[key]) return;
+    notifSavingRef.current[key] = true;
     setNotifOverrides(prev => ({ ...prev, [key]: value }));
-    if (user) {
+    if (!user) { notifSavingRef.current[key] = false; return; }
+    try {
       await saveNotificationPref(user.id, key, value);
       await refreshProfile();
+    } catch {
+      // Save failed — release the lock and drop the optimistic override so
+      // the switch falls back to showing the real (unchanged) server value
+      // instead of getting stuck forever on a value that never took effect.
+      notifSavingRef.current[key] = false;
+      setNotifOverrides(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     }
-    setNotifOverrides(prev => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
   };
+
+  // Drop an override — and release the in-flight lock — only once
+  // authProfile actually confirms it, never right after the save call
+  // merely returns.
+  useEffect(() => {
+    setNotifOverrides(prev => {
+      let changed = false;
+      const next = { ...prev };
+      (Object.keys(next) as NotificationPrefKey[]).forEach((key) => {
+        if (authProfile?.[key] === next[key]) {
+          delete next[key];
+          notifSavingRef.current[key] = false;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [authProfile]);
 
   const handleManageBilling = async () => {
     if (providerMismatch) return; // UI already blocks this — safety net only
