@@ -161,16 +161,31 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Full UI reset — only on a fresh open. This must NOT also depend on
+  // authProfile/user: any background refreshProfile() call while the modal
+  // is already open (saving an alert sound, flipping a notification toggle,
+  // the Stripe-return poll, etc.) gives authProfile a new object reference,
+  // and re-running this on every one of those bounced the user back to the
+  // Overview tab mid-interaction — see the separate sync effect below for
+  // keeping the form fields themselves up to date instead.
   useEffect(() => {
     if (!isOpen) return;
-    const fresh = blankFromAuth();
-    setProfile(fresh); setDraft(fresh);
     setTab("overview");
     setProfileSaved(false); setProfileError("");
     setPwSaved(false); setPwError("");
     setNewPw(""); setConfirmPw("");
     setPortalError("");
     setDeleteStep("idle"); setDeleteInput(""); setDeleteError("");
+  }, [isOpen]);
+
+  // Keep the editable profile/draft fields synced with the latest server
+  // profile — separate from the reset above so it doesn't touch tab/other
+  // UI state on every refresh.
+  useEffect(() => {
+    if (!isOpen) return;
+    const fresh = blankFromAuth();
+    setProfile(fresh); setDraft(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, authProfile, user]);
 
   useEffect(() => {
