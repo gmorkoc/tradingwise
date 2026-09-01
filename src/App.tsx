@@ -31,6 +31,7 @@ import { GannAnalysis } from "./components/GannAnalysis";
 import { HTFAnalysis } from "./components/HTFAnalysis";
 import { OnChainMetrics } from "./components/OnChainMetrics";
 import { OrderBook } from "./components/OrderBook";
+import { CoinChat } from "./components/CoinChat";
 import { PositionFlows } from "./components/PositionFlows";
 import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
@@ -1607,61 +1608,64 @@ function AppDashboard({
               <>
                 {chartAssetClass === "crypto" && <FlashNewsBanner />}
                 {chartAssetClass === "crypto" ? (
-                  <div
-                    className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
-                    ref={chartWrapRef}
-                    style={
-                      {
-                        "--ob-h": `${obSize.h}px`,
-                        "--ob-w": `${obSize.w}px`,
-                      } as React.CSSProperties
-                    }
-                  >
-                    <PriceChart
-                      refreshTrigger={refreshTrigger}
-                      theme={theme}
-                      coin={coin}
-                      onZoneChange={(zone, price) => {
-                        setChartZone(zone);
-                        setChartPrice(price);
-                      }}
-                      onOpenAuth={onOpenAuth}
-                      onOpenUpgrade={onOpenUpgrade}
-                      onFullscreenChange={setChartFullscreen}
-                    />
+                  <div className="chart-with-chat">
                     <div
-                      className="chart-resize-handle"
-                      onPointerDown={onResizePointerDown}
-                      onPointerMove={onResizePointerMove}
-                      onPointerUp={onResizePointerUp}
+                      className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
+                      ref={chartWrapRef}
+                      style={
+                        {
+                          "--ob-h": `${obSize.h}px`,
+                          "--ob-w": `${obSize.w}px`,
+                        } as React.CSSProperties
+                      }
                     >
-                      <svg
-                        className="chart-resize-icon"
-                        width="42"
-                        height="42"
-                        viewBox="0 0 64 64"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
+                      <PriceChart
+                        refreshTrigger={refreshTrigger}
+                        theme={theme}
+                        coin={coin}
+                        onZoneChange={(zone, price) => {
+                          setChartZone(zone);
+                          setChartPrice(price);
+                        }}
+                        onOpenAuth={onOpenAuth}
+                        onOpenUpgrade={onOpenUpgrade}
+                        onFullscreenChange={setChartFullscreen}
+                      />
+                      <div
+                        className="chart-resize-handle"
+                        onPointerDown={onResizePointerDown}
+                        onPointerMove={onResizePointerMove}
+                        onPointerUp={onResizePointerUp}
                       >
-                        {/* Hand / pointer finger */}
-                        <path d="M28 30V14a3 3 0 0 1 6 0v16" />
-                        <path d="M34 20a3 3 0 0 1 6 0v10" />
-                        <path d="M40 23a3 3 0 0 1 6 0v10" />
-                        <path d="M22 32a3 3 0 0 1 6 0v-2" />
-                        <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
-                        {/* Left arrow */}
-                        <line x1="12" y1="24" x2="2" y2="24" />
-                        <polyline points="6,20 2,24 6,28" />
-                        {/* Right arrow */}
-                        <line x1="52" y1="24" x2="62" y2="24" />
-                        <polyline points="58,20 62,24 58,28" />
-                      </svg>
+                        <svg
+                          className="chart-resize-icon"
+                          width="42"
+                          height="42"
+                          viewBox="0 0 64 64"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          {/* Hand / pointer finger */}
+                          <path d="M28 30V14a3 3 0 0 1 6 0v16" />
+                          <path d="M34 20a3 3 0 0 1 6 0v10" />
+                          <path d="M40 23a3 3 0 0 1 6 0v10" />
+                          <path d="M22 32a3 3 0 0 1 6 0v-2" />
+                          <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
+                          {/* Left arrow */}
+                          <line x1="12" y1="24" x2="2" y2="24" />
+                          <polyline points="6,20 2,24 6,28" />
+                          {/* Right arrow */}
+                          <line x1="52" y1="24" x2="62" y2="24" />
+                          <polyline points="58,20 62,24 58,28" />
+                        </svg>
+                      </div>
+                      <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                     </div>
-                    <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                    <CoinChat coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
                   </div>
                 ) : (
                   <StocksHome theme={theme} />

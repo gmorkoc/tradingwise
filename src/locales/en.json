@@ -1623,6 +1623,21 @@
     "colSize": "Size",
     "colValue": "Value"
   },
+  "coinChat": {
+    "triggerCount": "{{count}} comments",
+    "title": "{{coin}} Chat",
+    "commentCount": "{{count}} comments",
+    "empty": "No comments yet on {{coin}}. Be the first!",
+    "delete": "Delete",
+    "report": "Report",
+    "reported": "Reported",
+    "signInToPost": "Sign in to post a comment",
+    "upgradeToPost": "Upgrade to Pro to post comments",
+    "upgrade": "Upgrade",
+    "placeholder": "Share your take on {{coin}}…",
+    "post": "Post",
+    "postFailed": "Couldn't post your comment — please try again."
+  },
   "orderFlowTape": {
     "live": "LIVE",
     "connecting": "Connecting...",

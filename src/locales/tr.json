@@ -1555,6 +1555,21 @@
     "colSize": "Miktar",
     "colValue": "Değer"
   },
+  "coinChat": {
+    "triggerCount": "{{count}} yorum",
+    "title": "{{coin}} Sohbeti",
+    "commentCount": "{{count}} yorum",
+    "empty": "{{coin}} için henüz yorum yok. İlk yorumu sen yaz!",
+    "delete": "Sil",
+    "report": "Bildir",
+    "reported": "Bildirildi",
+    "signInToPost": "Yorum yapmak için giriş yap",
+    "upgradeToPost": "Yorum yapmak için Pro'ya yükselt",
+    "upgrade": "Yükselt",
+    "placeholder": "{{coin}} hakkındaki görüşünü paylaş…",
+    "post": "Gönder",
+    "postFailed": "Yorumun gönderilemedi — lütfen tekrar dene."
+  },
   "orderFlowTape": {
     "live": "CANLI",
     "connecting": "Bağlanıyor...",
