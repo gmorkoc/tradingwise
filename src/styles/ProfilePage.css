@@ -537,21 +537,23 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
   line-height: 1.4;
 }
 
-.pp-switch { position: relative; display: inline-block; cursor: pointer; flex-shrink: 0; }
-.pp-switch input { display: none; }
-
-.pp-switch-track {
-  display: block;
+.pp-switch {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
   width: 42px;
   height: 24px;
-  background: var(--color-border);
+  padding: 0;
+  border: none;
   border-radius: 12px;
-  position: relative;
+  background: var(--color-border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   transition: background 0.2s ease;
 }
 
-.pp-switch-track::after {
-  content: "";
+.pp-switch-thumb {
   position: absolute;
   top: 3px;
   left: 3px;
@@ -561,10 +563,11 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
   border-radius: 50%;
   transition: transform 0.2s ease;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  pointer-events: none;
 }
 
-.pp-switch input:checked + .pp-switch-track { background: #0ea5e9; }
-.pp-switch input:checked + .pp-switch-track::after { transform: translateX(18px); }
+.pp-switch--on { background: #0ea5e9; }
+.pp-switch--on .pp-switch-thumb { transform: translateX(18px); }
 
 /* ── Activity ────────────────────────────────────────────────────────────── */
 .pp-activity-list {

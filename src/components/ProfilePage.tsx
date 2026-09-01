@@ -159,6 +159,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [events,        setEvents]        = useState<AccountEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
 
+  // Optimistic overrides for the notification toggles — refreshProfile()'s
+  // round trip is otherwise the only thing that updates authProfile, so
+  // without this the switch just sits unchanged (or visibly reverts) for
+  // however long that request takes instead of flipping immediately on tap.
+  const [notifOverrides, setNotifOverrides] = useState<Partial<Record<NotificationPrefKey, boolean>>>({});
+
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Full UI reset — only on a fresh open. This must NOT also depend on
@@ -236,8 +242,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     if (user) { await saveAlertSound(user.id, sound); await refreshProfile(); }
   };
 
+  const notifPrefValue = (key: NotificationPrefKey): boolean =>
+    notifOverrides[key] ?? authProfile?.[key] ?? true;
+
   const handleNotifPrefChange = async (key: NotificationPrefKey, value: boolean) => {
-    if (user) { await saveNotificationPref(user.id, key, value); await refreshProfile(); }
+    setNotifOverrides(prev => ({ ...prev, [key]: value }));
+    if (user) {
+      await saveNotificationPref(user.id, key, value);
+      await refreshProfile();
+    }
+    setNotifOverrides(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   const handleManageBilling = async () => {
@@ -516,11 +534,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <p className="pp-notif-label">{t("profile.notifications.dailyBrief.label", "Daily Market Brief")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.dailyBrief.desc", "A push when there's fresh market news in the daily brief.")}</p>
                   </div>
-                  <label className="pp-switch">
-                    <input type="checkbox" checked={authProfile?.notify_daily_brief ?? true}
-                      onChange={(e) => handleNotifPrefChange("notify_daily_brief", e.target.checked)} />
-                    <span className="pp-switch-track" />
-                  </label>
+                  <button type="button" role="switch" aria-checked={notifPrefValue("notify_daily_brief")}
+                    className={`pp-switch${notifPrefValue("notify_daily_brief") ? " pp-switch--on" : ""}`}
+                    onClick={() => handleNotifPrefChange("notify_daily_brief", !notifPrefValue("notify_daily_brief"))}>
+                    <span className="pp-switch-thumb" />
+                  </button>
                 </div>
 
                 <div className="pp-notif-row">
@@ -528,11 +546,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <p className="pp-notif-label">{t("profile.notifications.priceAlerts.label", "Price Alerts")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.priceAlerts.desc", "Big BTC market moves and any price alerts you set.")}</p>
                   </div>
-                  <label className="pp-switch">
-                    <input type="checkbox" checked={authProfile?.notify_price_alerts ?? true}
-                      onChange={(e) => handleNotifPrefChange("notify_price_alerts", e.target.checked)} />
-                    <span className="pp-switch-track" />
-                  </label>
+                  <button type="button" role="switch" aria-checked={notifPrefValue("notify_price_alerts")}
+                    className={`pp-switch${notifPrefValue("notify_price_alerts") ? " pp-switch--on" : ""}`}
+                    onClick={() => handleNotifPrefChange("notify_price_alerts", !notifPrefValue("notify_price_alerts"))}>
+                    <span className="pp-switch-thumb" />
+                  </button>
                 </div>
 
                 <div className="pp-notif-row">
@@ -540,11 +558,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <p className="pp-notif-label">{t("profile.notifications.upgradeReminders.label", "Upgrade Reminders")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.upgradeReminders.desc", "Occasional reminders about what Pro and Elite unlock.")}</p>
                   </div>
-                  <label className="pp-switch">
-                    <input type="checkbox" checked={authProfile?.notify_upgrade_reminders ?? true}
-                      onChange={(e) => handleNotifPrefChange("notify_upgrade_reminders", e.target.checked)} />
-                    <span className="pp-switch-track" />
-                  </label>
+                  <button type="button" role="switch" aria-checked={notifPrefValue("notify_upgrade_reminders")}
+                    className={`pp-switch${notifPrefValue("notify_upgrade_reminders") ? " pp-switch--on" : ""}`}
+                    onClick={() => handleNotifPrefChange("notify_upgrade_reminders", !notifPrefValue("notify_upgrade_reminders"))}>
+                    <span className="pp-switch-thumb" />
+                  </button>
                 </div>
 
                 <div className="pp-divider" />
