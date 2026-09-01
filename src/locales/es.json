@@ -755,6 +755,8 @@
       "upgradeSub": "Tus nuevas funciones están activas inmediatamente. Solo se cobró la diferencia prorrateada — tu fecha de renovación no ha cambiado.",
       "downgradeMessage": "Cambio Programado",
       "downgradeSub": "Tu acceso actual continúa hasta el {{date}}, luego cambia automáticamente a {{newPlan}}. No se emiten reembolsos.",
+      "iapUpgradeSub": "Tus nuevas funciones están activas inmediatamente.",
+      "iapDowngradeSub": "Tu acceso actual continúa hasta tu próxima fecha de facturación, luego cambia automáticamente. No se emiten reembolsos.",
       "done": "Listo"
     },
     "badges": {

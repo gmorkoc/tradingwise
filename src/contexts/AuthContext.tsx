@@ -5,7 +5,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { SignInWithApple } from "@capacitor-community/apple-sign-in";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
-import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
+import { initRevenueCat, logOutRevenueCat, syncIAPEntitlement, isIAPAvailable } from "../services/revenuecat";
 import { initPushNotifications, logOutPushNotifications } from "../services/pushNotifications";
 
 // Must exactly match the CFBundleURLSchemes entry in Info.plist / the
@@ -75,6 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // table. No-op on web/Android — see isIAPAvailable().
         initRevenueCat(data.session.user.id);
         initPushNotifications(data.session.user.id);
+        // Reconciles profiles.tier against RevenueCat directly on every
+        // app open, not just right after a purchase — catches a plan
+        // change made through Apple's own Settings app (outside ours
+        // entirely) and doesn't depend on the webhook having landed.
+        if (isIAPAvailable()) syncIAPEntitlement().then(() => loadProfile(data.session!.user));
       }
       setLoading(false);
     });
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loadProfile(sess.user);
         initRevenueCat(sess.user.id);
         initPushNotifications(sess.user.id);
+        if (isIAPAvailable()) syncIAPEntitlement().then(() => loadProfile(sess.user));
       } else {
         setProfile(null);
         logOutRevenueCat();

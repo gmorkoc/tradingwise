@@ -124,13 +124,14 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
 
   // StoreKit's own purchase sheet replaces Stripe Checkout on iOS — Apple
   // requires digital subscriptions to go through In-App Purchase, not an
-  // external processor. Only fetched for new subscribers; existing native
-  // subscribers manage/change plans through Apple's own subscription
-  // settings (see handleManageBilling below), same as any other StoreKit app.
+  // external processor. Fetched for any iOS user, not just free tier —
+  // an existing Pro subscriber switching to Elite goes through this same
+  // purchase sheet too (StoreKit/RevenueCat handle the proration/crossgrade
+  // automatically within a subscription group); it's not Stripe-only.
   useEffect(() => {
-    if (!iap || tier !== "free") return;
+    if (!iap) return;
     getIAPPlans().then(setIapPlans);
-  }, [iap, tier]);
+  }, [iap]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -178,8 +179,13 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       return;
     }
 
-    // New subscriber on iOS → StoreKit's native purchase sheet, not Stripe
-    if (!isPaid && iap) {
+    // iOS → StoreKit's native purchase sheet, not Stripe's proration-preview
+    // flow below (which requires a Stripe customer that an IAP subscriber
+    // never has). This covers both a brand-new purchase and an existing
+    // subscriber switching tiers — StoreKit/RevenueCat handle the
+    // proration or scheduled crossgrade automatically within a
+    // subscription group, the same way Apple's own Settings UI would.
+    if (iap) {
       const iapPlan = iapPlans.find(p => p.tier === plan.id);
       if (!iapPlan) {
         setError("This plan isn't available for purchase right now. Please try again shortly.");
@@ -197,7 +203,14 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
       if (!sync.tier) await waitForTier(user!.id, result.tier ?? (plan.id as Tier));
       await refreshProfile();
       setLoading(null);
-      onClose();
+      if (isPaid) {
+        setDone(kind === "upgrade"
+          ? { message: t("upgradeModal.success.upgradeMessage", { plan: planLabel }), sub: t("upgradeModal.success.iapUpgradeSub") }
+          : { message: t("upgradeModal.success.downgradeMessage"), sub: t("upgradeModal.success.iapDowngradeSub") }
+        );
+      } else {
+        onClose();
+      }
       return;
     }
 

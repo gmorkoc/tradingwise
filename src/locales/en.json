@@ -769,6 +769,8 @@
       "upgradeSub": "Your new features are active immediately. Only the prorated difference was charged — your renewal date hasn't changed.",
       "downgradeMessage": "Downgrade Scheduled",
       "downgradeSub": "Your current plan access continues until {{date}}, then automatically switches to {{newPlan}}. No refund is issued.",
+      "iapUpgradeSub": "Your new features are active immediately.",
+      "iapDowngradeSub": "Your current plan access continues until your next billing date, then switches automatically. No refund is issued.",
       "reactivateMessage": "Subscription Reactivated",
       "reactivateSub": "Your subscription will continue automatically. No changes to your billing cycle.",
       "done": "Done"

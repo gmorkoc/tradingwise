@@ -755,6 +755,8 @@
       "upgradeSub": "Yeni özellikleriniz hemen aktif. Yalnızca orantılı fark ücretlendirildi — yenileme tarihiniz değişmedi.",
       "downgradeMessage": "Düşürme Planlandı",
       "downgradeSub": "Mevcut plan erişiminiz {{date}} tarihine kadar devam eder, ardından otomatik olarak {{newPlan}} planına geçilir. İade yapılmaz.",
+      "iapUpgradeSub": "Yeni özellikleriniz hemen aktif.",
+      "iapDowngradeSub": "Mevcut plan erişiminiz bir sonraki faturalama tarihinize kadar devam eder, ardından otomatik olarak değişir. İade yapılmaz.",
       "done": "Tamam"
     },
     "badges": {

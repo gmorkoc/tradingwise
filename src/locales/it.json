@@ -755,6 +755,8 @@
       "upgradeSub": "Le tue nuove funzionalità sono attive immediatamente. È stata addebitata solo la differenza in prorata — la data di rinnovo non è cambiata.",
       "downgradeMessage": "Downgrade Pianificato",
       "downgradeSub": "Il tuo accesso attuale continua fino al {{date}}, poi passa automaticamente a {{newPlan}}. Non vengono emessi rimborsi.",
+      "iapUpgradeSub": "Le tue nuove funzionalità sono attive immediatamente.",
+      "iapDowngradeSub": "Il tuo accesso attuale continua fino alla prossima data di fatturazione, poi passa automaticamente. Non vengono emessi rimborsi.",
       "done": "Fatto"
     },
     "badges": {
