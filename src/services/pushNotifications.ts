@@ -20,10 +20,12 @@ async function saveToken(token: string, userId: string): Promise<void> {
   if (error) console.error("Saving push token failed:", error.message);
 }
 
-/** Call once, after the Supabase user ID is known — requests OS permission,
- *  then registers this device's FCM token against that user so a backend
- *  job can target them. No-ops on web/Android, and never throws (permission
- *  denial is a normal, expected outcome). */
+/** Call once, after the Supabase user ID is known — requests OS permission
+ *  immediately (iOS only ever shows that dialog once per install anyway, so
+ *  there's no real cost to asking right away instead of gating behind an
+ *  explainer screen first), then registers this device's FCM token against
+ *  that user so a backend job can target them. No-ops on web/Android, and
+ *  never throws (permission denial is a normal, expected outcome). */
 export async function initPushNotifications(supabaseUserId: string): Promise<void> {
   if (!isPushAvailable()) return;
   try {
@@ -61,46 +63,37 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
       });
     }
 
-    const { receive } = await FirebaseMessaging.checkPermissions();
-    if (receive === "granted") {
-      const { token } = await FirebaseMessaging.getToken();
-      await saveToken(token, supabaseUserId);
-      return;
+    let { receive } = await FirebaseMessaging.checkPermissions();
+    if (receive === "prompt") {
+      await FirebaseMessaging.requestPermissions();
+      // Some plugin/OS combinations don't reliably surface the real result
+      // through requestPermissions()'s own return value once a decision
+      // already exists (seen returning "prompt" instead of "denied") — a
+      // fresh checkPermissions() call afterward is the source of truth.
+      ({ receive } = await FirebaseMessaging.checkPermissions());
     }
-    if (receive === "denied") return; // already declined at the OS level — nothing to do here
+    if (receive !== "granted") return;
 
-    // Never been asked yet. Apple doesn't require an explanation before the
-    // system prompt, but showing one first (PushPrimingModal.tsx, mounted at
-    // the app root) measurably improves opt-in rates and avoids reviewer
-    // pushback on an unexplained permission request. Shown once per device —
-    // if declined there, we don't auto-retry every sign-in.
-    if (localStorage.getItem(PRIMING_SHOWN_KEY)) return;
-    window.dispatchEvent(new CustomEvent("push-priming-needed", { detail: { userId: supabaseUserId } }));
+    const { token } = await FirebaseMessaging.getToken();
+    await saveToken(token, supabaseUserId);
   } catch (err) {
     console.error("Push notification init failed:", err);
   }
 }
 
-const PRIMING_SHOWN_KEY = "pushPrimingShown";
-
-/** Called from PushPrimingModal.tsx once the user taps "Enable" — shows the
- *  real OS prompt and, if granted, registers the token. */
+/** Called from ProfilePage's Notifications tab when the user taps "Enable"
+ *  after having skipped the initial login-time prompt (or if it silently
+ *  failed) — same request-then-verify flow as initPushNotifications. */
 export async function completePushPriming(supabaseUserId: string): Promise<void> {
-  localStorage.setItem(PRIMING_SHOWN_KEY, "1");
   try {
-    const { receive } = await FirebaseMessaging.requestPermissions();
+    await FirebaseMessaging.requestPermissions();
+    const { receive } = await FirebaseMessaging.checkPermissions();
     if (receive !== "granted") return;
     const { token } = await FirebaseMessaging.getToken();
     await saveToken(token, supabaseUserId);
   } catch (err) {
     console.error("Push permission request failed:", err);
   }
-}
-
-/** Called from PushPrimingModal.tsx on "Not now" — records that the user's
- *  been asked so initPushNotifications doesn't show it again every sign-in. */
-export function dismissPushPriming(): void {
-  localStorage.setItem(PRIMING_SHOWN_KEY, "1");
 }
 
 /** Detaches this device's token from the signed-out account so a future

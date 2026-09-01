@@ -38,7 +38,6 @@ import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
-import { PushPrimingModal } from "./components/PushPrimingModal";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
@@ -2135,7 +2134,6 @@ function AppDashboard({
 
       <DailyBrief />
       <PushToast />
-      <PushPrimingModal />
 
       {priceTicker &&
         (pipWindow
