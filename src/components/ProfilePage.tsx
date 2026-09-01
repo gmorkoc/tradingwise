@@ -218,6 +218,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     return () => { cancelled = true; };
   }, [isOpen, tab, user]);
 
+  // Drop an override — and release the in-flight lock — only once
+  // authProfile actually confirms it, never right after the save call
+  // merely returns.
+  useEffect(() => {
+    setNotifOverrides(prev => {
+      let changed = false;
+      const next = { ...prev };
+      (Object.keys(next) as NotificationPrefKey[]).forEach((key) => {
+        if (authProfile?.[key] === next[key]) {
+          delete next[key];
+          notifSavingRef.current[key] = false;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [authProfile]);
+
   if (!isOpen) return null;
 
   const handleProfileSave = async () => {
@@ -276,24 +294,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
       });
     }
   };
-
-  // Drop an override — and release the in-flight lock — only once
-  // authProfile actually confirms it, never right after the save call
-  // merely returns.
-  useEffect(() => {
-    setNotifOverrides(prev => {
-      let changed = false;
-      const next = { ...prev };
-      (Object.keys(next) as NotificationPrefKey[]).forEach((key) => {
-        if (authProfile?.[key] === next[key]) {
-          delete next[key];
-          notifSavingRef.current[key] = false;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [authProfile]);
 
   const handleManageBilling = async () => {
     if (providerMismatch) return; // UI already blocks this — safety net only
