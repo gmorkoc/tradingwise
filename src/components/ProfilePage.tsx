@@ -179,6 +179,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   // invisible in-app (silently no-op, no way to tell why nothing arrives).
   const [pushPermission, setPushPermission] = useState<"granted" | "denied" | "prompt" | null>(null);
   const [pushEnabling,   setPushEnabling]   = useState(false);
+  const [pushError,      setPushError]      = useState("");
 
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -317,10 +318,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const handleEnablePush = async () => {
     if (!user || pushEnabling) return;
     setPushEnabling(true);
-    await completePushPriming(user.id);
-    const { receive } = await FirebaseMessaging.checkPermissions();
-    setPushPermission(receive as typeof pushPermission);
-    setPushEnabling(false);
+    setPushError("");
+    try {
+      // iOS shows its native permission dialog at most once per install —
+      // after the user has answered it once (either way), every future
+      // requestPermissions() call resolves instantly with that same cached
+      // answer and no dialog at all. If that's "denied", checkPermissions()
+      // below picks it up and the banner switches to the "Open Settings"
+      // variant on its own; if this hangs instead (seen with some native
+      // bridge issues), the timeout keeps the button from being stuck
+      // disabled forever.
+      await Promise.race([
+        completePushPriming(user.id),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000)),
+      ]);
+      const { receive } = await FirebaseMessaging.checkPermissions();
+      setPushPermission(receive as typeof pushPermission);
+    } catch {
+      setPushError(t("profile.notifications.enableFailed", "Couldn't reach the system permission dialog. Try Settings instead."));
+    } finally {
+      setPushEnabling(false);
+    }
   };
 
   const handleManageBilling = async () => {
@@ -610,6 +628,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     </button>
                   </p>
                 )}
+                {pushError && <p className="pp-msg pp-msg--error">{pushError}</p>}
 
                 <div className="pp-notif-row">
                   <div>

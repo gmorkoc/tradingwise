@@ -470,7 +470,8 @@
       "permissionDenied": "Push notifications are turned off for coinhintz in iOS Settings — the toggles below won't do anything until you enable them there.",
       "openSettings": "Open Settings",
       "permissionPrompt": "You haven't enabled push notifications on this device yet.",
-      "enable": "Enable"
+      "enable": "Enable",
+      "enableFailed": "Couldn't reach the system permission dialog. Try Settings instead."
     },
     "info": {
       "displayName": "Display Name",

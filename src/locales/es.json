@@ -509,7 +509,8 @@
       "permissionDenied": "Las notificaciones push están desactivadas para coinhintz en Ajustes de iOS — los interruptores de abajo no harán nada hasta que las actives allí.",
       "openSettings": "Abrir Ajustes",
       "permissionPrompt": "Aún no has activado las notificaciones push en este dispositivo.",
-      "enable": "Activar"
+      "enable": "Activar",
+      "enableFailed": "No se pudo abrir el diálogo de permisos del sistema. Prueba con Ajustes en su lugar."
     },
     "activity": {
       "title": "Actividad de la Cuenta",

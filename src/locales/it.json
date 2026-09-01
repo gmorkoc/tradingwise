@@ -509,7 +509,8 @@
       "permissionDenied": "Le notifiche push sono disattivate per coinhintz nelle Impostazioni di iOS — gli interruttori qui sotto non faranno nulla finché non le attivi lì.",
       "openSettings": "Apri Impostazioni",
       "permissionPrompt": "Non hai ancora attivato le notifiche push su questo dispositivo.",
-      "enable": "Attiva"
+      "enable": "Attiva",
+      "enableFailed": "Impossibile aprire la finestra di autorizzazione di sistema. Prova invece con Impostazioni."
     },
     "activity": {
       "title": "Attività dell'Account",

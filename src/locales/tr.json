@@ -509,7 +509,8 @@
       "permissionDenied": "Push bildirimleri iOS Ayarları'nda coinhintz için kapalı — orada etkinleştirmediğiniz sürece aşağıdaki anahtarlar hiçbir işe yaramaz.",
       "openSettings": "Ayarları Aç",
       "permissionPrompt": "Bu cihazda push bildirimlerini henüz etkinleştirmediniz.",
-      "enable": "Etkinleştir"
+      "enable": "Etkinleştir",
+      "enableFailed": "Sistem izin penceresine ulaşılamadı. Bunun yerine Ayarlar'ı deneyin."
     },
     "activity": {
       "title": "Hesap Etkinliği",
