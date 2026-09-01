@@ -779,6 +779,12 @@
       "note": "Your subscription ends at the billing period — access continues until then.",
       "reactivate": "Reactivate"
     },
+    "deviceMismatch": {
+      "title": "Manage this on your other device",
+      "appleBody": "This subscription was purchased through the App Store. To upgrade, downgrade, or cancel it, use the iPhone or iPad you subscribed on — or manage it directly in Settings → [your name] → Subscriptions.",
+      "webBody": "This subscription was purchased on the web. To upgrade, downgrade, or cancel it, sign in at coinhintz.io from a browser on the device you subscribed with.",
+      "gotIt": "Got it"
+    },
     "error": "Something went wrong",
     "perMonth": "/mo",
     "lf": {

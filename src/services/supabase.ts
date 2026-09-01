@@ -34,6 +34,19 @@ export function hasAccess(userTier: Tier, required: Tier): boolean {
   return TIER_RANK[userTier] >= TIER_RANK[required];
 }
 
+// Which payment processor actually owns a paid subscription — the
+// RevenueCat (Apple IAP) webhook never sets stripe_customer_id, so its
+// presence reliably distinguishes the two. Used to stop a user from trying
+// to upgrade/downgrade/cancel from the platform that *didn't* sell them
+// the subscription (web vs iOS use entirely separate billing systems with
+// no visibility into each other).
+export type SubscriptionProvider = "stripe" | "apple";
+
+export function subscriptionProvider(profile: Profile | null, tier: Tier): SubscriptionProvider | null {
+  if (tier === "free") return null;
+  return profile?.stripe_customer_id ? "stripe" : "apple";
+}
+
 export async function fetchProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")

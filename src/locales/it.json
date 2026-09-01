@@ -755,6 +755,12 @@
       "termsLink": "Termini di Utilizzo",
       "privacyLink": "Informativa sulla Privacy"
     },
+    "deviceMismatch": {
+      "title": "Gestiscilo dal tuo altro dispositivo",
+      "appleBody": "Questo abbonamento è stato acquistato tramite l'App Store. Per aggiornarlo, ridurlo o annullarlo, usa l'iPhone o iPad con cui ti sei abbonato — oppure gestiscilo direttamente in Impostazioni → [il tuo nome] → Abbonamenti.",
+      "webBody": "Questo abbonamento è stato acquistato sul web. Per aggiornarlo, ridurlo o annullarlo, accedi a coinhintz.io da un browser sul dispositivo con cui ti sei abbonato.",
+      "gotIt": "Capito"
+    },
     "error": "Qualcosa è andato storto",
     "perMonth": "/mese",
     "lf": {

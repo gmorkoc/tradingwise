@@ -755,6 +755,12 @@
       "termsLink": "Términos de Uso",
       "privacyLink": "Política de Privacidad"
     },
+    "deviceMismatch": {
+      "title": "Gestiona esto desde tu otro dispositivo",
+      "appleBody": "Esta suscripción se compró a través de la App Store. Para mejorarla, reducirla o cancelarla, usa el iPhone o iPad con el que te suscribiste — o gestiónala directamente en Ajustes → [tu nombre] → Suscripciones.",
+      "webBody": "Esta suscripción se compró en la web. Para mejorarla, reducirla o cancelarla, inicia sesión en coinhintz.io desde un navegador en el dispositivo con el que te suscribiste.",
+      "gotIt": "Entendido"
+    },
     "error": "Algo salió mal",
     "perMonth": "/mes",
     "lf": {

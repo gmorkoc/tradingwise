@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase, saveAlertSound, ALERT_SOUNDS, fetchAccountEvents, type AlertSound, type AccountEvent } from "../services/supabase";
+import { supabase, saveAlertSound, ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, type AlertSound, type AccountEvent } from "../services/supabase";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
@@ -114,6 +114,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const { user, profile: authProfile, tier, refreshProfile, session, signOut } = useAuth();
   const { used, limit, isPaid } = useAIQuota();
 
+  // Stripe (web) and Apple IAP (iOS) are separate billing systems with no
+  // visibility into each other — billing actions only work from the
+  // platform that actually sold the subscription.
+  const actualProvider = subscriptionProvider(authProfile, tier);
+  const providerMismatch = isPaid && actualProvider !== null && (
+    (actualProvider === "apple"  && !isIAPAvailable()) ||
+    (actualProvider === "stripe" && isIAPAvailable())
+  );
+
   const blankFromAuth = (): ProfileData => ({
     displayName: authProfile?.full_name || (user?.user_metadata?.full_name as string | undefined) || "",
     username: "",
@@ -209,6 +218,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   };
 
   const handleManageBilling = async () => {
+    if (providerMismatch) return; // UI already blocks this — safety net only
     // Subscriptions bought via IAP have no Stripe customer at all — Apple
     // requires these be managed through the user's Apple ID, not our UI.
     if (isIAPAvailable()) { openManageSubscriptions(); return; }
@@ -373,15 +383,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                 <div className="pp-divider" />
 
                 {portalError && <p className="pp-msg pp-msg--error">{portalError}</p>}
+                {isPaid && providerMismatch && (
+                  <p className="pp-msg pp-msg--warning">
+                    {actualProvider === "apple" ? t("upgradeModal.deviceMismatch.appleBody") : t("upgradeModal.deviceMismatch.webBody")}
+                  </p>
+                )}
                 <div className="pp-actions">
                   {isPaid ? (
-                    <button className="pp-btn pp-btn--ghost" onClick={handleManageBilling} disabled={portalLoading}>
-                      {portalLoading
-                        ? t("profile.subscription.loadingPortal")
-                        : isIAPAvailable()
-                        ? t("profile.subscription.manageAppleSubscription")
-                        : t("profile.subscription.manageBilling")}
-                    </button>
+                    providerMismatch ? null : (
+                      <button className="pp-btn pp-btn--ghost" onClick={handleManageBilling} disabled={portalLoading}>
+                        {portalLoading
+                          ? t("profile.subscription.loadingPortal")
+                          : isIAPAvailable()
+                          ? t("profile.subscription.manageAppleSubscription")
+                          : t("profile.subscription.manageBilling")}
+                      </button>
+                    )
                   ) : (
                     <button className="pp-btn pp-btn--primary" onClick={() => { onClose(); onOpenUpgrade(); }}>
                       {t("profile.subscription.upgradePlan")}

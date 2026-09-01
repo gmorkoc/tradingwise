@@ -755,6 +755,12 @@
       "termsLink": "Kullanım Şartları",
       "privacyLink": "Gizlilik Politikası"
     },
+    "deviceMismatch": {
+      "title": "Bunu diğer cihazınızdan yönetin",
+      "appleBody": "Bu abonelik App Store üzerinden satın alındı. Yükseltmek, düşürmek veya iptal etmek için abone olduğunuz iPhone veya iPad'i kullanın — ya da doğrudan Ayarlar → [adınız] → Abonelikler bölümünden yönetin.",
+      "webBody": "Bu abonelik web üzerinden satın alındı. Yükseltmek, düşürmek veya iptal etmek için abone olduğunuz cihazda bir tarayıcıdan coinhintz.io adresinde oturum açın.",
+      "gotIt": "Anladım"
+    },
     "error": "Bir şeyler yanlış gitti",
     "perMonth": "/ay",
     "lf": {

@@ -17,7 +17,7 @@ import {
   restorePurchases,
   type IAPPlan,
 } from "../services/revenuecat";
-import { TIER_RANK, fetchProfile, type Tier } from "../services/supabase";
+import { TIER_RANK, fetchProfile, subscriptionProvider, type Tier } from "../services/supabase";
 import "../styles/UpgradeModal.css";
 
 // The RevenueCat webhook that updates profiles.tier fires asynchronously,
@@ -145,8 +145,20 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   const isPaid     = tier === "pro" || tier === "elite";
   const currentRank = TIER_RANK[tier as keyof typeof TIER_RANK] ?? 0;
 
+  // A subscription can only be changed or cancelled from the platform that
+  // actually sold it — Stripe (web) and Apple IAP (iOS) have no visibility
+  // into each other. If the user is viewing from the *other* platform, block
+  // every plan action here instead of letting them hit a confusing failure
+  // (or, worse for an upgrade, end up buying a second, separate subscription).
+  const actualProvider = subscriptionProvider(profile, tier);
+  const providerMismatch = isPaid && actualProvider !== null && (
+    (actualProvider === "apple"  && !iap) ||
+    (actualProvider === "stripe" && iap)
+  );
+
   const handlePlanClick = async (plan: typeof PLANS[number]) => {
     if (!user) { onClose(); onOpenAuth(); return; }
+    if (providerMismatch) return; // UI already blocks this — safety net only
     setError("");
 
     const planLabel  = t(`upgradeModal.plans.${plan.id}.label`);
@@ -257,6 +269,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   };
 
   const handleManageBilling = async () => {
+    if (providerMismatch) return; // UI already blocks this — safety net only
     // Apple subscriptions are managed in the OS, not this app — Stripe's
     // billing portal has no visibility into a StoreKit purchase at all.
     if (iap) {
@@ -284,6 +297,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
   };
 
   const handleReactivate = async () => {
+    if (providerMismatch) return; // UI already blocks this — safety net only
     setLoading("reactivate");
     setError("");
     try {
@@ -319,8 +333,23 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
           {(confirm || done) ? "←" : "✕"}
         </button>
 
-        {/* ── Success screen ── */}
-        {done ? (
+        {/* ── Wrong-platform screen: this subscription belongs to the other
+              billing system (Stripe web vs Apple IAP) — block every plan
+              action rather than risk a failed cancel or a second, duplicate
+              subscription from an upgrade attempt. ── */}
+        {providerMismatch ? (
+          <div className="upgrade-confirm">
+            <div className="upgrade-confirm-icon" style={{ color: "#38bdf8", fontSize: "2.8rem" }}>📱</div>
+            <h2 className="upgrade-title">{t("upgradeModal.deviceMismatch.title")}</h2>
+            <p className="upgrade-sub">
+              {actualProvider === "apple" ? t("upgradeModal.deviceMismatch.appleBody") : t("upgradeModal.deviceMismatch.webBody")}
+            </p>
+            <button className="upgrade-plan-cta" style={{ maxWidth: 260, marginTop: 16 }} onClick={onClose}>
+              {t("upgradeModal.deviceMismatch.gotIt")}
+            </button>
+          </div>
+        ) : /* ── Success screen ── */
+        done ? (
           <div className="upgrade-confirm">
             <div className="upgrade-confirm-icon" style={{ color: "#4ade80", fontSize: "2.8rem" }}>✓</div>
             <h2 className="upgrade-title">{done.message}</h2>
