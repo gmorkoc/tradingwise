@@ -1,4 +1,4 @@
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { supabase } from "./supabase";
@@ -8,6 +8,19 @@ import { supabase } from "./supabase";
 export function isPushAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 }
+
+// Native plugin (ios/App/App/NotificationAuthPlugin.swift) — bypasses
+// @capacitor-firebase/messaging's requestPermissions(), which silently
+// asks iOS for zero notification capabilities because it (mis)reuses
+// capacitor.config.ts's FirebaseMessaging.presentationOptions (deliberately
+// set to [] so a foregrounded push doesn't also pop the OS banner) as the
+// authorization options to request. Requesting nothing means iOS never
+// records a real permission decision at all — see the plugin file for the
+// full explanation.
+interface NotificationAuthPlugin {
+  requestFullAuthorization(): Promise<{ granted: boolean }>;
+}
+const NotificationAuth = registerPlugin<NotificationAuthPlugin>("NotificationAuth");
 
 let currentToken: string | null = null;
 let listenersAttached = false;
@@ -65,12 +78,8 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
 
     let { receive } = await FirebaseMessaging.checkPermissions();
     if (receive === "prompt") {
-      await FirebaseMessaging.requestPermissions();
-      // Some plugin/OS combinations don't reliably surface the real result
-      // through requestPermissions()'s own return value once a decision
-      // already exists (seen returning "prompt" instead of "denied") — a
-      // fresh checkPermissions() call afterward is the source of truth.
-      ({ receive } = await FirebaseMessaging.checkPermissions());
+      await NotificationAuth.requestFullAuthorization();
+      receive = (await FirebaseMessaging.checkPermissions()).receive;
     }
     if (receive !== "granted") return;
 
@@ -86,7 +95,7 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
  *  failed) — same request-then-verify flow as initPushNotifications. */
 export async function completePushPriming(supabaseUserId: string): Promise<void> {
   try {
-    await FirebaseMessaging.requestPermissions();
+    await NotificationAuth.requestFullAuthorization();
     const { receive } = await FirebaseMessaging.checkPermissions();
     if (receive !== "granted") return;
     const { token } = await FirebaseMessaging.getToken();

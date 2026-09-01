@@ -20,6 +20,7 @@
 		555B9780CE1FCE5623407372 /* alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9039AA3378EB775396304197 /* alert.wav */; };
 		F95F6BBE7AD93204361CCAEE /* classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3BC7215F3CF845D0651DA654 /* classic.wav */; };
 		8C30AFB95CDC28C11947D2BB /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D43FB156F1A8ED89933CF05 /* MainViewController.swift */; };
+		42983EC1FCA30730287302EF /* NotificationAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +31,7 @@
 		9039AA3378EB775396304197 /* alert.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/alert.wav"; sourceTree = "<group>"; };
 		3BC7215F3CF845D0651DA654 /* classic.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/classic.wav"; sourceTree = "<group>"; };
 		1D43FB156F1A8ED89933CF05 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAuthPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -97,6 +99,7 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				1D43FB156F1A8ED89933CF05 /* MainViewController.swift */,
+				70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */,
 				5DBDCCD5ED615C75B3C0137F /* Configuration.storekit */,
 				0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */,
 				0F00FDFCBDFABE7CBDA0FBB8 /* bell.wav */,
@@ -236,6 +239,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				8C30AFB95CDC28C11947D2BB /* MainViewController.swift in Sources */,
+				42983EC1FCA30730287302EF /* NotificationAuthPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
