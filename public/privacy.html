@@ -33,6 +33,16 @@
     margin-bottom: 32px;
   }
   .logo span { color: #4ade80; }
+  .lang-switch {
+    display: flex;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+  .lang-switch a { color: var(--text-muted); text-decoration: none; }
+  .lang-switch a:hover { color: var(--accent); }
+  .lang-switch .current { color: var(--accent); font-weight: 700; }
   h1 {
     font-size: 1.7rem;
     margin: 0 0 6px;
@@ -70,6 +80,9 @@
 <body>
   <div class="wrap">
     <div class="logo">coinhint<span>z</span></div>
+    <div class="lang-switch">
+      <span class="current">EN</span> · <a href="/privacy.es.html">ES</a> · <a href="/privacy.it.html">IT</a> · <a href="/privacy.tr.html">TR</a>
+    </div>
     <h1>Privacy Policy</h1>
     <p class="updated">Last updated: August 31, 2026</p>
 

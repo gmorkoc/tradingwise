@@ -104,8 +104,11 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
+
 export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
   const { user, tier, profile, refreshProfile } = useAuth();
   const subStatus = profile?.subscription_status ?? "none";
   const isCanceling = subStatus === "canceling";
@@ -510,9 +513,9 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
             {!isPaid && (
               <p className="upgrade-footer upgrade-footer--policy">
                 {iap ? t("upgradeModal.footer.subscriptionTermsApple") : t("upgradeModal.footer.subscriptionTermsWeb")}{" "}
-                <a href="https://coinhintz.io/terms.html" target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.termsLink")}</a>
+                <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.termsLink")}</a>
                 {" · "}
-                <a href="https://coinhintz.io/privacy.html" target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.privacyLink")}</a>
+                <a href={`https://coinhintz.io/privacy${legalSuffix}.html`} target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.privacyLink")}</a>
               </p>
             )}
             {/* Apple subscriptions cancel/renew through the OS, not Stripe —

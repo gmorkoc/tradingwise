@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gizlilik Politikası — coinhintz</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --card: #111a2e;
+    --border: #1f2b45;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 32px;
+  }
+  .logo span { color: #4ade80; }
+  .lang-switch {
+    display: flex;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+  .lang-switch a { color: var(--text-muted); text-decoration: none; }
+  .lang-switch a:hover { color: var(--accent); }
+  .lang-switch .current { color: var(--accent); font-weight: 700; }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+  }
+  .updated {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 36px;
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 36px 0 10px;
+    color: var(--accent);
+  }
+  p, li { color: #cbd5e1; font-size: 0.94rem; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-top: 8px;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">coinhint<span>z</span></div>
+    <div class="lang-switch">
+      <a href="/privacy.html">EN</a> · <a href="/privacy.es.html">ES</a> · <a href="/privacy.it.html">IT</a> · <span class="current">TR</span>
+    </div>
+    <h1>Gizlilik Politikası</h1>
+    <p class="updated">Son güncelleme: 31 Ağustos 2026</p>
+
+    <p>Bu politika, coinhintz uygulamasını ve web sitesini ("Hizmet") kullandığınızda coinhintz'in ("biz") hangi bilgileri topladığını ve bunların nasıl kullanıldığını açıklar. Hizmeti kullanarak bu politikayı kabul etmiş olursunuz.</p>
+
+    <h2>Topladığımız bilgiler</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Hesap bilgileri</strong> — e-posta adresi ve varsa belirlediğiniz görünen ad. Google veya Apple ile giriş yaparsanız, o hesapla ilişkili e-posta ve adı alırız.</li>
+        <li><strong>Kimlik doğrulama verileri</strong> — e-posta/şifre ile giriş yaparsanız güvenli şekilde hashlenmiş bir şifre dahil olmak üzere, backend sağlayıcımız Supabase tarafından yönetilir.</li>
+        <li><strong>Abonelik ve faturalama durumu</strong> — plan seviyeniz ve abonelik durumunuz. Ödeme bilgilerinin kendisi tamamen Stripe (web) veya Apple (RevenueCat aracılığıyla iOS Uygulama İçi Satın Alma) tarafından işlenir — kart numaranızı asla almayız veya saklamayız.</li>
+        <li><strong>Push bildirim jetonu</strong> — iOS'ta bildirimleri etkinleştirirseniz, yapılandırdığınız uyarıları (fiyat uyarıları, haberler, hesap hatırlatıcıları) iletmek için kullanılan bir cihaz jetonu.</li>
+        <li><strong>Uygulama tercihleri ve oluşturduğunuz içerik</strong> — belirlediğiniz fiyat uyarıları, seçtiğiniz uyarı sesi, trader seviyesi ayarı ve yapay zeka sohbet özelliğine gönderdiğiniz mesajlar.</li>
+        <li><strong>Kullanım verileri</strong> — Hizmeti işletmek için gereken temel teknik veriler (örn. istek günlükleri) ve hizmet şartları kabul zaman damgaları.</li>
+      </ul>
+    </div>
+
+    <h2>Nasıl kullanıyoruz</h2>
+    <p>Hesabınızı yönetmek, abonelikleri işlemek, etkinleştirdiğiniz push bildirimlerini iletmek, yapay zeka sohbet taleplerine yanıt vermek, müşteri desteği sağlamak ve Hizmetin güvenliğini ve güvenilirliğini sürdürmek için. Kişisel bilgilerinizi satmıyoruz.</p>
+
+    <h2>Birlikte çalıştığımız üçüncü taraflar</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Supabase</strong> — veritabanı, kimlik doğrulama ve backend barındırma</li>
+        <li><strong>Stripe</strong> — web abonelikleri için ödeme işleme</li>
+        <li><strong>Apple / RevenueCat</strong> — iOS'ta Uygulama İçi Satın Alma işleme</li>
+        <li><strong>Firebase Cloud Messaging (Google)</strong> — iOS'ta push bildirimlerinin iletilmesi</li>
+        <li><strong>OpenAI</strong> — yanıt oluşturmak için yapay zeka sohbet özelliğine gönderdiğiniz mesajları işler</li>
+        <li><strong>Vercel</strong> — web barındırma</li>
+      </ul>
+      <p style="margin-bottom:0">Bunların her biri, verileri yalnızca kendi politikaları kapsamında Hizmetin kendi bölümünü sağlamak için gerektiği kadar işler. Üçüncü taraf reklam izleyicileri kullanmıyoruz ve mobil uygulama yapılandırmamızda analiz toplama devre dışı bırakılmıştır.</p>
+    </div>
+
+    <h2>Piyasa verileri</h2>
+    <p>Fiyat grafikleri, emir defteri ve piyasa verileri, kamuya açık borsa ve piyasa veri API'lerinden (Binance, Coinbase ve Coinglass dahil) alınır. Bu istekler kişisel bilgilerinizi içermez.</p>
+
+    <h2>Yerel depolama</h2>
+    <p>Uygulama, standart tarayıcı/uygulama yerel depolamasını kullanarak bazı tercihleri (örn. tema, uyarı ayarları, sohbet geçmişi) doğrudan cihazınızda saklar. Bu veriler cihazınızda kalır ve yukarıda açıklanan bir özelliğin parçası olmadığı sürece (bir push bildirimini tetikleyebilmesi için hesabınıza da kaydedilen bir fiyat uyarısı gibi) bize iletilmez.</p>
+
+    <h2>Veri saklama ve silme</h2>
+    <p>Uygulamadaki Profil → Tehlike Bölgesi üzerinden hesabınızı ve ilişkili verilerinizi istediğiniz zaman kalıcı olarak silebilirsiniz. Bu, yasal olarak saklamamız gereken durumlar (örn. Stripe/Apple tarafından kendi politikalarına göre saklanan vergi/muhasebe amaçlı ödeme kayıtları) haricinde hesabınızı sistemlerimizden kaldırır.</p>
+
+    <h2>Çocukların gizliliği</h2>
+    <p>Hizmet, bulundukları yargı bölgesinde yasal yaşta olan kullanıcılar içindir ve çocuklara yönelik değildir. Çocuklardan bilerek bilgi toplamayız.</p>
+
+    <h2>Bu politikadaki değişiklikler</h2>
+    <p>Bu politikayı zaman zaman güncelleyebiliriz. Önemli değişiklikler, yukarıdaki "Son güncelleme" tarihinin güncellenmesiyle yansıtılacaktır.</p>
+
+    <h2>İletişim</h2>
+    <p>Bu politika veya verileriniz hakkında sorularınız mı var? Bize <a href="mailto:support@coinhintz.io">support@coinhintz.io</a> adresinden ulaşın.</p>
+
+    <footer>
+      coinhintz.io · <a href="/terms.tr.html">Kullanım Şartları</a>
+    </footer>
+  </div>
+</body>
+</html>

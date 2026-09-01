@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Política de Privacidad — coinhintz</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --card: #111a2e;
+    --border: #1f2b45;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 32px;
+  }
+  .logo span { color: #4ade80; }
+  .lang-switch {
+    display: flex;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+  }
+  .lang-switch a { color: var(--text-muted); text-decoration: none; }
+  .lang-switch a:hover { color: var(--accent); }
+  .lang-switch .current { color: var(--accent); font-weight: 700; }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+  }
+  .updated {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 36px;
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 36px 0 10px;
+    color: var(--accent);
+  }
+  p, li { color: #cbd5e1; font-size: 0.94rem; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-top: 8px;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">coinhint<span>z</span></div>
+    <div class="lang-switch">
+      <a href="/privacy.html">EN</a> · <span class="current">ES</span> · <a href="/privacy.it.html">IT</a> · <a href="/privacy.tr.html">TR</a>
+    </div>
+    <h1>Política de Privacidad</h1>
+    <p class="updated">Última actualización: 31 de agosto de 2026</p>
+
+    <p>Esta política explica qué información recopila coinhintz ("nosotros") cuando utilizas la aplicación y el sitio web de coinhintz (el "Servicio"), y cómo se utiliza. Al utilizar el Servicio, aceptas esta política.</p>
+
+    <h2>Información que recopilamos</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Información de la cuenta</strong> — dirección de correo electrónico y nombre para mostrar si lo proporcionas. Si inicias sesión con Google o Apple, recibimos el correo electrónico y el nombre asociados a esa cuenta.</li>
+        <li><strong>Datos de autenticación</strong> — gestionados por nuestro proveedor de backend, Supabase, incluyendo una contraseña cifrada de forma segura si utilizas el inicio de sesión por correo electrónico/contraseña.</li>
+        <li><strong>Estado de suscripción y facturación</strong> — tu nivel de plan y estado de suscripción. Los datos de pago en sí son gestionados íntegramente por Stripe (web) o Apple (compra dentro de la aplicación en iOS, a través de RevenueCat) — nunca recibimos ni almacenamos el número de tu tarjeta.</li>
+        <li><strong>Token de notificaciones push</strong> — si activas las notificaciones en iOS, un token de dispositivo utilizado para entregar las alertas que has configurado (alertas de precio, noticias, recordatorios de cuenta).</li>
+        <li><strong>Preferencias de la aplicación y contenido que creas</strong> — alertas de precio que configuras, el sonido de alerta elegido, el nivel de trader configurado, y los mensajes que envías a la función de chat con IA.</li>
+        <li><strong>Datos de uso</strong> — datos técnicos básicos necesarios para operar el Servicio (p. ej., registros de solicitudes), y marcas de tiempo de aceptación de los términos del servicio.</li>
+      </ul>
+    </div>
+
+    <h2>Cómo la utilizamos</h2>
+    <p>Para gestionar tu cuenta, procesar suscripciones, entregar las notificaciones push que has activado, responder a las solicitudes del chat de IA, brindar soporte al cliente y mantener la seguridad y fiabilidad del Servicio. No vendemos tu información personal.</p>
+
+    <h2>Terceros con los que trabajamos</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Supabase</strong> — base de datos, autenticación y alojamiento del backend</li>
+        <li><strong>Stripe</strong> — procesamiento de pagos para suscripciones web</li>
+        <li><strong>Apple / RevenueCat</strong> — procesamiento de compras dentro de la aplicación en iOS</li>
+        <li><strong>Firebase Cloud Messaging (Google)</strong> — entrega de notificaciones push en iOS</li>
+        <li><strong>OpenAI</strong> — procesa los mensajes que envías a la función de chat con IA para generar respuestas</li>
+        <li><strong>Vercel</strong> — alojamiento web</li>
+      </ul>
+      <p style="margin-bottom:0">Cada uno de estos procesa datos únicamente según sea necesario para proporcionar su parte del Servicio, bajo sus propias políticas de privacidad. No utilizamos rastreadores publicitarios de terceros, y la recopilación de analíticas está desactivada en la configuración de nuestra aplicación móvil.</p>
+    </div>
+
+    <h2>Datos de mercado</h2>
+    <p>Los gráficos de precios, el libro de órdenes y los datos de mercado se obtienen de APIs públicas de exchanges y datos de mercado (incluyendo Binance, Coinbase y Coinglass). Estas solicitudes no incluyen tu información personal.</p>
+
+    <h2>Almacenamiento local</h2>
+    <p>La aplicación almacena algunas preferencias directamente en tu dispositivo (p. ej., tema, configuración de alertas, historial de chat) utilizando el almacenamiento local estándar del navegador/aplicación. Estos datos permanecen en tu dispositivo y no se nos transmiten a menos que formen parte de una función descrita anteriormente (como una alerta de precio, que también se guarda en tu cuenta para poder activar una notificación push).</p>
+
+    <h2>Retención y eliminación de datos</h2>
+    <p>Puedes eliminar permanentemente tu cuenta y los datos asociados en cualquier momento desde Perfil → Zona de Peligro en la aplicación. Esto elimina tu cuenta de nuestros sistemas, sujeto a lo que estemos legalmente obligados a conservar (p. ej., registros de pago con fines fiscales/contables, conservados por Stripe/Apple según sus propias políticas).</p>
+
+    <h2>Privacidad de menores</h2>
+    <p>El Servicio está destinado a usuarios de edad legal en su jurisdicción y no está dirigido a menores. No recopilamos conscientemente información de menores.</p>
+
+    <h2>Cambios en esta política</h2>
+    <p>Podemos actualizar esta política periódicamente. Los cambios importantes se reflejarán actualizando la fecha de "Última actualización" indicada arriba.</p>
+
+    <h2>Contacto</h2>
+    <p>¿Preguntas sobre esta política o tus datos? Contáctanos en <a href="mailto:support@coinhintz.io">support@coinhintz.io</a>.</p>
+
+    <footer>
+      coinhintz.io · <a href="/terms.es.html">Términos de Uso</a>
+    </footer>
+  </div>
+</body>
+</html>
