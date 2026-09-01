@@ -491,6 +491,22 @@
       "confirmButton": "Eliminar Cuenta Permanentemente",
       "deleting": "Eliminando…"
     },
+    "notifications": {
+      "title": "Configuración de Notificaciones",
+      "sub": "Elige qué notificaciones push quieres recibir.",
+      "dailyBrief": {
+        "label": "Resumen Diario del Mercado",
+        "desc": "Un aviso cuando hay noticias nuevas en el resumen diario."
+      },
+      "priceAlerts": {
+        "label": "Alertas de Precio",
+        "desc": "Grandes movimientos de BTC y las alertas de precio que configures."
+      },
+      "upgradeReminders": {
+        "label": "Recordatorios de Mejora",
+        "desc": "Recordatorios ocasionales de lo que desbloquean Pro y Elite."
+      }
+    },
     "activity": {
       "title": "Actividad de la Cuenta",
       "sub": "Un historial de eventos de la cuenta y de facturación.",

@@ -14,7 +14,8 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const { data: freeUsers } = await supabaseAdmin.from("profiles").select("id").eq("tier", "free");
+  const { data: freeUsers } = await supabaseAdmin.from("profiles").select("id")
+    .eq("tier", "free").eq("notify_upgrade_reminders", true);
   if (!freeUsers || freeUsers.length === 0) {
     return new Response(JSON.stringify({ freeUsers: 0, sent: 0 }), { headers: { "Content-Type": "application/json" } });
   }

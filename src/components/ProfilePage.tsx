@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase, saveAlertSound, ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, type AlertSound, type AccountEvent } from "../services/supabase";
+import {
+  supabase, saveAlertSound, saveNotificationPref, ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider,
+  type AlertSound, type AccountEvent, type NotificationPrefKey,
+} from "../services/supabase";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
@@ -38,14 +41,15 @@ const STATUS_CONFIG: Record<string, { tKey: string; color: string }> = {
   incomplete_expired: { tKey: "profile.status.incomplete_expired", color: "#f87171" },
 };
 
-type Tab = "overview" | "profile" | "security" | "activity" | "danger";
+type Tab = "overview" | "profile" | "security" | "notifications" | "activity" | "danger";
 
 const NAV_ITEMS: { id: Tab; label: string; danger?: boolean }[] = [
-  { id: "overview",  label: "Overview" },
-  { id: "profile",   label: "Profile Info" },
-  { id: "security",  label: "Security" },
-  { id: "activity",  label: "Activity" },
-  { id: "danger",    label: "Danger Zone", danger: true },
+  { id: "overview",      label: "Overview" },
+  { id: "profile",       label: "Profile Info" },
+  { id: "security",      label: "Security" },
+  { id: "notifications", label: "Notifications" },
+  { id: "activity",      label: "Activity" },
+  { id: "danger",        label: "Danger Zone", danger: true },
 ];
 
 function getInitials(name: string): string {
@@ -217,6 +221,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     if (user) { await saveAlertSound(user.id, sound); await refreshProfile(); }
   };
 
+  const handleNotifPrefChange = async (key: NotificationPrefKey, value: boolean) => {
+    if (user) { await saveNotificationPref(user.id, key, value); await refreshProfile(); }
+  };
+
   const handleManageBilling = async () => {
     if (providerMismatch) return; // UI already blocks this — safety net only
     // Subscriptions bought via IAP have no Stripe customer at all — Apple
@@ -363,25 +371,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-divider" />
 
-                <h3 className="pp-pane-title">{t("profile.alertSound.title", "Alert Sound")}</h3>
-                <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
-                  {t("profile.alertSound.hint", "Plays for price alerts — both in the app and in push notifications.")}
-                </p>
-                <div className="pp-stat-row">
-                  {ALERT_SOUNDS.map((sound) => (
-                    <button
-                      key={sound}
-                      className={`pp-btn${(authProfile?.alert_sound ?? "bell") === sound ? " pp-btn--primary" : " pp-btn--ghost"}`}
-                      onClick={() => handleAlertSoundChange(sound)}
-                    >
-                      {(authProfile?.alert_sound ?? "bell") === sound ? "✓ " : ""}
-                      {t(`profile.alertSound.${sound}`, sound.charAt(0).toUpperCase() + sound.slice(1))}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="pp-divider" />
-
                 {portalError && <p className="pp-msg pp-msg--error">{portalError}</p>}
                 {isPaid && providerMismatch && (
                   <p className="pp-msg pp-msg--warning">
@@ -497,6 +486,69 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                   <button className="pp-btn pp-btn--primary" onClick={handlePasswordChange} disabled={!newPw || !confirmPw}>
                     {t("profile.security.changePassword")}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Notifications ─────────────────────────── */}
+            {tab === "notifications" && (
+              <div className="pp-pane">
+                <h3 className="pp-pane-title">{t("profile.notifications.title", "Notification Settings")}</h3>
+                <p className="pp-pane-sub">{t("profile.notifications.sub", "Choose which push notifications you want to receive.")}</p>
+
+                <div className="pp-notif-row">
+                  <div>
+                    <p className="pp-notif-label">{t("profile.notifications.dailyBrief.label", "Daily Market Brief")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.dailyBrief.desc", "A push when there's fresh market news in the daily brief.")}</p>
+                  </div>
+                  <label className="pp-switch">
+                    <input type="checkbox" checked={authProfile?.notify_daily_brief ?? true}
+                      onChange={(e) => handleNotifPrefChange("notify_daily_brief", e.target.checked)} />
+                    <span className="pp-switch-track" />
+                  </label>
+                </div>
+
+                <div className="pp-notif-row">
+                  <div>
+                    <p className="pp-notif-label">{t("profile.notifications.priceAlerts.label", "Price Alerts")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.priceAlerts.desc", "Big BTC market moves and any price alerts you set.")}</p>
+                  </div>
+                  <label className="pp-switch">
+                    <input type="checkbox" checked={authProfile?.notify_price_alerts ?? true}
+                      onChange={(e) => handleNotifPrefChange("notify_price_alerts", e.target.checked)} />
+                    <span className="pp-switch-track" />
+                  </label>
+                </div>
+
+                <div className="pp-notif-row">
+                  <div>
+                    <p className="pp-notif-label">{t("profile.notifications.upgradeReminders.label", "Upgrade Reminders")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.upgradeReminders.desc", "Occasional reminders about what Pro and Elite unlock.")}</p>
+                  </div>
+                  <label className="pp-switch">
+                    <input type="checkbox" checked={authProfile?.notify_upgrade_reminders ?? true}
+                      onChange={(e) => handleNotifPrefChange("notify_upgrade_reminders", e.target.checked)} />
+                    <span className="pp-switch-track" />
+                  </label>
+                </div>
+
+                <div className="pp-divider" />
+
+                <h3 className="pp-pane-title">{t("profile.alertSound.title", "Alert Sound")}</h3>
+                <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                  {t("profile.alertSound.hint", "Plays for price alerts — both in the app and in push notifications.")}
+                </p>
+                <div className="pp-stat-row">
+                  {ALERT_SOUNDS.map((sound) => (
+                    <button
+                      key={sound}
+                      className={`pp-btn${(authProfile?.alert_sound ?? "bell") === sound ? " pp-btn--primary" : " pp-btn--ghost"}`}
+                      onClick={() => handleAlertSoundChange(sound)}
+                    >
+                      {(authProfile?.alert_sound ?? "bell") === sound ? "✓ " : ""}
+                      {t(`profile.alertSound.${sound}`, sound.charAt(0).toUpperCase() + sound.slice(1))}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

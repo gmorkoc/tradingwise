@@ -26,6 +26,9 @@ export interface Profile {
   trader_level: string | null;
   terms_agreed_at: string | null;
   alert_sound: string;
+  notify_daily_brief: boolean;
+  notify_price_alerts: boolean;
+  notify_upgrade_reminders: boolean;
 }
 
 export const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, elite: 2 };
@@ -96,6 +99,15 @@ export async function saveAlertSound(userId: string, sound: AlertSound): Promise
   await supabase
     .from("profiles")
     .update({ alert_sound: sound })
+    .eq("id", userId);
+}
+
+export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders";
+
+export async function saveNotificationPref(userId: string, key: NotificationPrefKey, value: boolean): Promise<void> {
+  await supabase
+    .from("profiles")
+    .update({ [key]: value })
     .eq("id", userId);
 }
 

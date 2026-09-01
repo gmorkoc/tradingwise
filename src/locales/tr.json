@@ -491,6 +491,22 @@
       "confirmButton": "Hesabı Kalıcı Olarak Sil",
       "deleting": "Siliniyor…"
     },
+    "notifications": {
+      "title": "Bildirim Ayarları",
+      "sub": "Hangi push bildirimlerini almak istediğinizi seçin.",
+      "dailyBrief": {
+        "label": "Günlük Piyasa Özeti",
+        "desc": "Günlük özette yeni piyasa haberleri olduğunda bir bildirim."
+      },
+      "priceAlerts": {
+        "label": "Fiyat Uyarıları",
+        "desc": "Büyük BTC piyasa hareketleri ve belirlediğiniz fiyat uyarıları."
+      },
+      "upgradeReminders": {
+        "label": "Yükseltme Hatırlatıcıları",
+        "desc": "Pro ve Elite'in neler sunduğuna dair ara sıra hatırlatmalar."
+      }
+    },
     "activity": {
       "title": "Hesap Etkinliği",
       "sub": "Hesap ve faturalama olaylarının geçmişi.",

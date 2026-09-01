@@ -58,7 +58,10 @@ Deno.serve(async (req) => {
       const diff = btcPrice - anchor;
       await supabaseAdmin.from("btc_price_alert_state").update({ anchor_price: btcPrice, updated_at: new Date().toISOString() }).eq("id", 1);
 
-      const { data: tokens } = await supabaseAdmin.from("device_push_tokens").select("token, user_id");
+      const { data: eligible } = await supabaseAdmin.from("profiles").select("id").eq("notify_price_alerts", true);
+      const { data: tokens } = eligible && eligible.length > 0
+        ? await supabaseAdmin.from("device_push_tokens").select("token, user_id").in("user_id", eligible.map(u => u.id))
+        : { data: [] as { token: string; user_id: string }[] };
       if (tokens && tokens.length > 0) {
         const direction = diff > 0 ? "up" : "down";
         const title = `BTC ${direction === "up" ? "▲" : "▼"} $${Math.round(btcPrice).toLocaleString("en-US")}`;
@@ -91,10 +94,12 @@ Deno.serve(async (req) => {
 
     await supabaseAdmin.from("price_alerts").update({ triggered: true }).eq("id", alert.id);
 
+    const { data: userProfile } = await supabaseAdmin.from("profiles").select("alert_sound, notify_price_alerts").eq("id", alert.user_id).single();
+    if (userProfile?.notify_price_alerts === false) continue;
+
     const { data: userTokens } = await supabaseAdmin.from("device_push_tokens").select("token").eq("user_id", alert.user_id);
     if (!userTokens || userTokens.length === 0) continue;
 
-    const { data: userProfile } = await supabaseAdmin.from("profiles").select("alert_sound").eq("id", alert.user_id).single();
     const title = `${alert.coin} ${alert.direction === "above" ? "▲" : "▼"} $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
     const body = `${alert.direction === "above" ? "Went above" : "Dropped below"} your $${alert.target_price.toLocaleString("en-US", { maximumFractionDigits: 2 })} alert`;
     const token = await ensureAccessToken();

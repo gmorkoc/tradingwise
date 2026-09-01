@@ -136,7 +136,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ fetched: items.length, fresh: 0 }), { headers: { "Content-Type": "application/json" } });
   }
 
-  const { data: tokens } = await supabaseAdmin.from("device_push_tokens").select("token, user_id");
+  const { data: eligible } = await supabaseAdmin.from("profiles").select("id").eq("notify_daily_brief", true);
+  if (!eligible || eligible.length === 0) {
+    return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0 }), { headers: { "Content-Type": "application/json" } });
+  }
+
+  const { data: tokens } = await supabaseAdmin
+    .from("device_push_tokens")
+    .select("token, user_id")
+    .in("user_id", eligible.map(u => u.id));
   if (!tokens || tokens.length === 0) {
     return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0 }), { headers: { "Content-Type": "application/json" } });
   }

@@ -452,6 +452,22 @@
       "alert": "Alert",
       "classic": "Classic"
     },
+    "notifications": {
+      "title": "Notification Settings",
+      "sub": "Choose which push notifications you want to receive.",
+      "dailyBrief": {
+        "label": "Daily Market Brief",
+        "desc": "A push when there's fresh market news in the daily brief."
+      },
+      "priceAlerts": {
+        "label": "Price Alerts",
+        "desc": "Big BTC market moves and any price alerts you set."
+      },
+      "upgradeReminders": {
+        "label": "Upgrade Reminders",
+        "desc": "Occasional reminders about what Pro and Elite unlock."
+      }
+    },
     "info": {
       "displayName": "Display Name",
       "username": "Username",
