@@ -15,6 +15,17 @@ import Capacitor
 class MainViewController: CAPBridgeViewController {
     private var isLoadingObservation: NSKeyValueObservation?
 
+    // Capacitor only auto-registers plugins that are real installed npm
+    // packages, discovered by `cap sync` and listed in the bundled
+    // capacitor.config.json — a hand-added native Swift file conforming to
+    // CAPBridgedPlugin compiles fine and its symbols land in the binary,
+    // but the bridge never learns it exists without this. `bridge` is
+    // guaranteed set by the time capacitorDidLoad() runs (see its doc
+    // comment), and it must happen before the web content loads.
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(NotificationAuthPlugin())
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         isLoadingObservation = webView?.observe(\.isLoading, options: [.new]) { [weak self] _, change in
