@@ -16,6 +16,7 @@ export interface Profile {
   id: string;
   email: string;
   full_name: string;
+  username: string | null;
   tier: Tier;
   stripe_customer_id: string | null;
   subscription_status: string;
@@ -62,23 +63,35 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
   // Row missing — bootstrap a free profile so tier/quota tracking works
   if (error.code === "PGRST116") {
     const { data: { user } } = await supabase.auth.getUser();
-    const { data: created } = await supabase
+    const base = {
+      id: userId,
+      email: user?.email ?? "",
+      full_name: user?.user_metadata?.full_name ?? "",
+      tier: "free",
+      subscription_status: "none",
+      ai_requests_used: 0,
+      ai_requests_week: null,
+      stripe_customer_id: null,
+      subscription_end_at: null,
+      trader_level: null,
+      terms_agreed_at: null,
+    };
+    const username = (user?.user_metadata?.username as string | undefined) ?? null;
+
+    let { data: created, error: insertError } = await supabase
       .from("profiles")
-      .insert({
-        id: userId,
-        email: user?.email ?? "",
-        full_name: user?.user_metadata?.full_name ?? "",
-        tier: "free",
-        subscription_status: "none",
-        ai_requests_used: 0,
-        ai_requests_week: null,
-        stripe_customer_id: null,
-        subscription_end_at: null,
-        trader_level: null,
-        terms_agreed_at: null,
-      })
+      .insert({ ...base, username })
       .select()
       .single();
+
+    // Username was claimed by someone else between the signup-form check
+    // and this row actually being created — vanishingly rare given the
+    // real-time check, but the user should still end up with a profile
+    // row rather than none at all over it.
+    if (insertError?.code === "23505") {
+      ({ data: created } = await supabase.from("profiles").insert(base).select().single());
+    }
+
     return created as Profile | null;
   }
 
@@ -90,6 +103,25 @@ export async function saveTraderLevel(userId: string, level: string): Promise<vo
     .from("profiles")
     .update({ trader_level: level })
     .eq("id", userId);
+}
+
+export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+
+// Backed by a SECURITY DEFINER function (not a plain select) so this works
+// for an anonymous, mid-signup caller without exposing any other profile
+// row's data — see the profile_username migration.
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_username_available", { check_username: username });
+  if (error) { console.error("isUsernameAvailable failed:", error.message); return false; }
+  return !!data;
+}
+
+export async function saveUsername(userId: string, username: string): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ username })
+    .eq("id", userId);
+  if (error) throw new Error(error.code === "23505" ? "That username is already taken." : error.message);
 }
 
 export const ALERT_SOUNDS = ["bell", "chime", "alert", "classic"] as const;

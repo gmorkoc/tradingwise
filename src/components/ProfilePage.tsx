@@ -3,7 +3,8 @@ import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  supabase, saveAlertSound, saveNotificationPref, ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider,
+  supabase, saveAlertSound, saveNotificationPref, saveUsername, isUsernameAvailable, USERNAME_PATTERN,
+  ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
 import { playAlertSoundFile } from "../utils/alertSound";
@@ -131,7 +132,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
   const blankFromAuth = (): ProfileData => ({
     displayName: authProfile?.full_name || (user?.user_metadata?.full_name as string | undefined) || "",
-    username: "",
+    username: authProfile?.username ?? "",
     email: user?.email ?? "",
     bio: "",
   });
@@ -256,10 +257,25 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     if (!draft.displayName.trim()) { setProfileError(t("profile.messages.displayNameRequired")); return; }
     if (!draft.email.trim()) { setProfileError(t("profile.messages.emailRequired")); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email)) { setProfileError(t("profile.messages.invalidEmail")); return; }
+
+    const trimmedUsername = draft.username.trim();
+    const usernameChanged = trimmedUsername !== (authProfile?.username ?? "");
+    if (usernameChanged) {
+      if (!USERNAME_PATTERN.test(trimmedUsername)) { setProfileError(t("auth.errors.usernameInvalid")); return; }
+      const avail = await isUsernameAvailable(trimmedUsername);
+      if (!avail) { setProfileError(t("auth.errors.usernameTaken")); return; }
+    }
+
     const updates: { email?: string; data?: { full_name: string } } = { data: { full_name: draft.displayName.trim() } };
     if (draft.email !== user?.email) updates.email = draft.email;
     const { error } = await supabase.auth.updateUser(updates);
     if (error) { setProfileError(error.message); return; }
+
+    if (usernameChanged && user) {
+      try { await saveUsername(user.id, trimmedUsername); }
+      catch (e: any) { setProfileError(e.message ?? t("upgradeModal.error")); return; }
+    }
+
     await refreshProfile();
     setProfile(draft); setProfileError("");
     setProfileSaved(true);

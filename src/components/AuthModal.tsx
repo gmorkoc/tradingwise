@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import { RiskDisclaimer } from "./RiskDisclaimer";
+import { isUsernameAvailable, USERNAME_PATTERN } from "../services/supabase";
 import "../styles/AuthModal.css";
+
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
 type View = "welcome" | "magic" | "sent" | "login" | "signup" | "reset";
 
@@ -71,6 +74,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const [password,    setPassword]    = useState("");
   const [confirm,     setConfirm]     = useState("");
   const [name,        setName]        = useState("");
+  const [username,       setUsername]       = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
   const [error,       setError]       = useState("");
   const [info,        setInfo]        = useState("");
   const [busy,        setBusy]        = useState(false);
@@ -91,6 +96,18 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    if (view !== "signup") return;
+    const trimmed = username.trim();
+    if (!trimmed) { setUsernameStatus("idle"); return; }
+    if (!USERNAME_PATTERN.test(trimmed)) { setUsernameStatus("invalid"); return; }
+    setUsernameStatus("checking");
+    const handle = setTimeout(() => {
+      isUsernameAvailable(trimmed).then(avail => setUsernameStatus(avail ? "available" : "taken"));
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [username, view]);
 
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === backdropRef.current) onClose();
@@ -136,11 +153,23 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!requireTerms()) return;
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || !USERNAME_PATTERN.test(trimmedUsername)) {
+      setError(t("auth.errors.usernameInvalid")); return;
+    }
     if (password !== confirm) { setError(t("auth.errors.passwordMismatch")); return; }
     if (password.length < 6)  { setError(t("auth.errors.passwordTooShort")); return; }
     setBusy(true); setError("");
+    // The debounced check may not have resolved yet (or may be stale) by
+    // the time the user hits submit — confirm once more synchronously
+    // rather than trusting whatever usernameStatus last settled on.
+    if (usernameStatus !== "available") {
+      const avail = await isUsernameAvailable(trimmedUsername);
+      if (!avail) { setUsernameStatus("taken"); setError(t("auth.errors.usernameTaken")); setBusy(false); return; }
+      setUsernameStatus("available");
+    }
     saveTerms();
-    const err = await signUp(email, password, name);
+    const err = await signUp(email, password, name, trimmedUsername);
     if (err) {
       const isDupe = err.toLowerCase().includes("already registered")
         || err.toLowerCase().includes("already been registered")
@@ -356,6 +385,21 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
                   <span className="auth-input-leading-icon"><UserIcon /></span>
                   <input className="auth-input auth-input--leading" type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} required autoFocus />
                 </div>
+              </label>
+              <label className="auth-label">{t("auth.signup.usernameLabel")}
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><UserIcon /></span>
+                  <input className="auth-input auth-input--leading" type="text" autoComplete="off" autoCapitalize="off" autoCorrect="off"
+                    maxLength={20} value={username} onChange={e => setUsername(e.target.value.replace(/\s/g, ""))} required />
+                </div>
+                {username.trim() && (
+                  <span className={`auth-username-status auth-username-status--${usernameStatus}`}>
+                    {usernameStatus === "checking" && t("auth.signup.usernameChecking")}
+                    {usernameStatus === "available" && t("auth.signup.usernameAvailable")}
+                    {usernameStatus === "taken" && t("auth.signup.usernameTaken")}
+                    {usernameStatus === "invalid" && t("auth.signup.usernameInvalid")}
+                  </span>
+                )}
               </label>
               <label className="auth-label">{t("auth.signup.emailLabel")}
                 <div className="auth-input-wrap">

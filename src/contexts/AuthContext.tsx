@@ -37,7 +37,7 @@ interface AuthContextValue {
   loading:     boolean;
   profileLoading: boolean;
   tier:        Tier;
-  signUp:      (email: string, password: string, fullName: string) => Promise<string | null>;
+  signUp:      (email: string, password: string, fullName: string, username: string) => Promise<string | null>;
   signIn:      (email: string, password: string) => Promise<string | null>;
   signInWithMagicLink: (email: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
@@ -119,12 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { listener.then(l => l.remove()); };
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string): Promise<string | null> => {
+  const signUp = async (email: string, password: string, fullName: string, username: string): Promise<string | null> => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        // Picked up by fetchProfile's lazy profile-row insert, since
+        // there's no server-side trigger creating that row — see
+        // services/supabase.ts.
+        data: { full_name: fullName, username },
         emailRedirectTo: `${window.location.origin}/`,
       },
     });

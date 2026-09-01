@@ -347,6 +347,11 @@
       "title": "Crear cuenta",
       "sub": "Empieza con plan gratuito — mejora cuando quieras",
       "fullNameLabel": "Nombre completo",
+      "usernameLabel": "Nombre de usuario",
+      "usernameChecking": "Comprobando disponibilidad…",
+      "usernameAvailable": "Nombre de usuario disponible",
+      "usernameTaken": "Nombre de usuario ya en uso",
+      "usernameInvalid": "3–20 caracteres: solo letras, números y guiones bajos",
       "emailLabel": "Correo electrónico",
       "passwordLabel": "Contraseña",
       "confirmLabel": "Confirmar contraseña",
@@ -371,7 +376,9 @@
     },
     "errors": {
       "passwordMismatch": "Las contraseñas no coinciden",
-      "passwordTooShort": "La contraseña debe tener al menos 6 caracteres"
+      "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+      "usernameInvalid": "Introduce un nombre de usuario (3–20 caracteres: solo letras, números y guiones bajos)",
+      "usernameTaken": "Ese nombre de usuario ya está en uso"
     },
     "disclaimer": {
       "heading": "Aviso de Riesgo y Términos de Uso",

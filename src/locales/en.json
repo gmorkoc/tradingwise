@@ -347,6 +347,11 @@
       "title": "Create account",
       "sub": "Start with a free plan — upgrade anytime",
       "fullNameLabel": "Full name",
+      "usernameLabel": "Username",
+      "usernameChecking": "Checking availability…",
+      "usernameAvailable": "Username available",
+      "usernameTaken": "Username already taken",
+      "usernameInvalid": "3–20 characters: letters, numbers, and underscores only",
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "confirmLabel": "Confirm password",
@@ -371,7 +376,9 @@
     },
     "errors": {
       "passwordMismatch": "Passwords do not match",
-      "passwordTooShort": "Password must be at least 6 characters"
+      "passwordTooShort": "Password must be at least 6 characters",
+      "usernameInvalid": "Enter a username (3–20 characters: letters, numbers, and underscores only)",
+      "usernameTaken": "That username is already taken"
     },
     "disclaimer": {
       "heading": "Risk Disclaimer & Terms of Use",

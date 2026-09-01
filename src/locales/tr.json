@@ -347,6 +347,11 @@
       "title": "Hesap oluştur",
       "sub": "Ücretsiz planla başla — istediğin zaman yükselt",
       "fullNameLabel": "Ad soyad",
+      "usernameLabel": "Kullanıcı adı",
+      "usernameChecking": "Uygunluk kontrol ediliyor…",
+      "usernameAvailable": "Kullanıcı adı uygun",
+      "usernameTaken": "Kullanıcı adı zaten alınmış",
+      "usernameInvalid": "3–20 karakter: yalnızca harf, rakam ve alt çizgi",
       "emailLabel": "E-posta",
       "passwordLabel": "Şifre",
       "confirmLabel": "Şifreyi onayla",
@@ -371,7 +376,9 @@
     },
     "errors": {
       "passwordMismatch": "Şifreler eşleşmiyor",
-      "passwordTooShort": "Şifre en az 6 karakter olmalıdır"
+      "passwordTooShort": "Şifre en az 6 karakter olmalıdır",
+      "usernameInvalid": "Bir kullanıcı adı girin (3–20 karakter: yalnızca harf, rakam ve alt çizgi)",
+      "usernameTaken": "Bu kullanıcı adı zaten alınmış"
     },
     "disclaimer": {
       "heading": "Risk Bildirimi ve Kullanım Şartları",
