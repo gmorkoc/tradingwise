@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAccountEvent } from "../_shared/accountEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -90,6 +91,10 @@ Deno.serve(async (req) => {
         subscription_end_at: periodEnd,
       })
       .eq("id", user.id);
+
+    await logAccountEvent(supabaseAdmin, user.id, "subscription_cancel_scheduled", {
+      provider: "stripe", accessUntil: periodEnd,
+    });
 
     return new Response(
       JSON.stringify({ success: true, accessUntil: periodEnd }),

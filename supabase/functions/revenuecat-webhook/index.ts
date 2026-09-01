@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAccountEvent } from "../_shared/accountEvents.ts";
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -53,17 +54,46 @@ Deno.serve(async (req) => {
   const userId = event.app_user_id;
 
   switch (event.type) {
-    case "INITIAL_PURCHASE":
-    case "RENEWAL":
-    case "PRODUCT_CHANGE":
+    case "INITIAL_PURCHASE": {
+      const tier = tierFromEntitlements(event.entitlement_ids);
+      const fields: Record<string, unknown> = { subscription_status: "active" };
+      if (tier) fields.tier = tier;
+      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
+      await updateProfile(userId, fields);
+      await logAccountEvent(supabaseAdmin, userId, "subscription_started", { tier, provider: "apple" });
+      break;
+    }
+
+    case "RENEWAL": {
+      const tier = tierFromEntitlements(event.entitlement_ids);
+      const fields: Record<string, unknown> = { subscription_status: "active" };
+      if (tier) fields.tier = tier;
+      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
+      await updateProfile(userId, fields);
+      await logAccountEvent(supabaseAdmin, userId, "payment_succeeded", { tier, provider: "apple" });
+      break;
+    }
+
+    case "PRODUCT_CHANGE": {
+      const { data: before } = await supabaseAdmin.from("profiles").select("tier").eq("id", userId).single();
+      const tier = tierFromEntitlements(event.entitlement_ids);
+      const fields: Record<string, unknown> = { subscription_status: "active" };
+      if (tier) fields.tier = tier;
+      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
+      await updateProfile(userId, fields);
+      if (tier && before && tier !== before.tier) {
+        await logAccountEvent(supabaseAdmin, userId, "tier_changed", { from: before.tier, to: tier, provider: "apple" });
+      }
+      break;
+    }
+
     case "UNCANCELLATION": {
       const tier = tierFromEntitlements(event.entitlement_ids);
       const fields: Record<string, unknown> = { subscription_status: "active" };
       if (tier) fields.tier = tier;
-      if (event.expiration_at_ms) {
-        fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
-      }
+      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
       await updateProfile(userId, fields);
+      await logAccountEvent(supabaseAdmin, userId, "subscription_reactivated", { provider: "apple" });
       break;
     }
 
@@ -71,6 +101,7 @@ Deno.serve(async (req) => {
       // Auto-renew turned off — access continues until expiration_at_ms,
       // the EXPIRATION event (below) is what actually downgrades the tier.
       await updateProfile(userId, { subscription_status: "canceling" });
+      await logAccountEvent(supabaseAdmin, userId, "subscription_cancel_scheduled", { provider: "apple" });
       break;
     }
 
@@ -80,11 +111,13 @@ Deno.serve(async (req) => {
         subscription_status: "canceled",
         subscription_end_at: null,
       });
+      await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { provider: "apple" });
       break;
     }
 
     case "BILLING_ISSUE": {
       await updateProfile(userId, { subscription_status: "past_due" });
+      await logAccountEvent(supabaseAdmin, userId, "payment_failed", { provider: "apple" });
       break;
     }
 

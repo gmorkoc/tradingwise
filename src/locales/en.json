@@ -498,6 +498,20 @@
       "typeToConfirm": "Type \"DELETE\" to confirm",
       "confirmButton": "Permanently Delete Account",
       "deleting": "Deleting…"
+    },
+    "activity": {
+      "title": "Account Activity",
+      "sub": "A history of account and billing events.",
+      "empty": "No other activity yet.",
+      "accountCreated": "Account created",
+      "subscriptionStarted": "Subscribed to {{tier}}",
+      "tierChanged": "Changed plan from {{from}} to {{to}}",
+      "downgradeScheduled": "Downgrade to {{to}} scheduled",
+      "subscriptionCancelScheduled": "Subscription set to cancel at period end",
+      "subscriptionReactivated": "Subscription reactivated",
+      "subscriptionCanceled": "Subscription canceled",
+      "paymentSucceeded": "Payment succeeded — {{tier}}",
+      "paymentFailed": "Payment failed"
     }
   },
   "quotaWall": {

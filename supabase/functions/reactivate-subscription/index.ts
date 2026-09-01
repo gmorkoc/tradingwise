@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAccountEvent } from "../_shared/accountEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -69,6 +70,8 @@ Deno.serve(async (req) => {
       .from("profiles")
       .update({ subscription_status: updated.status })
       .eq("id", user.id);
+
+    await logAccountEvent(supabaseAdmin, user.id, "subscription_reactivated", { provider: "stripe" });
 
     return new Response(
       JSON.stringify({ success: true }),

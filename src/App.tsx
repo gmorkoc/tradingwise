@@ -1060,7 +1060,15 @@ function AppDashboard({
           </button>
 
           {/* Mobile-only profile header */}
-          <div className="mob-nav-profile">
+          <button
+            type="button"
+            className="mob-nav-profile mob-nav-profile--clickable"
+            onClick={() => {
+              setMobileNavOpen(false);
+              if (user) setProfileOpen(true);
+              else onOpenAuth();
+            }}
+          >
             <div className="mob-nav-avatar">
               {profile?.full_name
                 ? profile.full_name
@@ -1078,7 +1086,8 @@ function AppDashboard({
               </span>
               <span className={`mob-nav-tier mob-nav-tier--${tier}`}>{tier.toUpperCase()}</span>
             </div>
-          </div>
+            <span className="mob-nav-profile-arrow">›</span>
+          </button>
 
           <div className="icon-strip-nav">
             {NAV_ITEMS.filter((item) => !item.hidden).map((item) => {
@@ -2178,6 +2187,18 @@ function AppGate() {
     const t = setTimeout(() => setMinTimeElapsed(true), 1000);
     return () => clearTimeout(t);
   }, []);
+
+  // Only the *first* profile fetch after sign-in should blank the screen to
+  // the boot splash. refreshProfile() (e.g. saving an alert sound, the
+  // post-Stripe-checkout poll) also flips profileLoading, but that's a
+  // background refresh — showing the boot screen for it unmounts the whole
+  // app tree and wipes any open modal's local state (profileOpen etc).
+  const initialLoadDoneFor = useRef<string | null>(null);
+  const isInitialLoad = user ? initialLoadDoneFor.current !== user.id : false;
+  useEffect(() => {
+    if (user && !profileLoading) initialLoadDoneFor.current = user.id;
+    if (!user) initialLoadDoneFor.current = null;
+  }, [user, profileLoading]);
   const [showAuth, setShowAuth] = useState(false);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -2260,7 +2281,7 @@ function AppGate() {
   }, [user]);
 
   // Blank screen while Supabase resolves the session — prevents any flicker
-  if (authLoading || (user && profileLoading) || (user && !minTimeElapsed)) {
+  if (authLoading || (user && profileLoading && isInitialLoad) || (user && !minTimeElapsed)) {
     return (
       <div className="app-boot-screen">
         <CoinHintzLogo loading={true} />

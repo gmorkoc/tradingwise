@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAccountEvent } from "../_shared/accountEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -119,6 +120,12 @@ Deno.serve(async (req) => {
         })
         .eq("id", user.id);
 
+      if (newTier && paymentSucceeded) {
+        await logAccountEvent(supabaseAdmin, user.id, "tier_changed", {
+          from: PRICE_TIER[currentItem.price.id] ?? null, to: newTier, provider: "stripe",
+        });
+      }
+
       return new Response(
         JSON.stringify({ success: true, isUpgrade: true, paymentSucceeded }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -162,6 +169,11 @@ Deno.serve(async (req) => {
       });
 
       const scheduledAt = new Date(subscription.current_period_end * 1000).toISOString();
+
+      await logAccountEvent(supabaseAdmin, user.id, "downgrade_scheduled", {
+        from: PRICE_TIER[currentItem.price.id] ?? null, to: PRICE_TIER[newPriceId] ?? null,
+        provider: "stripe", scheduledAt,
+      });
 
       // Profile tier stays unchanged — user keeps current access until period end.
       // The Stripe webhook will update the tier when the schedule executes.

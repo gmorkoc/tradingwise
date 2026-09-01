@@ -490,6 +490,20 @@
       "typeToConfirm": "Onaylamak için \"DELETE\" yazın",
       "confirmButton": "Hesabı Kalıcı Olarak Sil",
       "deleting": "Siliniyor…"
+    },
+    "activity": {
+      "title": "Hesap Etkinliği",
+      "sub": "Hesap ve faturalama olaylarının geçmişi.",
+      "empty": "Henüz başka etkinlik yok.",
+      "accountCreated": "Hesap oluşturuldu",
+      "subscriptionStarted": "{{tier}} planına abone olundu",
+      "tierChanged": "Plan {{from}} planından {{to}} planına değiştirildi",
+      "downgradeScheduled": "{{to}} planına düşürme planlandı",
+      "subscriptionCancelScheduled": "Abonelik dönem sonunda iptal edilecek şekilde ayarlandı",
+      "subscriptionReactivated": "Abonelik yeniden etkinleştirildi",
+      "subscriptionCanceled": "Abonelik iptal edildi",
+      "paymentSucceeded": "Ödeme başarılı — {{tier}}",
+      "paymentFailed": "Ödeme başarısız"
     }
   },
   "quotaWall": {

@@ -490,6 +490,20 @@
       "typeToConfirm": "Escribe \"DELETE\" para confirmar",
       "confirmButton": "Eliminar Cuenta Permanentemente",
       "deleting": "Eliminando…"
+    },
+    "activity": {
+      "title": "Actividad de la Cuenta",
+      "sub": "Un historial de eventos de la cuenta y de facturación.",
+      "empty": "Aún no hay más actividad.",
+      "accountCreated": "Cuenta creada",
+      "subscriptionStarted": "Suscrito a {{tier}}",
+      "tierChanged": "Plan cambiado de {{from}} a {{to}}",
+      "downgradeScheduled": "Cambio a {{to}} programado",
+      "subscriptionCancelScheduled": "Suscripción configurada para cancelarse al final del período",
+      "subscriptionReactivated": "Suscripción reactivada",
+      "subscriptionCanceled": "Suscripción cancelada",
+      "paymentSucceeded": "Pago realizado — {{tier}}",
+      "paymentFailed": "Pago fallido"
     }
   },
   "quotaWall": {

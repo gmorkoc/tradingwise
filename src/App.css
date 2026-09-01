@@ -2499,6 +2499,12 @@ html[data-theme="light"] .icon-strip-quota-bar {
 /* ── Mobile profile header (hidden on desktop) ──────────────────────────── */
 .mob-nav-profile {
   display: none;
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Swipe hint ─────────────────────────────────────────────────────────── */
@@ -2630,6 +2636,16 @@ html[data-theme="light"] .icon-strip-quota-bar {
     flex-shrink: 0;
     border-bottom: 1px solid var(--color-border);
     margin-bottom: 4px;
+    cursor: pointer;
+  }
+  .mob-nav-profile--clickable:active {
+    background: var(--color-primary-soft);
+  }
+  .mob-nav-profile-arrow {
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    flex-shrink: 0;
   }
   .mob-nav-avatar {
     width: 36px;

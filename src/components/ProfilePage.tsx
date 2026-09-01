@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase, saveAlertSound, ALERT_SOUNDS, type AlertSound } from "../services/supabase";
+import { supabase, saveAlertSound, ALERT_SOUNDS, fetchAccountEvents, type AlertSound, type AccountEvent } from "../services/supabase";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
@@ -38,12 +38,13 @@ const STATUS_CONFIG: Record<string, { tKey: string; color: string }> = {
   incomplete_expired: { tKey: "profile.status.incomplete_expired", color: "#f87171" },
 };
 
-type Tab = "overview" | "profile" | "security" | "danger";
+type Tab = "overview" | "profile" | "security" | "activity" | "danger";
 
 const NAV_ITEMS: { id: Tab; label: string; danger?: boolean }[] = [
   { id: "overview",  label: "Overview" },
   { id: "profile",   label: "Profile Info" },
   { id: "security",  label: "Security" },
+  { id: "activity",  label: "Activity" },
   { id: "danger",    label: "Danger Zone", danger: true },
 ];
 
@@ -56,6 +57,55 @@ function getInitials(name: string): string {
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+
+const EVENT_TIER_RANK: Record<string, number> = { free: 0, pro: 1, elite: 2 };
+
+function eventTierLabel(t: (k: string) => string, tier: string | null | undefined): string {
+  if (!tier) return "";
+  const conf = (TIER_CONFIG as Record<string, { tKey: string }>)[tier];
+  return conf ? t(conf.tKey) : tier;
+}
+
+function eventIcon(ev: AccountEvent): string {
+  switch (ev.type) {
+    case "subscription_started": return "✦";
+    case "tier_changed": {
+      const up = (EVENT_TIER_RANK[ev.detail?.to] ?? 0) > (EVENT_TIER_RANK[ev.detail?.from] ?? 0);
+      return up ? "⬆" : "⬇";
+    }
+    case "downgrade_scheduled":            return "⬇";
+    case "subscription_cancel_scheduled":  return "⏳";
+    case "subscription_reactivated":       return "↻";
+    case "subscription_canceled":          return "⛔";
+    case "payment_succeeded":              return "💳";
+    case "payment_failed":                 return "⚠";
+    default:                               return "•";
+  }
+}
+
+function eventLabel(t: (k: string, opts?: Record<string, unknown>) => string, ev: AccountEvent): string {
+  const d = ev.detail ?? {};
+  switch (ev.type) {
+    case "subscription_started":
+      return t("profile.activity.subscriptionStarted", { tier: eventTierLabel(t, d.tier) });
+    case "tier_changed":
+      return t("profile.activity.tierChanged", { from: eventTierLabel(t, d.from), to: eventTierLabel(t, d.to) });
+    case "downgrade_scheduled":
+      return t("profile.activity.downgradeScheduled", { from: eventTierLabel(t, d.from), to: eventTierLabel(t, d.to) });
+    case "subscription_cancel_scheduled":
+      return t("profile.activity.subscriptionCancelScheduled");
+    case "subscription_reactivated":
+      return t("profile.activity.subscriptionReactivated");
+    case "subscription_canceled":
+      return t("profile.activity.subscriptionCanceled");
+    case "payment_succeeded":
+      return t("profile.activity.paymentSucceeded", { tier: eventTierLabel(t, d.tier) });
+    case "payment_failed":
+      return t("profile.activity.paymentFailed");
+    default:
+      return ev.type;
+  }
 }
 
 
@@ -93,6 +143,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError,   setDeleteError]   = useState("");
 
+  const [events,        setEvents]        = useState<AccountEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,6 +166,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || tab !== "activity" || !user) return;
+    let cancelled = false;
+    setEventsLoading(true);
+    fetchAccountEvents(user.id).then((rows) => {
+      if (!cancelled) { setEvents(rows); setEventsLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, tab, user]);
 
   if (!isOpen) return null;
 
@@ -417,6 +480,40 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                   <button className="pp-btn pp-btn--primary" onClick={handlePasswordChange} disabled={!newPw || !confirmPw}>
                     {t("profile.security.changePassword")}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Activity ──────────────────────────────── */}
+            {tab === "activity" && (
+              <div className="pp-pane">
+                <h3 className="pp-pane-title">{t("profile.activity.title")}</h3>
+                <p className="pp-pane-sub">{t("profile.activity.sub")}</p>
+
+                <div className="pp-activity-list">
+                  {eventsLoading && <p className="pp-upgrade-hint">{t("common.loading")}</p>}
+
+                  {!eventsLoading && events.map((ev) => (
+                    <div className="pp-activity-item" key={ev.id}>
+                      <span className="pp-activity-icon">{eventIcon(ev)}</span>
+                      <div className="pp-activity-body">
+                        <span className="pp-activity-label">{eventLabel(t, ev)}</span>
+                        <span className="pp-activity-date">{formatDate(ev.created_at)}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!eventsLoading && events.length === 0 && (
+                    <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>{t("profile.activity.empty")}</p>
+                  )}
+
+                  <div className="pp-activity-item">
+                    <span className="pp-activity-icon">🎉</span>
+                    <div className="pp-activity-body">
+                      <span className="pp-activity-label">{t("profile.activity.accountCreated")}</span>
+                      <span className="pp-activity-date">{formatDate(user?.created_at ?? null)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

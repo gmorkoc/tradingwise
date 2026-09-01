@@ -86,6 +86,27 @@ export async function saveAlertSound(userId: string, sound: AlertSound): Promise
     .eq("id", userId);
 }
 
+export interface AccountEvent {
+  id: number;
+  type: string;
+  detail: Record<string, any> | null;
+  created_at: string;
+}
+
+// Written by the Stripe/RevenueCat webhooks and the cancel/reactivate/upgrade
+// edge functions (see supabase/functions/_shared/accountEvents.ts) — shown
+// in the Profile → Activity tab.
+export async function fetchAccountEvents(userId: string): Promise<AccountEvent[]> {
+  const { data, error } = await supabase
+    .from("account_events")
+    .select("id, type, detail, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) { console.error("fetchAccountEvents failed:", error.message); return []; }
+  return data ?? [];
+}
+
 export async function saveTermsAgreement(userId: string, agreedAt: string): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from("profiles")

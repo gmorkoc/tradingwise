@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logAccountEvent } from "../_shared/accountEvents.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2024-06-20",
@@ -18,11 +19,14 @@ const PRICE_TIER: Record<string, string> = {
   "price_1ThB3ACanYhArG7jDp33W6xS": "elite",
 };
 
-async function updateProfileByCustomer(customerId: string, fields: Record<string, unknown>) {
-  await supabaseAdmin
+async function updateProfileByCustomer(customerId: string, fields: Record<string, unknown>): Promise<string | null> {
+  const { data } = await supabaseAdmin
     .from("profiles")
     .update(fields)
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select("id")
+    .single();
+  return data?.id ?? null;
 }
 
 async function notifyAdmin(payload: { event: "signup" | "purchase"; email: string; tier?: string }) {
@@ -68,10 +72,11 @@ Deno.serve(async (req) => {
         subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
       };
       if (tier) fields.tier = tier;
-      await updateProfileByCustomer(customerId(session), fields);
+      const id = await updateProfileByCustomer(customerId(session), fields);
       if (tier && session.customer_details?.email) {
         await notifyAdmin({ event: "purchase", email: session.customer_details.email, tier });
       }
+      if (id) await logAccountEvent(supabaseAdmin, id, "subscription_started", { tier, provider: "stripe" });
       break;
     }
 
@@ -80,22 +85,35 @@ Deno.serve(async (req) => {
       const sub = await stripe.subscriptions.retrieve(raw.id);
       const priceId = sub.items.data[0]?.price.id ?? "";
       const tier = PRICE_TIER[priceId];
+      const cust = customerId(raw);
+
+      const { data: before } = await supabaseAdmin
+        .from("profiles")
+        .select("id, tier")
+        .eq("stripe_customer_id", cust)
+        .single();
+
       const fields: Record<string, unknown> = {
         subscription_status: sub.status,
         subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
       };
       if (tier) fields.tier = tier;
-      await updateProfileByCustomer(customerId(raw), fields);
+      await updateProfileByCustomer(cust, fields);
+
+      if (before && tier && tier !== before.tier) {
+        await logAccountEvent(supabaseAdmin, before.id, "tier_changed", { from: before.tier, to: tier, provider: "stripe" });
+      }
       break;
     }
 
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
-      await updateProfileByCustomer(customerId(sub), {
+      const id = await updateProfileByCustomer(customerId(sub), {
         tier:                "free",
         subscription_status: "canceled",
         subscription_end_at: null,
       });
+      if (id) await logAccountEvent(supabaseAdmin, id, "subscription_canceled", { provider: "stripe" });
       break;
     }
 
@@ -110,16 +128,22 @@ Deno.serve(async (req) => {
           subscription_end_at: new Date(sub.current_period_end * 1000).toISOString(),
         };
         if (tier) fields.tier = tier;
-        await updateProfileByCustomer(customerId(sub), fields);
+        const id = await updateProfileByCustomer(customerId(sub), fields);
+        if (id) {
+          await logAccountEvent(supabaseAdmin, id, "payment_succeeded", {
+            tier, provider: "stripe", amount: invoice.amount_paid, currency: invoice.currency,
+          });
+        }
       }
       break;
     }
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
-      await updateProfileByCustomer(customerId(invoice), {
+      const id = await updateProfileByCustomer(customerId(invoice), {
         subscription_status: "past_due",
       });
+      if (id) await logAccountEvent(supabaseAdmin, id, "payment_failed", { provider: "stripe" });
       break;
     }
   }

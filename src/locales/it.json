@@ -490,6 +490,20 @@
       "typeToConfirm": "Digita \"DELETE\" per confermare",
       "confirmButton": "Elimina Account Definitivamente",
       "deleting": "Eliminazione…"
+    },
+    "activity": {
+      "title": "Attività dell'Account",
+      "sub": "Una cronologia degli eventi dell'account e di fatturazione.",
+      "empty": "Nessun'altra attività per ora.",
+      "accountCreated": "Account creato",
+      "subscriptionStarted": "Abbonato a {{tier}}",
+      "tierChanged": "Piano cambiato da {{from}} a {{to}}",
+      "downgradeScheduled": "Passaggio a {{to}} programmato",
+      "subscriptionCancelScheduled": "Abbonamento impostato per l'annullamento a fine periodo",
+      "subscriptionReactivated": "Abbonamento riattivato",
+      "subscriptionCanceled": "Abbonamento annullato",
+      "paymentSucceeded": "Pagamento riuscito — {{tier}}",
+      "paymentFailed": "Pagamento non riuscito"
     }
   },
   "quotaWall": {

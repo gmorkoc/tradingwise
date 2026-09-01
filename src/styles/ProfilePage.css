@@ -504,6 +504,52 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
   line-height: 1.5;
 }
 
+/* ── Activity ────────────────────────────────────────────────────────────── */
+.pp-activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pp-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pp-activity-item:last-child { border-bottom: none; }
+
+.pp-activity-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-soft);
+  font-size: 0.9rem;
+}
+
+.pp-activity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pp-activity-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.pp-activity-date {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media (max-width: 580px) {
   .pp-modal { border-radius: 16px; height: min(94vh, 660px); }
