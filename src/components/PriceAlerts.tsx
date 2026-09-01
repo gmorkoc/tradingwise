@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
-import { coinglass, CoinSymbol } from "../services/coinglass";
+import { coinglass, CoinSymbol, COINS } from "../services/coinglass";
 import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../services/supabase";
@@ -10,6 +10,7 @@ import "../styles/PriceAlerts.css";
 
 interface PriceAlert {
   id: string;
+  coin: CoinSymbol;
   targetPrice: number;
   direction: "above" | "below";
   label: string;
@@ -27,7 +28,10 @@ const STORAGE_KEY = "priceAlerts";
 function loadAlerts(): PriceAlert[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    // Alerts saved before per-coin support didn't store a coin at all —
+    // fall back to BTC for those rather than crash on the missing field.
+    return (JSON.parse(raw) as PriceAlert[]).map((a) => ({ ...a, coin: a.coin ?? "BTC" }));
   } catch { return []; }
 }
 
@@ -57,11 +61,20 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
   const [open, setOpen]         = useState(false);
   const [alerts, setAlerts]     = useState<PriceAlert[]>(loadAlerts);
   const [input, setInput]       = useState("");
+  const [selectedCoin, setSelectedCoin] = useState<CoinSymbol>(coin);
   const [toast, setToast]       = useState<PriceAlert | null>(null);
-  const [livePrice, setLivePrice] = useState(currentPrice);
-  const prevPriceRef            = useRef<number | null>(null);
+  const [prices, setPrices]     = useState<Record<string, number>>({});
+  const prevPricesRef           = useRef<Record<string, number>>({});
   const toastTimerRef           = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bellRef                 = useRef<HTMLButtonElement>(null);
+
+  // Opening the panel fresh defaults the coin picker to whatever chart is
+  // currently on screen — doesn't snap back while it's already open, so
+  // picking a different coin sticks for setting several alerts in a row.
+  useEffect(() => {
+    if (open) setSelectedCoin(coin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Global switch hides an already-showing toast too, not just future ones.
   useEffect(() => {
@@ -87,32 +100,58 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  useEffect(() => {
-    const id = setInterval(async () => {
-      const c = await coinglass.getLiveSecondCandle(coin);
-      if (c) setLivePrice(c.close);
-    }, 3000);
-    return () => clearInterval(id);
-  }, [coin]);
+  // Every coin that needs a live price right now: whichever coin is picked
+  // in the add form (shown in the panel header, and needed so its
+  // direction/reference price is accurate the moment it's selected), and
+  // every coin any pending alert is watching — not just one. The
+  // currently-charted coin doesn't need its own poll here — the
+  // currentPrice-sync effect below already keeps prices[coin] fresh from
+  // the prop, and it's only ever read as a fallback when it equals selectedCoin.
+  const trackedCoins = useMemo(() => {
+    const set = new Set<string>([selectedCoin]);
+    for (const a of alerts) if (!a.triggered) set.add(a.coin);
+    return Array.from(set);
+  }, [selectedCoin, alerts]);
+  const trackedCoinsKey = trackedCoins.join(",");
 
   useEffect(() => {
-    if (currentPrice) setLivePrice(currentPrice);
-  }, [currentPrice]);
+    let cancelled = false;
+    const poll = async () => {
+      const results = await Promise.all(
+        trackedCoinsKey.split(",").map(async (c) => [c, (await coinglass.getLiveSecondCandle(c))?.close] as const)
+      );
+      if (cancelled) return;
+      setPrices((prev) => {
+        const next = { ...prev };
+        for (const [c, price] of results) if (price != null) next[c] = price;
+        return next;
+      });
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [trackedCoinsKey]);
+
+  useEffect(() => {
+    if (currentPrice) setPrices((prev) => ({ ...prev, [coin]: currentPrice }));
+  }, [coin, currentPrice]);
 
   useEffect(() => { saveAlerts(alerts); }, [alerts]);
 
   useEffect(() => {
-    const prev = prevPriceRef.current;
-    prevPriceRef.current = livePrice;
-    if (!prev || !livePrice) return;
+    const prevPrices = prevPricesRef.current;
+    prevPricesRef.current = prices;
 
     setAlerts((current) =>
       current.map((alert) => {
         if (alert.triggered) return alert;
+        const price = prices[alert.coin];
+        const prev = prevPrices[alert.coin];
+        if (price == null || prev == null) return alert;
         const hit =
           alert.direction === "above"
-            ? prev < alert.targetPrice && livePrice >= alert.targetPrice
-            : prev > alert.targetPrice && livePrice <= alert.targetPrice;
+            ? prev < alert.targetPrice && price >= alert.targetPrice
+            : prev > alert.targetPrice && price <= alert.targetPrice;
         if (hit) {
           if (notificationsEnabledRef.current) {
             playAlertSoundFile(alertSoundRef.current);
@@ -125,7 +164,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
         return alert;
       })
     );
-  }, [livePrice]);
+  }, [prices]);
 
   const handleBellClick = () => {
     if (bellRef.current) syncPanelPos(bellRef.current); // sync before render
@@ -135,9 +174,11 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
   const addAlert = () => {
     const price = parseFloat(input.replace(/,/g, ""));
     if (!price || isNaN(price) || price <= 0) return;
-    const direction: "above" | "below" = price > livePrice ? "above" : "below";
+    const refPrice = prices[selectedCoin] ?? currentPrice;
+    const direction: "above" | "below" = price > refPrice ? "above" : "below";
     const alert: PriceAlert = {
       id: crypto.randomUUID(),
+      coin: selectedCoin,
       targetPrice: price,
       direction,
       label: `${direction === "above" ? "↑" : "↓"} $${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
@@ -152,7 +193,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
     // the in-app toast/sound while it's open, unchanged.
     if (user) {
       supabase.from("price_alerts").insert({
-        id: alert.id, user_id: user.id, coin, target_price: price, direction,
+        id: alert.id, user_id: user.id, coin: selectedCoin, target_price: price, direction,
       }).then(({ error }) => { if (error) console.error("Saving price alert failed:", error.message); });
     }
   };
@@ -194,12 +235,21 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
                 <div className="alerts-panel-header">
                   <span className="alerts-panel-title">{t("priceAlerts.title")}</span>
                   <span className="alerts-panel-price">
-                    {coin} ${livePrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {selectedCoin} ${(prices[selectedCoin] ?? (selectedCoin === coin ? currentPrice : undefined))?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "…"}
                   </span>
                   <button className="alerts-panel-close" onClick={() => setOpen(false)}>✕</button>
                 </div>
 
                 <div className="alerts-add">
+                  <select
+                    className="alerts-coin-select"
+                    value={selectedCoin}
+                    onChange={(e) => setSelectedCoin(e.target.value as CoinSymbol)}
+                  >
+                    {COINS.map((c) => (
+                      <option key={c.symbol} value={c.symbol}>{c.symbol}</option>
+                    ))}
+                  </select>
                   <input
                     className="alerts-input"
                     type="number"
@@ -210,13 +260,13 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
                   />
                   <button className="alerts-add-btn" onClick={addAlert}>{t("priceAlerts.addBtn")}</button>
                 </div>
-
                 <div className="alerts-list">
                   {alerts.length === 0 && (
                     <p className="alerts-empty">{t("priceAlerts.empty")}</p>
                   )}
                   {alerts.map((alert) => (
                     <div key={alert.id} className={`alert-item${alert.triggered ? " alert-item--triggered" : ""}`}>
+                      <span className="alert-coin">{alert.coin}</span>
                       <span className={`alert-direction ${alert.direction === "above" ? "alert-direction--above" : "alert-direction--below"}`}>
                         {alert.direction === "above" ? "↑" : "↓"}
                       </span>
@@ -247,7 +297,7 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
               <div className="alert-toast-icon">🔔</div>
               <div className="alert-toast-body">
                 <strong>{t("priceAlerts.toastTitle")}</strong>
-                <span>{coin} {toast.direction === "above" ? t("priceAlerts.toastReached") : t("priceAlerts.toastDropped")} ${toast.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span>{toast.coin} {toast.direction === "above" ? t("priceAlerts.toastReached") : t("priceAlerts.toastDropped")} ${toast.targetPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <button className="alert-toast-close">✕</button>
             </div>

@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabase";
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -17,6 +18,16 @@ async function authHeaders() {
 }
 
 export async function redirectToCheckout(priceId: string): Promise<void> {
+  // Apple Guideline 3.1.1: a digital subscription must go through In-App
+  // Purchase on iOS, never an external payment flow — this is the actual
+  // mechanism that would load Stripe Checkout inside the app, so it's
+  // blocked here unconditionally rather than trusting every caller (e.g.
+  // UpgradeModal's isIAPAvailable() check) to have gated it correctly.
+  // isIAPAvailable() can go false on a real iOS device if a build-time env
+  // var is ever missing/misconfigured — this still can't be bypassed by that.
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
+    throw new Error("Purchases on iOS go through the App Store, not this screen. Please try again in a moment.");
+  }
   const headers = await authHeaders();
   const res = await fetch(`${FN_BASE}/create-checkout`, {
     method: "POST",

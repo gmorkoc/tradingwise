@@ -37,6 +37,8 @@ import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
 import { DailyBrief } from "./components/DailyBrief";
+import { PushToast } from "./components/PushToast";
+import { PushPrimingModal } from "./components/PushPrimingModal";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
@@ -48,7 +50,7 @@ import { PredictionEngine } from "./components/PredictionEngine";
 import { FundingBot } from "./components/FundingBot";
 import { CandleWatcher } from "./components/CandleWatcher";
 import { TradeManager } from "./components/TradeManager";
-import { PriceChart } from "./components/PriceChart";
+import { PriceChart, formatLivePrice } from "./components/PriceChart";
 import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -246,6 +248,26 @@ const COIN_ICONS: Record<string, string> = {
   RENDER: "⬡",
   ZEC: "ⓩ",
 };
+
+const RECENT_COINS_KEY = "recentCoinSearches";
+const MAX_RECENT_COINS = 6;
+
+function loadRecentCoins(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_COINS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function addRecentCoin(symbol: string): string[] {
+  try {
+    const next = [symbol, ...loadRecentCoins().filter((s) => s !== symbol)].slice(0, MAX_RECENT_COINS);
+    localStorage.setItem(RECENT_COINS_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return loadRecentCoins();
+  }
+}
 
 /* ── Authenticated dashboard — only mounts when user is logged in ── */
 interface DashboardProps {
@@ -619,6 +641,7 @@ function AppDashboard({
   const [contactOpen, setContactOpen] = useState(false);
   const [coinPickerOpen, setCoinPickerOpen] = useState(false);
   const [coinSearch, setCoinSearch] = useState("");
+  const [recentCoins, setRecentCoins] = useState<string[]>(loadRecentCoins);
   const [globalSearch, setGlobalSearch] = useState(false);
   const [coinMarketCaps, setCoinMarketCaps] = useState<Map<string, number>>(
     new Map(),
@@ -1250,11 +1273,7 @@ function AppDashboard({
                   </span>
                   {Number.isFinite(livePrice ?? btcData?.price) && (
                     <span className="mch-coin-price">
-                      $
-                      {(livePrice ?? btcData!.price!).toLocaleString("en-US", {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })}
+                      {formatLivePrice(livePrice ?? btcData!.price!)}
                     </span>
                   )}
                   <span className="price-source">
@@ -1828,6 +1847,16 @@ function AppDashboard({
                       c.symbol.toLowerCase().includes(q) ||
                       c.name.toLowerCase().includes(q)
                     );
+                  }).sort((a, b) => {
+                    // Recently-picked coins float to the top, most recent
+                    // first — everything else keeps its original order
+                    // (Array.sort is stable) below them.
+                    const ai = recentCoins.indexOf(a.symbol);
+                    const bi = recentCoins.indexOf(b.symbol);
+                    if (ai === -1 && bi === -1) return 0;
+                    if (ai === -1) return 1;
+                    if (bi === -1) return -1;
+                    return ai - bi;
                   }).map((c) => {
                     const mc = coinMarketCaps.get(c.symbol);
                     const mcLabel =
@@ -1854,6 +1883,7 @@ function AppDashboard({
                         onClick={() => {
                           setCoin(c.symbol);
                           clearCandleCache();
+                          setRecentCoins(addRecentCoin(c.symbol));
                           closeCoinPicker();
                         }}
                       >
@@ -2095,6 +2125,8 @@ function AppDashboard({
       {/* end app-shell-body */}
 
       <DailyBrief />
+      <PushToast />
+      <PushPrimingModal />
 
       {priceTicker &&
         (pipWindow
@@ -2158,6 +2190,15 @@ function AppGate() {
   useEffect(() => {
     if (user) setShowAuth(false);
   }, [user]);
+
+  // Tapping an upgrade-reminder-push notification (pushNotifications.ts)
+  // dispatches this instead of calling setShowUpgrade directly — that
+  // service module sits well below App.tsx and has no access to this state.
+  useEffect(() => {
+    const onOpenUpgradeEvent = () => setShowUpgrade(true);
+    window.addEventListener("open-upgrade-modal", onOpenUpgradeEvent);
+    return () => window.removeEventListener("open-upgrade-modal", onOpenUpgradeEvent);
+  }, []);
 
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
     const stored = localStorage.getItem("theme");

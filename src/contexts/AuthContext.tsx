@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
+import { SignInWithApple } from "@capacitor-community/apple-sign-in";
 import { supabase, Profile, fetchProfile, Tier } from "../services/supabase";
 import { initRevenueCat, logOutRevenueCat } from "../services/revenuecat";
 import { initPushNotifications, logOutPushNotifications } from "../services/pushNotifications";
@@ -11,6 +12,22 @@ import { initPushNotifications, logOutPushNotifications } from "../services/push
 // android:scheme intent-filter, and be added to Supabase's Authentication →
 // URL Configuration → Redirect URLs allowlist.
 const NATIVE_OAUTH_REDIRECT = "io.coinhintz.app://login-callback";
+
+// Sign in with Apple has no Android support (upstream plugin) and we don't
+// run the web (Services ID) variant — iOS native only, same gating pattern
+// as isIAPAvailable()/isPushAvailable().
+const APPLE_SIGNIN_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+
+function randomNonce(length = 32): string {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._";
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 
 interface AuthContextValue {
@@ -24,6 +41,8 @@ interface AuthContextValue {
   signIn:      (email: string, password: string) => Promise<string | null>;
   signInWithMagicLink: (email: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
+  signInWithApple: () => Promise<string | null>;
+  appleSignInAvailable: boolean;
   signOut:     () => Promise<void>;
   resetPassword: (email: string) => Promise<string | null>;
   refreshProfile: () => Promise<void>;
@@ -142,6 +161,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error?.message ?? null;
   };
 
+  // Native Sign in with Apple, not the browser-redirect OAuth flow Google
+  // uses above — ASAuthorizationAppleIDProvider (inside the plugin) talks
+  // to Apple directly via the app's own "Sign in with Apple" capability, no
+  // browser hop or appUrlOpen deep link involved. Apple's identity token
+  // embeds a hash of the nonce we pass it; Supabase re-hashes the raw nonce
+  // we give it here and checks the two match, so both have to travel together.
+  const signInWithApple = async (): Promise<string | null> => {
+    if (!APPLE_SIGNIN_AVAILABLE) return "Sign in with Apple isn't available here";
+    try {
+      const rawNonce = randomNonce();
+      const hashedNonce = await sha256Hex(rawNonce);
+      const { response } = await SignInWithApple.authorize({
+        clientId: "io.coinhintz.app",
+        redirectURI: "https://coinhintz.io",
+        scopes: "email name",
+        nonce: hashedNonce,
+      });
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: response.identityToken,
+        nonce: rawNonce,
+      });
+      return error?.message ?? null;
+    } catch (err: any) {
+      // User dismissed the native Apple ID sheet — not a real error.
+      if (String(err?.message ?? err).toLowerCase().includes("cancel")) return null;
+      return err?.message ?? "Apple sign-in failed";
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     window.location.replace("/");
@@ -162,7 +211,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, profile, session, loading, profileLoading,
       tier: profile?.tier ?? "free",
-      signUp, signIn, signInWithMagicLink, signInWithGoogle, signOut, resetPassword, refreshProfile,
+      signUp, signIn, signInWithMagicLink, signInWithGoogle, signInWithApple,
+      appleSignInAvailable: APPLE_SIGNIN_AVAILABLE,
+      signOut, resetPassword, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

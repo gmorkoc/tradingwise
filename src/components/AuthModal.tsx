@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
+import { RiskDisclaimer } from "./RiskDisclaimer";
 import "../styles/AuthModal.css";
 
-type View = "magic" | "sent" | "login" | "signup" | "reset";
+type View = "welcome" | "magic" | "sent" | "login" | "signup" | "reset";
 
 interface Props {
   onClose: () => void;
@@ -17,6 +18,31 @@ const GOOGLE_ICON = (
     <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
     <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
     <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+  </svg>
+);
+
+const APPLE_ICON = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
+    <path d="M16.365 1.43c0 1.14-.468 2.184-1.207 2.97-.836.9-2.16 1.593-3.348 1.494-.166-1.107.468-2.29 1.166-3.01.83-.87 2.28-1.526 3.39-1.454zM20.6 17.196c-.51 1.17-.75 1.69-1.4 2.72-.91 1.44-2.19 3.23-3.78 3.24-1.41.02-1.78-.92-3.7-.91-1.92.01-2.32.93-3.73.91-1.59-.02-2.8-1.63-3.72-3.07-2.55-3.97-2.82-8.64-1.24-11.12.99-1.55 2.55-2.46 4.03-2.46 1.5 0 2.44.92 3.68.92 1.2 0 1.94-.92 3.68-.92 1.32 0 2.72.72 3.72 1.96-3.27 1.79-2.74 6.45.28 7.75z"/>
+  </svg>
+);
+
+const MailIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+);
+const LockIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+const UserIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
   </svg>
 );
 
@@ -36,10 +62,10 @@ const EyeOff = () => (
 
 export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const { t } = useTranslation();
-  const { signIn, signUp, signInWithMagicLink, signInWithGoogle, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithMagicLink, signInWithGoogle, signInWithApple, appleSignInAvailable, resetPassword } = useAuth();
 
   const [view, setView] = useState<View>(
-    initialView === "signup" ? "signup" : initialView === "login" ? "login" : "magic"
+    initialView === "signup" ? "signup" : initialView === "login" ? "login" : "welcome"
   );
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
@@ -52,7 +78,9 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const [showCfm,     setShowCfm]     = useState(false);
   const alreadyAgreed = !!localStorage.getItem("terms_agreed_at");
   const [termsAgreed, setTermsAgreed] = useState(alreadyAgreed);
+  const [termsShake,  setTermsShake]  = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const disclaimerRef = useRef<HTMLLabelElement>(null);
 
   useEffect(() => {
     setError(""); setInfo("");
@@ -73,10 +101,20 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
       localStorage.setItem("terms_agreed_at", new Date().toISOString());
   };
 
-  const canSubmit = termsAgreed && !busy;
+  // Buttons that need agreement stay clickable (not disabled) so this can
+  // actually fire and give feedback, instead of a submit silently doing
+  // nothing — which is what a plain disabled attribute would do.
+  const requireTerms = (): boolean => {
+    if (termsAgreed) return true;
+    setTermsShake(true);
+    disclaimerRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    setTimeout(() => setTermsShake(false), 650);
+    return false;
+  };
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!requireTerms()) return;
     setBusy(true); setError("");
     saveTerms();
     const err = await signInWithMagicLink(email);
@@ -97,8 +135,9 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirm) { setError("Passwords don't match"); return; }
-    if (password.length < 6)  { setError("Password must be at least 6 characters"); return; }
+    if (!requireTerms()) return;
+    if (password !== confirm) { setError(t("auth.errors.passwordMismatch")); return; }
+    if (password.length < 6)  { setError(t("auth.errors.passwordTooShort")); return; }
     setBusy(true); setError("");
     saveTerms();
     const err = await signUp(email, password, name);
@@ -118,44 +157,30 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     setBusy(true); setError("");
     const err = await resetPassword(email);
     if (err) setError(err);
-    else setInfo("Password reset link sent — check your inbox.");
+    else setInfo(t("auth.reset.resetSent"));
     setBusy(false);
   };
 
   const handleGoogle = async () => {
+    // Login never needs agreement (see the note further down) — every other
+    // view can create a new account via Google, so it does.
+    if (view !== "login" && !requireTerms()) return;
     setBusy(true); setError("");
     saveTerms();
     const err = await signInWithGoogle();
     if (err) { setError(err); setBusy(false); }
   };
 
-  const Disclaimer = () => (
-    <div className="auth-disclaimer">
-      <div className="auth-disclaimer-scroll">
-        <p className="auth-disclaimer-heading">⚠️ Risk Disclaimer &amp; Terms of Use</p>
-
-        <p className="auth-disclaimer-section">Market &amp; Platform Risk</p>
-        <p>coinhintz provides market data, analytical tools, and AI-generated signals for <strong>informational and educational purposes only</strong>. Nothing on this platform constitutes financial, investment, legal, or tax advice of any kind.</p>
-        <p><strong>Cryptocurrency trading involves substantial risk of loss.</strong> Digital asset markets are highly volatile and largely unregulated. You may lose some or all of your invested capital. Never invest money you cannot afford to lose.</p>
-        <p>All AI predictions, signals, funding rate analyses, and market insights are generated algorithmically and are <strong>not guaranteed to be accurate, complete, or timely</strong>. Past performance does not guarantee future results.</p>
-        <p>Market data may be delayed, incomplete, or inaccurate. coinhintz makes no representations regarding data accuracy and is not liable for errors or omissions.</p>
-        <p><strong>You are solely responsible for any financial decisions you make.</strong> coinhintz bears no liability for any losses or damages arising from your use of this platform.</p>
-        <p>This platform is for users of legal age who are legally permitted to engage with cryptocurrency services in their jurisdiction.</p>
-
-        <p className="auth-disclaimer-section">Billing &amp; Subscription Policy</p>
-        <p><strong>Subscriptions auto-renew</strong> monthly at the listed price until cancelled. By subscribing you authorise coinhintz to charge your payment method on a recurring basis.</p>
-        <p><strong>No refunds.</strong> All payments are final and non-refundable. We do not issue partial or full refunds for any reason, including unused time, dissatisfaction, or accidental purchases.</p>
-        <p><strong>Cancellation.</strong> You may cancel your subscription at any time. Cancellation takes effect at the end of your current billing period — you retain full access to your plan features until that date, after which your account reverts to the Free tier. No credit or refund is issued for the remaining unused days.</p>
-        <p><strong>Plan upgrades</strong> take effect immediately. Only the prorated difference for the remaining billing period is charged; your renewal date does not change.</p>
-        <p><strong>Plan downgrades</strong> are scheduled to take effect at the end of your current billing period. You keep your higher-tier access until then. No refund or credit is issued for the difference.</p>
-        <p>coinhintz reserves the right to change pricing with reasonable notice. Continued use of the service after a price change constitutes acceptance of the new price.</p>
-      </div>
-      <label className="auth-terms-check">
-        <input type="checkbox" checked={termsAgreed} onChange={e => setTermsAgreed(e.target.checked)} />
-        <span>I have read and agree to the Risk Disclaimer, Terms of Use, and Billing Policy above</span>
-      </label>
-    </div>
-  );
+  // Unlike Google's browser-redirect flow above, this resolves in place —
+  // no app close/reopen in between — so it closes the modal itself on success.
+  const handleApple = async () => {
+    if (view !== "login" && !requireTerms()) return;
+    setBusy(true); setError("");
+    saveTerms();
+    const err = await signInWithApple();
+    if (err) { setError(err); setBusy(false); }
+    else { onClose(); }
+  };
 
   return (
     <div className="auth-backdrop" ref={backdropRef} onClick={handleBackdrop}>
@@ -168,27 +193,61 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
 
         <div className="auth-card-body">
 
+        {/* ── Welcome gateway (default when no specific intent was given) ── */}
+        {view === "welcome" && (
+          <div className="auth-welcome">
+            <h2 className="auth-title">{t("auth.welcome.title")}</h2>
+            <p className="auth-sub">{t("auth.welcome.sub")}</p>
+            <button className="auth-submit" onClick={() => setView("signup")}>
+              {t("auth.welcome.createAccount")}
+            </button>
+            <button className="auth-welcome-login" onClick={() => setView("login")}>
+              {t("auth.welcome.haveAccount")}
+            </button>
+          </div>
+        )}
+
         {/* ── Magic link (default) ── */}
         {view === "magic" && (
           <>
             <h2 className="auth-title">{t("auth.magic.title")}</h2>
             <p className="auth-sub">{t("auth.magic.sub")}</p>
 
-            {!alreadyAgreed && <Disclaimer />}
+            {!alreadyAgreed && (
+              <RiskDisclaimer
+                ref={disclaimerRef}
+                checked={termsAgreed}
+                onChange={setTermsAgreed}
+                shake={termsShake}
+              />
+            )}
 
-            <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
-              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
-            </button>
-            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleMagicLink}>
               <label className="auth-label">{t("auth.login.emailLabel")}
-                <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><MailIcon /></span>
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+                </div>
               </label>
               {error && <p className="auth-error">{error}</p>}
-              <button className="auth-submit" disabled={!canSubmit}>
+              <button className="auth-submit" disabled={busy}>
                 {busy ? t("auth.magic.sending") : t("auth.magic.sendBtn")}
               </button>
             </form>
+
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
+            {/* Apple first, not just equally styled — Guideline 4.8 reviews
+                sometimes flag a third-party sign-in option that's positioned
+                below Apple's, not just one that's styled smaller/lesser. */}
+            {appleSignInAvailable && (
+              <button className="auth-apple" type="button" onClick={handleApple} disabled={busy}>
+                {APPLE_ICON} {t("auth.continueWithApple")}
+              </button>
+            )}
+            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
+            </button>
+
             <p className="auth-switch">
               {t("auth.magic.preferPassword")}{" "}
               <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.magic.signinWithPassword")}</button>
@@ -220,19 +279,25 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <h2 className="auth-title">{t("auth.login.title")}</h2>
             <p className="auth-sub">{t("auth.login.sub")}</p>
 
-            {!alreadyAgreed && <Disclaimer />}
+            {/* Logging in means the account (and its terms agreement) already
+                exists — unlike signup/magic-link, this is never a first-time
+                acceptance, so no disclaimer here regardless of this device's
+                own localStorage state. */}
 
-            <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
-              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
-            </button>
-            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleLogin}>
               <label className="auth-label">{t("auth.login.emailLabel")}
-                <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><MailIcon /></span>
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                </div>
               </label>
               <label className="auth-label">{t("auth.login.passwordLabel")}
                 <div className="auth-input-wrap">
-                  <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                  <span className="auth-input-leading-icon"><LockIcon /></span>
+                  {/* current-password (not new-password) is what lets iOS
+                      recognize this as a login form and offer the saved
+                      credential via Face ID/Touch ID-gated Keychain autofill. */}
+                  <input className="auth-input auth-input--leading" type={showPw ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
                     {showPw ? <EyeOn /> : <EyeOff />}
                   </button>
@@ -248,6 +313,20 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               {info && <p className="auth-info">{info}</p>}
               <button className="auth-submit" disabled={busy}>{busy ? t("auth.login.signingIn") : t("auth.login.signinBtn")}</button>
             </form>
+
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
+            {/* Apple first, not just equally styled — Guideline 4.8 reviews
+                sometimes flag a third-party sign-in option that's positioned
+                below Apple's, not just one that's styled smaller/lesser. */}
+            {appleSignInAvailable && (
+              <button className="auth-apple" type="button" onClick={handleApple} disabled={busy}>
+                {APPLE_ICON} {t("auth.continueWithApple")}
+              </button>
+            )}
+            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
+            </button>
+
             <p className="auth-switch">
               <button className="auth-link-btn" onClick={() => setView("magic")}>{t("auth.login.useMagicLink")}</button>
               {" · "}
@@ -262,22 +341,36 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <h2 className="auth-title">{t("auth.signup.title")}</h2>
             <p className="auth-sub">{t("auth.signup.sub")}</p>
 
-            {!alreadyAgreed && <Disclaimer />}
+            {!alreadyAgreed && (
+              <RiskDisclaimer
+                ref={disclaimerRef}
+                checked={termsAgreed}
+                onChange={setTermsAgreed}
+                shake={termsShake}
+              />
+            )}
 
-            <button className="auth-google" type="button" onClick={handleGoogle} disabled={!canSubmit}>
-              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
-            </button>
-            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
             <form className="auth-form" onSubmit={handleSignup}>
               <label className="auth-label">{t("auth.signup.fullNameLabel")}
-                <input className="auth-input" type="text" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><UserIcon /></span>
+                  <input className="auth-input auth-input--leading" type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+                </div>
               </label>
               <label className="auth-label">{t("auth.signup.emailLabel")}
-                <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><MailIcon /></span>
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required />
+                </div>
               </label>
               <label className="auth-label">{t("auth.signup.passwordLabel")}
                 <div className="auth-input-wrap">
-                  <input className="auth-input" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                  <span className="auth-input-leading-icon"><LockIcon /></span>
+                  {/* new-password (distinct from login's current-password) is
+                      what makes iOS offer to generate a strong password and,
+                      after a successful submit, offer to save it — the same
+                      Keychain entry current-password reads back on login. */}
+                  <input className="auth-input auth-input--leading" type={showPw ? "text" : "password"} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowPw(v => !v)} tabIndex={-1}>
                     {showPw ? <EyeOn /> : <EyeOff />}
                   </button>
@@ -285,7 +378,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               </label>
               <label className="auth-label">{t("auth.signup.confirmLabel")}
                 <div className="auth-input-wrap">
-                  <input className="auth-input" type={showCfm ? "text" : "password"} value={confirm} onChange={e => setConfirm(e.target.value)} required />
+                  <span className="auth-input-leading-icon"><LockIcon /></span>
+                  <input className="auth-input auth-input--leading" type={showCfm ? "text" : "password"} autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required />
                   <button type="button" className="auth-eye" onClick={() => setShowCfm(v => !v)} tabIndex={-1}>
                     {showCfm ? <EyeOn /> : <EyeOff />}
                   </button>
@@ -294,12 +388,26 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               {error === "sso_exists" ? (
                 <p className="auth-error">
                   {t("auth.signup.ssoExists")}{" "}
-                  <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={!canSubmit}>{t("auth.signup.signinWithGoogle")}</button>
+                  <button type="button" className="auth-link-btn" onClick={handleGoogle} disabled={busy}>{t("auth.signup.signinWithGoogle")}</button>
                 </p>
               ) : error ? <p className="auth-error">{error}</p> : null}
               {info && <p className="auth-info">{info}</p>}
-              <button className="auth-submit" disabled={!canSubmit}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
+              <button className="auth-submit" disabled={busy}>{busy ? t("auth.signup.creating") : t("auth.signup.createBtn")}</button>
             </form>
+
+            <div className="auth-divider"><span>{t("auth.divider")}</span></div>
+            {/* Apple first, not just equally styled — Guideline 4.8 reviews
+                sometimes flag a third-party sign-in option that's positioned
+                below Apple's, not just one that's styled smaller/lesser. */}
+            {appleSignInAvailable && (
+              <button className="auth-apple" type="button" onClick={handleApple} disabled={busy}>
+                {APPLE_ICON} {t("auth.continueWithApple")}
+              </button>
+            )}
+            <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
+              {GOOGLE_ICON} {t("auth.continueWithGoogle")}
+            </button>
+
             <p className="auth-switch">
               {t("auth.signup.preferNoPassword")}{" "}
               <button className="auth-link-btn" onClick={() => setView("magic")}>{t("auth.signup.sendMagicLink")}</button>
@@ -317,7 +425,10 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <p className="auth-sub">{t("auth.reset.sub")}</p>
             <form className="auth-form" onSubmit={handleReset}>
               <label className="auth-label">{t("auth.reset.emailLabel")}
-                <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                <div className="auth-input-wrap">
+                  <span className="auth-input-leading-icon"><MailIcon /></span>
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                </div>
               </label>
               {error && <p className="auth-error">{error}</p>}
               {info  && <p className="auth-info">{info}</p>}

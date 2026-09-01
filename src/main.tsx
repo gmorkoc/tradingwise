@@ -1,14 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { inject } from '@vercel/analytics'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar } from '@capacitor/status-bar'
 import { initKeyboardAvoidance } from './utils/keyboardAvoidance'
 import App from './App.tsx'
 import './index.css'
 import './i18n'
-
-inject()
 
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';

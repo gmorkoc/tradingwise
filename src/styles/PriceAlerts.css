@@ -183,6 +183,23 @@
   background: #7dd3fc;
 }
 
+.alerts-coin-select {
+  flex-shrink: 0;
+  width: 84px;
+  padding: 8px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.alerts-coin-select:focus {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
 /* ── Alerts list ─────────────────────────────────────────────────────────── */
 .alerts-list {
   overflow-y: auto;
@@ -211,6 +228,14 @@
 }
 .alert-item--triggered {
   opacity: 0.5;
+}
+
+.alert-coin {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  width: 34px;
 }
 
 .alert-direction {

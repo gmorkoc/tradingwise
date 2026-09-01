@@ -305,7 +305,14 @@
   "auth": {
     "logoText": "coinhintz",
     "continueWithGoogle": "Continua con Google",
+    "continueWithApple": "Continua con Apple",
     "divider": "o",
+    "welcome": {
+      "title": "Benvenuto su coinhintz",
+      "sub": "Approfondimenti crypto basati su IA, avvisi sui prezzi e analisi di mercato — tutto in un unico posto.",
+      "createAccount": "Crea account",
+      "haveAccount": "Hai già un account? Accedi"
+    },
     "magic": {
       "title": "Accedi o crea un account",
       "sub": "Nessuna password — ti invieremo un link magico",
@@ -365,6 +372,29 @@
     "errors": {
       "passwordMismatch": "Le password non corrispondono",
       "passwordTooShort": "La password deve avere almeno 6 caratteri"
+    },
+    "disclaimer": {
+      "heading": "Avviso di Rischio e Termini di Utilizzo",
+      "riskSectionTitle": "Rischio di Mercato e della Piattaforma",
+      "risk1": "coinhintz fornisce dati di mercato, strumenti analitici e segnali generati dall'IA <strong>esclusivamente a scopo informativo ed educativo</strong>. Nulla su questa piattaforma costituisce consulenza finanziaria, di investimento, legale o fiscale di alcun tipo.",
+      "risk2": "<strong>Il trading di criptovalute comporta un rischio sostanziale di perdita.</strong> I mercati degli asset digitali sono altamente volatili e in gran parte non regolamentati. Potresti perdere parte o tutto il capitale investito. Non investire mai denaro che non puoi permetterti di perdere.",
+      "risk3": "Tutte le previsioni IA, i segnali, le analisi dei tassi di finanziamento e le informazioni di mercato sono generate algoritmicamente e <strong>non è garantito che siano accurate, complete o tempestive</strong>. Le performance passate non garantiscono risultati futuri.",
+      "risk4": "I dati di mercato potrebbero essere ritardati, incompleti o imprecisi. coinhintz non fornisce alcuna garanzia sull'accuratezza dei dati e non è responsabile per errori od omissioni.",
+      "risk5": "<strong>Sei l'unico responsabile delle decisioni finanziarie che prendi.</strong> coinhintz non si assume alcuna responsabilità per perdite o danni derivanti dall'uso di questa piattaforma.",
+      "risk6": "Questa piattaforma è destinata a utenti maggiorenni legalmente autorizzati a utilizzare servizi di criptovalute nella propria giurisdizione.",
+      "billingSectionTitle": "Politica di Fatturazione e Abbonamento",
+      "billing1": "<strong>Gli abbonamenti si rinnovano automaticamente</strong> ogni mese al prezzo indicato fino all'annullamento. Sottoscrivendo l'abbonamento, autorizzi coinhintz ad addebitare il tuo metodo di pagamento su base ricorrente.",
+      "billing2": "<strong>Nessun rimborso.</strong> Tutti i pagamenti sono definitivi e non rimborsabili. Non emettiamo rimborsi parziali o totali per nessun motivo, incluso il tempo non utilizzato, l'insoddisfazione o gli acquisti accidentali.",
+      "billing3": "<strong>Annullamento.</strong> Puoi annullare il tuo abbonamento in qualsiasi momento. L'annullamento ha effetto alla fine del periodo di fatturazione corrente — mantieni l'accesso completo alle funzionalità del tuo piano fino a quella data, dopodiché il tuo account torna al livello Gratuito. Non viene emesso alcun credito o rimborso per i giorni non utilizzati rimanenti.",
+      "billing4": "<strong>Gli upgrade di piano</strong> hanno effetto immediato. Viene addebitata solo la differenza proporzionale per il periodo di fatturazione rimanente; la data di rinnovo non cambia.",
+      "billing5": "<strong>I downgrade di piano</strong> sono programmati per avere effetto alla fine del periodo di fatturazione corrente. Mantieni l'accesso al livello superiore fino ad allora. Non viene emesso alcun credito o rimborso per la differenza.",
+      "billing6": "coinhintz si riserva il diritto di modificare i prezzi con un preavviso ragionevole. L'uso continuato del servizio dopo una modifica del prezzo costituisce accettazione del nuovo prezzo.",
+      "checkLabel": "Ho letto e accetto l'Avviso di Rischio, i Termini di Utilizzo e la Politica di Fatturazione sopra riportati"
+    },
+    "termsGate": {
+      "saveError": "Impossibile salvare la tua accettazione — riprova.",
+      "saving": "Salvataggio…",
+      "agreeAndContinue": "Accetto e Continuo →"
     }
   },
   "account": {
@@ -700,7 +730,15 @@
       "manageBilling": "Gestisci fatturazione",
       "loadingPortal": "Caricamento…",
       "cancelAnytime": "Annulla quando vuoi",
-      "securePayment": " · Pagamento sicuro tramite Stripe"
+      "securePayment": " · Pagamento sicuro tramite Stripe",
+      "securePaymentApple": " · Pagamento sicuro tramite App Store",
+      "noRefundNote": "Non vengono emessi rimborsi. Se annulli, mantieni l'accesso completo fino alla fine del periodo di fatturazione.",
+      "wantToCancel": "Vuoi annullare?",
+      "cancelLink": "Annulla abbonamento",
+      "subscriptionTermsApple": "Pro ed Elite sono abbonamenti mensili a rinnovo automatico addebitati al tuo ID Apple. Gli abbonamenti si rinnovano automaticamente a meno che non vengano annullati almeno 24 ore prima della fine del periodo corrente — gestisci o annulla in qualsiasi momento nelle impostazioni degli abbonamenti del tuo ID Apple. Consulta i nostri",
+      "subscriptionTermsWeb": "Pro ed Elite sono abbonamenti mensili a rinnovo automatico addebitati tramite Stripe. Gli abbonamenti si rinnovano automaticamente fino all'annullamento. Consulta i nostri",
+      "termsLink": "Termini di Utilizzo",
+      "privacyLink": "Informativa sulla Privacy"
     },
     "error": "Qualcosa è andato storto",
     "perMonth": "/mese",

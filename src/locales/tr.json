@@ -305,7 +305,14 @@
   "auth": {
     "logoText": "coinhintz",
     "continueWithGoogle": "Google ile devam et",
+    "continueWithApple": "Apple ile devam et",
     "divider": "veya",
+    "welcome": {
+      "title": "coinhintz'e hoş geldiniz",
+      "sub": "Yapay zeka destekli kripto analizleri, fiyat uyarıları ve piyasa analizi — hepsi tek bir yerde.",
+      "createAccount": "Hesap oluştur",
+      "haveAccount": "Zaten bir hesabın var mı? Giriş yap"
+    },
     "magic": {
       "title": "Giriş yap veya hesap oluştur",
       "sub": "Şifre gerekmiyor — sana sihirli bağlantı göndereceğiz",
@@ -365,6 +372,29 @@
     "errors": {
       "passwordMismatch": "Şifreler eşleşmiyor",
       "passwordTooShort": "Şifre en az 6 karakter olmalıdır"
+    },
+    "disclaimer": {
+      "heading": "Risk Bildirimi ve Kullanım Şartları",
+      "riskSectionTitle": "Piyasa ve Platform Riski",
+      "risk1": "coinhintz, piyasa verilerini, analiz araçlarını ve yapay zeka tarafından üretilen sinyalleri <strong>yalnızca bilgilendirme ve eğitim amacıyla</strong> sunar. Bu platformdaki hiçbir şey herhangi bir türde finansal, yatırım, hukuki veya vergi tavsiyesi teşkil etmez.",
+      "risk2": "<strong>Kripto para ticareti önemli bir kayıp riski taşır.</strong> Dijital varlık piyasaları oldukça değişkendir ve büyük ölçüde düzenlenmemiştir. Yatırdığınız sermayenin bir kısmını veya tamamını kaybedebilirsiniz. Kaybetmeyi göze alamayacağınız parayı asla yatırmayın.",
+      "risk3": "Tüm yapay zeka tahminleri, sinyaller, fonlama oranı analizleri ve piyasa öngörüleri algoritmik olarak üretilir ve <strong>doğru, eksiksiz veya zamanında olacağı garanti edilmez</strong>. Geçmiş performans gelecekteki sonuçları garanti etmez.",
+      "risk4": "Piyasa verileri gecikmeli, eksik veya hatalı olabilir. coinhintz, veri doğruluğu konusunda hiçbir beyanda bulunmaz ve hata veya eksikliklerden sorumlu değildir.",
+      "risk5": "<strong>Aldığınız her türlü finansal karardan yalnızca siz sorumlusunuz.</strong> coinhintz, bu platformun kullanımından kaynaklanan hiçbir kayıp veya zarardan sorumlu tutulamaz.",
+      "risk6": "Bu platform, bulundukları yargı bölgesinde kripto para hizmetlerinden yasal olarak yararlanma hakkına sahip, yasal yaşta olan kullanıcılar içindir.",
+      "billingSectionTitle": "Faturalama ve Abonelik Politikası",
+      "billing1": "<strong>Abonelikler</strong>, iptal edilene kadar listelenen fiyattan aylık olarak otomatik yenilenir. Abone olarak, coinhintz'in ödeme yönteminizden düzenli olarak tahsilat yapmasına izin vermiş olursunuz.",
+      "billing2": "<strong>Geri ödeme yok.</strong> Tüm ödemeler kesindir ve iade edilmez. Kullanılmayan süre, memnuniyetsizlik veya yanlışlıkla yapılan satın almalar dahil olmak üzere hiçbir sebeple kısmi veya tam geri ödeme yapmıyoruz.",
+      "billing3": "<strong>İptal.</strong> Aboneliğinizi istediğiniz zaman iptal edebilirsiniz. İptal, mevcut faturalama döneminizin sonunda yürürlüğe girer — o tarihe kadar plan özelliklerinize tam erişiminizi korursunuz, ardından hesabınız Ücretsiz katmana döner. Kalan kullanılmamış günler için kredi veya geri ödeme yapılmaz.",
+      "billing4": "<strong>Plan yükseltmeleri</strong> hemen yürürlüğe girer. Yalnızca kalan faturalama dönemi için orantılı fark tahsil edilir; yenileme tarihiniz değişmez.",
+      "billing5": "<strong>Plan düşürmeleri</strong>, mevcut faturalama döneminizin sonunda yürürlüğe girecek şekilde planlanır. O zamana kadar üst düzey erişiminizi korursunuz. Fark için kredi veya geri ödeme yapılmaz.",
+      "billing6": "coinhintz, makul bir bildirimde bulunarak fiyatları değiştirme hakkını saklı tutar. Fiyat değişikliğinden sonra hizmetin kullanılmaya devam edilmesi, yeni fiyatın kabul edildiği anlamına gelir.",
+      "checkLabel": "Yukarıdaki Risk Bildirimi, Kullanım Şartları ve Faturalama Politikasını okudum ve kabul ediyorum"
+    },
+    "termsGate": {
+      "saveError": "Onayınız kaydedilemedi — lütfen tekrar deneyin.",
+      "saving": "Kaydediliyor…",
+      "agreeAndContinue": "Kabul Ediyorum ve Devam Et →"
     }
   },
   "account": {
@@ -700,7 +730,15 @@
       "manageBilling": "Faturalamayı yönet",
       "loadingPortal": "Yükleniyor…",
       "cancelAnytime": "İstediğin zaman iptal et",
-      "securePayment": " · Stripe ile güvenli ödeme"
+      "securePayment": " · Stripe ile güvenli ödeme",
+      "securePaymentApple": " · App Store üzerinden güvenli ödeme",
+      "noRefundNote": "Geri ödeme yapılmaz. İptal edersen, faturalama döneminin sonuna kadar tam erişimini korursun.",
+      "wantToCancel": "İptal etmek mi istiyorsun?",
+      "cancelLink": "Aboneliği iptal et",
+      "subscriptionTermsApple": "Pro ve Elite, Apple ID'nize faturalandırılan otomatik yenilenen aylık aboneliklerdir. Abonelikler, mevcut dönemin bitiminden en az 24 saat önce iptal edilmedikçe otomatik olarak yenilenir — Apple ID abonelik ayarlarınızdan istediğiniz zaman yönetebilir veya iptal edebilirsiniz. Bkz.",
+      "subscriptionTermsWeb": "Pro ve Elite, Stripe üzerinden faturalandırılan otomatik yenilenen aylık aboneliklerdir. Abonelikler iptal edilene kadar otomatik olarak yenilenir. Bkz.",
+      "termsLink": "Kullanım Şartları",
+      "privacyLink": "Gizlilik Politikası"
     },
     "error": "Bir şeyler yanlış gitti",
     "perMonth": "/ay",

@@ -31,6 +31,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>coinhintz uses your camera to attach a photo (e.g. a chart or screenshot) to the AI chat for analysis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>coinhintz needs access to your photo library to attach images to the AI chat for analysis.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

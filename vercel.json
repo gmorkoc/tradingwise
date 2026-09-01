@@ -7,5 +7,11 @@
     { "source": "/coinbase-api/:path*","destination": "https://api.international.coinbase.com/:path*" },
     { "source": "/gecko-api/:path*",  "destination": "https://api.coingecko.com/:path*" },
     { "source": "/fred-api/:path*",   "destination": "https://fred.stlouisfed.org/:path*" }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [{ "key": "Content-Type", "value": "application/json" }]
+    }
   ]
 }

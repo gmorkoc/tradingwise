@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, saveAlertSound, ALERT_SOUNDS, type AlertSound } from "../services/supabase";
@@ -159,7 +160,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     try {
       const token = session?.access_token;
       if (!token) throw new Error("Not authenticated");
-      const res = await fetch("/api/deleteAccount", {
+      // The native app's WebView doesn't run from the coinhintz.io origin,
+      // so a bare relative path resolves to nothing on-device — same fix
+      // as coinglass.ts's BN_BASE.
+      const apiBase = Capacitor.isNativePlatform() ? "https://www.coinhintz.io" : "";
+      const res = await fetch(`${apiBase}/api/deleteAccount`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

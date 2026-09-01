@@ -1,6 +1,12 @@
+import { Capacitor } from '@capacitor/core';
 import { BTCData } from './coinglass';
 import { FearGreedData } from './feargreed';
 import { supabase } from './supabase';
+
+// The native app's WebView doesn't run from the coinhintz.io origin, so a
+// bare relative path resolves to nothing on-device — same fix as
+// coinglass.ts's BN_BASE.
+const API_BASE = Capacitor.isNativePlatform() ? 'https://www.coinhintz.io' : '';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -49,7 +55,7 @@ export async function callOpenAI(body: object): Promise<any> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
 
-  const res = await fetch("/api/openai", {
+  const res = await fetch(`${API_BASE}/api/openai`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),

@@ -16,6 +16,13 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: 'none',
     },
+    // Empty = suppress the OS banner/sound/badge for a push that arrives
+    // while the app is in the foreground — pushNotifications.ts shows an
+    // in-app toast for those instead. Only affects foreground presentation;
+    // backgrounded/closed still get the normal system notification.
+    FirebaseMessaging: {
+      presentationOptions: [],
+    },
   },
 };
 

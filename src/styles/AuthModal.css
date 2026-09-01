@@ -30,7 +30,7 @@
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 20px;
-  padding: 36px 40px 32px;
+  padding: 36px 32px 32px 40px;
   width: 100%;
   max-width: 420px;
   /* 100% resolves against .auth-backdrop's content-box height, which is
@@ -53,6 +53,11 @@
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
+  /* iOS's overlay scrollbar draws right at this element's own edge,
+     ignoring the outer .auth-card's padding — this reserves an 8px gutter
+     for it (the card's own right padding was reduced by the same 8px, so
+     buttons/content end up at the same visual inset as before). */
+  padding-right: 8px;
 }
 
 @keyframes auth-slide-up {
@@ -130,6 +135,19 @@
 
 .auth-input-wrap .auth-input {
   padding-right: 40px;
+}
+
+.auth-input-wrap .auth-input--leading {
+  padding-left: 38px;
+}
+
+.auth-input-leading-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
 }
 
 .auth-eye {
@@ -221,6 +239,30 @@
 .auth-submit:active  { transform: scale(0.98); }
 .auth-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* ── Welcome gateway ── */
+.auth-welcome {
+  display: flex;
+  flex-direction: column;
+}
+.auth-welcome .auth-title { margin-bottom: 6px; }
+.auth-welcome .auth-sub { margin-bottom: 22px; }
+.auth-welcome .auth-submit { margin-top: 0; }
+
+.auth-welcome-login {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-primary);
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 10px;
+}
+.auth-welcome-login:hover { background: var(--color-primary-soft); }
+
 .auth-switch {
   margin: 16px 0 0;
   font-size: 0.78rem;
@@ -247,6 +289,28 @@
 }
 .auth-google:hover { background: var(--color-surface-strong); border-color: rgba(148,163,184,0.35); }
 .auth-google:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Apple's Human Interface Guidelines call for the solid black button
+   regardless of the app's own light/dark theme. */
+.auth-apple {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+}
+.auth-apple:hover { background: #1a1a1a; }
+.auth-apple:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .auth-divider {
   display: flex;
@@ -320,12 +384,34 @@
   padding: 10px 14px;
   background: rgba(99, 102, 241, 0.06);
   border-top: 1px solid var(--color-border);
+  border-bottom: 2px solid transparent;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--color-text);
   cursor: pointer;
   line-height: 1.45;
   user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+/* Draws the eye to the checkbox when a submit was blocked on it — see
+   requireTerms() in AuthModal.tsx. */
+.auth-terms-check--shake {
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom-color: #ef4444;
+  animation: auth-terms-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+.auth-terms-check--shake input[type="checkbox"] {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@keyframes auth-terms-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
 }
 
 .auth-terms-check input[type="checkbox"] {
@@ -377,6 +463,6 @@
 }
 
 @media (max-width: 480px) {
-  .auth-card { padding: 28px 20px 24px; }
+  .auth-card { padding: 28px 12px 24px 20px; }
   .auth-disclaimer-scroll { max-height: calc(100vh - 460px); min-height: 160px; }
 }

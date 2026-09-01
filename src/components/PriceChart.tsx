@@ -106,7 +106,7 @@ const FIB_LEVELS = [
   { ratio: 1, label: "1", color: "rgba(251,191,36,0.85)" },
 ] as const;
 
-function formatLivePrice(p: number): string {
+export function formatLivePrice(p: number): string {
   if (p >= 1000) return `$${p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (p >= 1) return `$${p.toFixed(4)}`;
   return `$${p.toFixed(6)}`;
@@ -2493,19 +2493,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                     : "24H"}
                     </span>
                     <span className="day-hl-high">
-                      H: $
-                      {dayHigh.toLocaleString("en-US", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}
+                      H: {formatLivePrice(dayHigh)}
                     </span>
                     <span className="day-hl-sep"> · </span>
                     <span className="day-hl-low">
-                      L: $
-                      {dayLow.toLocaleString("en-US", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}
+                      L: {formatLivePrice(dayLow)}
                     </span>
                   </span>
                 )}

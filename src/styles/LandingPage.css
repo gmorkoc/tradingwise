@@ -17,8 +17,11 @@
      iOS app — env(safe-area-inset-top) reports 0 in this WKWebView config,
      so MainViewController.swift injects the real UIKit value as
      --native-safe-area-top instead; env() is used as the fallback for
-     Android / browsers / installed PWA, where it works normally. */
-  padding: var(--native-safe-area-top, env(safe-area-inset-top)) 32px 0;
+     Android / browsers / installed PWA, where it works normally. The +12px
+     is a buffer to match padding-bottom — without it the raw safe-area
+     value alone put the buttons flush against the notch boundary with no
+     breathing room, while the bottom had its full 12px, looking lopsided. */
+  padding: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 12px) 32px 12px;
   min-height: 60px;
   border-bottom: 1px solid var(--color-header-border);
   position: sticky;
@@ -692,7 +695,7 @@ html[data-theme="light"] .lp-btn-hero-signin:hover {
 .lp-cta-long  { display: inline; }
 
 @media (max-width: 768px) {
-  .lp-nav { padding: var(--native-safe-area-top, env(safe-area-inset-top)) 16px 12px; }
+  .lp-nav { padding: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 12px) 16px 12px; }
   .lp-nav-logo span { display: none; }
   .lp-nav-actions { gap: 6px; }
   .lp-nav-actions .lp-btn-ghost  { padding: 6px 10px; font-size: 0.75rem; }

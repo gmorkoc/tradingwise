@@ -499,9 +499,22 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                     ? <button className="upgrade-manage-link" onClick={handleManageBilling}>Manage in App Store</button>
                     : <>{t("upgradeModal.footer.proratedNote")}<button className="upgrade-manage-link" onClick={handleManageBilling} disabled={loading === "portal"}>{loading === "portal" ? t("upgradeModal.footer.loadingPortal") : t("upgradeModal.footer.manageBilling")}</button></>)
                 : t("upgradeModal.footer.cancelAnytime")
-              }{t("upgradeModal.footer.securePayment")}
+              }{iap ? t("upgradeModal.footer.securePaymentApple") : t("upgradeModal.footer.securePayment")}
             </p>
             <p className="upgrade-footer upgrade-footer--policy">{t("upgradeModal.footer.noRefundNote")}</p>
+            {/* Required subscription disclosure (Apple Guideline 3.1.2 /
+                Schedule 2): title, length, price, and auto-renewal terms are
+                already shown above per-plan — this covers the rest, plus the
+                Terms/Privacy links, directly on the purchase screen itself
+                rather than only inside StoreKit's own sheet. */}
+            {!isPaid && (
+              <p className="upgrade-footer upgrade-footer--policy">
+                {iap ? t("upgradeModal.footer.subscriptionTermsApple") : t("upgradeModal.footer.subscriptionTermsWeb")}{" "}
+                <a href="https://coinhintz.io/terms.html" target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.termsLink")}</a>
+                {" · "}
+                <a href="https://coinhintz.io/privacy.html" target="_blank" rel="noopener noreferrer" className="upgrade-manage-link">{t("upgradeModal.footer.privacyLink")}</a>
+              </p>
+            )}
             {/* Apple subscriptions cancel/renew through the OS, not Stripe —
                 this app has no visibility to drive that flow itself. */}
             {isPaid && iap && (

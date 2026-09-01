@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — coinhintz</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --card: #111a2e;
+    --border: #1f2b45;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 32px;
+  }
+  .logo span { color: #4ade80; }
+  h1 {
+    font-size: 1.7rem;
+    margin: 0 0 6px;
+  }
+  .updated {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 36px;
+  }
+  h2 {
+    font-size: 1.05rem;
+    margin: 36px 0 10px;
+    color: var(--accent);
+  }
+  p, li { color: #cbd5e1; font-size: 0.94rem; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-top: 8px;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">coinhint<span>z</span></div>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: August 31, 2026</p>
+
+    <p>This policy explains what information coinhintz ("we", "us") collects when you use the coinhintz app and website (the "Service"), and how it's used. By using the Service, you agree to this policy.</p>
+
+    <h2>Information we collect</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Account information</strong> — email address, and display name if you provide one. If you sign in with Google or Apple, we receive the email and name associated with that account.</li>
+        <li><strong>Authentication data</strong> — managed by our backend provider, Supabase, including a securely hashed password if you use email/password sign-in.</li>
+        <li><strong>Subscription and billing status</strong> — your plan tier and subscription status. Payment details themselves are handled entirely by Stripe (web) or Apple (iOS In-App Purchase, via RevenueCat) — we never receive or store your card number.</li>
+        <li><strong>Push notification token</strong> — if you enable notifications on iOS, a device token used to deliver alerts you've configured (price alerts, news, account reminders).</li>
+        <li><strong>App preferences and content you create</strong> — price alerts you set, your chosen alert sound, trader-level setting, and messages you send to the AI chat feature.</li>
+        <li><strong>Usage data</strong> — basic technical data needed to operate the Service (e.g. request logs), and terms-of-service agreement timestamps.</li>
+      </ul>
+    </div>
+
+    <h2>How we use it</h2>
+    <p>To operate your account, process subscriptions, deliver the push notifications you've opted into, respond to AI chat requests, provide customer support, and maintain the security and reliability of the Service. We do not sell your personal information.</p>
+
+    <h2>Third parties we work with</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Supabase</strong> — database, authentication, and backend hosting</li>
+        <li><strong>Stripe</strong> — payment processing for web subscriptions</li>
+        <li><strong>Apple / RevenueCat</strong> — In-App Purchase processing on iOS</li>
+        <li><strong>Firebase Cloud Messaging (Google)</strong> — delivery of push notifications on iOS</li>
+        <li><strong>OpenAI</strong> — processes the messages you send to the AI chat feature to generate responses</li>
+        <li><strong>Vercel</strong> — web hosting</li>
+      </ul>
+      <p style="margin-bottom:0">Each of these processes data only as needed to provide their part of the Service, under their own privacy policies. We do not use third-party advertising trackers, and analytics collection is disabled in our mobile app configuration.</p>
+    </div>
+
+    <h2>Market data</h2>
+    <p>Price charts, order book, and market data are pulled from public exchange and market-data APIs (including Binance, Coinbase, and Coinglass). These requests don't include your personal information.</p>
+
+    <h2>Local storage</h2>
+    <p>The app stores some preferences directly on your device (e.g. theme, alert settings, chat history) using standard browser/app local storage. This data stays on your device and isn't transmitted to us unless it's part of a feature described above (like a price alert, which is also saved to your account so it can trigger a push notification).</p>
+
+    <h2>Data retention & deletion</h2>
+    <p>You can permanently delete your account and associated data at any time from Profile → Danger Zone in the app. This removes your account from our systems, subject to what we're legally required to retain (e.g. payment records for tax/accounting purposes, retained by Stripe/Apple per their own policies).</p>
+
+    <h2>Children's privacy</h2>
+    <p>The Service is intended for users of legal age in their jurisdiction and is not directed at children. We do not knowingly collect information from children.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy from time to time. Material changes will be reflected by updating the "Last updated" date above.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy or your data? Contact us at <a href="mailto:support@coinhintz.io">support@coinhintz.io</a>.</p>
+
+    <footer>
+      coinhintz.io · <a href="/terms.html">Terms of Use</a>
+    </footer>
+  </div>
+</body>
+</html>
