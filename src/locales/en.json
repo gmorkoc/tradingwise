@@ -436,6 +436,7 @@
     },
     "aiUsage": {
       "unlimited": "Unlimited AI requests",
+      "locked": "AI chat isn't included on the Free plan.",
       "requestsUsed": "{{used}} of {{limit}} requests used today",
       "resetsOn": "Resets tomorrow",
       "upgradePro": "Upgrade to Pro",

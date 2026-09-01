@@ -436,10 +436,11 @@
     },
     "aiUsage": {
       "unlimited": "Sınırsız YZ isteği",
-      "requestsUsed": "Bu hafta {{limit}} isteğin {{used}}'i kullanıldı",
-      "resetsOn": "{{date}} tarihinde sıfırlanır",
+      "locked": "Yapay zeka sohbeti Ücretsiz planda yer almaz.",
+      "requestsUsed": "Bugün {{limit}} isteğin {{used}}'i kullanıldı",
+      "resetsOn": "Yarın sıfırlanır",
       "upgradePro": "Pro'ya Yükselt",
-      "proHint": " haftada 35 YZ isteği için ya da sınırsız için Elite.",
+      "proHint": " günde 25 YZ isteği için ya da sınırsız için Elite.",
       "upgradeElite": "Elite'e Yükselt",
       "eliteHint": " sınırsız YZ isteği için."
     },

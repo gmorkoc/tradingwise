@@ -258,6 +258,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <span>✦</span>
                     <span>{t("profile.aiUsage.unlimited")}</span>
                   </div>
+                ) : tier === "free" ? (
+                  <p className="pp-upgrade-hint">
+                    {t("profile.aiUsage.locked")}{" "}
+                    <button className="pp-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>{t("profile.aiUsage.upgradePro")}</button>
+                    {t("profile.aiUsage.proHint")}
+                  </p>
                 ) : (
                   <>
                     <div className="pp-ai-row">
@@ -273,12 +279,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                         style={{ width: `${Math.min(100, (used/limit)*100)}%` }}
                       />
                     </div>
-                    {!isPaid && (
-                      <p className="pp-upgrade-hint">
-                        <button className="pp-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>{t("profile.aiUsage.upgradePro")}</button>
-                        {t("profile.aiUsage.proHint")}
-                      </p>
-                    )}
                     {isPaid && tier === "pro" && (
                       <p className="pp-upgrade-hint">
                         <button className="pp-upgrade-link" onClick={() => { onClose(); onOpenUpgrade(); }}>{t("profile.aiUsage.upgradeElite")}</button>

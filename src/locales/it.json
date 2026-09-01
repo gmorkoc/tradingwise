@@ -436,10 +436,11 @@
     },
     "aiUsage": {
       "unlimited": "Richieste IA illimitate",
-      "requestsUsed": "{{used}} di {{limit}} richieste usate questa settimana",
-      "resetsOn": "Si azzera il {{date}}",
+      "locked": "La chat IA non è inclusa nel piano Gratuito.",
+      "requestsUsed": "{{used}} di {{limit}} richieste usate oggi",
+      "resetsOn": "Si azzera domani",
       "upgradePro": "Aggiorna a Pro",
-      "proHint": " per 35 richieste IA/settimana, o Elite per illimitate.",
+      "proHint": " per 25 richieste IA al giorno, o Elite per illimitate.",
       "upgradeElite": "Aggiorna a Elite",
       "eliteHint": " per richieste IA illimitate."
     },
