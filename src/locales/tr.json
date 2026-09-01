@@ -505,7 +505,11 @@
       "upgradeReminders": {
         "label": "Yükseltme Hatırlatıcıları",
         "desc": "Pro ve Elite'in neler sunduğuna dair ara sıra hatırlatmalar."
-      }
+      },
+      "permissionDenied": "Push bildirimleri iOS Ayarları'nda coinhintz için kapalı — orada etkinleştirmediğiniz sürece aşağıdaki anahtarlar hiçbir işe yaramaz.",
+      "openSettings": "Ayarları Aç",
+      "permissionPrompt": "Bu cihazda push bildirimlerini henüz etkinleştirmediniz.",
+      "enable": "Etkinleştir"
     },
     "activity": {
       "title": "Hesap Etkinliği",

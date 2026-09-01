@@ -9,6 +9,8 @@ import {
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
+import { isPushAvailable, completePushPriming } from "../services/pushNotifications";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/ProfilePage.css";
 
@@ -172,6 +174,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [notifOverrides, setNotifOverrides] = useState<Partial<Record<NotificationPrefKey, boolean>>>({});
   const notifSavingRef = useRef<Partial<Record<NotificationPrefKey, boolean>>>({});
 
+  // The toggles below only control which categories send — none of them do
+  // anything if push is off at the OS level, and that state was previously
+  // invisible in-app (silently no-op, no way to tell why nothing arrives).
+  const [pushPermission, setPushPermission] = useState<"granted" | "denied" | "prompt" | null>(null);
+  const [pushEnabling,   setPushEnabling]   = useState(false);
+
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Full UI reset — only on a fresh open. This must NOT also depend on
@@ -236,6 +244,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     });
   }, [authProfile]);
 
+  useEffect(() => {
+    if (!isOpen || tab !== "notifications" || !isPushAvailable()) return;
+    FirebaseMessaging.checkPermissions().then(({ receive }) => setPushPermission(receive as typeof pushPermission));
+  }, [isOpen, tab]);
+
   if (!isOpen) return null;
 
   const handleProfileSave = async () => {
@@ -299,6 +312,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
         return next;
       });
     }
+  };
+
+  const handleEnablePush = async () => {
+    if (!user || pushEnabling) return;
+    setPushEnabling(true);
+    await completePushPriming(user.id);
+    const { receive } = await FirebaseMessaging.checkPermissions();
+    setPushPermission(receive as typeof pushPermission);
+    setPushEnabling(false);
   };
 
   const handleManageBilling = async () => {
@@ -571,6 +593,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
               <div className="pp-pane">
                 <h3 className="pp-pane-title">{t("profile.notifications.title", "Notification Settings")}</h3>
                 <p className="pp-pane-sub">{t("profile.notifications.sub", "Choose which push notifications you want to receive.")}</p>
+
+                {pushPermission === "denied" && (
+                  <p className="pp-msg pp-msg--warning">
+                    {t("profile.notifications.permissionDenied", "Push notifications are turned off for coinhintz in iOS Settings — the toggles below won't do anything until you enable them there.")}{" "}
+                    <button className="pp-upgrade-link" onClick={() => { window.location.href = "app-settings:"; }}>
+                      {t("profile.notifications.openSettings", "Open Settings")}
+                    </button>
+                  </p>
+                )}
+                {pushPermission === "prompt" && (
+                  <p className="pp-msg pp-msg--warning">
+                    {t("profile.notifications.permissionPrompt", "You haven't enabled push notifications on this device yet.")}{" "}
+                    <button className="pp-upgrade-link" onClick={handleEnablePush} disabled={pushEnabling}>
+                      {pushEnabling ? t("common.loading") : t("profile.notifications.enable", "Enable")}
+                    </button>
+                  </p>
+                )}
 
                 <div className="pp-notif-row">
                   <div>
