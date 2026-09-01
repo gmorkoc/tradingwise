@@ -67,6 +67,7 @@ import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
+import UsernameGateModal from "./components/UsernameGateModal";
 import { PWAInstallButton } from "./components/PWAInstallGuide";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
@@ -2294,6 +2295,15 @@ function AppGate() {
   const pendingTermsFlush = !!localStorage.getItem("terms_agreed_at");
   if (user && profile && !profile.terms_agreed_at && !pendingTermsFlush) {
     return <TermsGateModal userId={user.id} onAgreed={refreshProfile} />;
+  }
+
+  // Gate: signed in but has no username — the only way to land here is
+  // Google/Apple sign-in (a redirect straight to the provider, with no
+  // form of ours to add a username field to) or a pre-existing account
+  // from before this field existed. AuthModal's own signup form already
+  // makes it mandatory for anyone who goes through that.
+  if (user && profile && !profile.username) {
+    return <UsernameGateModal userId={user.id} onSaved={refreshProfile} />;
   }
 
   if (!user) {

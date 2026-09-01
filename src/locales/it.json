@@ -402,6 +402,11 @@
       "saveError": "Impossibile salvare la tua accettazione — riprova.",
       "saving": "Salvataggio…",
       "agreeAndContinue": "Accetto e Continuo →"
+    },
+    "usernameGate": {
+      "title": "Scegli un nome utente",
+      "sub": "Un'ultima cosa prima di iniziare.",
+      "continue": "Continua →"
     }
   },
   "account": {

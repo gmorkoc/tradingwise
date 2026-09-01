@@ -402,6 +402,11 @@
       "saveError": "Onayınız kaydedilemedi — lütfen tekrar deneyin.",
       "saving": "Kaydediliyor…",
       "agreeAndContinue": "Kabul Ediyorum ve Devam Et →"
+    },
+    "usernameGate": {
+      "title": "Bir kullanıcı adı seçin",
+      "sub": "Başlamadan önce son bir şey daha.",
+      "continue": "Devam Et →"
     }
   },
   "account": {

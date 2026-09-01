@@ -402,6 +402,11 @@
       "saveError": "Couldn't save your agreement — please try again.",
       "saving": "Saving…",
       "agreeAndContinue": "I Agree & Continue →"
+    },
+    "usernameGate": {
+      "title": "Choose a username",
+      "sub": "One more thing before you get started.",
+      "continue": "Continue →"
     }
   },
   "account": {

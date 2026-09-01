@@ -402,6 +402,11 @@
       "saveError": "No se pudo guardar tu aceptación — inténtalo de nuevo.",
       "saving": "Guardando…",
       "agreeAndContinue": "Acepto y Continuar →"
+    },
+    "usernameGate": {
+      "title": "Elige un nombre de usuario",
+      "sub": "Una cosa más antes de empezar.",
+      "continue": "Continuar →"
     }
   },
   "account": {
