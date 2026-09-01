@@ -96,19 +96,21 @@ export const ALERT_SOUNDS = ["bell", "chime", "alert", "classic"] as const;
 export type AlertSound = typeof ALERT_SOUNDS[number];
 
 export async function saveAlertSound(userId: string, sound: AlertSound): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({ alert_sound: sound })
     .eq("id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders";
 
 export async function saveNotificationPref(userId: string, key: NotificationPrefKey, value: boolean): Promise<void> {
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({ [key]: value })
     .eq("id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export interface AccountEvent {

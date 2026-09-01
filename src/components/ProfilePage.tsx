@@ -264,7 +264,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
   const handleAlertSoundChange = async (sound: AlertSound) => {
     playAlertSoundFile(sound);
-    if (user) { await saveAlertSound(user.id, sound); await refreshProfile(); }
+    if (!user) return;
+    try {
+      await saveAlertSound(user.id, sound);
+      await refreshProfile();
+    } catch (err) {
+      console.error("Failed to save alert sound:", err);
+    }
   };
 
   const notifPrefValue = (key: NotificationPrefKey): boolean =>
