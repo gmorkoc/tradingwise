@@ -75,14 +75,14 @@
   color: var(--color-text-muted);
 }
 
-/* One row, one line — avatar, @name, tier badge, message (truncated with
-   an ellipsis rather than wrapping), then time + action pinned to the
-   right edge. No dividers, tight vertical rhythm. */
+/* Avatar + one flowing paragraph — name, tier badge, message, time and
+   the ⋮ menu all wrap together as inline text, so a long message grows
+   to multiple lines instead of being cut off. No dividers, tight rhythm. */
 .coin-chat-comment {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 0;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
   min-width: 0;
 }
 
@@ -90,6 +90,7 @@
   flex-shrink: 0;
   width: 20px;
   height: 20px;
+  margin-top: 2px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -104,15 +105,22 @@
   background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
 }
 
-.coin-chat-comment-name {
-  flex-shrink: 0;
+.coin-chat-comment-line {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: 0.8rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.coin-chat-comment-name {
   font-weight: 700;
   color: var(--color-text);
 }
 
 .coin-chat-tier-chip {
-  flex-shrink: 0;
+  display: inline-block;
   font-size: 0.56rem;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -128,31 +136,26 @@
 }
 
 .coin-chat-comment-text {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.8rem;
   font-weight: 400;
   color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .coin-chat-comment-time {
-  flex-shrink: 0;
-  margin-left: auto;
   font-size: 0.66rem;
   color: var(--color-text-muted);
 }
 
 /* Delete/report live behind a hover-revealed "⋮" menu, YouTube-style,
-   instead of a permanently-visible text link. */
+   instead of a permanently-visible text link. Inline-block so it can sit
+   inside the flowing paragraph and still anchor the dropdown below it. */
 .coin-chat-comment-menu-wrap {
   position: relative;
-  flex-shrink: 0;
+  display: inline-block;
 }
 
 .coin-chat-comment-dots {
+  display: inline-block;
+  vertical-align: -2px;
   background: none;
   border: none;
   padding: 1px 4px;

@@ -120,39 +120,41 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         comments.map((c) => (
           <div className="coin-chat-comment" key={c.id}>
             <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
-            <span className="coin-chat-comment-name">@{c.username}</span>
-            <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier.toUpperCase()}</span>
-            <span className="coin-chat-comment-text">{c.body}</span>
-            <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
-            {user && (
-              <div className="coin-chat-comment-menu-wrap">
-                <button
-                  type="button"
-                  className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
-                  onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                  aria-label="More"
-                >
-                  ⋮
-                </button>
-                {openMenuId === c.id && (
-                  <div className="coin-chat-comment-menu">
-                    {user.id === c.user_id ? (
-                      <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
-                        {t("coinChat.delete")}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={reportedIds.has(c.id)}
-                        onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
-                      >
-                        {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <p className="coin-chat-comment-line">
+              <span className="coin-chat-comment-name">@{c.username}</span>{" "}
+              <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
+              <span className="coin-chat-comment-text">{c.body}</span>{" "}
+              <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
+              {user && (
+                <span className="coin-chat-comment-menu-wrap">
+                  <button
+                    type="button"
+                    className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
+                    onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                    aria-label="More"
+                  >
+                    ⋮
+                  </button>
+                  {openMenuId === c.id && (
+                    <span className="coin-chat-comment-menu">
+                      {user.id === c.user_id ? (
+                        <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
+                          {t("coinChat.delete")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={reportedIds.has(c.id)}
+                          onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
+                        >
+                          {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </span>
+              )}
+            </p>
           </div>
         ))
       )}
