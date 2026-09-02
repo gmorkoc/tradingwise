@@ -1574,7 +1574,10 @@
     "funding": "Fonlama",
     "longShort": "L/S",
     "fearGreed": "Korku ve Açgözlülük",
-    "announceBanner": "Yeni: Canlı sohbet burada — {{coin}} hakkında diğer yatırımcıların ne düşündüğünü gör."
+    "announceBanner": "Yeni: Canlı sohbet burada — {{coin}} hakkında diğer yatırımcıların ne düşündüğünü gör.",
+    "reply": "Yanıtla",
+    "cancel": "İptal",
+    "replyingTo": "Yanıtlanıyor"
   },
   "orderFlowTape": {
     "live": "CANLI",

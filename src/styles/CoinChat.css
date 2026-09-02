@@ -536,3 +536,119 @@
     display: none;
   }
 }
+
+/* ── X/Twitter-style reply takeover ────────────────────────────────────── */
+.coin-chat-reply-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--color-card-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.coin-chat-reply-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.coin-chat-reply-cancel {
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coin-chat-reply-post {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 18px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.coin-chat-reply-post:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.coin-chat-reply-parent {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding: 16px 16px 0;
+}
+
+.coin-chat-reply-parent .coin-chat-avatar,
+.coin-chat-reply-compose .coin-chat-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.coin-chat-reply-parent-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.coin-chat-reply-parent-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coin-chat-reply-parent-text {
+  margin: 3px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.coin-chat-reply-connector {
+  flex-shrink: 0;
+  width: 2px;
+  height: 22px;
+  background: var(--color-border);
+  margin: 4px 0 4px 34px;
+}
+
+.coin-chat-reply-label {
+  flex-shrink: 0;
+  padding: 0 16px 10px 52px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.coin-chat-reply-label b {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.coin-chat-reply-compose {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.coin-chat-reply-compose .coin-chat-composer {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border-top: none;
+}

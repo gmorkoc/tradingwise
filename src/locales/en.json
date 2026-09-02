@@ -1642,7 +1642,10 @@
     "funding": "Funding",
     "longShort": "L/S",
     "fearGreed": "Fear & Greed",
-    "announceBanner": "New: Live chat is here — see what other traders think about {{coin}}."
+    "announceBanner": "New: Live chat is here — see what other traders think about {{coin}}.",
+    "reply": "Reply",
+    "cancel": "Cancel",
+    "replyingTo": "Replying to"
   },
   "orderFlowTape": {
     "live": "LIVE",

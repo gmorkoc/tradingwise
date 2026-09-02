@@ -1574,7 +1574,10 @@
     "funding": "Financiación",
     "longShort": "L/C",
     "fearGreed": "Miedo y Codicia",
-    "announceBanner": "Nuevo: el chat en vivo ya está aquí — mira qué opinan otros traders sobre {{coin}}."
+    "announceBanner": "Nuevo: el chat en vivo ya está aquí — mira qué opinan otros traders sobre {{coin}}.",
+    "reply": "Responder",
+    "cancel": "Cancelar",
+    "replyingTo": "Respondiendo a"
   },
   "orderFlowTape": {
     "live": "EN VIVO",

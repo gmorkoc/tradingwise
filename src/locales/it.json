@@ -1574,7 +1574,10 @@
     "funding": "Funding",
     "longShort": "L/S",
     "fearGreed": "Paura e Avidità",
-    "announceBanner": "Novità: la chat dal vivo è arrivata — scopri cosa ne pensano gli altri trader su {{coin}}."
+    "announceBanner": "Novità: la chat dal vivo è arrivata — scopri cosa ne pensano gli altri trader su {{coin}}.",
+    "reply": "Rispondi",
+    "cancel": "Annulla",
+    "replyingTo": "Stai rispondendo a"
   },
   "orderFlowTape": {
     "live": "LIVE",

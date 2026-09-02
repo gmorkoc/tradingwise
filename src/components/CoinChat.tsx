@@ -75,7 +75,7 @@ function useIsDesktop(): boolean {
 
 export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Props) {
   const { t } = useTranslation();
-  const { user, tier } = useAuth();
+  const { user, tier, profile } = useAuth();
   const isPaid = tier === "pro" || tier === "elite";
   const isDesktop = useIsDesktop();
 
@@ -87,6 +87,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [replyTarget, setReplyTarget] = useState<CoinComment | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -150,10 +151,26 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     try {
       await postCoinComment(coin, user.id, draft);
       setDraft("");
+      setReplyTarget(null);
     } catch (e: any) {
       setError(e.message ?? t("coinChat.postFailed"));
     }
     setPosting(false);
+  };
+
+  const openReply = (c: CoinComment) => {
+    setOpenMenuId(null);
+    setReplyTarget(c);
+    setDraft(`@${c.username} `);
+    setError("");
+    requestAnimationFrame(() => composerInputRef.current?.focus());
+  };
+
+  const closeReply = () => {
+    setReplyTarget(null);
+    setDraft("");
+    setMentionQuery(null);
+    setError("");
   };
 
   const handleDelete = async (id: number) => {
@@ -224,6 +241,9 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
                   </button>
                   {openMenuId === c.id && (
                     <span className="coin-chat-comment-menu">
+                      <button type="button" onClick={() => openReply(c)}>
+                        {t("coinChat.reply", "Reply")}
+                      </button>
                       {user.id === c.user_id ? (
                         <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
                           {t("coinChat.delete")}
@@ -305,6 +325,42 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     </div>
   );
 
+  // X/Twitter-style full-screen reply takeover: parent message up top with
+  // a connecting line down to the (reused) composer, Cancel/Post in the
+  // header. Reuses {composer} rather than a second input, so there's only
+  // ever one element holding composerInputRef at a time.
+  const replyModal = replyTarget && (
+    <div className="coin-chat-reply-modal">
+      <div className="coin-chat-reply-header">
+        <button type="button" className="coin-chat-reply-cancel" onClick={closeReply}>
+          {t("coinChat.cancel", "Cancel")}
+        </button>
+        <button type="button" className="coin-chat-reply-post" onClick={handlePost} disabled={posting || !draft.trim()}>
+          {t("coinChat.post")}
+        </button>
+      </div>
+      <div className="coin-chat-reply-parent">
+        <div className={`coin-chat-avatar cc-tier--${replyTarget.tier}`}>{initials(replyTarget.username)}</div>
+        <div className="coin-chat-reply-parent-body">
+          <div className="coin-chat-reply-parent-meta">
+            <span className="coin-chat-comment-name">@{replyTarget.username}</span>
+            <span className={`coin-chat-tier-chip cc-tier--${replyTarget.tier}`}>{replyTarget.tier === "elite" ? "E" : "P"}</span>
+            <span className="coin-chat-comment-time">{timeAgo(replyTarget.created_at)}</span>
+          </div>
+          <p className="coin-chat-reply-parent-text">{renderWithMentions(replyTarget.body)}</p>
+        </div>
+      </div>
+      <div className="coin-chat-reply-connector" />
+      <div className="coin-chat-reply-label">
+        {t("coinChat.replyingTo", "Replying to")} <b>@{replyTarget.username}</b>
+      </div>
+      <div className="coin-chat-reply-compose">
+        <div className={`coin-chat-avatar cc-tier--${tier}`}>{initials(profile?.username ?? "?")}</div>
+        {composer}
+      </div>
+    </div>
+  );
+
   // Desktop: plain content dropped into the parent's side-panel dock — no
   // trigger/backdrop/self-close, the aside wrapper in App.tsx owns visibility.
   if (isDesktop) {
@@ -319,7 +375,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         </div>
         <CoinMarketMood coin={coin} />
         {feed}
-        {composer}
+        {!replyTarget && composer}
+        {replyModal}
       </div>
     );
   }
@@ -345,7 +402,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         </div>
         <CoinMarketMood coin={coin} />
         {feed}
-        {composer}
+        {!replyTarget && composer}
+        {replyModal}
       </div>
     </div>
   );
