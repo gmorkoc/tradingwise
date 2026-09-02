@@ -8,31 +8,28 @@
 
 /* Begin PBXBuildFile section */
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		388A3002BC1307A68D5ABC40 /* Sounds/bell.wav in Resources */ = {isa = PBXBuildFile; fileRef = 0F00FDFCBDFABE7CBDA0FBB8 /* Sounds/bell.wav */; };
+		42983EC1FCA30730287302EF /* NotificationAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		555B9780CE1FCE5623407372 /* Sounds/alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9039AA3378EB775396304197 /* Sounds/alert.wav */; };
+		569634DA02ECED6842FF5AD2 /* Sounds/chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 85962337AF61A4236888957B /* Sounds/chime.wav */; };
 		7C8AF4E172C0605A6E553D0B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */; };
-		388A3002BC1307A68D5ABC40 /* bell.wav in Resources */ = {isa = PBXBuildFile; fileRef = 0F00FDFCBDFABE7CBDA0FBB8 /* bell.wav */; };
-		569634DA02ECED6842FF5AD2 /* chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 85962337AF61A4236888957B /* chime.wav */; };
-		555B9780CE1FCE5623407372 /* alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9039AA3378EB775396304197 /* alert.wav */; };
-		F95F6BBE7AD93204361CCAEE /* classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3BC7215F3CF845D0651DA654 /* classic.wav */; };
 		8C30AFB95CDC28C11947D2BB /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D43FB156F1A8ED89933CF05 /* MainViewController.swift */; };
-		42983EC1FCA30730287302EF /* NotificationAuthPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
+		F95F6BBE7AD93204361CCAEE /* Sounds/classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3BC7215F3CF845D0651DA654 /* Sounds/classic.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		0F00FDFCBDFABE7CBDA0FBB8 /* bell.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/bell.wav"; sourceTree = "<group>"; };
-		85962337AF61A4236888957B /* chime.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/chime.wav"; sourceTree = "<group>"; };
-		9039AA3378EB775396304197 /* alert.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/alert.wav"; sourceTree = "<group>"; };
-		3BC7215F3CF845D0651DA654 /* classic.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = "Sounds/classic.wav"; sourceTree = "<group>"; };
+		0F00FDFCBDFABE7CBDA0FBB8 /* Sounds/bell.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = Sounds/bell.wav; sourceTree = "<group>"; };
 		1D43FB156F1A8ED89933CF05 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
-		70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAuthPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		3BC7215F3CF845D0651DA654 /* Sounds/classic.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = Sounds/classic.wav; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -42,6 +39,9 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		5DBDCCD5ED615C75B3C0137F /* Configuration.storekit */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
+		70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAuthPlugin.swift; sourceTree = "<group>"; };
+		85962337AF61A4236888957B /* Sounds/chime.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = Sounds/chime.wav; sourceTree = "<group>"; };
+		9039AA3378EB775396304197 /* Sounds/alert.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = Sounds/alert.wav; sourceTree = "<group>"; };
 		9D8CAB7E303FEB0600A9E33C /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
@@ -102,10 +102,10 @@
 				70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */,
 				5DBDCCD5ED615C75B3C0137F /* Configuration.storekit */,
 				0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */,
-				0F00FDFCBDFABE7CBDA0FBB8 /* bell.wav */,
-				85962337AF61A4236888957B /* chime.wav */,
-				9039AA3378EB775396304197 /* alert.wav */,
-				3BC7215F3CF845D0651DA654 /* classic.wav */,
+				0F00FDFCBDFABE7CBDA0FBB8 /* Sounds/bell.wav */,
+				85962337AF61A4236888957B /* Sounds/chime.wav */,
+				9039AA3378EB775396304197 /* Sounds/alert.wav */,
+				3BC7215F3CF845D0651DA654 /* Sounds/classic.wav */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -187,10 +187,10 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				7C8AF4E172C0605A6E553D0B /* GoogleService-Info.plist in Resources */,
-				388A3002BC1307A68D5ABC40 /* bell.wav in Resources */,
-				569634DA02ECED6842FF5AD2 /* chime.wav in Resources */,
-				555B9780CE1FCE5623407372 /* alert.wav in Resources */,
-				F95F6BBE7AD93204361CCAEE /* classic.wav in Resources */,
+				388A3002BC1307A68D5ABC40 /* Sounds/bell.wav in Resources */,
+				569634DA02ECED6842FF5AD2 /* Sounds/chime.wav in Resources */,
+				555B9780CE1FCE5623407372 /* Sounds/alert.wav in Resources */,
+				F95F6BBE7AD93204361CCAEE /* Sounds/classic.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
