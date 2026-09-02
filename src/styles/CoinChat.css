@@ -5,17 +5,8 @@
 .coin-chat-panel {
   display: flex;
   flex-direction: column;
-  background: var(--color-card-bg);
+  background: var(--color-surface);
   overflow: hidden;
-}
-
-.coin-chat-grabber {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--color-border);
-  margin: 10px auto 2px;
-  flex-shrink: 0;
 }
 
 .coin-chat-head {
@@ -490,42 +481,20 @@
     font-size: 0.85rem;
   }
 
-  .coin-chat--sheet-open .coin-chat-trigger {
-    display: none;
-  }
-
-  .coin-chat-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 295;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-  }
-
-  .coin-chat--sheet-open .coin-chat-backdrop {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
+  /* Full-screen takeover, portaled to <body> — identical treatment to
+     the reply modal (opaque, no ancestor-transform containing-block
+     trap, safe-area-aware header). No backdrop/grabber: it covers the
+     whole screen, so there's no "outside" to dim or partial height to
+     drag between. */
   .coin-chat-panel {
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     z-index: 300;
-    max-height: 78vh;
-    border-radius: 16px 16px 0 0;
-    border-bottom: none;
-    box-shadow: 0 -12px 40px var(--color-shadow);
-    transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  .coin-chat--sheet-open .coin-chat-panel {
-    transform: translateY(0);
+  .coin-chat-panel .coin-chat-head {
+    padding-top: max(14px, var(--native-safe-area-top, env(safe-area-inset-top)));
   }
 }
 

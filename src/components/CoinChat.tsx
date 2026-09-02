@@ -499,30 +499,36 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     );
   }
 
-  // Mobile: floating trigger pill + backdrop + swipe-up sheet.
+  // Mobile: floating trigger pill + full-screen takeover, same treatment
+  // as the reply modal (portaled to <body> so no ancestor transform can
+  // ever clip it to less than the real viewport again, opaque, safe-area
+  // aware header). No backdrop/grabber — it covers the whole screen, so
+  // there's no "outside" to tap or partial height to drag between.
   return (
-    <div className={`coin-chat${sheetOpen ? " coin-chat--sheet-open" : ""}`}>
-      <button type="button" className="coin-chat-trigger" onClick={() => setSheetOpen(true)}>
-        <span className="coin-chat-trigger-icon">💬</span>
-        <span className="coin-chat-trigger-label">{t("coinChat.triggerCount", { count: comments.length, coin })}</span>
-      </button>
+    <div className="coin-chat">
+      {!sheetOpen && (
+        <button type="button" className="coin-chat-trigger" onClick={() => setSheetOpen(true)}>
+          <span className="coin-chat-trigger-icon">💬</span>
+          <span className="coin-chat-trigger-label">{t("coinChat.triggerCount", { count: comments.length, coin })}</span>
+        </button>
+      )}
 
-      <div className="coin-chat-backdrop" onClick={() => setSheetOpen(false)} />
-
-      <div className="coin-chat-panel" ref={panelRef}>
-        <div className="coin-chat-grabber" onClick={() => setSheetOpen(false)} />
-        <div className="coin-chat-head">
-          <div>
-            <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-            <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
+      {sheetOpen && createPortal(
+        <div className="coin-chat-panel" ref={panelRef}>
+          <div className="coin-chat-head">
+            <div>
+              <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
+              <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
+            </div>
+            <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
           </div>
-          <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
-        </div>
-        <CoinMarketMood coin={coin} />
-        {feed}
-        {!replyTarget && composer}
-        {replyModal}
-      </div>
+          <CoinMarketMood coin={coin} />
+          {feed}
+          {!replyTarget && composer}
+        </div>,
+        document.body
+      )}
+      {replyModal}
     </div>
   );
 }
