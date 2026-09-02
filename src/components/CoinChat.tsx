@@ -125,11 +125,23 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
-      if (panelRef.current) panelRef.current.style.bottom = `${info.keyboardHeight}px`;
+      if (panelRef.current) {
+        panelRef.current.style.bottom = `${info.keyboardHeight}px`;
+        // .coin-chat-panel's max-height:78vh is sized against the full
+        // (keyboard-unaware) viewport — pushing `bottom` up without also
+        // pinning `top` let 78vh of height + the keyboard offset add up to
+        // more than the actual visible space, extending the panel's top
+        // edge past the status bar. Pinning `top` makes the effective
+        // height min(78vh, available space) instead.
+        panelRef.current.style.top = "max(14px, var(--native-safe-area-top, env(safe-area-inset-top)))";
+      }
       if (replyModalRef.current) replyModalRef.current.style.bottom = `${info.keyboardHeight}px`;
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (panelRef.current) panelRef.current.style.bottom = "0px";
+      if (panelRef.current) {
+        panelRef.current.style.bottom = "0px";
+        panelRef.current.style.top = "";
+      }
       if (replyModalRef.current) replyModalRef.current.style.bottom = "0px";
     });
     return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };

@@ -714,3 +714,10 @@
   padding: 0;
   border-top: none;
 }
+
+/* The header's own Post button already submits — hide the composer's
+   inline send button here so there's only one, matching X (Enter still
+   submits via the input's own onKeyDown). */
+.coin-chat-reply-compose .coin-chat-send {
+  display: none;
+}
