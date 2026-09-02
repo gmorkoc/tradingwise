@@ -75,26 +75,26 @@
   color: var(--color-text-muted);
 }
 
+/* Rows have no dividers and sit close together — matches YouTube live
+   chat's rhythm (avatar left, name + message flow as one line, tiny
+   muted meta line below) rather than a bordered comment-card look. */
 .coin-chat-comment {
   display: flex;
-  gap: 9px;
-  padding: 10px 2px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.coin-chat-comment:last-child {
-  border-bottom: none;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
 }
 
 .coin-chat-avatar {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: #fff;
   background: var(--color-primary);
@@ -109,24 +109,24 @@
   min-width: 0;
 }
 
-.coin-chat-comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+.coin-chat-comment-line {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.42;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .coin-chat-comment-name {
-  font-size: 0.8rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
 .coin-chat-tier-chip {
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 1px 6px;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
   border-radius: 999px;
   color: var(--color-primary);
   background: var(--color-primary-soft);
@@ -137,41 +137,38 @@
   background: rgba(167, 139, 250, 0.14);
 }
 
-.coin-chat-comment-time {
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-}
-
 .coin-chat-comment-text {
-  margin-top: 2px;
-  font-size: 0.83rem;
-  line-height: 1.4;
+  font-weight: 400;
   color: var(--color-text);
-  word-break: break-word;
-  white-space: pre-wrap;
 }
 
-.coin-chat-comment-actions {
-  margin-top: 4px;
+.coin-chat-comment-meta {
+  margin-top: 1px;
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.coin-chat-comment-actions button {
+.coin-chat-comment-time {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+}
+
+.coin-chat-comment-meta button {
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
 }
 
-.coin-chat-comment-actions button:hover {
+.coin-chat-comment-meta button:hover {
   color: var(--color-danger);
 }
 
-.coin-chat-comment-actions button:disabled {
+.coin-chat-comment-meta button:disabled {
   cursor: default;
   color: var(--color-text-muted);
   opacity: 0.6;

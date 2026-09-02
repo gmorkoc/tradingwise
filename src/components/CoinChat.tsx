@@ -111,13 +111,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
           <div className="coin-chat-comment" key={c.id}>
             <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
             <div className="coin-chat-comment-body">
+              <p className="coin-chat-comment-line">
+                <span className="coin-chat-comment-name">{c.username}</span>{" "}
+                <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier.toUpperCase()}</span>{" "}
+                <span className="coin-chat-comment-text">{c.body}</span>
+              </p>
               <div className="coin-chat-comment-meta">
-                <span className="coin-chat-comment-name">{c.username}</span>
-                <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier.toUpperCase()}</span>
                 <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
-              </div>
-              <p className="coin-chat-comment-text">{c.body}</p>
-              <div className="coin-chat-comment-actions">
                 {user?.id === c.user_id ? (
                   <button type="button" onClick={() => handleDelete(c.id)}>{t("coinChat.delete")}</button>
                 ) : user ? (
