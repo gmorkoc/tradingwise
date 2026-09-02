@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
@@ -427,8 +428,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   // X/Twitter-style full-screen reply takeover: parent message up top with
   // a connecting line down to the (reused) composer, Cancel/Post in the
   // header. Reuses {composer} rather than a second input, so there's only
-  // ever one element holding composerInputRef at a time.
-  const replyModal = replyTarget && (
+  // ever one element holding composerInputRef at a time. Portaled straight
+  // to <body> — .coin-chat-panel (the mobile sheet) has a CSS transform for
+  // its slide animation, and a transform on any ancestor makes `position:
+  // fixed` descendants resolve against THAT box instead of the real
+  // viewport, so nesting this inside the sheet left the status-bar area
+  // uncovered. Escaping to <body> sidesteps that regardless of ancestors.
+  const replyModal = replyTarget && createPortal(
     <div className="coin-chat-reply-modal" ref={replyModalRef}>
       <div className="coin-chat-reply-header">
         <button type="button" className="coin-chat-reply-cancel" onClick={closeReply}>
@@ -457,7 +463,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         <div className={`coin-chat-avatar cc-tier--${tier}`}>{initials(profile?.username ?? "?")}</div>
         {composer}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 
   // Desktop: plain content dropped into the parent's side-panel dock — no
