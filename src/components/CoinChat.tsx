@@ -56,6 +56,16 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [error, setError] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const handle = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".coin-chat-comment-menu-wrap")) setOpenMenuId(null);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [openMenuId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,13 +124,35 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
             <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier.toUpperCase()}</span>
             <span className="coin-chat-comment-text">{c.body}</span>
             <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
-            {user?.id === c.user_id ? (
-              <button type="button" className="coin-chat-comment-action" onClick={() => handleDelete(c.id)}>{t("coinChat.delete")}</button>
-            ) : user ? (
-              <button type="button" className="coin-chat-comment-action" disabled={reportedIds.has(c.id)} onClick={() => handleReport(c.id)}>
-                {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
-              </button>
-            ) : null}
+            {user && (
+              <div className="coin-chat-comment-menu-wrap">
+                <button
+                  type="button"
+                  className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
+                  onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                  aria-label="More"
+                >
+                  ⋮
+                </button>
+                {openMenuId === c.id && (
+                  <div className="coin-chat-comment-menu">
+                    {user.id === c.user_id ? (
+                      <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
+                        {t("coinChat.delete")}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={reportedIds.has(c.id)}
+                        onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
+                      >
+                        {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))
       )}

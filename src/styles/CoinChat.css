@@ -145,25 +145,81 @@
   color: var(--color-text-muted);
 }
 
-.coin-chat-comment-action {
+/* Delete/report live behind a hover-revealed "⋮" menu, YouTube-style,
+   instead of a permanently-visible text link. */
+.coin-chat-comment-menu-wrap {
+  position: relative;
   flex-shrink: 0;
+}
+
+.coin-chat-comment-dots {
   background: none;
   border: none;
-  padding: 0;
-  font-size: 0.66rem;
-  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  line-height: 1;
   color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.coin-chat-comment:hover .coin-chat-comment-dots,
+.coin-chat-comment-dots:focus-visible,
+.coin-chat-comment-dots--open {
+  opacity: 1;
+}
+
+.coin-chat-comment-dots:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+/* No hover on touch — keep the affordance faintly visible so it's still
+   discoverable without needing a hover state that doesn't exist. */
+@media (hover: none) {
+  .coin-chat-comment-dots {
+    opacity: 0.5;
+  }
+}
+
+.coin-chat-comment-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  min-width: 100px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px var(--color-shadow);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.coin-chat-comment-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-text);
   cursor: pointer;
 }
 
-.coin-chat-comment-action:hover {
+.coin-chat-comment-menu button:hover {
+  background: var(--color-input-bg);
   color: var(--color-danger);
 }
 
-.coin-chat-comment-action:disabled {
+.coin-chat-comment-menu button:disabled {
   cursor: default;
   color: var(--color-text-muted);
   opacity: 0.6;
+  background: none;
 }
 
 .coin-chat-composer {
