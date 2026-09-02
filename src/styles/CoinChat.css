@@ -310,6 +310,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Replies nest under their parent, one level deep, with a connecting
+   line down the left edge — same idea as X's reply threading. */
+.coin-chat-thread {
+  margin-left: 9px;
+  padding-left: 17px;
+  border-left: 2px solid var(--color-border);
+}
+
+.coin-chat-thread .coin-chat-comment:first-child {
+  padding-top: 2px;
+}
+
 .coin-chat-composer {
   flex-shrink: 0;
   padding: 10px 16px 16px;

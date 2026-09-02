@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
@@ -156,11 +156,15 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
   }, [coin, user?.id]);
 
+  // Threads stay one level deep — replying to a reply still attaches to
+  // its root ancestor, so rendering never has to handle arbitrary nesting.
+  const replyToId = replyTarget ? (replyTarget.reply_to_id ?? replyTarget.id) : null;
+
   const handlePost = async () => {
     if (!user || !draft.trim() || posting) return;
     setPosting(true); setError("");
     try {
-      await postCoinComment(coin, user.id, draft);
+      await postCoinComment(coin, user.id, draft, replyToId);
       setDraft("");
       setReplyTarget(null);
     } catch (e: any) {
@@ -237,6 +241,81 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(pos, pos); });
   };
 
+  // Group into one-level threads: top-level comments in feed order, each
+  // with its own replies (oldest first, like reading down a thread).
+  const topLevelComments = comments.filter((c) => !c.reply_to_id);
+  const repliesByParent = new Map<number, CoinComment[]>();
+  for (const c of comments) {
+    if (!c.reply_to_id) continue;
+    const list = repliesByParent.get(c.reply_to_id) ?? [];
+    list.push(c);
+    repliesByParent.set(c.reply_to_id, list);
+  }
+  repliesByParent.forEach((list) =>
+    list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  );
+
+  const renderComment = (c: CoinComment) => (
+    <div className="coin-chat-comment" key={c.id}>
+      <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
+      <div className="coin-chat-comment-body">
+        <p className="coin-chat-comment-line">
+          <span className="coin-chat-comment-name">@{c.username}</span>{" "}
+          <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
+          <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
+          <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
+          {user && (
+            <span className="coin-chat-comment-menu-wrap">
+              <button
+                type="button"
+                className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
+                onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                aria-label="More"
+              >
+                ⋮
+              </button>
+              {openMenuId === c.id && (
+                <span className="coin-chat-comment-menu">
+                  {user.id === c.user_id ? (
+                    <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
+                      {t("coinChat.delete")}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={reportedIds.has(c.id)}
+                      onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
+                    >
+                      {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
+                    </button>
+                  )}
+                </span>
+              )}
+            </span>
+          )}
+        </p>
+        <div className="coin-chat-comment-actions-row">
+          <button type="button" className="coin-chat-action-btn" onClick={() => openReply(c)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+            {t("coinChat.reply", "Reply")}
+          </button>
+          <button
+            type="button"
+            className={`coin-chat-action-btn${likedIds.has(c.id) ? " coin-chat-action-btn--liked" : ""}`}
+            onClick={() => handleLike(c.id)}
+          >
+            <svg viewBox="0 0 24 24" fill={likedIds.has(c.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 21s-6.7-4.35-9.3-8.1C1 10.4 1.5 7 4.2 5.5c2.2-1.2 4.6-.6 6 1.1l1.8 2.1 1.8-2.1c1.4-1.7 3.8-2.3 6-1.1 2.7 1.5 3.2 4.9 1.5 7.4C18.7 16.65 12 21 12 21z" />
+            </svg>
+            {c.like_count > 0 && <span className="coin-chat-action-count">{c.like_count}</span>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const feed = (
     <div className="coin-chat-feed">
       {loading ? (
@@ -257,66 +336,19 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
           ) : null}
         </div>
       ) : (
-        comments.map((c) => (
-          <div className="coin-chat-comment" key={c.id}>
-            <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
-            <div className="coin-chat-comment-body">
-              <p className="coin-chat-comment-line">
-                <span className="coin-chat-comment-name">@{c.username}</span>{" "}
-                <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
-                <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
-                <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
-                {user && (
-                  <span className="coin-chat-comment-menu-wrap">
-                    <button
-                      type="button"
-                      className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
-                      onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                      aria-label="More"
-                    >
-                      ⋮
-                    </button>
-                    {openMenuId === c.id && (
-                      <span className="coin-chat-comment-menu">
-                        {user.id === c.user_id ? (
-                          <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
-                            {t("coinChat.delete")}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={reportedIds.has(c.id)}
-                            onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
-                          >
-                            {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
-                          </button>
-                        )}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </p>
-              <div className="coin-chat-comment-actions-row">
-                <button type="button" className="coin-chat-action-btn" onClick={() => openReply(c)}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                  </svg>
-                  {t("coinChat.reply", "Reply")}
-                </button>
-                <button
-                  type="button"
-                  className={`coin-chat-action-btn${likedIds.has(c.id) ? " coin-chat-action-btn--liked" : ""}`}
-                  onClick={() => handleLike(c.id)}
-                >
-                  <svg viewBox="0 0 24 24" fill={likedIds.has(c.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 21s-6.7-4.35-9.3-8.1C1 10.4 1.5 7 4.2 5.5c2.2-1.2 4.6-.6 6 1.1l1.8 2.1 1.8-2.1c1.4-1.7 3.8-2.3 6-1.1 2.7 1.5 3.2 4.9 1.5 7.4C18.7 16.65 12 21 12 21z" />
-                  </svg>
-                  {c.like_count > 0 && <span className="coin-chat-action-count">{c.like_count}</span>}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))
+        topLevelComments.map((c) => {
+          const replies = repliesByParent.get(c.id);
+          return (
+            <Fragment key={c.id}>
+              {renderComment(c)}
+              {replies && replies.length > 0 && (
+                <div className="coin-chat-thread">
+                  {replies.map((r) => renderComment(r))}
+                </div>
+              )}
+            </Fragment>
+          );
+        })
       )}
     </div>
   );

@@ -10,6 +10,7 @@ export interface CoinComment {
   body: string;
   created_at: string;
   like_count: number;
+  reply_to_id: number | null;
 }
 
 const BODY_MAX = 500;
@@ -28,12 +29,14 @@ export async function fetchCoinComments(coin: string, limit = 50): Promise<CoinC
 // username/tier are stamped server-side by a trigger (see the coin_chat
 // migration) from the poster's own profile row — never trusted from here,
 // so there's nothing to pass but the coin and the message itself.
-export async function postCoinComment(coin: string, userId: string, body: string): Promise<CoinComment> {
+export async function postCoinComment(
+  coin: string, userId: string, body: string, replyToId?: number | null
+): Promise<CoinComment> {
   const trimmed = body.trim().slice(0, BODY_MAX);
   if (!trimmed) throw new Error("Comment can't be empty.");
   const { data, error } = await supabase
     .from("coin_comments")
-    .insert({ coin, user_id: userId, body: trimmed })
+    .insert({ coin, user_id: userId, body: trimmed, reply_to_id: replyToId ?? null })
     .select()
     .single();
   if (error) throw new Error(error.message);
