@@ -33,11 +33,15 @@ export function PushToast() {
   if (!toast) return null;
 
   const handleTap = () => {
-    const data = toast.data as { type?: string; url?: string } | undefined;
+    const data = toast.data as { type?: string; url?: string; coin?: string; commentId?: string } | undefined;
     if (data?.type === "daily_brief" && data.url) {
       Browser.open({ url: data.url });
     } else if (data?.type === "upgrade_reminder") {
       window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
+    } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
+      window.dispatchEvent(new CustomEvent("open-coin-mention", {
+        detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) },
+      }));
     }
     setToast(null);
   };
