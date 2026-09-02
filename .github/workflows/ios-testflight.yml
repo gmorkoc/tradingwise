@@ -20,6 +20,17 @@ jobs:
         run: npm ci
 
       - name: Build web assets
+        env:
+          VITE_COINGLASS_API_KEY: ${{ secrets.VITE_COINGLASS_API_KEY }}
+          VITE_OPENAI_API_KEY: ${{ secrets.VITE_OPENAI_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STRIPE_ELITE_PRICE_ID: ${{ secrets.VITE_STRIPE_ELITE_PRICE_ID }}
+          VITE_STRIPE_PRO_PRICE_ID: ${{ secrets.VITE_STRIPE_PRO_PRICE_ID }}
+          VITE_COINALYZE_API_KEY: ${{ secrets.VITE_COINALYZE_API_KEY }}
+          VITE_TWELVEDATA_API_KEY: ${{ secrets.VITE_TWELVEDATA_API_KEY }}
+          VITE_ALPHAVANTAGE_API_KEY: ${{ secrets.VITE_ALPHAVANTAGE_API_KEY }}
+          VITE_REVENUECAT_IOS_API_KEY: ${{ secrets.VITE_REVENUECAT_IOS_API_KEY }}
         run: npm run build
 
       - name: List installed Xcode versions (diagnostic)
