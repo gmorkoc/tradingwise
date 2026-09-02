@@ -45,7 +45,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded = false, onOpenAuth, onOpenUpgrade }) => {
   const { t } = useTranslation();
-  const { exceeded, consume, limit, remaining } = useAIQuota();
+  const { exceeded, consume } = useAIQuota();
   const { tier, user } = useAuth();
   const hasPro = hasAccess(tier, "pro");
 
@@ -359,24 +359,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
     setIsOpen(v => !v);
   };
 
-  const isElite    = tier === "elite";
-  const quotaDot   = exceeded ? "exceeded" : isElite ? "elite" : "";
-  const quotaChip  = exceeded ? "exceeded" : isElite ? "elite" : "";
-
   return (
     <>
       {isOpen && hasPro && panel}
       <div className="chat-fab-wrap">
-        {hasPro && (
-          <div className={`chat-fab-quota-chip ${quotaChip}`}>
-            <span className={`chat-fab-quota-dot ${quotaDot}`} />
-            {isElite
-              ? "∞ · Elite"
-              : exceeded
-                ? "Quota full"
-                : `${remaining}/${limit} AI left`}
-          </div>
-        )}
         <button
           className={`chat-fab ${isOpen ? "open" : ""}`}
           onClick={handleFabClick}

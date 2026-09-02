@@ -826,7 +826,10 @@ function AppDashboard({
   const [chartPrice, setChartPrice] = useState(0);
   const [chartFullscreen, setChartFullscreen] = useState(false);
 
-  const [priceAlert, setPriceAlert] = useState<{
+  // Value intentionally unread — the bullish/bearish banner render is
+  // disabled below, but the computation stays wired up so it's a one-line
+  // re-add (destructure priceAlert back in + restore the JSX) to bring back.
+  const [, setPriceAlert] = useState<{
     message: string;
     type: "bullish" | "bearish";
     key: number;
@@ -2159,15 +2162,8 @@ function AppDashboard({
           </div>
         )}
 
-        {priceAlert && (
-          <div
-            key={priceAlert.key}
-            className={`price-alert price-alert--${priceAlert.type}`}
-          >
-            <div className="price-alert-label">{t("alert.signalLabel")}</div>
-            <div className="price-alert-message">{priceAlert.message}</div>
-          </div>
-        )}
+        {/* Price signal banner (bullish/bearish) hidden for now — see
+            priceAlert state above, logic left intact to re-enable easily. */}
 
         <WhaleAlerts btcPrice={btcData?.price} />
 
