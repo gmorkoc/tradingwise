@@ -35,11 +35,11 @@
   background: none;
   border: none;
   color: var(--color-text-secondary);
-  font-size: 1rem;
+  font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
