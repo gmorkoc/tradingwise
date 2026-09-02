@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -58,6 +60,23 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // capacitor.config.ts sets Keyboard resize:'none' globally, so this
+  // fixed-position mobile sheet never shrinks for the keyboard on its own —
+  // the composer at its bottom just ends up hidden underneath it. Pulling
+  // the sheet's own `bottom` up by the keyboard height keeps the composer
+  // above the keyboard, same fix as ChatInterface.tsx's panel.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
+      if (panelRef.current) panelRef.current.style.bottom = `${info.keyboardHeight}px`;
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (panelRef.current) panelRef.current.style.bottom = "0px";
+    });
+    return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
+  }, []);
 
   useEffect(() => {
     if (openMenuId === null) return;
@@ -233,7 +252,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
 
       <div className="coin-chat-backdrop" onClick={() => setSheetOpen(false)} />
 
-      <div className="coin-chat-panel">
+      <div className="coin-chat-panel" ref={panelRef}>
         <div className="coin-chat-grabber" onClick={() => setSheetOpen(false)} />
         <div className="coin-chat-head">
           <div>
