@@ -93,6 +93,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
+  const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
 
   // Lets other floating widgets (Daily Brief) hide themselves while the
@@ -114,18 +115,21 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     return () => { cancelled = true; clearTimeout(id); };
   }, [mentionQuery]);
 
-  // capacitor.config.ts sets Keyboard resize:'none' globally, so this
-  // fixed-position mobile sheet never shrinks for the keyboard on its own —
-  // the composer at its bottom just ends up hidden underneath it. Pulling
-  // the sheet's own `bottom` up by the keyboard height keeps the composer
-  // above the keyboard, same fix as ChatInterface.tsx's panel.
+  // capacitor.config.ts sets Keyboard resize:'none' globally, so these
+  // fixed-position elements never shrink for the keyboard on their own —
+  // whatever's at the bottom (the sheet's composer, the reply modal's
+  // compose row) just ends up hidden underneath it. Pulling each one's
+  // own `bottom` up by the keyboard height keeps its content above the
+  // keyboard, same fix as ChatInterface.tsx's panel.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
       if (panelRef.current) panelRef.current.style.bottom = `${info.keyboardHeight}px`;
+      if (replyModalRef.current) replyModalRef.current.style.bottom = `${info.keyboardHeight}px`;
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       if (panelRef.current) panelRef.current.style.bottom = "0px";
+      if (replyModalRef.current) replyModalRef.current.style.bottom = "0px";
     });
     return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
   }, []);
@@ -425,7 +429,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   // header. Reuses {composer} rather than a second input, so there's only
   // ever one element holding composerInputRef at a time.
   const replyModal = replyTarget && (
-    <div className="coin-chat-reply-modal">
+    <div className="coin-chat-reply-modal" ref={replyModalRef}>
       <div className="coin-chat-reply-header">
         <button type="button" className="coin-chat-reply-cancel" onClick={closeReply}>
           {t("coinChat.cancel", "Cancel")}
