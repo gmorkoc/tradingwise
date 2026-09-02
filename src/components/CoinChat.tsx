@@ -119,29 +119,19 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   // capacitor.config.ts sets Keyboard resize:'none' globally, so these
   // fixed-position elements never shrink for the keyboard on their own —
   // whatever's at the bottom (the sheet's composer, the reply modal's
-  // compose row) just ends up hidden underneath it. Pulling each one's
-  // own `bottom` up by the keyboard height keeps its content above the
-  // keyboard, same fix as ChatInterface.tsx's panel.
+  // compose row) just ends up hidden underneath it. Both are inset:0 now
+  // (no more max-height:78vh to fight with), so pulling each one's own
+  // `bottom` up by the keyboard height is enough — `top` stays at 0 and
+  // the safe-area gap under the status bar is handled once, by the
+  // header's own padding-top, not duplicated here too.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
-      if (panelRef.current) {
-        panelRef.current.style.bottom = `${info.keyboardHeight}px`;
-        // .coin-chat-panel's max-height:78vh is sized against the full
-        // (keyboard-unaware) viewport — pushing `bottom` up without also
-        // pinning `top` let 78vh of height + the keyboard offset add up to
-        // more than the actual visible space, extending the panel's top
-        // edge past the status bar. Pinning `top` makes the effective
-        // height min(78vh, available space) instead.
-        panelRef.current.style.top = "max(14px, var(--native-safe-area-top, env(safe-area-inset-top)))";
-      }
+      if (panelRef.current) panelRef.current.style.bottom = `${info.keyboardHeight}px`;
       if (replyModalRef.current) replyModalRef.current.style.bottom = `${info.keyboardHeight}px`;
     });
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (panelRef.current) {
-        panelRef.current.style.bottom = "0px";
-        panelRef.current.style.top = "";
-      }
+      if (panelRef.current) panelRef.current.style.bottom = "0px";
       if (replyModalRef.current) replyModalRef.current.style.bottom = "0px";
     });
     return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
