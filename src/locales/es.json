@@ -1382,7 +1382,8 @@
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
-    "logo": "📊 coinhintz.AI"
+    "logo": "📊 coinhintz.AI",
+    "aiChat": "Chat IA"
   },
   "tradeManager": {
     "long": "▲ Largo",

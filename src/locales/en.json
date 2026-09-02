@@ -1411,7 +1411,8 @@
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
-    "logo": "📊 coinhintz.AI"
+    "logo": "📊 coinhintz.AI",
+    "aiChat": "AI Chat"
   },
   "tradeManager": {
     "long": "▲ Long",
