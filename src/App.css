@@ -1394,18 +1394,6 @@ select {
   color: var(--color-primary);
 }
 
-.chart-with-chat {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 10px;
-}
-
-.chart-with-chat > .chart-section-wrap {
-  flex: 1;
-  min-width: 0;
-}
-
 .chart-section-wrap {
   display: flex;
   flex-direction: row;

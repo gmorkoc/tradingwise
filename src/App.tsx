@@ -299,6 +299,12 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("watchlist-visible", String(showWatchlist));
   }, [showWatchlist]);
+  const [showCoinChat, setShowCoinChat] = useState(
+    () => localStorage.getItem("coinchat-visible") !== "false",
+  );
+  useEffect(() => {
+    localStorage.setItem("coinchat-visible", String(showCoinChat));
+  }, [showCoinChat]);
 
   const [coin, setCoin] = useState<CoinSymbol>(
     () => (localStorage.getItem("coin") as CoinSymbol) || "BTC",
@@ -1608,64 +1614,61 @@ function AppDashboard({
               <>
                 {chartAssetClass === "crypto" && <FlashNewsBanner />}
                 {chartAssetClass === "crypto" ? (
-                  <div className="chart-with-chat">
+                  <div
+                    className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
+                    ref={chartWrapRef}
+                    style={
+                      {
+                        "--ob-h": `${obSize.h}px`,
+                        "--ob-w": `${obSize.w}px`,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <PriceChart
+                      refreshTrigger={refreshTrigger}
+                      theme={theme}
+                      coin={coin}
+                      onZoneChange={(zone, price) => {
+                        setChartZone(zone);
+                        setChartPrice(price);
+                      }}
+                      onOpenAuth={onOpenAuth}
+                      onOpenUpgrade={onOpenUpgrade}
+                      onFullscreenChange={setChartFullscreen}
+                    />
                     <div
-                      className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
-                      ref={chartWrapRef}
-                      style={
-                        {
-                          "--ob-h": `${obSize.h}px`,
-                          "--ob-w": `${obSize.w}px`,
-                        } as React.CSSProperties
-                      }
+                      className="chart-resize-handle"
+                      onPointerDown={onResizePointerDown}
+                      onPointerMove={onResizePointerMove}
+                      onPointerUp={onResizePointerUp}
                     >
-                      <PriceChart
-                        refreshTrigger={refreshTrigger}
-                        theme={theme}
-                        coin={coin}
-                        onZoneChange={(zone, price) => {
-                          setChartZone(zone);
-                          setChartPrice(price);
-                        }}
-                        onOpenAuth={onOpenAuth}
-                        onOpenUpgrade={onOpenUpgrade}
-                        onFullscreenChange={setChartFullscreen}
-                      />
-                      <div
-                        className="chart-resize-handle"
-                        onPointerDown={onResizePointerDown}
-                        onPointerMove={onResizePointerMove}
-                        onPointerUp={onResizePointerUp}
+                      <svg
+                        className="chart-resize-icon"
+                        width="42"
+                        height="42"
+                        viewBox="0 0 64 64"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
                       >
-                        <svg
-                          className="chart-resize-icon"
-                          width="42"
-                          height="42"
-                          viewBox="0 0 64 64"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          {/* Hand / pointer finger */}
-                          <path d="M28 30V14a3 3 0 0 1 6 0v16" />
-                          <path d="M34 20a3 3 0 0 1 6 0v10" />
-                          <path d="M40 23a3 3 0 0 1 6 0v10" />
-                          <path d="M22 32a3 3 0 0 1 6 0v-2" />
-                          <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
-                          {/* Left arrow */}
-                          <line x1="12" y1="24" x2="2" y2="24" />
-                          <polyline points="6,20 2,24 6,28" />
-                          {/* Right arrow */}
-                          <line x1="52" y1="24" x2="62" y2="24" />
-                          <polyline points="58,20 62,24 58,28" />
-                        </svg>
-                      </div>
-                      <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                        {/* Hand / pointer finger */}
+                        <path d="M28 30V14a3 3 0 0 1 6 0v16" />
+                        <path d="M34 20a3 3 0 0 1 6 0v10" />
+                        <path d="M40 23a3 3 0 0 1 6 0v10" />
+                        <path d="M22 32a3 3 0 0 1 6 0v-2" />
+                        <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
+                        {/* Left arrow */}
+                        <line x1="12" y1="24" x2="2" y2="24" />
+                        <polyline points="6,20 2,24 6,28" />
+                        {/* Right arrow */}
+                        <line x1="52" y1="24" x2="62" y2="24" />
+                        <polyline points="58,20 62,24 58,28" />
+                      </svg>
                     </div>
-                    <CoinChat coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+                    <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                   </div>
                 ) : (
                   <StocksHome theme={theme} />
@@ -1810,6 +1813,24 @@ function AppDashboard({
             }}
           />
         </aside>
+
+        {activeSection === "chart" && chartAssetClass === "crypto" && (
+          <aside
+            className={`coin-chat-dock${showCoinChat ? "" : " coin-chat-dock--hidden"}`}
+          >
+            <button
+              className="coin-chat-dock-edge"
+              onClick={() => setShowCoinChat((v) => !v)}
+              aria-label={showCoinChat ? "Hide chat" : "Show chat"}
+            />
+            <CoinChat
+              coin={coin}
+              onOpenAuth={onOpenAuth}
+              onOpenUpgrade={onOpenUpgrade}
+              onCloseDesktop={() => setShowCoinChat(false)}
+            />
+          </aside>
+        )}
 
         <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
 

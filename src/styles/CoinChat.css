@@ -6,7 +6,6 @@
   display: flex;
   flex-direction: column;
   background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
   overflow: hidden;
 }
 
@@ -24,13 +23,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 16px 12px;
+  padding: 16px 16px 12px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
 .coin-chat-title {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-text);
 }
@@ -62,7 +61,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px 14px;
+  padding: 8px 16px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -180,7 +179,7 @@
 
 .coin-chat-composer {
   flex-shrink: 0;
-  padding: 10px 14px 14px;
+  padding: 10px 16px 16px;
   border-top: 1px solid var(--color-border);
 }
 
@@ -302,6 +301,10 @@
     cursor: pointer;
   }
 
+  .coin-chat-trigger-icon {
+    font-size: 0.85rem;
+  }
+
   .coin-chat--sheet-open .coin-chat-trigger {
     display: none;
   }
@@ -341,22 +344,65 @@
   }
 }
 
-/* ── Desktop: always-open docked side panel ────────────────────────────── */
-@media (min-width: 641px) {
-  .coin-chat {
-    width: 300px;
-    flex-shrink: 0;
-  }
+/* ── Desktop dock: same collapsible side-panel mechanism as Watchlist
+   (App.css .side-panel / .side-panel-edge) — width collapses to a thin
+   edge-click strip instead of vanishing, so there's always a way back in.
+   Kept as its own classes (not literally .side-panel) because the dock
+   needs to fully get out of the way below 641px, where CoinChat switches
+   to the fixed-position mobile sheet instead. */
+.coin-chat-dock {
+  width: 330px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: width 0.22s ease;
+  position: relative;
+}
 
-  .coin-chat-trigger,
-  .coin-chat-backdrop,
-  .coin-chat-grabber {
+.coin-chat-dock--hidden {
+  width: 8px;
+}
+
+.coin-chat-dock-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.15s;
+}
+
+.coin-chat-dock-edge:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.coin-chat-dock-edge:focus,
+.coin-chat-dock-edge:focus-visible,
+.coin-chat-dock-edge:active {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* Content dropped into the dock — no background/border of its own, the
+   dock supplies that chrome (same convention as .side-panel .wl-card). */
+.coin-chat-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .coin-chat-dock {
+    display: contents;
+  }
+  .coin-chat-dock-edge {
     display: none;
-  }
-
-  .coin-chat-panel {
-    width: 100%;
-    height: 100%;
-    border-radius: 12px;
   }
 }
