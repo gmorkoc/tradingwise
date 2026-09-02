@@ -36,7 +36,22 @@ export async function postCoinComment(coin: string, userId: string, body: string
     .select()
     .single();
   if (error) throw new Error(error.message);
+
+  // The queue_comment_mentions trigger has already resolved any @handles
+  // in the body into mention_notifications rows by now — this just asks
+  // the edge function to drain them into pushes. Fire-and-forget: a
+  // failure here shouldn't surface as the comment itself having failed.
+  supabase.functions.invoke("notify-mention", { body: { commentId: data.id } }).catch(() => {});
+
   return data as CoinComment;
+}
+
+// Composer @mention autocomplete.
+export async function searchUsernames(prefix: string): Promise<string[]> {
+  if (!prefix) return [];
+  const { data, error } = await supabase.rpc("search_usernames", { prefix });
+  if (error) { console.error("searchUsernames failed:", error.message); return []; }
+  return ((data as { username: string }[]) ?? []).map((r) => r.username);
 }
 
 export async function deleteCoinComment(commentId: number): Promise<void> {

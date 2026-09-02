@@ -6,7 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { COINS } from "../services/coinglass";
 import {
   fetchCoinComments, postCoinComment, deleteCoinComment, reportCoinComment,
-  subscribeToCoinComments, unsubscribeFromCoinComments, COIN_COMMENT_MAX_LENGTH,
+  subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
 import { CoinMarketMood } from "./CoinMarketMood";
@@ -28,6 +28,28 @@ function coinName(symbol: string): string {
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
+}
+
+// Finds the @handle currently being typed at the caret, if any — e.g.
+// "hey @ro|" (| = caret) -> "ro". Null once the token is broken by a
+// space, or the "@" isn't starting a fresh word (like an email address).
+function currentMentionQuery(value: string, caret: number): string | null {
+  const upToCaret = value.slice(0, caret);
+  const at = upToCaret.lastIndexOf("@");
+  if (at === -1) return null;
+  const between = upToCaret.slice(at + 1);
+  if (/[^A-Za-z0-9_]/.test(between)) return null;
+  if (at > 0 && /[A-Za-z0-9_]/.test(upToCaret[at - 1])) return null;
+  return between;
+}
+
+// Splits on @handles (same 3-20 char pattern the server resolves) so they
+// can be styled — odd indices are always the captured matches here since
+// there's exactly one capturing group in the split regex.
+function renderWithMentions(body: string) {
+  return body.split(/(@[A-Za-z0-9_]{3,20})/g).map((part, i) =>
+    i % 2 === 1 ? <span key={i} className="coin-chat-mention">{part}</span> : part
+  );
 }
 
 function timeAgo(iso: string): string {
@@ -65,7 +87,19 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<string[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (mentionQuery === null) { setMentionResults([]); return; }
+    let cancelled = false;
+    const id = setTimeout(() => {
+      searchUsernames(mentionQuery).then((names) => { if (!cancelled) setMentionResults(names); });
+    }, 200);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [mentionQuery]);
 
   // capacitor.config.ts sets Keyboard resize:'none' globally, so this
   // fixed-position mobile sheet never shrinks for the keyboard on its own —
@@ -135,6 +169,21 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     try { await reportCoinComment(id, user.id); } catch { /* stays marked locally either way */ }
   };
 
+  const selectMention = (username: string) => {
+    const input = composerInputRef.current;
+    const caret = input?.selectionStart ?? draft.length;
+    const upToCaret = draft.slice(0, caret);
+    const at = upToCaret.lastIndexOf("@");
+    if (at === -1) return;
+    const before = draft.slice(0, at);
+    const after = draft.slice(caret);
+    const next = `${before}@${username} ${after}`;
+    setDraft(next);
+    setMentionQuery(null);
+    const pos = before.length + username.length + 2;
+    requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(pos, pos); });
+  };
+
   const feed = (
     <div className="coin-chat-feed">
       {loading ? (
@@ -161,7 +210,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
             <p className="coin-chat-comment-line">
               <span className="coin-chat-comment-name">@{c.username}</span>{" "}
               <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
-              <span className="coin-chat-comment-text">{c.body}</span>{" "}
+              <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
               <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
               {user && (
                 <span className="coin-chat-comment-menu-wrap">
@@ -211,13 +260,41 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         </div>
       ) : (
         <div className="coin-chat-input-row">
+          {mentionQuery !== null && mentionResults.length > 0 && (
+            <div className="coin-chat-mention-menu">
+              {mentionResults.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); selectMention(name); }}
+                >
+                  @{name}
+                </button>
+              ))}
+            </div>
+          )}
           <input
+            ref={composerInputRef}
             className="coin-chat-input"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setMentionQuery(currentMentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length));
+            }}
             placeholder={t("coinChat.placeholder", { coin })}
             maxLength={COIN_COMMENT_MAX_LENGTH}
-            onKeyDown={(e) => { if (e.key === "Enter") handlePost(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (mentionQuery !== null && mentionResults.length > 0) {
+                  e.preventDefault();
+                  selectMention(mentionResults[0]);
+                } else {
+                  handlePost();
+                }
+              } else if (e.key === "Escape" && mentionQuery !== null) {
+                setMentionQuery(null);
+              }
+            }}
           />
           <button type="button" className="coin-chat-send" onClick={handlePost} disabled={posting || !draft.trim()}>
             {t("coinChat.post")}
