@@ -597,7 +597,10 @@
   position: fixed;
   inset: 0;
   z-index: 500;
-  background: var(--color-card-bg);
+  /* Fully opaque — --color-card-bg is translucent (rgba, ~0.9-0.95
+     alpha), fine for a panel with its own backdrop but not for a true
+     full-screen takeover, where it lets the dimmed feed bleed through. */
+  background: var(--color-surface);
   display: flex;
   flex-direction: column;
 }
