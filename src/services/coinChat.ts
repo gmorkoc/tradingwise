@@ -26,6 +26,20 @@ export async function fetchCoinComments(coin: string, limit = 50): Promise<CoinC
   return (data as CoinComment[]) ?? [];
 }
 
+// Deep-linking from a mention push notification can't rely on the comment
+// showing up in fetchCoinComments' most-recent-50 window — a busy chat can
+// easily bury it. Used to fetch that one comment (and, if it's a reply,
+// its parent — see CoinChat.tsx) directly by id instead.
+export async function fetchCommentById(id: number): Promise<CoinComment | null> {
+  const { data, error } = await supabase
+    .from("coin_comments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) { console.error("fetchCommentById failed:", error.message); return null; }
+  return (data as CoinComment) ?? null;
+}
+
 // username/tier are stamped server-side by a trigger (see the coin_chat
 // migration) from the poster's own profile row — never trusted from here,
 // so there's nothing to pass but the coin and the message itself.

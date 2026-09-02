@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { COINS } from "../services/coinglass";
 import {
-  fetchCoinComments, postCoinComment, deleteCoinComment, reportCoinComment,
+  fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
   likeComment, unlikeComment, fetchMyLikedCommentIds,
   subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
@@ -23,9 +23,14 @@ interface Props {
   // from inside the panel just asks the parent to collapse it.
   onCloseDesktop?: () => void;
   // Set from outside (a tapped @mention push notification, routed through
-  // App.tsx) when a specific comment should be scrolled to and flashed —
-  // App.tsx clears it back to null a few seconds later.
+  // App.tsx) when a specific comment should be scrolled to and flashed.
   highlightCommentId?: number | null;
+  // Called once the highlight has actually been shown (or definitively
+  // can't be — e.g. the comment was deleted) so App.tsx knows it's safe to
+  // clear highlightCommentId. Not a fixed timer: the target may need an
+  // extra network round-trip (see the direct-fetch effect below) that can
+  // take longer than any reasonable guess, especially on a cold app launch.
+  onHighlightDone?: () => void;
 }
 
 function coinName(symbol: string): string {
@@ -79,7 +84,7 @@ function useIsDesktop(): boolean {
   return isDesktop;
 }
 
-export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, highlightCommentId }: Props) {
+export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, highlightCommentId, onHighlightDone }: Props) {
   const { t } = useTranslation();
   const { user, tier, profile } = useAuth();
   const isPaid = tier === "pro" || tier === "elite";
@@ -101,6 +106,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
+  // onHighlightDone is a fresh inline function every App.tsx render — kept
+  // in a ref (rather than an effect dep) so those effects don't re-run and
+  // re-fire their cleanup every time the parent re-renders for unrelated
+  // reasons.
+  const onHighlightDoneRef = useRef(onHighlightDone);
+  useEffect(() => { onHighlightDoneRef.current = onHighlightDone; }, [onHighlightDone]);
+  const highlightFetchAttempted = useRef<number | null>(null);
 
   // Lets other floating widgets (Daily Brief) hide themselves while the
   // mobile sheet or the full-screen reply takeover is open, instead of
@@ -185,6 +197,38 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     if (highlightCommentId != null) setSheetOpen(true);
   }, [highlightCommentId]);
 
+  // fetchCoinComments only loads the 50 most recent comments — a busy chat
+  // can easily bury the tagged comment (or, for a reply, its parent — the
+  // feed only renders a reply nested under its parent, so the parent has
+  // to be present too) past that window. Once the normal load finishes and
+  // the target still isn't there, fetch it directly by id and splice it
+  // (and its parent, if any) into the feed. Guarded by a ref so a failed
+  // lookup (deleted comment) doesn't retry every time comments changes.
+  useEffect(() => {
+    if (highlightCommentId == null || loading) return;
+    if (comments.some((c) => c.id === highlightCommentId)) return;
+    if (highlightFetchAttempted.current === highlightCommentId) return;
+    highlightFetchAttempted.current = highlightCommentId;
+    let cancelled = false;
+    (async () => {
+      const target = await fetchCommentById(highlightCommentId);
+      if (cancelled) return;
+      if (!target) { onHighlightDoneRef.current?.(); return; }
+      const extra = [target];
+      if (target.reply_to_id && !comments.some((c) => c.id === target.reply_to_id)) {
+        const parent = await fetchCommentById(target.reply_to_id);
+        if (parent) extra.push(parent);
+      }
+      if (!cancelled) {
+        setComments((prev) => {
+          const ids = new Set(prev.map((c) => c.id));
+          return [...extra.filter((c) => !ids.has(c.id)), ...prev];
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [highlightCommentId, loading, comments]);
+
   // Once the target comment is actually in the loaded feed, scroll to it
   // and flash it briefly so it's easy to spot among everything else.
   useEffect(() => {
@@ -195,7 +239,10 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
       setFlashId(highlightCommentId);
     });
-    const clear = setTimeout(() => setFlashId(null), 2200);
+    const clear = setTimeout(() => {
+      setFlashId(null);
+      onHighlightDoneRef.current?.();
+    }, 2200);
     return () => { cancelAnimationFrame(frame); clearTimeout(clear); };
   }, [highlightCommentId, comments]);
 

@@ -317,8 +317,10 @@ function AppDashboard({
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and
   // hand the comment id down to CoinChat so it can scroll to/flash it.
-  // Cleared a few seconds later so revisiting the same coin later doesn't
-  // replay the highlight.
+  // Cleared via CoinChat's onHighlightDone callback once it's actually
+  // been shown (or definitively can't be) rather than a fixed timer — the
+  // target comment can need an extra network round-trip that a guessed
+  // timeout would race against, especially on a cold app launch.
   const [highlightCommentId, setHighlightCommentId] = useState<number | null>(null);
   useEffect(() => {
     const onOpenCoinMention = (e: Event) => {
@@ -330,7 +332,6 @@ function AppDashboard({
       setChartAssetClass("crypto");
       setShowCoinChat(true);
       setHighlightCommentId(detail.commentId);
-      window.setTimeout(() => setHighlightCommentId(null), 4000);
     };
     window.addEventListener("open-coin-mention", onOpenCoinMention);
     return () => window.removeEventListener("open-coin-mention", onOpenCoinMention);
@@ -1847,6 +1848,7 @@ function AppDashboard({
               onOpenUpgrade={onOpenUpgrade}
               onCloseDesktop={() => setShowCoinChat(false)}
               highlightCommentId={highlightCommentId}
+              onHighlightDone={() => setHighlightCommentId(null)}
             />
           </aside>
         )}
