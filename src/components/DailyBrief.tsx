@@ -172,7 +172,7 @@ export const DailyBrief: React.FC = () => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
   const [index, setIndex] = useState(0);
-  const [sheetState, setSheetState] = useState<SheetState>(() => (IS_IOS ? "minimized" : "collapsed"));
+  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
