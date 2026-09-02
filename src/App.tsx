@@ -1825,8 +1825,10 @@ function AppDashboard({
           </aside>
         )}
 
-        {/* AI chat FAB temporarily hidden — re-enable by uncommenting this. */}
-        {false && <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
+        {/* AI chat FAB temporarily hidden on web — kept on iOS. */}
+        {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+          <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+        )}
 
         {coinPickerOpen &&
           ReactDOM.createPortal(
