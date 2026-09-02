@@ -56,8 +56,10 @@
 }
 
 /* Fully off-screen while scrolling the page down, sliding back in on any
-   scroll up — only applied in the resting "collapsed" state (see
-   DailyBrief.tsx), not while actively expanded/reading or user-minimized. */
+   scroll up — applied in both resting states, "collapsed" and
+   "minimized" (see DailyBrief.tsx), just not while actively expanded and
+   being read. Declared after .db-sheet--minimized so it wins the
+   transform when both classes are present at once. */
 .db-sheet--scroll-hidden {
   transform: translateY(120%);
 }

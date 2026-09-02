@@ -169,7 +169,7 @@ export const DailyBrief: React.FC = () => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
   const [index, setIndex] = useState(0);
-  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  const [sheetState, setSheetState] = useState<SheetState>("minimized");
   const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -274,7 +274,7 @@ export const DailyBrief: React.FC = () => {
         <div className="db-backdrop" onClick={() => setSheetState("collapsed")} />
       )}
       <div
-        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${sheetState === "collapsed" && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
+        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${sheetState !== "expanded" && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
         style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
       >
         {sheetState !== "minimized" && (
