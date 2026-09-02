@@ -1557,7 +1557,7 @@
   },
   "coinChat": {
     "triggerCount": "{{count}} yorum",
-    "title": "{{coin}} Sohbeti",
+    "title": "{{coinName}} Sohbet Odası",
     "commentCount": "{{count}} yorum",
     "empty": "{{coin}} için henüz yorum yok. İlk yorumu sen yaz!",
     "delete": "Sil",

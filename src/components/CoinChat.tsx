@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
+import { COINS } from "../services/coinglass";
 import {
   fetchCoinComments, postCoinComment, deleteCoinComment, reportCoinComment,
   subscribeToCoinComments, unsubscribeFromCoinComments, COIN_COMMENT_MAX_LENGTH,
@@ -19,6 +20,10 @@ interface Props {
   // the parent's side-panel dock (same pattern as Watchlist), so closing
   // from inside the panel just asks the parent to collapse it.
   onCloseDesktop?: () => void;
+}
+
+function coinName(symbol: string): string {
+  return COINS.find((c) => c.symbol === symbol)?.name ?? symbol;
 }
 
 function initials(name: string): string {
@@ -230,7 +235,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
       <div className="coin-chat-card">
         <div className="coin-chat-head">
           <div>
-            <div className="coin-chat-title">{t("coinChat.title", { coin })}</div>
+            <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
             <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
           </div>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
@@ -256,7 +261,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         <div className="coin-chat-grabber" onClick={() => setSheetOpen(false)} />
         <div className="coin-chat-head">
           <div>
-            <div className="coin-chat-title">{t("coinChat.title", { coin })}</div>
+            <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
             <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
           </div>
           <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
