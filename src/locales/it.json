@@ -1557,7 +1557,7 @@
   },
   "coinChat": {
     "triggerCount": "{{count}} commenti",
-    "title": "Chat room di {{coinName}}",
+    "title": "Chat di {{coinName}}",
     "commentCount": "{{count}} commenti",
     "empty": "Nessun commento su {{coin}} ancora. Sii il primo!",
     "delete": "Elimina",
