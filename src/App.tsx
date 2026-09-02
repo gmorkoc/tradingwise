@@ -32,6 +32,7 @@ import { HTFAnalysis } from "./components/HTFAnalysis";
 import { OnChainMetrics } from "./components/OnChainMetrics";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
+import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { PositionFlows } from "./components/PositionFlows";
 import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
@@ -1606,6 +1607,13 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
+                {chartAssetClass === "crypto" && (
+                  <AnnouncementBanner
+                    storageKey="announce-coinchat-v1"
+                    icon="💬"
+                    message={t("coinChat.announceBanner", { coin })}
+                  />
+                )}
                 {chartAssetClass === "crypto" && (
                   <Watchlist
                     onSelectCoin={(symbol) => {

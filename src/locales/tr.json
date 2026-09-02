@@ -1568,7 +1568,13 @@
     "upgrade": "Yükselt",
     "placeholder": "{{coin}} hakkındaki görüşünü paylaş…",
     "post": "Gönder",
-    "postFailed": "Yorumun gönderilemedi — lütfen tekrar dene."
+    "postFailed": "Yorumun gönderilemedi — lütfen tekrar dene.",
+    "emptyTitle": "Henüz yorum yok",
+    "marketData": "Piyasa verisi",
+    "funding": "Fonlama",
+    "longShort": "L/S",
+    "fearGreed": "Korku ve Açgözlülük",
+    "announceBanner": "Yeni: Canlı sohbet burada — {{coin}} hakkında diğer yatırımcıların ne düşündüğünü gör."
   },
   "orderFlowTape": {
     "live": "CANLI",

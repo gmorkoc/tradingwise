@@ -1636,7 +1636,13 @@
     "upgrade": "Upgrade",
     "placeholder": "Share your take on {{coin}}…",
     "post": "Post",
-    "postFailed": "Couldn't post your comment — please try again."
+    "postFailed": "Couldn't post your comment — please try again.",
+    "emptyTitle": "No comments yet",
+    "marketData": "Market data",
+    "funding": "Funding",
+    "longShort": "L/S",
+    "fearGreed": "Fear & Greed",
+    "announceBanner": "New: Live chat is here — see what other traders think about {{coin}}."
   },
   "orderFlowTape": {
     "live": "LIVE",

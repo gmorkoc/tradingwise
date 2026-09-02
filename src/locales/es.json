@@ -1568,7 +1568,13 @@
     "upgrade": "Mejorar plan",
     "placeholder": "Comparte tu opinión sobre {{coin}}…",
     "post": "Publicar",
-    "postFailed": "No se pudo publicar tu comentario — inténtalo de nuevo."
+    "postFailed": "No se pudo publicar tu comentario — inténtalo de nuevo.",
+    "emptyTitle": "Aún no hay comentarios",
+    "marketData": "Datos de mercado",
+    "funding": "Financiación",
+    "longShort": "L/C",
+    "fearGreed": "Miedo y Codicia",
+    "announceBanner": "Nuevo: el chat en vivo ya está aquí — mira qué opinan otros traders sobre {{coin}}."
   },
   "orderFlowTape": {
     "live": "EN VIVO",

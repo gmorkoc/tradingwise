@@ -6,6 +6,7 @@ import {
   subscribeToCoinComments, unsubscribeFromCoinComments, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
+import { CoinMarketMood } from "./CoinMarketMood";
 import "../styles/CoinChat.css";
 
 interface Props {
@@ -115,7 +116,20 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
       {loading ? (
         <p className="coin-chat-empty">{t("common.loading")}</p>
       ) : comments.length === 0 ? (
-        <p className="coin-chat-empty">{t("coinChat.empty", { coin })}</p>
+        <div className="coin-chat-empty-state">
+          <div className="coin-chat-empty-icon">💬</div>
+          <p className="coin-chat-empty-title">{t("coinChat.emptyTitle", "No comments yet")}</p>
+          <p className="coin-chat-empty-sub">{t("coinChat.empty", { coin })}</p>
+          {!user ? (
+            <button type="button" className="coin-chat-empty-cta" onClick={onOpenAuth}>
+              {t("coinChat.signInToPost")}
+            </button>
+          ) : !isPaid ? (
+            <button type="button" className="coin-chat-empty-cta" onClick={() => onOpenUpgrade?.("pro")}>
+              {t("coinChat.upgradeToPost")}
+            </button>
+          ) : null}
+        </div>
       ) : (
         comments.map((c) => (
           <div className="coin-chat-comment" key={c.id}>
@@ -202,6 +216,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
           </div>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
         </div>
+        <CoinMarketMood coin={coin} />
         {feed}
         {composer}
       </div>
@@ -227,6 +242,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
           </div>
           <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
         </div>
+        <CoinMarketMood coin={coin} />
         {feed}
         {composer}
       </div>

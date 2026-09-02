@@ -1568,7 +1568,13 @@
     "upgrade": "Passa a Pro",
     "placeholder": "Condividi la tua opinione su {{coin}}…",
     "post": "Pubblica",
-    "postFailed": "Impossibile pubblicare il commento — riprova."
+    "postFailed": "Impossibile pubblicare il commento — riprova.",
+    "emptyTitle": "Nessun commento ancora",
+    "marketData": "Dati di mercato",
+    "funding": "Funding",
+    "longShort": "L/S",
+    "fearGreed": "Paura e Avidità",
+    "announceBanner": "Novità: la chat dal vivo è arrivata — scopri cosa ne pensano gli altri trader su {{coin}}."
   },
   "orderFlowTape": {
     "live": "LIVE",

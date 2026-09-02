@@ -1,0 +1,50 @@
+/* A slim, clearly-labeled strip of real market data (funding rate,
+   long/short ratio, Fear & Greed) — visually distinct from chat rows so
+   it never reads as a message from a user. */
+.coin-mood {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 16px;
+  background: var(--color-input-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.coin-mood-label {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.coin-mood-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.coin-mood-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.coin-mood-metric-label {
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+}
+
+.coin-mood-metric-value {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.coin-mood-metric-value.up { color: var(--color-success); }
+.coin-mood-metric-value.down { color: var(--color-danger); }
