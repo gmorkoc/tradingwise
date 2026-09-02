@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { COINS } from "../services/coinglass";
 import {
   fetchCoinComments, postCoinComment, deleteCoinComment, reportCoinComment,
+  likeComment, unlikeComment, fetchMyLikedCommentIds,
   subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
@@ -86,6 +87,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [error, setError] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
+  const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [replyTarget, setReplyTarget] = useState<CoinComment | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -133,7 +135,16 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     setDraft(""); setError("");
 
     fetchCoinComments(coin).then((rows) => {
-      if (!cancelled) { setComments(rows); setLoading(false); }
+      if (cancelled) return;
+      setComments(rows);
+      setLoading(false);
+      if (user) {
+        fetchMyLikedCommentIds(user.id, rows.map((r) => r.id)).then((ids) => {
+          if (!cancelled) setLikedIds(ids);
+        });
+      } else {
+        setLikedIds(new Set());
+      }
     });
 
     const channel = subscribeToCoinComments(
@@ -143,7 +154,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     );
 
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
-  }, [coin]);
+  }, [coin, user?.id]);
 
   const handlePost = async () => {
     if (!user || !draft.trim() || posting) return;
@@ -186,6 +197,31 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
     try { await reportCoinComment(id, user.id); } catch { /* stays marked locally either way */ }
   };
 
+  const handleLike = async (id: number) => {
+    if (!user) { onOpenAuth?.(); return; }
+    const wasLiked = likedIds.has(id);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      wasLiked ? next.delete(id) : next.add(id);
+      return next;
+    });
+    setComments((prev) => prev.map((c) => (
+      c.id === id ? { ...c, like_count: c.like_count + (wasLiked ? -1 : 1) } : c
+    )));
+    try {
+      await (wasLiked ? unlikeComment(id, user.id) : likeComment(id, user.id));
+    } catch {
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        wasLiked ? next.add(id) : next.delete(id);
+        return next;
+      });
+      setComments((prev) => prev.map((c) => (
+        c.id === id ? { ...c, like_count: c.like_count + (wasLiked ? 1 : -1) } : c
+      )));
+    }
+  };
+
   const selectMention = (username: string) => {
     const input = composerInputRef.current;
     const caret = input?.selectionStart ?? draft.length;
@@ -224,44 +260,61 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
         comments.map((c) => (
           <div className="coin-chat-comment" key={c.id}>
             <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
-            <p className="coin-chat-comment-line">
-              <span className="coin-chat-comment-name">@{c.username}</span>{" "}
-              <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
-              <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
-              <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
-              {user && (
-                <span className="coin-chat-comment-menu-wrap">
-                  <button
-                    type="button"
-                    className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
-                    onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                    aria-label="More"
-                  >
-                    ⋮
-                  </button>
-                  {openMenuId === c.id && (
-                    <span className="coin-chat-comment-menu">
-                      <button type="button" onClick={() => openReply(c)}>
-                        {t("coinChat.reply", "Reply")}
-                      </button>
-                      {user.id === c.user_id ? (
-                        <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
-                          {t("coinChat.delete")}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={reportedIds.has(c.id)}
-                          onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
-                        >
-                          {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
-                        </button>
-                      )}
-                    </span>
-                  )}
-                </span>
-              )}
-            </p>
+            <div className="coin-chat-comment-body">
+              <p className="coin-chat-comment-line">
+                <span className="coin-chat-comment-name">@{c.username}</span>{" "}
+                <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
+                <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
+                <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
+                {user && (
+                  <span className="coin-chat-comment-menu-wrap">
+                    <button
+                      type="button"
+                      className={`coin-chat-comment-dots${openMenuId === c.id ? " coin-chat-comment-dots--open" : ""}`}
+                      onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                      aria-label="More"
+                    >
+                      ⋮
+                    </button>
+                    {openMenuId === c.id && (
+                      <span className="coin-chat-comment-menu">
+                        {user.id === c.user_id ? (
+                          <button type="button" onClick={() => { handleDelete(c.id); setOpenMenuId(null); }}>
+                            {t("coinChat.delete")}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={reportedIds.has(c.id)}
+                            onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
+                          >
+                            {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </p>
+              <div className="coin-chat-comment-actions-row">
+                <button type="button" className="coin-chat-action-btn" onClick={() => openReply(c)}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                  {t("coinChat.reply", "Reply")}
+                </button>
+                <button
+                  type="button"
+                  className={`coin-chat-action-btn${likedIds.has(c.id) ? " coin-chat-action-btn--liked" : ""}`}
+                  onClick={() => handleLike(c.id)}
+                >
+                  <svg viewBox="0 0 24 24" fill={likedIds.has(c.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 21s-6.7-4.35-9.3-8.1C1 10.4 1.5 7 4.2 5.5c2.2-1.2 4.6-.6 6 1.1l1.8 2.1 1.8-2.1c1.4-1.7 3.8-2.3 6-1.1 2.7 1.5 3.2 4.9 1.5 7.4C18.7 16.65 12 21 12 21z" />
+                  </svg>
+                  {c.like_count > 0 && <span className="coin-chat-action-count">{c.like_count}</span>}
+                </button>
+              </div>
+            </div>
           </div>
         ))
       )}

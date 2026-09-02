@@ -147,9 +147,12 @@
   background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
 }
 
-.coin-chat-comment-line {
+.coin-chat-comment-body {
   flex: 1;
   min-width: 0;
+}
+
+.coin-chat-comment-line {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.5;
@@ -265,6 +268,46 @@
   color: var(--color-text-muted);
   opacity: 0.6;
   background: none;
+}
+
+/* Always-visible Reply/Like row under each message — unlike the ⋮ menu
+   (delete/report), these are common enough actions to not hide. */
+.coin-chat-comment-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 3px;
+}
+
+.coin-chat-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.coin-chat-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.coin-chat-action-btn:hover {
+  color: var(--color-text);
+}
+
+.coin-chat-action-btn--liked,
+.coin-chat-action-btn--liked:hover {
+  color: var(--color-danger);
+}
+
+.coin-chat-action-count {
+  font-variant-numeric: tabular-nums;
 }
 
 .coin-chat-composer {

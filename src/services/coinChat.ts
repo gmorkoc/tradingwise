@@ -9,6 +9,7 @@ export interface CoinComment {
   tier: "pro" | "elite";
   body: string;
   created_at: string;
+  like_count: number;
 }
 
 const BODY_MAX = 500;
@@ -57,6 +58,37 @@ export async function searchUsernames(prefix: string): Promise<string[]> {
 export async function deleteCoinComment(commentId: number): Promise<void> {
   const { error } = await supabase.from("coin_comments").delete().eq("id", commentId);
   if (error) throw new Error(error.message);
+}
+
+// Any authenticated user can like — lighter-weight than posting, not
+// restricted to pro/elite. like_count on the comment is kept in sync
+// server-side by a trigger, never written from here.
+export async function likeComment(commentId: number, userId: string): Promise<void> {
+  const { error } = await supabase.from("coin_comment_likes").insert({ comment_id: commentId, user_id: userId });
+  if (error && error.code !== "23505") throw new Error(error.message);
+}
+
+export async function unlikeComment(commentId: number, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("coin_comment_likes")
+    .delete()
+    .eq("comment_id", commentId)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
+// Which of the given comments the signed-in user has already liked —
+// fetched once alongside the feed so like buttons render filled/unfilled
+// correctly on load.
+export async function fetchMyLikedCommentIds(userId: string, commentIds: number[]): Promise<Set<number>> {
+  if (commentIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("coin_comment_likes")
+    .select("comment_id")
+    .eq("user_id", userId)
+    .in("comment_id", commentIds);
+  if (error) { console.error("fetchMyLikedCommentIds failed:", error.message); return new Set(); }
+  return new Set((data ?? []).map((r) => r.comment_id as number));
 }
 
 export async function reportCoinComment(commentId: number, reporterId: string): Promise<void> {
