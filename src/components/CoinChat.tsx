@@ -112,7 +112,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
             <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
             <div className="coin-chat-comment-body">
               <p className="coin-chat-comment-line">
-                <span className="coin-chat-comment-name">{c.username}</span>{" "}
+                <span className="coin-chat-comment-name">@{c.username}</span>{" "}
                 <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier.toUpperCase()}</span>{" "}
                 <span className="coin-chat-comment-text">{c.body}</span>
               </p>
