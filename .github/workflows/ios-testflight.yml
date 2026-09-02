@@ -1,0 +1,96 @@
+name: iOS TestFlight Upload
+
+# Manual only — this uploads a real build to App Store Connect, so it
+# should never fire automatically on a push. Trigger it from the Actions
+# tab ("Run workflow") when you actually want a new TestFlight build.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build-and-upload:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: List installed Xcode versions (diagnostic)
+        run: ls /Applications | grep Xcode
+
+      # latest-stable rather than a pinned number — Apple's SDK requirement
+      # (currently iOS 26+) moves forward over time, and this tracks
+      # whatever the runner image actually has instead of guessing a
+      # version string that may not exist on it.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Sync Capacitor iOS project
+        run: npx cap sync ios
+
+      - name: Write App Store Connect API key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
+
+      - name: Archive
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -destination "generic/platform=iOS" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APPSTORE_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APPSTORE_API_ISSUER_ID }}
+
+      - name: Write export options
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>R4WU895Q9L</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Export
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APPSTORE_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APPSTORE_API_ISSUER_ID }}
+
+      - name: Upload to App Store Connect
+        run: |
+          xcrun altool --upload-app \
+            -f "$RUNNER_TEMP/export/App.ipa" \
+            -t ios \
+            --apiKey ${{ secrets.APPSTORE_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APPSTORE_API_ISSUER_ID }}
