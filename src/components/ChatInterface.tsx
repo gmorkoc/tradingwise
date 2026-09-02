@@ -54,6 +54,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
   ];
 
   const [isOpen,    setIsOpen]    = useState(false);
+
+  // Lets other floating widgets (Daily Brief) hide themselves while this
+  // panel is open, instead of stacking/overlapping it.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("ai-chat-active", { detail: isOpen }));
+    return () => { if (isOpen) window.dispatchEvent(new CustomEvent("ai-chat-active", { detail: false })); };
+  }, [isOpen]);
+
   const [messages,  setMessages]  = useState<DisplayMessage[]>(() => {
     if (typeof window === "undefined") return defaultMessages();
     try {

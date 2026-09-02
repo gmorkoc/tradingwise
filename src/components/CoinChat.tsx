@@ -95,6 +95,16 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const panelRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
 
+  // Lets other floating widgets (Daily Brief) hide themselves while the
+  // mobile sheet or the full-screen reply takeover is open, instead of
+  // stacking/overlapping it. Desktop's docked panel doesn't share screen
+  // space with those, so it isn't counted as "active" here.
+  const isActive = sheetOpen || replyTarget !== null;
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("coin-chat-active", { detail: isActive }));
+    return () => { if (isActive) window.dispatchEvent(new CustomEvent("coin-chat-active", { detail: false })); };
+  }, [isActive]);
+
   useEffect(() => {
     if (mentionQuery === null) { setMentionResults([]); return; }
     let cancelled = false;

@@ -177,7 +177,25 @@ export const DailyBrief: React.FC = () => {
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
+  const [chatActive, setChatActive] = useState(false);
   const dragStartY = useRef<number | null>(null);
+
+  // Coin chat (mobile sheet / reply takeover) and the AI chat panel both
+  // dispatch these when they open/close — hide completely rather than
+  // risk stacking on top of them and looking cluttered.
+  useEffect(() => {
+    const coinChatOpen = { current: false };
+    const aiChatOpen = { current: false };
+    const recompute = () => setChatActive(coinChatOpen.current || aiChatOpen.current);
+    const onCoinChat = (e: Event) => { coinChatOpen.current = (e as CustomEvent<boolean>).detail; recompute(); };
+    const onAiChat = (e: Event) => { aiChatOpen.current = (e as CustomEvent<boolean>).detail; recompute(); };
+    window.addEventListener("coin-chat-active", onCoinChat);
+    window.addEventListener("ai-chat-active", onAiChat);
+    return () => {
+      window.removeEventListener("coin-chat-active", onCoinChat);
+      window.removeEventListener("ai-chat-active", onAiChat);
+    };
+  }, []);
 
   // Yahoo Finance-style auto-hide: slide the (collapsed, resting) sheet out
   // of the way while the user scrolls down through the page, back in on any
@@ -257,7 +275,7 @@ export const DailyBrief: React.FC = () => {
     }
   };
 
-  if (items.length === 0 || dismissed) return null;
+  if (items.length === 0 || dismissed || chatActive) return null;
 
   const current = items[index];
   const chips = [t(CATEGORY_LABEL_KEY[current.category]), ...extractChips(current.title)].slice(0, 4);
