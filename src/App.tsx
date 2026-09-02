@@ -1825,7 +1825,8 @@ function AppDashboard({
           </aside>
         )}
 
-        <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+        {/* AI chat FAB temporarily hidden — re-enable by uncommenting this. */}
+        {false && <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />}
 
         {coinPickerOpen &&
           ReactDOM.createPortal(
