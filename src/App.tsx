@@ -1607,7 +1607,8 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                {chartAssetClass === "crypto" && (
+                {chartAssetClass === "crypto" &&
+                  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
                   <AnnouncementBanner
                     storageKey="announce-coinchat-v1"
                     icon="💬"
@@ -1807,7 +1808,9 @@ function AppDashboard({
           </div>
         </div>
 
-        {activeSection === "chart" && chartAssetClass === "crypto" && (
+        {/* Coin chat hidden on web for now — kept on iOS. */}
+        {activeSection === "chart" && chartAssetClass === "crypto" &&
+          Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
           <aside
             className={`coin-chat-dock${showCoinChat ? "" : " coin-chat-dock--hidden"}`}
           >
