@@ -5,7 +5,7 @@ import {
   useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext, arrayMove, verticalListSortingStrategy,
+  SortableContext, arrayMove, horizontalListSortingStrategy,
   sortableKeyboardCoordinates, useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,7 +22,7 @@ const CHARTABLE_SYMBOLS = new Set<string>(COINS.map(c => c.symbol));
 /* ── Sparkline ──────────────────────────────────────────────────────────── */
 function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }) {
   if (prices.length < 2) return null;
-  const W = 60, H = 26;
+  const W = 44, H = 18;
   // Only downsample large series (e.g. CoinGecko 168-pt); Binance gives 7 pts already
   const sample = prices.length > 20 ? prices.filter((_, i) => i % 4 === 0) : prices;
   const min = Math.min(...sample);
@@ -33,11 +33,11 @@ function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }
     const y = H - ((p - min) / range) * (H - 4) - 2;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  const color = positive ? "#22c55e" : "#ef4444";
+  const color = positive ? "#22c55e" : "#fb7185";
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+    <svg className="wl-chip-spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <polyline points={pts} fill="none" stroke={color}
-        strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+        strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
@@ -49,14 +49,8 @@ function fmtPrice(p: number): string {
   return p.toFixed(6);
 }
 
-function fmtVol(v: number): string {
-  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
-  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
-  return `${v.toFixed(0)}`;
-}
-
-/* ── Row ────────────────────────────────────────────────────────────────── */
-interface RowProps {
+/* ── Chip ───────────────────────────────────────────────────────────────── */
+interface ChipProps {
   id: string;
   meta?: CatalogEntry;
   entry?: PriceEntry;
@@ -68,13 +62,12 @@ interface RowProps {
   dragTitle: string;
   removeTitle: string;
   chartTitle: string;
-  volLabel: string;
 }
 
-function WatchlistRow({
+function WatchlistChip({
   id, meta, entry, spark, imgError, onImgError, onRemove, onSelect,
-  dragTitle, removeTitle, chartTitle, volLabel,
-}: RowProps) {
+  dragTitle, removeTitle, chartTitle,
+}: ChipProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const symbol = (meta?.symbol ?? "").toUpperCase();
   const pct = entry?.pct ?? 0;
@@ -87,9 +80,9 @@ function WatchlistRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const rowContent = (
+  const chipContent = (
     <>
-      <div className="wl-row-icon">
+      <div className="wl-chip-icon">
         {!imgError ? (
           <img
             className="wl-coin-img"
@@ -103,43 +96,35 @@ function WatchlistRow({
         )}
       </div>
 
-      <div className="wl-row-info">
-        <span className="wl-row-symbol">{symbol}-USD</span>
-        <span className="wl-row-vol">{volLabel} {entry ? fmtVol(entry.vol) : "—"}</span>
-      </div>
-
-      {spark.length > 1 && (
-        <div className="wl-row-spark">
-          <Sparkline prices={spark} positive={up} />
+      <div className="wl-chip-text">
+        <span className="wl-chip-sym">{symbol}</span>
+        <div className="wl-chip-row">
+          <span className="wl-chip-price">{entry ? `$${fmtPrice(entry.price)}` : "—"}</span>
+          {entry && (
+            <span className={`wl-chip-pct${up ? " up" : " down"}`}>
+              {up ? "+" : ""}{pct.toFixed(2)}%
+            </span>
+          )}
         </div>
-      )}
-
-      <div className="wl-row-right">
-        <span className="wl-row-price">${entry ? fmtPrice(entry.price) : "—"}</span>
-        <span className={`wl-row-pct${up ? " up" : " down"}`}>
-          {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
-        </span>
       </div>
+
+      {spark.length > 1 && <Sparkline prices={spark} positive={up} />}
     </>
   );
 
   return (
-    <div ref={setNodeRef} style={style} className="wl-row">
-      <button className="wl-row-handle" title={dragTitle} {...attributes} {...listeners}>
-        ⋮⋮
-      </button>
+    <div ref={setNodeRef} style={style} className="wl-chip">
+      <button className="wl-chip-handle" title={dragTitle} {...attributes} {...listeners}>⋮⋮</button>
 
       {chartable ? (
-        <button className="wl-row-main" onClick={() => onSelect!(symbol)} title={chartTitle}>
-          {rowContent}
+        <button className="wl-chip-main" onClick={() => onSelect!(symbol)} title={chartTitle}>
+          {chipContent}
         </button>
       ) : (
-        <div className="wl-row-main wl-row-main--static">{rowContent}</div>
+        <div className="wl-chip-main wl-chip-main--static">{chipContent}</div>
       )}
 
-      <button className="wl-row-star" onClick={() => onRemove(id)} title={removeTitle}>
-        ★
-      </button>
+      <button className="wl-chip-remove" onClick={() => onRemove(id)} title={removeTitle}>×</button>
     </div>
   );
 }
@@ -164,6 +149,7 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [imgErrors,  setImgErrors]  = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     localStorage.setItem("watchlistCoins_v1", JSON.stringify(watchedIds));
@@ -236,14 +222,55 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
      c.symbol.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const scrollBy = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+
   return (
-    <div className="wl-card">
-      <div className="wl-header">
-        <h3 className="wl-title">{t("watchlist.title")}</h3>
-        <span className="wl-subtitle">
-          {t("watchlist.updated")} ·{" "}
-          <span className="wl-source-badge">Binance</span>
-        </span>
+    <div className="wl-strip">
+      <div className="wl-strip-label">
+        <span className="wl-strip-dot" />
+        {t("watchlist.title")}
+      </div>
+
+      {loading && watchedIds.length > 0 && (
+        <div className="wl-loading">{t("watchlist.loading")}</div>
+      )}
+
+      {!loading && watchedIds.length === 0 && (
+        <div className="wl-empty">{t("watchlist.emptyText")}</div>
+      )}
+
+      {!loading && watchedIds.length > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={watchedIds} strategy={horizontalListSortingStrategy}>
+            <div className="wl-scroll" ref={scrollRef}>
+              {watchedIds.map(id => {
+                const meta   = CATALOG.find(c => c.id === id);
+                const symbol = (meta?.symbol ?? "").toUpperCase();
+                return (
+                  <WatchlistChip
+                    key={id}
+                    id={id}
+                    meta={meta}
+                    entry={priceData.get(symbol)}
+                    spark={sparklines.get(symbol) ?? []}
+                    imgError={imgErrors.has(symbol)}
+                    onImgError={sym => setImgErrors(prev => new Set([...prev, sym]))}
+                    onRemove={removeCoin}
+                    onSelect={onSelectCoin}
+                    dragTitle={t("watchlist.dragTitle")}
+                    removeTitle={t("watchlist.removeTitle")}
+                    chartTitle={t("watchlist.viewChart")}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <div className="wl-strip-actions">
+        <button className="wl-nav-btn" onClick={() => scrollBy(-1)} aria-label="Scroll left">‹</button>
+        <button className="wl-nav-btn" onClick={() => scrollBy(1)} aria-label="Scroll right">›</button>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
             {t("watchlist.addCoin")}
@@ -272,48 +299,6 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
           )}
         </div>
       </div>
-
-      {loading && watchedIds.length > 0 && (
-        <div className="wl-loading">{t("watchlist.loading")}</div>
-      )}
-
-      {!loading && watchedIds.length === 0 && (
-        <div className="wl-empty">
-          <div className="wl-empty-icon">☆</div>
-          <div className="wl-empty-text">{t("watchlist.emptyText")}</div>
-          <div className="wl-empty-hint">{t("watchlist.emptyHint")}</div>
-        </div>
-      )}
-
-      {!loading && watchedIds.length > 0 && (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={watchedIds} strategy={verticalListSortingStrategy}>
-            <div className="wl-list">
-              {watchedIds.map(id => {
-                const meta   = CATALOG.find(c => c.id === id);
-                const symbol = (meta?.symbol ?? "").toUpperCase();
-                return (
-                  <WatchlistRow
-                    key={id}
-                    id={id}
-                    meta={meta}
-                    entry={priceData.get(symbol)}
-                    spark={sparklines.get(symbol) ?? []}
-                    imgError={imgErrors.has(symbol)}
-                    onImgError={sym => setImgErrors(prev => new Set([...prev, sym]))}
-                    onRemove={removeCoin}
-                    onSelect={onSelectCoin}
-                    dragTitle={t("watchlist.dragTitle")}
-                    removeTitle={t("watchlist.removeTitle")}
-                    chartTitle={t("watchlist.viewChart")}
-                    volLabel={t("watchlist.vol")}
-                  />
-                );
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
     </div>
   );
 }

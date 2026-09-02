@@ -293,12 +293,6 @@ function AppDashboard({
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const onboardingCheckedRef = useRef(false);
-  const [showWatchlist, setShowWatchlist] = useState(
-    () => localStorage.getItem("watchlist-visible") !== "false",
-  );
-  useEffect(() => {
-    localStorage.setItem("watchlist-visible", String(showWatchlist));
-  }, [showWatchlist]);
   const [showCoinChat, setShowCoinChat] = useState(
     () => localStorage.getItem("coinchat-visible") !== "false",
   );
@@ -1612,6 +1606,14 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
+                {chartAssetClass === "crypto" && (
+                  <Watchlist
+                    onSelectCoin={(symbol) => {
+                      setCoin(symbol as CoinSymbol);
+                      clearCandleCache();
+                    }}
+                  />
+                )}
                 {chartAssetClass === "crypto" && <FlashNewsBanner />}
                 {chartAssetClass === "crypto" ? (
                   <div
@@ -1796,23 +1798,6 @@ function AppDashboard({
             )}
           </div>
         </div>
-
-        <aside
-          className={`side-panel${showWatchlist ? "" : " side-panel--hidden"}`}
-        >
-          <button
-            className="side-panel-edge"
-            onClick={() => setShowWatchlist((v) => !v)}
-            aria-label={showWatchlist ? "Hide watchlist" : "Show watchlist"}
-          />
-          <Watchlist
-            onSelectCoin={(symbol) => {
-              setCoin(symbol as CoinSymbol);
-              clearCandleCache();
-              setActiveSection("chart");
-            }}
-          />
-        </aside>
 
         {activeSection === "chart" && chartAssetClass === "crypto" && (
           <aside

@@ -1,49 +1,207 @@
-.wl-card {
-  background: var(--color-card-bg);
-  border-radius: 0;
-  padding: 20px 24px;
-  border-left: 1px solid var(--color-border);
-}
-
-/* ── Header ─────────────────────────────────────────────────────────────── */
-.wl-header {
+/* Horizontal ticker strip — same chrome pattern as StockTickerStrip.css,
+   extended with drag-to-reorder, remove, and add-coin controls. */
+.wl-strip {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--color-card-bg);
+  border: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+  border-radius: 0;
 }
 
-.wl-title {
-  margin: 0;
-  font-size: 1.1rem;
+.wl-strip-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--color-text);
+  padding-right: 12px;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+  white-space: nowrap;
 }
 
-.wl-subtitle {
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
-  padding: 2px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+.wl-strip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
 }
-.wl-source-badge {
-  color: var(--color-primary);
-  font-weight: 600;
-  text-decoration: none;
-  opacity: 0.8;
+
+.wl-loading,
+.wl-empty {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Scroll region ──────────────────────────────────────────────────────── */
+.wl-scroll {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  flex: 1;
+  min-width: 0;
+}
+.wl-scroll::-webkit-scrollbar { display: none; }
+
+/* ── Chip ───────────────────────────────────────────────────────────────── */
+.wl-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.wl-chip-handle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: grab;
+  touch-action: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  letter-spacing: -2px;
+  padding: 2px;
+  opacity: 0;
   transition: opacity 0.15s;
 }
-.wl-source-badge:hover {
-  opacity: 1;
-  text-decoration: underline;
+
+.wl-chip:hover .wl-chip-handle { opacity: 0.5; }
+.wl-chip-handle:hover { opacity: 0.9 !important; }
+.wl-chip-handle:active { cursor: grabbing; }
+
+.wl-chip-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
 
-/* ── Search / add ───────────────────────────────────────────────────────── */
+.wl-chip-main--static { cursor: default; }
+
+.wl-chip-main:hover .wl-chip-sym { color: var(--color-primary); }
+
+.wl-chip-icon { flex-shrink: 0; }
+
+.wl-coin-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: contain;
+  display: block;
+}
+
+.wl-coin-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wl-chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wl-chip-sym {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-secondary);
+}
+
+.wl-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.wl-chip-price {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wl-chip-pct {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wl-chip-pct.up { color: #22c55e; }
+.wl-chip-pct.down { color: #fb7185; }
+
+.wl-chip-spark { flex-shrink: 0; }
+
+.wl-chip-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  padding: 2px 2px 2px 4px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.wl-chip:hover .wl-chip-remove { opacity: 0.5; }
+.wl-chip-remove:hover { opacity: 1 !important; color: #fb7185; }
+
+/* ── Trailing actions: scroll nav + add coin ───────────────────────────── */
+.wl-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding-left: 8px;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+}
+
+.wl-nav-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.wl-nav-btn:hover { background: var(--color-border); color: var(--color-text); }
+
 .wl-search-wrap {
   position: relative;
-  margin-left: auto;
+  margin-left: 6px;
 }
 
 .wl-add-btn {
@@ -51,11 +209,12 @@
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
   border-radius: 6px;
-  padding: 5px 14px;
-  font-size: 0.8rem;
+  padding: 5px 12px;
+  font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  transition: opacity 0.15s;
 }
 
 .wl-add-btn:hover { opacity: 0.8; }
@@ -129,202 +288,10 @@
   color: var(--color-text-muted);
 }
 
-/* ── States ─────────────────────────────────────────────────────────────── */
-.wl-loading {
-  text-align: center;
-  padding: 40px;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.wl-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 48px 24px;
-  color: var(--color-text-muted);
-}
-
-.wl-empty-icon { font-size: 2rem; opacity: 0.5; }
-.wl-empty-text { font-size: 0.95rem; font-weight: 600; color: var(--color-text); }
-.wl-empty-hint { font-size: 0.8rem; }
-
-/* ── List ───────────────────────────────────────────────────────────────── */
-.wl-list {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ── Row ────────────────────────────────────────────────────────────────── */
-.wl-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--color-border);
-  transition: background 0.12s;
-  border-radius: 8px;
-}
-
-.wl-row:last-child { border-bottom: none; }
-
-.wl-row:hover {
-  background: rgba(255, 255, 255, 0.03);
-  margin: 0 -8px;
-  padding: 11px 8px;
-}
-
-html[data-theme="light"] .wl-row:hover {
-  background: rgba(0, 0, 0, 0.025);
-}
-
-/* Drag handle */
-.wl-row-handle {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: grab;
-  touch-action: none;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  line-height: 1;
-  letter-spacing: -2px;
-  padding: 4px 2px;
-  opacity: 0.4;
-  transition: opacity 0.15s;
-}
-
-.wl-row-handle:hover { opacity: 0.8; }
-.wl-row-handle:active { cursor: grabbing; }
-
-/* Clickable row body — navigates the price chart to this coin */
-.wl-row-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-  border-radius: 6px;
-}
-
-.wl-row-main:hover .wl-row-symbol {
-  color: var(--color-primary);
-}
-
-.wl-row-main--static {
-  cursor: default;
-}
-
-/* Coin icon */
-.wl-row-icon { flex-shrink: 0; }
-
-.wl-coin-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: contain;
-  display: block;
-}
-
-.wl-coin-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-  font-weight: 700;
-  font-size: 0.78rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* Left text: symbol + volume */
-.wl-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.wl-row-symbol {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.2;
-}
-
-.wl-row-vol {
-  font-size: 0.6rem;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Sparkline */
-.wl-row-spark {
-  flex-shrink: 0;
-  opacity: 0.85;
-  display: flex;
-  align-items: center;
-}
-
-/* Right: price + pct */
-.wl-row-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.wl-row-price {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.wl-row-pct {
-  font-size: 0.6rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.wl-row-pct.up   { color: #22c55e; }
-.wl-row-pct.down { color: #ef4444; }
-
-/* Star remove button */
-.wl-row-star {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.05rem;
-  color: var(--color-text-muted);
-  padding: 4px 2px 4px 6px;
-  line-height: 1;
-  transition: color 0.15s;
-  opacity: 0.5;
-}
-
-.wl-row-star:hover {
-  color: #ef4444;
-  opacity: 1;
-}
-
 /* ── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 600px) {
-  .wl-card { padding: 16px; }
-  .wl-row-spark { display: none; }
+@media (max-width: 640px) {
+  .wl-strip { gap: 10px; padding: 8px 12px; }
+  .wl-strip-label { display: none; }
+  .wl-chip-price { font-size: 0.78rem; }
+  .wl-chip-spark { display: none; }
 }

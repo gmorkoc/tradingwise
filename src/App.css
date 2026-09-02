@@ -1971,112 +1971,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
   .icon-strip-label { font-size: 0.75rem; }
 }
 
-/* ── Side watchlist panel ───────────────────────────────────────────────── */
-.side-panel {
-  width: 330px;
-  flex-shrink: 0;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-  transition: width 0.22s ease;
-  position: relative;
-}
-
-.side-panel--hidden {
-  width: 8px;
-  overflow: hidden;
-}
-
-.side-panel-edge {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  z-index: 2;
-  transition: background 0.15s;
-}
-
-.side-panel-edge:hover {
-  background: rgba(56, 189, 248, 0.12);
-}
-.side-panel-edge:focus,
-.side-panel-edge:focus-visible,
-.side-panel-edge:active {
-  outline: none;
-  box-shadow: none;
-  background: transparent;
-}
-
-.wl-toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
-}
-
-.wl-toggle-btn:hover {
-  color: var(--color-text);
-  background: var(--color-hover);
-}
-
-@media (max-width: 900px) {
-  .wl-toggle-btn, .side-panel, .side-panel-edge { display: none; }
-}
-
-/* Strip card chrome — Watchlist lives flush in the panel */
-.side-panel .wl-card {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 18px 14px;
-  box-shadow: none;
-  min-height: 100%;
-}
-.side-panel .wl-header {
-  margin-bottom: 14px;
-}
-.side-panel .wl-title {
-  font-size: 1rem;
-}
-.side-panel .wl-subtitle {
-  display: none;
-}
-.side-panel .wl-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.side-panel .wl-tile {
-  border-radius: 14px;
-  padding: 12px 11px 10px;
-  gap: 6px;
-}
-.side-panel .wl-tile-price {
-  font-size: 0.88rem;
-}
-.side-panel .wl-sparkline {
-  display: none;
-}
-.side-panel .wl-tile-vol {
-  display: none;
-}
-
 /* ── Main panel ─────────────────────────────────────────────────────────── */
 .main-panel {
   flex: 1;
@@ -2485,17 +2379,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
   max-height: 100%;
 }
 
-/* ── Shell responsive ───────────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .side-panel {
-    width: 270px;
-  }
-}
-@media (max-width: 900px) {
-  .side-panel {
-    display: none;
-  }
-}
 /* ── Mobile profile header (hidden on desktop) ──────────────────────────── */
 .mob-nav-profile {
   display: none;
