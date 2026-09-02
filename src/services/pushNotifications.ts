@@ -25,6 +25,23 @@ const NotificationAuth = registerPlugin<NotificationAuthPlugin>("NotificationAut
 let currentToken: string | null = null;
 let listenersAttached = false;
 
+// A cold-launch notification tap fires this listener as soon as
+// initPushNotifications runs (right after auth resolves) — well before
+// AppGate finishes its boot screen and mounts AppDashboard (which is
+// gated behind auth resolving AND a minimum 1s anti-flicker delay, see
+// App.tsx). AppDashboard's "open-coin-mention" DOM listener doesn't exist
+// yet at that point, and a plain dispatchEvent with nobody listening is
+// just lost — unlike Capacitor's own native-side events, it isn't queued
+// for whoever attaches next. Stashing the most recent one here lets
+// AppDashboard drain it once on mount, covering the gap.
+let pendingCoinMention: { coin: string; commentId: number } | null = null;
+
+export function consumePendingCoinMention(): { coin: string; commentId: number } | null {
+  const pending = pendingCoinMention;
+  pendingCoinMention = null;
+  return pending;
+}
+
 async function saveToken(token: string, userId: string): Promise<void> {
   currentToken = token;
   const { error } = await supabase
@@ -64,9 +81,9 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
         } else if (data?.type === "upgrade_reminder") {
           window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
         } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
-          window.dispatchEvent(new CustomEvent("open-coin-mention", {
-            detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) },
-          }));
+          const detail = { coin: data.coin, commentId: parseInt(data.commentId, 10) };
+          pendingCoinMention = detail;
+          window.dispatchEvent(new CustomEvent("open-coin-mention", { detail }));
         }
       });
 

@@ -16,6 +16,7 @@ import {
 } from "./services/coinglass";
 import { CATALOG } from "./services/coinCatalog";
 import { fetchBinancePrices } from "./services/binancePrices";
+import { consumePendingCoinMention } from "./services/pushNotifications";
 import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
@@ -323,15 +324,25 @@ function AppDashboard({
   // timeout would race against, especially on a cold app launch.
   const [highlightCommentId, setHighlightCommentId] = useState<number | null>(null);
   useEffect(() => {
-    const onOpenCoinMention = (e: Event) => {
-      const detail = (e as CustomEvent<{ coin: string; commentId: number }>).detail;
-      if (!detail) return;
+    const applyCoinMention = (detail: { coin: string; commentId: number }) => {
       setCoin(detail.coin as CoinSymbol);
       clearCandleCache();
       setActiveSection("chart");
       setChartAssetClass("crypto");
       setShowCoinChat(true);
       setHighlightCommentId(detail.commentId);
+    };
+    // A notification tap on a fully-killed app fires pushNotifications.ts's
+    // listener (and thus this event) as soon as auth resolves — which is
+    // before AppGate's boot screen (auth resolve + a hard-coded minimum 1s
+    // delay, see AppGate below) finishes and mounts this component. A plain
+    // dispatchEvent with nobody listening yet is just lost, so check for
+    // one that already arrived before this listener existed too.
+    const pending = consumePendingCoinMention();
+    if (pending) applyCoinMention(pending);
+    const onOpenCoinMention = (e: Event) => {
+      const detail = (e as CustomEvent<{ coin: string; commentId: number }>).detail;
+      if (detail) applyCoinMention(detail);
     };
     window.addEventListener("open-coin-mention", onOpenCoinMention);
     return () => window.removeEventListener("open-coin-mention", onOpenCoinMention);
