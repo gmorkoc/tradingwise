@@ -117,6 +117,18 @@
   gap: 8px;
   padding: 6px 0;
   min-width: 0;
+  border-radius: 8px;
+}
+
+/* Landed on from tapping a @mention push notification — flashes once so
+   it's easy to spot among everything else, then fades back out. */
+@keyframes coin-chat-flash {
+  0%, 100% { background: transparent; }
+  20%, 80% { background: var(--color-primary-soft); }
+}
+
+.coin-chat-comment--flash {
+  animation: coin-chat-flash 2.2s ease;
 }
 
 .coin-chat-avatar {

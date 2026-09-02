@@ -52,16 +52,21 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
 
       // Tapping a daily-brief-push notification opens straight to that
       // article — same destination as tapping the item inside the app.
-      // Tapping an upgrade-reminder-push opens the Upgrade modal — that
-      // state lives in App.tsx, well above this plain service module, so
-      // it's reached via a plain DOM event instead (same pattern as
+      // Tapping an upgrade-reminder-push opens the Upgrade modal, and
+      // tapping a coin-mention push jumps to that comment — both live in
+      // App.tsx, well above this plain service module, so they're reached
+      // via a plain DOM event instead (same pattern as
       // useNotificationsEnabled.ts's cross-component toggle).
       FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {
-        const data = notification.data as { type?: string; url?: string } | undefined;
+        const data = notification.data as { type?: string; url?: string; coin?: string; commentId?: string } | undefined;
         if (data?.type === "daily_brief" && data.url) {
           Browser.open({ url: data.url });
         } else if (data?.type === "upgrade_reminder") {
           window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
+        } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
+          window.dispatchEvent(new CustomEvent("open-coin-mention", {
+            detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) },
+          }));
         }
       });
 

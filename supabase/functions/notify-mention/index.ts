@@ -82,6 +82,7 @@ Deno.serve(async (req) => {
         const ok = await sendPush(at, t.token, title, body, recipient.alert_sound ?? "bell", {
           type: "coin_mention",
           coin: comment.coin,
+          commentId: String(commentId),
         });
         if (ok) sentCount++;
       }

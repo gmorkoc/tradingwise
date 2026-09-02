@@ -313,6 +313,28 @@ function AppDashboard({
     () => (new URLSearchParams(window.location.search).get("asset") === "stocks" ? "stocks" : "crypto"),
   );
   const [chartNavExpanded, setChartNavExpanded] = useState(false);
+
+  // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
+  // that comment: switch to its coin, open the chart + chat dock, and
+  // hand the comment id down to CoinChat so it can scroll to/flash it.
+  // Cleared a few seconds later so revisiting the same coin later doesn't
+  // replay the highlight.
+  const [highlightCommentId, setHighlightCommentId] = useState<number | null>(null);
+  useEffect(() => {
+    const onOpenCoinMention = (e: Event) => {
+      const detail = (e as CustomEvent<{ coin: string; commentId: number }>).detail;
+      if (!detail) return;
+      setCoin(detail.coin as CoinSymbol);
+      clearCandleCache();
+      setActiveSection("chart");
+      setChartAssetClass("crypto");
+      setShowCoinChat(true);
+      setHighlightCommentId(detail.commentId);
+      window.setTimeout(() => setHighlightCommentId(null), 4000);
+    };
+    window.addEventListener("open-coin-mention", onOpenCoinMention);
+    return () => window.removeEventListener("open-coin-mention", onOpenCoinMention);
+  }, []);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -1824,6 +1846,7 @@ function AppDashboard({
               onOpenAuth={onOpenAuth}
               onOpenUpgrade={onOpenUpgrade}
               onCloseDesktop={() => setShowCoinChat(false)}
+              highlightCommentId={highlightCommentId}
             />
           </aside>
         )}

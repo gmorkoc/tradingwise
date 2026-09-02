@@ -22,6 +22,10 @@ interface Props {
   // the parent's side-panel dock (same pattern as Watchlist), so closing
   // from inside the panel just asks the parent to collapse it.
   onCloseDesktop?: () => void;
+  // Set from outside (a tapped @mention push notification, routed through
+  // App.tsx) when a specific comment should be scrolled to and flashed —
+  // App.tsx clears it back to null a few seconds later.
+  highlightCommentId?: number | null;
 }
 
 function coinName(symbol: string): string {
@@ -75,7 +79,7 @@ function useIsDesktop(): boolean {
   return isDesktop;
 }
 
-export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Props) {
+export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, highlightCommentId }: Props) {
   const { t } = useTranslation();
   const { user, tier, profile } = useAuth();
   const isPaid = tier === "pro" || tier === "elite";
@@ -93,6 +97,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   const [replyTarget, setReplyTarget] = useState<CoinComment | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<string[]>([]);
+  const [flashId, setFlashId] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +177,27 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
 
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
   }, [coin, user?.id]);
+
+  // A tapped @mention push notification sets highlightCommentId from
+  // outside (via App.tsx) — make sure the mobile sheet is actually open
+  // so there's something to scroll within.
+  useEffect(() => {
+    if (highlightCommentId != null) setSheetOpen(true);
+  }, [highlightCommentId]);
+
+  // Once the target comment is actually in the loaded feed, scroll to it
+  // and flash it briefly so it's easy to spot among everything else.
+  useEffect(() => {
+    if (highlightCommentId == null) return;
+    if (!comments.some((c) => c.id === highlightCommentId)) return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(`coin-chat-comment-${highlightCommentId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setFlashId(highlightCommentId);
+    });
+    const clear = setTimeout(() => setFlashId(null), 2200);
+    return () => { cancelAnimationFrame(frame); clearTimeout(clear); };
+  }, [highlightCommentId, comments]);
 
   // Threads stay one level deep — replying to a reply still attaches to
   // its root ancestor, so rendering never has to handle arbitrary nesting.
@@ -273,7 +299,11 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop }: Pr
   );
 
   const renderComment = (c: CoinComment) => (
-    <div className="coin-chat-comment" key={c.id}>
+    <div
+      id={`coin-chat-comment-${c.id}`}
+      className={`coin-chat-comment${flashId === c.id ? " coin-chat-comment--flash" : ""}`}
+      key={c.id}
+    >
       <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
       <div className="coin-chat-comment-body">
         <p className="coin-chat-comment-line">
