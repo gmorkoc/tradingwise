@@ -1630,8 +1630,8 @@
   },
   "coinChat": {
     "triggerLabel": "Live Chat",
-    "title": "{{coinName}} Chat",
-    "commentCount": "{{count}} comments",
+    "title": "{{coinName}} Live Chat",
+    "commentCount": "{{count}} people talking about {{coinName}}",
     "empty": "No comments yet on {{coin}}. Be the first!",
     "delete": "Delete",
     "report": "Report",

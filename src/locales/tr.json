@@ -1562,8 +1562,8 @@
   },
   "coinChat": {
     "triggerLabel": "Canlı Sohbet",
-    "title": "{{coinName}} Sohbeti",
-    "commentCount": "{{count}} yorum",
+    "title": "{{coinName}} Canlı Sohbeti",
+    "commentCount": "{{coinName}} hakkında konuşan {{count}} kişi",
     "empty": "{{coin}} için henüz yorum yok. İlk yorumu sen yaz!",
     "delete": "Sil",
     "report": "Bildir",

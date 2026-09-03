@@ -600,7 +600,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         <div className="coin-chat-head">
           <div>
             <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-            <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
+            <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length, coinName: coinName(coin) })}</div>
           </div>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
         </div>
@@ -635,7 +635,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
           <div className="coin-chat-head">
             <div>
               <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-              <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length })}</div>
+              <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length, coinName: coinName(coin) })}</div>
             </div>
             <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
           </div>

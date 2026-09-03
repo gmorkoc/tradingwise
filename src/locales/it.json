@@ -1562,8 +1562,8 @@
   },
   "coinChat": {
     "triggerLabel": "Chat dal Vivo",
-    "title": "Chat di {{coinName}}",
-    "commentCount": "{{count}} commenti",
+    "title": "Chat dal Vivo di {{coinName}}",
+    "commentCount": "{{count}} persone che parlano di {{coinName}}",
     "empty": "Nessun commento su {{coin}} ancora. Sii il primo!",
     "delete": "Elimina",
     "report": "Segnala",
