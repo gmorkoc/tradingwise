@@ -1563,7 +1563,6 @@
   "coinChat": {
     "triggerLabel": "Canlı Sohbet",
     "title": "{{coinName}} Canlı Sohbeti",
-    "commentCount": "{{coinName}} hakkında konuşan {{count}} kişi",
     "empty": "{{coin}} için henüz yorum yok. İlk yorumu sen yaz!",
     "delete": "Sil",
     "report": "Bildir",
@@ -1587,6 +1586,7 @@
     "liqAbove": "Liq Üstü",
     "liqBelow": "Liq Altı",
     "fearGreed": "Korku ve Açgözlülük",
+    "marketCap": "piyasa değeri",
     "announceBanner": "Yeni: Canlı sohbet burada — {{coin}} hakkında diğer yatırımcıların ne düşündüğünü gör.",
     "reply": "Yanıtla",
     "cancel": "İptal",

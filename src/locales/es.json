@@ -1563,7 +1563,6 @@
   "coinChat": {
     "triggerLabel": "Chat en Vivo",
     "title": "Chat en Vivo de {{coinName}}",
-    "commentCount": "{{count}} personas hablando de {{coinName}}",
     "empty": "Aún no hay comentarios sobre {{coin}}. ¡Sé el primero!",
     "delete": "Eliminar",
     "report": "Reportar",
@@ -1587,6 +1586,7 @@
     "liqAbove": "Liq Arriba",
     "liqBelow": "Liq Abajo",
     "fearGreed": "Miedo y Codicia",
+    "marketCap": "cap. de mercado",
     "announceBanner": "Nuevo: el chat en vivo ya está aquí — mira qué opinan otros traders sobre {{coin}}.",
     "reply": "Responder",
     "cancel": "Cancelar",

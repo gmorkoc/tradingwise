@@ -1631,7 +1631,6 @@
   "coinChat": {
     "triggerLabel": "Live Chat",
     "title": "{{coinName}} Live Chat",
-    "commentCount": "{{count}} people talking about {{coinName}}",
     "empty": "No comments yet on {{coin}}. Be the first!",
     "delete": "Delete",
     "report": "Report",
@@ -1655,6 +1654,7 @@
     "liqAbove": "Liq Above",
     "liqBelow": "Liq Below",
     "fearGreed": "Fear & Greed",
+    "marketCap": "market cap",
     "announceBanner": "New: Live chat is here — see what other traders think about {{coin}}.",
     "reply": "Reply",
     "cancel": "Cancel",

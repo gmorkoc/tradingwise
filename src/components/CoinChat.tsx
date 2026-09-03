@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { COINS } from "../services/coinglass";
+import { COINS, fetchCoinMarketCaps } from "../services/coinglass";
 import {
   fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
   likeComment, unlikeComment, fetchMyLikedCommentIds,
@@ -36,6 +36,97 @@ interface Props {
 
 function coinName(symbol: string): string {
   return COINS.find((c) => c.symbol === symbol)?.name ?? symbol;
+}
+
+// One-line "why this coin matters" blurbs for the chat panel's sub-header
+// (e.g. "Ethereum — the leading smart contract platform · $410B market
+// cap"). English-only for now — translating 60+ curated descriptions
+// accurately into every locale is its own project; COIN_BLURB_FALLBACK
+// covers any symbol added to COINS without an entry here.
+const COIN_BLURB_FALLBACK = "One of the top cryptocurrencies by market cap";
+const COIN_BLURBS: Partial<Record<string, string>> = {
+  BTC: "The world's first cryptocurrency",
+  ETH: "The leading smart contract platform",
+  BNB: "Native token of the Binance ecosystem",
+  SOL: "High-speed blockchain for DeFi & NFTs",
+  XRP: "Built for fast, low-cost cross-border payments",
+  ADA: "Research-driven proof-of-stake blockchain",
+  AVAX: "Fast, scalable platform for custom blockchains",
+  DOT: "Connects multiple blockchains into one network",
+  ATOM: "Hub for the Cosmos interchain ecosystem",
+  TRX: "High-throughput blockchain for content & payments",
+  ETC: "The original, immutable Ethereum chain",
+  LTC: "Fast, low-fee payments — the \"silver\" to Bitcoin's gold",
+  BCH: "Bitcoin fork focused on cheap, everyday payments",
+  NEAR: "Developer-friendly, sharded smart contract platform",
+  ICP: "Blockchain built to host full web apps on-chain",
+  FIL: "Decentralized storage network",
+  AR: "Permanent, pay-once data storage",
+  TIA: "Modular blockchain for scalable rollups",
+  EGLD: "High-throughput blockchain for Web3 & payments",
+  APT: "High-performance chain built with the Move language",
+  SUI: "Parallelized smart contract platform",
+  STX: "Brings smart contracts to Bitcoin",
+  CFX: "Hybrid-consensus chain popular in Asia",
+  DASH: "Fast, private digital cash",
+  ZEC: "Privacy-focused cryptocurrency",
+  XLM: "Cross-border payments & asset tokenization network",
+  LINK: "Connects smart contracts to real-world data",
+  UNI: "The largest decentralized token exchange",
+  AAVE: "Leading decentralized lending protocol",
+  CRV: "Stablecoin-focused decentralized exchange",
+  INJ: "Blockchain built for decentralized finance",
+  ENS: "Naming system for Ethereum wallets & sites",
+  COMP: "Decentralized lending & borrowing protocol",
+  LDO: "Leading liquid staking protocol",
+  DYDX: "Decentralized exchange for perpetual futures",
+  SNX: "Protocol for minting synthetic assets",
+  YFI: "Automated DeFi yield aggregator",
+  UMA: "Protocol for building synthetic financial contracts",
+  TRB: "Decentralized oracle network",
+  LPT: "Decentralized video streaming network",
+  NMR: "Powers a crowdsourced hedge fund",
+  AUCTION: "Governance token for the Bounce auction platform",
+  KSM: "Fast-moving canary network for Polkadot",
+  ZEN: "Privacy-focused blockchain platform",
+  SSV: "Decentralized Ethereum staking infrastructure",
+  OP: "Leading Ethereum layer-2 scaling network",
+  ARB: "Largest Ethereum layer-2 by activity",
+  HYPE: "Native token of the Hyperliquid derivatives exchange",
+  TAO: "Decentralized network for machine learning",
+  WLD: "Identity & payments network by Tools for Humanity",
+  ORDI: "First major token on the Bitcoin Ordinals protocol",
+  BERA: "EVM chain built around Proof-of-Liquidity",
+  ENA: "Powers a synthetic dollar protocol",
+  JTO: "Governance token for Jito's Solana staking protocol",
+  VIRTUAL: "Platform for launching AI agents on-chain",
+  GRASS: "Rewards users for sharing internet bandwidth",
+  RENDER: "Decentralized GPU rendering network",
+  ONDO: "Brings tokenized real-world assets on-chain",
+  DOGE: "The original meme coin",
+  SHIB: "Community-driven meme token ecosystem",
+  PEPE: "Meme coin inspired by the Pepe the Frog meme",
+  FLOKI: "Meme coin with an expanding utility ecosystem",
+  BONK: "Solana's breakout community meme coin",
+  WIF: "Dog-hat meme coin with a devoted community",
+  TRUMP: "Meme coin tied to Donald Trump",
+  MEME: "Community-driven meme coin platform",
+  BOME: "Fast-rising Solana meme coin",
+  NOT: "Meme coin from the Notcoin Telegram game",
+  GALA: "Powers the Gala Games Web3 gaming ecosystem",
+  CHZ: "Powers fan tokens for sports & entertainment",
+  APE: "Governance token for the Bored Ape ecosystem",
+  AXS: "Governance token for the Axie Infinity game",
+  SAND: "Token for The Sandbox virtual world",
+  MANA: "Token for the Decentraland virtual world",
+  ENJ: "Powers tokenized in-game items",
+};
+
+function fmtMarketCap(n: number): string {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${n.toLocaleString()}`;
 }
 
 const PAGE_SIZE = 50;
@@ -108,6 +199,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const [flashId, setFlashId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [marketCap, setMarketCap] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
@@ -173,6 +265,15 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, [openMenuId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMarketCap(null);
+    fetchCoinMarketCaps().then((caps) => {
+      if (!cancelled) setMarketCap(caps.get(coin) ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [coin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,6 +393,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   // Threads stay one level deep — replying to a reply still attaches to
   // its root ancestor, so rendering never has to handle arbitrary nesting.
   const replyToId = replyTarget ? (replyTarget.reply_to_id ?? replyTarget.id) : null;
+
+  const subHeader = (
+    <>
+      {coinName(coin)} — {COIN_BLURBS[coin] ?? COIN_BLURB_FALLBACK}
+      {marketCap !== null && <> · {fmtMarketCap(marketCap)} {t("coinChat.marketCap", "market cap")}</>}
+    </>
+  );
 
   const handlePost = async () => {
     if (!user || !draft.trim() || posting) return;
@@ -598,9 +706,9 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     return (
       <div className="coin-chat-card">
         <div className="coin-chat-head">
-          <div>
+          <div className="coin-chat-head-text">
             <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-            <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length, coinName: coinName(coin) })}</div>
+            <div className="coin-chat-sub">{subHeader}</div>
           </div>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
         </div>
@@ -633,9 +741,9 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
       {sheetOpen && createPortal(
         <div className="coin-chat-panel" ref={panelRef}>
           <div className="coin-chat-head">
-            <div>
+            <div className="coin-chat-head-text">
               <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-              <div className="coin-chat-sub">{t("coinChat.commentCount", { count: comments.length, coinName: coinName(coin) })}</div>
+              <div className="coin-chat-sub">{subHeader}</div>
             </div>
             <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
           </div>

@@ -25,10 +25,16 @@
   color: var(--color-text);
 }
 
+.coin-chat-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .coin-chat-sub {
   margin-top: 2px;
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  line-height: 1.35;
 }
 
 .coin-chat-close {

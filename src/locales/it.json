@@ -1563,7 +1563,6 @@
   "coinChat": {
     "triggerLabel": "Chat dal Vivo",
     "title": "Chat dal Vivo di {{coinName}}",
-    "commentCount": "{{count}} persone che parlano di {{coinName}}",
     "empty": "Nessun commento su {{coin}} ancora. Sii il primo!",
     "delete": "Elimina",
     "report": "Segnala",
@@ -1587,6 +1586,7 @@
     "liqAbove": "Liq Sopra",
     "liqBelow": "Liq Sotto",
     "fearGreed": "Paura e Avidità",
+    "marketCap": "cap. di mercato",
     "announceBanner": "Novità: la chat dal vivo è arrivata — scopri cosa ne pensano gli altri trader su {{coin}}.",
     "reply": "Rispondi",
     "cancel": "Annulla",
