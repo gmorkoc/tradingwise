@@ -927,6 +927,16 @@
       "title": "Paura & Avidità + On-Chain",
       "desc": "Indice di sentiment in tempo reale combinato con hash rate, ricavi dei miner e volume on-chain — l'IA interpreta tutto."
     },
+    "mobileApp": {
+      "label": "In Arrivo su Mobile",
+      "title": "Porta coinhintz ovunque si muova il mercato",
+      "desc": "La dashboard IA completa, chat dal vivo e avvisi di prezzo — direttamente in tasca. App iOS e Android in arrivo presto.",
+      "comingSoon": "Presto",
+      "appStoreEyebrow": "Scarica su",
+      "appStore": "App Store",
+      "googlePlayEyebrow": "DISPONIBILE SU",
+      "googlePlay": "Google Play"
+    },
     "pricing": {
       "label": "Prezzi",
       "sectionTitle": "Inizia gratis, aggiorna quando sei pronto",

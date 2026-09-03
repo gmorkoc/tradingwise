@@ -951,6 +951,16 @@
       "title": "Fear & Greed + On-Chain",
       "desc": "Real-time sentiment index combined with hash rate, miner revenue, and on-chain volume — AI interprets it all."
     },
+    "mobileApp": {
+      "label": "Coming to Mobile",
+      "title": "Take coinhintz anywhere the market moves",
+      "desc": "The full AI dashboard, live chat, and price alerts — right in your pocket. iOS and Android apps launching soon.",
+      "comingSoon": "Soon",
+      "appStoreEyebrow": "Download on the",
+      "appStore": "App Store",
+      "googlePlayEyebrow": "GET IT ON",
+      "googlePlay": "Google Play"
+    },
     "pricing": {
       "label": "Pricing",
       "sectionTitle": "Start free, upgrade when you're ready",

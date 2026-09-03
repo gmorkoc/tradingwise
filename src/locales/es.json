@@ -927,6 +927,16 @@
       "title": "Miedo y codicia + On-Chain",
       "desc": "Índice de sentimiento en tiempo real combinado con hash rate, ingresos de mineros y volumen on-chain — la IA lo interpreta todo."
     },
+    "mobileApp": {
+      "label": "Próximamente en Móvil",
+      "title": "Lleva coinhintz a donde vaya el mercado",
+      "desc": "El panel de IA completo, chat en vivo y alertas de precio — directo en tu bolsillo. Las apps de iOS y Android llegan pronto.",
+      "comingSoon": "Pronto",
+      "appStoreEyebrow": "Disponible en",
+      "appStore": "App Store",
+      "googlePlayEyebrow": "DISPONIBLE EN",
+      "googlePlay": "Google Play"
+    },
     "pricing": {
       "label": "Precios",
       "sectionTitle": "Empieza gratis, mejora cuando estés listo",

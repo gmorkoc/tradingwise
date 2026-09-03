@@ -927,6 +927,16 @@
       "title": "Korku & Açgözlülük + Zincir Üzeri",
       "desc": "Gerçek zamanlı duyarlılık endeksi, hash oranı, madenci gelirleri ve zincir üzeri hacimle birleştirildi — YZ hepsini yorumlar."
     },
+    "mobileApp": {
+      "label": "Mobile Çok Yakında",
+      "title": "coinhintz'i piyasanın gittiği her yere götür",
+      "desc": "Tam YZ panosu, canlı sohbet ve fiyat uyarıları — doğrudan cebinizde. iOS ve Android uygulamaları yakında.",
+      "comingSoon": "Yakında",
+      "appStoreEyebrow": "İndirin",
+      "appStore": "App Store",
+      "googlePlayEyebrow": "ŞUNDAN EDİNİN",
+      "googlePlay": "Google Play"
+    },
     "pricing": {
       "label": "Fiyatlandırma",
       "sectionTitle": "Ücretsiz başla, hazır olduğunda yükselt",
