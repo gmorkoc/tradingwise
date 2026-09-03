@@ -30,6 +30,7 @@ import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
+import { PWAInstallButton } from "./components/PWAInstallGuide";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
@@ -1237,19 +1238,30 @@ function AppDashboard({
               />
             </div>
 
-            <button
-              className="icon-strip-btn"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("open-ai-chat"));
-                setMobileNavOpen(false);
-              }}
-              title={t("nav.aiChat")}
-            >
-              <span className="nav-icon-wrap">
-                <NavIcon d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-              </span>
-              <span className="icon-strip-label">{t("nav.aiChat")}</span>
-            </button>
+            {/* AI Chat itself only ever mounts on iOS (see the
+                ChatInterface render further down) — this nav item swaps
+                back to the original web-only "Install App" prompt on
+                every other platform instead of linking to a feature that
+                isn't there. */}
+            {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? (
+              <button
+                className="icon-strip-btn"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("open-ai-chat"));
+                  setMobileNavOpen(false);
+                }}
+                title={t("nav.aiChat")}
+              >
+                <span className="nav-icon-wrap">
+                  <NavIcon d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </span>
+                <span className="icon-strip-label">{t("nav.aiChat")}</span>
+              </button>
+            ) : (
+              <PWAInstallButton
+                onCloseMobileNav={() => setMobileNavOpen(false)}
+              />
+            )}
 
             <button
               className="icon-strip-btn"
