@@ -477,14 +477,11 @@
     z-index: 250;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 9px 14px;
-    border: 1px solid var(--color-primary);
+    height: 44px;
+    padding: 0 16px 0 0;
+    border: none;
     border-radius: 999px;
-    background: var(--color-card-bg);
-    color: var(--color-text);
-    font-size: 0.78rem;
-    font-weight: 700;
+    background: var(--color-primary);
     box-shadow: 0 8px 24px var(--color-shadow);
     cursor: pointer;
     animation: coin-chat-trigger-glow 2.4s ease-out infinite;
@@ -499,9 +496,54 @@
     }
   }
 
-  .coin-chat-trigger-icon {
+  /* Round "speech bubble" bump on the left — same fill as the pill, sized
+     slightly taller so it overhangs top/bottom like a real bubble, with a
+     small tail. The 3 dots bounce in sequence, like a typing indicator. */
+  .coin-chat-trigger-bubble {
+    position: relative;
+    flex-shrink: 0;
+    width: 44px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--color-primary);
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 3.5px;
+  }
+
+  .coin-chat-trigger-tail {
+    position: absolute;
+    left: 9px;
+    bottom: 3px;
+    width: 10px;
+    height: 10px;
+    background: var(--color-primary);
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+  }
+
+  .coin-chat-trigger-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #fff;
+    animation: coin-chat-trigger-typing 1.3s ease-in-out infinite;
+  }
+  .coin-chat-trigger-dot:nth-child(1) { animation-delay: 0s; }
+  .coin-chat-trigger-dot:nth-child(2) { animation-delay: 0.15s; }
+  .coin-chat-trigger-dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes coin-chat-trigger-typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30%           { transform: translateY(-3px); opacity: 1; }
+  }
+
+  .coin-chat-trigger-label {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #fff;
   }
 
   /* Full-screen takeover, portaled to <body> — identical treatment to
@@ -715,7 +757,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .coin-chat-trigger {
+  .coin-chat-trigger,
+  .coin-chat-trigger-dot {
     animation: none;
   }
 }

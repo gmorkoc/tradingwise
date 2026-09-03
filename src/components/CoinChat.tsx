@@ -620,13 +620,11 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     <div className="coin-chat">
       {!sheetOpen && (
         <button type="button" className="coin-chat-trigger" onClick={() => setSheetOpen(true)}>
-          <span className="coin-chat-trigger-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1.5" y="3" width="14" height="10" rx="4" />
-              <path d="M5 13l-1 4 5-4" />
-              <rect x="8.5" y="9" width="14" height="10" rx="4" />
-              <path d="M19 19l1 4-5-4" />
-            </svg>
+          <span className="coin-chat-trigger-bubble">
+            <span className="coin-chat-trigger-dot" />
+            <span className="coin-chat-trigger-dot" />
+            <span className="coin-chat-trigger-dot" />
+            <span className="coin-chat-trigger-tail" />
           </span>
           <span className="coin-chat-trigger-label">{t("coinChat.triggerLabel")}</span>
         </button>
