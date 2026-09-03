@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // comment that isn't theirs.
     const { data: comment } = await supabaseAdmin
       .from("coin_comments")
-      .select("user_id, username, coin")
+      .select("user_id, username, coin, avatar_url")
       .eq("id", commentId)
       .single();
     if (!comment || comment.user_id !== user.id) {
@@ -83,6 +83,8 @@ Deno.serve(async (req) => {
           type: "coin_mention",
           coin: comment.coin,
           commentId: String(commentId),
+          username: comment.username,
+          ...(comment.avatar_url ? { avatarUrl: comment.avatar_url } : {}),
         });
         if (ok) sentCount++;
       }

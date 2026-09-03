@@ -1,15 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { Browser } from "@capacitor/browser";
+import { Avatar } from "./Avatar";
 import "../styles/PushToast.css";
+
+interface PushToastData {
+  type?: string;
+  url?: string;
+  coin?: string;
+  commentId?: string;
+  avatarUrl?: string;
+  username?: string;
+}
 
 interface PushToastDetail {
   title: string;
   body: string;
-  data?: Record<string, unknown>;
+  data?: PushToastData;
 }
 
 const DURATION = 6000;
+
+function initials(name: string): string {
+  return name.slice(0, 2).toUpperCase();
+}
 
 // Rendered once at the app root. pushNotifications.ts dispatches
 // "push-toast" for any push received while the app is in the foreground
@@ -32,8 +46,9 @@ export function PushToast() {
 
   if (!toast) return null;
 
+  const data = toast.data;
+
   const handleTap = () => {
-    const data = toast.data as { type?: string; url?: string; coin?: string; commentId?: string } | undefined;
     if (data?.type === "daily_brief" && data.url) {
       Browser.open({ url: data.url });
     } else if (data?.type === "upgrade_reminder") {
@@ -48,7 +63,11 @@ export function PushToast() {
 
   return ReactDOM.createPortal(
     <div className="push-toast" onClick={handleTap} role="alert">
-      <div className="push-toast-icon">🔔</div>
+      {data?.type === "coin_mention" ? (
+        <Avatar url={data.avatarUrl} fallback={initials(data.username ?? "?")} className="push-toast-avatar" />
+      ) : (
+        <div className="push-toast-icon">🔔</div>
+      )}
       <div className="push-toast-body">
         <strong>{toast.title}</strong>
         <span>{toast.body}</span>
