@@ -16,6 +16,16 @@ export interface CoinComment {
 
 const BODY_MAX = 500;
 
+// avatar_url is denormalized onto coin_comments at post time (same as
+// username/tier), so a changed profile photo would otherwise only show up
+// on comments posted afterward. Backfills every one of the caller's own
+// past comments too — SECURITY DEFINER RPC scoped to auth.uid(), see
+// 20260903020000_backfill_comment_avatars.sql.
+export async function backfillMyCommentAvatars(avatarUrl: string): Promise<void> {
+  const { error } = await supabase.rpc("update_my_comment_avatars", { new_avatar_url: avatarUrl });
+  if (error) throw new Error(error.message);
+}
+
 // `before` pages backward in time (strictly older than that comment's
 // created_at) — a cursor rather than an offset so comments inserted at the
 // top between page loads (realtime) can't shift a later page's results.

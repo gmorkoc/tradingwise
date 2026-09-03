@@ -8,6 +8,7 @@ import {
   ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, uploadAvatar, saveAvatarUrl,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
+import { backfillMyCommentAvatars } from "../services/coinChat";
 import { Avatar } from "./Avatar";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
@@ -310,6 +311,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
       const url = await uploadAvatar(user.id, blob, contentType);
       await saveAvatarUrl(user.id, url);
       await refreshProfile();
+      // Best-effort — the avatar itself already saved successfully above,
+      // so a failure here shouldn't surface as the whole change failing.
+      backfillMyCommentAvatars(url).catch((err) =>
+        console.error("Failed to backfill avatar onto past comments:", err)
+      );
     } catch (err: any) {
       setAvatarError(err.message ?? t("profile.messages.saveFailed", "Couldn't save your photo — please try again."));
     } finally {
