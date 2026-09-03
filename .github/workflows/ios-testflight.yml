@@ -56,6 +56,35 @@ jobs:
           echo "${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}" | base64 --decode \
             > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
 
+      # Reuses one persistent "Apple Distribution" certificate + provisioning
+      # profile (stored as secrets) instead of automatic signing, which used
+      # to mint a brand-new certificate on every single run — ephemeral
+      # runners have no cached keychain, so each run burned a fresh
+      # certificate slot until the account hit Apple's cap and archiving
+      # started failing outright.
+      - name: Import signing certificate + provisioning profile
+        env:
+          CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPSTORE_API_KEY_ID }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/dist_cert.p12"
+
+          echo -n "$CERT_P12_BASE64" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo -n "$PROFILE_BASE64" | base64 --decode \
+            -o ~/Library/MobileDevice/Provisioning\ Profiles/app_distribution.mobileprovision
+
       - name: Archive
         working-directory: ios/App
         run: |
@@ -65,10 +94,11 @@ jobs:
             -configuration Release \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -destination "generic/platform=iOS" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ secrets.APPSTORE_API_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APPSTORE_API_ISSUER_ID }}
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            "PROVISIONING_PROFILE_SPECIFIER=iOS Team Store Provisioning Profile: io.coinhintz.app" \
+            DEVELOPMENT_TEAM=R4WU895Q9L \
+            OTHER_CODE_SIGN_FLAGS="--keychain $RUNNER_TEMP/signing.keychain-db"
 
       - name: Write export options
         run: |
@@ -82,7 +112,14 @@ jobs:
             <key>teamID</key>
             <string>R4WU895Q9L</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>io.coinhintz.app</key>
+              <string>iOS Team Store Provisioning Profile: io.coinhintz.app</string>
+            </dict>
           </dict>
           </plist>
           EOF
@@ -92,11 +129,11 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ secrets.APPSTORE_API_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APPSTORE_API_ISSUER_ID }}
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Clean up temporary keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
 
       - name: Upload to App Store Connect
         run: |
