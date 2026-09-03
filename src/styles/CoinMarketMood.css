@@ -1,69 +1,65 @@
-/* A slim, clearly-labeled strip of real market data (price, funding rate,
+/* A slim, clearly-labeled block of real market data (price, funding rate,
    long/short ratio, RSI, MACD, open interest, liquidation zones, Fear &
    Greed) — visually distinct from chat rows so it never reads as a
-   message from a user. Horizontally scrollable rather than wrapping, so
-   it stays a single line no matter how many metrics have data. */
+   message from a user. A compact grid, 3 per row, so every value stays
+   aligned regardless of how many metrics happen to have data. */
 .coin-mood {
-  position: relative;
   flex-shrink: 0;
-  padding: 8px 0 8px 16px;
+  padding: 10px 16px;
   background: var(--color-input-bg);
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Fades the last visible chip into the background instead of cutting it
-   off hard, hinting there's more to scroll to. */
-.coin-mood::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 28px;
-  background: linear-gradient(to right, transparent, var(--color-input-bg));
-  pointer-events: none;
-}
-
 .coin-mood-label {
   display: block;
-  flex-shrink: 0;
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-muted);
-  padding-bottom: 6px;
+  padding-bottom: 8px;
 }
 
-.coin-mood-scroll {
+.coin-mood-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 6px;
+}
+
+.coin-mood-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.coin-mood-cell-icon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 2px;
+  border-radius: 7px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
-  gap: 14px;
-  overflow-x: auto;
-  padding-right: 16px;
-  scrollbar-width: none;
-}
-.coin-mood-scroll::-webkit-scrollbar { display: none; }
-
-.coin-mood-metric {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  flex-shrink: 0;
-  white-space: nowrap;
+  justify-content: center;
+  font-size: 0.7rem;
+  line-height: 1;
 }
 
-.coin-mood-metric-label {
-  font-size: 0.66rem;
+.coin-mood-cell-label {
+  font-size: 0.6rem;
   color: var(--color-text-muted);
 }
 
-.coin-mood-metric-value {
-  font-size: 0.72rem;
-  font-weight: 700;
+.coin-mood-cell-value {
+  font-size: 0.76rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
+  white-space: nowrap;
 }
 
-.coin-mood-metric-value.up { color: var(--color-success); }
-.coin-mood-metric-value.down { color: var(--color-danger); }
+.coin-mood-cell-value.up { color: var(--color-success); }
+.coin-mood-cell-value.down { color: var(--color-danger); }

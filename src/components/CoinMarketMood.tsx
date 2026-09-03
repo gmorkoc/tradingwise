@@ -38,12 +38,20 @@ function fmtCompactUsd(n: number): string {
   return `$${n.toFixed(0)}`;
 }
 
+interface Cell {
+  key: string;
+  icon: string;
+  label: string;
+  value: string;
+  cls: "" | " up" | " down";
+}
+
 // Real, already-fetched market data — price, funding rate, long/short
 // ratio, RSI, MACD trend, open interest and liquidation zones from
 // CoinGlass/exchange APIs, Fear & Greed from alternative.me — never
-// fabricated commentary. Clearly labeled as data, not chat. A horizontal
-// scroll ticker rather than a wrapping row so it never grows past one
-// line no matter how many of these happen to have data.
+// fabricated commentary. Clearly labeled as data, not chat. A compact
+// grid rather than a wrapping/scrolling row — every value stays aligned
+// regardless of how many of these happen to have data.
 export function CoinMarketMood({ coin }: Props) {
   const { t } = useTranslation();
   const [data, setData] = useState<MoodData>(EMPTY);
@@ -82,73 +90,61 @@ export function CoinMarketMood({ coin }: Props) {
   const lsUp = (data.longShortRatio ?? 1) >= 1;
   // Standard 70/30 overbought/oversold thresholds — same convention used
   // in the tutorial and Alt Analysis' indicator glossary.
-  const rsiClass = data.rsi === null ? "" : data.rsi >= 70 ? " down" : data.rsi <= 30 ? " up" : "";
+  const rsiCls: Cell["cls"] = data.rsi === null ? "" : data.rsi >= 70 ? " down" : data.rsi <= 30 ? " up" : "";
   const macdUp = data.macd !== null && data.macdSignal !== null ? data.macd >= data.macdSignal : null;
+
+  const cells: Cell[] = [];
+  if (data.price !== null) {
+    cells.push({ key: "price", icon: "$", label: t("coinChat.price", "Price"), value: fmtPrice(data.price), cls: "" });
+  }
+  if (data.fundingRate !== null) {
+    cells.push({
+      key: "funding", icon: "⚡", label: t("coinChat.funding", "Funding"),
+      value: `${fundingUp ? "+" : ""}${(data.fundingRate * 100).toFixed(3)}%`, cls: fundingUp ? " up" : " down",
+    });
+  }
+  if (data.longShortRatio !== null) {
+    cells.push({
+      key: "ls", icon: "⇄", label: t("coinChat.longShort", "L/S"),
+      value: data.longShortRatio.toFixed(2), cls: lsUp ? " up" : " down",
+    });
+  }
+  if (data.rsi !== null) {
+    cells.push({ key: "rsi", icon: "〰", label: t("coinChat.rsi", "RSI"), value: data.rsi.toFixed(0), cls: rsiCls });
+  }
+  if (macdUp !== null) {
+    cells.push({
+      key: "macd", icon: "≈", label: t("coinChat.macd", "MACD"),
+      value: macdUp ? t("coinChat.bullish", "Bullish") : t("coinChat.bearish", "Bearish"), cls: macdUp ? " up" : " down",
+    });
+  }
+  if (data.openInterest !== null) {
+    cells.push({ key: "oi", icon: "Σ", label: t("coinChat.openInterest", "OI"), value: fmtCompactUsd(data.openInterest), cls: "" });
+  }
+  if (data.liquidationAbove !== null) {
+    cells.push({ key: "liqAbove", icon: "↑", label: t("coinChat.liqAbove", "Liq Above"), value: fmtPrice(data.liquidationAbove), cls: " down" });
+  }
+  if (data.liquidationBelow !== null) {
+    cells.push({ key: "liqBelow", icon: "↓", label: t("coinChat.liqBelow", "Liq Below"), value: fmtPrice(data.liquidationBelow), cls: " up" });
+  }
+  if (data.fearGreedValue !== null) {
+    cells.push({
+      key: "fg", icon: "◐", label: t("coinChat.fearGreed", "Fear & Greed"),
+      value: `${data.fearGreedValue} · ${data.fearGreedLabel}`, cls: "",
+    });
+  }
 
   return (
     <div className="coin-mood">
       <span className="coin-mood-label">{t("coinChat.marketData", "Market data")}</span>
-      <div className="coin-mood-scroll">
-        {data.price !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.price", "Price")}</span>
-            <span className="coin-mood-metric-value">{fmtPrice(data.price)}</span>
-          </span>
-        )}
-        {data.fundingRate !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.funding", "Funding")}</span>
-            <span className={`coin-mood-metric-value${fundingUp ? " up" : " down"}`}>
-              {fundingUp ? "+" : ""}{(data.fundingRate * 100).toFixed(3)}%
-            </span>
-          </span>
-        )}
-        {data.longShortRatio !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.longShort", "L/S")}</span>
-            <span className={`coin-mood-metric-value${lsUp ? " up" : " down"}`}>
-              {data.longShortRatio.toFixed(2)}
-            </span>
-          </span>
-        )}
-        {data.rsi !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.rsi", "RSI")}</span>
-            <span className={`coin-mood-metric-value${rsiClass}`}>{data.rsi.toFixed(0)}</span>
-          </span>
-        )}
-        {macdUp !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.macd", "MACD")}</span>
-            <span className={`coin-mood-metric-value${macdUp ? " up" : " down"}`}>
-              {macdUp ? t("coinChat.bullish", "Bullish") : t("coinChat.bearish", "Bearish")}
-            </span>
-          </span>
-        )}
-        {data.openInterest !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.openInterest", "OI")}</span>
-            <span className="coin-mood-metric-value">{fmtCompactUsd(data.openInterest)}</span>
-          </span>
-        )}
-        {data.liquidationAbove !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.liqAbove", "Liq Above")}</span>
-            <span className="coin-mood-metric-value down">{fmtPrice(data.liquidationAbove)}</span>
-          </span>
-        )}
-        {data.liquidationBelow !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.liqBelow", "Liq Below")}</span>
-            <span className="coin-mood-metric-value up">{fmtPrice(data.liquidationBelow)}</span>
-          </span>
-        )}
-        {data.fearGreedValue !== null && (
-          <span className="coin-mood-metric">
-            <span className="coin-mood-metric-label">{t("coinChat.fearGreed", "Fear & Greed")}</span>
-            <span className="coin-mood-metric-value">{data.fearGreedValue} · {data.fearGreedLabel}</span>
-          </span>
-        )}
+      <div className="coin-mood-grid">
+        {cells.map((c) => (
+          <div className="coin-mood-cell" key={c.key}>
+            <div className="coin-mood-cell-icon">{c.icon}</div>
+            <div className="coin-mood-cell-label">{c.label}</div>
+            <div className={`coin-mood-cell-value${c.cls}`}>{c.value}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
