@@ -226,7 +226,11 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
-  }, [coin]);
+    // sheetOpen: on mobile {feed} only mounts once the sheet is open (it's
+    // portaled), so feedRef.current is still null on first mount — this
+    // needs to re-run once the sheet actually opens to pick up the ref,
+    // not just when coin changes.
+  }, [coin, sheetOpen]);
 
   // A tapped @mention push notification sets highlightCommentId from
   // outside (via App.tsx) — make sure the mobile sheet is actually open
