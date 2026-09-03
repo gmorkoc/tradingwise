@@ -290,8 +290,13 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .wl-strip { gap: 10px; padding: 8px 12px; }
-  .wl-strip-label { display: none; }
+  .wl-strip { gap: 8px; padding: 8px 10px; }
+  .wl-strip-label { font-size: 0.68rem; padding-right: 8px; gap: 4px; }
   .wl-chip-price { font-size: 0.78rem; }
-  .wl-chip-spark { display: none; }
+  .wl-scroll { gap: 16px; }
+
+  .wl-strip-actions { gap: 0; padding-left: 6px; }
+  .wl-nav-btn { width: 17px; height: 17px; font-size: 0.72rem; border-radius: 4px; }
+  .wl-search-wrap { margin-left: 4px; }
+  .wl-add-btn { padding: 5px 8px; font-size: 0.68rem; }
 }
