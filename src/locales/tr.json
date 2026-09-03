@@ -1549,7 +1549,8 @@
   "whaleAlerts": {
     "label": "Balina Uyarısı · BTC",
     "bullish": "▲ Boğa",
-    "bearish": "▼ Ayı"
+    "bearish": "▼ Ayı",
+    "snooze": "30dk Ertele"
   },
   "orderBook": {
     "title": "Emir Defteri",

@@ -1549,7 +1549,8 @@
   "whaleAlerts": {
     "label": "Avviso Balena · BTC",
     "bullish": "▲ Rialzista",
-    "bearish": "▼ Ribassista"
+    "bearish": "▼ Ribassista",
+    "snooze": "Silenzia 30m"
   },
   "orderBook": {
     "title": "Libro Ordini",

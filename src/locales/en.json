@@ -1578,7 +1578,8 @@
   "whaleAlerts": {
     "label": "Whale Alert · BTC",
     "bullish": "▲ Bullish",
-    "bearish": "▼ Bearish"
+    "bearish": "▼ Bearish",
+    "snooze": "Snooze 30m"
   },
   "optionsAnalytics": {
     "loading": "Loading options data…",

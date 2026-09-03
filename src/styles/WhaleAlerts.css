@@ -16,17 +16,15 @@
   position: relative;
   overflow: hidden;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px 12px 12px;
+  flex-direction: column;
   background: var(--color-surface);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
-  min-width: 280px;
-  max-width: 340px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+  min-width: 220px;
+  max-width: 260px;
   animation: whale-slide-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
@@ -35,11 +33,17 @@
   to   { opacity: 1; transform: translateX(0)     scale(1);   }
 }
 
+.whale-alert-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 7px 9px;
+}
+
 .whale-alert-icon {
-  font-size: 1.7rem;
+  font-size: 1.15rem;
   line-height: 1;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.35));
 }
 
 .whale-alert-body {
@@ -47,27 +51,27 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .whale-alert-label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.55rem;
+  gap: 5px;
+  font-size: 0.5rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.1em;
   color: var(--color-primary);
   line-height: 1.2;
 }
 
 .whale-sentiment {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 1px 6px;
-  border-radius: 4px;
+  letter-spacing: 0.05em;
+  padding: 0 5px;
+  border-radius: 3px;
 }
 .whale-sentiment--bullish {
   background: rgba(34, 197, 94, 0.15);
@@ -81,12 +85,12 @@
 .whale-alert-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .whale-alert-btc {
-  font-size: 1.05rem;
+  font-size: 0.86rem;
   font-weight: 800;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
@@ -94,7 +98,7 @@
 }
 
 .whale-alert-usd {
-  font-size: 0.78rem;
+  font-size: 0.66rem;
   font-weight: 500;
   color: var(--color-text-secondary);
 }
@@ -103,20 +107,19 @@
 .whale-alert-transfer {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 1px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .whale-alert-entity {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 600;
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100px;
+  max-width: 76px;
   cursor: default;
 }
 
@@ -128,7 +131,7 @@
 .whale-alert-arrow {
   color: var(--color-text-muted);
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 /* Action buttons */
@@ -136,7 +139,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   flex-shrink: 0;
 }
 
@@ -144,10 +147,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   color: var(--color-primary);
-  border-radius: 8px;
+  border-radius: 6px;
   text-decoration: none;
   transition: background 0.15s;
 }
@@ -157,13 +160,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   background: none;
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: color 0.15s, background 0.15s;
   padding: 0;
 }
@@ -176,13 +179,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   background: none;
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: color 0.15s, background 0.15s;
   padding: 0;
 }
@@ -190,31 +193,32 @@
 .whale-mute--off { color: #ef4444; }
 .whale-mute--off:hover { color: #f87171; background: var(--color-input-bg); }
 
-.whale-snooze {
+/* Quiet secondary action — thin footer strip, not competing with the
+   primary content above it. */
+.whale-snooze-footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
+  gap: 4px;
+  padding: 4px 9px;
+  background: var(--color-input-bg);
   border: none;
-  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.6rem;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 8px;
-  transition: color 0.15s, background 0.15s;
-  padding: 0;
 }
-.whale-snooze:hover { color: var(--color-text); background: var(--color-input-bg); }
+.whale-snooze-footer:hover { color: var(--color-text); }
 
 /* Shrinking progress bar at bottom */
 .whale-alert-progress {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 2px;
-  border-radius: 0 0 16px 16px;
+  height: 1.5px;
   background: var(--color-primary);
-  opacity: 0.45;
+  opacity: 0.4;
   animation: whale-progress var(--dismiss-ms, 12000ms) linear forwards;
 }
 @keyframes whale-progress {
