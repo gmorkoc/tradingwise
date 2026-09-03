@@ -1,13 +1,28 @@
-/* A slim, clearly-labeled block of real market data (price, funding rate,
+/* A slim, clearly-labeled strip of real market data (price, funding rate,
    long/short ratio, RSI, MACD, open interest, liquidation zones, Fear &
    Greed) — visually distinct from chat rows so it never reads as a
-   message from a user. A compact grid, 3 per row, so every value stays
-   aligned regardless of how many metrics happen to have data. */
+   message from a user. A single scrollable row rather than wrapping into
+   a grid, so it never grows past one line regardless of how many
+   metrics happen to have data. */
 .coin-mood {
+  position: relative;
   flex-shrink: 0;
-  padding: 10px 16px;
+  padding: 10px 0 10px 16px;
   background: var(--color-input-bg);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Fades the last visible cell into the background instead of cutting it
+   off hard, hinting there's more to scroll to. */
+.coin-mood::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--color-input-bg));
+  pointer-events: none;
 }
 
 .coin-mood-label {
@@ -21,16 +36,21 @@
 }
 
 .coin-mood-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  overflow-x: auto;
+  padding-right: 16px;
+  scrollbar-width: none;
 }
+.coin-mood-grid::-webkit-scrollbar { display: none; }
 
 .coin-mood-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
   text-align: center;
 }
 
@@ -51,6 +71,7 @@
 .coin-mood-cell-label {
   font-size: 0.6rem;
   color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .coin-mood-cell-value {

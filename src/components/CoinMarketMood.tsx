@@ -60,27 +60,34 @@ export function CoinMarketMood({ coin }: Props) {
     let cancelled = false;
     setData(EMPTY);
 
-    Promise.all([
-      coinglass.getAllBTCData(coin).catch(() => null),
-      fetchFearGreed().catch(() => null),
-    ]).then(([btc, fg]) => {
-      if (cancelled) return;
-      setData({
-        price: typeof btc?.price === "number" ? btc.price : null,
-        fundingRate: typeof btc?.fundingRate === "number" ? btc.fundingRate : null,
-        longShortRatio: typeof btc?.longShortRatio === "number" ? btc.longShortRatio : null,
-        fearGreedValue: fg?.current.value ?? null,
-        fearGreedLabel: fg?.current.classification ?? null,
-        rsi: typeof btc?.rsi === "number" ? btc.rsi : null,
-        macd: typeof btc?.macd === "number" ? btc.macd : null,
-        macdSignal: typeof btc?.macdSignal === "number" ? btc.macdSignal : null,
-        openInterest: typeof btc?.openInterest === "number" ? btc.openInterest : null,
-        liquidationAbove: typeof btc?.liquidationAbove === "number" ? btc.liquidationAbove : null,
-        liquidationBelow: typeof btc?.liquidationBelow === "number" ? btc.liquidationBelow : null,
+    // Same 30s cadence App.tsx already polls getAllBTCData at for the main
+    // chart/header — this just rides the same real-time refresh, not a
+    // separate slower one.
+    const refresh = () => {
+      Promise.all([
+        coinglass.getAllBTCData(coin).catch(() => null),
+        fetchFearGreed().catch(() => null),
+      ]).then(([btc, fg]) => {
+        if (cancelled) return;
+        setData({
+          price: typeof btc?.price === "number" ? btc.price : null,
+          fundingRate: typeof btc?.fundingRate === "number" ? btc.fundingRate : null,
+          longShortRatio: typeof btc?.longShortRatio === "number" ? btc.longShortRatio : null,
+          fearGreedValue: fg?.current.value ?? null,
+          fearGreedLabel: fg?.current.classification ?? null,
+          rsi: typeof btc?.rsi === "number" ? btc.rsi : null,
+          macd: typeof btc?.macd === "number" ? btc.macd : null,
+          macdSignal: typeof btc?.macdSignal === "number" ? btc.macdSignal : null,
+          openInterest: typeof btc?.openInterest === "number" ? btc.openInterest : null,
+          liquidationAbove: typeof btc?.liquidationAbove === "number" ? btc.liquidationAbove : null,
+          liquidationBelow: typeof btc?.liquidationBelow === "number" ? btc.liquidationBelow : null,
+        });
       });
-    });
+    };
 
-    return () => { cancelled = true; };
+    refresh();
+    const id = setInterval(refresh, 30_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, [coin]);
 
   const hasAny = Object.values(data).some((v) => v !== null);
