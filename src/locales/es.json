@@ -1558,7 +1558,7 @@
     "colValue": "Valor"
   },
   "coinChat": {
-    "triggerCount": "{{count}} comentarios",
+    "triggerLabel": "Chat en Vivo",
     "title": "Chat de {{coinName}}",
     "commentCount": "{{count}} comentarios",
     "empty": "Aún no hay comentarios sobre {{coin}}. ¡Sé el primero!",

@@ -490,7 +490,8 @@
   }
 
   .coin-chat-trigger-icon {
-    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
   }
 
   /* Full-screen takeover, portaled to <body> — identical treatment to

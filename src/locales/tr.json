@@ -1558,7 +1558,7 @@
     "colValue": "Değer"
   },
   "coinChat": {
-    "triggerCount": "{{count}} yorum",
+    "triggerLabel": "Canlı Sohbet",
     "title": "{{coinName}} Sohbeti",
     "commentCount": "{{count}} yorum",
     "empty": "{{coin}} için henüz yorum yok. İlk yorumu sen yaz!",
