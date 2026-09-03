@@ -2889,7 +2889,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="aiqw-live-dot" />
                   LIVE
                 </span>
-                <span className="pattern-insight-ai-badge">
+                <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
                   {t("chart.aiPowered")}
                 </span>
                 <button
@@ -3173,7 +3173,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="aiqw-live-dot" />
                   LIVE
                 </span>
-                <span className="pattern-insight-ai-badge">
+                <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
                   {t("chart.aiPowered")}
                 </span>
               </div>

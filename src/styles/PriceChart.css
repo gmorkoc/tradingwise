@@ -1699,6 +1699,19 @@ html[data-theme="light"] .cap-overlay-feature {
   padding: 2px 7px;
 }
 
+/* Matches .aiqw-live-badge's exact pill shape (the LIVE badge it sits
+   next to) — same geometry, keeps its own purple AI color scheme. Scoped
+   to a modifier rather than changing the shared class, since
+   pattern-insight-ai-badge is also used elsewhere (OnChainMetrics,
+   GannAnalysis) with the older look. */
+.pattern-insight-ai-badge--pill {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 99px;
+  padding: 1px 6px 1px 4px;
+}
+
 .pattern-insight-badge {
   font-size: 0.82rem;
   font-weight: 700;

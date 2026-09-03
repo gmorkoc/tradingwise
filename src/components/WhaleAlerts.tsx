@@ -5,6 +5,7 @@ import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/WhaleAlerts.css";
 
 const DISMISS_MS = 4_000;
+const SNOOZE_MS = 30 * 60 * 1000;
 
 function playWhaleSound() {
   try {
@@ -66,6 +67,13 @@ export function WhaleAlerts({ btcPrice }: Props) {
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
+  const [snoozedUntil, setSnoozedUntil] = useState<number | null>(() => {
+    const saved = Number(localStorage.getItem("whale-snoozed-until"));
+    return saved > Date.now() ? saved : null;
+  });
+  const snoozedUntilRef = useRef(snoozedUntil);
+  snoozedUntilRef.current = snoozedUntil;
+
   const queueRef = useRef<WhaleTx[]>([]);
   const processingRef = useRef(false);
   const soundPlayedRef = useRef(false);
@@ -81,6 +89,17 @@ export function WhaleAlerts({ btcPrice }: Props) {
       localStorage.setItem("whale-muted", next ? "1" : "0");
       return next;
     });
+  }, []);
+
+  // Snoozing clears whatever's on screen right now too (not just future
+  // alerts), and drops anything already queued so the backlog doesn't pop
+  // up immediately after — matches the notificationsEnabled behavior above.
+  const snooze = useCallback(() => {
+    const until = Date.now() + SNOOZE_MS;
+    localStorage.setItem("whale-snoozed-until", String(until));
+    setSnoozedUntil(until);
+    queueRef.current = [];
+    setAlerts([]);
   }, []);
 
   const dismiss = useCallback((id: string) => {
@@ -102,6 +121,7 @@ export function WhaleAlerts({ btcPrice }: Props) {
   useEffect(() => {
     return subscribeWhaleAlerts(tx => {
       if (!notificationsEnabledRef.current) return;
+      if (snoozedUntilRef.current && Date.now() < snoozedUntilRef.current) return;
       queueRef.current.push(tx);
       if (!processingRef.current) {
         processingRef.current = true;
@@ -179,6 +199,18 @@ export function WhaleAlerts({ btcPrice }: Props) {
                     <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
                   </svg>
                 )}
+              </button>
+              <button
+                className="whale-snooze"
+                onClick={snooze}
+                aria-label="Snooze whale alerts for 30 minutes"
+                title="Snooze 30 min"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="13" r="8"/>
+                  <path d="M12 9v4l3 2"/>
+                  <path d="M9 1h6"/>
+                </svg>
               </button>
               <a
                 href={`https://mempool.space/tx/${alert.hash}`}
