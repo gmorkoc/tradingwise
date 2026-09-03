@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
-import { COINS, fetchCoinMarketCaps } from "../services/coinglass";
+import { COINS, fetchCoinMarketCaps, fetchCoinChanges24h } from "../services/coinglass";
 import {
   fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
   likeComment, unlikeComment, fetchMyLikedCommentIds,
@@ -200,6 +200,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [marketCap, setMarketCap] = useState<number | null>(null);
+  const [change24h, setChange24h] = useState<number | null>(null);
+  const [logoError, setLogoError] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
@@ -269,8 +271,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   useEffect(() => {
     let cancelled = false;
     setMarketCap(null);
+    setChange24h(null);
+    setLogoError(false);
     fetchCoinMarketCaps().then((caps) => {
       if (!cancelled) setMarketCap(caps.get(coin) ?? null);
+    });
+    fetchCoinChanges24h().then((changes) => {
+      if (!cancelled) setChange24h(changes.get(coin)?.change ?? null);
     });
     return () => { cancelled = true; };
   }, [coin]);
@@ -394,11 +401,19 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   // its root ancestor, so rendering never has to handle arbitrary nesting.
   const replyToId = replyTarget ? (replyTarget.reply_to_id ?? replyTarget.id) : null;
 
-  const subHeader = (
-    <>
-      {coinName(coin)} — {COIN_BLURBS[coin] ?? COIN_BLURB_FALLBACK}
-      {marketCap !== null && <> · {fmtMarketCap(marketCap)} {t("coinChat.marketCap", "market cap")}</>}
-    </>
+  const coinBlurb = COIN_BLURBS[coin] ?? COIN_BLURB_FALLBACK;
+  const capUp = (change24h ?? 0) >= 0;
+
+  const headerLogo = !logoError ? (
+    <img
+      className="coin-chat-logo"
+      src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+      alt=""
+      loading="lazy"
+      onError={() => setLogoError(true)}
+    />
+  ) : (
+    <div className="coin-chat-logo coin-chat-logo--fallback">{coin[0]}</div>
   );
 
   const handlePost = async () => {
@@ -706,9 +721,18 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     return (
       <div className="coin-chat-card">
         <div className="coin-chat-head">
+          {headerLogo}
           <div className="coin-chat-head-text">
-            <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-            <div className="coin-chat-sub">{subHeader}</div>
+            <div className="coin-chat-title-row">
+              <span className="coin-chat-live-dot" />
+              <span className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</span>
+            </div>
+            <div className="coin-chat-blurb">{coinBlurb}</div>
+            {marketCap !== null && (
+              <div className={`coin-chat-cap-pill${capUp ? " up" : " down"}`}>
+                {capUp ? "▲" : "▼"} {fmtMarketCap(marketCap)} {t("coinChat.marketCap", "market cap")}
+              </div>
+            )}
           </div>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
         </div>
@@ -741,9 +765,18 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
       {sheetOpen && createPortal(
         <div className="coin-chat-panel" ref={panelRef}>
           <div className="coin-chat-head">
+            {headerLogo}
             <div className="coin-chat-head-text">
-              <div className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</div>
-              <div className="coin-chat-sub">{subHeader}</div>
+              <div className="coin-chat-title-row">
+                <span className="coin-chat-live-dot" />
+                <span className="coin-chat-title">{t("coinChat.title", { coinName: coinName(coin) })}</span>
+              </div>
+              <div className="coin-chat-blurb">{coinBlurb}</div>
+              {marketCap !== null && (
+                <div className={`coin-chat-cap-pill${capUp ? " up" : " down"}`}>
+                  {capUp ? "▲" : "▼"} {fmtMarketCap(marketCap)} {t("coinChat.marketCap", "market cap")}
+                </div>
+              )}
             </div>
             <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
           </div>
