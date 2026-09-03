@@ -43,11 +43,25 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Same convention as CoinChat.tsx's own useIsDesktop — gates the floating
+// FAB to desktop-width web (see the bottom of this component).
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia("(min-width: 641px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 641px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isDesktop;
+}
+
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded = false, onOpenAuth, onOpenUpgrade }) => {
   const { t } = useTranslation();
   const { exceeded, consume } = useAIQuota();
   const { tier, user } = useAuth();
   const hasPro = hasAccess(tier, "pro");
+  const isDesktop = useIsDesktop();
 
   const defaultMessages = (): DisplayMessage[] => [
     { id: "0", role: "assistant", content: t("chat.defaultMessage", { coin: "BTC" }) },
@@ -366,5 +380,43 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ btcData, embedded 
 
   if (embedded) return panel;
 
-  return isOpen && hasPro ? panel : null;
+  // Floating trigger is web-desktop only: iOS opens this via the "AI Chat"
+  // nav item's open-ai-chat event instead (no room/need for a floating
+  // bubble there), and mobile web has no entry point to this panel at all.
+  if (Capacitor.isNativePlatform() || !isDesktop) {
+    return isOpen && hasPro ? panel : null;
+  }
+
+  const handleFabClick = () => {
+    if (!hasPro) {
+      if (!user) { onOpenAuth?.(); } else { onOpenUpgrade?.(); }
+      return;
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <>
+      {isOpen && hasPro && panel}
+      <div className="chat-fab-wrap">
+        <button
+          className={`chat-fab ${isOpen ? "open" : ""}`}
+          onClick={handleFabClick}
+          title={hasPro ? t("chat.title") : "AI Chat · Pro required"}
+        >
+          {isOpen && hasPro ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          ) : (
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L13.8 9.3L21 12L13.8 14.7L12 22L10.2 14.7L3 12L10.2 9.3Z"/>
+              <path d="M19.5 4.5L20.2 6.8L22.5 7.5L20.2 8.2L19.5 10.5L18.8 8.2L16.5 7.5L18.8 6.8Z" opacity="0.8"/>
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
+  );
 };

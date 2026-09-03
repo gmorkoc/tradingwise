@@ -1927,10 +1927,11 @@ function AppDashboard({
           </aside>
         )}
 
-        {/* AI chat FAB temporarily hidden on web — kept on iOS. */}
-        {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
-          <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
-        )}
+        {/* Mounted on both iOS and web — ChatInterface decides what to
+            actually render itself: iOS opens it via the nav item's
+            open-ai-chat event (no FAB there), web desktop gets the
+            floating FAB back, mobile web renders nothing. */}
+        <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
 
         {coinPickerOpen &&
           ReactDOM.createPortal(
