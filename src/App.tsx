@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment, lazy, Suspense } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -20,7 +20,6 @@ import { consumePendingCoinMention } from "./services/pushNotifications";
 import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
-import { LiquidationHeatmap } from "./components/LiquidationHeatmap";
 import { LearnSection } from "./components/LearnSection";
 import { NewsTicker } from "./components/NewsTicker";
 import { LeveragePopup } from "./components/LeveragePopup";
@@ -28,15 +27,10 @@ import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
-import { GannAnalysis } from "./components/GannAnalysis";
-import { HTFAnalysis } from "./components/HTFAnalysis";
-import { OnChainMetrics } from "./components/OnChainMetrics";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
-import { PositionFlows } from "./components/PositionFlows";
-import { OrderFlowFramework } from "./components/OrderFlowFramework";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
@@ -49,19 +43,10 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
-import { PredictionEngine } from "./components/PredictionEngine";
-import { FundingBot } from "./components/FundingBot";
-import { CandleWatcher } from "./components/CandleWatcher";
-import { TradeManager } from "./components/TradeManager";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
 import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
-import { GlobalMarkets } from "./components/GlobalMarkets";
-import { StocksHome } from "./components/StocksHome";
-import { AltAnalysis } from "./components/AltAnalysis";
-import { OptionsAnalytics } from "./components/OptionsAnalytics";
-import { CorrelationMatrix } from "./components/CorrelationMatrix";
 import { BtcMoveToast } from "./components/BtcMoveToast";
 import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
@@ -74,6 +59,38 @@ import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
+
+// Everything below is behind a section nav tab (or, for StocksHome, the
+// crypto/stocks toggle within "chart") — only one is ever visible at a
+// time, so each ships as its own chunk fetched on first visit instead of
+// bloating the initial bundle every user pays for regardless of which
+// sections they actually open. PriceChart stays a static import above
+// since "chart" is the default section, needed immediately on load.
+const LiquidationHeatmap = lazy(() => import("./components/LiquidationHeatmap").then(m => ({ default: m.LiquidationHeatmap })));
+const GannAnalysis = lazy(() => import("./components/GannAnalysis").then(m => ({ default: m.GannAnalysis })));
+const HTFAnalysis = lazy(() => import("./components/HTFAnalysis").then(m => ({ default: m.HTFAnalysis })));
+const OnChainMetrics = lazy(() => import("./components/OnChainMetrics").then(m => ({ default: m.OnChainMetrics })));
+const PositionFlows = lazy(() => import("./components/PositionFlows").then(m => ({ default: m.PositionFlows })));
+const OrderFlowFramework = lazy(() => import("./components/OrderFlowFramework").then(m => ({ default: m.OrderFlowFramework })));
+const PredictionEngine = lazy(() => import("./components/PredictionEngine").then(m => ({ default: m.PredictionEngine })));
+const FundingBot = lazy(() => import("./components/FundingBot").then(m => ({ default: m.FundingBot })));
+const CandleWatcher = lazy(() => import("./components/CandleWatcher").then(m => ({ default: m.CandleWatcher })));
+const TradeManager = lazy(() => import("./components/TradeManager").then(m => ({ default: m.TradeManager })));
+const GlobalMarkets = lazy(() => import("./components/GlobalMarkets").then(m => ({ default: m.GlobalMarkets })));
+const StocksHome = lazy(() => import("./components/StocksHome").then(m => ({ default: m.StocksHome })));
+const AltAnalysis = lazy(() => import("./components/AltAnalysis").then(m => ({ default: m.AltAnalysis })));
+const OptionsAnalytics = lazy(() => import("./components/OptionsAnalytics").then(m => ({ default: m.OptionsAnalytics })));
+const CorrelationMatrix = lazy(() => import("./components/CorrelationMatrix").then(m => ({ default: m.CorrelationMatrix })));
+
+// Shown briefly the first time a section's chunk is fetched — negligible
+// on subsequent visits since the chunk stays cached.
+function SectionLoading() {
+  return (
+    <div className="section-loading">
+      <div className="section-loading-spinner" />
+    </div>
+  );
+}
 
 type SectionId =
   | "chart"
@@ -291,6 +308,15 @@ function AppDashboard({
     const hash = window.location.hash.slice(1) as SectionId;
     return NAV_ITEMS.some((n) => n.id === hash) ? hash : "chart";
   });
+  // CandleWatcher stays mounted (display:none, not unmounted) once first
+  // opened so its chart state/zoom/drawings survive switching away and
+  // back — but deferring that first mount until actually visited (instead
+  // of unconditionally, as before) means its ~4000-line chunk isn't
+  // fetched on every app load for users who never open this section.
+  const [candleAIVisited, setCandleAIVisited] = useState(() => activeSection === "candleai");
+  useEffect(() => {
+    if (activeSection === "candleai") setCandleAIVisited(true);
+  }, [activeSection]);
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -1733,128 +1759,136 @@ function AppDashboard({
                     <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                   </div>
                 ) : (
-                  <StocksHome theme={theme} />
+                  <Suspense fallback={<SectionLoading />}>
+                    <StocksHome theme={theme} />
+                  </Suspense>
                 )}
               </>
             )}
             {activeSection !== "chart" && (
               <SectionBanner section={activeSection} />
             )}
-            {activeSection === "heatmap" && (
-              <LiquidationHeatmap
-                coin={coin}
-                theme={theme}
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            )}
-            {activeSection === "onchain" && (
-              <OnChainMetrics
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            )}
-            {activeSection === "gann" && (
-              <BlurGate
-                requiredTier="pro"
-                featureName="Gann Analysis"
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                className="bg-root--top"
-              >
-                <GannAnalysis
+            <Suspense fallback={<SectionLoading />}>
+              {activeSection === "heatmap" && (
+                <LiquidationHeatmap
+                  coin={coin}
+                  theme={theme}
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                />
+              )}
+              {activeSection === "onchain" && (
+                <OnChainMetrics
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                />
+              )}
+              {activeSection === "gann" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Gann Analysis"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <GannAnalysis
+                    coin={coin}
+                    currentPrice={btcData?.price}
+                    onOpenAuth={onOpenAuth}
+                    onOpenUpgrade={onOpenUpgrade}
+                  />
+                </BlurGate>
+              )}
+              {activeSection === "htf" && (
+                <HTFAnalysis
                   coin={coin}
                   currentPrice={btcData?.price}
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                 />
-              </BlurGate>
-            )}
-            {activeSection === "htf" && (
-              <HTFAnalysis
-                coin={coin}
-                currentPrice={btcData?.price}
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            )}
-            {activeSection === "positions" && <PositionFlows coin={coin} />}
-            {activeSection === "orderflow" && (
-              <OrderFlowFramework coin={coin} />
-            )}
-            {activeSection === "signals" && (
-              <PredictionEngine
-                btcData={btcData}
-                coin={coin}
-                livePrice={livePrice}
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            )}
-            {activeSection === "fundingbot" && (
-              <FundingBot
-                coin={coin}
-                theme={theme}
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            )}
-            {activeSection === "riskcalc" && (
-              <BlurGate
-                requiredTier="pro"
-                featureName="Position Size Calculator"
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                className="bg-root--top"
-              >
-                <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
-              </BlurGate>
-            )}
-            <div style={{ display: activeSection === "candleai" ? "contents" : "none" }}>
-              <CandleWatcher
-                coin={coin}
-                theme={theme}
-                visible={activeSection === "candleai"}
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-              />
-            </div>
-            {activeSection === "markets" && <GlobalMarkets />}
-            {activeSection === "altanalysis" && (
-              <BlurGate
-                requiredTier="elite"
-                featureName="Alt Analysis"
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                className="bg-root--top"
-              >
-                <AltAnalysis
-                  onOpenUpgrade={onOpenUpgrade ?? (() => {})}
-                  onOpenAuth={onOpenAuth ?? (() => {})}
+              )}
+              {activeSection === "positions" && <PositionFlows coin={coin} />}
+              {activeSection === "orderflow" && (
+                <OrderFlowFramework coin={coin} />
+              )}
+              {activeSection === "signals" && (
+                <PredictionEngine
+                  btcData={btcData}
+                  coin={coin}
+                  livePrice={livePrice}
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
                 />
-              </BlurGate>
-            )}
-            {activeSection === "options" && (
-              <BlurGate
-                requiredTier="pro"
-                featureName="Options Analytics"
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                className="bg-root--top"
-              >
-                <OptionsAnalytics />
-              </BlurGate>
-            )}
-            {activeSection === "correlation" && (
-              <BlurGate
-                requiredTier="pro"
-                featureName="Correlation Matrix"
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                className="bg-root--top"
-              >
-                <CorrelationMatrix />
-              </BlurGate>
+              )}
+              {activeSection === "fundingbot" && (
+                <FundingBot
+                  coin={coin}
+                  theme={theme}
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                />
+              )}
+              {activeSection === "riskcalc" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Position Size Calculator"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+                </BlurGate>
+              )}
+              {activeSection === "markets" && <GlobalMarkets />}
+              {activeSection === "altanalysis" && (
+                <BlurGate
+                  requiredTier="elite"
+                  featureName="Alt Analysis"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <AltAnalysis
+                    onOpenUpgrade={onOpenUpgrade ?? (() => {})}
+                    onOpenAuth={onOpenAuth ?? (() => {})}
+                  />
+                </BlurGate>
+              )}
+              {activeSection === "options" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Options Analytics"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <OptionsAnalytics />
+                </BlurGate>
+              )}
+              {activeSection === "correlation" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Correlation Matrix"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <CorrelationMatrix />
+                </BlurGate>
+              )}
+            </Suspense>
+            {candleAIVisited && (
+              <div style={{ display: activeSection === "candleai" ? "contents" : "none" }}>
+                <Suspense fallback={activeSection === "candleai" ? <SectionLoading /> : null}>
+                  <CandleWatcher
+                    coin={coin}
+                    theme={theme}
+                    visible={activeSection === "candleai"}
+                    onOpenAuth={onOpenAuth}
+                    onOpenUpgrade={onOpenUpgrade}
+                  />
+                </Suspense>
+              </div>
             )}
           </div>
         </div>

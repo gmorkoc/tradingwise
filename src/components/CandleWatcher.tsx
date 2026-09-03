@@ -2460,12 +2460,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => { cancelled = true; };
   }, [coin, intervalIdx, retryKey]);
 
-  // Auto-refresh — elite only
+  // Auto-refresh — elite only. Paused while this section isn't the active
+  // one (component stays mounted-but-hidden rather than unmounting, to
+  // preserve chart state across nav — see the "visible" prop) so a
+  // background tab doesn't keep firing network fetches for a chart no
+  // one's looking at.
   useEffect(() => {
-    if (!isElite) return;
+    if (!isElite || !visible) return;
     const id = setInterval(() => fetchCandles(false), interval.refresh);
     return () => clearInterval(id);
-  }, [fetchCandles, interval.refresh, isElite]);
+  }, [fetchCandles, interval.refresh, isElite, visible]);
 
   // Suppress AI auto-trigger when page returns from background (idle/lock screen)
   useEffect(() => {
@@ -2487,19 +2491,22 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     });
   }, [visible]);
 
-  // Candle close countdown — ticks every second
+  // Candle close countdown — ticks every second. Paused while hidden, same
+  // reasoning as the auto-refresh effect above.
   useEffect(() => {
-    if (!candles.length) return;
+    if (!visible || !candles.length) return;
     const openTimeSec = Number(candles[candles.length - 1].time);
     const closesAt    = openTimeSec + interval.durationSec;
     const tick = () => setCandleCountdown(fmtCountdown(Math.max(0, closesAt - Math.floor(Date.now() / 1000))));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [candles, interval]);
+  }, [candles, interval, visible]);
 
-  // Per-interval tab countdowns — UTC boundary math, ticks every second
+  // Per-interval tab countdowns — UTC boundary math, ticks every second.
+  // Paused while hidden.
   useEffect(() => {
+    if (!visible) return;
     const tick = () => {
       const nowSec = Math.floor(Date.now() / 1000);
       setIntervalCountdowns(INTERVALS.map(iv => fmtTabBadge(iv, nowSec)));
@@ -2507,10 +2514,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [visible]);
 
-  // Daily close countdown — always UTC midnight
+  // Daily close countdown — always UTC midnight. Paused while hidden.
   useEffect(() => {
+    if (!visible) return;
     const tick = () => {
       const now      = Date.now();
       const midnight = Math.ceil(now / 86_400_000) * 86_400_000;
@@ -2519,11 +2527,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [visible]);
 
-  // Daily close banner — elite only
+  // Daily close banner — elite only. Paused while hidden — this one does a
+  // real network fetch every 60s, not just a cheap countdown tick.
   useEffect(() => {
-    if (!isElite) return;
+    if (!isElite || !visible) return;
     const BINANCE_SYM: Record<string, string> = {
       BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
       DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
@@ -2557,7 +2566,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     check();
     const id = setInterval(check, 60_000);
     return () => clearInterval(id);
-  }, [coin]);
+  }, [coin, visible]);
 
   // MTF biases — elite only
   useEffect(() => {
