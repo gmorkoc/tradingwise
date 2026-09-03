@@ -1321,6 +1321,7 @@
     "title": "Lista de Seguimiento",
     "updated": "Actualizado cada 5 segundos",
     "addCoin": "+ Añadir a la lista",
+    "addCoinShort": "+ Añadir",
     "searchPlaceholder": "Buscar por nombre o símbolo…",
     "loading": "Cargando datos de mercado…",
     "noResults": "Sin resultados",

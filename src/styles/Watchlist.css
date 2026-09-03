@@ -296,7 +296,7 @@
   .wl-scroll { gap: 16px; }
 
   .wl-strip-actions { gap: 0; padding-left: 6px; }
-  .wl-nav-btn { width: 17px; height: 17px; font-size: 0.72rem; border-radius: 4px; }
-  .wl-search-wrap { margin-left: 4px; }
+  .wl-nav-btn { display: none; }
+  .wl-search-wrap { margin-left: 0; }
   .wl-add-btn { padding: 5px 8px; font-size: 0.68rem; }
 }

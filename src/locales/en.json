@@ -1349,6 +1349,7 @@
     "title": "Watchlist",
     "updated": "Updated every 5 seconds",
     "addCoin": "+ Add to Watchlist",
+    "addCoinShort": "+ Add",
     "searchPlaceholder": "Search by name or symbol…",
     "loading": "Loading market data…",
     "noResults": "No results found",

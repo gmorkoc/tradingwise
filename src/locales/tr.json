@@ -1321,6 +1321,7 @@
     "title": "İzleme Listesi",
     "updated": "Her 5 saniyede güncellenir",
     "addCoin": "+ İzleme Listesine Ekle",
+    "addCoinShort": "+ Ekle",
     "searchPlaceholder": "Ad veya sembolle ara…",
     "loading": "Piyasa verileri yükleniyor…",
     "noResults": "Sonuç bulunamadı",

@@ -136,6 +136,16 @@ interface WatchlistProps {
 
 export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const { t } = useTranslation();
+  // Matches Watchlist.css's own mobile breakpoint — the full "+ Add to
+  // Watchlist" label is too wide there and crowds out the coin chips, so a
+  // shorter "+ Add" is used instead to leave more room for the content.
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 640px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 640px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const [watchedIds, setWatchedIds] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("watchlistCoins_v1") ?? "null");
@@ -273,7 +283,7 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
         <button className="wl-nav-btn" onClick={() => scrollBy(1)} aria-label="Scroll right">›</button>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
-            {t("watchlist.addCoin")}
+            {t(isMobile ? "watchlist.addCoinShort" : "watchlist.addCoin")}
           </button>
           {searchOpen && (
             <div className="wl-dropdown">

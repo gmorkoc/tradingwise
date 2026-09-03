@@ -1321,6 +1321,7 @@
     "title": "Lista Osservazione",
     "updated": "Aggiornato ogni 5 secondi",
     "addCoin": "+ Aggiungi alla Watchlist",
+    "addCoinShort": "+ Aggiungi",
     "searchPlaceholder": "Cerca per nome o simbolo…",
     "loading": "Caricamento dati di mercato…",
     "noResults": "Nessun risultato",
