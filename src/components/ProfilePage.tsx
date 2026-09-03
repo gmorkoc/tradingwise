@@ -331,8 +331,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
       if (!photo.webPath) return;
       const blob = await fetch(photo.webPath).then((r) => r.blob());
       await handleAvatarBlob(blob, `image/${photo.format === "jpg" ? "jpeg" : photo.format}`);
-    } catch {
-      // User cancelled the picker — not an error.
+    } catch (err: any) {
+      // The plugin rejects with these two messages on a plain user
+      // cancel/dismiss — anything else (missing permission, plugin not
+      // available, etc.) is a real failure and should actually surface,
+      // not disappear silently.
+      const msg = String(err?.message ?? err ?? "");
+      if (msg === "User cancelled photos app" || msg === "No image picked") return;
+      console.error("Avatar photo pick failed:", err);
+      setAvatarError(msg || t("profile.messages.saveFailed", "Couldn't save your photo — please try again."));
     }
   };
 
