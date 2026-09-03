@@ -12,6 +12,7 @@ import {
   type CoinComment,
 } from "../services/coinChat";
 import { CoinMarketMood } from "./CoinMarketMood";
+import { Avatar } from "./Avatar";
 import "../styles/CoinChat.css";
 
 interface Props {
@@ -393,7 +394,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
       className={`coin-chat-comment${flashId === c.id ? " coin-chat-comment--flash" : ""}`}
       key={c.id}
     >
-      <div className={`coin-chat-avatar cc-tier--${c.tier}`}>{initials(c.username)}</div>
+      <Avatar url={c.avatar_url} fallback={initials(c.username)} className={`coin-chat-avatar cc-tier--${c.tier}`} />
       <div className="coin-chat-comment-body">
         <p className="coin-chat-comment-line">
           <span className="coin-chat-comment-name">@{c.username}</span>{" "}
@@ -569,7 +570,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         </button>
       </div>
       <div className="coin-chat-reply-parent">
-        <div className={`coin-chat-avatar cc-tier--${replyTarget.tier}`}>{initials(replyTarget.username)}</div>
+        <Avatar url={replyTarget.avatar_url} fallback={initials(replyTarget.username)} className={`coin-chat-avatar cc-tier--${replyTarget.tier}`} />
         <div className="coin-chat-reply-parent-body">
           <div className="coin-chat-reply-parent-meta">
             <span className="coin-chat-comment-name">@{replyTarget.username}</span>
@@ -584,7 +585,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         {t("coinChat.replyingTo", "Replying to")} <b>@{replyTarget.username}</b>
       </div>
       <div className="coin-chat-reply-compose">
-        <div className={`coin-chat-avatar cc-tier--${tier}`}>{initials(profile?.username ?? "?")}</div>
+        <Avatar url={profile?.avatar_url} fallback={initials(profile?.username ?? "?")} className={`coin-chat-avatar cc-tier--${tier}`} />
         {composer}
       </div>
     </div>,

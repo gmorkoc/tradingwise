@@ -487,13 +487,15 @@
       "emailRequired": "L'email è obbligatoria.",
       "invalidEmail": "Inserisci un indirizzo email valido.",
       "passwordTooShort": "La nuova password deve avere almeno 6 caratteri.",
-      "passwordMismatch": "Le password non corrispondono."
+      "passwordMismatch": "Le password non corrispondono.",
+      "saveFailed": "Impossibile salvare la tua foto — riprova."
     },
     "actions": {
       "saveChanges": "Salva Modifiche",
       "discard": "Annulla",
       "yourName": "Il tuo nome",
-      "noEmail": "nessuna email impostata"
+      "noEmail": "nessuna email impostata",
+      "changePhoto": "Cambia foto profilo"
     },
     "deleteAccount": {
       "sub": "Una volta eliminato il tuo account, tutti i tuoi dati saranno rimossi definitivamente. Questa azione non può essere annullata.",

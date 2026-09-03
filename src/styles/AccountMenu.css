@@ -66,6 +66,15 @@
   line-height: 1;
 }
 
+/* Once a real photo is set, this is a small circular avatar instead of
+   a bare oversized letter — the img variant needs its own background/
+   radius since the plain-letter case above deliberately has neither. */
+img.acct-initial-icon {
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  object-fit: cover;
+}
+
 .icon-strip-acct .icon-strip-label {
   font-size: 0.92rem;
 }

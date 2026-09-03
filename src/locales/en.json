@@ -516,13 +516,15 @@
       "emailRequired": "Email is required.",
       "invalidEmail": "Enter a valid email address.",
       "passwordTooShort": "New password must be at least 6 characters.",
-      "passwordMismatch": "Passwords do not match."
+      "passwordMismatch": "Passwords do not match.",
+      "saveFailed": "Couldn't save your photo — please try again."
     },
     "actions": {
       "saveChanges": "Save Changes",
       "discard": "Discard",
       "yourName": "Your Name",
-      "noEmail": "no email set"
+      "noEmail": "no email set",
+      "changePhoto": "Change profile photo"
     },
     "deleteAccount": {
       "sub": "Once you delete your account, all your data will be permanently removed. This action cannot be undone.",

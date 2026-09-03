@@ -142,6 +142,7 @@
   justify-content: center;
   font-size: 0.54rem;
   font-weight: 700;
+  object-fit: cover;
   color: #fff;
   background: var(--color-primary);
 }

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import {
   supabase, saveAlertSound, saveNotificationPref, saveUsername, isUsernameAvailable, USERNAME_PATTERN,
-  ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider,
+  ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, uploadAvatar, saveAvatarUrl,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
+import { Avatar } from "./Avatar";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
@@ -143,6 +145,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [draft,   setDraft]   = useState<ProfileData>(blankFromAuth);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState("");
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError,     setAvatarError]     = useState("");
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   const [newPw,      setNewPw]      = useState("");
   const [confirmPw,  setConfirmPw]  = useState("");
@@ -292,6 +298,50 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     setTimeout(() => setPwSaved(false), 2500);
   };
 
+  // Shared by both the native Camera pick and the web file input — fires
+  // immediately on selection rather than staging in draft, same pattern as
+  // handleAlertSoundChange below (there's nothing to "cancel", picking a
+  // new photo is the commit).
+  const handleAvatarBlob = async (blob: Blob, contentType: string) => {
+    if (!user) return;
+    setAvatarUploading(true);
+    setAvatarError("");
+    try {
+      const url = await uploadAvatar(user.id, blob, contentType);
+      await saveAvatarUrl(user.id, url);
+      await refreshProfile();
+    } catch (err: any) {
+      setAvatarError(err.message ?? t("profile.messages.saveFailed", "Couldn't save your photo — please try again."));
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleAvatarPick = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      avatarFileInputRef.current?.click();
+      return;
+    }
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Prompt,
+        quality: 80,
+      });
+      if (!photo.webPath) return;
+      const blob = await fetch(photo.webPath).then((r) => r.blob());
+      await handleAvatarBlob(blob, `image/${photo.format === "jpg" ? "jpeg" : photo.format}`);
+    } catch {
+      // User cancelled the picker — not an error.
+    }
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) handleAvatarBlob(file, file.type || "image/jpeg");
+  };
+
   const handleAlertSoundChange = async (sound: AlertSound) => {
     playAlertSoundFile(sound);
     if (!user) return;
@@ -409,10 +459,37 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
         {/* ── Header ─────────────────────────────────────── */}
         <div className="pp-header">
           <div className="pp-header-identity">
-            <div className="pp-avatar"><span>{initials}</span></div>
+            <button
+              type="button"
+              className="pp-avatar-btn"
+              onClick={handleAvatarPick}
+              disabled={avatarUploading}
+              aria-label={t("profile.actions.changePhoto", "Change profile photo")}
+              title={t("profile.actions.changePhoto", "Change profile photo")}
+            >
+              <Avatar url={authProfile?.avatar_url} fallback={initials} className="pp-avatar" />
+              <span className="pp-avatar-edit-badge">
+                {avatarUploading ? (
+                  <span className="pp-avatar-spinner" />
+                ) : (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                )}
+              </span>
+            </button>
+            <input
+              ref={avatarFileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarFileChange}
+            />
             <div>
               <p className="pp-header-name">{profile.displayName || t("profile.actions.yourName")}</p>
               <p className="pp-header-email">{profile.email}</p>
+              {avatarError && <p className="pp-msg pp-msg--error pp-avatar-error">{avatarError}</p>}
             </div>
           </div>
           <button className="pp-close" onClick={onClose} aria-label="Close">✕</button>

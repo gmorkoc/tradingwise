@@ -30,6 +30,7 @@ export interface Profile {
   notify_daily_brief: boolean;
   notify_price_alerts: boolean;
   notify_upgrade_reminders: boolean;
+  avatar_url: string | null;
 }
 
 export const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, elite: 2 };
@@ -122,6 +123,30 @@ export async function saveUsername(userId: string, username: string): Promise<vo
     .update({ username })
     .eq("id", userId);
   if (error) throw new Error(error.code === "23505" ? "That username is already taken." : error.message);
+}
+
+// One object per user at a flat path equal to their own uid (see the
+// avatars bucket's storage.objects RLS policies) — upsert overwrites it in
+// place on every re-upload rather than accumulating old files. The public
+// URL is stable, so a cache-busting query param is appended for the
+// caller to store, otherwise browsers/WKWebView keep showing the old
+// photo after a re-upload since the URL itself never changes.
+export async function uploadAvatar(userId: string, file: Blob, contentType: string): Promise<string> {
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(userId, file, { contentType, upsert: true });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from("avatars").getPublicUrl(userId);
+  return `${data.publicUrl}?t=${Date.now()}`;
+}
+
+export async function saveAvatarUrl(userId: string, url: string): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar_url: url })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export const ALERT_SOUNDS = ["bell", "chime", "alert", "classic"] as const;

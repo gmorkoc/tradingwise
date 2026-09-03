@@ -487,13 +487,15 @@
       "emailRequired": "E-posta zorunludur.",
       "invalidEmail": "Geçerli bir e-posta adresi girin.",
       "passwordTooShort": "Yeni şifre en az 6 karakter olmalıdır.",
-      "passwordMismatch": "Şifreler eşleşmiyor."
+      "passwordMismatch": "Şifreler eşleşmiyor.",
+      "saveFailed": "Fotoğrafınız kaydedilemedi — lütfen tekrar deneyin."
     },
     "actions": {
       "saveChanges": "Değişiklikleri Kaydet",
       "discard": "İptal Et",
       "yourName": "Adınız",
-      "noEmail": "e-posta ayarlanmamış"
+      "noEmail": "e-posta ayarlanmamış",
+      "changePhoto": "Profil fotoğrafını değiştir"
     },
     "deleteAccount": {
       "sub": "Hesabını sildiğinde tüm veriler kalıcı olarak kaldırılır. Bu işlem geri alınamaz.",

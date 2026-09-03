@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { Avatar } from "./Avatar";
 import "../styles/AccountMenu.css";
 
 const TIER_META: Record<
@@ -103,7 +104,9 @@ export const AccountMenu: React.FC<Props> = ({
   return (
     <div className="acct-wrap">
       <button className="acct-avatar" ref={avatarRef} onClick={openMenu}>
-        <span className="nav-icon-wrap acct-initial-icon">{firstInitial}</span>
+        <span className="nav-icon-wrap">
+          <Avatar url={profile?.avatar_url} fallback={firstInitial} className="acct-initial-icon" />
+        </span>
         <span className="icon-strip-label">{firstName}</span>
       </button>
 

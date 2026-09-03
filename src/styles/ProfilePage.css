@@ -65,6 +65,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  object-fit: cover;
 }
 
 .pp-avatar span {
@@ -72,6 +73,50 @@
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.02em;
+}
+
+.pp-avatar-btn {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.pp-avatar-btn:disabled { cursor: default; }
+
+.pp-avatar-edit-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pp-avatar-spinner {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  animation: pp-avatar-spin 0.7s linear infinite;
+}
+@keyframes pp-avatar-spin { to { transform: rotate(360deg); } }
+
+.pp-avatar-error {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.72rem;
 }
 
 .pp-header-name {

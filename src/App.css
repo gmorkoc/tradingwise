@@ -2542,6 +2542,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
     font-weight: 700;
     color: #fff;
     flex-shrink: 0;
+    object-fit: cover;
   }
   .mob-nav-userinfo {
     display: flex;

@@ -33,6 +33,7 @@ import { HTFAnalysis } from "./components/HTFAnalysis";
 import { OnChainMetrics } from "./components/OnChainMetrics";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
+import { Avatar } from "./components/Avatar";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { PositionFlows } from "./components/PositionFlows";
 import { OrderFlowFramework } from "./components/OrderFlowFramework";
@@ -1107,17 +1108,21 @@ function AppDashboard({
               else onOpenAuth();
             }}
           >
-            <div className="mob-nav-avatar">
-              {profile?.full_name
-                ? profile.full_name
-                    .trim()
-                    .split(/\s+/)
-                    .map((w) => w[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()
-                : (user?.email?.[0] ?? "?").toUpperCase()}
-            </div>
+            <Avatar
+              url={profile?.avatar_url}
+              fallback={
+                profile?.full_name
+                  ? profile.full_name
+                      .trim()
+                      .split(/\s+/)
+                      .map((w) => w[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()
+                  : (user?.email?.[0] ?? "?").toUpperCase()
+              }
+              className="mob-nav-avatar"
+            />
             <div className="mob-nav-userinfo">
               <span className="mob-nav-name">
                 {profile?.full_name || user?.email?.split("@")[0] || "Account"}
