@@ -15,13 +15,18 @@ export interface CoinComment {
 
 const BODY_MAX = 500;
 
-export async function fetchCoinComments(coin: string, limit = 50): Promise<CoinComment[]> {
-  const { data, error } = await supabase
+// `before` pages backward in time (strictly older than that comment's
+// created_at) — a cursor rather than an offset so comments inserted at the
+// top between page loads (realtime) can't shift a later page's results.
+export async function fetchCoinComments(coin: string, limit = 50, before?: string): Promise<CoinComment[]> {
+  let query = supabase
     .from("coin_comments")
     .select("*")
     .eq("coin", coin)
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (before) query = query.lt("created_at", before);
+  const { data, error } = await query;
   if (error) { console.error("fetchCoinComments failed:", error.message); return []; }
   return (data as CoinComment[]) ?? [];
 }

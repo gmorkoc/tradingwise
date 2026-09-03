@@ -37,6 +37,8 @@ function coinName(symbol: string): string {
   return COINS.find((c) => c.symbol === symbol)?.name ?? symbol;
 }
 
+const PAGE_SIZE = 50;
+
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
@@ -103,9 +105,17 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<string[]>([]);
   const [flashId, setFlashId] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
+  const feedRef = useRef<HTMLDivElement>(null);
+  // Always-current snapshot for the scroll listener below, so it doesn't
+  // need comments/hasMore/loadingMore in its effect deps (which would mean
+  // detaching and reattaching the listener on every fetch).
+  const pageStateRef = useRef({ comments, hasMore, loadingMore });
+  useEffect(() => { pageStateRef.current = { comments, hasMore, loadingMore }; });
   // onHighlightDone is a fresh inline function every App.tsx render — kept
   // in a ref (rather than an effect dep) so those effects don't re-run and
   // re-fire their cleanup every time the parent re-renders for unrelated
@@ -167,10 +177,12 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     let cancelled = false;
     setLoading(true);
     setDraft(""); setError("");
+    setHasMore(true);
 
-    fetchCoinComments(coin).then((rows) => {
+    fetchCoinComments(coin, PAGE_SIZE).then((rows) => {
       if (cancelled) return;
       setComments(rows);
+      setHasMore(rows.length === PAGE_SIZE);
       setLoading(false);
       if (user) {
         fetchMyLikedCommentIds(user.id, rows.map((r) => r.id)).then((ids) => {
@@ -189,6 +201,32 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
 
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
   }, [coin, user?.id]);
+
+  // Older comments are only fetched once the user actually scrolls toward
+  // them — comments is DESC (newest first, oldest last) and loadMore
+  // appends, so it stays that way across pages. Cursor is the oldest
+  // loaded comment's created_at, not an offset (see fetchCoinComments).
+  const loadMore = async () => {
+    const { comments: current, hasMore: more, loadingMore: inFlight } = pageStateRef.current;
+    if (inFlight || !more) return;
+    const oldest = current[current.length - 1]?.created_at;
+    if (!oldest) return;
+    setLoadingMore(true);
+    const rows = await fetchCoinComments(coin, PAGE_SIZE, oldest);
+    setComments((prev) => [...prev, ...rows]);
+    setHasMore(rows.length === PAGE_SIZE);
+    setLoadingMore(false);
+  };
+
+  useEffect(() => {
+    const el = feedRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) loadMore();
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [coin]);
 
   // A tapped @mention push notification sets highlightCommentId from
   // outside (via App.tsx) — make sure the mobile sheet is actually open
@@ -411,7 +449,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   );
 
   const feed = (
-    <div className="coin-chat-feed">
+    <div className="coin-chat-feed" ref={feedRef}>
       {loading ? (
         <p className="coin-chat-empty">{t("common.loading")}</p>
       ) : comments.length === 0 ? (
@@ -430,19 +468,22 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
           ) : null}
         </div>
       ) : (
-        topLevelComments.map((c) => {
-          const replies = repliesByParent.get(c.id);
-          return (
-            <Fragment key={c.id}>
-              {renderComment(c)}
-              {replies && replies.length > 0 && (
-                <div className="coin-chat-thread">
-                  {replies.map((r) => renderComment(r))}
-                </div>
-              )}
-            </Fragment>
-          );
-        })
+        <>
+          {topLevelComments.map((c) => {
+            const replies = repliesByParent.get(c.id);
+            return (
+              <Fragment key={c.id}>
+                {renderComment(c)}
+                {replies && replies.length > 0 && (
+                  <div className="coin-chat-thread">
+                    {replies.map((r) => renderComment(r))}
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
+          {loadingMore && <p className="coin-chat-empty">{t("common.loading")}</p>}
+        </>
       )}
     </div>
   );
