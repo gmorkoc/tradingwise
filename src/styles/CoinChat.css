@@ -477,11 +477,12 @@
     z-index: 250;
     display: inline-flex;
     align-items: center;
-    height: 44px;
-    padding: 0 16px 0 0;
-    border: none;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid var(--color-primary);
     border-radius: 999px;
-    background: var(--color-primary);
+    background: var(--color-card-bg);
+    color: var(--color-text);
     box-shadow: 0 8px 24px var(--color-shadow);
     cursor: pointer;
     animation: coin-chat-trigger-glow 2.4s ease-out infinite;
@@ -496,37 +497,18 @@
     }
   }
 
-  /* Round "speech bubble" bump on the left — same fill as the pill, sized
-     slightly taller so it overhangs top/bottom like a real bubble, with a
-     small tail. The 3 dots bounce in sequence, like a typing indicator. */
-  .coin-chat-trigger-bubble {
-    position: relative;
-    flex-shrink: 0;
-    width: 44px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--color-primary);
+  /* 3 dots bouncing in sequence, like a typing indicator. */
+  .coin-chat-trigger-icon {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 3.5px;
-  }
-
-  .coin-chat-trigger-tail {
-    position: absolute;
-    left: 9px;
-    bottom: 3px;
-    width: 10px;
-    height: 10px;
-    background: var(--color-primary);
-    clip-path: polygon(0 0, 100% 100%, 0 100%);
+    gap: 3px;
   }
 
   .coin-chat-trigger-dot {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--color-primary);
     animation: coin-chat-trigger-typing 1.3s ease-in-out infinite;
   }
   .coin-chat-trigger-dot:nth-child(1) { animation-delay: 0s; }
@@ -539,11 +521,10 @@
   }
 
   .coin-chat-trigger-label {
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    font-size: 0.78rem;
+    font-weight: 700;
     text-transform: uppercase;
-    color: #fff;
+    letter-spacing: 0.02em;
   }
 
   /* Full-screen takeover, portaled to <body> — identical treatment to

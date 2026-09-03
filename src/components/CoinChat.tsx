@@ -620,11 +620,10 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     <div className="coin-chat">
       {!sheetOpen && (
         <button type="button" className="coin-chat-trigger" onClick={() => setSheetOpen(true)}>
-          <span className="coin-chat-trigger-bubble">
+          <span className="coin-chat-trigger-icon">
             <span className="coin-chat-trigger-dot" />
             <span className="coin-chat-trigger-dot" />
             <span className="coin-chat-trigger-dot" />
-            <span className="coin-chat-trigger-tail" />
           </span>
           <span className="coin-chat-trigger-label">{t("coinChat.triggerLabel")}</span>
         </button>
