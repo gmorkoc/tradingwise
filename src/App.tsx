@@ -2435,8 +2435,6 @@ function AppGate() {
             setAuthView("signup");
             setShowAuth(true);
           }}
-          theme={theme}
-          onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         />
         {showAuth && (
           <AuthModal

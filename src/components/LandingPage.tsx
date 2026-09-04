@@ -61,8 +61,30 @@ function LangPicker() {
 interface Props {
   onSignIn: () => void;
   onSignUp: () => void;
-  theme: "dark" | "light";
-  onToggleTheme: () => void;
+}
+
+// Adds "lp-reveal-in" to a container the first time it scrolls into view —
+// child elements key their staggered entrance animation off that class
+// (see .lp-features-bento.lp-reveal-in .lp-feature-tile etc. in
+// LandingPage.css) so cards animate in on scroll, not all at once on load.
+function useReveal<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add("lp-reveal-in");
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
 }
 
 // [open, high, low, close, volume] — prices in $K
@@ -165,24 +187,34 @@ function MockChart() {
         const fill = green ? "rgba(34,197,94,0.82)" : "rgba(251,113,133,0.82)";
         const lastFill = green ? "#22c55e" : "#fb7185";
         return (
-          <g key={i} filter={isLast ? "url(#mcLast)" : undefined}>
-            <rect x={cx - bodyW / 2} y={volBase + VOL_H - vH} width={bodyW} height={vH}
-              fill={green ? "rgba(34,197,94,0.28)" : "rgba(251,113,133,0.28)"} rx="1" />
-            <line x1={cx} y1={toY(h)} x2={cx} y2={toY(l)} stroke={isLast ? lastFill : fill} strokeWidth={isLast ? 1.5 : 1} />
-            <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} fill={isLast ? lastFill : fill} rx="1" />
-            {/* Buy signal at candle 13 */}
+          <React.Fragment key={i}>
+            {/* AI signal at candle 13 — appears first, before the price action
+                plays out, so the story reads "AI calls it" then "watch it
+                happen" rather than the other way around. A sibling of the
+                candle group (not nested inside it) so it animates on its own
+                early timeline instead of inheriting the candle's grow-in. */}
             {i === 13 && (
-              <>
-                <polygon points={`${cx},${toY(l)+16} ${cx-7},${toY(l)+28} ${cx+7},${toY(l)+28}`} fill="#22c55e" filter="url(#mcGlow)" />
-                <text x={cx} y={toY(l)+40} textAnchor="middle" fontSize="7.5" fill="#22c55e" fontWeight="bold" fontFamily="sans-serif">BUY</text>
-              </>
+              <g className="lp-hero-signal">
+                {/* Arrow points at the exact low first — the badge above is
+                    the bigger, more prominent read of the same call. */}
+                <polygon points={`${cx},${toY(l)+18} ${cx-9},${toY(l)+34} ${cx+9},${toY(l)+34}`} fill="#22c55e" filter="url(#mcGlow)" />
+                <rect className="lp-hero-signal-flash" x={cx - 68} y={toY(h) - 49} width="136" height="36" rx="9"
+                  fill="#16a34a" filter="url(#mcGlow)" />
+                <text x={cx} y={toY(h) - 27} textAnchor="middle" fontSize="11" fontWeight="800" fill="#ffffff" letterSpacing="0.02em" fontFamily="sans-serif">Bottom Signal</text>
+              </g>
             )}
-          </g>
+            <g className="lp-hero-candle" style={{ animationDelay: `${1.4 + i * 0.35}s` }} filter={isLast ? "url(#mcLast)" : undefined}>
+              <rect x={cx - bodyW / 2} y={volBase + VOL_H - vH} width={bodyW} height={vH}
+                fill={green ? "rgba(34,197,94,0.28)" : "rgba(251,113,133,0.28)"} rx="1" />
+              <line x1={cx} y1={toY(h)} x2={cx} y2={toY(l)} stroke={isLast ? lastFill : fill} strokeWidth={isLast ? 1.5 : 1} />
+              <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} fill={isLast ? lastFill : fill} rx="1" />
+            </g>
+          </React.Fragment>
         );
       })}
 
       {/* EMA */}
-      {emaLine && <polyline points={emaLine} fill="none" stroke="url(#mcEma)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" filter="url(#mcGlow)" />}
+      {emaLine && <polyline className="lp-hero-ema" points={emaLine} fill="none" stroke="url(#mcEma)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" filter="url(#mcGlow)" />}
 
       {/* Labels */}
       <text x={6} y={22} fontSize="11" fill="rgba(241,245,249,0.85)" fontWeight="bold" fontFamily="sans-serif">BTC / USD</text>
@@ -205,7 +237,7 @@ function RSIChart() {
     <svg viewBox={`0 0 ${W} ${H}`} className="lp-rsi-svg" preserveAspectRatio="xMidYMid meet">
       <line x1={0} y1={H * 0.3} x2={W} y2={H * 0.3} stroke="rgba(251,113,133,0.2)" strokeWidth="0.8" strokeDasharray="3,3" />
       <line x1={0} y1={H * 0.7} x2={W} y2={H * 0.7} stroke="rgba(34,197,94,0.2)"   strokeWidth="0.8" strokeDasharray="3,3" />
-      <polyline points={pts} fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline className="lp-hero-rsi-line" points={pts} fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
       <text x={4} y={11} fontSize="7.5" fill="rgba(148,163,184,0.45)" fontFamily="sans-serif">RSI(14)</text>
       <text x={W - 3} y={H * 0.3 + 3} textAnchor="end" fontSize="7" fill="rgba(251,113,133,0.5)" fontFamily="monospace">70</text>
       <text x={W - 3} y={H * 0.7 + 3} textAnchor="end" fontSize="7" fill="rgba(34,197,94,0.5)"   fontFamily="monospace">30</text>
@@ -267,69 +299,89 @@ function FearGreedGauge({ value = 72 }: { value?: number }) {
   );
 }
 
-function AIChatMock() {
-  const metrics = [
-    { l: "Trend",   v: "BULLISH",  c: "#22c55e" },
-    { l: "RSI(14)", v: "72",       c: "#f59e0b" },
-    { l: "Funding", v: "+0.018%",  c: "#38bdf8" },
-  ];
+// Mini annotated candlestick chart for the CandleAI flagship promo — same
+// OHLC series + EMA math as the hero's MockChart, plus the smart-money
+// overlays (order block, fair value gap, CHoCH/BOS, AI target) that make
+// this read as the real AI Candle Watcher screen rather than a generic
+// price chart. Colors are fixed semantic hex (bull/bear/AI accent),
+// matching MockChart's own precedent — see LandingPage.css's CandleAI
+// promo comment for why that's not a theme-token violation.
+const CAI_MIN_P = 95.5, CAI_MAX_P = 110.5, CAI_W = 600, CAI_PAD_R = 54, CAI_H = 150, CAI_PAD_T = 8;
+function caiToY(p: number) { return CAI_PAD_T + (1 - (p - CAI_MIN_P) / (CAI_MAX_P - CAI_MIN_P)) * CAI_H; }
+
+function CandleAIChart() {
+  const usableW = CAI_W - CAI_PAD_R;
+  const cW = usableW / CANDLES.length;
+  const bodyW = Math.max(4, cW * 0.55);
+  const closes = CANDLES.map(c => c[3]);
+  const ema = computeEMA(closes, 9);
+  const emaLine = ema
+    .map((v, i) => v != null ? `${(i + 0.5) * cW},${caiToY(v)}` : null)
+    .filter(Boolean).join(" ");
+  const svgH = CAI_PAD_T + CAI_H + 10;
+  const lastClose = CANDLES[CANDLES.length - 1][3];
+  const targetY = caiToY(CAI_MAX_P - 0.5);
+
   return (
-    <div className="lp-chat-window">
-      <div className="lp-chat-header">
-        <span className="lp-chat-header-logo">✦</span>
-        <span className="lp-chat-header-title">coinhintz AI</span>
-        <span className="lp-chat-header-live"><span className="lp-chat-live-dot" />Live</span>
-      </div>
-      <div className="lp-chat-body">
-        <div className="lp-chat-row lp-chat-row--user">
-          <div className="lp-chat-user-bubble">What's the current BTC market setup?</div>
-        </div>
-        <div className="lp-chat-row lp-chat-row--ai">
-          <span className="lp-chat-avatar">✦</span>
-          <div className="lp-chat-bubble">
-            Bitcoin is holding above $105K and the <strong>EMA9 just crossed above EMA21</strong> — a strong short-term continuation signal. Funding at +0.018% confirms healthy long demand without overleveraging.
-          </div>
-        </div>
-        <div className="lp-chat-metrics">
-          {metrics.map(m => (
-            <div key={m.l} className="lp-chat-metric">
-              <div className="lp-chat-metric-l">{m.l}</div>
-              <div className="lp-chat-metric-v" style={{ color: m.c }}>{m.v}</div>
-            </div>
-          ))}
-        </div>
-        <div className="lp-chat-row lp-chat-row--user">
-          <div className="lp-chat-user-bubble">Where should I place my stop loss?</div>
-        </div>
-        <div className="lp-chat-row lp-chat-row--ai">
-          <span className="lp-chat-avatar">✦</span>
-          <div className="lp-chat-bubble">
-            For a long near <strong>$108,600</strong> → stop at <strong>$104,200</strong> (EMA20 + consolidation base). That's 4.0% risk. Target <strong>$115,000</strong> gives a clean 2.9R setup.
-          </div>
-        </div>
-        <div className="lp-chat-row lp-chat-row--ai">
-          <span className="lp-chat-avatar">✦</span>
-          <div className="lp-chat-typing"><span /><span /><span /></div>
-        </div>
-      </div>
-      <div className="lp-chat-footer">
-        <div className="lp-chat-input-row">
-          <span className="lp-chat-placeholder">Ask about any market or strategy…</span>
-          <button className="lp-chat-send">↑</button>
-        </div>
-      </div>
-    </div>
+    <svg viewBox={`0 0 ${CAI_W} ${svgH}`} className="lp-cai-chart-svg" preserveAspectRatio="xMidYMid meet">
+      {[98, 101, 104, 107].map(p => (
+        <React.Fragment key={p}>
+          <line x1={0} y1={caiToY(p)} x2={usableW} y2={caiToY(p)} stroke="rgba(148,163,184,0.16)" strokeWidth="1" strokeDasharray="4,4" />
+          <text x={usableW + 4} y={caiToY(p) + 3} fontSize="8" fill="rgba(148,163,184,0.6)" fontFamily="'JetBrains Mono', monospace">${p}K</text>
+        </React.Fragment>
+      ))}
+
+      {/* Bull order block */}
+      <rect x={8 * cW} y={caiToY(101.2)} width={3 * cW} height={caiToY(99.3) - caiToY(101.2)} fill="rgba(34,197,94,0.10)" stroke="rgba(34,197,94,0.35)" strokeWidth="1" strokeDasharray="2,2" />
+      <text x={8 * cW + 3} y={caiToY(101.2) - 4} fontSize="7.5" fontWeight="700" fill="#22c55e" fontFamily="'JetBrains Mono', monospace">Bull OB</text>
+
+      {/* Fair value gap */}
+      <rect x={14 * cW} y={caiToY(106.4)} width={2.3 * cW} height={caiToY(104.6) - caiToY(106.4)} fill="rgba(56,189,248,0.10)" stroke="rgba(56,189,248,0.4)" strokeWidth="1" strokeDasharray="2,2" />
+      <text x={14 * cW + 2} y={caiToY(106.4) - 4} fontSize="7.5" fontWeight="700" fill="#38bdf8" fontFamily="'JetBrains Mono', monospace">FVG</text>
+
+      {CANDLES.map(([o, h, l, c], i) => {
+        const cx = (i + 0.5) * cW;
+        const green = c >= o;
+        const bodyTop = caiToY(Math.max(o, c)), bodyBot = caiToY(Math.min(o, c));
+        const bodyH = Math.max(1.5, bodyBot - bodyTop);
+        const isLast = i === CANDLES.length - 1;
+        const fill = green ? "rgba(34,197,94,0.85)" : "rgba(251,113,133,0.85)";
+        const lastFill = green ? "#22c55e" : "#fb7185";
+        return (
+          <g key={i}>
+            <line x1={cx} y1={caiToY(h)} x2={cx} y2={caiToY(l)} stroke={isLast ? lastFill : fill} strokeWidth={isLast ? 1.5 : 1} />
+            <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} fill={isLast ? lastFill : fill} rx="1" />
+          </g>
+        );
+      })}
+
+      <text x={5.5 * cW} y={caiToY(96.2) + 14} fontSize="7.5" fontWeight="700" fill="#f59e0b" fontFamily="'JetBrains Mono', monospace">CHoCH ↓</text>
+      <text x={16.6 * cW} y={caiToY(107.9) - 6} fontSize="7.5" fontWeight="700" fill="#22c55e" fontFamily="'JetBrains Mono', monospace">BOS ↑</text>
+
+      {emaLine && <polyline points={emaLine} fill="none" stroke="#a78bfa" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />}
+
+      <line x1={0} y1={targetY} x2={usableW} y2={targetY} stroke="#818cf8" strokeWidth="1.2" strokeDasharray="5,3" opacity="0.8" />
+      <rect x={usableW} y={targetY - 8} width={CAI_PAD_R - 2} height={16} fill="#818cf8" rx="3" />
+      <text x={usableW + CAI_PAD_R / 2 - 1} y={targetY + 4} textAnchor="middle" fontSize="7.5" fill="white" fontWeight="bold" fontFamily="'JetBrains Mono', monospace">AI $111K</text>
+
+      <rect x={usableW} y={caiToY(lastClose) - 8} width={CAI_PAD_R - 2} height={16} fill="#22c55e" rx="3" />
+      <text x={usableW + CAI_PAD_R / 2 - 1} y={caiToY(lastClose) + 4} textAnchor="middle" fontSize="7.5" fill="white" fontWeight="bold" fontFamily="'JetBrains Mono', monospace">$108.6K</text>
+    </svg>
   );
 }
 
 // ── Main ────────────────────────────────────────────────────────────────
 
-export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onToggleTheme }) => {
+export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
   const { t } = useTranslation();
   const featureList = t("landing.features.list", { returnObjects: true }) as { icon: string; title: string; desc: string }[];
-  const sidekickBullets = t("landing.sidekick.bullets", { returnObjects: true }) as string[];
-  const aiSectionBullets = t("landing.aiSection.bullets", { returnObjects: true }) as string[];
   const pricingPlans = t("landing.pricing.plans", { returnObjects: true }) as { label: string; price: string; per: string; cta: string; features: string[] }[];
+
+  const candleAIRevealRef = useReveal<HTMLDivElement>();
+  const featuresRevealRef = useReveal<HTMLDivElement>();
+  const strategyAlertsRevealRef = useReveal<HTMLDivElement>();
+  const pricingRevealRef = useReveal<HTMLDivElement>();
+  const ctaRevealRef = useReveal<HTMLElement>();
 
   return (
   <div className="lp-root">
@@ -341,12 +393,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
       </div>
       <div className="lp-nav-actions">
         <button className="lp-btn-ghost lp-nav-signin" onClick={onSignIn}>{t("landing.signin")}</button>
-        <button className="lp-btn-primary" onClick={onSignUp}>
-          <span className="lp-cta-long">{t("landing.getStarted")}</span>
-          <span className="lp-cta-short">Start Free</span>
-        </button>
         <LangPicker />
-        <button className="lp-theme-toggle" onClick={onToggleTheme} title="Toggle theme" aria-label="Toggle theme">{theme === "dark" ? "☀" : "☽"}</button>
       </div>
     </nav>
 
@@ -357,73 +404,158 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
           <div className="lp-hero-chart-bar">
             <span className="lp-hcb-pair">BTC/USD · 1H</span>
             <span className="lp-hcb-price">$108,642</span>
-            <span className="lp-hcb-chg">+3.24% ▲</span>
-            <span className="lp-hcb-signal">✦ AI Signal: ACCUMULATE</span>
+            <span className="lp-hcb-chg lp-hero-flash">+3.24% ▲</span>
+            <span className="lp-hcb-signal lp-hero-flash"><span className="lp-hcb-signal-dot" />✦ AI Signal: ACCUMULATE</span>
           </div>
           <div className="lp-hero-chart-body"><MockChart /></div>
           <div className="lp-hero-chart-rsi"><RSIChart /></div>
         </div>
 
-        <div className="lp-hero-text">
+        <div className="lp-hero-text lp-hero-cascade">
           <div className="lp-hero-badge">{t("landing.hero.badge")}</div>
           <h1 className="lp-hero-title">{t("landing.hero.titleLine1")}<br /><span className="lp-hero-gradient">{t("landing.hero.titleGradient")}</span></h1>
           <p className="lp-hero-sub">{t("landing.hero.desc")}</p>
           <div className="lp-hero-actions">
-            <button className="lp-btn-hero-primary" onClick={onSignUp}>{t("landing.hero.startFree")}</button>
+            <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.hero.startFree")}</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* ── CandleAI flagship promo ─────────────────────────────────────────
+        Built from the real AI Candle Watcher screen (annotated chart, AI
+        Read panel, Live Tape) — replaces the old Sidekick chat mock and
+        AI panel mock, merged into one bento section right after the hero,
+        TickScan's own pattern of leading with the real tool. */}
+    <section className="lp-cai-promo">
+      <div className="lp-cai-head">
+        <div className="lp-section-label">{t("landing.candleAI.label")}</div>
+        <h2 className="lp-section-title">{t("landing.candleAI.title")}</h2>
+        <p className="lp-cai-promo-desc">{t("landing.candleAI.desc")}</p>
+      </div>
+
+      <div className="lp-cai-bento" ref={candleAIRevealRef}>
+        <div className="lp-cai-tile lp-cai-tile--chart">
+          <div className="lp-cai-chart-hd">
+            <span className="lp-cai-chart-logo">✦</span>
+            <span className="lp-cai-chart-name">AI Candle Watcher</span>
+            <span className="lp-cai-chart-pair">BTC/USD · 4H</span>
+            <span className="lp-cai-forecast-pill"><span className="dot" />{t("landing.candleAI.forecastPill")}</span>
+          </div>
+          <div className="lp-cai-chart-canvas"><CandleAIChart /></div>
+          <div className="lp-cai-chart-strip">
+            <div className="lp-cai-chart-stat"><div className="l">RSI(14)</div><div className="v" style={{ color: "#f59e0b" }}>54.7</div></div>
+            <div className="lp-cai-chart-stat"><div className="l">MACD</div><div className="v" style={{ color: "#22c55e" }}>+148.2</div></div>
+            <div className="lp-cai-chart-stat"><div className="l">EMA20</div><div className="v" style={{ color: "#22c55e" }}>↑ Above</div></div>
+            <div className="lp-cai-chart-stat"><div className="l">Wyckoff</div><div className="v" style={{ color: "#38bdf8" }}>Markup</div></div>
+          </div>
+        </div>
+
+        <div className="lp-cai-tile lp-cai-tile--read">
+          <div className="lp-cai-kicker">{t("landing.candleAI.readKicker")}</div>
+          <div className="lp-cai-bias-row">
+            <span className="lp-cai-bias-pill">▲ {t("landing.candleAI.bullishBias")}</span>
+            <span className="lp-cai-conf-pill">{t("landing.candleAI.mediumConf")}</span>
+          </div>
+          <div className="lp-cai-case-box lp-cai-case-box--bull">
+            <div className="lp-cai-case-lbl">▲ {t("landing.candleAI.bullCase")}</div>
+            <div className="lp-cai-case-txt">{t("landing.candleAI.bullCaseText")} <b>$82,300</b>.</div>
+          </div>
+          <div className="lp-cai-case-box lp-cai-case-box--bear">
+            <div className="lp-cai-case-lbl">▼ {t("landing.candleAI.bearCase")}</div>
+            <div className="lp-cai-case-txt">{t("landing.candleAI.bearCaseText")} <b>$77,600</b>.</div>
+          </div>
+          <span className="lp-cai-favored-tag">{t("landing.candleAI.bullsFavored")}</span>
+        </div>
+
+        <div className="lp-cai-tile lp-cai-tile--tape">
+          <div className="lp-cai-tape-hd"><span className="dot" />{t("landing.candleAI.liveTape")}</div>
+          <div className="lp-cai-tape-row">
+            <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
+            <div className="lp-cai-tape-body">
+              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape1Title")} <span className="lp-cai-tape-live">LIVE</span></div>
+              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape1Desc")}</div>
+            </div>
+            <span className="lp-cai-tape-t">{t("landing.candleAI.tapeNow")}</span>
+          </div>
+          <div className="lp-cai-tape-row">
+            <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
+            <div className="lp-cai-tape-body">
+              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape2Title")}</div>
+              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape2Desc")}</div>
+            </div>
+            <span className="lp-cai-tape-t">4h</span>
+          </div>
+          <div className="lp-cai-tape-row">
+            <span className="lp-cai-tape-mk lp-cai-tape-mk--down" />
+            <div className="lp-cai-tape-body">
+              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape3Title")}</div>
+              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape3Desc")}</div>
+            </div>
+            <span className="lp-cai-tape-t">8h</span>
           </div>
         </div>
       </div>
 
-      {/* Web only — pointless to advertise the iOS app from inside the iOS app.
-          Deliberately a normal-flow sibling of .lp-hero-card (not nested inside
-          .lp-hero-text) — that element is absolutely positioned inside a fixed
-          min-height, overflow:hidden card, so extra content there gets clipped. */}
-      {!Capacitor.isNativePlatform() && (
-        <div className="lp-hero-mobile">
-          <div className="lp-hero-mobile-label">{t("landing.mobileApp.label")}</div>
-          <h3 className="lp-hero-mobile-title">{t("landing.mobileApp.title")}</h3>
-          <p className="lp-hero-mobile-desc">{t("landing.mobileApp.desc")}</p>
-          <div className="lp-store-badges">
-            <div className="lp-store-badge">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.94 1.36-1.92 2.72-3.45 2.75-1.514.03-2-.89-3.73-.89-1.73 0-2.27.87-3.694.92-1.5.05-2.64-1.47-3.59-2.82-1.94-2.75-3.44-7.75-1.44-11.13.99-1.68 2.76-2.75 4.68-2.78 1.47-.03 2.86.98 3.75.98.9 0 2.58-1.21 4.35-1.03.74.03 2.82.3 4.15 2.25-.11.07-2.47 1.44-2.45 4.31.03 3.43 3.02 4.57 3.05 4.58-.03.09-.48 1.62-1.6 3.24z"/></svg>
-              <div className="lp-store-badge-text">
-                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.appStoreEyebrow")}</span>
-                <span className="lp-store-badge-name">{t("landing.mobileApp.appStore")}</span>
-              </div>
-              <span className="lp-soon-ribbon">{t("landing.mobileApp.comingSoon")}</span>
-            </div>
-            <div className="lp-store-badge">
-              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#00d9ff" d="M3.6 2.3c-.4.3-.6.8-.6 1.4v16.6c0 .6.2 1.1.6 1.4l.1.1L13 12.5v-.1L3.7 2.2z"/><path fill="#00e676" d="M16.1 15.6l-3.1-3.1v-.1l3.1-3.1 3.5 2c1 .6 1 1.6 0 2.2z"/><path fill="#ff3d00" d="M16.1 8.4L13 5.3 3.7 2.2c.3-.3.9-.4 1.5 0z"/><path fill="#ffc400" d="M13 12.5l3.1 3.1-9.9 5.6c-.6.4-1.2.3-1.5 0z"/></svg>
-              <div className="lp-store-badge-text">
-                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.googlePlayEyebrow")}</span>
-                <span className="lp-store-badge-name">{t("landing.mobileApp.googlePlay")}</span>
-              </div>
-              <span className="lp-soon-ribbon">{t("landing.mobileApp.comingSoon")}</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="lp-cai-pills">
+        <span className="lp-cai-pill">{t("landing.candleAI.pillPattern")}</span>
+        <span className="lp-cai-pill">{t("landing.candleAI.pillMarketMaker")}</span>
+        <span className="lp-cai-pill">{t("landing.candleAI.pillSmartMoney")}</span>
+        <span className="lp-cai-pill">{t("landing.candleAI.pillWyckoff")}</span>
+        <span className="lp-cai-pill">{t("landing.candleAI.pillElliott")}</span>
+        <span className="lp-cai-pill">{t("landing.candleAI.pillTradePlan")}</span>
+      </div>
+
+      <div className="lp-cai-cta-row">
+        <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.candleAI.cta")}</button>
+      </div>
     </section>
 
-    {/* ── AI Chat Feature Highlight ─────────────────────────────────────── */}
-    <section className="lp-sidekick">
-      <div className="lp-sidekick-inner">
-        <div className="lp-sidekick-text">
-          <div className="lp-sidekick-icon-wrap">✦</div>
-          <h2 className="lp-section-title lp-sidekick-title">
-            {t("landing.sidekick.title1")}<br />{t("landing.sidekick.title2")}
-          </h2>
-          <p className="lp-sidekick-desc">{t("landing.sidekick.desc")}</p>
-          <ul className="lp-sidekick-bullets">
-            {sidekickBullets.map((b, i) => (
-              <li key={i}><span className="lp-ai-check">✓</span> {b}</li>
-            ))}
-          </ul>
-          <button className="lp-sidekick-cta" onClick={onSignUp}>{t("landing.sidekick.cta")}</button>
+    {/* ── Strategy Alerts promo ────────────────────────────────────────── */}
+    <section className="lp-sa-promo">
+      <div className="lp-sa-promo-head">
+        <div className="lp-section-label">{t("landing.strategyAlertsPromo.label")}</div>
+        <h2 className="lp-section-title">{t("landing.strategyAlertsPromo.title")}</h2>
+        <p className="lp-sa-promo-desc">{t("landing.strategyAlertsPromo.desc")}</p>
+      </div>
+
+      <div className="lp-sa-bento" ref={strategyAlertsRevealRef}>
+        <div className="lp-sa-tile lp-sa-tile--builder">
+          <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.builderKicker")}</div>
+          <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.builderTitle")}</h3>
+          <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.builderDesc")}</p>
+          <div className="lp-sa-builder-demo">
+            <div className="lp-sa-cond-row"><span className="ind">RSI(14)</span><span className="tf">1h</span><span className="cmp">&lt; 30</span></div>
+            <div className="lp-sa-junc-row">AND</div>
+            <div className="lp-sa-cond-row"><span className="ind">Volume(20)</span><span className="tf">15m</span><span className="cmp">&gt; 2.0×</span></div>
+            <div className="lp-sa-preview-line">✓ {t("landing.strategyAlertsPromo.previewLine")}</div>
+          </div>
         </div>
-        <div className="lp-sidekick-visual">
-          <AIChatMock />
+
+        <div className="lp-sa-tile lp-sa-tile--fires">
+          <div className="lp-sa-fires-head"><span className="dot" />{t("landing.strategyAlertsPromo.firesLabel")}</div>
+          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin">₿</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire1")}</span><span className="lp-sa-fire-time">14:02</span></div>
+          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(129,140,248,0.16)", color: "#818cf8" }}>Ξ</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire2")}</span><span className="lp-sa-fire-time">13:41</span></div>
+          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(34,197,94,0.16)", color: "#22c55e" }}>◎</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire3")}</span><span className="lp-sa-fire-time">now</span></div>
         </div>
+
+        <div className="lp-sa-tile lp-sa-tile--coverage">
+          <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.coverageKicker")}</div>
+          <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.coverageTitle")}</h3>
+          <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.coverageDesc")}</p>
+          <div className="lp-sa-pill-row">
+            <span className="lp-sa-pill">RSI</span>
+            <span className="lp-sa-pill">EMA</span>
+            <span className="lp-sa-pill">MACD</span>
+            <span className="lp-sa-pill">Bollinger %B</span>
+            <span className="lp-sa-pill">Volume Ratio</span>
+            <span className="lp-sa-pill lp-sa-more-pill">{t("landing.strategyAlertsPromo.morePills")}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="lp-sa-cta-row">
+        <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.strategyAlertsPromo.cta")}</button>
       </div>
     </section>
 
@@ -431,67 +563,29 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     <section className="lp-features">
       <div className="lp-section-label">{t("landing.features.label")}</div>
       <h2 className="lp-section-title">{t("landing.features.sectionTitle")}</h2>
-      <div className="lp-features-grid">
-        {featureList.map((f, i) => (
-          <div key={i} className="lp-feature-card" style={{"--fc": FEATURE_COLORS[i]} as React.CSSProperties}>
-            <div className="lp-feature-icon-wrap"><span className="lp-feature-icon">{f.icon}</span></div>
-            <h3 className="lp-feature-title">{f.title}</h3>
-            <p className="lp-feature-desc">{f.desc}</p>
+      <div className="lp-features-bento" ref={featuresRevealRef}>
+        {/* The two live-data features get a real embedded mini-demo instead
+            of icon+text — absorbs the old standalone Heatmap/Fear&Greed
+            section, which just repeated this same content less vividly. */}
+        <div className="lp-feature-tile lp-feature-tile--large">
+          <div className="lp-feature-tile-head">
+            <span className="lp-feature-icon">{featureList[3]?.icon}</span>
+            <div>
+              <h3 className="lp-feature-title">{featureList[3]?.title}</h3>
+              <p className="lp-feature-desc">{featureList[3]?.desc}</p>
+            </div>
           </div>
-        ))}
-      </div>
-    </section>
-
-    {/* ── AI panel mock ────────────────────────────────────────────────── */}
-    <section className="lp-ai-section">
-      <div className="lp-ai-inner">
-        <div className="lp-ai-text">
-          <div className="lp-section-label">{t("landing.aiSection.label")}</div>
-          <h2 className="lp-section-title">{t("landing.aiSection.title")}</h2>
-          <p className="lp-ai-desc">{t("landing.aiSection.desc")}</p>
-          <ul className="lp-ai-bullets">
-            {aiSectionBullets.map((b, i) => (
-              <li key={i}><span className="lp-ai-check">✓</span> {b}</li>
-            ))}
-          </ul>
-          <button className="lp-btn-primary" onClick={onSignUp} style={{marginTop:24}}>{t("landing.aiSection.tryFree")}</button>
-        </div>
-
-        <div className="lp-ai-mock">
-          <div className="lp-ai-mock-header">
-            <span className="lp-ai-mock-logo">✦</span>
-            <span className="lp-ai-mock-title">AI Market Intelligence</span>
-            <span className="lp-ai-mock-bull">BULLISH</span>
-            <span className="lp-ai-mock-conf">HIGH</span>
-          </div>
-          <p className="lp-ai-mock-thesis">Bitcoin is forming a continuation pattern above the $105K psychological level. Funding rates remain healthy at +0.018%, long/short ratio of 1.34 favors bulls. EMA9 crossing above EMA21 with RSI at 72 — momentum is strong.</p>
-          <div className="lp-ai-scenarios">
-            <div className="lp-ai-sc lp-ai-sc--bull"><div className="lp-ai-sc-dir">▲ Bull Case</div><div className="lp-ai-sc-price">$115,000</div><div className="lp-ai-sc-prob">68%</div></div>
-            <div className="lp-ai-sc lp-ai-sc--base"><div className="lp-ai-sc-dir">→ Base</div><div className="lp-ai-sc-price">$108,500</div><div className="lp-ai-sc-prob">22%</div></div>
-            <div className="lp-ai-sc lp-ai-sc--bear"><div className="lp-ai-sc-dir">▼ Bear Case</div><div className="lp-ai-sc-price">$98,000</div><div className="lp-ai-sc-prob">10%</div></div>
-          </div>
-          <div className="lp-ai-mock-cards">
-            {[{l:"Sentiment",v:"BULLISH",c:"#22c55e"},{l:"L/S Ratio",v:"1.34 ▲",c:"#22c55e"},{l:"Funding",v:"+0.018%",c:"#38bdf8"},{l:"Action",v:"ACCUMULATE",c:"#a78bfa"}].map(x => (
-              <div key={x.l} className="lp-ai-mock-card"><div className="lp-ai-mock-card-l">{x.l}</div><div className="lp-ai-mock-card-v" style={{color:x.c}}>{x.v}</div></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {/* ── Heatmap + Fear & Greed ────────────────────────────────────────── */}
-    <section className="lp-data-section">
-      <div className="lp-data-inner">
-        <div className="lp-data-block">
-          <div className="lp-section-label">{t("landing.heatmap.label")}</div>
-          <h3 className="lp-data-title">{t("landing.heatmap.title")}</h3>
-          <p className="lp-data-desc">{t("landing.heatmap.desc")}</p>
           <HeatmapPreview />
         </div>
-        <div className="lp-data-block">
-          <div className="lp-section-label">{t("landing.sentiment.label")}</div>
-          <h3 className="lp-data-title">{t("landing.sentiment.title")}</h3>
-          <p className="lp-data-desc">{t("landing.sentiment.desc")}</p>
+
+        <div className="lp-feature-tile lp-feature-tile--large">
+          <div className="lp-feature-tile-head">
+            <span className="lp-feature-icon">{featureList[4]?.icon}</span>
+            <div>
+              <h3 className="lp-feature-title">{featureList[4]?.title}</h3>
+              <p className="lp-feature-desc">{featureList[4]?.desc}</p>
+            </div>
+          </div>
           <div className="lp-fg-wrap">
             <FearGreedGauge value={72} />
             <div className="lp-onchain-mini">
@@ -504,6 +598,14 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
             </div>
           </div>
         </div>
+
+        {[0, 1, 2].map(i => (
+          <div key={i} className="lp-feature-tile" style={{"--fc": FEATURE_COLORS[i]} as React.CSSProperties}>
+            <div className="lp-feature-icon-wrap"><span className="lp-feature-icon">{featureList[i]?.icon}</span></div>
+            <h3 className="lp-feature-title">{featureList[i]?.title}</h3>
+            <p className="lp-feature-desc">{featureList[i]?.desc}</p>
+          </div>
+        ))}
       </div>
     </section>
 
@@ -511,7 +613,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
     <section className="lp-pricing">
       <div className="lp-section-label">{t("landing.pricing.label")}</div>
       <h2 className="lp-section-title">{t("landing.pricing.sectionTitle")}</h2>
-      <div className="lp-plans">
+      <div className="lp-plans" ref={pricingRevealRef}>
         {pricingPlans.map((plan, i) => (
           <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}${PLAN_ELITE[i] ? " lp-plan--elite" : ""}`} style={{"--pc": PLAN_COLORS[i]} as React.CSSProperties}>
             {PLAN_PRIMARY[i] && <div className="lp-plan-popular-tag">{t("landing.pricing.popularTag")}</div>}
@@ -520,20 +622,50 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp, theme, onTogg
             <div className="lp-plan-price"><span className="lp-plan-amount">{plan.price}</span>{plan.per && <span className="lp-plan-per">{plan.per}</span>}</div>
             <ul className="lp-plan-features">{plan.features.map(f => <li key={f}><span style={{color: PLAN_COLORS[i]}}>✓</span> {f}</li>)}</ul>
             {PLAN_ELITE[i] && <div className="lp-plan-elite-banner">🔓 Unlimited AI predictions</div>}
-            <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary" : ""}${PLAN_ELITE[i] ? " lp-plan-cta--elite" : ""}`} style={PLAN_PRIMARY[i] || PLAN_ELITE[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
+            <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary lp-btn-glow" : ""}${PLAN_ELITE[i] ? " lp-plan-cta--elite" : ""}`} style={PLAN_PRIMARY[i] || PLAN_ELITE[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
           </div>
         ))}
       </div>
     </section>
 
     {/* ── CTA ──────────────────────────────────────────────────────────── */}
-    <section className="lp-cta">
+    <section className="lp-cta lp-cta-reveal" ref={ctaRevealRef}>
       <h2 className="lp-cta-title">{t("landing.cta.title")}</h2>
       <p className="lp-cta-sub">{t("landing.cta.sub")}</p>
-      <button className="lp-btn-hero-primary" onClick={onSignUp}>{t("landing.cta.btn")}</button>
+      <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.cta.btn")}</button>
     </section>
 
-    <footer className="lp-footer"><span>{t("landing.footer")}</span></footer>
+    {/* ── Footer — the mobile-app teaser lives inside it now, as one
+        cohesive band, instead of a separate card floating on its own. */}
+    <footer className="lp-footer">
+      {!Capacitor.isNativePlatform() && (
+        <div className="lp-footer-mobile">
+          <div className="lp-footer-mobile-text">
+            <span className="lp-footer-mobile-label">{t("landing.mobileApp.label")}</span>
+            <span className="lp-footer-mobile-title">{t("landing.mobileApp.title")}</span>
+          </div>
+          <div className="lp-store-badges">
+            <div className="lp-store-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.94 1.36-1.92 2.72-3.45 2.75-1.514.03-2-.89-3.73-.89-1.73 0-2.27.87-3.694.92-1.5.05-2.64-1.47-3.59-2.82-1.94-2.75-3.44-7.75-1.44-11.13.99-1.68 2.76-2.75 4.68-2.78 1.47-.03 2.86.98 3.75.98.9 0 2.58-1.21 4.35-1.03.74.03 2.82.3 4.15 2.25-.11.07-2.47 1.44-2.45 4.31.03 3.43 3.02 4.57 3.05 4.58-.03.09-.48 1.62-1.6 3.24z"/></svg>
+              <div className="lp-store-badge-text">
+                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.appStoreEyebrow")}</span>
+                <span className="lp-store-badge-name">{t("landing.mobileApp.appStore")}</span>
+              </div>
+              <span className="lp-soon-pill">{t("landing.mobileApp.comingSoon")}</span>
+            </div>
+            <div className="lp-store-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#00d9ff" d="M3.6 2.3c-.4.3-.6.8-.6 1.4v16.6c0 .6.2 1.1.6 1.4l.1.1L13 12.5v-.1L3.7 2.2z"/><path fill="#00e676" d="M16.1 15.6l-3.1-3.1v-.1l3.1-3.1 3.5 2c1 .6 1 1.6 0 2.2z"/><path fill="#ff3d00" d="M16.1 8.4L13 5.3 3.7 2.2c.3-.3.9-.4 1.5 0z"/><path fill="#ffc400" d="M13 12.5l3.1 3.1-9.9 5.6c-.6.4-1.2.3-1.5 0z"/></svg>
+              <div className="lp-store-badge-text">
+                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.googlePlayEyebrow")}</span>
+                <span className="lp-store-badge-name">{t("landing.mobileApp.googlePlay")}</span>
+              </div>
+              <span className="lp-soon-pill">{t("landing.mobileApp.comingSoon")}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="lp-footer-bottom"><span>{t("landing.footer")}</span></div>
+    </footer>
   </div>
   );
 };

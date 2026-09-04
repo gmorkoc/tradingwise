@@ -817,24 +817,12 @@
       "badge": "✦ YZ Destekli Kripto Analizi",
       "titleLine1": "Daha Akıllı İşlem Yapın",
       "titleGradient": "YZ piyasa zekasıyla",
-      "desc": "GPT-4o ile güçlendirilmiş gerçek zamanlı Bitcoin ve kripto analitiği. Tasfiye haritaları, zincir üzeri sinyaller, fiyat tahmin senaryoları ve Gann analizi — hepsi tek bir panoda.",
+      "desc": "GPT-4o ile güçlendirilmiş gerçek zamanlı Bitcoin ve kripto analitiği. Tasfiye haritaları, zincir üzeri sinyaller, fiyat tahmin senaryoları ve özel strateji uyarıları — hepsi tek bir panoda.",
       "startFree": "Ücretsiz başla ✦",
       "headline": "Piyasayı Bir Kurum Gibi Okuyun",
       "sub": "Fiyat hareketi, zincir üzeri veri, tasfiyeler ve duyarlılıkta YZ destekli analiz — hepsi tek bir panoda.",
       "cta": "Ücretsiz Başla — Kart Gerekmez",
       "trust": "2.000'den fazla kripto yatırımcısı tarafından güvenilir · Sonsuza dek ücretsiz plan mevcut"
-    },
-    "sidekick": {
-      "title1": "YZ ile sohbet edin,",
-      "title2": "işlem odaklı asistanınız",
-      "desc": "Kripto piyasaları için özel olarak tasarlandı — genel bir sohbet botu değil. Piyasa yapısını sorun, stop-loss seviyeleri alın, fonlama oranlarını çözümleyin ve gerçek zamanlı uygulanabilir trade kurulumları alın.",
-      "bullets": [
-        "Anlık grafik ve yapı analizi",
-        "Stop-loss, hedef ve R-oranı hesaplamaları",
-        "Canlı fonlama oranı ve tasfiye bağlamı",
-        "Boğa / ayı senaryo açıklamaları"
-      ],
-      "cta": "YZ Sohbeti Deneyin →"
     },
     "features": {
       "label": "İçinde neler var",
@@ -865,11 +853,6 @@
           "icon": "⛓",
           "title": "YZ Zincir Üzeri Analizi",
           "desc": "Hash oranı, madenci geliri, işlem hacmi — YZ tarafından uygulanabilir piyasa sinyallerine yorumlanır."
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analizi",
-          "desc": "Gelişmiş geometrik fiyat ve zaman teorisi. Profesyonel yatırımcıların kullandığı Karenin 9'u, Gann açıları ve döngü tahminleri."
         }
       ],
       "items": [
@@ -904,18 +887,6 @@
           "desc": "Perakende ve akıllı para net pozisyonları, duyarlılık sapması ve YZ tarafından üretilen eğilim özetleri — her 4 saatte güncellenir."
         }
       ]
-    },
-    "aiSection": {
-      "label": "YZ Motoru",
-      "title": "GPT-4o piyasayı sizin yerinize okur",
-      "desc": "YZ'miz canlı fonlama oranlarını, tasfiye seviyelerini, RSI, MACD, uzun/kısa oranlarını ve korku & açgözlülük verilerini alır — ardından güven derecesi, senaryo tahminleri ve uygulanabilir bir öneri içeren net bir piyasa tezine dönüştürür.",
-      "bullets": [
-        "Grafik üzerinde boğa / temel / ayı senaryo okları",
-        "YZ'den destek ve direnç seviyeleri",
-        "Kimin aldığı, kimin sattığı analizi",
-        "Tezi tersine çevirebilecek kilit risk faktörleri"
-      ],
-      "tryFree": "Ücretsiz deneyin →"
     },
     "heatmap": {
       "label": "Tasfiye Isı Haritası",
@@ -966,6 +937,7 @@
             "Zincir Üzeri YZ Analizi",
             "Senaryolu fiyat tahmini",
             "Tasfiye ısı haritası YZ",
+            "Özel Strateji Uyarıları",
             "35 YZ isteği / hafta"
           ]
         },
@@ -976,7 +948,6 @@
           "cta": "Elite'e Geç",
           "features": [
             "Pro'daki her şey — sınırsız",
-            "Gann Analizi YZ",
             "Coinbase Premium YZ",
             "Yeni özelliklere erken erişim"
           ]

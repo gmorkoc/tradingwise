@@ -817,24 +817,12 @@
       "badge": "✦ Analisi Cripto con IA",
       "titleLine1": "Fai trading più intelligente con",
       "titleGradient": "intelligenza di mercato IA",
-      "desc": "Analisi Bitcoin e cripto in tempo reale powered by GPT-4o. Mappe di liquidazione, segnali on-chain, scenari di previsione prezzo e analisi Gann — tutto in un dashboard.",
+      "desc": "Analisi Bitcoin e cripto in tempo reale powered by GPT-4o. Mappe di liquidazione, segnali on-chain, scenari di previsione prezzo e alert di strategia personalizzati — tutto in un dashboard.",
       "startFree": "Inizia gratis ✦",
       "headline": "Leggi il Mercato come un'Istituzione",
       "sub": "Analisi basata sull'IA su azione del prezzo, dati on-chain, liquidazioni e sentiment — tutto in un dashboard.",
       "cta": "Inizia Gratis — Nessuna Carta",
       "trust": "Scelto da oltre 2.000 trader di criptovalute · Piano gratuito disponibile"
-    },
-    "sidekick": {
-      "title1": "Chatta con la nostra IA,",
-      "title2": "il tuo assistente di trading",
-      "desc": "Progettata appositamente per i mercati cripto — non un chatbot generico. Chiedi della struttura di mercato, ottieni livelli di stop-loss, decodifica i tassi di finanziamento e ricevi setup operativi in tempo reale.",
-      "bullets": [
-        "Analisi istantanea di grafici e struttura",
-        "Calcoli di stop-loss, target e rapporto R",
-        "Contesto live di tassi di finanziamento e liquidazioni",
-        "Analisi degli scenari rialzisti / ribassisti"
-      ],
-      "cta": "Prova la Chat IA →"
     },
     "features": {
       "label": "Cosa c'è dentro",
@@ -865,11 +853,6 @@
           "icon": "⛓",
           "title": "Analisi On-Chain con IA",
           "desc": "Hash rate, ricavi dei miner, volume delle transazioni — interpretati dall'IA in segnali di mercato azionabili."
-        },
-        {
-          "icon": "📐",
-          "title": "Analisi Gann",
-          "desc": "Teoria geometrica avanzata di prezzo e tempo. Quadrato di 9, angoli di Gann e previsioni di ciclo usate dai trader professionisti."
         }
       ],
       "items": [
@@ -904,18 +887,6 @@
           "desc": "Posizioni nette retail vs smart money, divergenza del sentiment e riepiloghi bias generati dall'IA — aggiornati ogni 4 ore."
         }
       ]
-    },
-    "aiSection": {
-      "label": "Motore IA",
-      "title": "GPT-4o legge il mercato al posto tuo",
-      "desc": "La nostra IA assorbe tassi di finanziamento live, livelli di liquidazione, RSI, MACD, rapporti long/short e dati paura & avidità — poi li sintetizza in una chiara tesi di mercato con valutazione di confidenza, proiezioni di scenario e una raccomandazione operativa.",
-      "bullets": [
-        "Frecce di scenario rialzista / base / ribassista sul grafico",
-        "Livelli di supporto e resistenza dall'IA",
-        "Analisi di chi compra e chi vende",
-        "Fattori di rischio chiave che potrebbero invertire la tesi"
-      ],
-      "tryFree": "Provalo gratis →"
     },
     "heatmap": {
       "label": "Mappa di Calore Liquidazioni",
@@ -966,6 +937,7 @@
             "Analisi On-Chain IA",
             "Previsione prezzo con scenari",
             "Mappa calore liquidazioni IA",
+            "Alert di Strategia Personalizzati",
             "35 richieste IA / settimana"
           ]
         },
@@ -976,7 +948,6 @@
           "cta": "Vai ad Elite",
           "features": [
             "Tutto di Pro — illimitato",
-            "Analisi Gann IA",
             "Coinbase Premium IA",
             "Accesso anticipato alle novità"
           ]

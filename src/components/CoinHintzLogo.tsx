@@ -41,7 +41,7 @@ export const CoinHintzLogo: React.FC<Props> = ({ loading = false, variant = "def
     return (
       <span style={{ display: "flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
         <LogoIcon size={32} />
-        <span style={{ fontSize: "18px", fontWeight: 700, color: "#4f46e5", letterSpacing: "-0.3px" }}>
+        <span className="ch-logo-nav-text" style={{ fontSize: "18px", fontWeight: 700, color: "#4f46e5", letterSpacing: "-0.3px" }}>
           coinhint<span style={{ color: "#4ade80" }}>z</span>
         </span>
       </span>
