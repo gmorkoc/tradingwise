@@ -101,11 +101,6 @@ const CANDLES: [number, number, number, number, number][] = [
   [107.5, 108.2, 107.0, 107.8, 130], [107.8, 108.8, 107.5, 108.6, 168],
 ];
 
-const MIN_P = 95.5, MAX_P = 110.0, CHART_H = 180, VOL_H = 40, PAD_T = 10, PAD_R = 56;
-const SVG_W = 620;
-
-function toY(p: number) { return PAD_T + (1 - (p - MIN_P) / (MAX_P - MIN_P)) * CHART_H; }
-
 function computeEMA(closes: number[], period = 9): (number | null)[] {
   const k = 2 / (period + 1);
   const out: (number | null)[] = Array(period - 1).fill(null);
@@ -114,8 +109,6 @@ function computeEMA(closes: number[], period = 9): (number | null)[] {
   for (let i = period; i < closes.length; i++) out.push(closes[i] * k + out[out.length - 1]! * (1 - k));
   return out;
 }
-
-const RSI_VALUES = [45, 52, 58, 55, 48, 42, 55, 65, 72, 78, 73, 75, 70, 74, 78, 80, 77, 82, 79, 85];
 
 
 const HEATMAP: number[][] = [
@@ -140,110 +133,6 @@ const PLAN_ELITE   = [false, false, true];
 // ── Sub-components ──────────────────────────────────────────────────────
 
 
-function MockChart() {
-  const usableW = SVG_W - PAD_R;
-  const candleW = usableW / CANDLES.length;
-  const bodyW = Math.max(4, candleW * 0.55);
-  const closes = CANDLES.map(c => c[3]);
-  const ema = computeEMA(closes, 9);
-  const maxVol = Math.max(...CANDLES.map(c => c[4]));
-  const gridPrices = [96, 98, 100, 102, 104, 106, 108];
-  const labelPrices = [96, 98, 100, 102, 104, 106, 108, 110];
-  const volBase = PAD_T + CHART_H + 14;
-  const svgH = volBase + VOL_H;
-
-  const emaLine = ema
-    .map((v, i) => v != null ? `${(i + 0.5) * candleW},${toY(v)}` : null)
-    .filter(Boolean).join(" ");
-
-  return (
-    <svg viewBox={`0 0 ${SVG_W} ${svgH}`} className="lp-chart-svg" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="mcEma" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#fbbf24" />
-        </linearGradient>
-        <filter id="mcGlow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <filter id="mcLast"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-
-      {/* Grid */}
-      {gridPrices.map(p => (
-        <line key={p} x1={0} y1={toY(p)} x2={usableW} y2={toY(p)} stroke="rgba(148,163,184,0.08)" strokeWidth="1" strokeDasharray="4,4" />
-      ))}
-      {/* Price labels */}
-      {labelPrices.map(p => (
-        <text key={p} x={usableW + 4} y={toY(p) + 3.5} fontSize="8.5" fill="rgba(148,163,184,0.55)" fontFamily="monospace">${p}K</text>
-      ))}
-
-      {/* Candles + volume */}
-      {CANDLES.map(([o, h, l, c, v], i) => {
-        const cx = (i + 0.5) * candleW;
-        const green = c >= o;
-        const bodyTop = toY(Math.max(o, c)), bodyBot = toY(Math.min(o, c));
-        const bodyH = Math.max(1.5, bodyBot - bodyTop);
-        const isLast = i === CANDLES.length - 1;
-        const vH = (v / maxVol) * VOL_H;
-        const fill = green ? "rgba(34,197,94,0.82)" : "rgba(251,113,133,0.82)";
-        const lastFill = green ? "#22c55e" : "#fb7185";
-        return (
-          <React.Fragment key={i}>
-            {/* AI signal at candle 13 — appears first, before the price action
-                plays out, so the story reads "AI calls it" then "watch it
-                happen" rather than the other way around. A sibling of the
-                candle group (not nested inside it) so it animates on its own
-                early timeline instead of inheriting the candle's grow-in. */}
-            {i === 13 && (
-              <g className="lp-hero-signal">
-                {/* Arrow points at the exact low first — the badge above is
-                    the bigger, more prominent read of the same call. */}
-                <polygon points={`${cx},${toY(l)+18} ${cx-9},${toY(l)+34} ${cx+9},${toY(l)+34}`} fill="#22c55e" filter="url(#mcGlow)" />
-                <rect className="lp-hero-signal-flash" x={cx - 68} y={toY(h) - 49} width="136" height="36" rx="9"
-                  fill="#16a34a" filter="url(#mcGlow)" />
-                <text x={cx} y={toY(h) - 27} textAnchor="middle" fontSize="11" fontWeight="800" fill="#ffffff" letterSpacing="0.02em" fontFamily="sans-serif">Bottom Signal</text>
-              </g>
-            )}
-            <g className="lp-hero-candle" style={{ animationDelay: `${1.4 + i * 0.35}s` }} filter={isLast ? "url(#mcLast)" : undefined}>
-              <rect x={cx - bodyW / 2} y={volBase + VOL_H - vH} width={bodyW} height={vH}
-                fill={green ? "rgba(34,197,94,0.28)" : "rgba(251,113,133,0.28)"} rx="1" />
-              <line x1={cx} y1={toY(h)} x2={cx} y2={toY(l)} stroke={isLast ? lastFill : fill} strokeWidth={isLast ? 1.5 : 1} />
-              <rect x={cx - bodyW / 2} y={bodyTop} width={bodyW} height={bodyH} fill={isLast ? lastFill : fill} rx="1" />
-            </g>
-          </React.Fragment>
-        );
-      })}
-
-      {/* EMA */}
-      {emaLine && <polyline className="lp-hero-ema" points={emaLine} fill="none" stroke="url(#mcEma)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" filter="url(#mcGlow)" />}
-
-      {/* Labels */}
-      <text x={6} y={22} fontSize="11" fill="rgba(241,245,249,0.85)" fontWeight="bold" fontFamily="sans-serif">BTC / USD</text>
-      <text x={6} y={35} fontSize="8.5" fill="rgba(148,163,184,0.55)" fontFamily="sans-serif">1H · EMA(9)</text>
-      <text x={6} y={volBase + 9} fontSize="7.5" fill="rgba(148,163,184,0.4)" fontFamily="sans-serif">VOL</text>
-
-      {/* Current price badge */}
-      <rect x={usableW} y={toY(CANDLES[19][3]) - 8} width={PAD_R - 2} height={15} fill="#22c55e" rx="3" />
-      <text x={usableW + PAD_R / 2 - 1} y={toY(CANDLES[19][3]) + 3} textAnchor="middle" fontSize="8" fill="white" fontWeight="bold" fontFamily="monospace">$108.6K</text>
-    </svg>
-  );
-}
-
-function RSIChart() {
-  const W = SVG_W - PAD_R, H = 44;
-  const n = RSI_VALUES.length;
-  const cW = W / n;
-  const pts = RSI_VALUES.map((v, i) => `${(i + 0.5) * cW},${H - (v / 100) * H}`).join(" ");
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="lp-rsi-svg" preserveAspectRatio="xMidYMid meet">
-      <line x1={0} y1={H * 0.3} x2={W} y2={H * 0.3} stroke="rgba(251,113,133,0.2)" strokeWidth="0.8" strokeDasharray="3,3" />
-      <line x1={0} y1={H * 0.7} x2={W} y2={H * 0.7} stroke="rgba(34,197,94,0.2)"   strokeWidth="0.8" strokeDasharray="3,3" />
-      <polyline className="lp-hero-rsi-line" points={pts} fill="none" stroke="#a78bfa" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <text x={4} y={11} fontSize="7.5" fill="rgba(148,163,184,0.45)" fontFamily="sans-serif">RSI(14)</text>
-      <text x={W - 3} y={H * 0.3 + 3} textAnchor="end" fontSize="7" fill="rgba(251,113,133,0.5)" fontFamily="monospace">70</text>
-      <text x={W - 3} y={H * 0.7 + 3} textAnchor="end" fontSize="7" fill="rgba(34,197,94,0.5)"   fontFamily="monospace">30</text>
-    </svg>
-  );
-}
 
 function HeatmapPreview() {
   const heatColor = (v: number) => {
@@ -300,12 +189,12 @@ function FearGreedGauge({ value = 72 }: { value?: number }) {
 }
 
 // Mini annotated candlestick chart for the CandleAI flagship promo — same
-// OHLC series + EMA math as the hero's MockChart, plus the smart-money
-// overlays (order block, fair value gap, CHoCH/BOS, AI target) that make
-// this read as the real AI Candle Watcher screen rather than a generic
-// price chart. Colors are fixed semantic hex (bull/bear/AI accent),
-// matching MockChart's own precedent — see LandingPage.css's CandleAI
-// promo comment for why that's not a theme-token violation.
+// OHLC series + EMA math shared with the hero's card collage, plus the
+// smart-money overlays (order block, fair value gap, CHoCH/BOS, AI target)
+// that make this read as the real AI Candle Watcher screen rather than a
+// generic price chart. Colors are fixed semantic hex (bull/bear/AI accent),
+// not a theme-token violation — see LandingPage.css's CandleAI promo
+// comment for why.
 const CAI_MIN_P = 95.5, CAI_MAX_P = 110.5, CAI_W = 600, CAI_PAD_R = 54, CAI_H = 150, CAI_PAD_T = 8;
 function caiToY(p: number) { return CAI_PAD_T + (1 - (p - CAI_MIN_P) / (CAI_MAX_P - CAI_MIN_P)) * CAI_H; }
 
@@ -397,20 +286,13 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
       </div>
     </nav>
 
-    {/* ── Hero ─────────────────────────────────────────────────────────── */}
+    {/* ── Hero — established copy on the left, the bold glowing card
+        collage on the right: deep brand-gradient background, split so
+        the text has room to breathe beside the animation instead of
+        sitting on top of it. */}
     <section className="lp-hero">
-      <div className="lp-hero-card">
-        <div className="lp-hero-chart-area">
-          <div className="lp-hero-chart-bar">
-            <span className="lp-hcb-pair">BTC/USD · 1H</span>
-            <span className="lp-hcb-price">$108,642</span>
-            <span className="lp-hcb-chg lp-hero-flash">+3.24% ▲</span>
-            <span className="lp-hcb-signal lp-hero-flash"><span className="lp-hcb-signal-dot" />✦ AI Signal: ACCUMULATE</span>
-          </div>
-          <div className="lp-hero-chart-body"><MockChart /></div>
-          <div className="lp-hero-chart-rsi"><RSIChart /></div>
-        </div>
-
+      <div className="lp-bold-glow" />
+      <div className="lp-bold-inner lp-hero-split">
         <div className="lp-hero-text lp-hero-cascade">
           <div className="lp-hero-badge">{t("landing.hero.badge")}</div>
           <h1 className="lp-hero-title">{t("landing.hero.titleLine1")}<br /><span className="lp-hero-gradient">{t("landing.hero.titleGradient")}</span></h1>
@@ -418,6 +300,56 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
           <div className="lp-hero-actions">
             <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.hero.startFree")}</button>
           </div>
+        </div>
+
+        <div className="lp-bold-collage">
+          <h2 className="lp-bold-headline">
+            {t("landing.morph.title")}{" "}
+            <span className="lp-bold-word-cycle">
+              <span>{t("landing.morph.word1")}</span>
+              <span>{t("landing.morph.word2")}</span>
+              <span>{t("landing.morph.word3")}</span>
+            </span>
+          </h2>
+
+          <div className="lp-bold-card lp-bold-card--price">
+            <div className="lp-bold-card-top">
+              <span className="lp-bold-coin">₿</span>
+              <div>
+                <div className="lp-bold-card-name">BTC/USD</div>
+                <div className="lp-bold-card-price">$108,642 <span className="up">▲ 3.24%</span></div>
+              </div>
+            </div>
+            <svg className="lp-bold-spark" viewBox="0 0 160 40" preserveAspectRatio="none">
+              <polyline points="0,32 20,28 40,30 60,22 80,24 100,14 120,16 140,6 160,8" />
+              <circle cx="160" cy="8" r="3" />
+            </svg>
+          </div>
+
+          <div className="lp-bold-card lp-bold-card--signal">
+            <span className="lp-bold-dot" />✦ AI Signal: ACCUMULATE
+          </div>
+
+          <div className="lp-bold-card lp-bold-card--forecast">
+            <div className="lp-bold-pill">▲ {t("landing.candleAI.bullishBias")}</div>
+            <div className="lp-bold-card-sub">{t("landing.candleAI.bullCaseText")} <b>$118,000</b></div>
+          </div>
+
+          <div className="lp-bold-card lp-bold-card--alert">
+            <div className="lp-bold-card-kicker">{t("landing.strategyAlertsPromo.firesLabel")}</div>
+            <div className="lp-bold-card-sub">{t("landing.strategyAlertsPromo.fire1")}</div>
+          </div>
+
+          <div className="lp-bold-card lp-bold-card--icons">
+            <div className="lp-bold-icon-row"><span>📊</span>{t("landing.morph.screen1")}</div>
+            <div className="lp-bold-icon-row"><span>⚡</span>{t("landing.morph.screen2")}</div>
+            <div className="lp-bold-icon-row"><span>◎</span>{t("landing.morph.screen3")}</div>
+          </div>
+
+          <span className="lp-bold-tag lp-bold-tag--1">{t("landing.morph.tag1")}</span>
+          <span className="lp-bold-tag lp-bold-tag--2">{t("landing.morph.tag2")}</span>
+          <span className="lp-bold-tag lp-bold-tag--3">{t("landing.morph.tag3")}</span>
+          <span className="lp-bold-tag lp-bold-tag--4">{t("landing.morph.tag4")}</span>
         </div>
       </div>
     </section>
