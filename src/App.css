@@ -1341,59 +1341,6 @@ select {
   margin-bottom: 32px;
 }
 
-/* ── Chart nav accordion (Crypto/Stocks sub-items) ─────────────────────── */
-.chart-asset-tab-icon {
-  font-size: 0.85rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.chart-nav-chevron {
-  margin-left: auto;
-  font-size: 0.6rem;
-  transition: transform 0.15s ease;
-  flex-shrink: 0;
-}
-
-.chart-nav-chevron--open {
-  transform: rotate(180deg);
-}
-
-.chart-nav-subitems {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  gap: 1px;
-  padding: 2px 0 4px;
-}
-
-.chart-nav-subitem {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: none;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  padding: 6px 12px 6px 22px;
-  transition: background 0.15s, color 0.15s;
-}
-
-@media (min-width: 641px) {
-  .chart-nav-subitem { gap: 6px; }
-}
-
-.chart-nav-subitem:hover {
-  background: var(--color-input-bg);
-  color: var(--color-text-secondary);
-}
-
-.chart-nav-subitem--active {
-  color: var(--color-primary);
-}
-
 .chart-section-wrap {
   display: flex;
   flex-direction: row;
@@ -2614,18 +2561,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
   .icon-strip .icon-strip-btn.active {
     background: var(--color-primary-soft) !important;
     color: var(--color-primary);
-  }
-  .chart-nav-subitem {
-    width: calc(100% - 16px);
-    margin: 0 8px;
-    padding: 8px 16px 8px 46px;
-    border-radius: 8px;
-  }
-  .chart-nav-subitem:hover {
-    background: var(--color-input-bg);
-  }
-  .chart-nav-subitem--active {
-    background: var(--color-primary-soft);
   }
   .icon-strip .icon-strip-btn svg,
   .icon-strip .nav-icon-wrap svg {

@@ -1361,8 +1361,6 @@
     "candleai": "Velas IA",
     "markets": "Mercados Globales",
     "riskcalc": "Calc. Posición",
-    "crypto": "Cripto",
-    "stocks": "Acciones",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "swipeHint": "Desliza para abrir el menú",
@@ -2124,13 +2122,5 @@
     "minimize": "Minimizar",
     "close": "Cerrar",
     "expand": "Expandir"
-  },
-  "stocks": {
-    "setupTitle": "Los gráficos de acciones necesitan una clave API",
-    "setupBody": "Regístrate gratis en Twelve Data, obtén tu clave API y añádela como VITE_TWELVEDATA_API_KEY en tu entorno.",
-    "searchPlaceholder": "Buscar por símbolo o empresa…",
-    "noResults": "Sin resultados",
-    "refresh": "Actualizar",
-    "loading": "Cargando gráfico…"
   }
 }

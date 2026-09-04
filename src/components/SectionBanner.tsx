@@ -19,6 +19,7 @@ const ICONS: Partial<Record<string, string>> = {
   altanalysis: "◆",
   options:     "Ω",
   correlation: "⋈",
+  strategyalerts: "⚑",
 };
 
 interface Props { section: string }

@@ -75,7 +75,7 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
       // via a plain DOM event instead (same pattern as
       // useNotificationsEnabled.ts's cross-component toggle).
       FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {
-        const data = notification.data as { type?: string; url?: string; coin?: string; commentId?: string } | undefined;
+        const data = notification.data as { type?: string; url?: string; coin?: string; commentId?: string; strategyId?: string } | undefined;
         if (data?.type === "daily_brief" && data.url) {
           Browser.open({ url: data.url });
         } else if (data?.type === "upgrade_reminder") {
@@ -84,6 +84,8 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
           const detail = { coin: data.coin, commentId: parseInt(data.commentId, 10) };
           pendingCoinMention = detail;
           window.dispatchEvent(new CustomEvent("open-coin-mention", { detail }));
+        } else if (data?.type === "strategy_alert" && data.strategyId) {
+          window.dispatchEvent(new CustomEvent("open-strategy-alert", { detail: { strategyId: data.strategyId, coin: data.coin } }));
         }
       });
 

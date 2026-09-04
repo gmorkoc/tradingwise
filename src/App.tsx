@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -17,6 +17,7 @@ import {
 import { CATALOG } from "./services/coinCatalog";
 import { fetchBinancePrices } from "./services/binancePrices";
 import { consumePendingCoinMention } from "./services/pushNotifications";
+import { initWebPushMessageRouting } from "./services/webPush";
 import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
@@ -61,8 +62,7 @@ import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
 
-// Everything below is behind a section nav tab (or, for StocksHome, the
-// crypto/stocks toggle within "chart") — only one is ever visible at a
+// Everything below is behind a section nav tab — only one is ever visible at a
 // time, so each ships as its own chunk fetched on first visit instead of
 // bloating the initial bundle every user pays for regardless of which
 // sections they actually open. PriceChart stays a static import above
@@ -78,10 +78,10 @@ const FundingBot = lazy(() => import("./components/FundingBot").then(m => ({ def
 const CandleWatcher = lazy(() => import("./components/CandleWatcher").then(m => ({ default: m.CandleWatcher })));
 const TradeManager = lazy(() => import("./components/TradeManager").then(m => ({ default: m.TradeManager })));
 const GlobalMarkets = lazy(() => import("./components/GlobalMarkets").then(m => ({ default: m.GlobalMarkets })));
-const StocksHome = lazy(() => import("./components/StocksHome").then(m => ({ default: m.StocksHome })));
 const AltAnalysis = lazy(() => import("./components/AltAnalysis").then(m => ({ default: m.AltAnalysis })));
 const OptionsAnalytics = lazy(() => import("./components/OptionsAnalytics").then(m => ({ default: m.OptionsAnalytics })));
 const CorrelationMatrix = lazy(() => import("./components/CorrelationMatrix").then(m => ({ default: m.CorrelationMatrix })));
+const StrategyAlerts = lazy(() => import("./components/StrategyAlerts").then(m => ({ default: m.StrategyAlerts })));
 
 // Shown briefly the first time a section's chunk is fetched — negligible
 // on subsequent visits since the chunk stays cached.
@@ -109,7 +109,8 @@ type SectionId =
   | "altanalysis"
   | "riskcalc"
   | "options"
-  | "correlation";
+  | "correlation"
+  | "strategyalerts";
 
 interface Position { id: string; catalogId: string; amount: string; cost: string }
 
@@ -234,6 +235,15 @@ const NAV_ITEMS: {
       "M15 18a6 6 0 1 0 0 -12 6 6 0 0 0 0 12",
     ],
   },
+  {
+    id: "strategyalerts",
+    labelKey: "nav.strategyalerts",
+    requiredTier: "pro",
+    d: [
+      "M4 15s1 -1 4 -1 5 2 8 2 4 -1 4 -1V3s-1 1 -4 1 -5 -2 -8 -2 -4 1 -4 1z",
+      "M4 22V15",
+    ],
+  },
 ];
 
 function NavIcon({ d }: { d: string | string[] }) {
@@ -337,11 +347,6 @@ function AppDashboard({
     localStorage.setItem("coin", coin);
   }, [coin]);
 
-  const [chartAssetClass, setChartAssetClass] = useState<"crypto" | "stocks">(
-    () => (new URLSearchParams(window.location.search).get("asset") === "stocks" ? "stocks" : "crypto"),
-  );
-  const [chartNavExpanded, setChartNavExpanded] = useState(false);
-
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and
   // hand the comment id down to CoinChat so it can scroll to/flash it.
@@ -355,7 +360,6 @@ function AppDashboard({
       setCoin(detail.coin as CoinSymbol);
       clearCandleCache();
       setActiveSection("chart");
-      setChartAssetClass("crypto");
       setShowCoinChat(true);
       setHighlightCommentId(detail.commentId);
     };
@@ -373,6 +377,18 @@ function AppDashboard({
     };
     window.addEventListener("open-coin-mention", onOpenCoinMention);
     return () => window.removeEventListener("open-coin-mention", onOpenCoinMention);
+  }, []);
+  useEffect(() => {
+    // StrategyAlerts.tsx has its own listener for the same event to switch
+    // to its "My Strategies" tab — this one just navigates to the section.
+    const onOpenStrategyAlert = () => setActiveSection("strategyalerts");
+    window.addEventListener("open-strategy-alert", onOpenStrategyAlert);
+    return () => window.removeEventListener("open-strategy-alert", onOpenStrategyAlert);
+  }, []);
+  useEffect(() => {
+    // No-op on native (isWebPushAvailable() gates the actual subscription),
+    // but safe/cheap to register unconditionally — just a message listener.
+    initWebPushMessageRouting();
   }, []);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -780,7 +796,7 @@ function AppDashboard({
   // at a 70/30 chart/order-book split, then eases to 85/15 shortly after, so
   // the order book visibly shrinks and draws the eye to the drag handle.
   useEffect(() => {
-    if (activeSection !== "chart" || chartAssetClass !== "crypto") return;
+    if (activeSection !== "chart") return;
     const wrap = chartWrapRef.current;
     if (!wrap) return;
     if (window.innerWidth > 960) return; // desktop — order book isn't resizable there
@@ -810,7 +826,7 @@ function AppDashboard({
     });
 
     return () => { cancelled = true; cancelAnimationFrame(raf); };
-  }, [activeSection, chartAssetClass]);
+  }, [activeSection]);
 
   const openCoinPicker = () => {
     if (coinPickerBtnRef.current) {
@@ -876,19 +892,10 @@ function AppDashboard({
     if (btcData) setError("");
   }, [btcData]);
 
-  // Sync URL hash (active section) and asset query param (crypto/stocks) together.
-  // Always write an explicit value while on the chart section so both directions
-  // (crypto<->stocks) visibly update the URL, not just the stocks->crypto delete.
+  // Sync URL hash to the active section.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (activeSection === "chart") {
-      params.set("asset", chartAssetClass);
-    } else {
-      params.delete("asset");
-    }
-    const search = params.toString();
-    window.history.replaceState(null, "", `${search ? `?${search}` : ""}#${activeSection}`);
-  }, [activeSection, chartAssetClass]);
+    window.history.replaceState(null, "", `${window.location.search}#${activeSection}`);
+  }, [activeSection]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -1160,73 +1167,31 @@ function AppDashboard({
           </button>
 
           <div className="icon-strip-nav">
-            {NAV_ITEMS.filter((item) => !item.hidden).map((item) => {
-              const isChart = item.id === "chart";
-              const navButton = (
-                <button
-                  className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
-                  onClick={() => {
-                    setActiveSection(item.id);
-                    if (isChart) setChartNavExpanded((v) => !v);
-                  }}
-                  title={t(item.labelKey)}
-                >
-                  {/* Mobile badge — left of icon */}
-                  {item.requiredTier && (
-                    <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
-                      {item.requiredTier === "elite" ? "E" : "P"}
-                    </span>
-                  )}
-                  <span className="nav-icon-wrap">
-                    <NavIcon d={item.d} />
+            {NAV_ITEMS.filter((item) => !item.hidden).map((item) => (
+              <button
+                key={item.id}
+                className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
+                onClick={() => setActiveSection(item.id)}
+                title={t(item.labelKey)}
+              >
+                {/* Mobile badge — left of icon */}
+                {item.requiredTier && (
+                  <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
+                    {item.requiredTier === "elite" ? "E" : "P"}
                   </span>
-                  <span className="icon-strip-label">{t(item.labelKey)}</span>
-                  {isChart && (
-                    <span className={`icon-strip-label chart-nav-chevron${chartNavExpanded ? " chart-nav-chevron--open" : ""}`}>▾</span>
-                  )}
-                  {/* Desktop badge — after label */}
-                  {item.requiredTier && (
-                    <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
-                      {item.requiredTier === "elite" ? "E" : "P"}
-                    </span>
-                  )}
-                </button>
-              );
-
-              if (!isChart) return <Fragment key={item.id}>{navButton}</Fragment>;
-
-              return (
-                <Fragment key={item.id}>
-                  {navButton}
-                  {chartNavExpanded && (
-                    <div className="chart-nav-subitems">
-                      <button
-                        className={`chart-nav-subitem${chartAssetClass === "crypto" ? " chart-nav-subitem--active" : ""}`}
-                        onClick={() => {
-                          setChartAssetClass("crypto");
-                          setActiveSection("chart");
-                          setChartNavExpanded(false);
-                        }}
-                      >
-                        <span className="chart-asset-tab-icon">₿</span>
-                        <span className="icon-strip-label">{t("nav.crypto")}</span>
-                      </button>
-                      <button
-                        className={`chart-nav-subitem${chartAssetClass === "stocks" ? " chart-nav-subitem--active" : ""}`}
-                        onClick={() => {
-                          setChartAssetClass("stocks");
-                          setActiveSection("chart");
-                          setChartNavExpanded(false);
-                        }}
-                      >
-                        <span className="chart-asset-tab-icon">📈</span>
-                        <span className="icon-strip-label">{t("nav.stocks")}</span>
-                      </button>
-                    </div>
-                  )}
-                </Fragment>
-              );
-            })}
+                )}
+                <span className="nav-icon-wrap">
+                  <NavIcon d={item.d} />
+                </span>
+                <span className="icon-strip-label">{t(item.labelKey)}</span>
+                {/* Desktop badge — after label */}
+                {item.requiredTier && (
+                  <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
+                    {item.requiredTier === "elite" ? "E" : "P"}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
 
           <div className="icon-strip-bottom">
@@ -1696,85 +1661,76 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                {chartAssetClass === "crypto" &&
-                  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+                {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
                   <AnnouncementBanner
                     storageKey="announce-coinchat-v1"
                     icon="💬"
                     message={t("coinChat.announceBanner", { coin })}
                   />
                 )}
-                {chartAssetClass === "crypto" && (
-                  <Watchlist
-                    onSelectCoin={(symbol) => {
-                      setCoin(symbol as CoinSymbol);
-                      clearCandleCache();
+                <Watchlist
+                  onSelectCoin={(symbol) => {
+                    setCoin(symbol as CoinSymbol);
+                    clearCandleCache();
+                  }}
+                />
+                <FlashNewsBanner />
+                <div
+                  className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
+                  ref={chartWrapRef}
+                  style={
+                    {
+                      "--ob-h": `${obSize.h}px`,
+                      "--ob-w": `${obSize.w}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <PriceChart
+                    refreshTrigger={refreshTrigger}
+                    theme={theme}
+                    coin={coin}
+                    onZoneChange={(zone, price) => {
+                      setChartZone(zone);
+                      setChartPrice(price);
                     }}
+                    onOpenAuth={onOpenAuth}
+                    onOpenUpgrade={onOpenUpgrade}
+                    onFullscreenChange={setChartFullscreen}
                   />
-                )}
-                {chartAssetClass === "crypto" && <FlashNewsBanner />}
-                {chartAssetClass === "crypto" ? (
                   <div
-                    className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
-                    ref={chartWrapRef}
-                    style={
-                      {
-                        "--ob-h": `${obSize.h}px`,
-                        "--ob-w": `${obSize.w}px`,
-                      } as React.CSSProperties
-                    }
+                    className="chart-resize-handle"
+                    onPointerDown={onResizePointerDown}
+                    onPointerMove={onResizePointerMove}
+                    onPointerUp={onResizePointerUp}
                   >
-                    <PriceChart
-                      refreshTrigger={refreshTrigger}
-                      theme={theme}
-                      coin={coin}
-                      onZoneChange={(zone, price) => {
-                        setChartZone(zone);
-                        setChartPrice(price);
-                      }}
-                      onOpenAuth={onOpenAuth}
-                      onOpenUpgrade={onOpenUpgrade}
-                      onFullscreenChange={setChartFullscreen}
-                    />
-                    <div
-                      className="chart-resize-handle"
-                      onPointerDown={onResizePointerDown}
-                      onPointerMove={onResizePointerMove}
-                      onPointerUp={onResizePointerUp}
+                    <svg
+                      className="chart-resize-icon"
+                      width="42"
+                      height="42"
+                      viewBox="0 0 64 64"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
                     >
-                      <svg
-                        className="chart-resize-icon"
-                        width="42"
-                        height="42"
-                        viewBox="0 0 64 64"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        {/* Hand / pointer finger */}
-                        <path d="M28 30V14a3 3 0 0 1 6 0v16" />
-                        <path d="M34 20a3 3 0 0 1 6 0v10" />
-                        <path d="M40 23a3 3 0 0 1 6 0v10" />
-                        <path d="M22 32a3 3 0 0 1 6 0v-2" />
-                        <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
-                        {/* Left arrow */}
-                        <line x1="12" y1="24" x2="2" y2="24" />
-                        <polyline points="6,20 2,24 6,28" />
-                        {/* Right arrow */}
-                        <line x1="52" y1="24" x2="62" y2="24" />
-                        <polyline points="58,20 62,24 58,28" />
-                      </svg>
-                    </div>
-                    <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                      {/* Hand / pointer finger */}
+                      <path d="M28 30V14a3 3 0 0 1 6 0v16" />
+                      <path d="M34 20a3 3 0 0 1 6 0v10" />
+                      <path d="M40 23a3 3 0 0 1 6 0v10" />
+                      <path d="M22 32a3 3 0 0 1 6 0v-2" />
+                      <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
+                      {/* Left arrow */}
+                      <line x1="12" y1="24" x2="2" y2="24" />
+                      <polyline points="6,20 2,24 6,28" />
+                      {/* Right arrow */}
+                      <line x1="52" y1="24" x2="62" y2="24" />
+                      <polyline points="58,20 62,24 58,28" />
+                    </svg>
                   </div>
-                ) : (
-                  <Suspense fallback={<SectionLoading />}>
-                    <StocksHome theme={theme} />
-                  </Suspense>
-                )}
+                  <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                </div>
               </>
             )}
             {activeSection !== "chart" && (
@@ -1888,6 +1844,17 @@ function AppDashboard({
                   <CorrelationMatrix />
                 </BlurGate>
               )}
+              {activeSection === "strategyalerts" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Strategy Alerts"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <StrategyAlerts />
+                </BlurGate>
+              )}
             </Suspense>
             {candleAIVisited && (
               <div style={{ display: activeSection === "candleai" ? "contents" : "none" }}>
@@ -1906,7 +1873,7 @@ function AppDashboard({
         </div>
 
         {/* Coin chat hidden on web for now — kept on iOS. */}
-        {activeSection === "chart" && chartAssetClass === "crypto" &&
+        {activeSection === "chart" &&
           Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
           <aside
             className={`coin-chat-dock${showCoinChat ? "" : " coin-chat-dock--hidden"}`}

@@ -11,6 +11,7 @@ interface PushToastData {
   commentId?: string;
   avatarUrl?: string;
   username?: string;
+  strategyId?: string;
 }
 
 interface PushToastDetail {
@@ -56,6 +57,10 @@ export function PushToast() {
     } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
       window.dispatchEvent(new CustomEvent("open-coin-mention", {
         detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) },
+      }));
+    } else if (data?.type === "strategy_alert" && data.strategyId) {
+      window.dispatchEvent(new CustomEvent("open-strategy-alert", {
+        detail: { strategyId: data.strategyId, coin: data.coin },
       }));
     }
     setToast(null);

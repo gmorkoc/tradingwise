@@ -391,6 +391,11 @@ verify_jwt = false
 [functions.upgrade-reminder-push]
 verify_jwt = false
 
+# Invoked only by pg_cron (strategy-alert-eval cron migration), never by a
+# client — checks its own x-cron-secret header instead of a user JWT.
+[functions.strategy-alert-eval]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

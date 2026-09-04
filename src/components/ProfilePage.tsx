@@ -762,6 +762,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-notif-row">
                   <div>
+                    <p className="pp-notif-label">{t("profile.notifications.strategyAlerts.label", "Strategy Alerts")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.strategyAlerts.desc", "A push whenever one of your deployed strategies fires.")}</p>
+                  </div>
+                  <button type="button" role="switch" aria-checked={notifPrefValue("notify_strategy_alerts")}
+                    className={`pp-switch${notifPrefValue("notify_strategy_alerts") ? " pp-switch--on" : ""}`}
+                    onClick={() => handleNotifPrefChange("notify_strategy_alerts", !notifPrefValue("notify_strategy_alerts"))}>
+                    <span className="pp-switch-thumb" />
+                  </button>
+                </div>
+
+                <div className="pp-notif-row">
+                  <div>
                     <p className="pp-notif-label">{t("profile.notifications.upgradeReminders.label", "Upgrade Reminders")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.upgradeReminders.desc", "Occasional reminders about what Pro and Elite unlock.")}</p>
                   </div>

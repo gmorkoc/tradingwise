@@ -1451,8 +1451,7 @@
     "riskcalc": "Position Size Calc",
     "options": "Options",
     "correlation": "Correlation",
-    "crypto": "Crypto",
-    "stocks": "Stocks",
+    "strategyalerts": "Strategy Alerts",
     "settings": "Settings",
     "signOut": "Sign Out",
     "swipeHint": "Swipe to open menu",
@@ -2034,6 +2033,15 @@
         "Regime Detection"
       ]
     },
+    "strategyalerts": {
+      "title": "Strategy Alerts",
+      "desc": "Build a rule once with indicators and price conditions. Apply it across coins and timeframes. Get pinged the instant it fires — even with the app closed.",
+      "tags": [
+        "Rules Engine",
+        "Multi-Coin",
+        "Server-Side"
+      ]
+    },
     "gann": {
       "title": "Gann Analysis",
       "desc": "W.D. Gann's geometric price/time relationships identify high-probability reversal zones that most traders never see. When price and time square off, reversals become highly probable.",
@@ -2263,13 +2271,5 @@
     "minimize": "Minimize",
     "close": "Close",
     "expand": "Expand"
-  },
-  "stocks": {
-    "setupTitle": "Stock charts need an API key",
-    "setupBody": "Sign up for a free Twelve Data account, grab your API key, and add it as VITE_TWELVEDATA_API_KEY in your environment.",
-    "searchPlaceholder": "Search by symbol or company…",
-    "noResults": "No results found",
-    "refresh": "Refresh",
-    "loading": "Loading chart…"
   }
 }

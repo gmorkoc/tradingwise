@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn } from "../services/coinglass";
+import { calcEMA, calcRSI, calcRSIArray, calcMACD, calcTEMA, calcBB, calcATR, calcVolRatio } from "../services/indicators";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
 import { BlurGate } from "./MembershipGate";
@@ -77,12 +78,8 @@ interface AIRead {
 // ── Intervals ─────────────────────────────────────────────────────────────────
 
 const INTERVALS: Interval[] = [
-  { label: "1m",  value: "1m",  refresh: 30_000,   limit: 100, durationSec: 60      },
-  { label: "5m",  value: "5m",  refresh: 60_000,   limit: 100, durationSec: 300     },
   { label: "15m", value: "15m", refresh: 60_000,   limit: 100, durationSec: 900     },
-  { label: "30m", value: "30m", refresh: 120_000,  limit: 100, durationSec: 1_800   },
   { label: "1h",  value: "1h",  refresh: 300_000,  limit: 100, durationSec: 3_600   },
-  { label: "2h",  value: "2h",  refresh: 300_000,  limit: 100, durationSec: 7_200   },
   { label: "4h",  value: "4h",  refresh: 600_000,  limit: 100, durationSec: 14_400  },
   { label: "8h",  value: "8h",  refresh: 900_000,  limit: 100, durationSec: 28_800  },
   { label: "1d",  value: "1d",  refresh: 1800_000, limit: 100, durationSec: 86_400  },
@@ -149,54 +146,8 @@ function dailyCloseInsight(o: number, h: number, l: number, c: number, pct: numb
 }
 
 // ── Indicator math ────────────────────────────────────────────────────────────
-
-function calcEMA(values: number[], period: number): number[] {
-  if (values.length < period) return values.map(() => NaN);
-  const k = 2 / (period + 1);
-  const result: number[] = new Array(values.length).fill(NaN);
-  let ema = values.slice(0, period).reduce((s, v) => s + v, 0) / period;
-  result[period - 1] = ema;
-  for (let i = period; i < values.length; i++) {
-    ema = values[i] * k + ema * (1 - k);
-    result[i] = ema;
-  }
-  return result;
-}
-
-function calcRSI(candles: CandleDataPoint[], period = 14): number | null {
-  if (candles.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const d = candles[i].close - candles[i - 1].close;
-    if (d > 0) gains += d; else losses -= d;
-  }
-  let ag = gains / period, al = losses / period;
-  for (let i = period + 1; i < candles.length; i++) {
-    const d = candles[i].close - candles[i - 1].close;
-    ag = (ag * (period - 1) + Math.max(d, 0)) / period;
-    al = (al * (period - 1) + Math.max(-d, 0)) / period;
-  }
-  return al === 0 ? 100 : 100 - 100 / (1 + ag / al);
-}
-
-function calcRSIArray(candles: CandleDataPoint[], period = 14): (number | null)[] {
-  const result: (number | null)[] = new Array(candles.length).fill(null);
-  if (candles.length < period + 1) return result;
-  let gains = 0, losses = 0;
-  for (let i = 1; i <= period; i++) {
-    const d = candles[i].close - candles[i - 1].close;
-    if (d > 0) gains += d; else losses -= d;
-  }
-  let ag = gains / period, al = losses / period;
-  result[period] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
-  for (let i = period + 1; i < candles.length; i++) {
-    const d = candles[i].close - candles[i - 1].close;
-    ag = (ag * (period - 1) + Math.max(d, 0)) / period;
-    al = (al * (period - 1) + Math.max(-d, 0)) / period;
-    result[i] = al === 0 ? 100 : 100 - 100 / (1 + ag / al);
-  }
-  return result;
-}
+// calcEMA/calcRSI/calcRSIArray/calcMACD/calcTEMA/calcBB/calcATR/calcVolRatio
+// now live in ../services/indicators.ts (shared with Strategy Alerts).
 
 type DivMarker = { time: number; type: "bull" | "bear" };
 
@@ -253,32 +204,6 @@ function detectRSIDivergences(candles: CandleDataPoint[], swing = 5): DivMarker[
   }
 
   return divs;
-}
-
-function calcMACD(candles: CandleDataPoint[]): { line: number | null; signal: number | null; hist: number | null } {
-  if (candles.length < 35) return { line: null, signal: null, hist: null };
-  const closes = candles.map(c => c.close);
-  const ema12 = calcEMA(closes, 12);
-  const ema26 = calcEMA(closes, 26);
-  const macdArr = closes.map((_, i) => isNaN(ema12[i]) || isNaN(ema26[i]) ? NaN : ema12[i] - ema26[i]);
-  const validMacd = macdArr.filter(v => !isNaN(v));
-  if (validMacd.length < 9) return { line: null, signal: null, hist: null };
-  const signalArr = calcEMA(validMacd, 9);
-  const line = validMacd[validMacd.length - 1];
-  const signal = signalArr[signalArr.length - 1];
-  return { line, signal, hist: line - signal };
-}
-
-// Chain-safe EMA + TEMA for the weekly cycle chart (no NaN padding).
-function calcTEMA(values: number[], period: number): number[] {
-  const ema = (vs: number[]): number[] => {
-    const k = 2 / (period + 1);
-    const out = [vs[0]];
-    for (let i = 1; i < vs.length; i++) out.push(vs[i] * k + out[i - 1] * (1 - k));
-    return out;
-  };
-  const e1 = ema(values), e2 = ema(e1), e3 = ema(e2);
-  return values.map((_, i) => 3 * e1[i] - 3 * e2[i] + e3[i]);
 }
 
 // Historical volatility cone: zero-drift range from weekly log-return stddev,
@@ -341,36 +266,6 @@ function getHalvingCyclePhase(): { phase: string; daysSinceLast: number; daysUnt
     "Accumulation/bottom phase";
 
   return { phase, daysSinceLast, daysUntilNext };
-}
-
-function calcBB(candles: CandleDataPoint[], period = 20): { upper: number; middle: number; lower: number; pct: number } | null {
-  if (candles.length < period) return null;
-  const closes = candles.slice(-period).map(c => c.close);
-  const sma = closes.reduce((s, v) => s + v, 0) / period;
-  const sd = Math.sqrt(closes.reduce((s, v) => s + (v - sma) ** 2, 0) / period);
-  const upper = sma + 2 * sd, lower = sma - 2 * sd;
-  const last = candles[candles.length - 1].close;
-  const pct = upper === lower ? 0.5 : (last - lower) / (upper - lower);
-  return { upper, middle: sma, lower, pct };
-}
-
-function calcATR(candles: CandleDataPoint[], period = 14): number | null {
-  if (candles.length < period + 1) return null;
-  const trs = candles.slice(1).map((c, i) => {
-    const prev = candles[i];
-    return Math.max(c.high - c.low, Math.abs(c.high - prev.close), Math.abs(c.low - prev.close));
-  });
-  const emaTR = calcEMA(trs, period);
-  const last = emaTR[emaTR.length - 1];
-  return isNaN(last) ? null : last;
-}
-
-function calcVolRatio(candles: CandleDataPoint[], period = 20): number | null {
-  if (candles.length < period + 1) return null;
-  const recent = candles.slice(-(period + 1));
-  const avg = recent.slice(0, period).reduce((s, c) => s + (c.volume ?? 0), 0) / period;
-  const cur = recent[recent.length - 1].volume ?? 0;
-  return avg === 0 ? null : cur / avg;
 }
 
 function calcSR(candles: CandleDataPoint[], lookback = 5): { support: number[]; resistance: number[] } {
@@ -1732,7 +1627,7 @@ function IndicatorPill({
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true }) => {
   const { tier } = useAuth();
   const isElite = hasAccess(tier, "elite");
-  const [intervalIdx, setIntervalIdx] = useState(6);  // default 4h
+  const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const candlesRef = useRef<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);

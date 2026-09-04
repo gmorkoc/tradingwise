@@ -28,8 +28,6 @@ jobs:
           VITE_STRIPE_ELITE_PRICE_ID: ${{ secrets.VITE_STRIPE_ELITE_PRICE_ID }}
           VITE_STRIPE_PRO_PRICE_ID: ${{ secrets.VITE_STRIPE_PRO_PRICE_ID }}
           VITE_COINALYZE_API_KEY: ${{ secrets.VITE_COINALYZE_API_KEY }}
-          VITE_TWELVEDATA_API_KEY: ${{ secrets.VITE_TWELVEDATA_API_KEY }}
-          VITE_ALPHAVANTAGE_API_KEY: ${{ secrets.VITE_ALPHAVANTAGE_API_KEY }}
           VITE_REVENUECAT_IOS_API_KEY: ${{ secrets.VITE_REVENUECAT_IOS_API_KEY }}
         run: npm run build
 

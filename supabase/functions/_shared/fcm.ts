@@ -64,9 +64,17 @@ export async function getAccessToken(): Promise<string> {
 // not a nested path) — see src/utils/alertSound.ts for the matching web copy.
 // `data` becomes the notification's tap payload — read via
 // notificationActionPerformed in pushNotifications.ts.
+// `interruptionLevel` ("time-sensitive") breaks through Focus/DND and is
+// shown more prominently — requires the app's
+// com.apple.developer.usernotifications.time-sensitive entitlement (see
+// ios/App/App/*.entitlements). It does NOT force the on-screen banner to
+// linger — that's the device owner's own Settings > Notifications > app >
+// Banner Style ("Persistent" vs "Temporary"), which no push payload can
+// override. Optional and omitted by default so existing callers (price
+// alerts, daily brief, upgrade reminders) are unaffected.
 export async function sendPush(
   accessToken: string, token: string, title: string, body: string, sound: string,
-  data?: Record<string, string>
+  data?: Record<string, string>, interruptionLevel?: "time-sensitive"
 ): Promise<boolean> {
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`, {
     method: "POST",
@@ -78,7 +86,14 @@ export async function sendPush(
       message: {
         token,
         notification: { title, body },
-        apns: { payload: { aps: { sound: `${sound}.wav` } } },
+        apns: {
+          payload: {
+            aps: {
+              sound: `${sound}.wav`,
+              ...(interruptionLevel ? { "interruption-level": interruptionLevel } : {}),
+            },
+          },
+        },
         ...(data ? { data } : {}),
       },
     }),
