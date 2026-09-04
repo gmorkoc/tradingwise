@@ -201,7 +201,7 @@ function caiToY(p: number) { return CAI_PAD_T + (1 - (p - CAI_MIN_P) / (CAI_MAX_
 function CandleAIChart() {
   const usableW = CAI_W - CAI_PAD_R;
   const cW = usableW / CANDLES.length;
-  const bodyW = Math.max(4, cW * 0.55);
+  const bodyW = Math.max(3, cW * 0.42);
   const closes = CANDLES.map(c => c[3]);
   const ema = computeEMA(closes, 9);
   const emaLine = ema
@@ -360,134 +360,137 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
         AI panel mock, merged into one bento section right after the hero,
         TickScan's own pattern of leading with the real tool. */}
     <section className="lp-cai-promo">
-      <div className="lp-cai-head">
-        <div className="lp-section-label">{t("landing.candleAI.label")}</div>
-        <h2 className="lp-section-title">{t("landing.candleAI.title")}</h2>
-        <p className="lp-cai-promo-desc">{t("landing.candleAI.desc")}</p>
-      </div>
-
-      <div className="lp-cai-bento" ref={candleAIRevealRef}>
-        <div className="lp-cai-tile lp-cai-tile--chart">
-          <div className="lp-cai-chart-hd">
-            <span className="lp-cai-chart-logo">✦</span>
-            <span className="lp-cai-chart-name">AI Candle Watcher</span>
-            <span className="lp-cai-chart-pair">BTC/USD · 4H</span>
-            <span className="lp-cai-forecast-pill"><span className="dot" />{t("landing.candleAI.forecastPill")}</span>
+      <div className="lp-cai-inner lp-cai-split">
+        <div className="lp-cai-visual" ref={candleAIRevealRef}>
+          <div className="lp-cai-tile lp-cai-tile--chart">
+            <div className="lp-cai-chart-hd">
+              <span className="lp-cai-chart-logo">✦</span>
+              <span className="lp-cai-chart-name">AI Candle Watcher</span>
+              <span className="lp-cai-chart-pair">BTC/USD · 4H</span>
+              <span className="lp-cai-forecast-pill"><span className="dot" />{t("landing.candleAI.forecastPill")}</span>
+            </div>
+            <div className="lp-cai-chart-canvas"><CandleAIChart /></div>
+            <div className="lp-cai-chart-strip">
+              <div className="lp-cai-chart-stat"><div className="l">RSI(14)</div><div className="v" style={{ color: "#f59e0b" }}>54.7</div></div>
+              <div className="lp-cai-chart-stat"><div className="l">MACD</div><div className="v" style={{ color: "#22c55e" }}>+148.2</div></div>
+              <div className="lp-cai-chart-stat"><div className="l">EMA20</div><div className="v" style={{ color: "#22c55e" }}>↑ Above</div></div>
+              <div className="lp-cai-chart-stat"><div className="l">Wyckoff</div><div className="v" style={{ color: "#38bdf8" }}>Markup</div></div>
+            </div>
           </div>
-          <div className="lp-cai-chart-canvas"><CandleAIChart /></div>
-          <div className="lp-cai-chart-strip">
-            <div className="lp-cai-chart-stat"><div className="l">RSI(14)</div><div className="v" style={{ color: "#f59e0b" }}>54.7</div></div>
-            <div className="lp-cai-chart-stat"><div className="l">MACD</div><div className="v" style={{ color: "#22c55e" }}>+148.2</div></div>
-            <div className="lp-cai-chart-stat"><div className="l">EMA20</div><div className="v" style={{ color: "#22c55e" }}>↑ Above</div></div>
-            <div className="lp-cai-chart-stat"><div className="l">Wyckoff</div><div className="v" style={{ color: "#38bdf8" }}>Markup</div></div>
+
+          <div className="lp-cai-tile lp-cai-tile--read lp-cai-tile--float">
+            <div className="lp-cai-kicker">{t("landing.candleAI.readKicker")}</div>
+            <div className="lp-cai-bias-row">
+              <span className="lp-cai-bias-pill">▲ {t("landing.candleAI.bullishBias")}</span>
+              <span className="lp-cai-conf-pill">{t("landing.candleAI.mediumConf")}</span>
+            </div>
+            <div className="lp-cai-case-box lp-cai-case-box--bull">
+              <div className="lp-cai-case-lbl">▲ {t("landing.candleAI.bullCase")}</div>
+              <div className="lp-cai-case-txt">{t("landing.candleAI.bullCaseText")} <b>$82,300</b>.</div>
+            </div>
+            <div className="lp-cai-case-box lp-cai-case-box--bear">
+              <div className="lp-cai-case-lbl">▼ {t("landing.candleAI.bearCase")}</div>
+              <div className="lp-cai-case-txt">{t("landing.candleAI.bearCaseText")} <b>$77,600</b>.</div>
+            </div>
+            <span className="lp-cai-favored-tag">{t("landing.candleAI.bullsFavored")}</span>
+          </div>
+
+          <div className="lp-cai-tile lp-cai-tile--tape lp-cai-tile--float">
+            <div className="lp-cai-tape-hd"><span className="dot" />{t("landing.candleAI.liveTape")}</div>
+            <div className="lp-cai-tape-row">
+              <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
+              <div className="lp-cai-tape-body">
+                <div className="lp-cai-tape-nm">{t("landing.candleAI.tape1Title")} <span className="lp-cai-tape-live">LIVE</span></div>
+                <div className="lp-cai-tape-desc">{t("landing.candleAI.tape1Desc")}</div>
+              </div>
+              <span className="lp-cai-tape-t">{t("landing.candleAI.tapeNow")}</span>
+            </div>
+            <div className="lp-cai-tape-row">
+              <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
+              <div className="lp-cai-tape-body">
+                <div className="lp-cai-tape-nm">{t("landing.candleAI.tape2Title")}</div>
+                <div className="lp-cai-tape-desc">{t("landing.candleAI.tape2Desc")}</div>
+              </div>
+              <span className="lp-cai-tape-t">4h</span>
+            </div>
+            <div className="lp-cai-tape-row">
+              <span className="lp-cai-tape-mk lp-cai-tape-mk--down" />
+              <div className="lp-cai-tape-body">
+                <div className="lp-cai-tape-nm">{t("landing.candleAI.tape3Title")}</div>
+                <div className="lp-cai-tape-desc">{t("landing.candleAI.tape3Desc")}</div>
+              </div>
+              <span className="lp-cai-tape-t">8h</span>
+            </div>
           </div>
         </div>
 
-        <div className="lp-cai-tile lp-cai-tile--read">
-          <div className="lp-cai-kicker">{t("landing.candleAI.readKicker")}</div>
-          <div className="lp-cai-bias-row">
-            <span className="lp-cai-bias-pill">▲ {t("landing.candleAI.bullishBias")}</span>
-            <span className="lp-cai-conf-pill">{t("landing.candleAI.mediumConf")}</span>
-          </div>
-          <div className="lp-cai-case-box lp-cai-case-box--bull">
-            <div className="lp-cai-case-lbl">▲ {t("landing.candleAI.bullCase")}</div>
-            <div className="lp-cai-case-txt">{t("landing.candleAI.bullCaseText")} <b>$82,300</b>.</div>
-          </div>
-          <div className="lp-cai-case-box lp-cai-case-box--bear">
-            <div className="lp-cai-case-lbl">▼ {t("landing.candleAI.bearCase")}</div>
-            <div className="lp-cai-case-txt">{t("landing.candleAI.bearCaseText")} <b>$77,600</b>.</div>
-          </div>
-          <span className="lp-cai-favored-tag">{t("landing.candleAI.bullsFavored")}</span>
-        </div>
+        <div className="lp-cai-text">
+          <div className="lp-section-label">{t("landing.candleAI.label")}</div>
+          <h2 className="lp-section-title">{t("landing.candleAI.title")}</h2>
+          <p className="lp-cai-promo-desc">{t("landing.candleAI.desc")}</p>
 
-        <div className="lp-cai-tile lp-cai-tile--tape">
-          <div className="lp-cai-tape-hd"><span className="dot" />{t("landing.candleAI.liveTape")}</div>
-          <div className="lp-cai-tape-row">
-            <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
-            <div className="lp-cai-tape-body">
-              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape1Title")} <span className="lp-cai-tape-live">LIVE</span></div>
-              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape1Desc")}</div>
-            </div>
-            <span className="lp-cai-tape-t">{t("landing.candleAI.tapeNow")}</span>
+          <div className="lp-cai-pills">
+            <span className="lp-cai-pill">{t("landing.candleAI.pillPattern")}</span>
+            <span className="lp-cai-pill">{t("landing.candleAI.pillMarketMaker")}</span>
+            <span className="lp-cai-pill">{t("landing.candleAI.pillSmartMoney")}</span>
+            <span className="lp-cai-pill">{t("landing.candleAI.pillWyckoff")}</span>
+            <span className="lp-cai-pill">{t("landing.candleAI.pillElliott")}</span>
+            <span className="lp-cai-pill">{t("landing.candleAI.pillTradePlan")}</span>
           </div>
-          <div className="lp-cai-tape-row">
-            <span className="lp-cai-tape-mk lp-cai-tape-mk--up" />
-            <div className="lp-cai-tape-body">
-              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape2Title")}</div>
-              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape2Desc")}</div>
-            </div>
-            <span className="lp-cai-tape-t">4h</span>
-          </div>
-          <div className="lp-cai-tape-row">
-            <span className="lp-cai-tape-mk lp-cai-tape-mk--down" />
-            <div className="lp-cai-tape-body">
-              <div className="lp-cai-tape-nm">{t("landing.candleAI.tape3Title")}</div>
-              <div className="lp-cai-tape-desc">{t("landing.candleAI.tape3Desc")}</div>
-            </div>
-            <span className="lp-cai-tape-t">8h</span>
+
+          <div className="lp-cai-cta-row">
+            <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.candleAI.cta")}</button>
           </div>
         </div>
-      </div>
-
-      <div className="lp-cai-pills">
-        <span className="lp-cai-pill">{t("landing.candleAI.pillPattern")}</span>
-        <span className="lp-cai-pill">{t("landing.candleAI.pillMarketMaker")}</span>
-        <span className="lp-cai-pill">{t("landing.candleAI.pillSmartMoney")}</span>
-        <span className="lp-cai-pill">{t("landing.candleAI.pillWyckoff")}</span>
-        <span className="lp-cai-pill">{t("landing.candleAI.pillElliott")}</span>
-        <span className="lp-cai-pill">{t("landing.candleAI.pillTradePlan")}</span>
-      </div>
-
-      <div className="lp-cai-cta-row">
-        <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.candleAI.cta")}</button>
       </div>
     </section>
 
     {/* ── Strategy Alerts promo ────────────────────────────────────────── */}
     <section className="lp-sa-promo">
-      <div className="lp-sa-promo-head">
-        <div className="lp-section-label">{t("landing.strategyAlertsPromo.label")}</div>
-        <h2 className="lp-section-title">{t("landing.strategyAlertsPromo.title")}</h2>
-        <p className="lp-sa-promo-desc">{t("landing.strategyAlertsPromo.desc")}</p>
-      </div>
-
-      <div className="lp-sa-bento" ref={strategyAlertsRevealRef}>
-        <div className="lp-sa-tile lp-sa-tile--builder">
-          <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.builderKicker")}</div>
-          <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.builderTitle")}</h3>
-          <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.builderDesc")}</p>
-          <div className="lp-sa-builder-demo">
-            <div className="lp-sa-cond-row"><span className="ind">RSI(14)</span><span className="tf">1h</span><span className="cmp">&lt; 30</span></div>
-            <div className="lp-sa-junc-row">AND</div>
-            <div className="lp-sa-cond-row"><span className="ind">Volume(20)</span><span className="tf">15m</span><span className="cmp">&gt; 2.0×</span></div>
-            <div className="lp-sa-preview-line">✓ {t("landing.strategyAlertsPromo.previewLine")}</div>
+      <div className="lp-sa-inner lp-sa-split">
+        <div className="lp-sa-text">
+          <div className="lp-section-label">{t("landing.strategyAlertsPromo.label")}</div>
+          <h2 className="lp-section-title">{t("landing.strategyAlertsPromo.title")}</h2>
+          <p className="lp-sa-promo-desc">{t("landing.strategyAlertsPromo.desc")}</p>
+          <div className="lp-sa-cta-row">
+            <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.strategyAlertsPromo.cta")}</button>
           </div>
         </div>
 
-        <div className="lp-sa-tile lp-sa-tile--fires">
-          <div className="lp-sa-fires-head"><span className="dot" />{t("landing.strategyAlertsPromo.firesLabel")}</div>
-          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin">₿</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire1")}</span><span className="lp-sa-fire-time">14:02</span></div>
-          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(129,140,248,0.16)", color: "#818cf8" }}>Ξ</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire2")}</span><span className="lp-sa-fire-time">13:41</span></div>
-          <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(34,197,94,0.16)", color: "#22c55e" }}>◎</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire3")}</span><span className="lp-sa-fire-time">now</span></div>
-        </div>
+        <div className="lp-sa-bento" ref={strategyAlertsRevealRef}>
+          <div className="lp-sa-tile lp-sa-tile--builder">
+            <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.builderKicker")}</div>
+            <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.builderTitle")}</h3>
+            <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.builderDesc")}</p>
+            <div className="lp-sa-builder-demo">
+              <div className="lp-sa-cond-row"><span className="ind">RSI(14)</span><span className="tf">1h</span><span className="cmp">&lt; 30</span></div>
+              <div className="lp-sa-junc-row">AND</div>
+              <div className="lp-sa-cond-row"><span className="ind">Volume(20)</span><span className="tf">15m</span><span className="cmp">&gt; 2.0×</span></div>
+              <div className="lp-sa-preview-line">✓ {t("landing.strategyAlertsPromo.previewLine")}</div>
+            </div>
+          </div>
 
-        <div className="lp-sa-tile lp-sa-tile--coverage">
-          <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.coverageKicker")}</div>
-          <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.coverageTitle")}</h3>
-          <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.coverageDesc")}</p>
-          <div className="lp-sa-pill-row">
-            <span className="lp-sa-pill">RSI</span>
-            <span className="lp-sa-pill">EMA</span>
-            <span className="lp-sa-pill">MACD</span>
-            <span className="lp-sa-pill">Bollinger %B</span>
-            <span className="lp-sa-pill">Volume Ratio</span>
-            <span className="lp-sa-pill lp-sa-more-pill">{t("landing.strategyAlertsPromo.morePills")}</span>
+          <div className="lp-sa-tile lp-sa-tile--fires">
+            <div className="lp-sa-fires-head"><span className="dot" />{t("landing.strategyAlertsPromo.firesLabel")}</div>
+            <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin">₿</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire1")}</span><span className="lp-sa-fire-time">14:02</span></div>
+            <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(129,140,248,0.16)", color: "#818cf8" }}>Ξ</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire2")}</span><span className="lp-sa-fire-time">13:41</span></div>
+            <div className="lp-sa-fire-row"><span className="lp-sa-fire-coin" style={{ background: "rgba(34,197,94,0.16)", color: "#22c55e" }}>◎</span><span className="lp-sa-fire-text">{t("landing.strategyAlertsPromo.fire3")}</span><span className="lp-sa-fire-time">now</span></div>
+          </div>
+
+          <div className="lp-sa-tile lp-sa-tile--coverage">
+            <div className="lp-sa-tile-kicker">{t("landing.strategyAlertsPromo.coverageKicker")}</div>
+            <h3 className="lp-sa-tile-title">{t("landing.strategyAlertsPromo.coverageTitle")}</h3>
+            <p className="lp-sa-tile-body">{t("landing.strategyAlertsPromo.coverageDesc")}</p>
+            <div className="lp-sa-pill-row">
+              <span className="lp-sa-pill">RSI</span>
+              <span className="lp-sa-pill">EMA</span>
+              <span className="lp-sa-pill">MACD</span>
+              <span className="lp-sa-pill">Bollinger %B</span>
+              <span className="lp-sa-pill">Volume Ratio</span>
+              <span className="lp-sa-pill lp-sa-more-pill">{t("landing.strategyAlertsPromo.morePills")}</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="lp-sa-cta-row">
-        <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.strategyAlertsPromo.cta")}</button>
       </div>
     </section>
 

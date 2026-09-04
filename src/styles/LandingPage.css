@@ -319,7 +319,7 @@ html[data-theme="light"] .lp-root {
   background: var(--lp-hero-bg);
 }
 
-.lp-hero-split { display: flex; align-items: center; gap: 40px; }
+.lp-hero-split { display: flex; align-items: center; gap: 72px; }
 
 .lp-hero-text {
   position: relative;
@@ -382,7 +382,7 @@ html[data-theme="light"] .lp-root {
    absorbed from the old standalone Data section, which just repeated this
    content less vividly further down the page); row 2 is four compact
    icon+text tiles for the rest of the feature list. */
-.lp-features { padding: 72px 32px; max-width: 1100px; margin: 0 auto; }
+.lp-features { padding: 72px 32px; max-width: 1480px; margin: 0 auto; }
 /* 12-column basis so 2 large tiles (span 6 each) and 3 small tiles (span 4
    each) both fill their row exactly — 6+6=12, 4+4+4=12. */
 .lp-features-bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
@@ -443,13 +443,16 @@ html[data-theme="light"] .lp-root {
    real feature content. Every color comes from the fixed --lp-* tokens
    (see .lp-root) so it matches the hero's dark aura like every other
    section on this page. */
-.lp-sa-promo { padding: 72px 32px; max-width: 1100px; margin: 0 auto; }
-.lp-sa-promo-head { text-align: center; max-width: 620px; margin: 0 auto 32px; }
-.lp-sa-promo-head .lp-section-label { display: flex; justify-content: center; }
-.lp-sa-promo-head .lp-section-title { text-align: center; }
-.lp-sa-promo-desc { font-size: 0.92rem; color: var(--lp-text-secondary); line-height: 1.6; margin: 0; }
+.lp-sa-promo { padding: 72px 32px; }
+/* Same width + split-layout language as the hero/CandleAI above it — text
+   on the left this time, continuing the left/right/left alternation down
+   the page instead of every flagship section mirroring the last. */
+.lp-sa-inner { max-width: 1480px; margin: 0 auto; }
+.lp-sa-split { display: flex; align-items: flex-start; gap: 72px; }
+.lp-sa-text { flex: 1 1 45%; min-width: 0; text-align: left; }
+.lp-sa-promo-desc { font-size: 0.92rem; color: var(--lp-text-secondary); line-height: 1.6; margin: 0 0 24px; }
 
-.lp-sa-bento { display: grid; grid-template-columns: 1.15fr 0.85fr; grid-template-rows: auto auto; gap: 14px; }
+.lp-sa-bento { flex: 1 1 55%; min-width: 0; display: grid; grid-template-columns: 1.15fr 0.85fr; grid-template-rows: auto auto; gap: 14px; }
 .lp-sa-tile {
   background: var(--lp-panel);
   border: 1px solid var(--lp-border);
@@ -526,11 +529,14 @@ html[data-theme="light"] .lp-root {
 }
 .lp-sa-more-pill { color: var(--lp-text-muted); background: none; border: 1px dashed var(--lp-border); }
 
-.lp-sa-cta-row { display: flex; justify-content: center; margin-top: 28px; }
+.lp-sa-cta-row { display: flex; justify-content: flex-start; margin-top: 28px; }
 
 @media (max-width: 900px) {
-  .lp-sa-bento { grid-template-columns: 1fr; }
+  .lp-sa-split { flex-direction: column; }
+  .lp-sa-bento { flex-basis: auto; width: 100%; grid-template-columns: 1fr; }
   .lp-sa-tile--builder { grid-row: auto; }
+  .lp-sa-text { flex-basis: auto; text-align: center; }
+  .lp-sa-cta-row { justify-content: center; }
 }
 @media (max-width: 640px) {
   .lp-sa-promo { padding: 48px 16px; }
@@ -544,7 +550,7 @@ html[data-theme="light"] .lp-root {
   position: absolute; inset: 0; pointer-events: none;
   background: var(--lp-hero-glow);
 }
-.lp-bold-inner { position: relative; z-index: 1; max-width: 1320px; margin: 0 auto; }
+.lp-bold-inner { position: relative; z-index: 1; max-width: 1480px; margin: 0 auto; }
 
 /* The cycling headline sits dead center of the card collage (a normal-
    flow flex item); every card/tag is absolutely positioned around it, so
@@ -662,29 +668,43 @@ html[data-theme="light"] .lp-root {
    flagship sections. Surface/text/border colors come from the fixed --lp-*
    tokens like the rest of the page; candle/annotation colors are their own
    fixed semantic hex (bull green, bear red, AI indigo/violet). */
-.lp-cai-promo { padding: 72px 32px; max-width: 1100px; margin: 0 auto; }
-.lp-cai-head { text-align: center; max-width: 680px; margin: 0 auto 32px; }
-.lp-cai-head .lp-section-label { display: flex; justify-content: center; }
-.lp-cai-head .lp-section-title { text-align: center; }
-.lp-cai-promo-desc { font-size: 0.92rem; color: var(--lp-text-secondary); line-height: 1.6; margin: 0; }
-
-.lp-cai-bento { display: grid; grid-template-columns: 1.15fr 0.85fr; grid-template-rows: auto auto; gap: 14px; }
+.lp-cai-promo { padding: 72px 32px; }
+/* Same width + split-layout language as the hero: the bento (images) sits
+   on the left, the copy on the right — mirrored from the hero's
+   text-left/visual-right so the two flagship moments don't feel identical. */
+.lp-cai-inner { max-width: 1480px; margin: 0 auto; }
+.lp-cai-split { display: flex; align-items: flex-start; gap: 72px; }
+/* Overlapping showcase: the chart card anchors the space in normal flow;
+   the AI Read + Live Tape cards break out of the grid and float over it at
+   a slight angle with real depth, borrowing the hero collage's technique
+   instead of a flat side-by-side bento. */
+.lp-cai-visual { position: relative; flex: 1 1 55%; min-width: 0; }
+.lp-cai-text { flex: 1 1 45%; min-width: 0; text-align: left; }
+.lp-cai-promo-desc { font-size: 0.92rem; color: var(--lp-text-secondary); line-height: 1.6; margin: 0 0 24px; }
 .lp-cai-tile {
   background: var(--lp-panel);
   border: 1px solid var(--lp-border);
   border-radius: 16px;
   opacity: 0; transform: translateY(14px);
 }
-.lp-cai-bento.lp-reveal-in .lp-cai-tile { animation: lp-reveal-up 0.6s cubic-bezier(0.22,1,0.36,1) forwards; }
-.lp-cai-bento.lp-reveal-in .lp-cai-tile--chart { animation-delay: 0.05s; }
-.lp-cai-bento.lp-reveal-in .lp-cai-tile--read  { animation-delay: 0.20s; }
-.lp-cai-bento.lp-reveal-in .lp-cai-tile--tape  { animation-delay: 0.35s; }
+.lp-cai-visual.lp-reveal-in .lp-cai-tile { animation: lp-reveal-up 0.6s cubic-bezier(0.22,1,0.36,1) forwards; }
+.lp-cai-visual.lp-reveal-in .lp-cai-tile--chart { animation-delay: 0.05s; }
+.lp-cai-visual.lp-reveal-in .lp-cai-tile--read  { animation-delay: 0.20s; }
+.lp-cai-visual.lp-reveal-in .lp-cai-tile--tape  { animation-delay: 0.35s; }
 @media (prefers-reduced-motion: reduce) {
   .lp-cai-tile { opacity: 1; transform: none; animation: none; }
 }
 
-.lp-cai-tile--chart { grid-row: span 2; display: flex; flex-direction: column; overflow: hidden; }
+.lp-cai-tile--chart { width: 88%; display: flex; flex-direction: column; overflow: hidden; }
 .lp-cai-tile--read, .lp-cai-tile--tape { padding: 24px; }
+.lp-cai-tile--float {
+  position: absolute;
+  backdrop-filter: blur(6px);
+  box-shadow: var(--lp-card-shadow);
+  z-index: 2;
+}
+.lp-cai-tile--read { right: -6%; top: 10px; width: 56%; transform: rotate(3deg); }
+.lp-cai-tile--tape { left: 2%; bottom: -28px; width: 54%; transform: rotate(-2.5deg); }
 
 .lp-cai-kicker { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--lp-accent); margin-bottom: 8px; }
 .lp-cai-tile-title { font-size: 1.05rem; font-weight: 750; color: var(--lp-text); margin: 0 0 12px; letter-spacing: -0.01em; }
@@ -760,14 +780,18 @@ html[data-theme="light"] .lp-root {
 .lp-cai-tape-desc { font-size: 0.68rem; color: var(--lp-text-muted); line-height: 1.4; margin-top: 2px; }
 .lp-cai-tape-t { font-family: 'JetBrains Mono', monospace; font-size: 0.64rem; color: var(--lp-text-muted); flex-shrink: 0; }
 
-.lp-cai-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 24px; }
-.lp-cai-pill { padding: 7px 14px; border-radius: 999px; background: var(--lp-panel-2); border: 1px solid var(--lp-border); font-size: 0.76rem; font-weight: 600; color: var(--lp-text-secondary); }
+.lp-cai-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; margin-top: 0; }
+.lp-cai-pill { padding: 5px 11px; border-radius: 999px; background: var(--lp-panel-2); border: 1px solid var(--lp-border); font-size: 0.68rem; font-weight: 600; color: var(--lp-text-secondary); }
 
-.lp-cai-cta-row { display: flex; justify-content: center; margin-top: 28px; }
+.lp-cai-cta-row { display: flex; justify-content: flex-start; margin-top: 28px; }
 
 @media (max-width: 900px) {
-  .lp-cai-bento { grid-template-columns: 1fr; }
-  .lp-cai-tile--chart { grid-row: auto; }
+  .lp-cai-split { flex-direction: column; }
+  .lp-cai-visual { flex-basis: auto; width: 100%; }
+  .lp-cai-tile--chart { width: 100%; }
+  .lp-cai-tile--float { position: static; width: 100% !important; margin-top: 12px; transform: none; }
+  .lp-cai-text { flex-basis: auto; text-align: center; order: -1; }
+  .lp-cai-pills, .lp-cai-cta-row { justify-content: center; }
 }
 @media (max-width: 640px) {
   .lp-cai-promo { padding: 48px 16px; }
@@ -817,7 +841,7 @@ html[data-theme="light"] .lp-root {
 /* ── Pricing ─────────────────────────────────────────────────────────── */
 .lp-pricing {
   padding: 72px 32px;
-  max-width: 1100px; margin: 0 auto; text-align: center;
+  max-width: 1480px; margin: 0 auto; text-align: center;
   border-top: 1px solid var(--lp-border);
 }
 .lp-pricing .lp-section-label,
