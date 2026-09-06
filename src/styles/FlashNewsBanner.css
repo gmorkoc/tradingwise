@@ -120,19 +120,19 @@ html[data-theme="light"] .fnb-root {
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile web and the native iOS app both render at this width — hide the
-   source chip and trim the headline so it has more room instead of
-   truncating. */
+/* Mobile web and the native iOS app both render at this width — trim the
+   headline so it has more room instead of truncating. */
 @media (max-width: 640px) {
   .fnb-root {
     padding: 0 12px;
   }
 
-  .fnb-source {
-    display: none;
-  }
-
   .fnb-headline {
     font-size: 0.8rem;
+  }
+
+  .fnb-source {
+    font-size: 0.62rem;
+    padding: 2px 6px;
   }
 }
