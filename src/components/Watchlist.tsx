@@ -33,7 +33,7 @@ function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }
     const y = H - ((p - min) / range) * (H - 4) - 2;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  const color = positive ? "#22c55e" : "#fb7185";
+  const color = positive ? "#4ade80" : "#fb7185";
   return (
     <svg className="wl-chip-spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <polyline points={pts} fill="none" stroke={color}

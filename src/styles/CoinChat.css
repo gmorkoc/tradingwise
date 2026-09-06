@@ -1,12 +1,59 @@
 /* Per-coin comment feed. Structural placement (docked panel vs swipe-up
    sheet) is split at the app's standard 640px breakpoint; everything else
-   (comment rows, composer, tier styling) is shared between both modes. */
+   (comment rows, composer, tier styling) is shared between both modes.
+   Sits outside .chart-active in the DOM (a sibling dock, not a descendant
+   of .main-content), so it carries its own copy of the same fixed-dark
+   --pc-* aurora tokens PriceChart.css defines — see that file's comment
+   for why. */
+.coin-chat-dock {
+  --pc-panel: rgba(255, 255, 255, 0.035);
+  --pc-panel-2: rgba(255, 255, 255, 0.06);
+  --pc-border: rgba(165, 180, 252, 0.16);
+  --pc-text: #ffffff;
+  --pc-text-secondary: #c7cbf0;
+  --pc-text-muted: #9490c0;
+  --pc-accent: #818cf8;
+  --pc-accent-soft: rgba(129, 140, 248, 0.18);
+  --pc-success: #4ade80;
+  --pc-danger: #fb7185;
+}
+/* Aurora Glass is dark-only — see PriceChart.css's .chart-active comment.
+   Light theme also gives the panel a bit of separation from its own dock
+   background (a subtle tint behind a white card) so it can carry the same
+   glossy, rounded treatment as the rest of the chart page's sections. */
+html[data-theme="light"] .coin-chat-dock {
+  --pc-panel: #ffffff;
+  --pc-panel-2: var(--color-surface-alt);
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-secondary: var(--color-text-secondary);
+  --pc-text-muted: var(--color-text-muted);
+  --pc-accent: var(--color-primary);
+  --pc-accent-soft: var(--color-primary-soft);
+  --pc-success: var(--color-success);
+  --pc-danger: var(--color-danger);
+  --pc-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
 
 .coin-chat-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--pc-panel-2);
   overflow: hidden;
+}
+
+/* Desktop dock only — the mobile variant below (max-width: 640px) takes
+   over the full viewport as a fixed sheet, where insetting it with margin
+   would just expose whatever is behind the "modal" through the gap. */
+@media (min-width: 641px) {
+  html[data-theme="light"] .coin-chat-panel {
+    margin: 10px;
+    height: calc(100% - 20px);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 80px), var(--pc-panel);
+    box-shadow: var(--pc-shadow);
+  }
 }
 
 .coin-chat-head {
@@ -15,7 +62,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--pc-border);
   flex-shrink: 0;
 }
 
@@ -32,8 +79,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+  background: var(--pc-accent-soft);
+  color: var(--pc-accent);
   font-size: 1rem;
   font-weight: 800;
 }
@@ -53,25 +100,25 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-success);
+  background: var(--pc-success);
   flex-shrink: 0;
   animation: coin-chat-live-pulse 1.8s ease-in-out infinite;
 }
 @keyframes coin-chat-live-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 50%, transparent); }
-  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 0%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pc-success) 50%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc-success) 0%, transparent); }
 }
 
 .coin-chat-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--pc-text);
 }
 
 .coin-chat-blurb {
   margin-top: 2px;
   font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
   line-height: 1.35;
 }
 
@@ -86,18 +133,18 @@
   font-weight: 800;
 }
 .coin-chat-cap-pill.up {
-  background: color-mix(in srgb, var(--color-success) 14%, transparent);
-  color: var(--color-success);
+  background: color-mix(in srgb, var(--pc-success) 14%, transparent);
+  color: var(--pc-success);
 }
 .coin-chat-cap-pill.down {
-  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  color: var(--color-danger);
+  background: color-mix(in srgb, var(--pc-danger) 14%, transparent);
+  color: var(--pc-danger);
 }
 
 .coin-chat-close {
   background: none;
   border: none;
-  color: var(--color-text-secondary);
+  color: var(--pc-text-secondary);
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
@@ -107,8 +154,8 @@
 }
 
 .coin-chat-close:hover {
-  color: var(--color-text);
-  background: var(--color-input-bg);
+  color: var(--pc-text);
+  background: var(--pc-panel-2);
 }
 
 .coin-chat-feed {
@@ -126,7 +173,7 @@
   padding: 24px 8px;
   text-align: center;
   font-size: 0.82rem;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .coin-chat-empty-state {
@@ -149,13 +196,13 @@
   margin: 0;
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--pc-text);
 }
 
 .coin-chat-empty-sub {
   margin: 0;
   font-size: 0.78rem;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
   max-width: 30ch;
 }
 
@@ -164,7 +211,7 @@
   border: none;
   border-radius: 999px;
   padding: 8px 18px;
-  background: var(--color-primary);
+  background: var(--pc-accent);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
@@ -187,7 +234,7 @@
    it's easy to spot among everything else, then fades back out. */
 @keyframes coin-chat-flash {
   0%, 100% { background: transparent; }
-  20%, 80% { background: var(--color-primary-soft); }
+  20%, 80% { background: var(--pc-accent-soft); }
 }
 
 .coin-chat-comment--flash {
@@ -207,7 +254,7 @@
   font-weight: 700;
   object-fit: cover;
   color: #fff;
-  background: var(--color-primary);
+  background: var(--pc-accent);
 }
 
 .coin-chat-avatar.cc-tier--elite {
@@ -228,7 +275,7 @@
 
 .coin-chat-comment-name {
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--pc-text);
 }
 
 .coin-chat-tier-chip {
@@ -238,8 +285,8 @@
   letter-spacing: 0.03em;
   padding: 1px 5px;
   border-radius: 999px;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+  color: var(--pc-accent);
+  background: var(--pc-accent-soft);
 }
 
 .coin-chat-tier-chip.cc-tier--elite {
@@ -249,12 +296,12 @@
 
 .coin-chat-comment-text {
   font-weight: 400;
-  color: var(--color-text);
+  color: var(--pc-text);
 }
 
 .coin-chat-comment-time {
   font-size: 0.66rem;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
 }
 
 /* Delete/report live behind a hover-revealed "⋮" menu, YouTube-style,
@@ -274,7 +321,7 @@
   border-radius: 4px;
   font-size: 0.85rem;
   line-height: 1;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
@@ -287,8 +334,8 @@
 }
 
 .coin-chat-comment-dots:hover {
-  background: var(--color-input-bg);
-  color: var(--color-text);
+  background: var(--pc-panel-2);
+  color: var(--pc-text);
 }
 
 /* No hover on touch — keep the affordance faintly visible so it's still
@@ -304,8 +351,8 @@
   top: calc(100% + 2px);
   right: 0;
   min-width: 100px;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
+  background: var(--pc-panel);
+  border: 1px solid var(--pc-border);
   border-radius: 8px;
   box-shadow: 0 10px 28px var(--color-shadow);
   overflow: hidden;
@@ -321,18 +368,18 @@
   border: none;
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--pc-text);
   cursor: pointer;
 }
 
 .coin-chat-comment-menu button:hover {
-  background: var(--color-input-bg);
-  color: var(--color-danger);
+  background: var(--pc-panel-2);
+  color: var(--pc-danger);
 }
 
 .coin-chat-comment-menu button:disabled {
   cursor: default;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
   opacity: 0.6;
   background: none;
 }
@@ -355,7 +402,7 @@
   padding: 2px 0;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
   cursor: pointer;
 }
 
@@ -365,12 +412,12 @@
 }
 
 .coin-chat-action-btn:hover {
-  color: var(--color-text);
+  color: var(--pc-text);
 }
 
 .coin-chat-action-btn--liked,
 .coin-chat-action-btn--liked:hover {
-  color: var(--color-danger);
+  color: var(--pc-danger);
 }
 
 .coin-chat-action-count {
@@ -382,7 +429,7 @@
 .coin-chat-thread {
   margin-left: 9px;
   padding-left: 17px;
-  border-left: 2px solid var(--color-border);
+  border-left: 2px solid var(--pc-border);
 }
 
 .coin-chat-thread .coin-chat-comment:first-child {
@@ -392,7 +439,7 @@
 .coin-chat-composer {
   flex-shrink: 0;
   padding: 10px 16px 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--pc-border);
 }
 
 .coin-chat-cta {
@@ -400,7 +447,7 @@
   padding: 10px;
   border: none;
   border-radius: 10px;
-  background: var(--color-primary);
+  background: var(--pc-accent);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 700;
@@ -422,7 +469,7 @@
   flex: 1;
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--pc-text-secondary);
 }
 
 .coin-chat-upgrade-pill {
@@ -453,8 +500,8 @@
   right: 0;
   max-height: 160px;
   overflow-y: auto;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
+  background: var(--pc-panel);
+  border: 1px solid var(--pc-border);
   border-radius: 10px;
   box-shadow: 0 10px 28px var(--color-shadow);
   z-index: 20;
@@ -469,17 +516,17 @@
   border: none;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--pc-text);
   cursor: pointer;
 }
 
 .coin-chat-mention-menu button:hover {
-  background: var(--color-input-bg);
-  color: var(--color-primary);
+  background: var(--pc-panel-2);
+  color: var(--pc-accent);
 }
 
 .coin-chat-mention {
-  color: var(--color-primary);
+  color: var(--pc-accent);
   font-weight: 600;
 }
 
@@ -488,19 +535,19 @@
   min-width: 0;
   padding: 9px 12px;
   border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
-  color: var(--color-text);
+  border: 1px solid var(--pc-border);
+  background: var(--pc-panel-2);
+  color: var(--pc-text);
   font-size: 0.83rem;
 }
 
 .coin-chat-input:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--pc-accent);
 }
 
 .coin-chat-input::placeholder {
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .coin-chat-send {
@@ -508,7 +555,7 @@
   border: none;
   border-radius: 999px;
   padding: 8px 16px;
-  background: var(--color-primary);
+  background: var(--pc-accent);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 700;
@@ -523,7 +570,7 @@
 .coin-chat-error {
   margin: 6px 2px 0;
   font-size: 0.72rem;
-  color: var(--color-danger);
+  color: var(--pc-danger);
 }
 
 /* ── Mobile: floating trigger + swipe-up sheet ─────────────────────────── */
@@ -546,8 +593,8 @@
     padding: 9px 14px;
     border: none;
     border-radius: 999px;
-    background: var(--color-card-bg);
-    color: var(--color-text);
+    background: var(--pc-panel);
+    color: var(--pc-text);
     box-shadow: 0 8px 24px var(--color-shadow);
     cursor: pointer;
   }
@@ -570,7 +617,7 @@
     z-index: -1;
     border-radius: inherit;
     padding: 1px;
-    background: conic-gradient(from var(--coin-chat-trigger-angle), transparent 0deg, var(--color-primary) 90deg, transparent 190deg);
+    background: conic-gradient(from var(--coin-chat-trigger-angle), transparent 0deg, var(--pc-accent) 90deg, transparent 190deg);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -593,7 +640,7 @@
     width: 4px;
     height: 4px;
     border-radius: 50%;
-    background: var(--color-primary);
+    background: var(--pc-accent);
     animation: coin-chat-trigger-typing 1.3s ease-in-out infinite;
   }
   .coin-chat-trigger-dot:nth-child(1) { animation-delay: 0s; }
@@ -637,11 +684,14 @@
 .coin-chat-dock {
   width: 330px;
   flex-shrink: 0;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
+  background: var(--pc-panel-2);
+  border-left: 1px solid var(--pc-border);
   overflow: hidden;
   transition: width 0.22s ease;
   position: relative;
+}
+html[data-theme="light"] .coin-chat-dock {
+  border-left: none;
 }
 
 .coin-chat-dock--hidden {
@@ -699,7 +749,7 @@
   /* Fully opaque — --color-card-bg is translucent (rgba, ~0.9-0.95
      alpha), fine for a panel with its own backdrop but not for a true
      full-screen takeover, where it lets the dimmed feed bleed through. */
-  background: var(--color-surface);
+  background: var(--pc-panel-2);
   display: flex;
   flex-direction: column;
 }
@@ -714,13 +764,13 @@
      stays as the fallback for web/Android. Same convention as
      App.css's own top-safe-area padding. */
   padding: max(14px, var(--native-safe-area-top, env(safe-area-inset-top))) 16px 14px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--pc-border);
 }
 
 .coin-chat-reply-cancel {
   background: none;
   border: none;
-  color: var(--color-text);
+  color: var(--pc-text);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -730,7 +780,7 @@
   border: none;
   border-radius: 999px;
   padding: 7px 18px;
-  background: var(--color-primary);
+  background: var(--pc-accent);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 700;
@@ -773,7 +823,7 @@
   margin: 3px 0 0;
   font-size: 0.9rem;
   line-height: 1.45;
-  color: var(--color-text);
+  color: var(--pc-text);
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -782,7 +832,7 @@
   flex-shrink: 0;
   width: 2px;
   height: 22px;
-  background: var(--color-border);
+  background: var(--pc-border);
   margin: 4px 0 4px 34px;
 }
 
@@ -790,11 +840,11 @@
   flex-shrink: 0;
   padding: 0 16px 10px 52px;
   font-size: 0.78rem;
-  color: var(--color-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .coin-chat-reply-label b {
-  color: var(--color-primary);
+  color: var(--pc-accent);
   font-weight: 600;
 }
 

@@ -101,7 +101,7 @@ const FIB_LEVELS = [
   { ratio: 0.236, label: "0.236", color: "rgba(167,139,250,0.85)" },
   { ratio: 0.382, label: "0.382", color: "rgba(52,211,153,0.85)" },
   { ratio: 0.5, label: "0.5", color: "rgba(251,113,133,0.85)" },
-  { ratio: 0.618, label: "0.618", color: "rgba(56,189,248,0.85)" },
+  { ratio: 0.618, label: "0.618", color: "rgba(129,140,248,0.85)" },
   { ratio: 0.786, label: "0.786", color: "rgba(249,115,22,0.85)" },
   { ratio: 1, label: "1", color: "rgba(251,191,36,0.85)" },
 ] as const;
@@ -381,11 +381,11 @@ function calcMACD(
     const color =
       h >= 0
         ? h >= prev
-          ? "rgba(34,197,94,0.85)"
-          : "rgba(34,197,94,0.45)"
+          ? "rgba(74,222,128,0.85)"
+          : "rgba(74,222,128,0.45)"
         : h <= prev
-          ? "rgba(239,68,68,0.85)"
-          : "rgba(239,68,68,0.45)";
+          ? "rgba(251,113,133,0.85)"
+          : "rgba(251,113,133,0.45)";
     macdLine.push({ time: times[i], value: +m.toFixed(2) });
     signalLine.push({ time: times[i], value: +s.toFixed(2) });
     histogram.push({ time: times[i], value: +h.toFixed(2), color });
@@ -1051,13 +1051,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     ? isFullscreen
       ? "#0f172a"
       : "#475569"
-    : "#94a3b8";
+    : "#9490c0";
   const gridColor = isLight
     ? isFullscreen
       ? "#94a3b8"
       : "#e2e8f0"
-    : "#1e293b";
-  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#0f172a";
+    : "#2b2748";
+  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#141230";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -1324,22 +1324,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         layout: {
           background: {
             type: ColorType.Solid,
-            color: isLight ? "#ffffff" : "#0f1117",
+            color: isLight ? "#ffffff" : "#141230",
           },
-          textColor: isLight ? "#475569" : "#94a3b8",
+          textColor: isLight ? "#475569" : "#9490c0",
         },
         grid: {
           vertLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.04)",
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
           },
           horzLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.04)",
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
           },
         },
         crosshair: { mode: 1 },
-        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#1e293b" },
+        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#2b2748" },
         timeScale: {
-          borderColor: isLight ? "#e2e8f0" : "#1e293b",
+          borderColor: isLight ? "#e2e8f0" : "#2b2748",
           timeVisible: true,
           secondsVisible: false,
         },
@@ -1372,8 +1372,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       // so the fill sits behind price action, not on top of it.
       bbFillUpperRef.current = chart.addSeries(AreaSeries, {
         lineVisible: false,
-        topColor: "rgba(56,189,248,0.10)",
-        bottomColor: "rgba(56,189,248,0.10)",
+        topColor: "rgba(129,140,248,0.10)",
+        bottomColor: "rgba(129,140,248,0.10)",
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
@@ -1388,12 +1388,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       });
 
       candleRef.current = chart.addSeries(CandlestickSeries, {
-        upColor: "#22c55e",
-        downColor: "#ef4444",
-        borderUpColor: "#22c55e",
-        borderDownColor: "#ef4444",
-        wickUpColor: "#22c55e",
-        wickDownColor: "#ef4444",
+        upColor: "#4ade80",
+        downColor: "#fb7185",
+        borderUpColor: "#4ade80",
+        borderDownColor: "#fb7185",
+        wickUpColor: "#4ade80",
+        wickDownColor: "#fb7185",
       });
       volumeRef.current = chart.addSeries(HistogramSeries, {
         priceScaleId: "volume",
@@ -1416,7 +1416,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       });
       bbLowerRef.current = chart.addSeries(LineSeries, {
         ...bbOpts,
-        color: "rgba(34,197,94,0.7)",
+        color: "rgba(74,222,128,0.7)",
       });
       ema20Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
@@ -1436,7 +1436,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       });
       ma20Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
-        color: "#38bdf8",
+        color: "#818cf8",
         title: "MA 20",
         visible: false,
       });
@@ -1544,8 +1544,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               value: c.volume ?? 0,
               color:
                 c.close >= c.open
-                  ? "rgba(34,197,94,0.45)"
-                  : "rgba(239,68,68,0.45)",
+                  ? "rgba(74,222,128,0.45)"
+                  : "rgba(251,113,133,0.45)",
             })),
           );
           const { upper, middle, lower } = calcBollingerBands(data);
@@ -1579,7 +1579,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           for (const { price } of support) {
             const pl = candleRef.current?.createPriceLine({
               price,
-              color: "rgba(34,197,94,0.75)",
+              color: "rgba(74,222,128,0.75)",
               lineWidth: 1,
               lineStyle: 2,
               axisLabelVisible: true,
@@ -1595,8 +1595,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           onZoneChange?.(isPaid ? zones : null, lastPrice);
           if (isPaid && zones) {
             const zoneLines: [number, string, string][] = [
-              [zones.buyZone.upper, "rgba(34,197,94,0.5)", "Buy Zone ▲"],
-              [zones.buyZone.lower, "rgba(34,197,94,0.5)", "Buy Zone ▼"],
+              [zones.buyZone.upper, "rgba(74,222,128,0.5)", "Buy Zone ▲"],
+              [zones.buyZone.lower, "rgba(74,222,128,0.5)", "Buy Zone ▼"],
               [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
               [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
             ];
@@ -1651,7 +1651,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             });
             const hlLow = candleRef.current?.createPriceLine({
               price: dLow,
-              color: "#38bdf8",
+              color: "#818cf8",
               lineWidth: 1,
               lineStyle: 2,
               axisLabelVisible: true,
@@ -1714,7 +1714,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     div.type === "bullish"
                       ? ("arrowUp" as const)
                       : ("arrowDown" as const),
-                  color: div.type === "bullish" ? "#22c55e" : "#ef4444",
+                  color: div.type === "bullish" ? "#4ade80" : "#fb7185",
                   size: 3,
                   text: div.type === "bullish" ? "Bull Div" : "Bear Div",
                 }))
@@ -1740,7 +1740,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     div.type === "bullish"
                       ? ("arrowUp" as const)
                       : ("arrowDown" as const),
-                  color: div.type === "bullish" ? "#22c55e" : "#ef4444",
+                  color: div.type === "bullish" ? "#4ade80" : "#fb7185",
                   size: 2,
                 }))
               : [];
@@ -1833,8 +1833,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               value: candle.volume,
               color:
                 candle.close >= candle.open
-                  ? "rgba(34,197,94,0.45)"
-                  : "rgba(239,68,68,0.45)",
+                  ? "rgba(74,222,128,0.45)"
+                  : "rgba(251,113,133,0.45)",
             });
           }
         }
@@ -1959,7 +1959,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       time: p.time as number,
       position: p.type === "high" ? "aboveBar" : "belowBar",
       shape: p.type === "high" ? "arrowDown" : "arrowUp",
-      color: p.type === "high" ? "#ef4444" : "#22c55e",
+      color: p.type === "high" ? "#fb7185" : "#4ade80",
       size: 1,
     }));
     if (!gannMarkersPluginRef.current) {
@@ -2080,7 +2080,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // RSI series
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rsiSeries: any = rsiChart.addSeries(LineSeries, {
-      color: "#38bdf8",
+      color: "#818cf8",
       lineWidth: 2 as const,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -2103,7 +2103,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     });
     rsiSeries.createPriceLine({
       price: 30,
-      color: "rgba(34,197,94,0.65)",
+      color: "rgba(74,222,128,0.65)",
       lineWidth: 1 as const,
       lineStyle: 2,
       axisLabelVisible: true,
@@ -2119,7 +2119,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const macdLn: any = macdChart.addSeries(LineSeries, {
-      color: "#38bdf8",
+      color: "#818cf8",
       lineWidth: 2 as const,
       priceLineVisible: false,
       lastValueVisible: true,
@@ -2292,7 +2292,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // Header bar
     ctx.fillStyle = "#0a1628";
     ctx.fillRect(0, 0, W, HEADER_H);
-    ctx.fillStyle = "rgba(56,189,248,0.18)";
+    ctx.fillStyle = "rgba(129,140,248,0.18)";
     ctx.fillRect(0, HEADER_H - 1, W, 1);
 
     // Left label: coin + interval
@@ -2314,13 +2314,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         "strong-sell": t("chart.strongSell"),
       };
       const sigColor: Record<string, string> = {
-        "strong-buy": "#22c55e",
+        "strong-buy": "#4ade80",
         buy: "#86efac",
         oversold: "#f59e0b",
         neutral: "#94a3b8",
         overbought: "#f59e0b",
         sell: "#fca5a5",
-        "strong-sell": "#ef4444",
+        "strong-sell": "#fb7185",
       };
       const sigText = sigLabel[zone.signal] ?? zone.signal;
       ctx.font = "bold 11px 'Inter', system-ui, sans-serif";
@@ -2587,7 +2587,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         />
                         <span
                           className="indicators-menu-dot"
-                          style={{ background: "#38bdf8" }}
+                          style={{ background: "#818cf8" }}
                         />
                         <span>{t("chart.ma20")}</span>
                       </label>
@@ -2671,7 +2671,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         />
                         <span
                           className="indicators-menu-dot"
-                          style={{ background: "#38bdf8" }}
+                          style={{ background: "#818cf8" }}
                         />
                         <span>{t("chart.rsi14")}</span>
                       </label>

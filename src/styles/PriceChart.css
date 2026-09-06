@@ -1,7 +1,82 @@
+/* "Aurora Glass" — a fixed dark indigo aura behind the whole chart page
+   (this component + Watchlist/FlashNewsBanner/OrderBook/CoinChat, scoped
+   via the shared `.chart-active` wrapper App.tsx already applies),
+   regardless of site theme. Chart chrome (panels, pills, badges) sits as
+   frosted glass on top rather than opaque cards. */
+.chart-active {
+  --pc-bg: radial-gradient(ellipse at 30% -10%, #322b78 0%, #17143a 45%, #0a0a1f 100%);
+  --pc-panel: rgba(255, 255, 255, 0.035);
+  --pc-panel-2: rgba(255, 255, 255, 0.06);
+  --pc-border: rgba(165, 180, 252, 0.16);
+  --pc-text: #ffffff;
+  --pc-text-secondary: #c7cbf0;
+  --pc-text-muted: #9490c0;
+  --pc-accent: #818cf8;
+  --pc-accent-2: #7c3aed;
+  --pc-accent-soft: rgba(129, 140, 248, 0.18);
+  --pc-success: #4ade80;
+  --pc-danger: #fb7185;
+  --pc-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  --pc-chart-bg: #141230;
+  --pc-chart-text: #9490c0;
+  --pc-chart-grid: #2b2748;
+  --pc-scrim-rgb: 10, 10, 31;
+}
+/* Aurora Glass is dark-only. Light theme keeps the app's normal colors
+   (no indigo takeover) but gives its own sections a bit of separation from
+   the page — a faint tinted backdrop behind white, gently rounded cards —
+   so the "glossy, rounded" treatment reads without changing the palette. */
+html[data-theme="light"] .chart-active {
+  --pc-bg: var(--color-surface-alt);
+  --pc-panel: #ffffff;
+  --pc-panel-2: #f2f4f8;
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-secondary: var(--color-text-secondary);
+  --pc-text-muted: var(--color-text-muted);
+  --pc-accent: var(--color-primary);
+  --pc-accent-2: var(--color-primary);
+  --pc-accent-soft: var(--color-primary-soft);
+  --pc-success: var(--color-success);
+  --pc-danger: var(--color-danger);
+  --pc-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+  --pc-chart-bg: #ffffff;
+  --pc-chart-text: #475569;
+  --pc-chart-grid: #e2e8f0;
+  --pc-scrim-rgb: 255, 255, 255;
+}
+
+/* Subtle top-edge sheen for light-theme section cards — layered directly
+   into each card's own `background` (a gradient layer over the flat panel
+   color) rather than a separate ::before overlay. A positioned pseudo-
+   element paints *above* normal in-flow content regardless of DOM order
+   (CSS stacking rules put positioned z-index:auto boxes after static
+   content), which was washing out every label/number inside these cards
+   with a translucent veil. Background layers don't have that problem —
+   they paint as part of the element's own background, always behind its
+   content — so this is the safe way to add a highlight without a
+   z-index fight. */
+
 .price-chart-container {
-  background: var(--color-card-bg);
+  background: var(--pc-bg);
   border-radius: 0;
   padding: 12px 16px;
+}
+
+html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  margin: 10px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
+  box-shadow: var(--pc-shadow);
+}
+@media (max-width: 768px) {
+  html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+    margin: 6px;
+    padding: 10px 10px;
+    border-radius: 14px;
+  }
 }
 
 /* Native fullscreen (desktop) — matches CSS overlay look */
@@ -12,7 +87,7 @@
   overflow: hidden;
   padding: 0 16px;
   box-sizing: border-box;
-  background: var(--color-card-bg);
+  background: var(--pc-bg);
 }
 
 html[data-theme="light"] .price-chart-container:fullscreen,
@@ -102,7 +177,7 @@ html[data-theme="light"]
   z-index: 999;
   overflow: hidden;
   padding: 0 16px;
-  background: var(--color-card-bg);
+  background: var(--pc-bg);
 }
 
 .price-chart-fs-scroll {
@@ -125,10 +200,12 @@ html[data-theme="light"]
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--color-card-bg);
+  background: rgba(var(--pc-scrim-rgb), 0.75);
+  backdrop-filter: blur(12px);
   padding-top: 12px;
   margin-top: -12px;
 }
+
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-group {
   background: #f8fafc;
@@ -140,6 +217,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-grou
   position: static;
   padding-top: 0;
   margin-top: 0;
+}
+html[data-theme="light"] .price-chart-container--fs .chart-header,
+html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
+  background: #f8fafc;
 }
 html[data-theme="light"] .price-chart-container--fs .chart-header,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
@@ -212,7 +293,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .live-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #22c55e;
+  color: #4ade80;
   letter-spacing: 0.05em;
   animation: pulse-live 1.4s ease-in-out infinite;
 }
@@ -252,11 +333,11 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 }
 
 .chart-current-price--up {
-  color: #22c55e;
+  color: #4ade80;
 }
 
 .chart-current-price--down {
-  color: #ef4444;
+  color: #fb7185;
 }
 
 .chart-dblclick-wrap::after {
@@ -296,27 +377,28 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 6px;
-  padding: 2px 8px;
+  background: var(--pc-panel-2);
+  border: 1px solid var(--pc-border);
+  border-radius: 8px;
+  padding: 3px 9px;
   letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
 }
 
 .day-hl-label {
-  color: var(--color-text-secondary);
+  color: #9490c0;
   font-weight: 600;
   margin-right: 2px;
 }
 .day-hl-high {
-  color: #22c55e;
+  color: #4ade80;
 }
 .day-hl-sep {
   color: var(--color-text-muted);
   font-weight: 400;
 }
 .day-hl-low {
-  color: #ef4444;
+  color: #fb7185;
 }
 
 .zone-signal {
@@ -342,14 +424,14 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   letter-spacing: 0.04em;
 }
 .div-badge--bullish {
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.08);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.08);
 }
 .div-badge--bearish {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.08);
+  color: #fb7185;
+  border-color: rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.08);
 }
 .div-badge--locked {
   color: var(--color-text-muted);
@@ -410,32 +492,32 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 /* Status signal colors */
 .zone-signal-gate--strong-buy,
 .zone-signal-gate--buy,
-.zone-signal-gate--oversold  { color: #22c55e; }
+.zone-signal-gate--oversold  { color: #4ade80; }
 .zone-signal-gate--strong-sell,
 .zone-signal-gate--sell,
-.zone-signal-gate--overbought { color: #ef4444; }
+.zone-signal-gate--overbought { color: #fb7185; }
 .zone-signal-gate--neutral   { color: #94a3b8; }
 
 /* Divergence colors */
-.zone-signal-gate--div-bullish { color: #22c55e; }
-.zone-signal-gate--div-bearish { color: #ef4444; }
+.zone-signal-gate--div-bullish { color: #4ade80; }
+.zone-signal-gate--div-bearish { color: #fb7185; }
 .zone-signal-gate--div-neutral { color: #94a3b8; }
 
 /* Dot */
 .zone-signal-live--gate { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .zone-signal-live--gate-strong-buy,
 .zone-signal-live--gate-buy,
-.zone-signal-live--gate-oversold  { background: #22c55e; }
+.zone-signal-live--gate-oversold  { background: #4ade80; }
 .zone-signal-live--gate-strong-sell,
 .zone-signal-live--gate-sell,
-.zone-signal-live--gate-overbought { background: #ef4444; }
+.zone-signal-live--gate-overbought { background: #fb7185; }
 .zone-signal-live--gate-neutral   { background: #94a3b8; }
-.zone-signal-live--gate-div-bullish { background: #22c55e; }
-.zone-signal-live--gate-div-bearish { background: #ef4444; }
+.zone-signal-live--gate-div-bullish { background: #4ade80; }
+.zone-signal-live--gate-div-bearish { background: #fb7185; }
 .zone-signal-live--gate-div-neutral { background: #94a3b8; }
 
 .zone-signal--strong-buy {
-  color: #22c55e;
+  color: #4ade80;
 }
 .zone-signal--buy {
   color: #4ade80;
@@ -480,14 +562,14 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 }
 
 .leverage-collapse-bar:hover {
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(129, 140, 248, 0.4);
   color: var(--color-text);
 }
 
 .leverage-collapse-bar.open {
-  background: rgba(56, 189, 248, 0.07);
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
+  background: rgba(129, 140, 248, 0.07);
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #818cf8;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -757,8 +839,8 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 
 .interval-select:hover,
 .interval-select:focus {
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+  border-color: rgba(129, 140, 248, 0.5);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.12);
   outline: none;
 }
 
@@ -774,7 +856,7 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   align-content: center;
   gap: 2px;
   padding: 3px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--pc-panel-2);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 6px;
   backdrop-filter: blur(4px);
@@ -790,7 +872,7 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: rgba(148, 163, 184, 0.65);
+  color: #9490c0;
   font-size: 0.73rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -803,23 +885,23 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 .interval-pill:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.09);
-  color: var(--color-text);
+  color: #e0e4ff;
 }
 
 .interval-pill--active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18) 0%, rgba(99, 102, 241, 0.13) 100%);
-  border-color: rgba(56, 189, 248, 0.42);
-  color: #7dd3fc;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-color: transparent;
+  color: #fff;
   box-shadow:
-    0 2px 10px rgba(56, 189, 248, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 2px 10px rgba(129, 140, 248, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .interval-pill--active:hover {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24) 0%, rgba(99, 102, 241, 0.18) 100%);
+  background: linear-gradient(135deg, #5850ec 0%, #8547f0 100%);
   box-shadow:
-    0 4px 14px rgba(56, 189, 248, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 4px 14px rgba(129, 140, 248, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .interval-pill--locked:hover {
@@ -837,7 +919,7 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   margin-top: 0.5px;
 }
 .interval-pill-trend--up   { color: #4ade80; }
-.interval-pill-trend--down { color: #f87171; }
+.interval-pill-trend--down { color: #fb7185; }
 
 
 
@@ -907,7 +989,7 @@ html[data-theme="light"] .interval-pill--locked:hover {
   color: rgba(148, 163, 184, 0.9);
 }
 .legend-bb-lower {
-  color: rgba(34, 197, 94, 0.9);
+  color: rgba(74, 222, 128, 0.9);
 }
 
 .chart-loading-overlay {
@@ -948,8 +1030,8 @@ html[data-theme="light"] .chart-loading-overlay {
 }
 
 .interval-banner--bullish {
-  background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(74, 222, 128, 0.08);
+  border-color: rgba(74, 222, 128, 0.3);
 }
 
 .interval-banner--bearish {
@@ -975,7 +1057,7 @@ html[data-theme="light"] .chart-loading-overlay {
 }
 
 .interval-banner--bullish .interval-banner-title {
-  color: #22c55e;
+  color: #4ade80;
 }
 .interval-banner--bearish .interval-banner-title {
   color: #fb7185;
@@ -1010,20 +1092,27 @@ html[data-theme="light"] .chart-loading-overlay {
 .chart-ai-placeholder {
   position: relative;
   margin: 8px 0;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--pc-border);
+}
+html[data-theme="light"] .chart-ai-placeholder {
+  border: none;
+  box-shadow: var(--pc-shadow);
 }
 
 .chart-ai-placeholder-preview {
   padding: 18px 16px 10px;
-  background: var(--color-surface);
+  background: var(--pc-panel);
   display: flex;
   flex-direction: column;
   gap: 10px;
   filter: blur(3px);
   user-select: none;
   pointer-events: none;
+}
+html[data-theme="light"] .chart-ai-placeholder-preview {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%), var(--pc-panel);
 }
 
 .chart-ai-placeholder-overlay {
@@ -1035,9 +1124,9 @@ html[data-theme="light"] .chart-loading-overlay {
   padding: 12px 16px;
   background: linear-gradient(
     to bottom,
-    rgba(8, 14, 28, 0) 0%,
-    rgba(8, 14, 28, 0.7) 50%,
-    rgba(8, 14, 28, 0.96) 100%
+    rgba(var(--pc-scrim-rgb), 0) 0%,
+    rgba(var(--pc-scrim-rgb), 0.75) 50%,
+    rgba(var(--pc-scrim-rgb), 0.97) 100%
   );
 }
 
@@ -1067,7 +1156,7 @@ html[data-theme="light"] .chart-ai-placeholder-overlay {
 .cap-overlay-ai-badge {
   font-size: 0.63rem;
   font-weight: 800;
-  color: #0ea5e9;
+  color: #818cf8;
   letter-spacing: 0.05em;
   flex-shrink: 0;
 }
@@ -1086,7 +1175,7 @@ html[data-theme="light"] .cap-overlay-title {
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.07em;
-  color: #0ea5e9;
+  color: #818cf8;
   flex-shrink: 0;
 }
 
@@ -1109,7 +1198,7 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .cap-overlay-feature svg {
-  color: #22c55e;
+  color: #4ade80;
   flex-shrink: 0;
 }
 
@@ -1118,8 +1207,8 @@ html[data-theme="light"] .cap-overlay-feature {
   padding: 7px 18px;
   border-radius: 20px;
   border: none;
-  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
-  box-shadow: 0 0 14px rgba(14, 165, 233, 0.4);
+  background: linear-gradient(135deg, #818cf8 0%, #7c3aed 100%);
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.4);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -1131,7 +1220,7 @@ html[data-theme="light"] .cap-overlay-feature {
 
 .cap-overlay-btn:hover {
   opacity: 0.9;
-  box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+  box-shadow: 0 0 20px rgba(129, 140, 248, 0.6);
 }
 
 .cap-btn-short { display: none; }
@@ -1147,7 +1236,7 @@ html[data-theme="light"] .cap-overlay-feature {
   width: 52px;
   height: 20px;
   border-radius: 20px;
-  background: rgba(34, 197, 94, 0.25);
+  background: rgba(74, 222, 128, 0.25);
 }
 
 .cap-title {
@@ -1486,8 +1575,8 @@ html[data-theme="light"] .cap-overlay-feature {
 
 .indicators-toggle:hover,
 .indicators-toggle--active {
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  border-color: rgba(129, 140, 248, 0.45);
+  color: #818cf8;
 }
 
 .indicators-menu {
@@ -1525,7 +1614,7 @@ html[data-theme="light"] .cap-overlay-feature {
 .indicators-menu-item input[type="checkbox"] {
   width: 15px;
   height: 15px;
-  accent-color: #38bdf8;
+  accent-color: #818cf8;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -1601,9 +1690,19 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .sub-chart-panel {
-  border-top: 1px solid var(--color-border);
-  padding-top: 10px;
-  margin-top: 6px;
+  position: relative;
+  border-top: none;
+  background: var(--pc-panel);
+  border: 1px solid var(--pc-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+html[data-theme="light"] .sub-chart-panel {
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 60%), var(--pc-panel);
+  box-shadow: var(--pc-shadow);
 }
 
 .sub-chart-header {
@@ -1640,16 +1739,16 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .legend-rsi {
-  color: #38bdf8;
+  color: #818cf8;
 }
 .legend-ob {
   color: rgba(251, 113, 133, 0.9);
 }
 .legend-os {
-  color: rgba(34, 197, 94, 0.9);
+  color: rgba(74, 222, 128, 0.9);
 }
 .legend-macd {
-  color: #38bdf8;
+  color: #818cf8;
 }
 .legend-signal {
   color: #f97316;
@@ -1658,19 +1757,26 @@ html[data-theme="light"] .cap-overlay-feature {
 /* ── Pattern Insight card ─────────────────────────────────────────────── */
 .pattern-insight {
   margin-top: 16px;
-  border-radius: 14px;
-  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  border: 1px solid rgba(165, 180, 252, 0.2);
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.14), rgba(56, 189, 248, 0.06));
   overflow: hidden;
+}
+html[data-theme="light"] .pattern-insight {
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%), var(--pc-panel);
+  box-shadow: var(--pc-shadow);
 }
 
 .pattern-insight--bullish {
-  border-left: 3px solid #22c55e;
+  border-left: 3px solid #4ade80;
 }
 .pattern-insight--bearish {
-  border-left: 3px solid #ef4444;
+  border-left: 3px solid #fb7185;
 }
 .pattern-insight--neutral {
-  border-left: 3px solid #94a3b8;
+  border-left: 3px solid #9490c0;
 }
 
 .pattern-insight-header {
@@ -1678,8 +1784,8 @@ html[data-theme="light"] .cap-overlay-feature {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-input-bg, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--pc-border);
+  background: var(--pc-panel-2);
 }
 
 .pattern-insight-header-right {
@@ -1923,9 +2029,9 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .predict-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(251, 113, 133, 0.12);
+  color: #fb7185;
+  border-color: rgba(251, 113, 133, 0.4);
 }
 
 /* ── Prediction Panel ────────────────────────────────────────────────────────── */
@@ -1939,13 +2045,13 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .prediction-panel--bullish {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.04);
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.04);
 }
 
 .prediction-panel--bearish {
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.04);
+  border-color: rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.04);
 }
 
 .prediction-panel--neutral {
@@ -1970,13 +2076,13 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 .prediction-direction-badge--bullish {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
 }
 
 .prediction-direction-badge--bearish {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.12);
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.12);
 }
 
 .prediction-direction-badge--neutral {
@@ -2040,13 +2146,13 @@ html[data-theme="light"] .cap-overlay-feature {
 .prediction-level--target .prediction-level-value {
   font-size: 1rem;
   font-weight: 700;
-  color: #22c55e;
+  color: #4ade80;
 }
 
 .prediction-level--sl .prediction-level-value {
   font-size: 1rem;
   font-weight: 700;
-  color: #ef4444;
+  color: #fb7185;
 }
 
 /* ── AI Pattern Analysis gate card (compact) ─────────────────────────── */

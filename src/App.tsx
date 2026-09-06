@@ -22,7 +22,6 @@ import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
 import { LearnSection } from "./components/LearnSection";
-import { NewsTicker } from "./components/NewsTicker";
 import { LeveragePopup } from "./components/LeveragePopup";
 import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
@@ -1073,10 +1072,6 @@ function AppDashboard({
           onOpenUpgrade();
         }}
       />
-      <div className="app-shell-news">
-        <NewsTicker />
-      </div>
-
       <div
         className={`app-shell-body${mobileNavOpen ? " mobile-nav-open" : ""}`}
       >
@@ -1285,6 +1280,7 @@ function AppDashboard({
         </nav>
 
         <div className="main-panel">
+          <FlashNewsBanner />
           <div className="main-coin-header">
             <div className="mch-left">
               <button
@@ -1674,7 +1670,6 @@ function AppDashboard({
                     clearCandleCache();
                   }}
                 />
-                <FlashNewsBanner />
                 <div
                   className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
                   ref={chartWrapRef}

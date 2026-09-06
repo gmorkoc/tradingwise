@@ -1,46 +1,53 @@
 .fnb-root {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 16px;
-  background: var(--color-card-bg);
+  gap: 12px;
+  height: 44px;
+  /* Left padding matches .main-coin-header / .wl-strip's 24px so all
+     three rows line up. */
+  padding: 0 18px 0 24px;
+  background: linear-gradient(90deg, color-mix(in srgb, #fb7185 6%, var(--color-card-bg)) 0%, var(--color-card-bg) 140px);
   border-bottom: 1px solid var(--color-border);
   overflow: hidden;
+}
+html[data-theme="light"] .fnb-root {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
 }
 
 .fnb-tag {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
-  font-size: 0.62rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.1em;
-  color: #ef4444;
+  color: #fb7185;
   text-transform: uppercase;
 }
 
 .fnb-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #ef4444;
+  background: #fb7185;
+  box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.55);
   animation: fnb-pulse 1.4s ease-in-out infinite;
   flex-shrink: 0;
 }
 
 @keyframes fnb-pulse {
-  0%, 100% { opacity: 1;   transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.7); }
+  0%   { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(251, 113, 133, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0); }
 }
 
 .fnb-source {
   flex-shrink: 0;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  padding: 3px 9px;
   border-radius: 4px;
   background: var(--color-input-bg);
   border: 1px solid var(--color-border);
@@ -50,8 +57,8 @@
 .fnb-headline {
   flex: 1;
   min-width: 0;
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--color-text);
   text-decoration: none;
   white-space: nowrap;
@@ -83,21 +90,33 @@
 }
 
 .fnb-nav {
-  background: none;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 1rem;
   line-height: 1;
-  padding: 0 3px;
-  transition: color 0.15s;
+  padding: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
-.fnb-nav:hover { color: var(--color-text); }
+.fnb-nav:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
 
 .fnb-counter {
-  font-size: 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 600;
   color: var(--color-text-muted);
-  min-width: 36px;
+  min-width: 38px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }

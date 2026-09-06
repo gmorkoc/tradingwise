@@ -1493,21 +1493,18 @@ body {
   background: var(--color-background);
 }
 
-.app-shell-news {
-  flex-shrink: 0;
-  width: 100%;
-  /* First element in the app shell — reserve the notch/Dynamic Island
-     inset here so nothing below has to. See MainViewController.swift for
-     why --native-safe-area-top exists instead of relying on env() alone. */
-  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
-}
-
 .app-shell-body {
   display: flex;
   flex-direction: row;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* First element in the app shell now (FlashNewsBanner moved below the
+     nav, into .main-panel) — reserve the notch/Dynamic Island inset here
+     so the nav rail doesn't render under it. See MainViewController.swift
+     for why --native-safe-area-top exists instead of relying on env()
+     alone. */
+  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
 }
 
 /* ── Icon nav strip ─────────────────────────────────────────────────────── */
@@ -1524,6 +1521,9 @@ body {
   z-index: 100;
   position: relative;
   transition: width 0.22s ease;
+}
+html[data-theme="light"] .icon-strip {
+  border-right-color: rgba(15, 23, 42, 0.06);
 }
 
 @media (min-width: 641px) {
@@ -1940,6 +1940,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
   border-bottom: 1px solid var(--color-border);
   overflow: visible;
 }
+html[data-theme="light"] .main-coin-header {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
 
 .mch-left {
   display: flex;
@@ -1980,6 +1983,9 @@ html[data-theme="light"] .icon-strip-quota-bar {
     border-color 0.18s,
     box-shadow 0.18s;
   white-space: nowrap;
+}
+html[data-theme="light"] .mch-coin-btn:not(:hover) {
+  border-color: rgba(15, 23, 42, 0.06);
 }
 .mch-coin-btn:hover {
   border-color: var(--color-primary);
@@ -2724,12 +2730,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
     width: 52px;
   }
 
-  .app-shell-news {
-    position: relative;
-    z-index: 70;
-    background: var(--color-surface);
-  }
-
   .main-coin-header {
     height: auto;
     min-height: 56px;
@@ -3236,4 +3236,19 @@ html[data-theme="light"] .pticker-price {
 
 @keyframes section-loading-spin {
   to { transform: rotate(360deg); }
+}
+
+/* Tier badges ("P" / "E") in the nav are hidden everywhere — purely
+   visual, the underlying requiredTier gating (BlurGate) is untouched.
+   High-specificity + !important selectors here mirror every variant
+   above (hover-expanded desktop strip, mobile-open expanded list) so
+   this wins regardless of state. */
+.icon-strip .nav-badge--mobile,
+.icon-strip .icon-strip-lock.nav-badge--desktop,
+.icon-strip .icon-strip-elite-badge.nav-badge--desktop,
+.icon-strip .icon-strip-elite-badge,
+.icon-strip .icon-strip-elite-badge.nav-badge--pro,
+.nav-badge--mobile,
+.icon-strip-elite-badge {
+  display: none !important;
 }
