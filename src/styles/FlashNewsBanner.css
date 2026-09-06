@@ -3,9 +3,9 @@
   align-items: center;
   gap: 12px;
   height: 44px;
-  /* Left padding matches .main-coin-header / .wl-strip's 24px so all
-     three rows line up. */
-  padding: 0 18px 0 24px;
+  /* Padding matches .main-coin-header's 24px on both sides so all three
+     rows line up left and right. */
+  padding: 0 24px;
   background: linear-gradient(90deg, color-mix(in srgb, #fb7185 6%, var(--color-card-bg)) 0%, var(--color-card-bg) 140px);
   border-bottom: 1px solid var(--color-border);
   overflow: hidden;
@@ -82,11 +82,10 @@ html[data-theme="light"] .fnb-root {
   text-decoration: underline;
 }
 
+/* Removed for now, across all devices — prev/next + counter weren't
+   worth the width, headlines just auto-rotate on their own timer. */
 .fnb-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  display: none;
 }
 
 .fnb-nav {
@@ -119,4 +118,21 @@ html[data-theme="light"] .fnb-root {
   min-width: 38px;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+/* Mobile web and the native iOS app both render at this width — hide the
+   source chip and trim the headline so it has more room instead of
+   truncating. */
+@media (max-width: 640px) {
+  .fnb-root {
+    padding: 0 12px;
+  }
+
+  .fnb-source {
+    display: none;
+  }
+
+  .fnb-headline {
+    font-size: 0.8rem;
+  }
 }

@@ -5,8 +5,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  /* Left padding matches .main-coin-header's 24px so the two rows line up. */
-  padding: 10px 14px 10px 24px;
+  /* Padding matches .main-coin-header's 24px on both sides so all three
+     rows line up left and right. */
+  padding: 10px 24px;
   background: var(--pc-panel);
   border: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
   backdrop-filter: blur(6px);
@@ -299,7 +300,7 @@ html[data-theme="light"] .chart-active .wl-strip {
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .wl-strip { gap: 8px; padding: 8px 10px 8px 12px; }
+  .wl-strip { gap: 8px; padding: 8px 12px; }
   .wl-strip-label { font-size: 0.68rem; padding-right: 8px; gap: 4px; }
   .wl-chip-price { font-size: 0.78rem; }
   .wl-scroll { gap: 16px; }
