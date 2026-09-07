@@ -1503,8 +1503,13 @@ body {
      nav, into .main-panel) — reserve the notch/Dynamic Island inset here
      so the nav rail doesn't render under it. See MainViewController.swift
      for why --native-safe-area-top exists instead of relying on env()
-     alone. */
+     alone. This padding area shows .app-shell-body's own background (its
+     children, .icon-strip and .main-panel, are opaque and cover
+     everything below it) — matched to --color-card-bg, the same color
+     FlashNewsBanner's gradient settles into, so the safe-area strip and
+     the news banner read as one continuous surface instead of a seam. */
   padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+  background: var(--color-card-bg);
 }
 
 /* ── Icon nav strip ─────────────────────────────────────────────────────── */
@@ -2445,15 +2450,32 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     align-items: flex-start;
     overflow-y: auto;
     overflow-x: hidden;
-    background: rgba(15, 23, 42, 0.82) !important;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-  html[data-theme="light"] .icon-strip {
-    background: rgba(255, 255, 255, 0.82) !important;
+    /* Transparent while closed — .main-panel (z-index 60) covers this box
+       everywhere BELOW the safe-area inset, but position:fixed always
+       measures from the true viewport top regardless of DOM position, so
+       this box still extends up under the notch/status bar where nothing
+       else covers it. A background there — even closed — showed through
+       as a stray tinted patch behind the status bar. Only paint the real
+       backdrop once the drawer is actually open. */
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* Same story as the background above — the desktop rule's 1px
+       border-right still applies here, and since this box reaches the
+       true viewport top, that edge showed up as a stray vertical line
+       through the status bar / safe-area strip. Only show it once the
+       drawer is actually open. */
+    border-right: none;
   }
   .icon-strip.mobile-open {
     z-index: 300001;
+    background: rgba(15, 23, 42, 0.82) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid var(--color-border);
+  }
+  html[data-theme="light"] .icon-strip.mobile-open {
+    background: rgba(255, 255, 255, 0.82) !important;
   }
 
   /* Hide desktop logo on mobile */

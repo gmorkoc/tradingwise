@@ -50,7 +50,7 @@ html[data-theme="light"] .coin-chat-dock {
   html[data-theme="light"] .coin-chat-panel {
     margin: 10px;
     height: calc(100% - 20px);
-    border-radius: 16px;
+    border-radius: 12px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 80px), var(--pc-panel);
     box-shadow: var(--pc-shadow);
   }
@@ -581,6 +581,11 @@ html[data-theme="light"] .coin-chat-dock {
     display: contents;
   }
 
+  /* var(--pc-panel) here resolves to .coin-chat-dock's real (dark-theme)
+     value — rgba(255,255,255,0.035), a "glass" tint meant to sit on the
+     chart page's own aurora background. Floating loose over arbitrary
+     page content via position:fixed, that's indistinguishable from fully
+     transparent. Needs its own solid, opaque color instead. */
   .coin-chat-trigger {
     position: fixed;
     right: 12px;
@@ -593,40 +598,27 @@ html[data-theme="light"] .coin-chat-dock {
     padding: 9px 14px;
     border: none;
     border-radius: 999px;
-    background: var(--pc-panel);
+    background: #141230;
     color: var(--pc-text);
     box-shadow: 0 8px 24px var(--color-shadow);
     cursor: pointer;
   }
-
-  /* A genuinely rotating border (not just a pulsing halo) — a conic
-     gradient ring, masked down to a thin outline and spun via an
-     animatable custom property. Sits behind the button's own background
-     (negative z-index + isolation:isolate above so it doesn't sink below
-     unrelated page content), so only the ring shows through. */
-  @property --coin-chat-trigger-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
+  html[data-theme="light"] .coin-chat-trigger {
+    background: #ffffff;
   }
 
-  .coin-chat-trigger::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    z-index: -1;
-    border-radius: inherit;
-    padding: 1px;
-    background: conic-gradient(from var(--coin-chat-trigger-angle), transparent 0deg, var(--pc-accent) 90deg, transparent 190deg);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: coin-chat-trigger-spin 2.6s linear infinite;
-    pointer-events: none;
+  /* A soft pulsing glow ring. Previously a conic-gradient spun via
+     mask-composite:xor/exclude — that combination of legacy -webkit- and
+     standard mask syntax is a known source of WKWebView rendering
+     glitches on iOS, which is the likely cause of this button "not
+     looking right" there. box-shadow is simple and reliable everywhere. */
+  .coin-chat-trigger {
+    animation: coin-chat-trigger-glow 2.2s ease-in-out infinite;
   }
 
-  @keyframes coin-chat-trigger-spin {
-    to { --coin-chat-trigger-angle: 360deg; }
+  @keyframes coin-chat-trigger-glow {
+    0%, 100% { box-shadow: 0 8px 24px var(--color-shadow), 0 0 0 0 var(--pc-accent-soft); }
+    50%      { box-shadow: 0 8px 24px var(--color-shadow), 0 0 0 4px var(--pc-accent-soft); }
   }
 
   /* 3 dots bouncing in sequence, like a typing indicator. */
@@ -662,12 +654,43 @@ html[data-theme="light"] .coin-chat-dock {
      the reply modal (opaque, no ancestor-transform containing-block
      trap, safe-area-aware header). No backdrop/grabber: it covers the
      whole screen, so there's no "outside" to dim or partial height to
-     drag between. */
+     drag between.
+
+     Portaled to <body> means it's no longer a DOM descendant of
+     .coin-chat-dock, so it can't see that element's --pc-* custom
+     properties (var() with an undefined custom property is invalid at
+     computed-value time — for a non-inherited property like `background`
+     that resolves to transparent, not to any fallback). Redefining the
+     same tokens directly on the panel makes it self-sufficient, using
+     solid colors here since — unlike the desktop dock — this panel IS
+     the entire screen's backdrop, not a glass layer over something else. */
   .coin-chat-panel {
+    --pc-panel: #141230;
+    --pc-panel-2: #17143a;
+    --pc-border: rgba(165, 180, 252, 0.16);
+    --pc-text: #ffffff;
+    --pc-text-secondary: #c7cbf0;
+    --pc-text-muted: #9490c0;
+    --pc-accent: #818cf8;
+    --pc-accent-soft: rgba(129, 140, 248, 0.18);
+    --pc-success: #4ade80;
+    --pc-danger: #fb7185;
     position: fixed;
     inset: 0;
     z-index: 300;
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  html[data-theme="light"] .coin-chat-panel {
+    --pc-panel: #ffffff;
+    --pc-panel-2: var(--color-surface-alt);
+    --pc-border: var(--color-border);
+    --pc-text: var(--color-text);
+    --pc-text-secondary: var(--color-text-secondary);
+    --pc-text-muted: var(--color-text-muted);
+    --pc-accent: var(--color-primary);
+    --pc-accent-soft: var(--color-primary-soft);
+    --pc-success: var(--color-success);
+    --pc-danger: var(--color-danger);
   }
 
   .coin-chat-panel .coin-chat-head {
@@ -742,7 +765,19 @@ html[data-theme="light"] .coin-chat-dock {
 }
 
 /* ── X/Twitter-style reply takeover ────────────────────────────────────── */
+/* Portaled to <body> at every width (see CoinChat.tsx), so — same
+   reasoning as .coin-chat-panel's mobile block above — it can't inherit
+   .coin-chat-dock's --pc-* tokens and needs its own self-sufficient copy. */
 .coin-chat-reply-modal {
+  --pc-panel-2: #17143a;
+  --pc-border: rgba(165, 180, 252, 0.16);
+  --pc-text: #ffffff;
+  --pc-text-secondary: #c7cbf0;
+  --pc-text-muted: #9490c0;
+  --pc-accent: #818cf8;
+  --pc-accent-soft: rgba(129, 140, 248, 0.18);
+  --pc-success: #4ade80;
+  --pc-danger: #fb7185;
   position: fixed;
   inset: 0;
   z-index: 500;
@@ -752,6 +787,17 @@ html[data-theme="light"] .coin-chat-dock {
   background: var(--pc-panel-2);
   display: flex;
   flex-direction: column;
+}
+html[data-theme="light"] .coin-chat-reply-modal {
+  --pc-panel-2: var(--color-surface-alt);
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-secondary: var(--color-text-secondary);
+  --pc-text-muted: var(--color-text-muted);
+  --pc-accent: var(--color-primary);
+  --pc-accent-soft: var(--color-primary-soft);
+  --pc-success: var(--color-success);
+  --pc-danger: var(--color-danger);
 }
 
 .coin-chat-reply-header {

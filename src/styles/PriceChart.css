@@ -66,7 +66,7 @@ html[data-theme="light"] .chart-active {
 html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
   margin: 10px;
   padding: 18px 20px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
   box-shadow: var(--pc-shadow);
@@ -75,7 +75,7 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
   html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
     margin: 6px;
     padding: 10px 10px;
-    border-radius: 14px;
+    border-radius: 4px;
   }
 }
 
@@ -1700,7 +1700,7 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 html[data-theme="light"] .sub-chart-panel {
   border: none;
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 60%), var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
@@ -1763,10 +1763,23 @@ html[data-theme="light"] .sub-chart-panel {
   overflow: hidden;
 }
 html[data-theme="light"] .pattern-insight {
-  border-radius: 16px;
+  border-radius: 12px;
   border: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%), var(--pc-panel);
   box-shadow: var(--pc-shadow);
+}
+
+/* Square off every card inside the price chart on mobile/iOS, not just
+   the outer .price-chart-container — the sub-chart panels, pattern
+   insight card, and AI-teaser card all still carried their own rounded
+   corners, which read as "the chart still has radius" even after the
+   outer container was squared off. */
+@media (max-width: 768px) {
+  html[data-theme="light"] .sub-chart-panel,
+  html[data-theme="light"] .pattern-insight,
+  html[data-theme="light"] .chart-ai-placeholder {
+    border-radius: 4px;
+  }
 }
 
 .pattern-insight--bullish {

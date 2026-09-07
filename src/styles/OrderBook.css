@@ -16,7 +16,7 @@ html[data-theme="light"] .chart-active .ob-card {
   margin: 10px;
   height: calc(100% - 20px);
   border-left: none;
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 80px), var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
@@ -28,7 +28,7 @@ html[data-theme="light"] .chart-active .ob-card {
 
 .ob-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--pc-text);
 }
@@ -242,7 +242,24 @@ html[data-theme="light"] .chart-active .ob-card {
   html[data-theme="light"] .chart-active .ob-card {
     margin: 6px;
     height: calc(100% - 12px);
-    border-radius: 14px;
+    border-radius: 4px;
+  }
+}
+
+/* Mirrors .chart-header h3's own breakpoints exactly (PriceChart.css) so
+   "Order Book" and "BTC Price Chart" stay the same size at every width —
+   without this, .ob-title stayed at its full 1.2rem while the chart
+   title shrank on a narrow phone, making Order Book's title look huge
+   by comparison. */
+@media (max-width: 768px) {
+  .ob-title {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ob-title {
+    font-size: 0.9rem;
   }
 }
 
