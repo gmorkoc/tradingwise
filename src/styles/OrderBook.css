@@ -246,10 +246,12 @@ html[data-theme="light"] .chart-active .ob-card {
        right margin — on real phones (App.css puts .chart-section-wrap
        back to row direction below 640px, "side by side on small
        phones"), this is the gap next to the resize handle between the
-       two cards. Top/bottom values here still matter for the 641-960px
+       two cards. Top margin matches .price-chart-container's own (6px)
+       so the two cards line up instead of one sitting lower than the
+       other. Top/bottom values here still matter for the 641-960px
        range, where the wrap is column-direction instead. */
-    margin: 3px 6px 6px 2px;
-    height: calc(100% - 9px);
+    margin: 6px 6px 6px 2px;
+    height: calc(100% - 12px);
     border-radius: 0;
   }
 }
