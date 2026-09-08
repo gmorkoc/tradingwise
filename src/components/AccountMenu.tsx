@@ -34,12 +34,17 @@ interface Props {
   onOpenAuth: () => void;
   onOpenUpgrade: () => void;
   onOpenProfile?: () => void;
+  // News ticker (desktop web) wants a generic person icon when there's no
+  // profile photo, instead of the letter-initial fallback used everywhere
+  // else this component renders (nav drawer, mobile nav).
+  iconFallback?: boolean;
 }
 
 export const AccountMenu: React.FC<Props> = ({
   onOpenAuth,
   onOpenUpgrade,
   onOpenProfile,
+  iconFallback,
 }) => {
   const { t } = useTranslation();
   const { user, profile, tier, signOut } = useAuth();
@@ -93,7 +98,11 @@ export const AccountMenu: React.FC<Props> = ({
   }
 
   const firstName = (() => {
-    if (profile?.full_name) return profile.full_name.trim().split(/\s+/)[0];
+    // Some signup flows default full_name to the raw email — never show
+    // the full address (with domain) as the display name.
+    if (profile?.full_name && !profile.full_name.includes("@")) {
+      return profile.full_name.trim().split(/\s+/)[0];
+    }
     return user.email?.split("@")[0] ?? "Account";
   })();
   const firstInitial = firstName[0].toUpperCase();
@@ -105,7 +114,14 @@ export const AccountMenu: React.FC<Props> = ({
     <div className="acct-wrap">
       <button className="acct-avatar" ref={avatarRef} onClick={openMenu}>
         <span className="nav-icon-wrap">
-          <Avatar url={profile?.avatar_url} fallback={firstInitial} className="acct-initial-icon" />
+          {iconFallback && !profile?.avatar_url ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          ) : (
+            <Avatar url={profile?.avatar_url} fallback={firstInitial} className="acct-initial-icon" />
+          )}
         </span>
         <span className="icon-strip-label">{firstName}</span>
       </button>

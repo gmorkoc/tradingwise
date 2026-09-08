@@ -120,6 +120,71 @@ html[data-theme="light"] .fnb-root {
   font-variant-numeric: tabular-nums;
 }
 
+/* Account menu, settings, sign-out, and theme toggle — moved here from
+   the nav drawer's .icon-strip-bottom for desktop web (see App.css's own
+   min-width:641px rule hiding that section there). Pushed to the far
+   right of the ticker as one group. */
+.fnb-desktop-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* .icon-strip-acct/.acct-avatar both use `width: 100%` for their block
+   layout in the nav drawer — override back to natural size here. */
+.fnb-desktop-controls .icon-strip-acct,
+.fnb-desktop-controls .acct-avatar {
+  width: auto;
+}
+
+/* .icon-strip-label defaults to opacity:0 (only revealed by
+   .icon-strip:hover, which never applies outside the nav drawer) — but
+   opacity:0 still reserves its full text width in the layout, which is
+   what read as a big empty gap next to the avatar. Show the name here
+   instead of leaving that reserved space empty. */
+.fnb-desktop-controls .icon-strip-label {
+  opacity: 1;
+  font-size: 0.78rem;
+}
+
+.fnb-icon-btn {
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  padding: 4px 8px;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fnb-icon-btn:hover {
+  background: none;
+  border-color: transparent;
+  color: var(--color-text);
+}
+
+/* Reuses .icon-strip-theme-pill's own look (nav rail toggle) but that
+   class has `width: 100%` for its block layout there — override back to
+   a natural size here so it doesn't try to fill the ticker's width. */
+.fnb-theme-toggle.icon-strip-theme-pill {
+  width: auto;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* Desktop web only — mobile/iOS keep these in the nav drawer. */
+@media (max-width: 640px) {
+  .fnb-desktop-controls {
+    display: none;
+  }
+}
+
 /* Mobile web and the native iOS app both render at this width — trim the
    headline so it has more room instead of truncating. */
 @media (max-width: 640px) {

@@ -1610,6 +1610,16 @@ html[data-theme="light"] .icon-strip {
   position: relative;
 }
 
+/* Account menu, settings, sign-out, and theme toggle all moved to the
+   news ticker's right side on desktop web (see FlashNewsBanner's own
+   .fnb-desktop-controls) — the nav drawer keeps this section only below
+   this width, where the ticker's copy is hidden instead. */
+@media (min-width: 641px) {
+  .icon-strip-bottom {
+    display: none;
+  }
+}
+
 .icon-strip-btn {
   width: 100%;
   height: auto;
@@ -1904,6 +1914,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .icon-strip-theme-pill:hover {
   background: none;
 }
+
 
 /* ── Compact sidebar on smaller desktops ────────────────────────────────── */
 @media (min-width: 641px) and (max-width: 1512px) {

@@ -30,7 +30,6 @@ import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
-import { PWAInstallButton } from "./components/PWAInstallGuide";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
@@ -1199,11 +1198,9 @@ function AppDashboard({
             </div>
 
             {/* AI Chat itself only ever mounts on iOS (see the
-                ChatInterface render further down) — this nav item swaps
-                back to the original web-only "Install App" prompt on
-                every other platform instead of linking to a feature that
-                isn't there. */}
-            {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? (
+                ChatInterface render further down) — this nav item only
+                shows there; other platforms have nothing to link to. */}
+            {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
               <button
                 className="icon-strip-btn"
                 onClick={() => {
@@ -1217,10 +1214,6 @@ function AppDashboard({
                 </span>
                 <span className="icon-strip-label">{t("nav.aiChat")}</span>
               </button>
-            ) : (
-              <PWAInstallButton
-                onCloseMobileNav={() => setMobileNavOpen(false)}
-              />
             )}
 
             <button
@@ -1280,7 +1273,15 @@ function AppDashboard({
         </nav>
 
         <div className="main-panel">
-          <FlashNewsBanner />
+          <FlashNewsBanner
+            theme={theme}
+            onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onOpenAuth={onOpenAuth}
+            onOpenUpgrade={onOpenUpgrade}
+            onOpenProfile={() => setProfileOpen(true)}
+            onOpenSettings={() => setDrawerOpen(true)}
+            onSignOut={signOut}
+          />
           <div className="main-coin-header">
             <div className="mch-left">
               <button

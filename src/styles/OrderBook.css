@@ -13,10 +13,12 @@
 }
 
 html[data-theme="light"] .chart-active .ob-card {
-  margin: 10px;
+  /* Left margin trimmed — matches .price-chart-container's own trimmed
+     right margin so the gap between the two cards isn't doubled. */
+  margin: 10px 10px 10px 4px;
   height: calc(100% - 20px);
   border-left: none;
-  border-radius: 12px;
+  border-radius: 0;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 80px), var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
@@ -240,9 +242,15 @@ html[data-theme="light"] .chart-active .ob-card {
   .ob-card { padding: 12px 10px; }
   .ob-filter-btn { padding: 2px 4px; font-size: 0.58rem; }
   html[data-theme="light"] .chart-active .ob-card {
-    margin: 6px;
-    height: calc(100% - 12px);
-    border-radius: 4px;
+    /* Left margin trimmed to match .price-chart-container's own trimmed
+       right margin — on real phones (App.css puts .chart-section-wrap
+       back to row direction below 640px, "side by side on small
+       phones"), this is the gap next to the resize handle between the
+       two cards. Top/bottom values here still matter for the 641-960px
+       range, where the wrap is column-direction instead. */
+    margin: 3px 6px 6px 2px;
+    height: calc(100% - 9px);
+    border-radius: 0;
   }
 }
 
