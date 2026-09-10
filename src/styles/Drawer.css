@@ -301,6 +301,9 @@
 .drawer-row--clickable:hover { background: var(--color-input-bg); }
 .drawer-row--clickable + .drawer-row--clickable { margin-top: 2px; }
 
+.drawer-row--danger .drawer-row-label { color: var(--color-danger); font-weight: 600; }
+.drawer-row--danger:hover { background: rgba(225, 29, 72, 0.08); }
+
 .drawer-row-label { font-size: 0.88rem; color: var(--color-text); font-weight: 500; }
 .drawer-row-arrow { font-size: 1.1rem; color: var(--color-text-secondary); }
 .drawer-row-right { display: flex; align-items: center; gap: 8px; }

@@ -1533,7 +1533,7 @@ html[data-theme="light"] .icon-strip {
 
 @media (min-width: 641px) {
   .icon-strip:hover {
-    width: 152px;
+    width: 230px;
   }
 }
 
@@ -1597,6 +1597,93 @@ html[data-theme="light"] .icon-strip {
   scrollbar-width: none;
 }
 .icon-strip-nav::-webkit-scrollbar { display: none; }
+
+/* ── Nav accordion categories ─────────────────────────────────────────── */
+.icon-strip-cat {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.icon-strip-cat-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 12px 9px 14px;
+  margin-top: 4px;
+  transition: color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.icon-strip-cat-head:hover { color: var(--color-text-secondary); }
+
+.icon-strip-cat-head .icon-strip-cat-icon {
+  flex-shrink: 0;
+}
+
+.icon-strip-cat-head .icon-strip-cat-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-strip-cat-head .icon-strip-cat-chev {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.icon-strip-cat-head.open .icon-strip-cat-chev { transform: rotate(90deg); }
+
+/* max-height (not display:none) so both the mobile tap-toggle and the
+   desktop hover-reveal below can animate smoothly instead of snapping. */
+.icon-strip-cat-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  max-height: 280px;
+  transition: max-height 0.22s ease, opacity 0.18s ease;
+}
+.icon-strip-cat-items.collapsed { max-height: 0; opacity: 0; }
+
+/* Collapsed 54px desktop rail — no room for the label or chevron, so
+   just the category's own icon shows, centered like the item icons
+   above it. Hovering the rail (which widens it) brings the label and
+   chevron back, same as every other nav item's label. */
+@media (min-width: 641px) {
+  .icon-strip-cat-head { padding: 8px 0; justify-content: center; }
+  .icon-strip-cat-head .icon-strip-cat-label,
+  .icon-strip-cat-head .icon-strip-cat-chev { display: none; }
+  .icon-strip:hover .icon-strip-cat-head { padding: 8px 12px 8px 14px; justify-content: flex-start; }
+  .icon-strip:hover .icon-strip-cat-head .icon-strip-cat-label,
+  .icon-strip:hover .icon-strip-cat-head .icon-strip-cat-chev { display: block; }
+
+  /* Desktop: hover reveals a category's items directly — no click
+     needed. The tap-toggled .collapsed class from mobile is ignored
+     here (overridden below) since there's no hover state to drive it
+     the other way when the mouse leaves. */
+  .icon-strip-cat-items,
+  .icon-strip-cat-items.collapsed {
+    max-height: 0;
+    opacity: 0;
+  }
+  .icon-strip-cat:hover .icon-strip-cat-items {
+    max-height: 280px;
+    opacity: 1;
+  }
+  .icon-strip-cat-head.open .icon-strip-cat-chev { transform: none; }
+  .icon-strip-cat:hover .icon-strip-cat-head .icon-strip-cat-chev { transform: rotate(90deg); }
+}
 
 .icon-strip-bottom {
   display: flex;
@@ -1922,7 +2009,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
     width: 48px;
     padding: 12px 0 16px;
   }
-  .icon-strip:hover { width: 140px; }
+  .icon-strip:hover { width: 210px; }
   .icon-strip-logo .st-logo-icon { width: 26px; height: 26px; }
   .icon-strip-btn {
     padding: 5px 10px 5px 11px;
@@ -2633,6 +2720,19 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: none;
   }
 
+  /* Nav accordion categories — same touch-sized treatment as .icon-strip-btn */
+  .icon-strip .icon-strip-cat-head {
+    padding: 12px 16px 12px 20px;
+    margin: 6px 8px 0;
+    width: calc(100% - 16px);
+    border-radius: 8px;
+    font-size: 0.68rem;
+    justify-content: space-between;
+  }
+  .icon-strip .icon-strip-cat-head:hover { background: var(--color-input-bg); }
+  .icon-strip .icon-strip-cat-head .icon-strip-cat-label { display: block; }
+  .icon-strip .icon-strip-cat-chev { width: 13px; height: 13px; }
+
   /* Hide floating left E bubble; show inline elite badge after label */
   .icon-strip .nav-badge--mobile { display: none !important; }
   .icon-strip .icon-strip-lock.nav-badge--desktop { display: none !important; }
@@ -2647,15 +2747,23 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     margin-left: -8px;
   }
 
-  /* ── Divider before bottom section ────────────────────────────────────── */
+  /* ── Bottom section: floating footer card ─────────────────────────────
+     Was a plain top-border divider pinned flush to the bottom — on a tall
+     phone with only a few collapsed categories above, that left a big
+     dead gap that made AI Chat/Settings read as an afterthought. Framing
+     them in their own rounded, shadowed card makes that gap read as
+     intentional breathing room around a distinct module instead. */
   .icon-strip .icon-strip-bottom {
-    width: 100%;
+    width: calc(100% - 16px);
     flex-direction: column;
     align-items: flex-start;
-    gap: 0;
-    padding: 0;
-    border-top: 1px solid var(--color-border);
-    margin-top: auto;
+    gap: 2px;
+    margin: auto 8px 12px;
+    padding: 4px;
+    border-top: none;
+    border-radius: 12px;
+    background: var(--color-input-bg);
+    box-shadow: 0 2px 8px var(--color-shadow);
   }
 
   /* Hide account menu avatar (profile is shown at top) */
@@ -2665,9 +2773,13 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 
   /* Settings / Sign out — secondary style */
   .icon-strip .icon-strip-bottom .icon-strip-btn {
-    padding: 9px 16px 9px 20px;
+    padding: 9px 12px;
     gap: 12px;
+    border-radius: 8px;
     color: var(--color-text-muted);
+  }
+  .icon-strip .icon-strip-bottom .icon-strip-btn:hover {
+    background: var(--color-card-bg);
   }
   .icon-strip .icon-strip-bottom .icon-strip-btn .icon-strip-label {
     font-size: 0.88rem;

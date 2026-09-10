@@ -39,7 +39,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, traderLevel,
 }) => {
   const { t } = useTranslation();
-  const { tier, user } = useAuth();
+  const { tier, user, signOut } = useAuth();
   const { used, limit } = useAIQuota();
   const [toolsOpen, setToolsOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -195,6 +195,18 @@ export const Drawer: React.FC<DrawerProps> = ({
               <span className="drawer-row-right"><span className="drawer-row-icon">✉️</span><span className="drawer-row-arrow">›</span></span>
             </div>
           </section>
+
+          {/* ── Account ───────────────────────────────────── */}
+          {user && (
+            <section className="drawer-section">
+              <div
+                className="drawer-row drawer-row--clickable drawer-row--danger"
+                onClick={() => { onClose(); signOut(); }}
+              >
+                <span className="drawer-row-label">{t("nav.signOut")}</span>
+              </div>
+            </section>
+          )}
 
           {/* ── Footer ────────────────────────────────────── */}
           <div className="drawer-footer-block">

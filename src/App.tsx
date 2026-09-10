@@ -115,12 +115,39 @@ interface Position { id: string; catalogId: string; amount: string; cost: string
 let positionIdSeq = 0;
 const makePositionId = () => `pos-${Date.now()}-${positionIdSeq++}`;
 
+type NavCategoryId = "market" | "technical" | "trading";
+
+// Order here is also render order — Chart/Candle AI stay flat above all
+// three (used constantly, don't bury them behind a click), everything
+// else groups into one of these three collapsible sections.
+const NAV_CATEGORIES: { id: NavCategoryId; labelKey: string; d: string | string[] }[] = [
+  {
+    id: "market",
+    labelKey: "nav.catMarketData",
+    // Bar chart — market data at a glance.
+    d: ["M5 21V13", "M12 21V7", "M19 21V11"],
+  },
+  {
+    id: "technical",
+    labelKey: "nav.catTechnical",
+    // Activity/pulse line — technical analysis of price action.
+    d: "M3 12h4l3 8 4-16 3 8h4",
+  },
+  {
+    id: "trading",
+    labelKey: "nav.catTradingTools",
+    // Wrench — tools.
+    d: "M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z",
+  },
+];
+
 const NAV_ITEMS: {
   id: SectionId;
   labelKey: string;
   d: string | string[];
   requiredTier?: Tier;
   hidden?: boolean;
+  category?: NavCategoryId;
 }[] = [
   {
     id: "chart",
@@ -138,12 +165,14 @@ const NAV_ITEMS: {
     id: "heatmap",
     labelKey: "nav.heatmap",
     requiredTier: "pro",
+    category: "market",
     d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M3 14h7v7H3z", "M14 14h7v7h-7z"],
   },
   {
     id: "onchain",
     labelKey: "nav.onchain",
     requiredTier: "pro",
+    category: "market",
     d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
   },
   {
@@ -156,6 +185,7 @@ const NAV_ITEMS: {
   {
     id: "positions",
     labelKey: "nav.positions",
+    category: "trading",
     d: [
       "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2",
       "M23 21v-2a4 4 0 00-3-3.87",
@@ -167,17 +197,20 @@ const NAV_ITEMS: {
     id: "htf",
     labelKey: "nav.htf",
     requiredTier: "pro",
+    category: "technical",
     d: ["M3 3v18h18", "M7 7l5 5 5-5", "M7 12l5 5 5-5"],
   },
-  { id: "orderflow", labelKey: "nav.orderflow", d: ["M2 12h4l3-9 4 18 3-9h6"] },
+  { id: "orderflow", labelKey: "nav.orderflow", category: "technical", d: ["M2 12h4l3-9 4 18 3-9h6"] },
   {
     id: "signals",
     labelKey: "nav.signals",
+    category: "technical",
     d: ["M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 3.9 2.4-7.4L2 9.4h7.6z"],
   },
   {
     id: "fundingbot",
     labelKey: "nav.fundingbot",
+    category: "trading",
     d: [
       "M19 5L5 19",
       "M6.5 6.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0",
@@ -188,11 +221,13 @@ const NAV_ITEMS: {
     id: "riskcalc",
     labelKey: "nav.riskcalc",
     requiredTier: "pro",
+    category: "trading",
     d: ["M21 4H8", "M3 4h.01", "M21 12H11", "M3 12h.01", "M21 20H8", "M3 20h.01", "M8 2v4", "M11 10v4", "M8 18v4"],
   },
   {
     id: "markets",
     labelKey: "nav.markets",
+    category: "market",
     d: [
       "M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0",
       "M3.6 9h16.8",
@@ -205,6 +240,7 @@ const NAV_ITEMS: {
     id: "altanalysis",
     labelKey: "nav.altanalysis",
     requiredTier: "elite",
+    category: "market",
     d: [
       "M8 3v3",
       "M6 6h4v6H6z",
@@ -218,6 +254,7 @@ const NAV_ITEMS: {
     id: "options",
     labelKey: "nav.options",
     requiredTier: "pro",
+    category: "market",
     d: [
       "M12 21a9 9 0 1 0 0 -18 9 9 0 0 0 0 18",
       "M12 17a5 5 0 1 0 0 -10 5 5 0 0 0 0 10",
@@ -228,6 +265,7 @@ const NAV_ITEMS: {
     id: "correlation",
     labelKey: "nav.correlation",
     requiredTier: "pro",
+    category: "market",
     d: [
       "M9 18a6 6 0 1 0 0 -12 6 6 0 0 0 0 12",
       "M15 18a6 6 0 1 0 0 -12 6 6 0 0 0 0 12",
@@ -237,6 +275,7 @@ const NAV_ITEMS: {
     id: "strategyalerts",
     labelKey: "nav.strategyalerts",
     requiredTier: "pro",
+    category: "trading",
     d: [
       "M4 15s1 -1 4 -1 5 2 8 2 4 -1 4 -1V3s-1 1 -4 1 -5 -2 -8 -2 -4 1 -4 1z",
       "M4 22V15",
@@ -326,6 +365,13 @@ function AppDashboard({
   useEffect(() => {
     if (activeSection === "candleai") setCandleAIVisited(true);
   }, [activeSection]);
+  // Nav accordion — which of the three collapsible categories is open.
+  // Defaults to whichever one contains the current section (so landing on
+  // e.g. #correlation opens Market Data automatically); falls back to the
+  // first category when the active section is one of the flat top items.
+  const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
+    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? NAV_CATEGORIES[0].id,
+  );
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -1054,6 +1100,32 @@ function AppDashboard({
     }
   }, [autoRefresh, coin]);
 
+  const renderNavItem = (item: (typeof NAV_ITEMS)[number]) => (
+    <button
+      key={item.id}
+      className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
+      onClick={() => setActiveSection(item.id)}
+      title={t(item.labelKey)}
+    >
+      {/* Mobile badge — left of icon */}
+      {item.requiredTier && (
+        <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
+          {item.requiredTier === "elite" ? "E" : "P"}
+        </span>
+      )}
+      <span className="nav-icon-wrap">
+        <NavIcon d={item.d} />
+      </span>
+      <span className="icon-strip-label">{t(item.labelKey)}</span>
+      {/* Desktop badge — after label */}
+      {item.requiredTier && (
+        <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
+          {item.requiredTier === "elite" ? "E" : "P"}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <>
     <div className="app-shell">
@@ -1161,31 +1233,32 @@ function AppDashboard({
           </button>
 
           <div className="icon-strip-nav">
-            {NAV_ITEMS.filter((item) => !item.hidden).map((item) => (
-              <button
-                key={item.id}
-                className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
-                onClick={() => setActiveSection(item.id)}
-                title={t(item.labelKey)}
-              >
-                {/* Mobile badge — left of icon */}
-                {item.requiredTier && (
-                  <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
-                    {item.requiredTier === "elite" ? "E" : "P"}
-                  </span>
-                )}
-                <span className="nav-icon-wrap">
-                  <NavIcon d={item.d} />
-                </span>
-                <span className="icon-strip-label">{t(item.labelKey)}</span>
-                {/* Desktop badge — after label */}
-                {item.requiredTier && (
-                  <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
-                    {item.requiredTier === "elite" ? "E" : "P"}
-                  </span>
-                )}
-              </button>
-            ))}
+            {NAV_ITEMS.filter((item) => !item.hidden && !item.category).map(renderNavItem)}
+
+            {NAV_CATEGORIES.map((cat) => {
+              const items = NAV_ITEMS.filter((item) => !item.hidden && item.category === cat.id);
+              const isOpen = openNavCategory === cat.id;
+              return (
+                <div className="icon-strip-cat" key={cat.id}>
+                  <button
+                    type="button"
+                    className={`icon-strip-cat-head${isOpen ? " open" : ""}`}
+                    onClick={() => setOpenNavCategory((prev) => (prev === cat.id ? null : cat.id))}
+                  >
+                    <span className="icon-strip-cat-icon nav-icon-wrap">
+                      <NavIcon d={cat.d} />
+                    </span>
+                    <span className="icon-strip-cat-label">{t(cat.labelKey)}</span>
+                    <svg className="icon-strip-cat-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                  <div className={`icon-strip-cat-items${isOpen ? "" : " collapsed"}`}>
+                    {items.map(renderNavItem)}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="icon-strip-bottom">
@@ -1233,41 +1306,6 @@ function AppDashboard({
                 />
               </span>
               <span className="icon-strip-label">{t("nav.settings")}</span>
-            </button>
-
-            <button
-              className="icon-strip-btn"
-              onClick={() => {
-                signOut();
-                setMobileNavOpen(false);
-              }}
-              title={t("nav.signOut")}
-            >
-              <span className="nav-icon-wrap">
-                <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-              </span>
-              <span className="icon-strip-label">{t("nav.signOut")}</span>
-            </button>
-
-            <button
-              className={`icon-strip-theme-pill${theme === "light" ? " light" : ""}`}
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              title={
-                theme === "dark"
-                  ? "Switch to light mode"
-                  : "Switch to dark mode"
-              }
-              aria-label="Toggle theme"
-            >
-              <div className="theme-pill-track">
-                <div className="theme-pill-knob">
-                  {theme === "dark" ? (
-                    <NavIcon d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-                  ) : (
-                    <NavIcon d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 5a7 7 0 100 14A7 7 0 0012 5z" />
-                  )}
-                </div>
-              </div>
             </button>
           </div>
         </nav>
