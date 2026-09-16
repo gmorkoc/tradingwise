@@ -256,6 +256,16 @@ html[data-theme="light"] .chart-active .ob-card {
   }
 }
 
+/* Chart/Order Book tabs (App.css, >=961px) mean only one of this card and
+   .price-chart-container is ever visible at this width — no more "sits
+   right next to it" adjacency to trim the left margin for, so both sides
+   match the same 10px inset .price-chart-container and .db-page use too. */
+@media (min-width: 961px) {
+  html[data-theme="light"] .chart-active .ob-card {
+    margin: 10px;
+  }
+}
+
 /* Mirrors .chart-header h3's own breakpoints exactly (PriceChart.css) so
    "Order Book" and "BTC Price Chart" stay the same size at every width —
    without this, .ob-title stayed at its full 1.2rem while the chart

@@ -177,88 +177,37 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.db-card-featured {
-  padding: 12px 14px calc(14px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+.db-card-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
 }
-
-.db-card-list {
-  display: none;
-}
-
-.db-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.db-source {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  padding: 3px 9px;
-  border-radius: 6px;
-}
-
-.db-source--crypto      { color: #22c55e; background: rgba(34, 197, 94, 0.14); }
-.db-source--markets     { color: #38bdf8; background: rgba(56, 189, 248, 0.14); }
-.db-source--geopolitics { color: #f97316; background: rgba(249, 115, 22, 0.14); }
 
 .db-live {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.6rem;
+  gap: 4px;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #22c55e;
+  letter-spacing: 0.06em;
+  color: #fff;
   text-transform: uppercase;
+  background: #e11d48;
+  padding: 2px 7px 2px 6px;
+  border-radius: 4px;
 }
 
 .db-live-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #22c55e;
+  background: #fff;
   animation: db-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes db-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.4; transform: scale(0.7); }
-}
-
-.db-card-body {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  text-decoration: none;
-}
-
-.db-headline {
-  flex: 1;
-  font-size: 1.02rem;
-  font-weight: 700;
-  line-height: 1.32;
-  color: var(--color-text);
-}
-
-.db-card-body:hover .db-headline {
-  color: var(--color-primary);
-  text-decoration: underline;
-}
-
-.db-thumb {
-  width: 84px;
-  height: 84px;
-  border-radius: 12px;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
 }
 
 .db-thumb-placeholder {
@@ -271,71 +220,57 @@
 .db-thumb-placeholder--markets     { color: #38bdf8; background: rgba(56, 189, 248, 0.14); }
 .db-thumb-placeholder--geopolitics { color: #f97316; background: rgba(249, 115, 22, 0.14); }
 
-.db-chips {
+.db-list-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin: 1px 0;
 }
 
 .db-chip {
-  font-size: 0.62rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 3px 9px;
-  border-radius: 20px;
-  background: var(--color-input-bg);
+  letter-spacing: 0.01em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--color-card-bg);
   border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+/* Plain topic tag (FED, CPI, WAR, ...) — no live data behind it. */
+.db-chip--tag {
   color: var(--color-text-secondary);
 }
 
-.db-chip--crypto      { border-color: rgba(34, 197, 94, 0.3);   color: #22c55e; }
-.db-chip--markets     { border-color: rgba(56, 189, 248, 0.3);  color: #38bdf8; }
-.db-chip--geopolitics { border-color: rgba(249, 115, 22, 0.3);  color: #f97316; }
-
-.db-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.db-item-meta {
-  font-size: 0.68rem;
-  color: var(--color-text-muted);
-}
-
-.db-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.db-nav-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  font-size: 1rem;
-  line-height: 1;
-  padding: 2px 6px;
-  transition: color 0.15s;
-}
-
-.db-nav-btn:hover {
+/* Ticker variant — a chip whose label matched a coin coinhintz already
+   tracks (see renderChip() in DailyBrief.tsx): the symbol stays neutral,
+   only the live signed % change is colored, same as Yahoo Finance's
+   "More News" ticker pills. */
+.db-chip-symbol {
   color: var(--color-text);
 }
 
-.db-counter {
-  font-size: 0.65rem;
+.db-chip--ticker.up .db-chip-change   { color: var(--color-success); }
+.db-chip--ticker.down .db-chip-change { color: var(--color-danger); }
+
+.db-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
   color: var(--color-text-muted);
-  min-width: 36px;
-  text-align: center;
+}
+
+.db-list-dot {
+  font-size: 0.6rem;
 }
 
 .db-list-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 12px 14px;
   border-top: 1px solid var(--color-border);
   text-decoration: none;
 }
@@ -345,9 +280,9 @@
 }
 
 .db-list-thumb {
-  width: 52px;
-  height: 52px;
-  border-radius: 9px;
+  width: 88px;
+  height: 58px;
+  border-radius: 7px;
   object-fit: cover;
   flex-shrink: 0;
   background: var(--color-input-bg);
@@ -358,30 +293,39 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
-}
-
-.db-list-source {
-  padding: 1px 7px;
-  font-size: 0.58rem;
+  padding-top: 1px;
 }
 
 .db-list-title {
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .db-list-item:active .db-list-title {
   color: var(--color-primary);
 }
 
-@media (max-width: 640px) {
-  .db-card-featured { display: none; }
-  .db-card-list { display: flex; flex-direction: column; }
+/* Yahoo-density row sizing — shared by the mobile "sheet" variant (when it
+   happens to render at >=641px, e.g. a tablet) and the desktop "page"
+   variant below, which only ever renders at this width or wider. Mobile
+   phones keep the compact 88x58 thumb row declared above. */
+@media (min-width: 641px) {
+  .db-list-item { gap: 16px; padding: 14px 18px; }
 
+  .db-list-thumb { width: 118px; height: 74px; border-radius: 8px; }
+
+  .db-list-title { font-size: 0.96rem; }
+}
+
+@media (max-width: 640px) {
   /* Bigger sliver on touch screens so it's easy to tap/drag back open */
   .db-sheet--minimized {
     transform: translateY(calc(100% - 28px + var(--db-drag-y)));
@@ -390,6 +334,86 @@
 
 @media (max-width: 480px) {
   .db-sheet { border-radius: 16px 16px 0 0; }
-  .db-headline { font-size: 0.94rem; }
-  .db-thumb { width: 68px; height: 68px; }
+}
+
+/* ── "page" variant — always-visible sidebar rendered next to the chart
+   on full desktop (.chart-page-row in App.css, >=961px only — that's also
+   where Chart/Order Book become tabs instead of side-by-side, freeing up
+   this column). Reuses every .db-list-* row style above, and the same
+   --pc-* tokens .price-chart-container/.ob-card use (defined on the
+   .chart-active ancestor, PriceChart.css) so it matches whichever of
+   those two is on screen. ─────────────────────────────────────────────── */
+.db-page {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 360px;
+  min-width: 300px;
+  max-width: 400px;
+  background: var(--pc-panel);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Light theme gives .price-chart-container/.ob-card a distinct rounded,
+   shadowed, borderless card with a 10px inset (PriceChart.css /
+   OrderBook.css, >=961px) — match that exactly instead of the dark
+   theme's flush frosted-glass panel above. */
+html[data-theme="light"] .chart-active .db-page {
+  /* Left margin skipped — .chart-page-row's own gap (App.css) already
+     separates this from the chart column, same reasoning as
+     .price-chart-container/.ob-card trimming their shared inner edge. */
+  margin: 10px 10px 10px 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
+  box-shadow: var(--pc-shadow);
+}
+
+.db-page-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--pc-border);
+}
+
+.db-page-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Denser than the shared min-width:641px row sizing above (that block
+   also covers the mobile "sheet" variant at tablet widths) — the sidebar
+   is narrower and taller than a tablet's floating sheet, so it trades
+   some size for fitting more headlines on screen at once. */
+.db-page .db-list-item {
+  gap: 10px;
+  padding: 10px 14px;
+  /* Lighter than the base rule's --color-border, which reads too dark
+     against this panel's background — halve it via color-mix rather
+     than a hardcoded literal, so it stays correct in both themes. */
+  border-top-color: color-mix(in srgb, var(--pc-border) 45%, transparent);
+}
+.db-page .db-list-thumb {
+  width: 76px;
+  height: 50px;
+  border-radius: 6px;
+}
+.db-page .db-list-title {
+  font-size: 0.95rem;
+  line-height: 1.32;
+}
+.db-page .db-list-meta {
+  font-size: 0.76rem;
+}
+.db-page .db-list-chips {
+  gap: 4px;
+}
+.db-page .db-chip {
+  font-size: 0.7rem;
+  padding: 2px 6px;
 }

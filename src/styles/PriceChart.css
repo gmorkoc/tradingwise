@@ -90,6 +90,16 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
   }
 }
 
+/* Chart/Order Book tabs (App.css, >=961px) mean only one of this card and
+   .ob-card is ever visible at this width — no more "sits right next to
+   .ob-card" adjacency to trim the right margin for, so both sides match
+   the same 10px inset .db-page's own right margin uses too. */
+@media (min-width: 961px) {
+  html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+    margin: 10px;
+  }
+}
+
 /* Native fullscreen (desktop) — matches CSS overlay look */
 .price-chart-container:fullscreen {
   position: fixed;

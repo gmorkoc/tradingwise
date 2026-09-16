@@ -32,7 +32,6 @@ import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
-import { FlashNewsBanner } from "./components/FlashNewsBanner";
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
 import { WhaleAlerts } from "./components/WhaleAlerts";
@@ -366,10 +365,12 @@ function AppDashboard({
   }, [activeSection]);
   // Nav accordion — which of the three collapsible categories is open.
   // Defaults to whichever one contains the current section (so landing on
-  // e.g. #correlation opens Market Data automatically); all categories
-  // stay collapsed by default otherwise (e.g. landing on Chart/Candle AI).
+  // e.g. #correlation opens Market Data automatically); Market Data is the
+  // default open category otherwise (e.g. landing on Chart/Candle AI) —
+  // manually toggling a category (see the nav item's onClick below) still
+  // behaves as a single-category accordion regardless of this default.
   const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
-    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? null,
+    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? "market",
   );
   // Same convention as ChatInterface.tsx/CoinChat.tsx's own useIsDesktop —
   // gates the AI Chat nav item to desktop-width web (mobile web keeps no
@@ -378,6 +379,18 @@ function AppDashboard({
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 641px)");
     const handler = (e: MediaQueryListEvent) => setIsDesktopWidth(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  // Wider than the tablet tier (641-960px, still the two-panel stacked
+  // chart+order-book layout) — full desktop gets Chart/Order Book tabs
+  // just like phones, freeing up the right side for an always-visible
+  // Daily Brief sidebar (.db-page, DailyBrief.css) instead of a floating
+  // sheet. See the matching `min-width: 961px` block in App.css.
+  const [isWideDesktop, setIsWideDesktop] = useState(() => window.matchMedia("(min-width: 961px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 961px)");
+    const handler = (e: MediaQueryListEvent) => setIsWideDesktop(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
@@ -1279,71 +1292,156 @@ function AppDashboard({
             })}
           </div>
 
-          <div className="icon-strip-bottom">
-            <div className="icon-strip-acct">
-              <AccountMenu
-                onOpenAuth={onOpenAuth}
-                onOpenUpgrade={onOpenUpgrade}
-                onOpenProfile={() => setProfileOpen(true)}
-              />
-            </div>
+          {/* Desktop web relocates this whole block into .top-nav-bar
+              (below, .main-panel) instead — mobile web and native iOS have
+              no top bar, so they keep it here in the nav drawer as their
+              only path to settings/sign-out. */}
+          {!(!Capacitor.isNativePlatform() && isDesktopWidth) && (
+            <div className="icon-strip-bottom">
+              <div className="icon-strip-acct">
+                <AccountMenu
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  onOpenProfile={() => setProfileOpen(true)}
+                />
+              </div>
 
-            {/* ChatInterface itself decides what to render (see its render
-                further down) — this nav item is its only trigger now, on
-                iOS or desktop web. Mobile web still has no entry point. */}
-            {(Capacitor.getPlatform() === "ios" || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
+              {/* ChatInterface itself decides what to render (see its render
+                  further down) — this nav item is its only trigger now, on
+                  iOS or desktop web. Mobile web still has no entry point. */}
+              {(Capacitor.getPlatform() === "ios" || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
+                <button
+                  className="icon-strip-btn"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("open-ai-chat"));
+                    setMobileNavOpen(false);
+                  }}
+                  title={t("nav.aiChat")}
+                >
+                  <span className="nav-icon-wrap">
+                    <NavIcon d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </span>
+                  <span className="icon-strip-label">{t("nav.aiChat")}</span>
+                </button>
+              )}
+
               <button
                 className="icon-strip-btn"
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent("open-ai-chat"));
+                  setDrawerOpen(true);
                   setMobileNavOpen(false);
                 }}
-                title={t("nav.aiChat")}
+                title={t("drawer.settings")}
               >
                 <span className="nav-icon-wrap">
-                  <NavIcon d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  <NavIcon
+                    d={[
+                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
+                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+                    ]}
+                  />
                 </span>
-                <span className="icon-strip-label">{t("nav.aiChat")}</span>
+                <span className="icon-strip-label">{t("nav.settings")}</span>
               </button>
-            )}
 
-            <button
-              className="icon-strip-btn"
-              onClick={() => {
-                setDrawerOpen(true);
-                setMobileNavOpen(false);
-              }}
-              title={t("drawer.settings")}
-            >
-              <span className="nav-icon-wrap">
-                <NavIcon
-                  d={[
-                    "M12 15a3 3 0 100-6 3 3 0 000 6z",
-                    "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
-                  ]}
-                />
-              </span>
-              <span className="icon-strip-label">{t("nav.settings")}</span>
-            </button>
-
-            <button
-              className="icon-strip-btn"
-              onClick={() => {
-                signOut();
-                setMobileNavOpen(false);
-              }}
-              title={t("nav.signOut")}
-            >
-              <span className="nav-icon-wrap">
-                <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-              </span>
-              <span className="icon-strip-label">{t("nav.signOut")}</span>
-            </button>
-          </div>
+              <button
+                className="icon-strip-btn"
+                onClick={() => {
+                  signOut();
+                  setMobileNavOpen(false);
+                }}
+                title={t("nav.signOut")}
+              >
+                <span className="nav-icon-wrap">
+                  <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                </span>
+                <span className="icon-strip-label">{t("nav.signOut")}</span>
+              </button>
+            </div>
+          )}
         </nav>
 
         <div className="main-panel">
-          <FlashNewsBanner />
+          {!Capacitor.isNativePlatform() && isDesktopWidth && (
+            <div className="top-nav-bar">
+              <div className="top-nav-logo">
+                coinhint<span className="top-nav-logo-accent">z</span>
+              </div>
+              <button
+                className="top-nav-search"
+                onClick={() => setGlobalSearch(true)}
+                title="Search (⌘K)"
+              >
+                <span className="top-nav-search-text">
+                  {t("search.placeholder", "Search coins, sections, features…")}
+                </span>
+                <span className="top-nav-search-btn">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
+              </button>
+              <div className="top-nav-icons">
+                <AccountMenu
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  onOpenProfile={() => setProfileOpen(true)}
+                  iconFallback
+                />
+                <button
+                  className="top-nav-icon-btn"
+                  onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat"))}
+                  title={t("nav.aiChat")}
+                >
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.55"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 8V4H8" />
+                    <rect width="16" height="12" x="4" y="8" rx="2" />
+                    <path d="M2 14h2" />
+                    <path d="M20 14h2" />
+                    <path d="M15 13v2" />
+                    <path d="M9 13v2" />
+                  </svg>
+                </button>
+                <button
+                  className="top-nav-icon-btn"
+                  onClick={() => setDrawerOpen(true)}
+                  title={t("drawer.settings")}
+                >
+                  <NavIcon
+                    d={[
+                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
+                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+                    ]}
+                  />
+                </button>
+                <button
+                  className="top-nav-icon-btn"
+                  onClick={() => signOut()}
+                  title={t("nav.signOut")}
+                >
+                  <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                </button>
+              </div>
+            </div>
+          )}
           <div className="main-coin-header">
             <div className="mch-left">
               <button
@@ -1726,87 +1824,94 @@ function AppDashboard({
                     clearCandleCache();
                   }}
                 />
-                <div className="chart-mobile-tabs">
-                  <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
-                  <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
-                  <button
-                    type="button"
-                    className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
-                    onClick={() => {
-                      if (mobileChartTab !== "chart") setTabSwipeDir("bear");
-                      setMobileChartTab("chart");
-                    }}
-                  >
-                    {t("chart.tabLabel", "Chart")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
-                    onClick={() => {
-                      if (mobileChartTab !== "orderbook") setTabSwipeDir("bull");
-                      setMobileChartTab("orderbook");
-                    }}
-                  >
-                    {t("orderBook.title")}
-                  </button>
-                </div>
-                <div
-                  className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
-                  ref={chartWrapRef}
-                  style={
-                    {
-                      "--ob-h": `${obSize.h}px`,
-                      "--ob-w": `${obSize.w}px`,
-                    } as React.CSSProperties
-                  }
-                >
-                  <PriceChart
-                    refreshTrigger={refreshTrigger}
-                    theme={theme}
-                    coin={coin}
-                    onZoneChange={(zone, price) => {
-                      setChartZone(zone);
-                      setChartPrice(price);
-                    }}
-                    onOpenAuth={onOpenAuth}
-                    onOpenUpgrade={onOpenUpgrade}
-                    onFullscreenChange={setChartFullscreen}
-                    coinChatOpen={showCoinChat}
-                    onToggleCoinChat={() => setShowCoinChat((v) => !v)}
-                  />
-                  <div
-                    className="chart-resize-handle"
-                    onPointerDown={onResizePointerDown}
-                    onPointerMove={onResizePointerMove}
-                    onPointerUp={onResizePointerUp}
-                  >
-                    <svg
-                      className="chart-resize-icon"
-                      width="42"
-                      height="42"
-                      viewBox="0 0 64 64"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
+                <div className="chart-page-row">
+                  <div className="chart-column">
+                    <div className="chart-mobile-tabs">
+                      <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
+                      <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
+                      <button
+                        type="button"
+                        className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
+                        onClick={() => {
+                          if (mobileChartTab !== "chart") setTabSwipeDir("bear");
+                          setMobileChartTab("chart");
+                        }}
+                      >
+                        {t("chart.tabLabel", "Chart")}
+                      </button>
+                      <button
+                        type="button"
+                        className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
+                        onClick={() => {
+                          if (mobileChartTab !== "orderbook") setTabSwipeDir("bull");
+                          setMobileChartTab("orderbook");
+                        }}
+                      >
+                        {t("orderBook.title")}
+                      </button>
+                    </div>
+                    <div
+                      className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
+                      ref={chartWrapRef}
+                      style={
+                        {
+                          "--ob-h": `${obSize.h}px`,
+                          "--ob-w": `${obSize.w}px`,
+                        } as React.CSSProperties
+                      }
                     >
-                      {/* Hand / pointer finger */}
-                      <path d="M28 30V14a3 3 0 0 1 6 0v16" />
-                      <path d="M34 20a3 3 0 0 1 6 0v10" />
-                      <path d="M40 23a3 3 0 0 1 6 0v10" />
-                      <path d="M22 32a3 3 0 0 1 6 0v-2" />
-                      <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
-                      {/* Left arrow */}
-                      <line x1="12" y1="24" x2="2" y2="24" />
-                      <polyline points="6,20 2,24 6,28" />
-                      {/* Right arrow */}
-                      <line x1="52" y1="24" x2="62" y2="24" />
-                      <polyline points="58,20 62,24 58,28" />
-                    </svg>
+                      <PriceChart
+                        refreshTrigger={refreshTrigger}
+                        theme={theme}
+                        coin={coin}
+                        onZoneChange={(zone, price) => {
+                          setChartZone(zone);
+                          setChartPrice(price);
+                        }}
+                        onOpenAuth={onOpenAuth}
+                        onOpenUpgrade={onOpenUpgrade}
+                        onFullscreenChange={setChartFullscreen}
+                        coinChatOpen={showCoinChat}
+                        onToggleCoinChat={() => setShowCoinChat((v) => !v)}
+                      />
+                      <div
+                        className="chart-resize-handle"
+                        onPointerDown={onResizePointerDown}
+                        onPointerMove={onResizePointerMove}
+                        onPointerUp={onResizePointerUp}
+                      >
+                        <svg
+                          className="chart-resize-icon"
+                          width="42"
+                          height="42"
+                          viewBox="0 0 64 64"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          {/* Hand / pointer finger */}
+                          <path d="M28 30V14a3 3 0 0 1 6 0v16" />
+                          <path d="M34 20a3 3 0 0 1 6 0v10" />
+                          <path d="M40 23a3 3 0 0 1 6 0v10" />
+                          <path d="M22 32a3 3 0 0 1 6 0v-2" />
+                          <path d="M22 32v6c0 6.627 4.477 12 10 12h4c5.523 0 10-5.373 10-12v-9" />
+                          {/* Left arrow */}
+                          <line x1="12" y1="24" x2="2" y2="24" />
+                          <polyline points="6,20 2,24 6,28" />
+                          {/* Right arrow */}
+                          <line x1="52" y1="24" x2="62" y2="24" />
+                          <polyline points="58,20 62,24 58,28" />
+                        </svg>
+                      </div>
+                      <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                    </div>
                   </div>
-                  <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                  {isWideDesktop && (
+                    <DailyBrief coinTickers={coinTickers} variant="page" />
+                  )}
                 </div>
               </>
             )}
@@ -2306,7 +2411,7 @@ function AppDashboard({
       </div>
       {/* end app-shell-body */}
 
-      <DailyBrief />
+      {!isWideDesktop && <DailyBrief coinTickers={coinTickers} />}
       <PushToast />
 
       {priceTicker &&

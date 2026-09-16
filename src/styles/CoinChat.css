@@ -727,6 +727,14 @@ html[data-theme="light"] .coin-chat-dock {
   box-shadow: 0 -8px 30px var(--color-shadow);
   transition: height 0.22s ease;
 }
+/* Dark theme's --pc-panel-2 is a 6%-opacity white tint meant to frost over
+   .chart-active's solid aurora-gradient canvas — but this dock is a fixed
+   overlay OUTSIDE that DOM tree (see the file-top comment) with nothing
+   solid behind it, so the page underneath bleeds straight through. Light
+   theme's --pc-panel-2 (--color-surface-alt) is already opaque and fine. */
+html:not([data-theme="light"]) .coin-chat-dock {
+  background: var(--color-surface);
+}
 .coin-chat-dock--open {
   height: 640px;
 }

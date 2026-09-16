@@ -1341,14 +1341,41 @@ select {
   margin-bottom: 32px;
 }
 
+/* Chart + Order Book, plus the Daily Brief sidebar (.db-page in
+   DailyBrief.css) that only ever mounts at >=961px (App.tsx's
+   isWideDesktop) — a plain in-flow row, not a floating overlay. Below
+   that width .chart-page-row only ever has one child, so it behaves like
+   a normal block. */
+.chart-page-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+/* Groups the tab strip with chart-section-wrap so both are constrained to
+   the chart column's own width — without this, .chart-mobile-tabs (a
+   sibling of .db-page inside .chart-page-row otherwise) would stretch
+   across the sidebar's width too. */
+.chart-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
 .chart-section-wrap {
   display: flex;
   flex-direction: row;
   gap: 0;
+  flex: 1;
+  min-width: 0;
 }
 
-/* Only shown on real phones — see the max-width:640px block below. Desktop
-   and tablet widths keep chart + order book side by side, no tabs. */
+/* Shown on real phones (<=640px) and full desktop (>=961px) — see the
+   combined media query further down for both the tab strip itself and
+   the "only one panel visible" logic it drives. The in-between tablet
+   range (641-960px) keeps chart + order book stacked, no tabs — see the
+   max-width:960px block below. */
 .chart-mobile-tabs {
   display: none;
 }
@@ -1505,15 +1532,15 @@ body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  /* First element in the app shell now (FlashNewsBanner moved below the
-     nav, into .main-panel) — reserve the notch/Dynamic Island inset here
-     so the nav rail doesn't render under it. See MainViewController.swift
-     for why --native-safe-area-top exists instead of relying on env()
-     alone. This padding area shows .app-shell-body's own background (its
+  /* Reserve the notch/Dynamic Island inset here so the nav rail doesn't
+     render under it. See MainViewController.swift for why
+     --native-safe-area-top exists instead of relying on env() alone.
+     This padding area shows .app-shell-body's own background (its
      children, .icon-strip and .main-panel, are opaque and cover
-     everything below it) — matched to --color-card-bg, the same color
-     FlashNewsBanner's gradient settles into, so the safe-area strip and
-     the news banner read as one continuous surface instead of a seam. */
+     everything below it) — matched to --color-card-bg so it reads as one
+     continuous surface with whatever's at the top of .main-panel
+     (.top-nav-bar on desktop web, .main-coin-header everywhere else)
+     instead of a seam. */
   padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
   background: var(--color-card-bg);
 }
@@ -1684,7 +1711,6 @@ html[data-theme="light"] .icon-strip {
   gap: 2px;
   width: 100%;
   padding-top: 10px;
-  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   position: relative;
 }
@@ -2013,6 +2039,153 @@ html[data-theme="light"] .icon-strip-quota-bar {
   background: var(--color-background);
 }
 
+/* ── Top nav bar (desktop web only) ─────────────────────────────────────────
+   Replaces the old FlashNewsBanner ticker slot — Daily Brief covers news
+   now. Yahoo Finance-style: a search trigger (opens the existing
+   GlobalSearch/Cmd+K modal, .mch-search-btn's sibling) plus the account/
+   AI-chat/settings/sign-out controls relocated up from .icon-strip-bottom
+   (hidden on this platform/width combo, see App.tsx). */
+.top-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 64px;
+  padding: 0 24px;
+  background: var(--color-card-bg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+html[data-theme="light"] .top-nav-bar {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+/* Wordmark before the search bar, Yahoo-style — text only, no icon mark
+   (unlike CoinHintzLogo's "nav" variant used elsewhere), same weight/
+   color/tracking as that variant's own text span. */
+.top-nav-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #4f46e5;
+}
+.top-nav-logo-accent {
+  color: #4ade80;
+}
+
+/* Search pill — a plain light-gray field with no border, and a solid
+   teal submit button seamlessly flush at its right edge (same border
+   radius as the pill itself, not floating inset). */
+.top-nav-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 660px;
+  height: 40px;
+  padding: 0;
+  background: var(--color-input-bg);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+/* --color-input-bg is nearly the same navy as .top-nav-bar's own
+   --color-card-bg in dark theme (0.8 vs 0.95 alpha of the same rgb) — the
+   pill all but disappears against the bar. A distinct lighter overlay
+   fixes the contrast without touching that shared token elsewhere. */
+html:not([data-theme="light"]) .top-nav-search {
+  background: rgba(255, 255, 255, 0.09);
+}
+html:not([data-theme="light"]) .top-nav-search:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+.top-nav-search:hover .top-nav-search-text {
+  color: var(--color-text-secondary);
+}
+
+.top-nav-search-text {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px 0 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  transition: color 0.15s;
+}
+
+.top-nav-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 100%;
+  flex-shrink: 0;
+  background: #2f6f5e;
+  color: #fff;
+  border-radius: 20px;
+}
+.top-nav-search-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.top-nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* Icon-only here — AccountMenu's name label makes sense in the sidebar's
+   vertical list, not this compact horizontal cluster. */
+.top-nav-icons .icon-strip-label {
+  display: none;
+}
+.top-nav-icons .acct-avatar {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  border-radius: 50%;
+}
+/* Filled circle behind whichever fallback AccountMenu renders (photo,
+   initials, or the iconFallback person outline) so it reads as one solid
+   avatar bubble, matching Yahoo's filled "G" circle, instead of a bare
+   icon floating with no background. */
+.top-nav-icons .acct-avatar .nav-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+}
+
+/* Bare circular icon buttons, no chrome by default — Settings/Sign-out
+   read like Yahoo's plain bell icon. */
+.top-nav-icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.top-nav-icon-btn:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
 /* ── Coin header bar ────────────────────────────────────────────────────── */
 .main-coin-header {
   flex-shrink: 0;
@@ -2947,9 +3120,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: block;
   }
 
-  /* ── Chart / Order Book segmented tabs on small phones ──────────────────
-     Replaces the old resizable side-by-side split — a 135px order book
-     sliver only fit Price/Size. Full width each, switch with a tap. */
+}
+
+/* ── Chart / Order Book segmented tabs — small phones (<=640px) AND full
+   desktop (>=961px) ─────────────────────────────────────────────────────
+   On phones this replaces the old resizable side-by-side split — a 135px
+   order book sliver only fit Price/Size. On desktop it frees up the right
+   side for the Daily Brief sidebar (.chart-page-row above, .db-page in
+   DailyBrief.css) instead of the fixed 264px order book column. Full
+   width each, switch with a tap/click. The in-between tablet range
+   (641-960px) is untouched — still the two-panel stacked+resizable
+   layout in the max-width:960px block above. */
+@media (max-width: 640px), (min-width: 961px) {
   .chart-mobile-tabs {
     position: relative;
     display: flex;
@@ -3052,6 +3234,50 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     min-width: 0;
     height: auto !important;
     padding: 10px 12px;
+  }
+}
+
+/* Desktop-only refinement — the phone-sized pill above (chunky, edge to
+   edge for a touch target, saturated gradient chip) reads as oversized
+   and out of place once it's a small control next to a desktop toolbar.
+   Same indicator/flash mechanic, but sized to fit "Order Book" on one
+   line and recolored as a quiet tinted segment instead of a loud
+   gradient block — closer to a native macOS/desktop segmented control. */
+@media (min-width: 961px) {
+  .chart-mobile-tabs {
+    align-self: flex-start;
+    width: 320px;
+    /* Bottom margin skipped — the chart/order-book card's own top margin
+       (10px, PriceChart.css/OrderBook.css) already provides that gap, so
+       adding one here would double it and make top/bottom uneven. */
+    margin: 10px 0 0 10px;
+    padding: 3px;
+    gap: 4px;
+  }
+  .chart-mobile-tab {
+    padding: 6px 0;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .chart-mobile-tab.active {
+    color: var(--pc-accent);
+  }
+  .chart-mobile-tab-indicator,
+  .chart-mobile-tab-flash {
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 5px);
+  }
+  .chart-mobile-tab-indicator {
+    background: var(--pc-accent-soft);
+    box-shadow: none;
+  }
+  .chart-mobile-tab-flash--orderbook {
+    left: calc(50% + 2px);
+  }
+  .chart-mobile-tab-indicator--orderbook {
+    transform: translateX(calc(100% + 4px));
   }
 }
 

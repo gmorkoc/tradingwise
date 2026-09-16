@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
+import type { Ticker24h } from "../services/coinglass";
 import "../styles/DailyBrief.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
@@ -48,8 +49,13 @@ const RELEVANCE_KEYWORDS = [
 ];
 
 // Short tag chips surfaced under a headline — mapped from the same relevance keywords.
+// Coin-symbol entries (bitcoin/btc, ethereum/eth, solana, xrp, etc.) get a live
+// price chip instead of a plain tag when that symbol is in `coinTickers` — see
+// renderChip() below.
 const CHIP_MAP: [string, string][] = [
   ["bitcoin", "BTC"], ["btc", "BTC"], ["ethereum", "ETH"], ["eth", "ETH"],
+  ["solana", "SOL"], ["xrp", "XRP"], ["ripple", "XRP"], ["cardano", "ADA"],
+  ["dogecoin", "DOGE"], ["binance coin", "BNB"], ["bnb", "BNB"],
   ["stablecoin", "STABLECOIN"], ["defi", "DEFI"], ["etf", "ETF"],
   ["sec ", "SEC"], ["cftc", "CFTC"], ["coinbase", "COINBASE"], ["binance", "BINANCE"],
   ["regulation", "REGULATION"], ["regulator", "REGULATION"],
@@ -78,6 +84,26 @@ function extractChips(title: string): string[] {
     if (chips.length >= 3) break;
   }
   return chips;
+}
+
+// A chip whose label happens to be a symbol we already have a live 24h
+// ticker for (coinTickers, fetched once at the App.tsx level for the coin
+// picker — no extra API call here) gets the real price instead of a plain
+// static tag.
+function renderChip(label: string, _category: Category, coinTickers?: Map<string, Ticker24h>) {
+  const ticker = coinTickers?.get(label);
+  if (ticker) {
+    const up = ticker.change >= 0;
+    return (
+      <span key={label} className={`db-chip db-chip--ticker${up ? " up" : " down"}`}>
+        <span className="db-chip-symbol">{label}</span>{" "}
+        <span className="db-chip-change">{up ? "+" : ""}{ticker.change.toFixed(2)}%</span>
+      </span>
+    );
+  }
+  return (
+    <span key={label} className="db-chip db-chip--tag">{label}</span>
+  );
 }
 
 // rss2json usually resolves `thumbnail`/`enclosure`, but some feeds only embed the
@@ -148,12 +174,6 @@ function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) =>
   return t("dailyBrief.daysAgo", { count: days });
 }
 
-const CATEGORY_LABEL_KEY: Record<Category, string> = {
-  crypto: "dailyBrief.categoryCrypto",
-  markets: "dailyBrief.categoryMarkets",
-  geopolitics: "dailyBrief.categoryGeopolitics",
-};
-
 const DRAG_THRESHOLD = 40;
 const TAP_THRESHOLD = 6;
 
@@ -168,10 +188,20 @@ const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({
 
 type SheetState = "minimized" | "collapsed" | "expanded";
 
-export const DailyBrief: React.FC = () => {
+interface Props {
+  // Same 24h ticker map App.tsx already fetches for the coin picker —
+  // reused here to upgrade a chip to a live price instead of a plain tag.
+  coinTickers?: Map<string, Ticker24h>;
+  // "sheet" (default) is the draggable, collapsible bottom sheet used on
+  // mobile/narrow widths. "page" is an always-visible panel meant to be
+  // rendered in-flow next to the chart on desktop — see its render branch
+  // below and .db-page in DailyBrief.css.
+  variant?: "sheet" | "page";
+}
+
+export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
-  const [index, setIndex] = useState(0);
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -275,19 +305,58 @@ export const DailyBrief: React.FC = () => {
     }
   };
 
+  const rows = items.map((item, i) => {
+    const chips = extractChips(item.title);
+    return (
+      <a
+        key={`${item.url}-${i}`}
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="db-list-item"
+      >
+        {item.thumbnail ? (
+          <img className="db-list-thumb" src={item.thumbnail} alt="" loading="lazy" />
+        ) : (
+          <ThumbPlaceholder className="db-list-thumb" category={item.category} />
+        )}
+        <span className="db-list-body">
+          <span className="db-list-title">{item.title}</span>
+          <span className="db-list-meta">
+            {item.source} <span className="db-list-dot">•</span> {timeAgo(item.pubDate, t)}
+          </span>
+          {chips.length > 0 && (
+            <span className="db-list-chips">
+              {chips.map((c) => renderChip(c, item.category, coinTickers))}
+            </span>
+          )}
+        </span>
+      </a>
+    );
+  });
+
+  if (variant === "page") {
+    if (items.length === 0) return null;
+    return (
+      <aside className="db-page">
+        <div className="db-page-head">
+          <span className="db-head-title">{t("dailyBrief.title")}</span>
+          <span className="db-live">
+            <span className="db-live-dot" />
+            {t("nav.live")}
+          </span>
+        </div>
+        <div className="db-page-list">{rows}</div>
+      </aside>
+    );
+  }
+
   if (items.length === 0 || dismissed || chatActive) return null;
 
-  const current = items[index];
-  const chips = [t(CATEGORY_LABEL_KEY[current.category]), ...extractChips(current.title)].slice(0, 4);
-
-  const cyclePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i - 1 + items.length) % items.length);
-  };
-  const cycleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIndex((i) => (i + 1) % items.length);
-  };
+  // Collapsed teaser always shows the latest headline — the pager (and the
+  // single-story "featured" card it drove) is gone now that the full list
+  // renders at every width, see .db-card-list below.
+  const current = items[0];
 
   return (
     <>
@@ -325,8 +394,8 @@ export const DailyBrief: React.FC = () => {
             <span className="db-head-title-row">
               <span className="db-head-title">{t("dailyBrief.title")}</span>
               <span className="db-live">
-                {t("nav.live")}
                 <span className="db-live-dot" />
+                {t("nav.live")}
               </span>
             </span>
             {sheetState !== "expanded" && (
@@ -336,70 +405,7 @@ export const DailyBrief: React.FC = () => {
         </div>
 
         <div className="db-card">
-          {/* Desktop / wide viewports — single featured story with prev/next pager */}
-          <div className="db-card-featured">
-            <div className="db-card-top">
-              <span className={`db-source db-source--${current.category}`}>{current.source}</span>
-              <span className="db-live">
-                {t("nav.live")}
-                <span className="db-live-dot" />
-              </span>
-            </div>
-            <a
-              href={current.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="db-card-body"
-            >
-              <span className="db-headline">{current.title}</span>
-              {current.thumbnail ? (
-                <img className="db-thumb" src={current.thumbnail} alt="" loading="lazy" />
-              ) : (
-                <ThumbPlaceholder className="db-thumb" category={current.category} />
-              )}
-            </a>
-            <div className="db-chips">
-              {chips.map((c) => (
-                <span key={c} className={`db-chip db-chip--${current.category}`}>
-                  {c}
-                </span>
-              ))}
-            </div>
-            <div className="db-card-footer">
-              <span className="db-item-meta">{timeAgo(current.pubDate, t)}</span>
-              <div className="db-nav">
-                <button className="db-nav-btn" onClick={cyclePrev} aria-label="Previous">‹</button>
-                <span className="db-counter">{index + 1} / {items.length}</span>
-                <button className="db-nav-btn" onClick={cycleNext} aria-label="Next">›</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile — vertically scrollable list of every story, no pager */}
-          <div className="db-card-list">
-            {items.map((item, i) => (
-              <a
-                key={`${item.url}-${i}`}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="db-list-item"
-              >
-                {item.thumbnail ? (
-                  <img className="db-list-thumb" src={item.thumbnail} alt="" loading="lazy" />
-                ) : (
-                  <ThumbPlaceholder className="db-list-thumb" category={item.category} />
-                )}
-                <span className="db-list-body">
-                  <span className={`db-source db-source--${item.category} db-list-source`}>
-                    {item.source}
-                  </span>
-                  <span className="db-list-title">{item.title}</span>
-                  <span className="db-item-meta">{timeAgo(item.pubDate, t)}</span>
-                </span>
-              </a>
-            ))}
-          </div>
+          <div className="db-card-list">{rows}</div>
         </div>
       </div>
     </>

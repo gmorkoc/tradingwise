@@ -1513,9 +1513,17 @@ export async function fetchCoin24hTickers(
   if (ticker24hCache && Date.now() - ticker24hFetchedAt < TICKER_TTL) {
     return ticker24hCache;
   }
-  // Single batch request — one connection instead of one per coin.
-  // Binance silently skips symbols that don't exist (no CORS errors from 400s).
-  const symbolList = JSON.stringify(coins.map(c => `${c.symbol}USDT`));
+  // Single batch request — one connection instead of one per coin. Contrary
+  // to what you'd hope, Binance does NOT silently skip symbols that don't
+  // exist here — a single invalid one 400s ("Invalid symbol") for the whole
+  // batch, zeroing out every coin's price. Confirmed via direct testing that
+  // HYPE and HYPEUSDT/GRASSUSDT aren't valid trading pairs, so they're
+  // excluded from this request specifically (still selectable/chartable
+  // elsewhere via COINS — this only affects the 24h ticker badge/chip).
+  const NO_BINANCE_SPOT = new Set(['HYPE', 'GRASS']);
+  const symbolList = JSON.stringify(
+    coins.filter(c => !NO_BINANCE_SPOT.has(c.symbol)).map(c => `${c.symbol}USDT`),
+  );
   const map = new Map<string, Ticker24h>();
   try {
     const res = await bnApi.get('/api/v3/ticker/24hr', { params: { symbols: symbolList } });
