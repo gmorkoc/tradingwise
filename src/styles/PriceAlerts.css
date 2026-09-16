@@ -330,6 +330,14 @@
   min-width: 260px;
   max-width: 320px;
   animation: toast-in 0.25s ease;
+  transition: bottom 0.22s ease;
+}
+
+/* The Live Chat dock (see .coin-chat-dock--open in CoinChat.css) can
+   reach up to ~640px/75vh tall while open — hop above it so this toast
+   never lands on the chat panel or its composer/Post button. */
+.alert-toast--chat-open {
+  bottom: calc(min(640px, 75vh) + 16px);
 }
 
 @keyframes toast-in {

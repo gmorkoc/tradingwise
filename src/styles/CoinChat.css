@@ -698,68 +698,127 @@ html[data-theme="light"] .coin-chat-dock {
   }
 }
 
-/* ── Desktop dock: same collapsible side-panel mechanism as Watchlist
-   (App.css .side-panel / .side-panel-edge) — width collapses to a thin
-   edge-click strip instead of vanishing, so there's always a way back in.
-   Kept as its own classes (not literally .side-panel) because the dock
-   needs to fully get out of the way below 641px, where CoinChat switches
-   to the fixed-position mobile sheet instead. */
+/* ── Desktop dock: anchored bottom-right, Kalshi-style — the bar at the
+   bottom never moves; only the card above it grows/shrinks. Height (not
+   width) is what collapses now, since the whole thing floats over the
+   chart instead of sitting in the layout flow and pushing it over.
+   Below 641px, CoinChat switches to the fixed-position mobile sheet
+   instead, so this whole block is irrelevant there. */
 .coin-chat-dock {
-  width: 330px;
-  flex-shrink: 0;
-  background: var(--pc-panel-2);
-  border-left: 1px solid var(--pc-border);
-  overflow: hidden;
-  transition: width 0.22s ease;
-  position: relative;
-}
-html[data-theme="light"] .coin-chat-dock {
-  border-left: none;
-}
-
-.coin-chat-dock--hidden {
-  width: 8px;
-}
-
-.coin-chat-dock-edge {
-  position: absolute;
-  left: 0;
-  top: 0;
+  position: fixed;
+  right: 16px;
   bottom: 0;
-  width: 8px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  z-index: 2;
-  transition: background 0.15s;
+  z-index: 40;
+  width: 460px;
+  height: 52px;
+  /* On a short viewport, this can reach almost to the top of the page —
+     right over the chart's own header/controls, which is what
+     "everything overlaps" was actually about. Capping to a fraction of
+     the viewport instead keeps real clearance above it no matter how
+     short the window is. */
+  max-height: min(640px, 75vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--pc-panel-2);
+  border: 1px solid var(--pc-border);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -8px 30px var(--color-shadow);
+  transition: height 0.22s ease;
 }
-
-.coin-chat-dock-edge:hover {
-  background: rgba(56, 189, 248, 0.12);
-}
-
-.coin-chat-dock-edge:focus,
-.coin-chat-dock-edge:focus-visible,
-.coin-chat-dock-edge:active {
-  outline: none;
-  box-shadow: none;
-  background: transparent;
+.coin-chat-dock--open {
+  height: 640px;
 }
 
 /* Content dropped into the dock — no background/border of its own, the
    dock supplies that chrome (same convention as .side-panel .wl-card). */
+/* Explicit height (not flex:1/min-height:0) so the collapsed state is
+   deterministic — same proven pattern as the nav accordion's
+   .icon-strip-cat-items, rather than relying on flex-shrink math. */
 .coin-chat-card {
+  flex-shrink: 0;
+  height: 588px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  transition: height 0.22s ease, opacity 0.15s ease;
+}
+.coin-chat-dock:not(.coin-chat-dock--open) .coin-chat-card {
+  height: 0;
+  opacity: 0;
+}
+
+.coin-chat-dock-bar {
+  flex-shrink: 0;
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px 0 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--pc-border);
+  cursor: pointer;
+  color: var(--pc-text);
+}
+.coin-chat-dock:not(.coin-chat-dock--open) .coin-chat-dock-bar {
+  border-top: none;
+}
+.coin-chat-dock-bar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pc-success);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+  flex-shrink: 0;
+}
+.coin-chat-dock-bar-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.coin-chat-dock-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.coin-chat-dock-bar-action {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--pc-text-muted);
+  white-space: nowrap;
+}
+.coin-chat-dock-bar-chev {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--pc-text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+html[data-theme="light"] .coin-chat-dock-bar-chev {
+  background: var(--color-surface-alt);
+}
+.coin-chat-dock-bar-chev--up {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 640px) {
   .coin-chat-dock {
     display: contents;
   }
-  .coin-chat-dock-edge {
+  /* display:contents above removes the wrapper's own box but not its
+     children — without this, the desktop-only bar would still render,
+     unstyled, wherever it happens to fall in the page flow. Mobile
+     keeps its own separate trigger (.coin-chat-trigger, untouched). */
+  .coin-chat-dock-bar {
     display: none;
   }
 }

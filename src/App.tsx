@@ -30,7 +30,6 @@ import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
-import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { Watchlist } from "./components/Watchlist";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { FlashNewsBanner } from "./components/FlashNewsBanner";
@@ -367,11 +366,21 @@ function AppDashboard({
   }, [activeSection]);
   // Nav accordion — which of the three collapsible categories is open.
   // Defaults to whichever one contains the current section (so landing on
-  // e.g. #correlation opens Market Data automatically); falls back to the
-  // first category when the active section is one of the flat top items.
+  // e.g. #correlation opens Market Data automatically); all categories
+  // stay collapsed by default otherwise (e.g. landing on Chart/Candle AI).
   const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
-    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? NAV_CATEGORIES[0].id,
+    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? null,
   );
+  // Same convention as ChatInterface.tsx/CoinChat.tsx's own useIsDesktop —
+  // gates the AI Chat nav item to desktop-width web (mobile web keeps no
+  // entry point to that panel, same as before).
+  const [isDesktopWidth, setIsDesktopWidth] = useState(() => window.matchMedia("(min-width: 641px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 641px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktopWidth(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -781,6 +790,15 @@ function AppDashboard({
       .catch(() => {});
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Segmented Chart/Order Book tabs — real phones only (see App.css's own
+  // max-width:640px block); desktop/tablet widths ignore this entirely and
+  // keep showing both side by side, resizable.
+  const [mobileChartTab, setMobileChartTab] = useState<"chart" | "orderbook">("chart");
+  // Which way the tab switch is "moving" — Order Book is to the right, so
+  // switching to it plays a bullish (green) swipe; back to Chart plays a
+  // bearish (red) one. Purely cosmetic, replayed via the flash span's
+  // `key` (see the JSX) — doesn't affect which tab actually shows.
+  const [tabSwipeDir, setTabSwipeDir] = useState<"bull" | "bear">("bull");
   const [obSize, setObSize] = useState({ h: 380, w: 135 });
   const [obResizeIntro, setObResizeIntro] = useState(false);
   const chartWrapRef = useRef<HTMLDivElement>(null);
@@ -1270,10 +1288,10 @@ function AppDashboard({
               />
             </div>
 
-            {/* AI Chat itself only ever mounts on iOS (see the
-                ChatInterface render further down) — this nav item only
-                shows there; other platforms have nothing to link to. */}
-            {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+            {/* ChatInterface itself decides what to render (see its render
+                further down) — this nav item is its only trigger now, on
+                iOS or desktop web. Mobile web still has no entry point. */}
+            {(Capacitor.getPlatform() === "ios" || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
               <button
                 className="icon-strip-btn"
                 onClick={() => {
@@ -1307,19 +1325,25 @@ function AppDashboard({
               </span>
               <span className="icon-strip-label">{t("nav.settings")}</span>
             </button>
+
+            <button
+              className="icon-strip-btn"
+              onClick={() => {
+                signOut();
+                setMobileNavOpen(false);
+              }}
+              title={t("nav.signOut")}
+            >
+              <span className="nav-icon-wrap">
+                <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+              </span>
+              <span className="icon-strip-label">{t("nav.signOut")}</span>
+            </button>
           </div>
         </nav>
 
         <div className="main-panel">
-          <FlashNewsBanner
-            theme={theme}
-            onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
-            onOpenAuth={onOpenAuth}
-            onOpenUpgrade={onOpenUpgrade}
-            onOpenProfile={() => setProfileOpen(true)}
-            onOpenSettings={() => setDrawerOpen(true)}
-            onSignOut={signOut}
-          />
+          <FlashNewsBanner />
           <div className="main-coin-header">
             <div className="mch-left">
               <button
@@ -1611,7 +1635,7 @@ function AppDashboard({
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </button>
-              <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} />
+              <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
               <button
                 className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
                 onClick={() => setNotificationsEnabled(!notificationsEnabled)}
@@ -1696,21 +1720,38 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
-                  <AnnouncementBanner
-                    storageKey="announce-coinchat-v1"
-                    icon="💬"
-                    message={t("coinChat.announceBanner", { coin })}
-                  />
-                )}
                 <Watchlist
                   onSelectCoin={(symbol) => {
                     setCoin(symbol as CoinSymbol);
                     clearCandleCache();
                   }}
                 />
+                <div className="chart-mobile-tabs">
+                  <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
+                  <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
+                  <button
+                    type="button"
+                    className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
+                    onClick={() => {
+                      if (mobileChartTab !== "chart") setTabSwipeDir("bear");
+                      setMobileChartTab("chart");
+                    }}
+                  >
+                    {t("chart.tabLabel", "Chart")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
+                    onClick={() => {
+                      if (mobileChartTab !== "orderbook") setTabSwipeDir("bull");
+                      setMobileChartTab("orderbook");
+                    }}
+                  >
+                    {t("orderBook.title")}
+                  </button>
+                </div>
                 <div
-                  className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""}`}
+                  className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
                   ref={chartWrapRef}
                   style={
                     {
@@ -1730,6 +1771,8 @@ function AppDashboard({
                     onOpenAuth={onOpenAuth}
                     onOpenUpgrade={onOpenUpgrade}
                     onFullscreenChange={setChartFullscreen}
+                    coinChatOpen={showCoinChat}
+                    onToggleCoinChat={() => setShowCoinChat((v) => !v)}
                   />
                   <div
                     className="chart-resize-handle"
@@ -1906,17 +1949,10 @@ function AppDashboard({
           </div>
         </div>
 
-        {/* Coin chat hidden on web for now — kept on iOS. */}
-        {activeSection === "chart" &&
-          Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+        {activeSection === "chart" && (
           <aside
-            className={`coin-chat-dock${showCoinChat ? "" : " coin-chat-dock--hidden"}`}
+            className={`coin-chat-dock${showCoinChat ? " coin-chat-dock--open" : ""}`}
           >
-            <button
-              className="coin-chat-dock-edge"
-              onClick={() => setShowCoinChat((v) => !v)}
-              aria-label={showCoinChat ? "Hide chat" : "Show chat"}
-            />
             <CoinChat
               coin={coin}
               onOpenAuth={onOpenAuth}
@@ -1925,6 +1961,25 @@ function AppDashboard({
               highlightCommentId={highlightCommentId}
               onHighlightDone={() => setHighlightCommentId(null)}
             />
+            <button
+              type="button"
+              className="coin-chat-dock-bar"
+              onClick={() => setShowCoinChat((v) => !v)}
+              aria-label={showCoinChat ? t("coinChat.hide") : t("coinChat.triggerLabel")}
+            >
+              <span className="coin-chat-dock-bar-dot" />
+              <span className="coin-chat-dock-bar-label">{t("coinChat.triggerLabel")}</span>
+              <span className="coin-chat-dock-bar-right">
+                {showCoinChat && (
+                  <span className="coin-chat-dock-bar-action">{t("coinChat.hide")}</span>
+                )}
+                <span className={`coin-chat-dock-bar-chev${showCoinChat ? " coin-chat-dock-bar-chev--up" : ""}`}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
+                </span>
+              </span>
+            </button>
           </aside>
         )}
 
@@ -2227,7 +2282,7 @@ function AppDashboard({
         {/* Price signal banner (bullish/bearish) hidden for now — see
             priceAlert state above, logic left intact to re-enable easily. */}
 
-        <WhaleAlerts btcPrice={btcData?.price} />
+        <WhaleAlerts btcPrice={btcData?.price} coinChatOpen={activeSection === "chart" && showCoinChat} />
 
         {swipeHint && (
           <div className="swipe-hint">

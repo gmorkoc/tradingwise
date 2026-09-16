@@ -1,7 +1,7 @@
 .whale-alerts {
   position: fixed;
-  /* Clears the AI chat FAB (bottom:24px, 56px tall, plus its quota chip)
-     sitting in the same corner — see .chat-fab-wrap in ChatInterface.css. */
+  /* Clears the Live Chat dock's collapsed bar (bottom:0, 52px tall)
+     sitting in the same corner — see .coin-chat-dock in CoinChat.css. */
   bottom: 130px;
   right: 28px;
   z-index: 998;
@@ -9,6 +9,15 @@
   flex-direction: column-reverse;
   gap: 8px;
   pointer-events: none;
+  transition: bottom 0.22s ease;
+}
+
+/* The dock's expanded height (see .coin-chat-dock--open/max-height in
+   CoinChat.css) reaches much higher than its collapsed bar — hop above
+   it too while it's open, so a whale alert never lands on top of the
+   chat panel or its composer/Post button. */
+.whale-alerts--chat-open {
+  bottom: calc(min(640px, 75vh) + 16px);
 }
 
 .whale-alert {
@@ -232,7 +241,8 @@
    Desktop/web keeps the original larger sizing above. */
 @media (max-width: 640px) {
   .whale-alerts {
-    /* Chat FAB moves to bottom:20px/right:12px on mobile — same clearance logic. */
+    /* Clears CoinChat's mobile trigger pill (bottom:88px — see
+       .coin-chat-trigger in CoinChat.css). */
     bottom: 120px;
     left: 10px;
     right: 10px;

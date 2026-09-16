@@ -131,6 +131,7 @@
   },
   "chart": {
     "title": "📈 {{coin}} Price Chart",
+    "tabLabel": "Chart",
     "live": "● LIVE",
     "loading": "Loading chart data...",
     "noData": "No chart data available",
@@ -470,6 +471,10 @@
       "dailyBrief": {
         "label": "Daily Market Brief",
         "desc": "A push when there's fresh market news in the daily brief."
+      },
+      "breakingNews": {
+        "label": "Breaking News",
+        "desc": "An urgent push for major, market-moving stories only — not routine headlines."
       },
       "priceAlerts": {
         "label": "Price Alerts",
@@ -1675,6 +1680,7 @@
   "coinChat": {
     "triggerLabel": "Live Chat",
     "title": "{{coinName}} Live Chat",
+    "hide": "Hide",
     "empty": "No comments yet on {{coin}}. Be the first!",
     "delete": "Delete",
     "report": "Report",

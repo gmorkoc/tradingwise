@@ -48,6 +48,79 @@ function isRelevant(title: string): boolean {
   return RELEVANCE_KEYWORDS.some((kw) => t.includes(kw));
 }
 
+// Classifies whether any of this run's fresh (already-relevant) headlines
+// are a genuinely major, urgent story — not just on-topic, which
+// isRelevant() above already filters for. Keyword matching can't tell "SEC
+// delays an ETF decision two weeks" (routine) from "SEC drops all charges
+// against a major exchange" (huge), so this is an LLM call, not more
+// keywords. Returns null (never throws) on any failure — missing secret,
+// rate limit, network — so a classification outage never breaks the
+// existing daily-brief push below it.
+async function classifyImportant(items: BriefItem[]): Promise<BriefItem | null> {
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const candidates = items.slice(0, 10);
+    const list = candidates.map((it, i) => `${i}. ${it.title}`).join("\n");
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: "You flag only genuinely major, market-moving crypto/macro news for an urgent push notification — things like a market-structure bill passing or failing (e.g. the CLARITY Act), an exchange collapse or major hack, a landmark SEC/CFTC ruling, an emergency Fed action, or a major stablecoin depeg. Routine price moves, minor company news, and ordinary regulatory back-and-forth do NOT qualify. Most headlines should NOT be flagged — when in doubt, don't flag it.",
+          },
+          {
+            role: "user",
+            content: `Headlines:\n${list}\n\nRespond as JSON: {"importantIndex": <index number, or null if none qualify>}.`,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content ?? "{}");
+    const idx = parsed.importantIndex;
+    return typeof idx === "number" && candidates[idx] ? candidates[idx] : null;
+  } catch {
+    return null;
+  }
+}
+
+// Own audience/send, separate from the notify_daily_brief flow below —
+// gated by notify_breaking_news so it's an independent opt-in, and uses
+// "time-sensitive" so it breaks through Focus/DND (requires the app's
+// com.apple.developer.usernotifications.time-sensitive entitlement, already
+// declared). Returns the number of pushes actually sent, for the response.
+async function sendBreakingNewsIfImportant(freshItems: BriefItem[]): Promise<number> {
+  const headline = await classifyImportant(freshItems);
+  if (!headline) return 0;
+
+  const { data: eligible } = await supabaseAdmin.from("profiles").select("id").eq("notify_breaking_news", true);
+  if (!eligible || eligible.length === 0) return 0;
+
+  const { data: tokens } = await supabaseAdmin
+    .from("device_push_tokens")
+    .select("token, user_id")
+    .in("user_id", eligible.map((u) => u.id));
+  if (!tokens || tokens.length === 0) return 0;
+
+  const soundByUser = await getSoundsByUser(tokens.map((t) => t.user_id));
+  const accessToken = await getAccessToken();
+  const results = await Promise.all(tokens.map(({ token, user_id }) =>
+    sendPush(
+      accessToken, token, "🚨 Breaking", headline.title,
+      soundByUser.get(user_id) ?? "bell",
+      { type: "breaking_news", url: headline.url },
+      "time-sensitive",
+    )
+  ));
+  return results.filter(Boolean).length;
+}
+
 function extractTag(block: string, tag: string): string | null {
   const m = block.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
   if (!m) return null;
@@ -136,9 +209,13 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ fetched: items.length, fresh: 0 }), { headers: { "Content-Type": "application/json" } });
   }
 
+  // Independent of the notify_daily_brief audience/flow below — a user can
+  // be opted into breaking news without the routine digest, or vice versa.
+  const breakingSent = await sendBreakingNewsIfImportant(freshItems);
+
   const { data: eligible } = await supabaseAdmin.from("profiles").select("id").eq("notify_daily_brief", true);
   if (!eligible || eligible.length === 0) {
-    return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0 }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0, breakingSent }), { headers: { "Content-Type": "application/json" } });
   }
 
   const { data: tokens } = await supabaseAdmin
@@ -146,7 +223,7 @@ Deno.serve(async (req) => {
     .select("token, user_id")
     .in("user_id", eligible.map(u => u.id));
   if (!tokens || tokens.length === 0) {
-    return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0 }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: 0, breakingSent }), { headers: { "Content-Type": "application/json" } });
   }
 
   const headline = freshItems[0];
@@ -162,7 +239,7 @@ Deno.serve(async (req) => {
   ));
 
   return new Response(
-    JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: results.filter(Boolean).length, total: tokens.length }),
+    JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: results.filter(Boolean).length, total: tokens.length, breakingSent }),
     { headers: { "Content-Type": "application/json" } }
   );
 });

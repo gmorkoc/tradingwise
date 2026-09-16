@@ -50,7 +50,7 @@ export function PushToast() {
   const data = toast.data;
 
   const handleTap = () => {
-    if (data?.type === "daily_brief" && data.url) {
+    if ((data?.type === "daily_brief" || data?.type === "breaking_news") && data.url) {
       Browser.open({ url: data.url });
     } else if (data?.type === "upgrade_reminder") {
       window.dispatchEvent(new CustomEvent("open-upgrade-modal"));

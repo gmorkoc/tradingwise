@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
 import {
   createChart,
   ColorType,
@@ -52,6 +53,8 @@ interface PriceChartProps {
   onOpenAuth?: () => void;
   onOpenUpgrade?: (plan?: "pro" | "elite") => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  coinChatOpen?: boolean;
+  onToggleCoinChat?: () => void;
 }
 
 const INTERVALS: TimeInterval[] = [
@@ -993,6 +996,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   onZoneChange,
   onOpenUpgrade = () => {},
   onFullscreenChange,
+  coinChatOpen,
+  onToggleCoinChat,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
@@ -2873,6 +2878,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   {isFullscreen ? t("chart.exit") : t("chart.expand")}
                 </span>
               </button>
+              {onToggleCoinChat && Capacitor.getPlatform() !== "ios" && (
+                <button
+                  className={`chart-livechat-pill${coinChatOpen ? " chart-livechat-pill--active" : ""}`}
+                  onClick={onToggleCoinChat}
+                  title={coinChatOpen ? t("coinChat.hide", "Hide chat") : t("coinChat.triggerLabel")}
+                >
+                  {coinChatOpen ? (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <span className="chart-livechat-dot" />
+                  )}
+                  {t("coinChat.triggerLabel")}
+                </button>
+              )}
             </div>
           </div>
         </div>

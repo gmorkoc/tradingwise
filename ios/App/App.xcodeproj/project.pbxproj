@@ -19,6 +19,7 @@
 		555B9780CE1FCE5623407372 /* Sounds/alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9039AA3378EB775396304197 /* Sounds/alert.wav */; };
 		569634DA02ECED6842FF5AD2 /* Sounds/chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 85962337AF61A4236888957B /* Sounds/chime.wav */; };
 		7C8AF4E172C0605A6E553D0B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */; };
+		BFEE7851C1E8710CD18C868E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3B921098585934EE05CC4FD3 /* PrivacyInfo.xcprivacy */; };
 		8C30AFB95CDC28C11947D2BB /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D43FB156F1A8ED89933CF05 /* MainViewController.swift */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		F95F6BBE7AD93204361CCAEE /* Sounds/classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3BC7215F3CF845D0651DA654 /* Sounds/classic.wav */; };
@@ -26,6 +27,7 @@
 
 /* Begin PBXFileReference section */
 		0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		3B921098585934EE05CC4FD3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0F00FDFCBDFABE7CBDA0FBB8 /* Sounds/bell.wav */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = audio.wav; path = Sounds/bell.wav; sourceTree = "<group>"; };
 		1D43FB156F1A8ED89933CF05 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -102,6 +104,7 @@
 				70A172925413CC4AB0244797 /* NotificationAuthPlugin.swift */,
 				5DBDCCD5ED615C75B3C0137F /* Configuration.storekit */,
 				0DDF2D8BEB827A8C3BCD0CC5 /* GoogleService-Info.plist */,
+				3B921098585934EE05CC4FD3 /* PrivacyInfo.xcprivacy */,
 				0F00FDFCBDFABE7CBDA0FBB8 /* Sounds/bell.wav */,
 				85962337AF61A4236888957B /* Sounds/chime.wav */,
 				9039AA3378EB775396304197 /* Sounds/alert.wav */,
@@ -187,6 +190,7 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				7C8AF4E172C0605A6E553D0B /* GoogleService-Info.plist in Resources */,
+				BFEE7851C1E8710CD18C868E /* PrivacyInfo.xcprivacy in Resources */,
 				388A3002BC1307A68D5ABC40 /* Sounds/bell.wav in Resources */,
 				569634DA02ECED6842FF5AD2 /* Sounds/chime.wav in Resources */,
 				555B9780CE1FCE5623407372 /* Sounds/alert.wav in Resources */,
@@ -379,7 +383,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = R4WU895Q9L;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
@@ -401,7 +405,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = R4WU895Q9L;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;

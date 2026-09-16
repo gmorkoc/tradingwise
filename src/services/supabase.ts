@@ -31,6 +31,7 @@ export interface Profile {
   notify_price_alerts: boolean;
   notify_upgrade_reminders: boolean;
   notify_strategy_alerts: boolean;
+  notify_breaking_news: boolean;
   avatar_url: string | null;
 }
 
@@ -161,7 +162,7 @@ export async function saveAlertSound(userId: string, sound: AlertSound): Promise
   if (error) throw new Error(error.message);
 }
 
-export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders" | "notify_strategy_alerts";
+export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders" | "notify_strategy_alerts" | "notify_breaking_news";
 
 export async function saveNotificationPref(userId: string, key: NotificationPrefKey, value: boolean): Promise<void> {
   const { error } = await supabase

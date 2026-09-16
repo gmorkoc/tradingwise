@@ -21,6 +21,7 @@ interface PriceAlert {
 interface Props {
   coin: CoinSymbol;
   currentPrice: number;
+  coinChatOpen?: boolean;
 }
 
 const STORAGE_KEY = "priceAlerts";
@@ -50,7 +51,7 @@ function syncPanelPos(el: HTMLElement) {
   root.style.setProperty("--alerts-panel-right", `${Math.max(clampedRight, 12)}px`);
 }
 
-export function PriceAlerts({ coin, currentPrice }: Props) {
+export function PriceAlerts({ coin, currentPrice, coinChatOpen }: Props) {
   const { t } = useTranslation();
   const { user, profile } = useAuth();
   const alertSoundRef = useRef(profile?.alert_sound ?? "bell");
@@ -293,7 +294,10 @@ export function PriceAlerts({ coin, currentPrice }: Props) {
           )}
 
           {toast && (
-            <div className="alert-toast" onClick={() => setToast(null)}>
+            <div
+              className={`alert-toast${coinChatOpen ? " alert-toast--chat-open" : ""}`}
+              onClick={() => setToast(null)}
+            >
               <div className="alert-toast-icon">🔔</div>
               <div className="alert-toast-body">
                 <strong>{t("priceAlerts.toastTitle")}</strong>

@@ -82,6 +82,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isIAPAvailable()) syncIAPEntitlement().then(() => loadProfile(data.session!.user));
       }
       setLoading(false);
+    }).catch(() => {
+      // A network blip here (getSession still has to reach Supabase) used
+      // to leave the app stuck on the boot screen forever, since nothing
+      // ever called setLoading(false). Fall through as signed-out instead —
+      // onAuthStateChange below will correct it once a session does resolve.
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {

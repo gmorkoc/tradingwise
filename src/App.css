@@ -1347,6 +1347,12 @@ select {
   gap: 0;
 }
 
+/* Only shown on real phones — see the max-width:640px block below. Desktop
+   and tablet widths keep chart + order book side by side, no tabs. */
+.chart-mobile-tabs {
+  display: none;
+}
+
 .chart-resize-handle {
   display: none;
   position: relative;
@@ -1656,10 +1662,12 @@ html[data-theme="light"] .icon-strip {
 }
 .icon-strip-cat-items.collapsed { max-height: 0; opacity: 0; }
 
-/* Collapsed 54px desktop rail — no room for the label or chevron, so
-   just the category's own icon shows, centered like the item icons
-   above it. Hovering the rail (which widens it) brings the label and
-   chevron back, same as every other nav item's label. */
+/* Collapsed 54px desktop rail — no room for the category label or
+   chevron, so just its icon shows, centered like the item icons above
+   it; hovering the rail (which widens it) brings the label and chevron
+   back, same as every other nav item's label. Which category is open
+   is click-driven (openNavCategory state), same as mobile — no hover
+   override on the items themselves. */
 @media (min-width: 641px) {
   .icon-strip-cat-head { padding: 8px 0; justify-content: center; }
   .icon-strip-cat-head .icon-strip-cat-label,
@@ -1667,22 +1675,6 @@ html[data-theme="light"] .icon-strip {
   .icon-strip:hover .icon-strip-cat-head { padding: 8px 12px 8px 14px; justify-content: flex-start; }
   .icon-strip:hover .icon-strip-cat-head .icon-strip-cat-label,
   .icon-strip:hover .icon-strip-cat-head .icon-strip-cat-chev { display: block; }
-
-  /* Desktop: hover reveals a category's items directly — no click
-     needed. The tap-toggled .collapsed class from mobile is ignored
-     here (overridden below) since there's no hover state to drive it
-     the other way when the mouse leaves. */
-  .icon-strip-cat-items,
-  .icon-strip-cat-items.collapsed {
-    max-height: 0;
-    opacity: 0;
-  }
-  .icon-strip-cat:hover .icon-strip-cat-items {
-    max-height: 280px;
-    opacity: 1;
-  }
-  .icon-strip-cat-head.open .icon-strip-cat-chev { transform: none; }
-  .icon-strip-cat:hover .icon-strip-cat-head .icon-strip-cat-chev { transform: rotate(90deg); }
 }
 
 .icon-strip-bottom {
@@ -1695,16 +1687,6 @@ html[data-theme="light"] .icon-strip {
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   position: relative;
-}
-
-/* Account menu, settings, sign-out, and theme toggle all moved to the
-   news ticker's right side on desktop web (see FlashNewsBanner's own
-   .fnb-desktop-controls) — the nav drawer keeps this section only below
-   this width, where the ticker's copy is hidden instead. */
-@media (min-width: 641px) {
-  .icon-strip-bottom {
-    display: none;
-  }
 }
 
 .icon-strip-btn {
@@ -2965,10 +2947,99 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: block;
   }
 
-  /* ── Chart + OrderBook side by side on small phones ────────────────────── */
+  /* ── Chart / Order Book segmented tabs on small phones ──────────────────
+     Replaces the old resizable side-by-side split — a 135px order book
+     sliver only fit Price/Size. Full width each, switch with a tap. */
+  .chart-mobile-tabs {
+    position: relative;
+    display: flex;
+    gap: 6px;
+    margin: 8px 6px 6px;
+    padding: 3px;
+    background: var(--pc-panel-2);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .chart-mobile-tab {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--pc-text-muted);
+    cursor: pointer;
+  }
+  .chart-mobile-tab.active {
+    color: #fff;
+  }
+
+  /* Steady-state active pill — slides between the two tabs. Has to be a
+     separate element (not the button's own background) because CSS can't
+     smoothly transition between two different gradients, only `transform`. */
+  .chart-mobile-tab-indicator {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc(50% - 4.5px);
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--pc-accent) 0%, var(--pc-accent-2) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 12px rgba(129, 140, 248, 0.45);
+    transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);
+    z-index: 1;
+  }
+  .chart-mobile-tab-indicator--orderbook {
+    transform: translateX(calc(100% + 6px));
+  }
+
+  /* Transient bullish (green, moving to Order Book) / bearish (red, moving
+     to Chart) flash — replayed on every switch via the span's `key`
+     (App.tsx), independent of the indicator's own steady-state color. */
+  @keyframes chart-tab-swipe-flash {
+    0%   { opacity: 0.85; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(1.35); }
+  }
+  .chart-mobile-tab-flash {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    width: calc(50% - 4.5px);
+    border-radius: 8px;
+    pointer-events: none;
+    animation: chart-tab-swipe-flash 0.45s ease-out forwards;
+    z-index: 1;
+  }
+  .chart-mobile-tab-flash--chart {
+    left: 3px;
+  }
+  .chart-mobile-tab-flash--orderbook {
+    left: calc(50% + 1.5px);
+  }
+  .chart-mobile-tab-flash--bull {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+  .chart-mobile-tab-flash--bear {
+    background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-mobile-tab-flash { animation: none; display: none; }
+    .chart-mobile-tab-indicator { transition: none; }
+  }
+
   .chart-section-wrap {
     flex-direction: row;
     align-items: stretch;
+  }
+  .chart-resize-handle {
+    display: none;
+  }
+  .chart-section-wrap--tab-chart > .ob-card,
+  .chart-section-wrap--tab-orderbook > .price-chart-container {
+    display: none;
   }
   .chart-section-wrap > .price-chart-container {
     flex: 1;
@@ -2976,45 +3047,11 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     overflow-y: auto;
   }
   .chart-section-wrap > .ob-card {
-    width: var(--ob-w, 135px) !important;
-    flex-shrink: 0;
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
     height: auto !important;
-    min-width: 4px;
-    padding: 6px 2px 6px 8px;
-  }
-  /* Only transitioned during the on-load resize-affordance hint — plain
-     drags stay untransitioned so the order book tracks the finger 1:1. */
-  .chart-section-wrap--resize-intro > .ob-card {
-    transition: width 0.6s cubic-bezier(0.34, 1.15, 0.64, 1) !important;
-  }
-  .chart-resize-handle {
-    height: auto;
-    align-self: stretch;
-    width: 24px;
-    flex-direction: column;
-    cursor: col-resize;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 16px;
-    background: transparent;
-    margin-right: -24px;
-    z-index: 1;
-  }
-  .chart-resize-icon {
-    position: sticky;
-    top: calc(50vh - 10px);
-    align-self: center;
-    opacity: 1;
-    margin-left: -12px;
-  }
-  .chart-section-wrap > .ob-card .ob-section {
-    overflow-y: hidden;
-  }
-  .chart-section-wrap > .ob-card .ob-row {
-    padding: 1px 2px;
-  }
-  .chart-section-wrap > .ob-card .ob-mid-row {
-    padding: 2px;
+    padding: 10px 12px;
   }
 }
 

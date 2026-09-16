@@ -39,7 +39,10 @@ html[data-theme="light"] .chart-active {
   --pc-accent-soft: var(--color-primary-soft);
   --pc-success: var(--color-success);
   --pc-danger: var(--color-danger);
-  --pc-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+  /* Tight blur radius on purpose — .price-chart-container/.ob-card only
+     have a 10px margin gap between them, and the old 24px blur bled well
+     past that, reading as a gray band in the gap instead of a shadow. */
+  --pc-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   --pc-chart-bg: #ffffff;
   --pc-chart-text: #475569;
   --pc-chart-grid: #e2e8f0;
@@ -68,7 +71,7 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
      combined margins (10px + 10px) left an oversized gap between them. */
   margin: 10px 4px 10px 10px;
   padding: 18px 20px;
-  border-radius: 0;
+  border-radius: 16px;
   border: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
   box-shadow: var(--pc-shadow);
@@ -83,7 +86,7 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
        the one that matters. */
     margin: 6px 2px 3px 6px;
     padding: 10px 10px;
-    border-radius: 0;
+    border-radius: 16px;
   }
 }
 
@@ -1332,6 +1335,12 @@ html[data-theme="light"] .cap-overlay-feature {
   .interval-pills          { display: none; }
   .interval-select--mobile { display: block; flex: 1; min-width: 0; font-size: 0.78rem; }
 
+  /* Live Chat's own mobile trigger (.coin-chat-trigger in CoinChat.css)
+     is the only entry point there — this pill calls onToggleCoinChat,
+     which only drives the desktop dock's open state and does nothing
+     on mobile's separate sheet, so it'd just be a dead button here. */
+  .chart-livechat-pill { display: none; }
+
   /* Reset row */
   .chart-reset-row {
     padding: 6px 10px;
@@ -1556,6 +1565,43 @@ html[data-theme="light"] .cap-overlay-feature {
 .chart-depth-btn--active {
   color: var(--color-primary);
   background: var(--color-primary-soft);
+}
+.chart-livechat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  min-width: 0;
+  padding: 6px 14px 6px 12px;
+  margin-left: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.chart-livechat-pill:hover {
+  border-color: var(--color-primary);
+}
+.chart-livechat-pill--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.chart-livechat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+  flex-shrink: 0;
 }
 .chart-depth-btn:active,
 .chart-screenshot-btn:active,

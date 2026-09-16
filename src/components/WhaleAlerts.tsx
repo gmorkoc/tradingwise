@@ -55,9 +55,10 @@ function isKnown(label: string): boolean {
 
 interface Props {
   btcPrice?: number;
+  coinChatOpen?: boolean;
 }
 
-export function WhaleAlerts({ btcPrice }: Props) {
+export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
   const { t } = useTranslation();
   const [notificationsEnabled] = useNotificationsEnabled();
   const notificationsEnabledRef = useRef(notificationsEnabled);
@@ -133,7 +134,11 @@ export function WhaleAlerts({ btcPrice }: Props) {
   if (!alerts.length) return null;
 
   return (
-    <div className="whale-alerts" role="status" aria-live="polite">
+    <div
+      className={`whale-alerts${coinChatOpen ? " whale-alerts--chat-open" : ""}`}
+      role="status"
+      aria-live="polite"
+    >
       {alerts.map(alert => {
         const usd = btcPrice && btcPrice > 0 ? alert.amount * btcPrice : null;
         return (

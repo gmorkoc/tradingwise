@@ -76,7 +76,7 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
       // useNotificationsEnabled.ts's cross-component toggle).
       FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {
         const data = notification.data as { type?: string; url?: string; coin?: string; commentId?: string; strategyId?: string } | undefined;
-        if (data?.type === "daily_brief" && data.url) {
+        if ((data?.type === "daily_brief" || data?.type === "breaking_news") && data.url) {
           Browser.open({ url: data.url });
         } else if (data?.type === "upgrade_reminder") {
           window.dispatchEvent(new CustomEvent("open-upgrade-modal"));

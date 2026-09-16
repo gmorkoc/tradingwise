@@ -750,6 +750,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-notif-row">
                   <div>
+                    <p className="pp-notif-label">{t("profile.notifications.breakingNews.label", "Breaking News")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.breakingNews.desc", "An urgent push for major, market-moving stories only — not routine headlines.")}</p>
+                  </div>
+                  <button type="button" role="switch" aria-checked={notifPrefValue("notify_breaking_news")}
+                    className={`pp-switch${notifPrefValue("notify_breaking_news") ? " pp-switch--on" : ""}`}
+                    onClick={() => handleNotifPrefChange("notify_breaking_news", !notifPrefValue("notify_breaking_news"))}>
+                    <span className="pp-switch-thumb" />
+                  </button>
+                </div>
+
+                <div className="pp-notif-row">
+                  <div>
                     <p className="pp-notif-label">{t("profile.notifications.priceAlerts.label", "Price Alerts")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.priceAlerts.desc", "Big BTC market moves and any price alerts you set.")}</p>
                   </div>
