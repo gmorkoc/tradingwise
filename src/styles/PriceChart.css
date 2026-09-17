@@ -62,18 +62,25 @@ html[data-theme="light"] .chart-active {
     --pc-panel-2: var(--color-surface-alt);
     --pc-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   }
+}
 
-  /* Same rounded-card shape light theme already uses below (margin,
-     padding, radius, shadow) — just this theme's own flat panel color
-     instead of light's white-sheen-gradient background. Light theme's own
-     rule is more specific (html[data-theme="light"] ...) so it keeps
-     winning there regardless of this. */
+/* Same rounded-card shape light theme uses below (margin, padding,
+   radius, shadow) at every width light's own rule applies at — no
+   min-width gate here either, otherwise the two themes would only match
+   above 769px and visibly diverge below it. Just this theme's own flat
+   panel color instead of light's white-sheen-gradient background. Light
+   theme's rule is more specific (html[data-theme="light"] ...) so it
+   keeps winning there regardless of this. */
+.chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  margin: 10px 4px 10px 10px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: none;
+  box-shadow: var(--pc-shadow);
+}
+@media (max-width: 768px) {
   .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    margin: 10px 4px 10px 10px;
-    padding: 18px 20px;
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--pc-shadow);
+    margin: 6px 2px 3px 6px;
   }
 }
 
