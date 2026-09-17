@@ -28,6 +28,13 @@ interface Props {
   // it is another "ask the parent" toggle rather than local state.
   expanded?: boolean;
   onToggleExpand?: () => void;
+  // Desktop only — whether the dock is currently open (App.tsx's
+  // showCoinChat). This component stays mounted on desktop even while
+  // closed (the dock just collapses it via CSS), so re-opening it doesn't
+  // change `comments` and wouldn't otherwise re-trigger the scroll-to-
+  // latest effect below. Mobile doesn't need this — its sheet unmounts
+  // the feed on close, so `sheetOpen` alone already covers it.
+  isOpen?: boolean;
   // Set from outside (a tapped @mention push notification, routed through
   // App.tsx) when a specific comment should be scrolled to and flashed.
   highlightCommentId?: number | null;
@@ -183,7 +190,7 @@ function useIsDesktop(): boolean {
   return isDesktop;
 }
 
-export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expanded, onToggleExpand, highlightCommentId, onHighlightDone }: Props) {
+export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expanded, onToggleExpand, isOpen, highlightCommentId, onHighlightDone }: Props) {
   const { t } = useTranslation();
   const { user, tier, profile } = useAuth();
   const isPaid = tier === "pro" || tier === "elite";
@@ -249,6 +256,24 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     if (action === "bottom") el.scrollTop = el.scrollHeight;
     else el.scrollTop += el.scrollHeight - prevScrollHeightRef.current;
   }, [comments]);
+
+  // Jump to the latest message whenever the chat is (re)opened. Mobile's
+  // sheet unmounts the feed on close, so a fresh mount already starts at
+  // scrollTop 0 — but desktop's dock stays mounted and only CSS-collapses
+  // while closed (see .coin-chat-dock--open, CoinChat.css), so `comments`
+  // doesn't change on reopen and the effect above never re-fires, leaving
+  // the reader wherever they'd scrolled to before closing it. The dock's
+  // collapse-to-height:0 also means scrollHeight isn't reliably measurable
+  // until its expand transition has actually finished, hence the delay
+  // matching CoinChat.css's `transition: height 0.22s ease`.
+  useEffect(() => {
+    if (!sheetOpen && !isOpen) return;
+    const id = setTimeout(() => {
+      const el = feedRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 240);
+    return () => clearTimeout(id);
+  }, [sheetOpen, isOpen]);
 
   // Lets other floating widgets (Daily Brief) hide themselves while the
   // mobile sheet or the full-screen reply takeover is open, instead of

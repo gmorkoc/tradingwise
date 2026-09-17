@@ -6,9 +6,9 @@
   gap: 16px;
   padding: 12px 16px;
   position: relative;
-  background: color-mix(in srgb, var(--gate-color, #818cf8) 8%, transparent);
-  border-top: 1px solid color-mix(in srgb, var(--gate-color, #818cf8) 20%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--gate-color, #818cf8) 20%, transparent);
+  background: color-mix(in srgb, var(--gate-color, #0a84ff) 8%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent);
 }
 
 .aiqw-gate-left {
@@ -53,7 +53,7 @@
   align-items: center;
   padding: 1px 5px;
   border-radius: 4px;
-  background: linear-gradient(135deg, #7c3aed, #818cf8);
+  background: linear-gradient(135deg, #bf5af2, #0a84ff);
   font-size: 0.55rem;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -171,12 +171,12 @@
   white-space: nowrap;
   letter-spacing: 0.02em;
   transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--gate-color, #818cf8) 40%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--gate-color, #0a84ff) 40%, transparent);
 }
 .aiqw-gate-btn:hover {
   opacity: 0.85;
   transform: translateY(-1px);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--gate-color, #818cf8) 60%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--gate-color, #0a84ff) 60%, transparent);
 }
 .aiqw-gate-btn:active { transform: scale(0.97); }
 .aiqw-gate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -286,7 +286,7 @@
   transition: background 0.25s;
 }
 .aiqw-pip--used {
-  background: linear-gradient(90deg, #7c3aed, #818cf8);
+  background: linear-gradient(90deg, #bf5af2, #0a84ff);
   box-shadow: 0 0 5px rgba(124, 58, 237, 0.35);
 }
 .aiqw-usage-label {

@@ -227,6 +227,14 @@ html[data-theme="light"] .chart-active .wl-strip {
   transition: opacity 0.15s;
 }
 
+/* Dark theme only — light theme's --pc-accent-soft is a near-white tint
+   (var(--color-primary-soft) over a white page), so white text there
+   would be unreadable; only dark theme's translucent tint over a dark
+   panel needs the plain-white contrast fix. */
+html:not([data-theme="light"]) .wl-add-btn {
+  color: #fff;
+}
+
 .wl-add-btn:hover { opacity: 0.8; }
 
 .wl-dropdown {
@@ -234,11 +242,23 @@ html[data-theme="light"] .chart-active .wl-strip {
   top: calc(100% + 6px);
   right: 0;
   width: 240px;
-  background: var(--pc-panel-2);
+  /* --pc-panel-2 is a ~6%-opacity tint meant to sit as a subtle overlay
+     on the solid Aurora background right behind it — fine for buttons/
+     pills, but on a FLOATING menu that needs to fully obscure whatever's
+     underneath (Daily Brief here), it was nearly see-through, so the
+     z-index fix alone didn't stop content bleeding through visually.
+     --color-card-bg is what AccountMenu.css already uses for the same
+     "opaque floating dropdown" job, so this matches that convention. */
+  background: var(--color-card-bg);
   border: 1px solid var(--pc-border);
   border-radius: 14px;
   box-shadow: 0 16px 40px var(--color-shadow);
-  z-index: 50;
+  /* Was 50 — got layered underneath Daily Brief's expanded sheet
+     (DailyBrief.css, z-index 100002) whenever both were open at once.
+     Above every other in-page panel now, but still under the account
+     menu/side drawer's 300001 (AccountMenu.css/Drawer.css), which should
+     stay the true topmost layer regardless of what else is open. */
+  z-index: 100010;
   overflow: hidden;
 }
 

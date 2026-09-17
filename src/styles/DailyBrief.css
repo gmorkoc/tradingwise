@@ -368,17 +368,6 @@ html[data-theme="light"] .chart-active .db-page {
   box-shadow: var(--pc-shadow);
 }
 
-/* Dark theme: same rounded-card shape as above, now that desktop dark
-   dropped its own frosted-glass panel look (PriceChart.css's .chart-active
-   override) in favor of the same flat, matte surface + shadow treatment
-   light theme already uses — just without light's white-sheen overlay.
-   Light theme's rule above is more specific and keeps winning there. */
-.chart-active .db-page {
-  margin: 10px 10px 10px 0;
-  border-radius: 16px;
-  box-shadow: var(--pc-shadow);
-}
-
 .db-page-head {
   flex-shrink: 0;
   display: flex;

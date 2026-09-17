@@ -50,7 +50,7 @@
 
 .onb-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #818cf8);
+  background: linear-gradient(90deg, #6366f1, #0a84ff);
   transition: width 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
@@ -102,7 +102,7 @@
 
 .onb-intro-glyph {
   font-size: 2.8rem;
-  background: linear-gradient(135deg, #6366f1, #818cf8, #a78bfa);
+  background: linear-gradient(135deg, #6366f1, #0a84ff, #a78bfa);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -297,7 +297,7 @@
   align-items: center;
   gap: 8px;
   padding: 14px 28px;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, #6366f1, #0a84ff);
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;

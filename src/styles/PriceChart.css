@@ -4,13 +4,20 @@
    regardless of site theme. Chart chrome (panels, pills, badges) sits as
    frosted glass on top rather than opaque cards. */
 .chart-active {
-  --pc-bg: radial-gradient(ellipse at 30% -10%, #322b78 0%, #17143a 45%, #0a0a1f 100%);
+  /* Flat panel color (was a radial "Aurora" gradient) — reuses the same
+     app-wide token light theme's own --pc-bg points at below, so
+     .price-chart-container and .ob-card render an identical, opaque
+     background instead of the transparent one they got from the aurora
+     gradient being removed with nothing put in its place. Text/border
+     tokens are aliased the same way so both cards' titles, muted labels
+     and dividers always match exactly, in both themes. */
+  --pc-bg: var(--color-surface-alt);
   --pc-panel: rgba(255, 255, 255, 0.035);
   --pc-panel-2: rgba(255, 255, 255, 0.06);
-  --pc-border: rgba(165, 180, 252, 0.16);
-  --pc-text: #ffffff;
-  --pc-text-secondary: #c7cbf0;
-  --pc-text-muted: #9490c0;
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-secondary: var(--color-text-secondary);
+  --pc-text-muted: var(--color-text-muted);
   --pc-accent: #818cf8;
   --pc-accent-2: #7c3aed;
   --pc-accent-soft: rgba(129, 140, 248, 0.18);
@@ -20,14 +27,27 @@
   --pc-chart-bg: #141230;
   --pc-chart-text: #9490c0;
   --pc-chart-grid: #2b2748;
-  --pc-scrim-rgb: 10, 10, 31;
+  /* rgb() of --pc-bg / --color-surface-alt (#111827) — the fullscreen
+     sticky header (.chart-fs-header-group) blends this at 75% opacity
+     over whatever's behind it, so it has to be the same hue as the flat
+     --pc-bg surrounding it (status bar strip included) or the sticky
+     band reads as a visibly different color band across the top. */
+  --pc-scrim-rgb: 17, 24, 39;
 }
 /* Aurora Glass is dark-only. Light theme keeps the app's normal colors
    (no indigo takeover) but gives its own sections a bit of separation from
    the page — a faint tinted backdrop behind white, gently rounded cards —
    so the "glossy, rounded" treatment reads without changing the palette. */
 html[data-theme="light"] .chart-active {
-  --pc-bg: var(--color-surface-alt);
+  /* --color-background (not --color-surface-alt) specifically because
+     that's the exact value confirmed by direct device measurement to be
+     what html/body render in the safe-area strip behind the status bar —
+     WebKit won't let this fullscreen view's `position:fixed` overlay
+     paint under the notch no matter what, so matching --pc-bg to that
+     value directly (rather than fixing the overlay) is what actually
+     makes the two strips read as one color. Embedded (non-fullscreen)
+     card views aren't affected — they set their own background below. */
+  --pc-bg: var(--color-background);
   --pc-panel: #ffffff;
   --pc-panel-2: #f2f4f8;
   --pc-border: var(--color-border);
@@ -69,28 +89,44 @@ html[data-theme="light"] .chart-active {
 /* Dark theme's own padding/margin was smaller than light's — same size
    change light theme makes below, without touching background/shadow/
    radius this time (those stay dark theme's usual Aurora Glass look). */
-.chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
   margin: 10px 4px 10px 10px;
   padding: 18px 20px;
 }
 @media (max-width: 768px) {
-  .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
     margin: 6px 2px 3px 6px;
+    /* The 18px 20px above was a desktop-only size match to light theme's
+       own card padding — never gated to width, so it was also leaking
+       onto phones/mobile web. Matches .ob-card's own mobile padding
+       (OrderBook.css, max-width:640px) so both panels read the same. */
+    padding: 12px 10px;
   }
 }
 
-html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+html[data-theme="light"]
+  .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
   /* Right margin trimmed — this sits right next to .ob-card, and their
      combined margins (10px + 10px) left an oversized gap between them. */
   margin: 10px 4px 10px 10px;
   padding: 18px 20px;
   border-radius: 16px;
   border: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.7) 0%,
+      rgba(255, 255, 255, 0) 90px
+    ),
+    var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
 @media (max-width: 768px) {
-  html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  html[data-theme="light"]
+    .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
     /* Right margin trimmed — on real phones (App.css's own max-width:640px
        override puts .chart-section-wrap back to row direction, "side by
        side on small phones"), this is the gap next to the resize handle
@@ -108,7 +144,9 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
    .ob-card" adjacency to trim the right margin for, so both sides match
    the same 10px inset .db-page's own right margin uses too. */
 @media (min-width: 961px) {
-  html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  html[data-theme="light"]
+    .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
     margin: 10px;
   }
 }
@@ -126,7 +164,7 @@ html[data-theme="light"] .chart-active .price-chart-container:not(.price-chart-c
 
 html[data-theme="light"] .price-chart-container:fullscreen,
 html[data-theme="light"] .price-chart-container--fs {
-  background: #f8fafc;
+  background: var(--pc-bg);
 }
 
 .chart-header-controls {
@@ -145,9 +183,7 @@ html[data-theme="light"] .price-chart-container--fs {
   padding: 5px;
   border-radius: 7px;
   flex-shrink: 0;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 
 .chart-fs-close-btn:hover {
@@ -214,6 +250,19 @@ html[data-theme="light"]
   background: var(--pc-bg);
 }
 
+/* WebKit quirk (confirmed by direct device measurement): a `position:fixed`
+   element's effective top is pushed down by the safe-area-inset-top amount
+   even with `inset: 0` / `top: 0`, and that push can't be cancelled from
+   this side (a negative `top` on the element itself just hits the same
+   floor). The strip behind the status bar/notch is never covered by this
+   element's own `background` — it's whatever `html`/`body` render
+   underneath, which is `--color-background` in both themes. So rather
+   than fighting fixed positioning, --pc-bg itself is set to that same
+   token (light theme: PriceChart.css above; dark theme already matched
+   it via --color-surface-alt being close enough there) so the fullscreen
+   panel's own background is identical to what the safe-area strip shows,
+   regardless of which one actually paints each pixel. */
+
 .price-chart-fs-scroll {
   height: 100%;
   overflow-y: scroll;
@@ -241,8 +290,15 @@ html[data-theme="light"]
 }
 
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
-html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-group {
-  background: #f8fafc;
+html[data-theme="light"]
+  .price-chart-container:fullscreen
+  .chart-fs-header-group {
+  /* Same token the container itself uses (--pc-bg) rather than a
+     hardcoded literal — this is exactly what went stale on dark theme
+     (a hardcoded scrim color that drifted from --pc-bg after a palette
+     change) and produced a visible seam under the status bar; matching
+     the token here means light theme can't develop the same bug later. */
+  background: var(--pc-bg);
 }
 
 /* Remove individual sticky from chart-header (now handled by group) */
@@ -254,11 +310,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-fs-header-grou
 }
 html[data-theme="light"] .price-chart-container--fs .chart-header,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
-  background: #f8fafc;
-}
-html[data-theme="light"] .price-chart-container--fs .chart-header,
-html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
-  background: #f8fafc;
+  background: var(--pc-bg);
 }
 
 @media (min-width: 769px) {
@@ -387,7 +439,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   white-space: nowrap;
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
@@ -402,7 +454,9 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 }
 /* Hide desktop hint on touch screens */
 @media (hover: none) {
-  .chart-dblclick-wrap::after { display: none; }
+  .chart-dblclick-wrap::after {
+    display: none;
+  }
 }
 
 .day-hl-badge {
@@ -521,34 +575,65 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   white-space: nowrap;
   transition: opacity 0.15s;
 }
-.zone-signal-gate:hover { opacity: 0.75; }
+.zone-signal-gate:hover {
+  opacity: 0.75;
+}
 
 /* Status signal colors */
 .zone-signal-gate--strong-buy,
 .zone-signal-gate--buy,
-.zone-signal-gate--oversold  { color: #4ade80; }
+.zone-signal-gate--oversold {
+  color: #4ade80;
+}
 .zone-signal-gate--strong-sell,
 .zone-signal-gate--sell,
-.zone-signal-gate--overbought { color: #fb7185; }
-.zone-signal-gate--neutral   { color: #94a3b8; }
+.zone-signal-gate--overbought {
+  color: #fb7185;
+}
+.zone-signal-gate--neutral {
+  color: #94a3b8;
+}
 
 /* Divergence colors */
-.zone-signal-gate--div-bullish { color: #4ade80; }
-.zone-signal-gate--div-bearish { color: #fb7185; }
-.zone-signal-gate--div-neutral { color: #94a3b8; }
+.zone-signal-gate--div-bullish {
+  color: #4ade80;
+}
+.zone-signal-gate--div-bearish {
+  color: #fb7185;
+}
+.zone-signal-gate--div-neutral {
+  color: #94a3b8;
+}
 
 /* Dot */
-.zone-signal-live--gate { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.zone-signal-live--gate {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .zone-signal-live--gate-strong-buy,
 .zone-signal-live--gate-buy,
-.zone-signal-live--gate-oversold  { background: #4ade80; }
+.zone-signal-live--gate-oversold {
+  background: #4ade80;
+}
 .zone-signal-live--gate-strong-sell,
 .zone-signal-live--gate-sell,
-.zone-signal-live--gate-overbought { background: #fb7185; }
-.zone-signal-live--gate-neutral   { background: #94a3b8; }
-.zone-signal-live--gate-div-bullish { background: #4ade80; }
-.zone-signal-live--gate-div-bearish { background: #fb7185; }
-.zone-signal-live--gate-div-neutral { background: #94a3b8; }
+.zone-signal-live--gate-overbought {
+  background: #fb7185;
+}
+.zone-signal-live--gate-neutral {
+  background: #94a3b8;
+}
+.zone-signal-live--gate-div-bullish {
+  background: #4ade80;
+}
+.zone-signal-live--gate-div-bearish {
+  background: #fb7185;
+}
+.zone-signal-live--gate-div-neutral {
+  background: #94a3b8;
+}
 
 .zone-signal--strong-buy {
   color: #4ade80;
@@ -632,7 +717,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   transition: background 0.15s, color 0.15s;
 }
 .chart-reset-view-btn::before {
-  content: '⤢';
+  content: "⤢";
   font-size: 0.82rem;
   line-height: 1;
 }
@@ -681,9 +766,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   border: 2px solid rgba(199, 210, 254, 0.85);
   background: #6366f1;
   font-size: 0.85rem;
-  box-shadow:
-    0 6px 18px rgba(99, 102, 241, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   animation: chart-explain-zone-glow 2.6s ease-in-out infinite 0.3s;
 }
@@ -718,14 +801,14 @@ html[data-theme="light"] .chart-explain-zone-btn__label {
 
 .chart-explain-zone-btn:hover .chart-explain-zone-btn__icon {
   transform: scale(1.1) rotate(-6deg);
-  box-shadow:
-    0 8px 22px rgba(99, 102, 241, 0.7),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 .chart-explain-zone-btn:hover .chart-explain-zone-btn__label {
   background: rgba(20, 16, 42, 0.9);
 }
-html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__label {
+html[data-theme="light"]
+  .chart-explain-zone-btn:hover
+  .chart-explain-zone-btn__label {
   background: rgba(238, 242, 255, 1);
 }
 .chart-explain-zone-btn:active .chart-explain-zone-btn__icon {
@@ -736,20 +819,23 @@ html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__
   animation: chart-explain-zone-pulse 1s ease-in-out infinite;
 }
 @keyframes chart-explain-zone-glow {
-  0%, 100% {
-    box-shadow:
-      0 6px 18px rgba(99, 102, 241, 0.5),
-      0 2px 6px rgba(0, 0, 0, 0.3);
+  0%,
+  100% {
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   }
   50% {
-    box-shadow:
-      0 6px 26px rgba(99, 102, 241, 0.85),
+    box-shadow: 0 6px 26px rgba(99, 102, 241, 0.85),
       0 2px 6px rgba(0, 0, 0, 0.3);
   }
 }
 @keyframes chart-explain-zone-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.08); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 .chart-explain-zone-btn__pro {
   position: absolute;
@@ -762,11 +848,18 @@ html[data-theme="light"] .chart-explain-zone-btn:hover .chart-explain-zone-btn__
   font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.04em;
-  box-shadow: 0 0 0 2px var(--color-card-bg, #0a0e17), inset 0 0 0 1px rgba(199, 210, 254, 0.5);
+  box-shadow: 0 0 0 2px var(--color-card-bg, #0a0e17),
+    inset 0 0 0 1px rgba(199, 210, 254, 0.5);
 }
 @keyframes chart-explain-zone-pop {
-  from { opacity: 0; transform: translateY(-10px) scale(0.85); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* "Clear" button — sits side by side with "Explain Zone" in .chart-zone-btn-row,
@@ -823,17 +916,13 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   background: #f43f5e;
   color: #fff1f2;
   font-size: 0.85rem;
-  box-shadow:
-    0 6px 18px rgba(244, 63, 94, 0.5),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 18px rgba(244, 63, 94, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .chart-clear-zone-btn:hover .chart-clear-zone-btn__icon {
   transform: scale(1.1) rotate(6deg);
-  box-shadow:
-    0 8px 22px rgba(244, 63, 94, 0.7),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 22px rgba(244, 63, 94, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -845,7 +934,9 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 }
 
 /* ── Interval pill segmented control ─────────────────────────────────────── */
-.interval-select--mobile { display: none; }
+.interval-select--mobile {
+  display: none;
+}
 
 .interval-select {
   padding: 7px 30px 7px 12px;
@@ -906,7 +997,8 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   letter-spacing: 0.02em;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.14s, border-color 0.14s, color 0.14s, box-shadow 0.14s;
+  transition: background 0.14s, border-color 0.14s, color 0.14s,
+    box-shadow 0.14s;
   user-select: none;
 }
 
@@ -940,10 +1032,12 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   line-height: 1;
   margin-top: 0.5px;
 }
-.interval-pill-trend--up   { color: #4ade80; }
-.interval-pill-trend--down { color: #fb7185; }
-
-
+.interval-pill-trend--up {
+  color: #4ade80;
+}
+.interval-pill-trend--down {
+  color: #fb7185;
+}
 
 /* light theme */
 html[data-theme="light"] .interval-pills {
@@ -962,7 +1056,11 @@ html[data-theme="light"] .interval-pill:hover {
 }
 
 html[data-theme="light"] .interval-pill--active {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(99, 102, 241, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.14) 0%,
+    rgba(99, 102, 241, 0.1) 100%
+  );
   border-color: rgba(56, 189, 248, 0.5);
   color: #0284c7;
   box-shadow: 0 2px 8px rgba(56, 189, 248, 0.15);
@@ -973,7 +1071,6 @@ html[data-theme="light"] .interval-pill--locked:hover {
   border-color: rgba(124, 58, 237, 0.3);
   color: #7c3aed;
 }
-
 
 .chart-legend {
   display: flex;
@@ -1112,7 +1209,6 @@ html[data-theme="light"] .chart-loading-overlay {
   color: var(--color-text-secondary);
 }
 
-
 /* ── AI banner placeholder (free users) ───────────────────────────────── */
 .chart-ai-placeholder {
   position: relative;
@@ -1137,7 +1233,12 @@ html[data-theme="light"] .chart-ai-placeholder {
   pointer-events: none;
 }
 html[data-theme="light"] .chart-ai-placeholder-preview {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%), var(--pc-panel);
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 40%
+    ),
+    var(--pc-panel);
 }
 
 .chart-ai-placeholder-overlay {
@@ -1233,7 +1334,6 @@ html[data-theme="light"] .cap-overlay-feature {
   border-radius: 20px;
   border: none;
   background: #818cf8;
-  box-shadow: 0 0 14px rgba(129, 140, 248, 0.4);
   color: #fff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -1245,11 +1345,14 @@ html[data-theme="light"] .cap-overlay-feature {
 
 .cap-overlay-btn:hover {
   opacity: 0.9;
-  box-shadow: 0 0 20px rgba(129, 140, 248, 0.6);
 }
 
-.cap-btn-short { display: none; }
-.cap-btn-full  { display: inline; }
+.cap-btn-short {
+  display: none;
+}
+.cap-btn-full {
+  display: inline;
+}
 
 .chart-ai-placeholder-header {
   display: flex;
@@ -1285,8 +1388,12 @@ html[data-theme="light"] .cap-overlay-feature {
   opacity: 0.7;
 }
 
-.cap-line--full { width: 100%; }
-.cap-line--three-quarter { width: 72%; }
+.cap-line--full {
+  width: 100%;
+}
+.cap-line--three-quarter {
+  width: 72%;
+}
 
 /* ─────────────────────────────────────────────────────────────────────── */
 .chart-error,
@@ -1346,14 +1453,23 @@ html[data-theme="light"] .cap-overlay-feature {
   }
 
   /* Hide desktop pills, show native select */
-  .interval-pills          { display: none; }
-  .interval-select--mobile { display: block; flex: 1; min-width: 0; font-size: 0.78rem; }
+  .interval-pills {
+    display: none;
+  }
+  .interval-select--mobile {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.78rem;
+  }
 
   /* Live Chat's own mobile trigger (.coin-chat-trigger in CoinChat.css)
      is the only entry point there — this pill calls onToggleCoinChat,
      which only drives the desktop dock's open state and does nothing
      on mobile's separate sheet, so it'd just be a dead button here. */
-  .chart-livechat-pill { display: none; }
+  .chart-livechat-pill {
+    display: none;
+  }
 
   /* Reset row */
   .chart-reset-row {
@@ -1476,8 +1592,12 @@ html[data-theme="light"] .cap-overlay-feature {
     align-self: flex-end;
   }
 
-  .cap-btn-full { display: none; }
-  .cap-btn-short { display: inline; }
+  .cap-btn-full {
+    display: none;
+  }
+  .cap-btn-short {
+    display: inline;
+  }
 }
 
 /* ── Indicators toggle + menu ────────────────────────────────────────── */
@@ -1512,7 +1632,9 @@ html[data-theme="light"] .cap-overlay-feature {
 .price-chart-container--fs .chart-legend-actions > .chart-screenshot-btn,
 .price-chart-container--fs .chart-legend-actions > .chart-fullscreen-btn,
 .price-chart-container:fullscreen .chart-legend-actions > .chart-screenshot-btn,
-.price-chart-container:fullscreen .chart-legend-actions > .chart-fullscreen-btn {
+.price-chart-container:fullscreen
+  .chart-legend-actions
+  > .chart-fullscreen-btn {
   display: none;
 }
 
@@ -1592,7 +1714,9 @@ html[data-theme="light"] .cap-overlay-feature {
     margin-top: 6px;
   }
   .price-chart-container--fs .chart-legend-actions .chart-header-controls,
-  .price-chart-container:fullscreen .chart-legend-actions .chart-header-controls {
+  .price-chart-container:fullscreen
+    .chart-legend-actions
+    .chart-header-controls {
     flex: 1;
   }
 }
@@ -1615,9 +1739,7 @@ html[data-theme="light"] .cap-overlay-feature {
   color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, background 0.15s;
 }
 .chart-icon-label {
   font-size: 0.6rem;
@@ -1649,12 +1771,21 @@ html[data-theme="light"] .cap-overlay-feature {
   gap: 4px;
 }
 .price-chart-container--fs .chart-title-actions .chart-fullscreen-btn svg,
-.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn svg {
+.price-chart-container:fullscreen
+  .chart-title-actions
+  .chart-fullscreen-btn
+  svg {
   width: 22px;
   height: 22px;
 }
-.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn .chart-icon-label,
-.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn .chart-icon-label {
+.price-chart-container--fs
+  .chart-title-actions
+  .chart-fullscreen-btn
+  .chart-icon-label,
+.price-chart-container:fullscreen
+  .chart-title-actions
+  .chart-fullscreen-btn
+  .chart-icon-label {
   font-size: 0.7rem;
 }
 
@@ -1675,10 +1806,7 @@ html[data-theme="light"] .cap-overlay-feature {
   white-space: nowrap;
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .chart-livechat-pill:hover {
   border-color: var(--color-primary);
@@ -1713,9 +1841,7 @@ html[data-theme="light"] .cap-overlay-feature {
   padding: 7px 13px;
   border-radius: 6px;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
@@ -1771,7 +1897,6 @@ html[data-theme="light"] .cap-overlay-feature {
   border-radius: 50%;
   flex-shrink: 0;
 }
-
 
 .indicators-menu-group-label {
   font-size: 0.65rem;
@@ -1847,7 +1972,12 @@ html[data-theme="light"] .cap-overlay-feature {
 html[data-theme="light"] .sub-chart-panel {
   border: none;
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 60%), var(--pc-panel);
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
 
@@ -1905,13 +2035,22 @@ html[data-theme="light"] .sub-chart-panel {
   margin-top: 16px;
   border-radius: 12px;
   border: 1px solid rgba(165, 180, 252, 0.2);
-  background: linear-gradient(135deg, rgba(129, 140, 248, 0.14), rgba(56, 189, 248, 0.06));
+  background: linear-gradient(
+    135deg,
+    rgba(129, 140, 248, 0.14),
+    rgba(56, 189, 248, 0.06)
+  );
   overflow: hidden;
 }
 html[data-theme="light"] .pattern-insight {
   border-radius: 12px;
   border: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 40%), var(--pc-panel);
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 40%
+    ),
+    var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
 
@@ -2052,7 +2191,9 @@ html[data-theme="light"] .pattern-insight {
   flex-shrink: 0;
   transition: opacity 0.15s;
 }
-.pattern-insight-elite-cta:hover { opacity: 0.85; }
+.pattern-insight-elite-cta:hover {
+  opacity: 0.85;
+}
 
 .pattern-insight-label {
   font-size: 0.68rem;
@@ -2108,12 +2249,22 @@ html[data-theme="light"] .pattern-insight {
 .pi-fade-in {
   animation: pi-fade-in 0.5s ease both;
 }
-.pi-fade-in--d1 { animation-delay: 0.12s; }
-.pi-fade-in--d2 { animation-delay: 0.24s; }
+.pi-fade-in--d1 {
+  animation-delay: 0.12s;
+}
+.pi-fade-in--d2 {
+  animation-delay: 0.24s;
+}
 
 @keyframes pi-fade-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Drawing Toolbar Row ───────────────────────────────────────────────────── */
@@ -2145,9 +2296,7 @@ html[data-theme="light"] .pattern-insight {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition:
-    opacity 0.15s,
-    transform 0.1s;
+  transition: opacity 0.15s, transform 0.1s;
   white-space: nowrap;
 }
 
@@ -2187,9 +2336,7 @@ html[data-theme="light"] .pattern-insight {
   border: 1px solid var(--color-border, #334155);
   border-radius: 5px;
   cursor: pointer;
-  transition:
-    background 0.12s,
-    color 0.12s;
+  transition: background 0.12s, color 0.12s;
   white-space: nowrap;
 }
 
@@ -2396,7 +2543,9 @@ html[data-theme="light"] .pattern-insight {
   transition: opacity 0.15s;
   white-space: nowrap;
 }
-.pi-gate-card-cta:hover { opacity: 0.85; }
+.pi-gate-card-cta:hover {
+  opacity: 0.85;
+}
 
 /* ── AI Interval Analysis gate card (compact, Pro) ───────────────────── */
 .ib-gate-card {
@@ -2473,4 +2622,6 @@ html[data-theme="light"] .pattern-insight {
   transition: opacity 0.15s;
   white-space: nowrap;
 }
-.ib-gate-card-cta:hover { opacity: 0.85; }
+.ib-gate-card-cta:hover {
+  opacity: 0.85;
+}

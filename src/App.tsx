@@ -2069,6 +2069,7 @@ function AppDashboard({
               onCloseDesktop={() => setShowCoinChat(false)}
               expanded={chatExpanded}
               onToggleExpand={() => setChatExpanded((v) => !v)}
+              isOpen={showCoinChat}
               highlightCommentId={highlightCommentId}
               onHighlightDone={() => setHighlightCommentId(null)}
             />

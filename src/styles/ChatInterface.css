@@ -333,7 +333,7 @@ html[data-theme="light"] .chat-tool-btn:hover:not(:disabled) { background: rgba(
 }
 
 .chat-send-btn:hover:not(:disabled) {
-  background: #818cf8;
+  background: #0a84ff;
   transform: scale(1.06);
 }
 

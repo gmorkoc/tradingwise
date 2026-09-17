@@ -12,7 +12,7 @@
 .aip-header {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #4f1c9e 0%, #6d28d9 35%, #7c3aed 65%, #6366f1 100%);
+  background: linear-gradient(135deg, #4f1c9e 0%, #6d28d9 35%, #bf5af2 65%, #6366f1 100%);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;

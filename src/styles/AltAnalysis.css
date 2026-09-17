@@ -36,7 +36,7 @@
   opacity: 0.12;
   filter: blur(60px);
   pointer-events: none;
-  background: var(--sector-color, #818cf8);
+  background: var(--sector-color, #0a84ff);
   z-index: 0;
 }
 
@@ -75,7 +75,7 @@
   transition: border-color 0.15s, background 0.15s;
   white-space: nowrap;
 }
-.alt-search-trigger:hover { border-color: var(--sector-color, #818cf8); }
+.alt-search-trigger:hover { border-color: var(--sector-color, #0a84ff); }
 
 .alt-search-wrap { position: relative; }
 
@@ -271,7 +271,7 @@
   width: 8px; height: 8px;
   border-radius: 50%;
   border: 2px solid var(--color-border);
-  border-top-color: var(--sector-color, #818cf8);
+  border-top-color: var(--sector-color, #0a84ff);
   animation: alt-spin 0.7s linear infinite;
   margin-left: 6px;
 }
@@ -397,20 +397,20 @@
   gap: 3px;
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--chip-color, #818cf8) 30%, var(--color-border));
-  background: color-mix(in srgb, var(--chip-color, #818cf8) 7%, var(--color-card-bg));
+  border: 1px solid color-mix(in srgb, var(--chip-color, #0a84ff) 30%, var(--color-border));
+  background: color-mix(in srgb, var(--chip-color, #0a84ff) 7%, var(--color-card-bg));
   cursor: default;
   transition: border-color 0.12s, background 0.12s;
   flex-shrink: 0;
 }
 .alt-info-chip:hover {
-  border-color: color-mix(in srgb, var(--chip-color, #818cf8) 60%, transparent);
-  background: color-mix(in srgb, var(--chip-color, #818cf8) 12%, var(--color-card-bg));
+  border-color: color-mix(in srgb, var(--chip-color, #0a84ff) 60%, transparent);
+  background: color-mix(in srgb, var(--chip-color, #0a84ff) 12%, var(--color-card-bg));
 }
 .alt-info-chip-icon {
   display: flex;
   align-items: center;
-  color: var(--chip-color, #818cf8);
+  color: var(--chip-color, #0a84ff);
   margin-bottom: 1px;
 }
 .alt-info-chip-name {
@@ -429,7 +429,7 @@
   align-items: center;
   padding: 2px 7px;
   border-radius: 5px;
-  background: linear-gradient(135deg, #7c3aed, #818cf8);
+  background: linear-gradient(135deg, #bf5af2, #0a84ff);
   font-size: 0.6rem;
   font-weight: 900;
   letter-spacing: 0.07em;

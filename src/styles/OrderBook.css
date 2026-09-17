@@ -1,7 +1,7 @@
 .ob-card {
-  background: var(--pc-panel);
-  border-left: 1px solid var(--pc-border);
-  backdrop-filter: blur(6px);
+  /* Same token .price-chart-container's own background uses (PriceChart.css)
+     so the two cards are pixel-identical in dark theme. */
+  background: var(--pc-bg);
   border-radius: 0;
   padding: 20px 16px;
   display: flex;
@@ -10,6 +10,8 @@
   height: 100%;
   box-sizing: border-box;
   position: relative;
+  margin: 10px 4px 10px 10px;
+  padding: 18px 20px;
 }
 
 html[data-theme="light"] .chart-active .ob-card {
@@ -19,7 +21,12 @@ html[data-theme="light"] .chart-active .ob-card {
   height: calc(100% - 20px);
   border-left: none;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 80px), var(--pc-panel);
+  background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0) 80px
+    ),
+    var(--pc-panel);
   box-shadow: var(--pc-shadow);
 }
 
@@ -106,7 +113,6 @@ html[data-theme="light"] .chart-active .ob-card {
   opacity: 0.7;
 }
 
-
 .ob-loading {
   flex: 1;
   display: flex;
@@ -192,8 +198,12 @@ html[data-theme="light"] .chart-active .ob-card {
   transition: width 0.35s ease;
 }
 
-.ob-fill--bid { background: #4ade80; }
-.ob-fill--ask { background: #fb7185; }
+.ob-fill--bid {
+  background: #4ade80;
+}
+.ob-fill--ask {
+  background: #fb7185;
+}
 
 /* Cells */
 .ob-cell {
@@ -206,11 +216,24 @@ html[data-theme="light"] .chart-active .ob-card {
   text-overflow: ellipsis;
 }
 
-.ob-price { font-weight: 600; }
-.ob-price--bid { color: #4ade80; }
-.ob-price--ask { color: #fb7185; }
-.ob-size { color: var(--pc-text-muted); text-align: right; }
-.ob-usd  { color: var(--pc-text-muted); text-align: right; font-size: 0.68rem; }
+.ob-price {
+  font-weight: 600;
+}
+.ob-price--bid {
+  color: #4ade80;
+}
+.ob-price--ask {
+  color: #fb7185;
+}
+.ob-size {
+  color: var(--pc-text-muted);
+  text-align: right;
+}
+.ob-usd {
+  color: var(--pc-text-muted);
+  text-align: right;
+  font-size: 0.68rem;
+}
 
 /* ── Pinned mid / spread row ─────────────────────────────────────────────── */
 
@@ -239,8 +262,13 @@ html[data-theme="light"] .chart-active .ob-card {
 }
 
 @media (max-width: 640px) {
-  .ob-card { padding: 12px 10px; }
-  .ob-filter-btn { padding: 2px 4px; font-size: 0.58rem; }
+  .ob-card {
+    padding: 12px 10px;
+  }
+  .ob-filter-btn {
+    padding: 2px 4px;
+    font-size: 0.58rem;
+  }
   html[data-theme="light"] .chart-active .ob-card {
     /* Left margin trimmed to match .price-chart-container's own trimmed
        right margin — on real phones (App.css puts .chart-section-wrap
@@ -302,7 +330,10 @@ html[data-theme="light"] .chart-active .ob-card {
   padding: 0;
   z-index: 10;
 }
-.ob-hide-btn:hover { background: var(--pc-panel-2); color: var(--pc-accent); }
+.ob-hide-btn:hover {
+  background: var(--pc-panel-2);
+  color: var(--pc-accent);
+}
 
 .ob-show-btn {
   display: none;
@@ -318,9 +349,16 @@ html[data-theme="light"] .chart-active .ob-card {
   justify-content: center;
   padding: 0;
 }
-.ob-show-btn:hover { background: var(--pc-panel-2); color: var(--pc-text); }
+.ob-show-btn:hover {
+  background: var(--pc-panel-2);
+  color: var(--pc-text);
+}
 
 @media (max-width: 640px) {
-  .ob-hide-btn { display: flex; }
-  .ob-show-btn { display: flex; }
+  .ob-hide-btn {
+    display: flex;
+  }
+  .ob-show-btn {
+    display: flex;
+  }
 }
