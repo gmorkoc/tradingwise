@@ -1540,14 +1540,6 @@ html[data-theme="light"] .cap-overlay-feature {
     min-height: 0;
   }
 
-  /* chart-header-right's base mobile rule (width:100%, further down this
-     file) is sized for the embedded view, where it holds the full
-     indicators+interval-select row. In fullscreen that content moved down
-     into chart-legend-actions instead (see chartControlsPanel in
-     PriceChart.tsx) — this now holds Exit alone, and stretching a single
-     small icon across the full row width left it floating at the far left
-     with the rest of the row empty. Pin it to the title row's right edge
-     instead, same as it reads on desktop. */
   /* Anchored to the header's true top-right corner (row 1, next to the
      price/title line) instead of sitting in normal flow below everything
      in chart-header-left — chart-header is column-direction on mobile
@@ -1579,6 +1571,21 @@ html[data-theme="light"] .cap-overlay-feature {
   .price-chart-container:fullscreen .chart-title-row .zone-signal,
   .price-chart-container:fullscreen .chart-title-row .zone-signal-gate {
     flex-basis: 100%;
+  }
+
+  /* Save + Indicators + interval row (chartControlsPanel, docked here in
+     fullscreen — see PriceChart.tsx) spans the full row instead of hugging
+     the right edge at its own content width, with some breathing room
+     above it separating it from the legend/BB-band labels. */
+  .price-chart-container--fs .chart-legend-actions,
+  .price-chart-container:fullscreen .chart-legend-actions {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 10px;
+  }
+  .price-chart-container--fs .chart-legend-actions .chart-header-controls,
+  .price-chart-container:fullscreen .chart-legend-actions .chart-header-controls {
+    flex: 1;
   }
 }
 
