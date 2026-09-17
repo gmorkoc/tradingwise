@@ -205,6 +205,16 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Dismiss-once banner introducing the MarketPulse bot — a global flag
+  // (not per-coin) since it's explaining a feature, not room-specific
+  // content; no reason to re-show it in every coin's room once seen.
+  const [showBotBanner, setShowBotBanner] = useState(
+    () => localStorage.getItem("coinchat-bot-banner-dismissed") !== "true",
+  );
+  const dismissBotBanner = () => {
+    localStorage.setItem("coinchat-bot-banner-dismissed", "true");
+    setShowBotBanner(false);
+  };
   const [marketCap, setMarketCap] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -648,6 +658,25 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
 
   const feed = (
     <div className="coin-chat-feed" ref={feedRef}>
+      {showBotBanner && (
+        <div className="coin-chat-bot-banner">
+          <span className="coin-chat-bot-banner-icon">🤖</span>
+          <p className="coin-chat-bot-banner-text">
+            {t(
+              "coinChat.botBannerText",
+              "MarketPulse posts market updates here and answers questions — tag @MarketPulse anytime.",
+            )}
+          </p>
+          <button
+            type="button"
+            className="coin-chat-bot-banner-close"
+            onClick={dismissBotBanner}
+            aria-label={t("coinChat.dismiss", "Dismiss")}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {loading ? (
         <p className="coin-chat-empty">{t("common.loading")}</p>
       ) : comments.length === 0 ? (

@@ -73,12 +73,32 @@ Deno.serve(async (req) => {
 
     const { data: comment } = await supabaseAdmin
       .from("coin_comments")
-      .select("id, coin, body, is_bot, reply_to_id")
+      .select("id, coin, body, is_bot, reply_to_id, user_id")
       .eq("id", commentId)
       .maybeSingle();
     if (!comment || comment.is_bot) return new Response("skip", { status: 200 });
 
     const botId = await getOrCreateBotId();
+
+    // Welcome takes priority over everything below — a brand-new poster
+    // gets greeted regardless of what their first message actually says,
+    // account-wide (not per-coin), so this only ever fires once per user.
+    const { count: priorCount } = await supabaseAdmin
+      .from("coin_comments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", comment.user_id)
+      .neq("id", comment.id);
+
+    if (priorCount === 0) {
+      const { error: welcomeErr } = await supabaseAdmin.from("coin_comments").insert({
+        coin: comment.coin,
+        user_id: botId,
+        body: `👋 Welcome to the room! I'm ${BOT_USERNAME} — I post market updates here and answer questions. Tag @${BOT_USERNAME} anytime to ask about price, recent moves, or market data.`,
+        reply_to_id: comment.id,
+      });
+      if (welcomeErr) throw new Error(welcomeErr.message);
+      return new Response("welcomed", { status: 200 });
+    }
 
     // A reply INSIDE the bot's own thread counts as addressed to it
     // regardless of phrasing — "thanks", "no I meant ETH", etc. wouldn't
