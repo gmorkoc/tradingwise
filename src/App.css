@@ -2,26 +2,34 @@
   box-sizing: border-box;
 }
 
+/* Dark theme values follow Apple's Human Interface Guidelines dark-mode
+   palette (developer.apple.com/design/human-interface-guidelines/dark-mode)
+   — same token names/structure as before ("our guide"), just the actual
+   values swapped for HIG's system colors: true black systemBackground
+   rather than an indigo-tinted one, secondary/tertiarySystemBackground for
+   surfaces, label/secondaryLabel/tertiaryLabel opacities for text, and
+   systemBlue/systemGreen/systemRed's dark-mode variants for accent colors.
+   Light theme is untouched. */
 :root {
-  --color-background: #070c18;
-  --color-surface: #0f172a;
-  --color-surface-alt: #111827;
-  --color-surface-strong: #141b2d;
-  --color-text: #edf2f7;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #7c8ba8;
-  --color-primary: #38bdf8;
-  --color-primary-soft: rgba(56, 189, 248, 0.16);
-  --color-success: #22c55e;
-  --color-danger: #fb7185;
-  --color-border: rgba(148, 163, 184, 0.16);
-  --color-shadow: rgba(15, 23, 42, 0.45);
-  --color-header-bg: rgba(8, 14, 26, 0.96);
-  --color-header-border: rgba(255, 255, 255, 0.05);
-  --color-card-bg: rgba(15, 23, 42, 0.95);
-  --color-input-bg: rgba(15, 23, 42, 0.8);
+  --color-background: #000000;
+  --color-surface: #1c1c1e;
+  --color-surface-alt: #2c2c2e;
+  --color-surface-strong: #3a3a3c;
+  --color-text: #ffffff;
+  --color-text-secondary: rgba(235, 235, 245, 0.6);
+  --color-text-muted: rgba(235, 235, 245, 0.3);
+  --color-primary: #0a84ff;
+  --color-primary-soft: rgba(10, 132, 255, 0.16);
+  --color-success: #30d158;
+  --color-danger: #ff453a;
+  --color-border: rgba(84, 84, 88, 0.6);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-header-bg: rgba(28, 28, 30, 0.96);
+  --color-header-border: rgba(255, 255, 255, 0.08);
+  --color-card-bg: rgba(28, 28, 30, 0.95);
+  --color-input-bg: rgba(44, 44, 46, 0.8);
   --color-msg-assistant-bg: rgba(255, 255, 255, 0.08);
-  --color-msg-assistant-text: #e2e8f0;
+  --color-msg-assistant-text: #f2f2f7;
 }
 
 html[data-theme="light"] {
