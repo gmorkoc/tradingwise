@@ -201,6 +201,25 @@ html[data-theme="light"]
   background: var(--pc-bg);
 }
 
+/* The notch/Dynamic Island strip painted --pc-bg (this component's own
+   Aurora-Glass chart background, unrelated to the rest of the app) instead
+   of matching the same safe-area-view convention every other full-height
+   screen uses (.app-shell-body in App.css: --color-card-bg painted behind
+   the inset, so it reads as one continuous surface with whatever sits
+   right below it instead of a seam). Referencing that same token here
+   instead of introducing a chart-specific color for just this strip. */
+.price-chart-container--fs::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--native-safe-area-top, env(safe-area-inset-top));
+  background: var(--color-card-bg);
+  z-index: 1;
+  pointer-events: none;
+}
+
 .price-chart-fs-scroll {
   height: 100%;
   overflow-y: scroll;
