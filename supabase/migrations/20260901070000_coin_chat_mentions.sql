@@ -50,6 +50,7 @@ alter table public.mention_notifications enable row level security;
 
 -- No insert/update policy for authenticated at all — only the trigger
 -- (SECURITY DEFINER) and the edge function (service role) ever write here.
+drop policy if exists "users can see their own mentions" on public.mention_notifications;
 create policy "users can see their own mentions"
   on public.mention_notifications for select
   to authenticated

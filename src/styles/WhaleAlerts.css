@@ -1,23 +1,16 @@
 .whale-alerts {
   position: fixed;
-  /* Clears the Live Chat dock's collapsed bar (bottom:0, 52px tall)
-     sitting in the same corner — see .coin-chat-dock in CoinChat.css. */
-  bottom: 130px;
-  right: 28px;
+  /* Bottom-left now — the Live Chat dock lives in the opposite (bottom-
+     right) corner, so this no longer needs to dodge its collapsed/expanded
+     height the way it did sharing the right corner with it. */
+  bottom: 28px;
+  left: 28px;
   z-index: 998;
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
   pointer-events: none;
   transition: bottom 0.22s ease;
-}
-
-/* The dock's expanded height (see .coin-chat-dock--open/max-height in
-   CoinChat.css) reaches much higher than its collapsed bar — hop above
-   it too while it's open, so a whale alert never lands on top of the
-   chat panel or its composer/Post button. */
-.whale-alerts--chat-open {
-  bottom: calc(min(640px, 75vh) + 16px);
 }
 
 .whale-alert {
@@ -38,8 +31,8 @@
 }
 
 @keyframes whale-slide-in {
-  from { opacity: 0; transform: translateX(18px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(0)     scale(1);   }
+  from { opacity: 0; transform: translateX(-18px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)      scale(1);   }
 }
 
 .whale-alert-main {

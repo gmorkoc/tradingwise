@@ -77,6 +77,11 @@ export async function postCoinComment(
   // failure here shouldn't surface as the comment itself having failed.
   supabase.functions.invoke("notify-mention", { body: { commentId: data.id } }).catch(() => {});
 
+  // Same fire-and-forget pattern — market-pulse-reply itself decides
+  // whether this comment was actually addressed to the bot (a no-op for
+  // most messages), so it's cheap to call unconditionally here.
+  supabase.functions.invoke("market-pulse-reply", { body: { commentId: data.id } }).catch(() => {});
+
   return data as CoinComment;
 }
 

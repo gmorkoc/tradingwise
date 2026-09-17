@@ -14,16 +14,19 @@ create index if not exists coin_comment_likes_user_idx on public.coin_comment_li
 
 alter table public.coin_comment_likes enable row level security;
 
+drop policy if exists "users can see their own likes" on public.coin_comment_likes;
 create policy "users can see their own likes"
   on public.coin_comment_likes for select
   to authenticated
   using (auth.uid() = user_id);
 
+drop policy if exists "authenticated users can like a comment" on public.coin_comment_likes;
 create policy "authenticated users can like a comment"
   on public.coin_comment_likes for insert
   to authenticated
   with check (auth.uid() = user_id);
 
+drop policy if exists "users can remove their own like" on public.coin_comment_likes;
 create policy "users can remove their own like"
   on public.coin_comment_likes for delete
   to authenticated

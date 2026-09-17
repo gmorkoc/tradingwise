@@ -141,21 +141,51 @@ html[data-theme="light"] .coin-chat-dock {
   color: var(--pc-danger);
 }
 
-.coin-chat-close {
+.coin-chat-close,
+.coin-chat-refresh,
+.coin-chat-expand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
   color: var(--pc-text-secondary);
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
-  padding: 6px;
+  padding: 0;
   border-radius: 8px;
   flex-shrink: 0;
+  transition: transform 0.12s ease, color 0.15s, background 0.15s;
 }
 
-.coin-chat-close:hover {
+.coin-chat-close:hover,
+.coin-chat-refresh:hover,
+.coin-chat-expand-toggle:hover {
   color: var(--pc-text);
   background: var(--pc-panel-2);
+}
+
+.coin-chat-expand-toggle:active {
+  transform: scale(0.85);
+}
+
+.coin-chat-refresh:disabled {
+  cursor: default;
+}
+
+.coin-chat-refresh:active {
+  transform: scale(0.85);
+}
+
+.coin-chat-refresh--spinning {
+  animation: coin-chat-refresh-spin 0.6s linear infinite;
+}
+
+@keyframes coin-chat-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .coin-chat-feed {
@@ -739,6 +769,20 @@ html:not([data-theme="light"]) .coin-chat-dock {
   height: 640px;
 }
 
+/* Stretches the dock from a fixed 16px below the top of the viewport down
+   to the bottom bar, instead of the usual capped 640px/75vh — top (not a
+   taller explicit height) so it naturally tracks viewport size on resize. */
+.coin-chat-dock--expanded {
+  top: 16px;
+  height: auto;
+  max-height: none;
+}
+.coin-chat-dock--expanded .coin-chat-card {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
 /* Content dropped into the dock — no background/border of its own, the
    dock supplies that chrome (same convention as .side-panel .wl-card). */
 /* Explicit height (not flex:1/min-height:0) so the collapsed state is
@@ -865,6 +909,26 @@ html[data-theme="light"] .coin-chat-reply-modal {
   --pc-accent-soft: var(--color-primary-soft);
   --pc-success: var(--color-success);
   --pc-danger: var(--color-danger);
+}
+
+/* Desktop: docked inline in the card where the composer normally sits,
+   not a full-viewport takeover — that treatment only makes sense on
+   mobile, where there's no persistent chat panel to dock into. */
+.coin-chat-reply-modal--inline {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  border-top: 1px solid var(--pc-border);
+}
+.coin-chat-reply-modal--inline .coin-chat-reply-header {
+  padding: 10px 16px;
+}
+.coin-chat-reply-modal--inline .coin-chat-reply-compose {
+  flex: none;
+  padding: 0 16px 16px;
 }
 
 .coin-chat-reply-header {

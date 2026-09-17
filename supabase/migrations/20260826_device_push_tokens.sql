@@ -13,6 +13,7 @@ create index if not exists device_push_tokens_user_id_idx
 
 alter table public.device_push_tokens enable row level security;
 
+drop policy if exists "Users manage their own push tokens" on public.device_push_tokens;
 create policy "Users manage their own push tokens"
   on public.device_push_tokens
   for all

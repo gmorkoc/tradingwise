@@ -2,7 +2,10 @@
 -- Nullable at the column level only because existing accounts predate
 -- this and can't retroactively be assigned one automatically.
 alter table public.profiles
-  add column if not exists username text,
+  add column if not exists username text;
+
+alter table public.profiles drop constraint if exists username_format;
+alter table public.profiles
   add constraint username_format check (username is null or username ~ '^[A-Za-z0-9_]{3,20}$');
 
 -- Case-insensitive uniqueness — "Alice" and "alice" are the same handle.

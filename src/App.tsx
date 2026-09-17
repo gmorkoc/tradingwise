@@ -404,6 +404,10 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("coinchat-visible", String(showCoinChat));
   }, [showCoinChat]);
+  // Desktop-only: stretches the floating dock to near full viewport height
+  // instead of its usual capped 640px. Not persisted — always starts
+  // collapsed, same as every other transient UI toggle in this file.
+  const [chatExpanded, setChatExpanded] = useState(false);
 
   const [coin, setCoin] = useState<CoinSymbol>(
     () => (localStorage.getItem("coin") as CoinSymbol) || "BTC",
@@ -2056,13 +2060,15 @@ function AppDashboard({
 
         {activeSection === "chart" && (
           <aside
-            className={`coin-chat-dock${showCoinChat ? " coin-chat-dock--open" : ""}`}
+            className={`coin-chat-dock${showCoinChat ? " coin-chat-dock--open" : ""}${chatExpanded ? " coin-chat-dock--expanded" : ""}`}
           >
             <CoinChat
               coin={coin}
               onOpenAuth={onOpenAuth}
               onOpenUpgrade={onOpenUpgrade}
               onCloseDesktop={() => setShowCoinChat(false)}
+              expanded={chatExpanded}
+              onToggleExpand={() => setChatExpanded((v) => !v)}
               highlightCommentId={highlightCommentId}
               onHighlightDone={() => setHighlightCommentId(null)}
             />

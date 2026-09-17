@@ -100,16 +100,13 @@ html[data-theme="light"] .lp-root {
      breathing room, while the bottom had its full 12px, looking lopsided. */
   padding: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 12px) 32px 12px;
   min-height: 60px;
-  border-bottom: 1px solid var(--lp-header-border);
-  position: sticky;
+  position: absolute;
   top: 0;
   z-index: 100;
-  background: var(--lp-header-bg);
-  backdrop-filter: blur(14px);
+  background: transparent;
+  border: 0;
+  width: 100%;
 }
-/* White header sits apart from the dark page below it, so nav content
-   reads from its own dark-on-white palette rather than the page's
-   white-on-dark --lp-text/--lp-border tokens. */
 .lp-nav-logo {
   display: flex;
   align-items: center;
@@ -963,10 +960,10 @@ html[data-theme="light"] .lp-root {
 
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .lp-hero { padding: 52px 20px 60px; }
+  .lp-hero { padding: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 90px) 20px 60px; }
   .lp-hero-split { flex-direction: column; gap: 8px; }
   .lp-hero-text {
-    flex-basis: auto; text-align: center; padding: 0 20px 32px;
+    flex-basis: auto; width: 100%; text-align: center; padding: 0 20px 32px;
   }
   .lp-hero-text .lp-hero-sub { margin-left: auto; margin-right: auto; }
   .lp-hero-actions { justify-content: center; }

@@ -16,6 +16,7 @@ create index if not exists account_events_user_id_created_at_idx
 
 alter table public.account_events enable row level security;
 
+drop policy if exists "Users can view their own account events" on public.account_events;
 create policy "Users can view their own account events"
   on public.account_events for select
   using (auth.uid() = user_id);

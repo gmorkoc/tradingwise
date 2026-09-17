@@ -18,6 +18,7 @@ create index if not exists price_alerts_pending_idx
 
 alter table public.price_alerts enable row level security;
 
+drop policy if exists "Users manage their own price alerts" on public.price_alerts;
 create policy "Users manage their own price alerts"
   on public.price_alerts
   for all

@@ -2377,6 +2377,254 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     link.click();
   };
 
+  // Indicators dropdown + interval pills — rendered beside the title normally,
+  // but relocated into the legend row (with Save/Exit) in fullscreen so all
+  // chart controls live in one place instead of splitting across two rows.
+  const chartControlsPanel = (
+    <div className="chart-header-controls">
+      {isFullscreen && (
+        <button
+          className="chart-screenshot-btn"
+          onClick={handleScreenshot}
+          title="Save chart as PNG"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+          <span className="chart-icon-label">{t("chart.save")}</span>
+        </button>
+      )}
+      <div className="indicators-menu-wrapper" ref={menuRef}>
+        <button
+          className={`indicators-toggle${menuOpen ? " indicators-toggle--active" : ""}`}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          ◈ {t("chart.indicators")} {menuOpen ? "▴" : "▾"}
+        </button>
+        {menuOpen && (
+          <div className="indicators-menu">
+            <div className="indicators-menu-group-label">
+              {t("chart.overlays")}
+            </div>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showBB}
+                onChange={(e) => setShowBB(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "rgba(251,113,133,0.85)" }}
+              />
+              <span>{t("chart.bollingerBands")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showEMA20}
+                onChange={(e) => setShowEMA20(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#4ade80" }}
+              />
+              <span>{t("chart.ema20")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showEMA50}
+                onChange={(e) => setShowEMA50(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#fb923c" }}
+              />
+              <span>{t("chart.ema50")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showEMA200}
+                onChange={(e) => setShowEMA200(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#c084fc" }}
+              />
+              <span>{t("chart.ema200")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showMA20}
+                onChange={(e) => setShowMA20(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#818cf8" }}
+              />
+              <span>{t("chart.ma20")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showMA50}
+                onChange={(e) => setShowMA50(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#f472b6" }}
+              />
+              <span>{t("chart.ma50")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showMA200}
+                onChange={(e) => setShowMA200(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#facc15" }}
+              />
+              <span>{t("chart.ma200")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showCME}
+                onChange={(e) => setShowCME(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "rgba(251,191,36,0.85)" }}
+              />
+              <span>{t("chart.cmeGaps")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showGann}
+                onChange={(e) => {
+                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                  setShowGann(e.target.checked);
+                }}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#f97316" }}
+              />
+              <span>Gann Pivots</span>
+              <span className="tier-badge tier-badge--pro">P</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showFib}
+                onChange={(e) => {
+                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                  setShowFib(e.target.checked);
+                }}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "rgba(251,191,36,0.85)" }}
+              />
+              <span>Fibonacci Levels</span>
+              <span className="tier-badge tier-badge--pro">P</span>
+            </label>
+            <div className="indicators-menu-divider" />
+            <div className="indicators-menu-group-label">
+              {t("chart.subcharts")}
+            </div>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showRSI}
+                onChange={(e) => setShowRSI(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#818cf8" }}
+              />
+              <span>{t("chart.rsi14")}</span>
+            </label>
+            <label className="indicators-menu-item">
+              <input
+                type="checkbox"
+                checked={showMACD}
+                onChange={(e) => setShowMACD(e.target.checked)}
+              />
+              <span
+                className="indicators-menu-dot"
+                style={{ background: "#f97316" }}
+              />
+              <span>{t("chart.macd1269")}</span>
+            </label>
+          </div>
+        )}
+      </div>
+      {/* Desktop: fancy pill buttons */}
+      <div className="interval-pills">
+        {INTERVALS.map((opt) => {
+          const needsPro = PRO_INTERVALS.has(opt);
+          const locked   = needsPro && !isPaid;
+          const trend    = trends[opt];
+          return (
+            <button
+              key={opt}
+              className={`interval-pill${interval === opt ? " interval-pill--active" : ""}${locked ? " interval-pill--locked" : ""}`}
+              title={INTERVAL_LABELS[opt]}
+              onClick={() => {
+                if (locked) { onOpenUpgrade?.("pro"); return; }
+                setInterval(opt);
+              }}
+            >
+              {INTERVAL_SHORT[opt]}
+              {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile: native dropdown */}
+      <select
+        className="interval-select interval-select--mobile"
+        value={interval}
+        onChange={(e) => {
+          const val = e.target.value as TimeInterval;
+          if (PRO_INTERVALS.has(val) && !isPaid) { onOpenUpgrade?.("pro"); return; }
+          setInterval(val);
+        }}
+      >
+        {INTERVALS.map((opt) => {
+          const needsPro = PRO_INTERVALS.has(opt);
+          const trend    = trends[opt];
+          const arrow    = trend === "bullish" ? " ↑" : trend === "bearish" ? " ↓" : "";
+          const pro      = needsPro ? " · PRO" : "";
+          return (
+            <option key={opt} value={opt}>
+              {INTERVAL_LABELS[opt]}{arrow}{pro}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
@@ -2427,53 +2675,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     Unlock Status
                   </button>
                 )}
-                {isFullscreen && (
-                  <div className="chart-title-actions">
-                    <button
-                      className="chart-screenshot-btn"
-                      onClick={handleScreenshot}
-                      title="Save chart as PNG"
-                    >
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                        <circle cx="12" cy="13" r="4" />
-                      </svg>
-                      <span className="chart-icon-label">
-                        {t("chart.save")}
-                      </span>
-                    </button>
-                    <button
-                      className="chart-fullscreen-btn"
-                      onClick={toggleFullscreen}
-                      title="Exit fullscreen"
-                    >
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
-                      </svg>
-                      <span className="chart-icon-label">
-                        {t("chart.exit")}
-                      </span>
-                    </button>
-                  </div>
-                )}
               </div>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
@@ -2523,226 +2724,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             </div>
             <div className="chart-header-right">
-              <div className="chart-header-controls">
-                <div className="indicators-menu-wrapper" ref={menuRef}>
+              {!isFullscreen && chartControlsPanel}
+              {isFullscreen && (
+                <div className="chart-title-actions">
                   <button
-                    className={`indicators-toggle${menuOpen ? " indicators-toggle--active" : ""}`}
-                    onClick={() => setMenuOpen((v) => !v)}
+                    className="chart-fullscreen-btn"
+                    onClick={toggleFullscreen}
+                    title="Exit fullscreen"
                   >
-                    ◈ {t("chart.indicators")} {menuOpen ? "▴" : "▾"}
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+                    </svg>
+                    <span className="chart-icon-label">
+                      {t("chart.exit")}
+                    </span>
                   </button>
-                  {menuOpen && (
-                    <div className="indicators-menu">
-                      <div className="indicators-menu-group-label">
-                        {t("chart.overlays")}
-                      </div>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showBB}
-                          onChange={(e) => setShowBB(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "rgba(251,113,133,0.85)" }}
-                        />
-                        <span>{t("chart.bollingerBands")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showEMA20}
-                          onChange={(e) => setShowEMA20(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#4ade80" }}
-                        />
-                        <span>{t("chart.ema20")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showEMA50}
-                          onChange={(e) => setShowEMA50(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#fb923c" }}
-                        />
-                        <span>{t("chart.ema50")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showEMA200}
-                          onChange={(e) => setShowEMA200(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#c084fc" }}
-                        />
-                        <span>{t("chart.ema200")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showMA20}
-                          onChange={(e) => setShowMA20(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#818cf8" }}
-                        />
-                        <span>{t("chart.ma20")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showMA50}
-                          onChange={(e) => setShowMA50(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#f472b6" }}
-                        />
-                        <span>{t("chart.ma50")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showMA200}
-                          onChange={(e) => setShowMA200(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#facc15" }}
-                        />
-                        <span>{t("chart.ma200")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showCME}
-                          onChange={(e) => setShowCME(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "rgba(251,191,36,0.85)" }}
-                        />
-                        <span>{t("chart.cmeGaps")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showGann}
-                          onChange={(e) => {
-                            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                            setShowGann(e.target.checked);
-                          }}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#f97316" }}
-                        />
-                        <span>Gann Pivots</span>
-                        <span className="tier-badge tier-badge--pro">P</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showFib}
-                          onChange={(e) => {
-                            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                            setShowFib(e.target.checked);
-                          }}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "rgba(251,191,36,0.85)" }}
-                        />
-                        <span>Fibonacci Levels</span>
-                        <span className="tier-badge tier-badge--pro">P</span>
-                      </label>
-                      <div className="indicators-menu-divider" />
-                      <div className="indicators-menu-group-label">
-                        {t("chart.subcharts")}
-                      </div>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showRSI}
-                          onChange={(e) => setShowRSI(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#818cf8" }}
-                        />
-                        <span>{t("chart.rsi14")}</span>
-                      </label>
-                      <label className="indicators-menu-item">
-                        <input
-                          type="checkbox"
-                          checked={showMACD}
-                          onChange={(e) => setShowMACD(e.target.checked)}
-                        />
-                        <span
-                          className="indicators-menu-dot"
-                          style={{ background: "#f97316" }}
-                        />
-                        <span>{t("chart.macd1269")}</span>
-                      </label>
-                    </div>
-                  )}
                 </div>
-                {/* Desktop: fancy pill buttons */}
-                <div className="interval-pills">
-                  {INTERVALS.map((opt) => {
-                    const needsPro = PRO_INTERVALS.has(opt);
-                    const locked   = needsPro && !isPaid;
-                    const trend    = trends[opt];
-                    return (
-                      <button
-                        key={opt}
-                        className={`interval-pill${interval === opt ? " interval-pill--active" : ""}${locked ? " interval-pill--locked" : ""}`}
-                        title={INTERVAL_LABELS[opt]}
-                        onClick={() => {
-                          if (locked) { onOpenUpgrade?.("pro"); return; }
-                          setInterval(opt);
-                        }}
-                      >
-                        {INTERVAL_SHORT[opt]}
-                        {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                          : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                          : null}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Mobile: native dropdown */}
-                <select
-                  className="interval-select interval-select--mobile"
-                  value={interval}
-                  onChange={(e) => {
-                    const val = e.target.value as TimeInterval;
-                    if (PRO_INTERVALS.has(val) && !isPaid) { onOpenUpgrade?.("pro"); return; }
-                    setInterval(val);
-                  }}
-                >
-                  {INTERVALS.map((opt) => {
-                    const needsPro = PRO_INTERVALS.has(opt);
-                    const trend    = trends[opt];
-                    const arrow    = trend === "bullish" ? " ↑" : trend === "bearish" ? " ↓" : "";
-                    const pro      = needsPro ? " · PRO" : "";
-                    return (
-                      <option key={opt} value={opt}>
-                        {INTERVAL_LABELS[opt]}{arrow}{pro}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+              )}
             </div>
           </div>
 
@@ -2761,6 +2768,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </>
             )}
             <div className="chart-legend-actions">
+              {isFullscreen && chartControlsPanel}
               <button
                 className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                 onClick={() => {

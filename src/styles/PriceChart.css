@@ -977,7 +977,10 @@ html[data-theme="light"] .interval-pill--locked:hover {
 .chart-legend {
   display: flex;
   gap: 16px;
-  align-items: center;
+  /* flex-end, not center — the legend text and the (taller) action buttons
+     don't share a height, so center-aligning left them with uneven gaps to
+     whatever sits below this row depending on which side you looked at. */
+  align-items: flex-end;
   margin-bottom: 12px;
   flex-wrap: wrap;
   min-height: 28px;
@@ -1492,25 +1495,33 @@ html[data-theme="light"] .cap-overlay-feature {
   display: none;
 }
 
-/* Inline Save/Exit in title row — mobile fullscreen only */
+/* Save/Exit stay pinned in the top row in fullscreen; Indicators/Intervals
+   relocate down into chart-legend-actions instead, so the legend row's own
+   Save/Exit copies would just be duplicates. */
 .chart-title-actions {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 4px;
-  margin-left: auto;
+}
+
+/* Direct-child selector only — the legend row's OWN native Save/Exit
+   buttons sit right in .chart-legend-actions, but the new Save button
+   (next to Indicators) lives nested inside chart-header-controls and must
+   stay visible. */
+.price-chart-container--fs .chart-legend-actions > .chart-screenshot-btn,
+.price-chart-container--fs .chart-legend-actions > .chart-fullscreen-btn,
+.price-chart-container:fullscreen .chart-legend-actions > .chart-screenshot-btn,
+.price-chart-container:fullscreen .chart-legend-actions > .chart-fullscreen-btn {
+  display: none;
+}
+
+/* Live Chat has no place in fullscreen. */
+.price-chart-container--fs .chart-livechat-pill,
+.price-chart-container:fullscreen .chart-livechat-pill {
+  display: none;
 }
 
 @media (max-width: 768px) {
-  .price-chart-container--fs .chart-title-actions,
-  .price-chart-container:fullscreen .chart-title-actions {
-    display: flex;
-  }
-
-  .price-chart-container--fs .chart-title-row,
-  .price-chart-container:fullscreen .chart-title-row {
-    width: 100%;
-  }
-
   .price-chart-container--fs .price-chart-fs-scroll,
   .price-chart-container:fullscreen .price-chart-fs-scroll {
     padding-top: 0;
@@ -1527,13 +1538,6 @@ html[data-theme="light"] .cap-overlay-feature {
   .price-chart-container:fullscreen .chart-legend {
     margin-bottom: 0;
     min-height: 0;
-  }
-
-  .price-chart-container--fs .chart-legend-actions .chart-screenshot-btn,
-  .price-chart-container--fs .chart-legend-actions .chart-fullscreen-btn,
-  .price-chart-container:fullscreen .chart-legend-actions .chart-screenshot-btn,
-  .price-chart-container:fullscreen .chart-legend-actions .chart-fullscreen-btn {
-    display: none;
   }
 }
 
@@ -1576,6 +1580,28 @@ html[data-theme="light"] .cap-overlay-feature {
   color: var(--color-primary);
   background: var(--color-primary-soft);
 }
+
+/* Exit reads as the primary fullscreen control now that it's pinned alone
+   in the top row, so it gets a bigger tap target than the compact icon row
+   it came from. Scoped to .chart-title-actions only — the Save button that
+   now sits next to Indicators shares that row's stretch-aligned flex line,
+   so enlarging it there would inflate Indicators/Intervals' height too. */
+.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn,
+.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn {
+  min-width: 46px;
+  padding: 6px 10px;
+  gap: 4px;
+}
+.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn svg,
+.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn svg {
+  width: 22px;
+  height: 22px;
+}
+.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn .chart-icon-label,
+.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn .chart-icon-label {
+  font-size: 0.7rem;
+}
+
 .chart-livechat-pill {
   display: flex;
   align-items: center;

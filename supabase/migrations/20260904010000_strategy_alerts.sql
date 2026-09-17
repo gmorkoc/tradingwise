@@ -21,6 +21,7 @@ create index if not exists strategy_alerts_enabled_idx
 
 alter table public.strategy_alerts enable row level security;
 
+drop policy if exists "Users manage their own strategy alerts" on public.strategy_alerts;
 create policy "Users manage their own strategy alerts"
   on public.strategy_alerts
   for all
@@ -48,6 +49,7 @@ alter table public.strategy_fires enable row level security;
 
 -- Read-only for users: only the cron (service role) ever writes fires,
 -- unlike strategy_alerts which users own end-to-end.
+drop policy if exists "Users view their own strategy fires" on public.strategy_fires;
 create policy "Users view their own strategy fires"
   on public.strategy_fires
   for select

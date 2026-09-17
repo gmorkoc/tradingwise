@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
@@ -23,6 +23,11 @@ interface Props {
   // the parent's side-panel dock (same pattern as Watchlist), so closing
   // from inside the panel just asks the parent to collapse it.
   onCloseDesktop?: () => void;
+  // Same reasoning as onCloseDesktop — the dock's height is a class on
+  // App.tsx's <aside>, not something this component renders, so expanding
+  // it is another "ask the parent" toggle rather than local state.
+  expanded?: boolean;
+  onToggleExpand?: () => void;
   // Set from outside (a tapped @mention push notification, routed through
   // App.tsx) when a specific comment should be scrolled to and flashed.
   highlightCommentId?: number | null;
@@ -178,7 +183,7 @@ function useIsDesktop(): boolean {
   return isDesktop;
 }
 
-export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, highlightCommentId, onHighlightDone }: Props) {
+export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expanded, onToggleExpand, highlightCommentId, onHighlightDone }: Props) {
   const { t } = useTranslation();
   const { user, tier, profile } = useAuth();
   const isPaid = tier === "pro" || tier === "elite";
@@ -199,6 +204,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const [flashId, setFlashId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [marketCap, setMarketCap] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number | null>(null);
   const [logoError, setLogoError] = useState(false);
@@ -218,6 +224,21 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   const onHighlightDoneRef = useRef(onHighlightDone);
   useEffect(() => { onHighlightDoneRef.current = onHighlightDone; }, [onHighlightDone]);
   const highlightFetchAttempted = useRef<number | null>(null);
+  // Chat reads newest-at-bottom (like a messaging app), not newest-at-top —
+  // "bottom" snaps to the latest message (initial load, a fresh message
+  // arriving while already near the bottom), "preserve" keeps the reader's
+  // position anchored when older history gets prepended above them instead
+  // of yanking them back down to the newest message.
+  const scrollActionRef = useRef<"bottom" | "preserve" | null>(null);
+  const prevScrollHeightRef = useRef(0);
+  useEffect(() => {
+    const el = feedRef.current;
+    const action = scrollActionRef.current;
+    scrollActionRef.current = null;
+    if (!el || !action) return;
+    if (action === "bottom") el.scrollTop = el.scrollHeight;
+    else el.scrollTop += el.scrollHeight - prevScrollHeightRef.current;
+  }, [comments]);
 
   // Lets other floating widgets (Daily Brief) hide themselves while the
   // mobile sheet or the full-screen reply takeover is open, instead of
@@ -290,6 +311,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
 
     fetchCoinComments(coin, PAGE_SIZE).then((rows) => {
       if (cancelled) return;
+      scrollActionRef.current = "bottom";
       setComments(rows);
       setHasMore(rows.length === PAGE_SIZE);
       setLoading(false);
@@ -304,24 +326,71 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
 
     const channel = subscribeToCoinComments(
       coin,
-      (comment) => setComments((prev) => (prev.some((c) => c.id === comment.id) ? prev : [comment, ...prev])),
+      (comment) => {
+        const el = feedRef.current;
+        const nearBottom = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+        setComments((prev) => {
+          if (prev.some((c) => c.id === comment.id)) return prev;
+          if (nearBottom) scrollActionRef.current = "bottom";
+          return [comment, ...prev];
+        });
+      },
       (id) => setComments((prev) => prev.filter((c) => c.id !== id))
     );
 
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
   }, [coin, user?.id]);
 
+  // Manual refresh — realtime (subscribeToCoinComments above) covers the
+  // common case, but a dropped/reconnecting websocket can leave the feed
+  // stale with no visible indication, so this is a plain re-fetch of the
+  // first page rather than anything realtime-specific.
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    const start = Date.now();
+    try {
+      const rows = await fetchCoinComments(coin, PAGE_SIZE);
+      scrollActionRef.current = "bottom";
+      setComments(rows);
+      setHasMore(rows.length === PAGE_SIZE);
+      if (user) {
+        const ids = await fetchMyLikedCommentIds(user.id, rows.map((r) => r.id));
+        setLikedIds(ids);
+      }
+    } finally {
+      // A local/cached response can resolve in a few ms — floor the spin
+      // to one full rotation so the click always visibly registers instead
+      // of just flickering.
+      const elapsed = Date.now() - start;
+      if (elapsed < 600) await new Promise((r) => setTimeout(r, 600 - elapsed));
+      setRefreshing(false);
+    }
+  }, [coin, user]);
+
   // Older comments are only fetched once the user actually scrolls toward
   // them — comments is DESC (newest first, oldest last) and loadMore
   // appends, so it stays that way across pages. Cursor is the oldest
   // loaded comment's created_at, not an offset (see fetchCoinComments).
+  // Rendered newest-at-bottom (see the feed map below), so "toward them"
+  // means scrolling up, and appended rows land visually above the reader
+  // instead of below — scrollActionRef "preserve" (set below) keeps their
+  // position anchored instead of the browser's default of leaving scrollTop
+  // unchanged, which would otherwise yank the view down as content grows
+  // above it.
   const loadMore = async () => {
     const { comments: current, hasMore: more, loadingMore: inFlight } = pageStateRef.current;
     if (inFlight || !more) return;
     const oldest = current[current.length - 1]?.created_at;
     if (!oldest) return;
+    // Captured before the "loading…" row renders (not just before
+    // setComments) so the delta below covers that row's own height too —
+    // it's gone again by the time this effect reads scrollHeight (loadingMore
+    // flips false in the same batch as setComments/setHasMore), so leaving
+    // it out of the baseline would misjudge the total height change.
+    prevScrollHeightRef.current = feedRef.current?.scrollHeight ?? 0;
     setLoadingMore(true);
     const rows = await fetchCoinComments(coin, PAGE_SIZE, oldest);
+    scrollActionRef.current = "preserve";
     setComments((prev) => [...prev, ...rows]);
     setHasMore(rows.length === PAGE_SIZE);
     setLoadingMore(false);
@@ -331,7 +400,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     const el = feedRef.current;
     if (!el) return;
     const onScroll = () => {
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 200) loadMore();
+      if (el.scrollTop < 200) loadMore();
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
@@ -497,9 +566,10 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
     requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(pos, pos); });
   };
 
-  // Group into one-level threads: top-level comments in feed order, each
-  // with its own replies (oldest first, like reading down a thread).
-  const topLevelComments = comments.filter((c) => !c.reply_to_id);
+  // Group into one-level threads. comments is DESC (newest first) — reversed
+  // here so the feed reads top-to-bottom oldest-to-newest, chat-style, with
+  // the latest message at the bottom instead of the top.
+  const topLevelComments = [...comments].filter((c) => !c.reply_to_id).reverse();
   const repliesByParent = new Map<number, CoinComment[]>();
   for (const c of comments) {
     if (!c.reply_to_id) continue;
@@ -597,6 +667,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         </div>
       ) : (
         <>
+          {loadingMore && <p className="coin-chat-empty">{t("common.loading")}</p>}
           {topLevelComments.map((c) => {
             const replies = repliesByParent.get(c.id);
             return (
@@ -610,7 +681,6 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
               </Fragment>
             );
           })}
-          {loadingMore && <p className="coin-chat-empty">{t("common.loading")}</p>}
         </>
       )}
     </div>
@@ -682,8 +752,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
   // fixed` descendants resolve against THAT box instead of the real
   // viewport, so nesting this inside the sheet left the status-bar area
   // uncovered. Escaping to <body> sidesteps that regardless of ancestors.
-  const replyModal = replyTarget && createPortal(
-    <div className="coin-chat-reply-modal" ref={replyModalRef}>
+  const replyContent = replyTarget && (
+    <div className={`coin-chat-reply-modal${isDesktop ? " coin-chat-reply-modal--inline" : ""}`} ref={replyModalRef}>
       <div className="coin-chat-reply-header">
         <button type="button" className="coin-chat-reply-cancel" onClick={closeReply}>
           {t("coinChat.cancel", "Cancel")}
@@ -711,9 +781,17 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
         <Avatar url={profile?.avatar_url} fallback={initials(profile?.username ?? "?")} className={`coin-chat-avatar cc-tier--${tier}`} />
         {composer}
       </div>
-    </div>,
-    document.body
+    </div>
   );
+
+  // Desktop keeps this docked inline in the card (no portal, no full-
+  // screen takeover — see coin-chat-reply-modal--inline in CoinChat.css).
+  // Mobile keeps the X/Twitter-style full-screen portal: .coin-chat-panel
+  // has a CSS transform for its slide animation, and a transform on any
+  // ancestor makes `position: fixed` descendants resolve against that box
+  // instead of the real viewport, so nesting this inside the sheet left
+  // the status-bar area uncovered. Escaping to <body> sidesteps that.
+  const replyModal = replyTarget && (isDesktop ? replyContent : createPortal(replyContent, document.body));
 
   // Desktop: plain content dropped into the parent's side-panel dock — no
   // trigger/backdrop/self-close, the aside wrapper in App.tsx owns visibility.
@@ -734,6 +812,33 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
               </div>
             )}
           </div>
+          <button
+            type="button"
+            className={`coin-chat-refresh${refreshing ? " coin-chat-refresh--spinning" : ""}`}
+            onClick={refresh}
+            disabled={refreshing}
+            aria-label={t("coinChat.refresh", "Refresh")}
+            title={t("coinChat.refresh", "Refresh")}
+          >
+            ↻
+          </button>
+          <button
+            type="button"
+            className="coin-chat-expand-toggle"
+            onClick={() => onToggleExpand?.()}
+            aria-label={expanded ? t("coinChat.collapse", "Collapse") : t("coinChat.expandChat", "Expand")}
+            title={expanded ? t("coinChat.collapse", "Collapse") : t("coinChat.expandChat", "Expand")}
+          >
+            {expanded ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 14h6v6M20 10h-6V4M14 14l7 7M10 10L3 3" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+              </svg>
+            )}
+          </button>
           <button type="button" className="coin-chat-close" onClick={() => onCloseDesktop?.()} aria-label="Close">✕</button>
         </div>
         <CoinMarketMood coin={coin} />
@@ -778,6 +883,16 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, high
                 </div>
               )}
             </div>
+            <button
+              type="button"
+              className={`coin-chat-refresh${refreshing ? " coin-chat-refresh--spinning" : ""}`}
+              onClick={refresh}
+              disabled={refreshing}
+              aria-label={t("coinChat.refresh", "Refresh")}
+              title={t("coinChat.refresh", "Refresh")}
+            >
+              ↻
+            </button>
             <button type="button" className="coin-chat-close" onClick={() => setSheetOpen(false)} aria-label="Close">✕</button>
           </div>
           <CoinMarketMood coin={coin} />

@@ -44,6 +44,7 @@ create trigger stamp_comment_author_trigger
 
 alter table public.coin_comments enable row level security;
 
+drop policy if exists "authenticated users can read coin comments" on public.coin_comments;
 create policy "authenticated users can read coin comments"
   on public.coin_comments for select
   to authenticated
@@ -51,6 +52,7 @@ create policy "authenticated users can read coin comments"
 
 -- with_check re-validates tier defensively even though the trigger already
 -- enforces it — belt and suspenders on a public-write table.
+drop policy if exists "pro and elite members can post coin comments" on public.coin_comments;
 create policy "pro and elite members can post coin comments"
   on public.coin_comments for insert
   to authenticated
@@ -59,6 +61,7 @@ create policy "pro and elite members can post coin comments"
     and exists (select 1 from public.profiles p where p.id = auth.uid() and p.tier in ('pro', 'elite'))
   );
 
+drop policy if exists "users can delete their own coin comments" on public.coin_comments;
 create policy "users can delete their own coin comments"
   on public.coin_comments for delete
   to authenticated
@@ -84,6 +87,7 @@ create table if not exists public.comment_reports (
 
 alter table public.comment_reports enable row level security;
 
+drop policy if exists "authenticated users can report a comment" on public.comment_reports;
 create policy "authenticated users can report a comment"
   on public.comment_reports for insert
   to authenticated
