@@ -1548,10 +1548,37 @@ html[data-theme="light"] .cap-overlay-feature {
      small icon across the full row width left it floating at the far left
      with the rest of the row empty. Pin it to the title row's right edge
      instead, same as it reads on desktop. */
+  /* Anchored to the header's true top-right corner (row 1, next to the
+     price/title line) instead of sitting in normal flow below everything
+     in chart-header-left — chart-header is column-direction on mobile
+     (base rule further down), so as a plain flex sibling Exit would land
+     below the whole title/status/H-L stack instead of beside its top. */
+  .price-chart-container--fs .chart-header,
+  .price-chart-container:fullscreen .chart-header {
+    position: relative;
+  }
   .price-chart-container--fs .chart-header-right,
   .price-chart-container:fullscreen .chart-header-right {
+    position: absolute;
+    top: 0;
+    right: 0;
     width: auto;
-    margin-left: auto;
+    margin-left: 0;
+  }
+  .price-chart-container--fs .chart-header-left,
+  .price-chart-container:fullscreen .chart-header-left {
+    padding-right: 48px;
+  }
+
+  /* Status (the Overbought/Oversold zone badge) reads as its own row,
+     after the price+LIVE line and before the 24H high/low stats — same
+     wrapping flex row as before, just forced onto a new line rather than
+     crowding onto the price line. */
+  .price-chart-container--fs .chart-title-row .zone-signal,
+  .price-chart-container--fs .chart-title-row .zone-signal-gate,
+  .price-chart-container:fullscreen .chart-title-row .zone-signal,
+  .price-chart-container:fullscreen .chart-title-row .zone-signal-gate {
+    flex-basis: 100%;
   }
 }
 
