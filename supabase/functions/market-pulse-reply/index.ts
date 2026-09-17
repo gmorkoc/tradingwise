@@ -37,8 +37,8 @@ async function getMarketSnapshot(coin: string): Promise<MarketSnapshot | null> {
 // Grounds the reply in real fetched data rather than letting the model
 // guess a price — the system prompt explicitly forbids inventing numbers,
 // and the only numbers it's given are the ones getMarketSnapshot fetched.
-async function generateReply(coin: string, question: string, market: MarketSnapshot | null): Promise<string | null> {
-  if (!OPENAI_API_KEY) return null;
+async function generateReply(coin: string, question: string, market: MarketSnapshot | null): Promise<{ text: string | null; debug: string }> {
+  if (!OPENAI_API_KEY) return { text: null, debug: "no OPENAI_API_KEY in env" };
   const context = market
     ? `Current ${coin} price: $${market.price.toLocaleString()}. 24h change: ${market.changePct24h >= 0 ? "+" : ""}${market.changePct24h.toFixed(2)}%.`
     : `No live price data available for ${coin} right now.`;
@@ -57,11 +57,12 @@ async function generateReply(coin: string, question: string, market: MarketSnaps
         ],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { text: null, debug: `openai http ${res.status}: ${(await res.text()).slice(0, 300)}` };
     const json = await res.json();
-    return (json.choices?.[0]?.message?.content ?? "").trim() || null;
-  } catch {
-    return null;
+    const text = (json.choices?.[0]?.message?.content ?? "").trim() || null;
+    return { text, debug: text ? "ok" : `empty content: ${JSON.stringify(json).slice(0, 300)}` };
+  } catch (e) {
+    return { text: null, debug: `exception: ${e instanceof Error ? e.message : String(e)}` };
   }
 }
 
@@ -98,8 +99,8 @@ Deno.serve(async (req) => {
     }
 
     const market = await getMarketSnapshot(comment.coin);
-    const reply = await generateReply(comment.coin, comment.body, market);
-    if (!reply) return new Response("no reply generated", { status: 200 });
+    const { text: reply, debug } = await generateReply(comment.coin, comment.body, market);
+    if (!reply) return new Response(`no reply generated: ${debug}`, { status: 200 });
 
     const { error } = await supabaseAdmin.from("coin_comments").insert({
       coin: comment.coin,
