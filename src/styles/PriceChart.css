@@ -1565,7 +1565,14 @@ html[data-theme="light"] .cap-overlay-feature {
   /* Status (the Overbought/Oversold zone badge) reads as its own row,
      after the price+LIVE line and before the 24H high/low stats — same
      wrapping flex row as before, just forced onto a new line rather than
-     crowding onto the price line. */
+     crowding onto the price line. row-gap kept separate from column-gap
+     so the price/LIVE line's own horizontal spacing stays as-is while the
+     gap down to this wrapped row (and, to match, down to the Save row
+     below) is tighter. */
+  .price-chart-container--fs .chart-title-row,
+  .price-chart-container:fullscreen .chart-title-row {
+    row-gap: 6px;
+  }
   .price-chart-container--fs .chart-title-row .zone-signal,
   .price-chart-container--fs .chart-title-row .zone-signal-gate,
   .price-chart-container:fullscreen .chart-title-row .zone-signal,
@@ -1575,13 +1582,13 @@ html[data-theme="light"] .cap-overlay-feature {
 
   /* Save + Indicators + interval row (chartControlsPanel, docked here in
      fullscreen — see PriceChart.tsx) spans the full row instead of hugging
-     the right edge at its own content width, with some breathing room
-     above it separating it from the legend/BB-band labels. */
+     the right edge at its own content width. Same 6px above it as
+     title-to-status, for a consistent stack instead of a bigger jump here. */
   .price-chart-container--fs .chart-legend-actions,
   .price-chart-container:fullscreen .chart-legend-actions {
     width: 100%;
     margin-left: 0;
-    margin-top: 10px;
+    margin-top: 6px;
   }
   .price-chart-container--fs .chart-legend-actions .chart-header-controls,
   .price-chart-container:fullscreen .chart-legend-actions .chart-header-controls {
