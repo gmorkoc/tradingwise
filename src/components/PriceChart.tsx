@@ -1056,13 +1056,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     ? isFullscreen
       ? "#0f172a"
       : "#475569"
-    : "#9490c0";
+    : "#8e8e93";
   const gridColor = isLight
     ? isFullscreen
       ? "#94a3b8"
       : "#e2e8f0"
-    : "#2b2748";
-  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#141230";
+    : "#38383a";
+  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#1c1c1e";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -1329,22 +1329,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         layout: {
           background: {
             type: ColorType.Solid,
-            color: isLight ? "#ffffff" : "#141230",
+            color: isLight ? "#ffffff" : "#1c1c1e",
           },
-          textColor: isLight ? "#475569" : "#9490c0",
+          textColor: isLight ? "#475569" : "#8e8e93",
         },
         grid: {
           vertLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)",
           },
           horzLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
+            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)",
           },
         },
         crosshair: { mode: 1 },
-        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#2b2748" },
+        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#38383a" },
         timeScale: {
-          borderColor: isLight ? "#e2e8f0" : "#2b2748",
+          borderColor: isLight ? "#e2e8f0" : "#38383a",
           timeVisible: true,
           secondsVisible: false,
         },
