@@ -215,7 +215,14 @@ html[data-theme="light"]
   left: 0;
   right: 0;
   height: var(--native-safe-area-top, env(safe-area-inset-top));
-  background: var(--color-card-bg);
+  /* --color-card-bg is translucent (rgba, ~0.9-0.95 alpha) — over
+     .app-shell-body's flat --color-background it reads as solid, but
+     directly over this chart's own colorful Aurora-Glass gradient it just
+     blended into a washed-out haze instead. Painting --color-background
+     as an opaque base underneath first reproduces the same look this
+     token has everywhere else, regardless of what's actually behind it. */
+  background-color: var(--color-background);
+  background-image: linear-gradient(var(--color-card-bg), var(--color-card-bg));
   z-index: 1;
   pointer-events: none;
 }
