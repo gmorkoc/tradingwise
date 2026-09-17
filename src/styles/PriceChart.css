@@ -49,6 +49,21 @@ html[data-theme="light"] .chart-active {
   --pc-scrim-rgb: 255, 255, 255;
 }
 
+/* Desktop dark theme drops the Aurora Glass treatment (radial gradient
+   background + translucent frosted-glass panels) for a flat, matte look
+   consistent with the rest of the app's dark surfaces — mobile/iOS keeps
+   Aurora Glass as-is. Same panels/shadow tokens the whole .chart-active
+   tree (this file, CoinChat, OrderBook, etc.) already reads from, so
+   overriding them here is enough without touching each component. */
+@media (min-width: 769px) {
+  .chart-active {
+    --pc-bg: var(--color-background);
+    --pc-panel: var(--color-surface);
+    --pc-panel-2: var(--color-surface-alt);
+    --pc-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
 /* Subtle top-edge sheen for light-theme section cards — layered directly
    into each card's own `background` (a gradient layer over the flat panel
    color) rather than a separate ::before overlay. A positioned pseudo-
