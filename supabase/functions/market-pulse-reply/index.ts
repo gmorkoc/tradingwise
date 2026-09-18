@@ -20,12 +20,14 @@ const corsHeaders = {
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const BINANCE_BASE = "https://data-api.binance.vision/api/v3";
 
-const QUESTION_STARTERS = /^(how|what|when|where|why|who|is|are|does|do|can|could|will|would|should)\b/i;
-
+// Explicit @mention only — this used to also fire on anything ending in
+// "?" or starting with a question word ("how", "what", "is", ...), which
+// meant the bot was chiming in on every question in the room, not just
+// ones actually directed at it. Replying inside its own thread and an
+// attached image are still separate, deliberate triggers (checked where
+// this is called), just no longer a bare question-shaped sentence.
 function looksAddressedToBot(body: string): boolean {
-  const t = body.trim();
-  if (new RegExp(`@${BOT_USERNAME}\\b`, "i").test(t)) return true;
-  return t.endsWith("?") || QUESTION_STARTERS.test(t);
+  return new RegExp(`@${BOT_USERNAME}\\b`, "i").test(body.trim());
 }
 
 interface MarketSnapshot {
