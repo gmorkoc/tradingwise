@@ -13,6 +13,7 @@ export interface CoinComment {
   reply_to_id: number | null;
   avatar_url: string | null;
   is_bot: boolean;
+  image_url: string | null;
 }
 
 const BODY_MAX = 500;
@@ -61,13 +62,15 @@ export async function fetchCommentById(id: number): Promise<CoinComment | null> 
 // migration) from the poster's own profile row — never trusted from here,
 // so there's nothing to pass but the coin and the message itself.
 export async function postCoinComment(
-  coin: string, userId: string, body: string, replyToId?: number | null
+  coin: string, userId: string, body: string, replyToId?: number | null, imageUrl?: string | null
 ): Promise<CoinComment> {
-  const trimmed = body.trim().slice(0, BODY_MAX);
+  // An image-only post is allowed (same default the old standalone AI
+  // Chat used) — everything else still requires real text.
+  const trimmed = body.trim().slice(0, BODY_MAX) || (imageUrl ? "Please analyse this image." : "");
   if (!trimmed) throw new Error("Comment can't be empty.");
   const { data, error } = await supabase
     .from("coin_comments")
-    .insert({ coin, user_id: userId, body: trimmed, reply_to_id: replyToId ?? null })
+    .insert({ coin, user_id: userId, body: trimmed, reply_to_id: replyToId ?? null, image_url: imageUrl ?? null })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -84,6 +87,25 @@ export async function postCoinComment(
   supabase.functions.invoke("market-pulse-reply", { body: { commentId: data.id } }).catch(() => {});
 
   return data as CoinComment;
+}
+
+// One object per upload at a random filename inside the poster's own
+// folder (never overwritten, unlike the avatars bucket's one-per-user
+// flat path — see uploadAvatar in supabase.ts) — a user can attach many
+// chat images over time, each its own message. RLS on chat-images only
+// allows writing into a folder matching the caller's own uid (see
+// 20260918200000_chat_image_uploads.sql), enforced independently of
+// this client code.
+export async function uploadChatImage(userId: string, file: Blob, contentType: string): Promise<string> {
+  const ext = contentType.split("/")[1] ?? "jpg";
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error: uploadError } = await supabase.storage
+    .from("chat-images")
+    .upload(path, file, { contentType });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 // Composer @mention autocomplete.

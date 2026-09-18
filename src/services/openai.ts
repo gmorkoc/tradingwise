@@ -8,11 +8,6 @@ import { supabase } from './supabase';
 // coinglass.ts's BN_BASE.
 const API_BASE = Capacitor.isNativePlatform() ? 'https://www.coinhintz.io' : '';
 
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
 interface ChatResponse {
   success: boolean;
   message: string;
@@ -68,47 +63,6 @@ export async function callOpenAI(body: object): Promise<any> {
 }
 
 export const openai = {
-  chat: async (
-    userMessage: string,
-    btcData?: Partial<BTCData> | null,
-    previousMessages: ChatMessage[] = [],
-    images?: string[]
-  ): Promise<ChatResponse> => {
-    try {
-      let systemMessage = 'You are a helpful AI assistant analyzing cryptocurrency market data and charts. When images are provided, perform detailed technical analysis on them. ';
-      if (btcData) {
-        systemMessage += `Current BTC Data: Price: $${btcData.price?.toFixed(2)}, `;
-        systemMessage += `Liquidation Above: $${btcData.liquidationAbove?.toFixed(2)}, `;
-        systemMessage += `Liquidation Below: $${btcData.liquidationBelow?.toFixed(2)}, `;
-        systemMessage += `Open Interest: ${btcData.openInterest?.toFixed(2)}, `;
-        systemMessage += `Funding Rate: ${btcData.fundingRate?.toFixed(4)}, `;
-        systemMessage += `Long/Short Ratio: ${btcData.longShortRatio?.toFixed(2)}, `;
-        systemMessage += `RSI: ${btcData.rsi?.toFixed(1)}, `;
-        systemMessage += `MACD: ${btcData.macd?.toFixed(2)}`;
-      }
-      systemMessage += ' Provide analysis and predictions based on this data.';
-
-      const userContent = images?.length
-        ? [
-            { type: 'text', text: userMessage || 'Please analyse this image.' },
-            ...images.map(url => ({ type: 'image_url', image_url: { url, detail: 'auto' } })),
-          ]
-        : userMessage;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const messages: any[] = [
-        { role: 'system', content: systemMessage },
-        ...previousMessages,
-        { role: 'user', content: userContent },
-      ];
-
-      const data = await callOpenAI({ model: 'gpt-4o', messages, temperature: 0.7, max_tokens: 1500 });
-      return { success: true, message: data?.choices?.[0]?.message?.content || '' };
-    } catch (error: any) {
-      return { success: false, message: '', error: error.message || 'Failed to get response from ChatGPT' };
-    }
-  },
-
   getPricePrediction: async (btcData: Partial<BTCData>, fearGreed?: FearGreedData): Promise<PredictionResponse> => {
     try {
       const liqMid = btcData.liquidationAbove != null && btcData.liquidationBelow != null
@@ -743,8 +697,6 @@ export async function getTabInsight(input: TabInsightInput): Promise<{ success: 
     return { success: false, error: err.message || "Failed" };
   }
 }
-
-export type { ChatMessage, ChatResponse };
 
 // ── Chart Prediction (for PriceChart overlay) ─────────────────────────────
 

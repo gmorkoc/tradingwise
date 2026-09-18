@@ -671,6 +671,79 @@ html[data-theme="light"] .coin-chat-dock {
   cursor: default;
 }
 
+.coin-chat-composer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coin-chat-attach-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--pc-border);
+  background: var(--pc-panel-2);
+  color: var(--pc-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.coin-chat-attach-btn:hover:not(:disabled) {
+  color: var(--pc-accent);
+  border-color: var(--pc-accent);
+}
+.coin-chat-attach-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.coin-chat-image-preview {
+  position: relative;
+  width: fit-content;
+}
+.coin-chat-image-preview img {
+  max-width: 140px;
+  max-height: 100px;
+  border-radius: 10px;
+  border: 1px solid var(--pc-border);
+  display: block;
+  object-fit: cover;
+}
+.coin-chat-image-preview-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--pc-border);
+  background: var(--color-card-bg);
+  color: var(--pc-text);
+  font-size: 0.6rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Posted image attachment, inside a message bubble — capped size so a
+   full-resolution chart screenshot doesn't dominate the whole feed. */
+.coin-chat-comment-image {
+  display: block;
+  max-width: 220px;
+  max-height: 220px;
+  width: auto;
+  border-radius: 10px;
+  border: 1px solid var(--pc-border);
+  margin: 4px 0 2px;
+  cursor: pointer;
+  object-fit: cover;
+}
+
 .coin-chat-error {
   margin: 6px 2px 0;
   font-size: 0.72rem;

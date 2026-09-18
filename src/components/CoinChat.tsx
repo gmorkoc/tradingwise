@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { COINS, fetchCoinMarketCaps, fetchCoinChanges24h } from "../services/coinglass";
 import {
   fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
-  likeComment, unlikeComment, fetchMyLikedCommentIds,
+  likeComment, unlikeComment, fetchMyLikedCommentIds, uploadChatImage,
   subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
@@ -217,6 +217,12 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
+  // Pending image attachment — file kept for upload-on-post, previewUrl is
+  // a local object URL so the composer can show it immediately without
+  // waiting on a network round trip (matches the old standalone AI Chat's
+  // image-preview UX, see removed ChatInterface.tsx).
+  const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
@@ -245,6 +251,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const panelRef = useRef<HTMLDivElement>(null);
   const replyModalRef = useRef<HTMLDivElement>(null);
   const composerInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   // Always-current snapshot for the scroll listener below, so it doesn't
   // need comments/hasMore/loadingMore in its effect deps (which would mean
@@ -539,13 +546,38 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     <div className="coin-chat-logo coin-chat-logo--fallback">{coin[0]}</div>
   );
 
+  // Revokes the local preview URL so it doesn't leak — safe to call
+  // whether or not one is currently set.
+  const clearPendingImage = () => {
+    setPendingImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl);
+      return null;
+    });
+  };
+
+  const handleImageSelect = (file: File | undefined) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    clearPendingImage();
+    setPendingImage({ file, previewUrl: URL.createObjectURL(file) });
+  };
+
   const handlePost = async () => {
-    if (!user || !draft.trim() || posting) return;
+    if (!user || (!draft.trim() && !pendingImage) || posting) return;
     setPosting(true); setError("");
     try {
-      await postCoinComment(coin, user.id, draft, replyToId);
+      let imageUrl: string | null = null;
+      if (pendingImage) {
+        setUploadingImage(true);
+        try {
+          imageUrl = await uploadChatImage(user.id, pendingImage.file, pendingImage.file.type);
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+      await postCoinComment(coin, user.id, draft, replyToId, imageUrl);
       setDraft("");
       setReplyTarget(null);
+      clearPendingImage();
     } catch (e: any) {
       setError(e.message ?? t("coinChat.postFailed"));
     }
@@ -678,6 +710,14 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             </span>
           )}
         </p>
+        {c.image_url && (
+          <img
+            src={c.image_url}
+            alt=""
+            className="coin-chat-comment-image"
+            onClick={() => window.open(c.image_url!, "_blank")}
+          />
+        )}
         <div className="coin-chat-comment-actions-row">
           <button type="button" className="coin-chat-action-btn" onClick={() => openReply(c)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -770,7 +810,21 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
           <button type="button" className="coin-chat-upgrade-pill" onClick={() => onOpenUpgrade?.("pro")}>{t("coinChat.upgrade")}</button>
         </div>
       ) : (
-        <div className="coin-chat-input-row">
+        <div className="coin-chat-composer-inner">
+          {pendingImage && (
+            <div className="coin-chat-image-preview">
+              <img src={pendingImage.previewUrl} alt="" />
+              <button
+                type="button"
+                className="coin-chat-image-preview-remove"
+                onClick={clearPendingImage}
+                aria-label="Remove image"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <div className="coin-chat-input-row">
           {mentionQuery !== null && mentionResults.length > 0 && (
             <div className="coin-chat-mention-menu">
               {mentionResults.map((name, i) => (
@@ -787,6 +841,26 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             </div>
           )}
           <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: "none" }}
+            onChange={(e) => { handleImageSelect(e.target.files?.[0]); e.target.value = ""; }}
+          />
+          <button
+            type="button"
+            className="coin-chat-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={posting}
+            title="Attach image for MarketPulse to analyze"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+          </button>
+          <input
             ref={composerInputRef}
             className="coin-chat-input"
             value={draft}
@@ -794,7 +868,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               setDraft(e.target.value);
               setMentionQuery(currentMentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length));
             }}
-            placeholder={t("coinChat.placeholder", { coin })}
+            placeholder={pendingImage ? t("coinChat.placeholderImage", "Ask about the image…") : t("coinChat.placeholder", { coin })}
             maxLength={COIN_COMMENT_MAX_LENGTH}
             onKeyDown={(e) => {
               const mentionOpen = mentionQuery !== null && mentionResults.length > 0;
@@ -816,9 +890,10 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               }
             }}
           />
-          <button type="button" className="coin-chat-send" onClick={handlePost} disabled={posting || !draft.trim()}>
-            {t("coinChat.post")}
+          <button type="button" className="coin-chat-send" onClick={handlePost} disabled={posting || uploadingImage || (!draft.trim() && !pendingImage)}>
+            {uploadingImage ? "…" : t("coinChat.post")}
           </button>
+          </div>
         </div>
       )}
       {error && <p className="coin-chat-error">{error}</p>}
@@ -840,7 +915,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
         <button type="button" className="coin-chat-reply-cancel" onClick={closeReply}>
           {t("coinChat.cancel", "Cancel")}
         </button>
-        <button type="button" className="coin-chat-reply-post" onClick={handlePost} disabled={posting || !draft.trim()}>
+        <button type="button" className="coin-chat-reply-post" onClick={handlePost} disabled={posting || uploadingImage || (!draft.trim() && !pendingImage)}>
           {t("coinChat.post")}
         </button>
       </div>

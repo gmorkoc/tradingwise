@@ -18,7 +18,6 @@ import { CATALOG } from "./services/coinCatalog";
 import { fetchBinancePrices } from "./services/binancePrices";
 import { consumePendingCoinMention } from "./services/pushNotifications";
 import { initWebPushMessageRouting } from "./services/webPush";
-import { ChatInterface } from "./components/ChatInterface";
 import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
 import { LearnSection } from "./components/LearnSection";
@@ -372,9 +371,8 @@ function AppDashboard({
   const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
     () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? "market",
   );
-  // Same convention as ChatInterface.tsx/CoinChat.tsx's own useIsDesktop —
-  // gates the AI Chat nav item to desktop-width web (mobile web keeps no
-  // entry point to that panel, same as before).
+  // Same convention as CoinChat.tsx's own useIsDesktop — desktop web
+  // relocates the account menu into .top-nav-bar instead of the nav drawer.
   const [isDesktopWidth, setIsDesktopWidth] = useState(() => window.matchMedia("(min-width: 641px)").matches);
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 641px)");
@@ -1310,25 +1308,6 @@ function AppDashboard({
                 />
               </div>
 
-              {/* ChatInterface itself decides what to render (see its render
-                  further down) — this nav item is its only trigger now, on
-                  iOS or desktop web. Mobile web still has no entry point. */}
-              {(Capacitor.getPlatform() === "ios" || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
-                <button
-                  className="icon-strip-btn"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent("open-ai-chat"));
-                    setMobileNavOpen(false);
-                  }}
-                  title={t("nav.aiChat")}
-                >
-                  <span className="nav-icon-wrap">
-                    <NavIcon d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                  </span>
-                  <span className="icon-strip-label">{t("nav.aiChat")}</span>
-                </button>
-              )}
-
               <button
                 className="icon-strip-btn"
                 onClick={() => {
@@ -1401,29 +1380,6 @@ function AppDashboard({
                   onOpenProfile={() => setProfileOpen(true)}
                   iconFallback
                 />
-                <button
-                  className="top-nav-icon-btn"
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat"))}
-                  title={t("nav.aiChat")}
-                >
-                  <svg
-                    width="26"
-                    height="26"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.55"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 8V4H8" />
-                    <rect width="16" height="12" x="4" y="8" rx="2" />
-                    <path d="M2 14h2" />
-                    <path d="M20 14h2" />
-                    <path d="M15 13v2" />
-                    <path d="M9 13v2" />
-                  </svg>
-                </button>
                 <button
                   className="top-nav-icon-btn"
                   onClick={() => setDrawerOpen(true)}
@@ -2105,12 +2061,6 @@ function AppDashboard({
             </button>
           </aside>
         )}
-
-        {/* Mounted on both iOS and web — ChatInterface decides what to
-            actually render itself: iOS opens it via the nav item's
-            open-ai-chat event (no FAB there), web desktop gets the
-            floating FAB back, mobile web renders nothing. */}
-        <ChatInterface btcData={btcData} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
 
         {coinPickerOpen &&
           ReactDOM.createPortal(

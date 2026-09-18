@@ -3,8 +3,9 @@ import { supabaseAdmin, getOrCreateBotId, BOT_USERNAME } from "../_shared/market
 // Invoked by the client right after a comment posts (see postCoinComment in
 // src/services/coinChat.ts) — same fire-and-forget pattern as notify-mention.
 // Only actually replies when the message looks addressed to the bot
-// (@mention or a question); every other comment is a cheap no-op so the
-// bot doesn't chime in on every "lol" or "nice" in the room.
+// (@mention, a question, or has an image attached); every other comment
+// is a cheap no-op so the bot doesn't chime in on every "lol" or "nice"
+// in the room.
 
 // Every other function in this project has this guard (see notify-mention)
 // — missing it here meant every browser CORS preflight (OPTIONS) hit
@@ -50,23 +51,41 @@ async function getMarketSnapshot(coin: string): Promise<MarketSnapshot | null> {
 // price-target *predictions* are a deliberate exception: the model is
 // explicitly allowed (encouraged, even) to give a short, opinionated,
 // clearly-speculative take when asked, reasoned off that same real data.
-async function generateReply(coin: string, question: string, market: MarketSnapshot | null): Promise<{ text: string | null; debug: string }> {
+//
+// imageUrl (chart screenshot etc.) switches to gpt-4o — mini doesn't do
+// vision — and adds it as an image_url content part, same request shape
+// the old standalone AI Chat panel used (removed ChatInterface.tsx /
+// services/openai.ts's openai.chat) before this capability moved here.
+async function generateReply(
+  coin: string, question: string, market: MarketSnapshot | null, imageUrl?: string | null
+): Promise<{ text: string | null; debug: string }> {
   if (!OPENAI_API_KEY) return { text: null, debug: "no OPENAI_API_KEY in env" };
   const context = market
     ? `Current ${coin} price: $${market.price.toLocaleString()}. 24h change: ${market.changePct24h >= 0 ? "+" : ""}${market.changePct24h.toFixed(2)}%.`
     : `No live price data available for ${coin} right now.`;
+  const imageInstruction = imageUrl
+    ? " An image was attached (likely a chart screenshot) — perform real technical analysis on it: read the visible price action, patterns, indicators, or levels, and speak to what you actually see rather than generic advice."
+    : "";
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: imageUrl ? "gpt-4o" : "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: `You are ${BOT_USERNAME}, a terse crypto bot posting in a ${coin} live chat room. Ground any factual claim (current price, 24h change, etc.) only in the real data given below — never invent a current number. If asked for a prediction, direction, or price target, DO give one: a short, opinionated take (e.g. "leaning bullish short-term off this momentum" or a rough price range) reasoned from the momentum in the data below, clearly framed as a quick guess or vibe rather than a fact — work a brief "not financial advice, just a read" style caveat into the sentence itself rather than a separate disclaimer line. Keep replies under 280 characters, casual, no "as an AI" framing.`,
+            content: `You are ${BOT_USERNAME}, a terse crypto bot posting in a ${coin} live chat room. Ground any factual claim (current price, 24h change, etc.) only in the real data given below — never invent a current number. If asked for a prediction, direction, or price target, DO give one: a short, opinionated take (e.g. "leaning bullish short-term off this momentum" or a rough price range) reasoned from the momentum in the data below, clearly framed as a quick guess or vibe rather than a fact — work a brief "not financial advice, just a read" style caveat into the sentence itself rather than a separate disclaimer line.${imageInstruction} Keep replies under 280 characters, casual, no "as an AI" framing.`,
           },
-          { role: "user", content: `${context}\n\nMessage from a trader in the room: "${question}"` },
+          {
+            role: "user",
+            content: imageUrl
+              ? [
+                  { type: "text", text: `${context}\n\nMessage from a trader in the room: "${question}"` },
+                  { type: "image_url", image_url: { url: imageUrl, detail: "auto" } },
+                ]
+              : `${context}\n\nMessage from a trader in the room: "${question}"`,
+          },
         ],
       }),
     });
@@ -90,7 +109,7 @@ Deno.serve(async (req) => {
 
     const { data: comment } = await supabaseAdmin
       .from("coin_comments")
-      .select("id, coin, body, is_bot, reply_to_id, user_id")
+      .select("id, coin, body, is_bot, reply_to_id, user_id, image_url")
       .eq("id", commentId)
       .maybeSingle();
     if (!comment || comment.is_bot) {
@@ -147,13 +166,16 @@ Deno.serve(async (req) => {
       replyingToBot = parent?.user_id === botId;
     }
 
-    if (!replyingToBot && !looksAddressedToBot(comment.body)) {
+    // An attached image is always meant for the bot — same as the old
+    // standalone AI Chat, which analyzed any uploaded image unconditionally
+    // — so it skips the @mention/question heuristic below too.
+    if (!replyingToBot && !comment.image_url && !looksAddressedToBot(comment.body)) {
       console.log(`[${commentId}] not addressed to bot — body: ${JSON.stringify(comment.body.slice(0, 120))}`);
       return new Response("not addressed to bot", { status: 200, headers: corsHeaders });
     }
 
     const market = await getMarketSnapshot(comment.coin);
-    const { text: reply, debug } = await generateReply(comment.coin, comment.body, market);
+    const { text: reply, debug } = await generateReply(comment.coin, comment.body, market, comment.image_url);
     if (!reply) {
       console.log(`[${commentId}] no reply generated — ${debug}`);
       return new Response(`no reply generated: ${debug}`, { status: 200, headers: corsHeaders });
