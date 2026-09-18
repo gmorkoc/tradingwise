@@ -44,9 +44,12 @@ async function getMarketSnapshot(coin: string): Promise<MarketSnapshot | null> {
   }
 }
 
-// Grounds the reply in real fetched data rather than letting the model
-// guess a price — the system prompt explicitly forbids inventing numbers,
-// and the only numbers it's given are the ones getMarketSnapshot fetched.
+// Factual claims (current price, 24h change) are grounded in real fetched
+// data — the model is never given more numbers than getMarketSnapshot
+// actually returned, and is told never to invent a current one. Direction/
+// price-target *predictions* are a deliberate exception: the model is
+// explicitly allowed (encouraged, even) to give a short, opinionated,
+// clearly-speculative take when asked, reasoned off that same real data.
 async function generateReply(coin: string, question: string, market: MarketSnapshot | null): Promise<{ text: string | null; debug: string }> {
   if (!OPENAI_API_KEY) return { text: null, debug: "no OPENAI_API_KEY in env" };
   const context = market
@@ -61,7 +64,7 @@ async function generateReply(coin: string, question: string, market: MarketSnaps
         messages: [
           {
             role: "system",
-            content: `You are ${BOT_USERNAME}, a terse crypto market-data bot posting in a ${coin} live chat room. Answer using only the real data given to you below — never invent a price or number, and say so briefly if you don't have the data instead of guessing. Keep replies under 280 characters, casual, no disclaimers, no "as an AI" framing.`,
+            content: `You are ${BOT_USERNAME}, a terse crypto bot posting in a ${coin} live chat room. Ground any factual claim (current price, 24h change, etc.) only in the real data given below — never invent a current number. If asked for a prediction, direction, or price target, DO give one: a short, opinionated take (e.g. "leaning bullish short-term off this momentum" or a rough price range) reasoned from the momentum in the data below, clearly framed as a quick guess or vibe rather than a fact — work a brief "not financial advice, just a read" style caveat into the sentence itself rather than a separate disclaimer line. Keep replies under 280 characters, casual, no "as an AI" framing.`,
           },
           { role: "user", content: `${context}\n\nMessage from a trader in the room: "${question}"` },
         ],
