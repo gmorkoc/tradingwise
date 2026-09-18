@@ -35,6 +35,42 @@ html[data-theme="light"] .coin-chat-dock {
   --pc-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
 }
 
+/* .coin-chat-panel (the swipe-up sheet, below) is portaled straight to
+   <body> — see its own comment further down — so it's no longer a DOM
+   descendant of .coin-chat-dock and can't see that element's --pc-*
+   tokens either (var() with an undefined custom property is invalid at
+   computed-value time — for a non-inherited property like `background`
+   that resolves to transparent, not to any fallback, which is exactly
+   what made its icons/fills disappear). Redefining the same tokens here
+   makes it self-sufficient. This used to live inside the mobile-only
+   @media(max-width:640px) block, which meant it silently broke at any
+   width where the sheet still rendered outside that gate — unconditional
+   now, matching .coin-chat-dock's own definition above exactly. */
+.coin-chat-panel {
+  --pc-panel: #141230;
+  --pc-panel-2: #17143a;
+  --pc-border: rgba(165, 180, 252, 0.16);
+  --pc-text: #ffffff;
+  --pc-text-secondary: #c7cbf0;
+  --pc-text-muted: #9490c0;
+  --pc-accent: #818cf8;
+  --pc-accent-soft: rgba(129, 140, 248, 0.18);
+  --pc-success: #4ade80;
+  --pc-danger: #fb7185;
+}
+html[data-theme="light"] .coin-chat-panel {
+  --pc-panel: #ffffff;
+  --pc-panel-2: var(--color-surface-alt);
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-secondary: var(--color-text-secondary);
+  --pc-text-muted: var(--color-text-muted);
+  --pc-accent: var(--color-primary);
+  --pc-accent-soft: var(--color-primary-soft);
+  --pc-success: var(--color-success);
+  --pc-danger: var(--color-danger);
+}
+
 .coin-chat-panel {
   position: relative;
   display: flex;
@@ -634,15 +670,18 @@ html[data-theme="light"] .coin-chat-dock {
   color: var(--pc-danger);
 }
 
+/* Composer row styled after ChatGPT's own mobile input bar (+ attach on
+   the left, pill input, solid filled circular send button on the right)
+   — a deliberate visual match, not just "similar". */
 .coin-chat-input {
   flex: 1;
   min-width: 0;
-  padding: 9px 12px;
+  padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid var(--pc-border);
-  background: var(--pc-panel-2);
+  background: var(--color-input-bg);
   color: var(--pc-text);
-  font-size: 0.83rem;
+  font-size: 0.85rem;
 }
 
 .coin-chat-input:focus {
@@ -654,21 +693,40 @@ html[data-theme="light"] .coin-chat-dock {
   color: var(--pc-text-muted);
 }
 
+/* Solid filled circle, always-visible white icon — same treatment
+   .coin-chat-attach-btn uses and for the same reason (a color that only
+   changes on :hover reads as invisible once mobile touch gets stuck in
+   that state); this button's icon was always safe since white-on-accent
+   never changes, but kept the same fixed-color convention regardless. */
 .coin-chat-send {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
+  border-radius: 50%;
   background: var(--pc-accent);
   color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
   cursor: pointer;
 }
 
 .coin-chat-send:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: default;
+}
+
+.coin-chat-send-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: coin-chat-spin 0.7s linear infinite;
+}
+@keyframes coin-chat-spin {
+  to { transform: rotate(360deg); }
 }
 
 .coin-chat-composer-inner {
@@ -677,6 +735,9 @@ html[data-theme="light"] .coin-chat-dock {
   gap: 8px;
 }
 
+/* Thin outline only (no fill) — matches ChatGPT's own "+" attach button,
+   distinct from the solid filled send button so the two read as
+   different actions at a glance. */
 .coin-chat-attach-btn {
   flex-shrink: 0;
   display: flex;
@@ -685,14 +746,20 @@ html[data-theme="light"] .coin-chat-dock {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid var(--pc-border);
-  background: var(--pc-panel-2);
-  color: var(--pc-text-muted);
+  border: 1.5px solid var(--pc-border);
+  background: transparent;
+  /* Always --pc-text (not --pc-text-muted, and never changed on :hover
+     below) — mobile touch persists :hover indefinitely after a tap, and
+     an icon that changes to --pc-accent on hover ended up stuck reading
+     as low-contrast against this panel's own indigo-tinted dark
+     background. Hover now tints the background instead, so the icon
+     itself is always clearly visible regardless of hover state. */
+  color: var(--pc-text);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 .coin-chat-attach-btn:hover:not(:disabled) {
-  color: var(--pc-accent);
+  background: var(--pc-accent-soft);
   border-color: var(--pc-accent);
 }
 .coin-chat-attach-btn:disabled {
@@ -831,43 +898,15 @@ html[data-theme="light"] .coin-chat-dock {
      the reply modal (opaque, no ancestor-transform containing-block
      trap, safe-area-aware header). No backdrop/grabber: it covers the
      whole screen, so there's no "outside" to dim or partial height to
-     drag between.
-
-     Portaled to <body> means it's no longer a DOM descendant of
-     .coin-chat-dock, so it can't see that element's --pc-* custom
-     properties (var() with an undefined custom property is invalid at
-     computed-value time — for a non-inherited property like `background`
-     that resolves to transparent, not to any fallback). Redefining the
-     same tokens directly on the panel makes it self-sufficient, using
-     solid colors here since — unlike the desktop dock — this panel IS
-     the entire screen's backdrop, not a glass layer over something else. */
+     drag between. Its --pc-* self-sufficiency (it's portaled outside
+     .coin-chat-dock, so can't see that element's tokens) is defined
+     unconditionally below, not inside this media query — see the
+     .coin-chat-panel rule near the top of this file. */
   .coin-chat-panel {
-    --pc-panel: #141230;
-    --pc-panel-2: #17143a;
-    --pc-border: rgba(165, 180, 252, 0.16);
-    --pc-text: #ffffff;
-    --pc-text-secondary: #c7cbf0;
-    --pc-text-muted: #9490c0;
-    --pc-accent: #818cf8;
-    --pc-accent-soft: rgba(129, 140, 248, 0.18);
-    --pc-success: #4ade80;
-    --pc-danger: #fb7185;
     position: fixed;
     inset: 0;
     z-index: 300;
     padding-bottom: env(safe-area-inset-bottom);
-  }
-  html[data-theme="light"] .coin-chat-panel {
-    --pc-panel: #ffffff;
-    --pc-panel-2: var(--color-surface-alt);
-    --pc-border: var(--color-border);
-    --pc-text: var(--color-text);
-    --pc-text-secondary: var(--color-text-secondary);
-    --pc-text-muted: var(--color-text-muted);
-    --pc-accent: var(--color-primary);
-    --pc-accent-soft: var(--color-primary-soft);
-    --pc-success: var(--color-success);
-    --pc-danger: var(--color-danger);
   }
 
   .coin-chat-panel .coin-chat-head {

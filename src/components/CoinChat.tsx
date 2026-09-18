@@ -854,10 +854,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             disabled={posting}
             title="Attach image for MarketPulse to analyze"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="M21 15l-5-5L5 21" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
           <input
@@ -890,8 +888,20 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
               }
             }}
           />
-          <button type="button" className="coin-chat-send" onClick={handlePost} disabled={posting || uploadingImage || (!draft.trim() && !pendingImage)}>
-            {uploadingImage ? "…" : t("coinChat.post")}
+          <button
+            type="button"
+            className="coin-chat-send"
+            onClick={handlePost}
+            disabled={posting || uploadingImage || (!draft.trim() && !pendingImage)}
+            aria-label={t("coinChat.post")}
+          >
+            {uploadingImage ? (
+              <span className="coin-chat-send-spinner" />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            )}
           </button>
           </div>
         </div>
