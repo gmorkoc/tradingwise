@@ -95,6 +95,18 @@ Deno.serve(async (req) => {
       return new Response("skip", { status: 200, headers: corsHeaders });
     }
 
+    // The client only ever renders one level of nesting — CoinChat.tsx's
+    // own composer flattens every new reply onto its root ancestor
+    // (replyTarget.reply_to_id ?? replyTarget.id) before posting, and its
+    // renderer only looks up replies keyed by a TOP-LEVEL comment's id.
+    // Replying directly to `comment.id` here breaks that whenever `comment`
+    // is itself already a reply (e.g. someone replying to the bot's own
+    // answer) — the bot's new row would carry a reply_to_id pointing at a
+    // non-top-level comment, so it'd never be looked up by the renderer
+    // and silently vanish from the UI despite existing in the database.
+    // Mirroring the same flattening here keeps every bot reply visible.
+    const replyToId = comment.reply_to_id ?? comment.id;
+
     const botId = await getOrCreateBotId();
 
     // Welcome takes priority over everything below — a brand-new poster
@@ -111,7 +123,7 @@ Deno.serve(async (req) => {
         coin: comment.coin,
         user_id: botId,
         body: `👋 Welcome to the room! I'm ${BOT_USERNAME} — I post market updates here and answer questions. Tag @${BOT_USERNAME} anytime to ask about price, recent moves, or market data.`,
-        reply_to_id: comment.id,
+        reply_to_id: replyToId,
       });
       if (welcomeErr) throw new Error(welcomeErr.message);
       console.log(`[${commentId}] welcomed user ${comment.user_id}`);
@@ -148,7 +160,7 @@ Deno.serve(async (req) => {
       coin: comment.coin,
       user_id: botId,
       body: reply.slice(0, 500),
-      reply_to_id: comment.id,
+      reply_to_id: replyToId,
     });
     if (error) throw new Error(error.message);
 
