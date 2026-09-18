@@ -6,6 +6,16 @@ import { supabaseAdmin, getOrCreateBotId, BOT_USERNAME } from "../_shared/market
 // (@mention or a question); every other comment is a cheap no-op so the
 // bot doesn't chime in on every "lol" or "nice" in the room.
 
+// Every other function in this project has this guard (see notify-mention)
+// — missing it here meant every browser CORS preflight (OPTIONS) hit
+// req.json() on an empty body, threw, and got caught as a 500. The browser
+// then silently dropped the real POST since its preflight had failed, so
+// the bot almost never actually ran despite being invoked correctly.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 const BINANCE_BASE = "https://data-api.binance.vision/api/v3";
 
@@ -67,16 +77,23 @@ async function generateReply(coin: string, question: string, market: MarketSnaps
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  let commentId: unknown;
   try {
-    const { commentId } = await req.json();
-    if (!commentId) return new Response("Missing commentId", { status: 400 });
+    ({ commentId } = await req.json());
+    if (!commentId) return new Response("Missing commentId", { status: 400, headers: corsHeaders });
 
     const { data: comment } = await supabaseAdmin
       .from("coin_comments")
       .select("id, coin, body, is_bot, reply_to_id, user_id")
       .eq("id", commentId)
       .maybeSingle();
-    if (!comment || comment.is_bot) return new Response("skip", { status: 200 });
+    if (!comment || comment.is_bot) {
+      console.log(`[${commentId}] skip — ${!comment ? "comment not found" : "is_bot"}`);
+      return new Response("skip", { status: 200, headers: corsHeaders });
+    }
 
     const botId = await getOrCreateBotId();
 
@@ -97,7 +114,8 @@ Deno.serve(async (req) => {
         reply_to_id: comment.id,
       });
       if (welcomeErr) throw new Error(welcomeErr.message);
-      return new Response("welcomed", { status: 200 });
+      console.log(`[${commentId}] welcomed user ${comment.user_id}`);
+      return new Response("welcomed", { status: 200, headers: corsHeaders });
     }
 
     // A reply INSIDE the bot's own thread counts as addressed to it
@@ -115,12 +133,16 @@ Deno.serve(async (req) => {
     }
 
     if (!replyingToBot && !looksAddressedToBot(comment.body)) {
-      return new Response("not addressed to bot", { status: 200 });
+      console.log(`[${commentId}] not addressed to bot — body: ${JSON.stringify(comment.body.slice(0, 120))}`);
+      return new Response("not addressed to bot", { status: 200, headers: corsHeaders });
     }
 
     const market = await getMarketSnapshot(comment.coin);
     const { text: reply, debug } = await generateReply(comment.coin, comment.body, market);
-    if (!reply) return new Response(`no reply generated: ${debug}`, { status: 200 });
+    if (!reply) {
+      console.log(`[${commentId}] no reply generated — ${debug}`);
+      return new Response(`no reply generated: ${debug}`, { status: 200, headers: corsHeaders });
+    }
 
     const { error } = await supabaseAdmin.from("coin_comments").insert({
       coin: comment.coin,
@@ -130,8 +152,11 @@ Deno.serve(async (req) => {
     });
     if (error) throw new Error(error.message);
 
-    return new Response("replied", { status: 200 });
+    console.log(`[${commentId}] replied: ${JSON.stringify(reply.slice(0, 120))}`);
+    return new Response("replied", { status: 200, headers: corsHeaders });
   } catch (e) {
-    return new Response(`error: ${e instanceof Error ? e.message : String(e)}`, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    console.log(`[${commentId ?? "?"}] error: ${msg}`);
+    return new Response(`error: ${msg}`, { status: 500, headers: corsHeaders });
   }
 });
