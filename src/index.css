@@ -80,7 +80,12 @@ button:hover {
   border-color: #646cff;
 }
 
-button:focus,
+/* :focus-visible only (not plain :focus) — Vite's own template default
+   applied this to *any* focus, including a touch tap, which is exactly
+   the stray blue box that showed up around nav items on mobile. Browsers
+   already only match :focus-visible for keyboard/programmatic focus, not
+   mouse/touch clicks, so keyboard navigation keeps its outline and touch
+   taps don't get one. */
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
@@ -108,10 +113,6 @@ textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 126, 234, 0.7);
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
 @media (prefers-color-scheme: light) {

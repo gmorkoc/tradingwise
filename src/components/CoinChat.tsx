@@ -161,12 +161,28 @@ function currentMentionQuery(value: string, caret: number): string | null {
 }
 
 // Splits on @handles (same 3-20 char pattern the server resolves) so they
-// can be styled — odd indices are always the captured matches here since
-// there's exactly one capturing group in the split regex.
-function renderWithMentions(body: string) {
-  return body.split(/(@[A-Za-z0-9_]{3,20})/g).map((part, i) =>
-    i % 2 === 1 ? <span key={i} className="coin-chat-mention">{part}</span> : part
-  );
+// can be styled. For MarketPulse's own messages (isBot), dollar amounts
+// ($3.747) and percentages (+25.11%, -0.18%) are highlighted too, so a
+// price/prediction reply is scannable at a glance instead of reading like
+// a wall of plain text — deliberately anchored on $ or % rather than bare
+// digits, so incidental numbers like "24h" or "15m" (candle labels) don't
+// get highlighted along with them. Percentages are colored by their own
+// sign (part of the match, not inferred) rather than a flat accent color,
+// so a loss doesn't read as good news at a glance.
+const MENTION_PATTERN = "@[A-Za-z0-9_]{3,20}";
+const NUMBER_PATTERN = "\\$\\d[\\d,]*(?:\\.\\d+)?|[+-]?\\d+(?:\\.\\d+)?%";
+function renderWithMentions(body: string, isBot = false) {
+  const pattern = new RegExp(`(${isBot ? `${MENTION_PATTERN}|${NUMBER_PATTERN}` : MENTION_PATTERN})`, "g");
+  return body.split(pattern).map((part, i) => {
+    if (i % 2 === 0) return part;
+    if (part.startsWith("@")) return <span key={i} className="coin-chat-mention">{part}</span>;
+    const cls = part.startsWith("+")
+      ? "coin-chat-number coin-chat-number--up"
+      : part.startsWith("-")
+        ? "coin-chat-number coin-chat-number--down"
+        : "coin-chat-number";
+    return <span key={i} className={cls}>{part}</span>;
+  });
 }
 
 function timeAgo(iso: string): string {
@@ -208,6 +224,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const [replyTarget, setReplyTarget] = useState<CoinComment | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionResults, setMentionResults] = useState<string[]>([]);
+  const [mentionActiveIndex, setMentionActiveIndex] = useState(0);
   const [flashId, setFlashId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -289,7 +306,9 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     if (mentionQuery === null) { setMentionResults([]); return; }
     let cancelled = false;
     const id = setTimeout(() => {
-      searchUsernames(mentionQuery).then((names) => { if (!cancelled) setMentionResults(names); });
+      searchUsernames(mentionQuery).then((names) => {
+        if (!cancelled) { setMentionResults(names); setMentionActiveIndex(0); }
+      });
     }, 200);
     return () => { cancelled = true; clearTimeout(id); };
   }, [mentionQuery]);
@@ -627,7 +646,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
         <p className="coin-chat-comment-line">
           <span className="coin-chat-comment-name">@{c.username}</span>{" "}
           <span className={`coin-chat-tier-chip cc-tier--${c.tier}`}>{c.tier === "elite" ? "E" : "P"}</span>{" "}
-          <span className="coin-chat-comment-text">{renderWithMentions(c.body)}</span>{" "}
+          <span className="coin-chat-comment-text">{renderWithMentions(c.body, c.is_bot)}</span>{" "}
           <span className="coin-chat-comment-time">{timeAgo(c.created_at)}</span>
           {user && (
             <span className="coin-chat-comment-menu-wrap">
@@ -754,10 +773,12 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
         <div className="coin-chat-input-row">
           {mentionQuery !== null && mentionResults.length > 0 && (
             <div className="coin-chat-mention-menu">
-              {mentionResults.map((name) => (
+              {mentionResults.map((name, i) => (
                 <button
                   key={name}
                   type="button"
+                  className={i === mentionActiveIndex ? "coin-chat-mention-menu-item--active" : undefined}
+                  onMouseEnter={() => setMentionActiveIndex(i)}
                   onMouseDown={(e) => { e.preventDefault(); selectMention(name); }}
                 >
                   @{name}
@@ -776,10 +797,17 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             placeholder={t("coinChat.placeholder", { coin })}
             maxLength={COIN_COMMENT_MAX_LENGTH}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (mentionQuery !== null && mentionResults.length > 0) {
+              const mentionOpen = mentionQuery !== null && mentionResults.length > 0;
+              if (e.key === "ArrowDown" && mentionOpen) {
+                e.preventDefault();
+                setMentionActiveIndex((i) => (i + 1) % mentionResults.length);
+              } else if (e.key === "ArrowUp" && mentionOpen) {
+                e.preventDefault();
+                setMentionActiveIndex((i) => (i - 1 + mentionResults.length) % mentionResults.length);
+              } else if (e.key === "Enter") {
+                if (mentionOpen) {
                   e.preventDefault();
-                  selectMention(mentionResults[0]);
+                  selectMention(mentionResults[mentionActiveIndex]);
                 } else {
                   handlePost();
                 }
@@ -824,7 +852,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
             <span className={`coin-chat-tier-chip cc-tier--${replyTarget.tier}`}>{replyTarget.tier === "elite" ? "E" : "P"}</span>
             <span className="coin-chat-comment-time">{timeAgo(replyTarget.created_at)}</span>
           </div>
-          <p className="coin-chat-reply-parent-text">{renderWithMentions(replyTarget.body)}</p>
+          <p className="coin-chat-reply-parent-text">{renderWithMentions(replyTarget.body, replyTarget.is_bot)}</p>
         </div>
       </div>
       <div className="coin-chat-reply-connector" />

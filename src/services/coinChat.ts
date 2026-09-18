@@ -12,6 +12,7 @@ export interface CoinComment {
   like_count: number;
   reply_to_id: number | null;
   avatar_url: string | null;
+  is_bot: boolean;
 }
 
 const BODY_MAX = 500;

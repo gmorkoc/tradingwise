@@ -2066,7 +2066,7 @@ function AppDashboard({
               coin={coin}
               onOpenAuth={onOpenAuth}
               onOpenUpgrade={onOpenUpgrade}
-              onCloseDesktop={() => setShowCoinChat(false)}
+              onCloseDesktop={() => { setShowCoinChat(false); setChatExpanded(false); }}
               expanded={chatExpanded}
               onToggleExpand={() => setChatExpanded((v) => !v)}
               isOpen={showCoinChat}
@@ -2076,7 +2076,18 @@ function AppDashboard({
             <button
               type="button"
               className="coin-chat-dock-bar"
-              onClick={() => setShowCoinChat((v) => !v)}
+              onClick={() => {
+                // Also drop expanded mode when hiding — .coin-chat-card
+                // switches to height:auto while expanded (CoinChat.css),
+                // and collapsing straight from an auto-computed height to
+                // 0 doesn't animate reliably (some engines just snap, some
+                // visibly glitch mid-transition instead of collapsing),
+                // which read as the panel "freezing" open on a long thread
+                // tall enough for the difference to be obvious. Collapsing
+                // from expanded's fixed 588px first avoids that entirely.
+                setShowCoinChat((v) => !v);
+                setChatExpanded(false);
+              }}
               aria-label={showCoinChat ? t("coinChat.hide") : t("coinChat.triggerLabel")}
             >
               <span className="coin-chat-dock-bar-dot" />
