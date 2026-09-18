@@ -735,18 +735,18 @@ html[data-theme="light"] .coin-chat-panel {
   gap: 8px;
 }
 
-/* Thin outline only (no fill) — matches ChatGPT's own "+" attach button,
-   distinct from the solid filled send button so the two read as
-   different actions at a glance. */
+/* Flat icon, no border/circle — ChatGPT's own "+" isn't circled either,
+   it just sits directly on the pill's background; only their send button
+   is a distinct filled shape, matching .coin-chat-send below. */
 .coin-chat-attach-btn {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
+  border: none;
   border-radius: 50%;
-  border: 1.5px solid var(--pc-border);
   background: transparent;
   /* Always --pc-text (not --pc-text-muted, and never changed on :hover
      below) — mobile touch persists :hover indefinitely after a tap, and
@@ -756,11 +756,10 @@ html[data-theme="light"] .coin-chat-panel {
      itself is always clearly visible regardless of hover state. */
   color: var(--pc-text);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
 }
 .coin-chat-attach-btn:hover:not(:disabled) {
-  background: var(--pc-accent-soft);
-  border-color: var(--pc-accent);
+  background: var(--pc-panel-2);
 }
 .coin-chat-attach-btn:disabled {
   opacity: 0.5;
