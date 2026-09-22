@@ -546,7 +546,7 @@ html[data-theme="light"] .coin-chat-panel {
 
 .coin-chat-composer {
   flex-shrink: 0;
-  padding: 10px 16px 16px;
+  padding: 8px 16px 12px;
   border-top: 1px solid var(--pc-border);
 }
 
@@ -596,7 +596,19 @@ html[data-theme="light"] .coin-chat-panel {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px 5px 4px 7px;
+  border: 1px solid var(--pc-border);
+  border-radius: 26px;
+  background: var(--color-input-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.coin-chat-input-row:focus-within {
+  border-color: var(--pc-accent);
+  box-shadow: 0 0 0 2px var(--pc-accent-soft);
 }
 
 /* @mention autocomplete — opens upward since the composer sits at the
@@ -670,51 +682,56 @@ html[data-theme="light"] .coin-chat-panel {
   color: var(--pc-danger);
 }
 
-/* Composer row styled after ChatGPT's own mobile input bar (+ attach on
-   the left, pill input, solid filled circular send button on the right)
-   — a deliberate visual match, not just "similar". */
+/* Keep the controls inside one ChatGPT-style composer shell. */
 .coin-chat-input {
   flex: 1;
   min-width: 0;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--pc-border);
-  background: var(--color-input-bg);
-  color: var(--pc-text);
-  font-size: 0.85rem;
-}
-
-.coin-chat-input:focus {
+  height: 32px;
+  padding: 5px 8px;
+  border: none;
   outline: none;
-  border-color: var(--pc-accent);
+  background: transparent;
+  color: var(--pc-text);
+  font: inherit;
+  font-size: 0.85rem;
 }
 
 .coin-chat-input::placeholder {
   color: var(--pc-text-muted);
 }
 
-/* Solid filled circle, always-visible white icon — same treatment
-   .coin-chat-attach-btn uses and for the same reason (a color that only
-   changes on :hover reads as invisible once mobile touch gets stuck in
-   that state); this button's icon was always safe since white-on-accent
-   never changes, but kept the same fixed-color convention regardless. */
 .coin-chat-send {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border: none;
   border-radius: 50%;
-  background: var(--pc-accent);
-  color: #fff;
+  background: var(--pc-text);
+  color: var(--color-background) !important;
   cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.coin-chat-send:hover:not(:disabled) {
+  transform: scale(1.04);
 }
 
 .coin-chat-send:disabled {
-  opacity: 0.4;
+  background: var(--pc-panel-2);
+  color: var(--pc-text) !important;
+  opacity: 1;
   cursor: default;
+}
+
+.coin-chat-attach-btn svg,
+.coin-chat-send svg {
+  display: block;
+  flex: 0 0 auto;
+  stroke: currentColor !important;
+  color: inherit;
 }
 
 .coin-chat-send-spinner {
@@ -735,9 +752,6 @@ html[data-theme="light"] .coin-chat-panel {
   gap: 8px;
 }
 
-/* Flat icon, no border/circle — ChatGPT's own "+" isn't circled either,
-   it just sits directly on the pill's background; only their send button
-   is a distinct filled shape, matching .coin-chat-send below. */
 .coin-chat-attach-btn {
   flex-shrink: 0;
   display: flex;
@@ -748,21 +762,17 @@ html[data-theme="light"] .coin-chat-panel {
   border: none;
   border-radius: 50%;
   background: transparent;
-  /* Always --pc-text (not --pc-text-muted, and never changed on :hover
-     below) — mobile touch persists :hover indefinitely after a tap, and
-     an icon that changes to --pc-accent on hover ended up stuck reading
-     as low-contrast against this panel's own indigo-tinted dark
-     background. Hover now tints the background instead, so the icon
-     itself is always clearly visible regardless of hover state. */
-  color: var(--pc-text);
+  color: var(--pc-text-secondary) !important;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 .coin-chat-attach-btn:hover:not(:disabled) {
   background: var(--pc-panel-2);
+  color: var(--pc-text) !important;
 }
 .coin-chat-attach-btn:disabled {
-  opacity: 0.5;
+  color: var(--pc-text-secondary);
+  opacity: 1;
   cursor: default;
 }
 

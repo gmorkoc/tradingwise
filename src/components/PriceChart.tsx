@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import {
   createChart,
   ColorType,
@@ -2264,7 +2266,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, []);
 
   // ── Screenshot ───────────────────────────────────────────────────────────
-  const handleScreenshot = () => {
+  const handleScreenshot = async () => {
     const mainCanvas = chartRef.current?.takeScreenshot();
     if (!mainCanvas) return;
 
@@ -2370,10 +2372,34 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       ctx.drawImage(macdCanvas, 0, y);
     }
 
+    const dataUrl = out.toDataURL("image/png");
+    const filename = `${coin}-${shortInterval}-${new Date().toISOString().slice(0, 10)}.png`;
+
+    if (Capacitor.isNativePlatform()) {
+      // <a download> is a no-op in a WKWebView — there's no downloads
+      // folder on iOS for it to land in, so the button did nothing.
+      // Write the PNG to the app's cache dir instead and hand it to the
+      // native share sheet, where "Save Image" drops it straight into
+      // Photos (NSPhotoLibraryAddUsageDescription already covers this —
+      // see Info.plist).
+      try {
+        const base64 = dataUrl.split(",")[1];
+        const written = await Filesystem.writeFile({
+          path: filename,
+          data: base64,
+          directory: Directory.Cache,
+        });
+        await Share.share({ url: written.uri, dialogTitle: t("chart.save") });
+      } catch (err) {
+        console.error("Chart save failed:", err);
+      }
+      return;
+    }
+
     // Trigger download
     const link = document.createElement("a");
-    link.href = out.toDataURL("image/png");
-    link.download = `${coin}-${shortInterval}-${new Date().toISOString().slice(0, 10)}.png`;
+    link.href = dataUrl;
+    link.download = filename;
     link.click();
   };
 

@@ -28,3 +28,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+# Local Supabase edge function secrets (e.g. supabase/.env.local.functions) —
+# .env.*.local above doesn't match this shape (it ends in .functions, not
+# .local), and it was sitting untracked with a real OpenAI key in it.
+.env.local.*

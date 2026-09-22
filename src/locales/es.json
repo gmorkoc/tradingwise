@@ -898,16 +898,6 @@
       "title": "Miedo y codicia + On-Chain",
       "desc": "Índice de sentimiento en tiempo real combinado con hash rate, ingresos de mineros y volumen on-chain — la IA lo interpreta todo."
     },
-    "mobileApp": {
-      "label": "Próximamente en Móvil",
-      "title": "Lleva coinhintz a donde vaya el mercado",
-      "desc": "El panel de IA completo, chat en vivo y alertas de precio — directo en tu bolsillo. Las apps de iOS y Android llegan pronto.",
-      "comingSoon": "Pronto",
-      "appStoreEyebrow": "Disponible en",
-      "appStore": "App Store",
-      "googlePlayEyebrow": "DISPONIBLE EN",
-      "googlePlay": "Google Play"
-    },
     "pricing": {
       "label": "Precios",
       "sectionTitle": "Empieza gratis, mejora cuando estés listo",
@@ -915,6 +905,7 @@
       "plans": [
         {
           "label": "Free",
+          "tagline": "Para traders que empiezan",
           "price": "$0",
           "per": "",
           "cta": "Empezar gratis",
@@ -927,6 +918,7 @@
         },
         {
           "label": "Pro",
+          "tagline": "Para traders serios",
           "price": "$30.99",
           "per": "/mes",
           "cta": "Empezar Pro",
@@ -943,6 +935,7 @@
         },
         {
           "label": "Elite",
+          "tagline": "Para power users que lo quieren todo",
           "price": "$59.99",
           "per": "/mes",
           "cta": "Ir a Elite",
@@ -965,7 +958,7 @@
       "sub": "Únete ahora — gratis para siempre, sin tarjeta de crédito.",
       "btn": "Crear cuenta gratis →"
     },
-    "footer": "© 2025 coinhintz.io · Hecho para traders serios",
+    "footer": "© 2026 coinhintz.io · Todos los derechos reservados",
     "signin": "Iniciar sesión",
     "getStarted": "Empezar gratis",
     "noCard": "Sin tarjeta requerida",
@@ -1315,6 +1308,44 @@
     "viewChart": "Ver gráfico",
     "vol": "Vol"
   },
+  "topMovers": {
+    "title": "Los Más Activos de Hoy",
+    "subtitle": "Cambio 24h %",
+    "loading": "Cargando los más activos…"
+  },
+  "chartAnalyze": {
+    "title": "Analizar un Gráfico",
+    "subtitle": "Sube o toma una foto de un gráfico y obtén un análisis técnico real con IA.",
+    "gateDesc": "Sube una captura del gráfico y obtén un análisis técnico completo con IA: patrones, niveles y una lectura real.",
+    "aiRead": "Lectura de IA",
+    "addYourChart": "Añade tu Gráfico",
+    "pickSubtitle": "Toma una foto o elige de tu galería",
+    "dropHint": "o arrastra y suelta imágenes aquí",
+    "takePhoto": "Tomar Foto",
+    "chooseLibrary": "Galería de Fotos",
+    "maxImages": "Hasta {{max}} gráficos a la vez.",
+    "tipsTitle": "Consejos Para Mejores Resultados",
+    "tipsDesc": "Para mejores resultados: sube 1–3 marcos temporales del mismo activo",
+    "goodCharts": "Gráficos válidos",
+    "good1": "Línea de precio clara con eje de tiempo visible",
+    "good2": "Capturas de TradingView, apps de bróker o gráficos de escritorio",
+    "good3": "Un solo activo por imagen",
+    "avoid": "Evita",
+    "avoid1": "Fotos borrosas o en ángulo",
+    "avoid2": "Varios gráficos amontonados en una imagen",
+    "avoid3": "Gráficos con demasiado desorden (indicadores superpuestos)",
+    "footerHint": "Añade hasta {{max}} marcos temporales para un análisis más profundo (ej. 1D, 1S, 1M)",
+    "analyzing": "Analizando…",
+    "analyzeOne": "Analizar gráfico",
+    "analyzeCount": "Analizar {{count}} gráficos",
+    "analyzeAnother": "Analizar otro",
+    "done": "Listo",
+    "errors": {
+      "pickFailed": "No se pudo abrir el selector — inténtalo de nuevo.",
+      "noResult": "El análisis falló — inténtalo de nuevo.",
+      "analyzeFailed": "Algo salió mal al analizar tu gráfico — inténtalo de nuevo."
+    }
+  },
   "alerts": {
     "title": "Constructor de alertas",
     "enableNotifications": "Activar notificaciones",
@@ -1350,6 +1381,7 @@
     "heatmap": "Mapa de Calor",
     "alerts": "Alertas",
     "watchlist": "Lista de Seguimiento",
+    "analyzeChart": "Analizar un Gráfico",
     "gann": "Gann",
     "live": "EN VIVO",
     "etf": "Flujos ETF",

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Capacitor } from "@capacitor/core";
 import i18n from "../i18n";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import "../styles/LandingPage.css";
@@ -261,10 +260,16 @@ function CandleAIChart() {
 
 // ── Main ────────────────────────────────────────────────────────────────
 
+// Same two Terms/Privacy pages the paywall links to (UpgradeModal.tsx) —
+// localized copies only exist for these three languages, everything else
+// falls back to the English page.
+const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
+
 export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
   const { t } = useTranslation();
+  const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
   const featureList = t("landing.features.list", { returnObjects: true }) as { icon: string; title: string; desc: string }[];
-  const pricingPlans = t("landing.pricing.plans", { returnObjects: true }) as { label: string; price: string; per: string; cta: string; features: string[] }[];
+  const pricingPlans = t("landing.pricing.plans", { returnObjects: true }) as { label: string; tagline: string; price: string; per: string; cta: string; features: string[] }[];
 
   const candleAIRevealRef = useReveal<HTMLDivElement>();
   const featuresRevealRef = useReveal<HTMLDivElement>();
@@ -549,57 +554,60 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
       <div className="lp-section-label">{t("landing.pricing.label")}</div>
       <h2 className="lp-section-title">{t("landing.pricing.sectionTitle")}</h2>
       <div className="lp-plans" ref={pricingRevealRef}>
-        {pricingPlans.map((plan, i) => (
-          <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}${PLAN_ELITE[i] ? " lp-plan--elite" : ""}`} style={{"--pc": PLAN_COLORS[i]} as React.CSSProperties}>
+        {pricingPlans.map((plan, i) => {
+          // Pro/Elite's own copy always leads with "Everything in <tier
+          // below>" (see the locale files) — pulled out of the checklist
+          // and rendered as its own pill, same as the reference this was
+          // matched against, instead of just another checkmark row.
+          const inheritsFrom = PLAN_PRIMARY[i] || PLAN_ELITE[i];
+          const [inheritedLine, ...ownFeatures] = plan.features;
+          return (
+          <div key={i} className={`lp-plan${PLAN_PRIMARY[i] ? " lp-plan--popular" : ""}${PLAN_ELITE[i] ? " lp-plan--elite" : ""}`}>
+            {PLAN_PRIMARY[i] && <div className="lp-plan-top-accent" />}
+            <div className="lp-plan-head-row">
+              <span className="lp-plan-label" style={{color: PLAN_COLORS[i]}}>{plan.label}</span>
+              <span className="lp-plan-index">0{i + 1} / {pricingPlans.length}</span>
+            </div>
             {PLAN_PRIMARY[i] && <div className="lp-plan-popular-tag">{t("landing.pricing.popularTag")}</div>}
-            {PLAN_ELITE[i]   && <div className="lp-plan-elite-tag">✦ BEST VALUE</div>}
-            <div className="lp-plan-label" style={{color: PLAN_COLORS[i]}}>{plan.label}</div>
+            {PLAN_ELITE[i]   && <div className="lp-plan-elite-tag">✦ Best Value</div>}
+            <p className="lp-plan-tagline">{plan.tagline}</p>
             <div className="lp-plan-price"><span className="lp-plan-amount">{plan.price}</span>{plan.per && <span className="lp-plan-per">{plan.per}</span>}</div>
-            <ul className="lp-plan-features">{plan.features.map(f => <li key={f}><span style={{color: PLAN_COLORS[i]}}>✓</span> {f}</li>)}</ul>
-            {PLAN_ELITE[i] && <div className="lp-plan-elite-banner">🔓 Unlimited AI predictions</div>}
+            {inheritsFrom && <div className="lp-plan-inherit-pill" style={{color: PLAN_COLORS[i], borderColor: PLAN_COLORS[i]}}><span className="lp-plan-inherit-plus">+</span>{inheritedLine}</div>}
+            <ul className="lp-plan-features">{(inheritsFrom ? ownFeatures : plan.features).map(f => <li key={f}><span style={{color: PLAN_COLORS[i]}}>✓</span> {f}</li>)}</ul>
             <button className={`lp-plan-cta${PLAN_PRIMARY[i] ? " lp-plan-cta--primary lp-btn-glow" : ""}${PLAN_ELITE[i] ? " lp-plan-cta--elite" : ""}`} style={PLAN_PRIMARY[i] || PLAN_ELITE[i] ? {} : {borderColor: PLAN_COLORS[i], color: PLAN_COLORS[i]}} onClick={onSignUp}>{plan.cta}</button>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
 
     {/* ── CTA ──────────────────────────────────────────────────────────── */}
     <section className="lp-cta lp-cta-reveal" ref={ctaRevealRef}>
-      <h2 className="lp-cta-title">{t("landing.cta.title")}</h2>
-      <p className="lp-cta-sub">{t("landing.cta.sub")}</p>
-      <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.cta.btn")}</button>
+      {/* Purely decorative — same floating-glass-chip language as the hero
+          collage above, just two calm accents instead of a whole scene,
+          so the closing pitch doesn't read as flat text on a panel. */}
+      <span className="lp-cta-chip lp-cta-chip--left" aria-hidden="true">
+        <span className="lp-cta-chip-dot" />₿ BTC <span className="lp-cta-chip-up">▲ 3.24%</span>
+      </span>
+      <span className="lp-cta-chip lp-cta-chip--right" aria-hidden="true">✦ AI Signal: ACCUMULATE</span>
+      <div className="lp-cta-content">
+        <div className="lp-cta-logo"><CoinHintzLogo /></div>
+        <h2 className="lp-cta-title">{t("landing.cta.title")}</h2>
+        <p className="lp-cta-sub">{t("landing.cta.sub")}</p>
+        <button className="lp-btn-hero-primary lp-btn-glow" onClick={onSignUp}>{t("landing.cta.btn")}</button>
+      </div>
     </section>
 
-    {/* ── Footer — the mobile-app teaser lives inside it now, as one
-        cohesive band, instead of a separate card floating on its own. */}
+    {/* ── Footer ───────────────────────────────────────────────────────── */}
     <footer className="lp-footer">
-      {!Capacitor.isNativePlatform() && (
-        <div className="lp-footer-mobile">
-          <div className="lp-footer-mobile-text">
-            <span className="lp-footer-mobile-label">{t("landing.mobileApp.label")}</span>
-            <span className="lp-footer-mobile-title">{t("landing.mobileApp.title")}</span>
-          </div>
-          <div className="lp-store-badges">
-            <div className="lp-store-badge">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.94 1.36-1.92 2.72-3.45 2.75-1.514.03-2-.89-3.73-.89-1.73 0-2.27.87-3.694.92-1.5.05-2.64-1.47-3.59-2.82-1.94-2.75-3.44-7.75-1.44-11.13.99-1.68 2.76-2.75 4.68-2.78 1.47-.03 2.86.98 3.75.98.9 0 2.58-1.21 4.35-1.03.74.03 2.82.3 4.15 2.25-.11.07-2.47 1.44-2.45 4.31.03 3.43 3.02 4.57 3.05 4.58-.03.09-.48 1.62-1.6 3.24z"/></svg>
-              <div className="lp-store-badge-text">
-                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.appStoreEyebrow")}</span>
-                <span className="lp-store-badge-name">{t("landing.mobileApp.appStore")}</span>
-              </div>
-              <span className="lp-soon-pill">{t("landing.mobileApp.comingSoon")}</span>
-            </div>
-            <div className="lp-store-badge">
-              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#00d9ff" d="M3.6 2.3c-.4.3-.6.8-.6 1.4v16.6c0 .6.2 1.1.6 1.4l.1.1L13 12.5v-.1L3.7 2.2z"/><path fill="#00e676" d="M16.1 15.6l-3.1-3.1v-.1l3.1-3.1 3.5 2c1 .6 1 1.6 0 2.2z"/><path fill="#ff3d00" d="M16.1 8.4L13 5.3 3.7 2.2c.3-.3.9-.4 1.5 0z"/><path fill="#ffc400" d="M13 12.5l3.1 3.1-9.9 5.6c-.6.4-1.2.3-1.5 0z"/></svg>
-              <div className="lp-store-badge-text">
-                <span className="lp-store-badge-eyebrow">{t("landing.mobileApp.googlePlayEyebrow")}</span>
-                <span className="lp-store-badge-name">{t("landing.mobileApp.googlePlay")}</span>
-              </div>
-              <span className="lp-soon-pill">{t("landing.mobileApp.comingSoon")}</span>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="lp-footer-bottom"><span>{t("landing.footer")}</span></div>
+      <div className="lp-footer-bottom">
+        <span>{t("landing.footer")}</span>
+        <span className="lp-footer-legal">
+          <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">{t("upgradeModal.footer.termsLink")}</a>
+          {" · "}
+          <a href={`https://coinhintz.io/privacy${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">{t("upgradeModal.footer.privacyLink")}</a>
+        </span>
+      </div>
     </footer>
   </div>
   );

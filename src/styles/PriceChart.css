@@ -97,12 +97,11 @@ html[data-theme="light"] .chart-active {
 @media (max-width: 768px) {
   .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    margin: 6px 2px 3px 6px;
-    /* The 18px 20px above was a desktop-only size match to light theme's
-       own card padding — never gated to width, so it was also leaking
-       onto phones/mobile web. Matches .ob-card's own mobile padding
-       (OrderBook.css, max-width:640px) so both panels read the same. */
-    padding: 12px 10px;
+    /* Left/right trimmed further (was 6px margin + 10px padding = 16px
+       inset on the left alone) — read as noticeably too much side space
+       on real iOS devices, where every horizontal pixel matters more. */
+    margin: 6px 2px 3px 3px;
+    padding: 12px 4px;
   }
 }
 
@@ -133,21 +132,26 @@ html[data-theme="light"]
        between this card and .ob-card. In the 641-960px range the wrap is
        column-direction instead, where the bottom margin (unchanged) is
        the one that matters. */
-    margin: 6px 2px 3px 6px;
-    padding: 10px 10px;
+    margin: 6px 2px 3px 3px;
+    padding: 10px 4px;
     border-radius: 16px;
   }
 }
 
 /* Chart/Order Book tabs (App.css, >=961px) mean only one of this card and
-   .ob-card is ever visible at this width — no more "sits right next to
-   .ob-card" adjacency to trim the right margin for, so both sides match
-   the same 10px inset .db-page's own right margin uses too. */
+   .ob-card is ever visible at this width, in the same single-panel
+   layout the tabs switch between — so this card's title should start at
+   the same x position as the tab labels directly above it. App.css's own
+   >=961px override for .chart-mobile-tabs sets margin-left:10px + its
+   unchanged padding:3px = 13px before the tab label text; matched here
+   with margin-left:10px + padding-left:3px. Longhand (not `margin`/
+   `padding` shorthand) so top/bottom and the right side stay whatever the
+   unconditional rules above already set per theme. */
 @media (min-width: 961px) {
-  html[data-theme="light"]
-    .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    margin: 10px;
+    margin-left: 10px;
+    padding-left: 3px;
   }
 }
 

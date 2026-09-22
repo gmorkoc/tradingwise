@@ -1,0 +1,127 @@
+/* Sits inside .chart-active (App.tsx), right above the price chart —
+   reads --pc-* tokens the same way Watchlist/PriceChart do so it matches
+   the "Aurora Glass" dark chrome and the light theme's flat cards exactly. */
+.tmb-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Flush full-width bar, no radius/gap — matches .wl-strip (Watchlist.css). */
+  padding: 10px 24px;
+  background: var(--pc-panel);
+  border: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
+  border-radius: 0;
+}
+
+.tmb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tmb-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tmb-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pc-text);
+  white-space: nowrap;
+}
+
+.tmb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pc-success);
+  box-shadow: 0 0 6px var(--pc-success);
+  flex-shrink: 0;
+}
+
+.tmb-subtitle {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--pc-text-muted);
+  white-space: nowrap;
+}
+
+.tmb-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  /* overflow-x:auto alone makes overflow-y compute to auto too (CSS
+     Overflow spec) — this headroom keeps a hovered pill's lift
+     (translateY(-1px)) from clipping against that edge. */
+  padding: 3px 2px 2px;
+  scrollbar-width: none;
+}
+.tmb-scroll::-webkit-scrollbar { display: none; }
+
+.tmb-loading {
+  font-size: 0.76rem;
+  color: var(--pc-text-muted);
+  padding: 6px 0;
+}
+
+.tmb-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.tmb-pill:hover { transform: translateY(-1px); }
+
+.tmb-pill.up {
+  background: color-mix(in srgb, var(--pc-success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pc-success) 25%, transparent);
+}
+.tmb-pill.down {
+  background: color-mix(in srgb, var(--pc-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pc-danger) 25%, transparent);
+}
+
+.tmb-pill-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.tmb-pill-icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pc-accent-soft);
+  color: var(--pc-accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.tmb-pill-sym {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--pc-text);
+}
+
+.tmb-pill-pct { font-size: 0.74rem; font-weight: 700; }
+.tmb-pill.up .tmb-pill-pct { color: var(--pc-success); }
+.tmb-pill.down .tmb-pill-pct { color: var(--pc-danger); }
+
+@media (max-width: 640px) {
+  .tmb-strip { padding: 8px 12px; }
+  .tmb-subtitle { display: none; }
+  .tmb-pill { padding: 5px 10px; }
+}

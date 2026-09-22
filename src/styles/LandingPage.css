@@ -1,6 +1,14 @@
 /* ── Root ──────────────────────────────────────────────────────────── */
 .lp-root {
   min-height: 100vh;
+  /* .lp-nav below is position:absolute, meant to scroll away with the
+     page like normal content — that only works if .lp-root is itself
+     the positioned containing block it anchors to. Without this, the
+     nav escapes to the outer page (App.css sets html/body to
+     overflow:hidden app-wide; .lp-root is the element that actually
+     scrolls), so it stayed visually pinned in place exactly like
+     position:fixed would, regardless of .lp-nav's own position value. */
+  position: relative;
   background: var(--lp-bg);
   color: var(--lp-text);
   font-family: inherit;
@@ -810,49 +818,38 @@ html[data-theme="light"] .lp-root {
 .lp-onchain-val   { font-size: 0.78rem; font-weight: 700; color: var(--lp-text); font-family: monospace; }
 .lp-onchain-val.up { color: #22c55e; }
 
-/* Store badges — reused inside the footer's mobile-app row below. */
-.lp-store-badges { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.lp-store-badge {
-  display: inline-flex; align-items: center; gap: 9px;
-  background: #000; color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px; padding: 8px 14px;
-  transition: transform 0.15s, border-color 0.15s;
-}
-.lp-store-badge:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.32); }
-.lp-store-badge svg { flex-shrink: 0; }
-.lp-store-badge-text { display: flex; flex-direction: column; line-height: 1.1; }
-.lp-store-badge-eyebrow { font-size: 0.55rem; opacity: 0.85; }
-.lp-store-badge-name { font-size: 0.92rem; font-weight: 700; letter-spacing: -0.01em; }
-
-/* Inline pill instead of a corner-overlapping ribbon — no absolute
-   positioning to fight with the badge's own text at small sizes. */
-.lp-soon-pill {
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  color: #1a1206; font-size: 0.58rem; font-weight: 800;
-  letter-spacing: 0.03em; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 999px;
-  white-space: nowrap; flex-shrink: 0;
-}
-
 /* ── Pricing ─────────────────────────────────────────────────────────── */
 .lp-pricing {
   padding: 72px 32px;
   max-width: 1480px; margin: 0 auto; text-align: center;
   border-top: 1px solid var(--lp-border);
+  position: relative; overflow: hidden;
 }
+/* A faint spotlight behind the popular card ties the section together
+   without competing with the card's own glow — pure decoration, doesn't
+   affect layout (absolutely positioned, zero size impact). */
+.lp-pricing::before {
+  content: "";
+  position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+  width: 640px; height: 320px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(56,189,248,0.16), transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+.lp-pricing > * { position: relative; z-index: 1; }
 .lp-pricing .lp-section-label,
 .lp-pricing .lp-section-title { text-align: center; }
 
-.lp-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px; text-align: left; }
+.lp-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 12px; text-align: left; align-items: start; }
 .lp-plan {
   background: var(--lp-panel);
   border: 1px solid var(--lp-border);
-  border-radius: 20px; padding: 26px 22px 22px;
-  position: relative; transition: border-color 0.2s;
+  border-radius: 16px; padding: 28px 24px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s;
   display: flex; flex-direction: column;
   opacity: 0; transform: translateY(14px);
 }
+.lp-plan:hover { transform: translateY(-4px); border-color: var(--lp-text-muted); box-shadow: 0 16px 40px -16px rgba(0,0,0,0.25); }
 .lp-plans.lp-reveal-in .lp-plan { animation: lp-reveal-up 0.6s cubic-bezier(0.22,1,0.36,1) forwards; }
 .lp-plans.lp-reveal-in .lp-plan:nth-child(1) { animation-delay: 0.05s; }
 .lp-plans.lp-reveal-in .lp-plan:nth-child(2) { animation-delay: 0.16s; }
@@ -861,25 +858,62 @@ html[data-theme="light"] .lp-root {
   .lp-plan { opacity: 1; transform: none; animation: none; }
 }
 .lp-plan-cta { margin-top: auto; }
-.lp-plan:hover { border-color: var(--lp-text-muted); }
+
+/* Thin gradient bar sitting right on the top edge, plus a faint tinted
+   border/glow — a restrained highlight instead of scaling the whole card
+   up, so Pro reads as "recommended" without the section looking lopsided. */
 .lp-plan--popular {
-  border-color: rgba(56,189,248,0.4);
-  background: var(--lp-accent-soft);
-  box-shadow: 0 0 40px rgba(56,189,248,0.08);
+  border-color: rgba(56,189,248,0.35);
+  background: linear-gradient(160deg, var(--lp-accent-soft) 0%, var(--lp-panel) 55%);
+  box-shadow: 0 0 0 1px rgba(56,189,248,0.12), 0 20px 48px -26px rgba(2,132,199,0.4);
 }
-.lp-plan-popular-tag {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, #38bdf8, #0284c7);
-  color: white; font-size: 0.65rem; font-weight: 800;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 4px 14px; border-radius: 999px; white-space: nowrap;
+.lp-plan--popular:hover { border-color: rgba(56,189,248,0.55); }
+.lp-plan-top-accent {
+  position: absolute; top: 0; left: 14%; right: 14%; height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, transparent, #38bdf8 20%, #0284c7 50%, #38bdf8 80%, transparent);
 }
-.lp-plan-label  { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+
+.lp-plan-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lp-plan-label  { font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+.lp-plan-index  { font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; color: var(--lp-text-muted); opacity: 0.65; letter-spacing: 0.03em; }
+.lp-plan-tagline { font-size: 0.8rem; color: var(--lp-text-muted); margin: 4px 0 18px; }
+
+.lp-plan-popular-tag,
+.lp-plan-elite-tag {
+  display: inline-flex; align-self: flex-start;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px; margin-bottom: 2px; white-space: nowrap;
+}
+.lp-plan-popular-tag { background: rgba(56,189,248,0.14); color: #38bdf8; }
+.lp-plan-elite-tag   { background: rgba(167,139,250,0.14); color: #a78bfa; }
+
 .lp-plan-price  { display: flex; align-items: baseline; gap: 3px; margin-bottom: 18px; }
 .lp-plan-amount { font-size: 2.2rem; font-weight: 900; color: var(--lp-text); letter-spacing: -0.04em; }
 .lp-plan-per    { font-size: 0.82rem; color: var(--lp-text-muted); font-weight: 600; }
-.lp-plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 8px; }
-.lp-plan-features li { font-size: 0.8rem; color: var(--lp-text-secondary); display: flex; align-items: center; gap: 7px; }
+
+/* "+ Everything in <tier below>" — pulled out of the checklist below (see
+   the JSX) since Pro/Elite's copy always leads with it. */
+.lp-plan-inherit-pill {
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  border: 1px solid; border-radius: 999px; background: var(--lp-panel-2);
+  padding: 6px 14px 6px 8px; margin-bottom: 16px;
+  font-size: 0.72rem; font-weight: 700;
+}
+.lp-plan-inherit-plus {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%; border: 1px solid currentColor;
+  font-size: 0.7rem; line-height: 1; flex-shrink: 0;
+}
+
+.lp-plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; }
+.lp-plan-features li {
+  font-size: 0.82rem; color: var(--lp-text-secondary);
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 0; border-bottom: 1px solid var(--lp-border);
+}
+.lp-plan-features li:last-child { border-bottom: none; }
+
 .lp-plan-cta {
   width: 100%; padding: 10px; border-radius: 11px;
   font-size: 0.85rem; font-weight: 700; cursor: pointer;
@@ -891,50 +925,79 @@ html[data-theme="light"] .lp-root {
 .lp-plan-cta--elite   { background: linear-gradient(135deg, #a78bfa, #7c3aed); color: white; border: none; }
 
 .lp-plan--elite {
-  border-color: rgba(167,139,250,0.5);
-  background: linear-gradient(160deg, rgba(167,139,250,0.07) 0%, var(--lp-panel) 60%);
-  box-shadow: 0 0 0 1px rgba(167,139,250,0.25), 0 0 48px rgba(139,92,246,0.14);
+  border-color: rgba(167,139,250,0.35);
+  background: linear-gradient(160deg, rgba(167,139,250,0.09) 0%, var(--lp-panel) 55%);
+  box-shadow: 0 0 0 1px rgba(167,139,250,0.12), 0 20px 48px -26px rgba(139,92,246,0.3);
 }
-.lp-plan--elite:hover { border-color: rgba(167,139,250,0.75); }
-
-.lp-plan-elite-tag {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: linear-gradient(135deg, #a78bfa, #7c3aed);
-  color: white; font-size: 0.65rem; font-weight: 800;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  padding: 4px 14px; border-radius: 999px; white-space: nowrap;
-}
-
-.lp-plan-elite-banner {
-  margin: 0 0 14px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(167,139,250,0.1);
-  border: 1px solid rgba(167,139,250,0.2);
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #c4b5fd;
-  text-align: center;
-}
+.lp-plan--elite:hover { border-color: rgba(167,139,250,0.55); }
 
 /* ── CTA ─────────────────────────────────────────────────────────────── */
 .lp-cta {
-  text-align: center; padding: 80px 32px;
+  position: relative; overflow: hidden;
+  text-align: center; padding: 96px 32px;
   background: var(--lp-panel);
   border-top: 1px solid var(--lp-border);
 }
+/* Same radial glow token the hero collage sits on, layered over a faint
+   line grid (reusing --lp-border for the lines, so it stays in step with
+   the theme) that fades out toward the edges via a mask — ties the
+   closing pitch back to the opening hero instead of a flat panel color. */
+.lp-cta::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    var(--lp-hero-glow),
+    repeating-linear-gradient(0deg, var(--lp-border) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(90deg, var(--lp-border) 0 1px, transparent 1px 46px);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 75%);
+  pointer-events: none;
+}
+.lp-cta-content { position: relative; z-index: 1; }
+.lp-cta-logo { display: flex; justify-content: center; margin-bottom: 18px; }
 .lp-cta-title { font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 900; color: var(--lp-text); letter-spacing: -0.03em; margin: 0 0 10px; }
 .lp-cta-sub   { font-size: 0.92rem; color: var(--lp-text-muted); margin: 0 0 28px; }
 
+/* Two floating glass chips flanking the pitch — decorative echoes of the
+   hero collage's price/signal cards, not real-time data (aria-hidden). */
+.lp-cta-chip {
+  position: absolute; top: 50%; z-index: 1;
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--lp-card-bg); border: 1px solid var(--lp-card-border);
+  border-radius: 999px; padding: 9px 18px;
+  font-size: 0.8rem; font-weight: 700; color: var(--lp-card-text);
+  backdrop-filter: blur(6px); box-shadow: var(--lp-card-shadow);
+  white-space: nowrap; pointer-events: none;
+  animation: lp-cta-chip-float 4.5s ease-in-out infinite;
+}
+.lp-cta-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+.lp-cta-chip-up { color: #4ade80; }
+.lp-cta-chip--left  { left: 6%; --r: -5deg; transform: translateY(-50%) rotate(var(--r)); animation-delay: 0s; }
+.lp-cta-chip--right { right: 6%; --r: 5deg; transform: translateY(-50%) rotate(var(--r)); animation-delay: 1.4s; }
+@keyframes lp-cta-chip-float {
+  0%, 100% { transform: translateY(-50%) rotate(var(--r)); }
+  50%      { transform: translateY(calc(-50% - 10px)) rotate(var(--r)); }
+}
+@media (max-width: 1100px) {
+  /* Cramped between the title and the viewport edge below this width —
+     drop them rather than let them collide with the text. */
+  .lp-cta-chip { display: none; }
+}
+
 /* Scroll-reveal for the final CTA — the one section that had no motion at
-   all; every other section already animates its content in via useReveal. */
-.lp-cta-reveal > * { opacity: 0; transform: translateY(14px); }
-.lp-cta-reveal.lp-reveal-in > * { animation: lp-reveal-up 0.65s cubic-bezier(0.22,1,0.36,1) forwards; }
-.lp-cta-reveal.lp-reveal-in > *:nth-child(1) { animation-delay: 0.05s; }
-.lp-cta-reveal.lp-reveal-in > *:nth-child(2) { animation-delay: 0.14s; }
-.lp-cta-reveal.lp-reveal-in > *:nth-child(3) { animation-delay: 0.23s; }
+   all; every other section already animates its content in via useReveal.
+   Scoped to .lp-cta-content's children (not .lp-cta's) so the decorative
+   chips, siblings of that wrapper, aren't caught by the nth-child timing
+   meant for title/sub/button. */
+.lp-cta-reveal .lp-cta-content > * { opacity: 0; transform: translateY(14px); }
+.lp-cta-reveal.lp-reveal-in .lp-cta-content > * { animation: lp-reveal-up 0.65s cubic-bezier(0.22,1,0.36,1) forwards; }
+.lp-cta-reveal.lp-reveal-in .lp-cta-content > *:nth-child(1) { animation-delay: 0.05s; }
+.lp-cta-reveal.lp-reveal-in .lp-cta-content > *:nth-child(2) { animation-delay: 0.14s; }
+.lp-cta-reveal.lp-reveal-in .lp-cta-content > *:nth-child(3) { animation-delay: 0.23s; }
+.lp-cta-reveal.lp-reveal-in .lp-cta-content > *:nth-child(4) { animation-delay: 0.32s; }
 @media (prefers-reduced-motion: reduce) {
-  .lp-cta-reveal > * { opacity: 1; transform: none; animation: none; }
+  .lp-cta-reveal .lp-cta-content > * { opacity: 1; transform: none; animation: none; }
+  .lp-cta-chip { animation: none; }
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────── */
@@ -943,20 +1006,18 @@ html[data-theme="light"] .lp-root {
   border-top: 1px solid var(--lp-border);
   background: var(--lp-panel);
 }
-.lp-footer-mobile {
-  display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap;
-  max-width: 900px; margin: 0 auto 28px; padding-bottom: 28px;
-  border-bottom: 1px solid var(--lp-border);
-}
-.lp-footer-mobile-text { display: flex; flex-direction: column; gap: 4px; }
-.lp-footer-mobile-label {
-  font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--lp-accent);
-}
-.lp-footer-mobile-title { font-size: 0.95rem; font-weight: 700; color: var(--lp-text); }
 .lp-footer-bottom {
-  text-align: center; font-size: 0.72rem; color: var(--lp-text-muted); opacity: 0.6;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  max-width: 1480px; margin: 0 auto;
+  font-size: 0.72rem; color: var(--lp-text-muted); opacity: 0.6;
 }
+@media (max-width: 640px) {
+  .lp-footer-bottom { flex-direction: column; text-align: center; gap: 6px; }
+}
+.lp-footer-legal a {
+  color: inherit; text-decoration: none;
+}
+.lp-footer-legal a:hover { text-decoration: underline; }
 
 /* ── Responsive ──────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -989,7 +1050,6 @@ html[data-theme="light"] .lp-root {
   .lp-features { padding: 48px 16px; }
   .lp-pricing { padding: 48px 16px; }
   .lp-footer { padding: 32px 16px 20px; }
-  .lp-footer-mobile { flex-direction: column; text-align: center; gap: 16px; }
   .lp-plans { grid-template-columns: 1fr; }
   .lp-cta { padding: 56px 16px; }
 }

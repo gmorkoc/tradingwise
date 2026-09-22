@@ -898,16 +898,6 @@
       "title": "Korku & Açgözlülük + Zincir Üzeri",
       "desc": "Gerçek zamanlı duyarlılık endeksi, hash oranı, madenci gelirleri ve zincir üzeri hacimle birleştirildi — YZ hepsini yorumlar."
     },
-    "mobileApp": {
-      "label": "Mobile Çok Yakında",
-      "title": "coinhintz'i piyasanın gittiği her yere götür",
-      "desc": "Tam YZ panosu, canlı sohbet ve fiyat uyarıları — doğrudan cebinizde. iOS ve Android uygulamaları yakında.",
-      "comingSoon": "Yakında",
-      "appStoreEyebrow": "İndirin",
-      "appStore": "App Store",
-      "googlePlayEyebrow": "ŞUNDAN EDİNİN",
-      "googlePlay": "Google Play"
-    },
     "pricing": {
       "label": "Fiyatlandırma",
       "sectionTitle": "Ücretsiz başla, hazır olduğunda yükselt",
@@ -915,6 +905,7 @@
       "plans": [
         {
           "label": "Ücretsiz",
+          "tagline": "Yeni başlayan yatırımcılar için",
           "price": "$0",
           "per": "",
           "cta": "Ücretsiz Başla",
@@ -927,6 +918,7 @@
         },
         {
           "label": "Pro",
+          "tagline": "Ciddi yatırımcılar için",
           "price": "$30.99",
           "per": "/ay",
           "cta": "Pro'ya Başla",
@@ -943,6 +935,7 @@
         },
         {
           "label": "Elite",
+          "tagline": "Her şeyi isteyen ileri düzey kullanıcılar için",
           "price": "$59.99",
           "per": "/ay",
           "cta": "Elite'e Geç",
@@ -965,7 +958,7 @@
       "sub": "Şimdi katılın — sonsuza dek ücretsiz, kredi kartı gerekmez.",
       "btn": "Ücretsiz hesap oluştur →"
     },
-    "footer": "© 2025 coinhintz.io · Ciddi yatırımcılar için tasarlandı",
+    "footer": "© 2026 coinhintz.io · Tüm hakları saklıdır",
     "signin": "Giriş Yap",
     "getStarted": "Ücretsiz Başla",
     "noCard": "Kart gerekmez",
@@ -1315,6 +1308,44 @@
     "viewChart": "Grafiği görüntüle",
     "vol": "Hacim"
   },
+  "topMovers": {
+    "title": "Bugünün En Çok Yükselenleri",
+    "subtitle": "24s % değişim",
+    "loading": "En çok yükselenler yükleniyor…"
+  },
+  "chartAnalyze": {
+    "title": "Grafik Analiz Et",
+    "subtitle": "Bir grafik yükle veya fotoğrafını çek, YZ ile gerçek bir teknik analiz al.",
+    "gateDesc": "Bir grafik ekran görüntüsü yükle ve tam bir YZ teknik analizi al — formasyonlar, seviyeler ve gerçek bir değerlendirme.",
+    "aiRead": "YZ Okuması",
+    "addYourChart": "Grafiğini Ekle",
+    "pickSubtitle": "Fotoğraf çek veya galerinden seç",
+    "dropHint": "veya resim dosyalarını buraya sürükleyip bırakın",
+    "takePhoto": "Fotoğraf Çek",
+    "chooseLibrary": "Fotoğraf Kitaplığı",
+    "maxImages": "Aynı anda en fazla {{max}} grafik.",
+    "tipsTitle": "En İyi Sonuçlar İçin İpuçları",
+    "tipsDesc": "En iyi sonuç için: aynı varlığın 1–3 zaman diliminden yükleyin",
+    "goodCharts": "İyi grafikler",
+    "good1": "Görünür zaman ekseniyle net bir fiyat çizgisi",
+    "good2": "TradingView ekran görüntüleri, broker uygulamaları veya masaüstü grafikleri",
+    "good3": "Görüntü başına tek varlık",
+    "avoid": "Kaçının",
+    "avoid1": "Bulanık veya açılı fotoğraflar",
+    "avoid2": "Tek görüntüde sıkıştırılmış birden fazla grafik",
+    "avoid3": "Aşırı karmaşık grafikler (üst üste binen göstergeler)",
+    "footerHint": "Daha derin analiz için en fazla {{max}} zaman dilimi ekleyin (ör. 1G, 1H, 1A)",
+    "analyzing": "Analiz ediliyor…",
+    "analyzeOne": "Grafiği analiz et",
+    "analyzeCount": "{{count}} grafiği analiz et",
+    "analyzeAnother": "Başka bir tane analiz et",
+    "done": "Tamam",
+    "errors": {
+      "pickFailed": "Seçici açılamadı — lütfen tekrar deneyin.",
+      "noResult": "Analiz başarısız oldu — lütfen tekrar deneyin.",
+      "analyzeFailed": "Grafiğiniz analiz edilirken bir sorun oluştu — lütfen tekrar deneyin."
+    }
+  },
   "alerts": {
     "title": "Alarm Oluşturucu",
     "enableNotifications": "Bildirimleri Etkinleştir",
@@ -1350,6 +1381,7 @@
     "heatmap": "Isı Haritası",
     "alerts": "Uyarılar",
     "watchlist": "İzleme Listesi",
+    "analyzeChart": "Grafik Analiz Et",
     "gann": "Gann",
     "live": "CANLI",
     "etf": "ETF Akışları",

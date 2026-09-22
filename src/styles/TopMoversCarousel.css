@@ -1,0 +1,160 @@
+/* Card-carousel variant of the top-movers banner — same --pc-* tokens as
+   TopMoversBanner.css/Watchlist.css so it drops into .chart-active without
+   its own color story. */
+.tmc-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Flush full-width bar, no radius/gap — same chrome as .wl-strip
+     (Watchlist.css) so the two toolbar strips read as one family instead
+     of Watchlist looking flat/native and this one looking like a floating
+     card, most obvious on iOS where the radius stood out against the
+     safe-area edges. */
+  padding: 8px 24px;
+  background: var(--pc-panel);
+  border: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
+  border-radius: 0;
+}
+/* .chart-page-row (App.css) puts a 6px flex gap between .chart-column and
+   the Daily Brief sidebar (>=961px, DailyBrief.css's .db-page) — right for
+   the chart/order book below, but it left this bar looking like it was
+   floating apart from Daily Brief instead of sitting flush against it.
+   Pulled back out by the same 6px so its own right edge touches .db-page
+   directly; the chart/order book's spacing is untouched since it comes
+   from .price-chart-container's own margin, not this gap. */
+@media (min-width: 961px) {
+  .tmc-strip { margin-right: -6px; }
+}
+
+.tmc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tmc-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tmc-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pc-text);
+}
+
+.tmc-nav { display: flex; gap: 2px; }
+.tmc-nav-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--pc-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+}
+.tmc-nav-btn:hover { color: var(--pc-accent); transform: scale(1.1); }
+.tmc-nav-btn svg { width: 16px; height: 16px; }
+
+.tmc-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  /* Setting only overflow-x makes the browser compute overflow-y as
+     `auto` too (CSS Overflow spec — a lone `visible` axis isn't allowed
+     next to a non-visible one), which was clipping .tmc-card's own
+     top border the instant its hover lift (translateY(-2px)) moved it
+     above this container's padding-box edge. This headroom gives that
+     lift + border somewhere to go without being cut off. */
+  padding: 4px 2px 2px;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+.tmc-scroll::-webkit-scrollbar { display: none; }
+
+.tmc-loading {
+  font-size: 0.76rem;
+  color: var(--pc-text-muted);
+  padding: 6px 0;
+}
+
+.tmc-card {
+  flex-shrink: 0;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--pc-border);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  /* Safety net so nothing inside (long symbol, wide % text) can ever
+     visually spill past the card's own rounded border. */
+  overflow: hidden;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.tmc-card:hover { transform: translateY(-2px); border-color: var(--pc-accent); }
+
+.tmc-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* A flex row's children don't shrink below their own content size by
+     default — with a fixed-width card, that pushed the % text (which
+     must never truncate) past the border whenever icon+symbol+% didn't
+     all fit, most visible on iOS with its slightly wider system-font
+     metrics. min-width:0 on the symbol below (the one item allowed to
+     shrink/truncate) is what actually fixes it; this row just needs to
+     not fight that. */
+  min-width: 0;
+}
+.tmc-card-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.tmc-card-icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pc-accent-soft);
+  color: var(--pc-accent);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+.tmc-card-sym {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--pc-text);
+  flex-grow: 1;
+  /* The one thing allowed to truncate — % change (flex-shrink:0 below)
+     and the icon must always stay fully visible and intact. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tmc-card-price {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--pc-text);
+}
+
+.tmc-card-pct { font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+.tmc-card-pct.up { color: var(--pc-success); }
+.tmc-card-pct.down { color: var(--pc-danger); }
+
+@media (max-width: 640px) {
+  .tmc-strip { padding: 8px 12px; }
+  .tmc-card { width: 112px; padding: 7px 9px; }
+}

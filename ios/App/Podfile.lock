@@ -10,10 +10,14 @@ PODS:
   - CapacitorCommunityAppleSignIn (6.0.0):
     - Capacitor
   - CapacitorCordova (6.2.1)
+  - CapacitorFilesystem (6.0.4):
+    - Capacitor
   - CapacitorFirebaseMessaging (6.3.1):
     - Capacitor
     - FirebaseMessaging (~> 11.0)
   - CapacitorKeyboard (6.0.3):
+    - Capacitor
+  - CapacitorShare (6.0.4):
     - Capacitor
   - CapacitorStatusBar (6.0.3):
     - Capacitor
@@ -84,8 +88,10 @@ DEPENDENCIES:
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
   - "RevenuecatPurchasesCapacitor (from `../../node_modules/@revenuecat/purchases-capacitor`)"
 
@@ -115,10 +121,14 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/apple-sign-in"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
   CapacitorFirebaseMessaging:
     :path: "../../node_modules/@capacitor-firebase/messaging"
   CapacitorKeyboard:
     :path: "../../node_modules/@capacitor/keyboard"
+  CapacitorShare:
+    :path: "../../node_modules/@capacitor/share"
   CapacitorStatusBar:
     :path: "../../node_modules/@capacitor/status-bar"
   RevenuecatPurchasesCapacitor:
@@ -131,8 +141,10 @@ SPEC CHECKSUMS:
   CapacitorCamera: 36dd808d7a49f946c1743b41d518208777e1fbd9
   CapacitorCommunityAppleSignIn: c8bba4ca8ff6ff843367ece13ee8af24e9266eb9
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
+  CapacitorFilesystem: 45e086a4396be03456c3d53d34b17c89169dd8cd
   CapacitorFirebaseMessaging: 3b4ff762b42ad3137c911a96ec06bf8bfd6fb122
   CapacitorKeyboard: 460c6f9ec5e52c84f2742d5ce2e67bbc7ab0ebb0
+  CapacitorShare: 44c43f74b95500ba7399c2ac21f0d55efc1a931e
   CapacitorStatusBar: 38665f1a18c55677098367a29f6b42126b72dc65
   FirebaseCore: efb3893e5b94f32b86e331e3bd6dadf18b66568e
   FirebaseCoreInternal: 9afa45b1159304c963da48addb78275ef701c6b4
@@ -146,6 +158,6 @@ SPEC CHECKSUMS:
   RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
   RevenuecatPurchasesCapacitor: 05a6dc8ba13e6cc072202c2dddcb4556abf45259
 
-PODFILE CHECKSUM: b69cc6d124e573a6319f1e5ceefc263502150d0d
+PODFILE CHECKSUM: 3efb9c80fa1ba065f1442e596409d28bd1905b3a
 
 COCOAPODS: 1.16.2

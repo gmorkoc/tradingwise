@@ -2136,7 +2136,7 @@ html:not([data-theme="light"]) .top-nav-search:hover {
 .top-nav-icons {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   margin-left: auto;
   flex-shrink: 0;
 }

@@ -898,16 +898,6 @@
       "title": "Paura & Avidità + On-Chain",
       "desc": "Indice di sentiment in tempo reale combinato con hash rate, ricavi dei miner e volume on-chain — l'IA interpreta tutto."
     },
-    "mobileApp": {
-      "label": "In Arrivo su Mobile",
-      "title": "Porta coinhintz ovunque si muova il mercato",
-      "desc": "La dashboard IA completa, chat dal vivo e avvisi di prezzo — direttamente in tasca. App iOS e Android in arrivo presto.",
-      "comingSoon": "Presto",
-      "appStoreEyebrow": "Scarica su",
-      "appStore": "App Store",
-      "googlePlayEyebrow": "DISPONIBILE SU",
-      "googlePlay": "Google Play"
-    },
     "pricing": {
       "label": "Prezzi",
       "sectionTitle": "Inizia gratis, aggiorna quando sei pronto",
@@ -915,6 +905,7 @@
       "plans": [
         {
           "label": "Free",
+          "tagline": "Per chi inizia a fare trading",
           "price": "$0",
           "per": "",
           "cta": "Inizia Gratis",
@@ -927,6 +918,7 @@
         },
         {
           "label": "Pro",
+          "tagline": "Per trader seri",
           "price": "$30.99",
           "per": "/mese",
           "cta": "Inizia Pro",
@@ -943,6 +935,7 @@
         },
         {
           "label": "Elite",
+          "tagline": "Per power user che vogliono tutto",
           "price": "$59.99",
           "per": "/mese",
           "cta": "Vai ad Elite",
@@ -965,7 +958,7 @@
       "sub": "Unisciti ora — gratis per sempre, nessuna carta di credito richiesta.",
       "btn": "Crea account gratuito →"
     },
-    "footer": "© 2025 coinhintz.io · Costruito per trader seri",
+    "footer": "© 2026 coinhintz.io · Tutti i diritti riservati",
     "signin": "Accedi",
     "getStarted": "Inizia Gratis",
     "noCard": "Nessuna carta richiesta",
@@ -1315,6 +1308,44 @@
     "viewChart": "Vedi grafico",
     "vol": "Vol"
   },
+  "topMovers": {
+    "title": "I Più Attivi di Oggi",
+    "subtitle": "Variazione 24h %",
+    "loading": "Caricamento dei più attivi…"
+  },
+  "chartAnalyze": {
+    "title": "Analizza un Grafico",
+    "subtitle": "Scatta o carica un grafico e ottieni una vera analisi tecnica con l'IA.",
+    "gateDesc": "Carica uno screenshot del grafico e ottieni un'analisi tecnica completa con IA — pattern, livelli e un giudizio reale.",
+    "aiRead": "Lettura IA",
+    "addYourChart": "Aggiungi il Tuo Grafico",
+    "pickSubtitle": "Scatta una foto o scegli dalla galleria",
+    "dropHint": "oppure trascina qui le immagini",
+    "takePhoto": "Scatta Foto",
+    "chooseLibrary": "Libreria Foto",
+    "maxImages": "Fino a {{max}} grafici alla volta.",
+    "tipsTitle": "Consigli Per Risultati Migliori",
+    "tipsDesc": "Per risultati migliori: carica 1–3 timeframe dello stesso asset",
+    "goodCharts": "Grafici validi",
+    "good1": "Linea di prezzo chiara con asse temporale visibile",
+    "good2": "Screenshot di TradingView, app broker o grafici desktop",
+    "good3": "Un solo asset per immagine",
+    "avoid": "Da evitare",
+    "avoid1": "Foto sfocate o storte",
+    "avoid2": "Più grafici ammassati in una sola immagine",
+    "avoid3": "Grafici troppo affollati (indicatori sovrapposti)",
+    "footerHint": "Aggiungi fino a {{max}} timeframe per un'analisi più approfondita (es. 1D, 1S, 1M)",
+    "analyzing": "Analisi in corso…",
+    "analyzeOne": "Analizza grafico",
+    "analyzeCount": "Analizza {{count}} grafici",
+    "analyzeAnother": "Analizza un altro",
+    "done": "Fatto",
+    "errors": {
+      "pickFailed": "Impossibile aprire il selettore — riprova.",
+      "noResult": "Analisi non riuscita — riprova.",
+      "analyzeFailed": "Qualcosa è andato storto durante l'analisi — riprova."
+    }
+  },
   "alerts": {
     "title": "Costruttore Avvisi",
     "enableNotifications": "Abilita Notifiche",
@@ -1350,6 +1381,7 @@
     "heatmap": "Mappa di Calore",
     "alerts": "Avvisi",
     "watchlist": "Lista Osservazione",
+    "analyzeChart": "Analizza un Grafico",
     "gann": "Gann",
     "live": "LIVE",
     "etf": "Flussi ETF",

@@ -30,6 +30,7 @@ import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
+import { TopMoversCarousel } from "./components/TopMoversCarousel";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
@@ -51,6 +52,7 @@ import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
 import { Tier, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
+import { ChartAnalyzeModal } from "./components/ChartAnalyzeModal";
 import { ResolutionBanner } from "./components/ResolutionBanner";
 import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
@@ -364,12 +366,12 @@ function AppDashboard({
   }, [activeSection]);
   // Nav accordion — which of the three collapsible categories is open.
   // Defaults to whichever one contains the current section (so landing on
-  // e.g. #correlation opens Market Data automatically); Market Data is the
-  // default open category otherwise (e.g. landing on Chart/Candle AI) —
-  // manually toggling a category (see the nav item's onClick below) still
-  // behaves as a single-category accordion regardless of this default.
+  // e.g. #correlation opens Market Data automatically); all closed
+  // otherwise (e.g. landing on Chart/Candle AI) — manually toggling a
+  // category (see the nav item's onClick below) still behaves as a
+  // single-category accordion regardless of this default.
   const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
-    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? "market",
+    () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? null,
   );
   // Same convention as CoinChat.tsx's own useIsDesktop — desktop web
   // relocates the account menu into .top-nav-bar instead of the nav drawer.
@@ -786,6 +788,7 @@ function AppDashboard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [chartAnalyzeOpen, setChartAnalyzeOpen] = useState(false);
   const [coinPickerOpen, setCoinPickerOpen] = useState(false);
   const [coinSearch, setCoinSearch] = useState("");
   const [recentCoins, setRecentCoins] = useState<string[]>(loadRecentCoins);
@@ -1204,6 +1207,13 @@ function AppDashboard({
           isOpen={contactOpen}
           onClose={() => setContactOpen(false)}
         />
+        <ChartAnalyzeModal
+          isOpen={chartAnalyzeOpen}
+          onClose={() => setChartAnalyzeOpen(false)}
+          onOpenUpgrade={onOpenUpgrade}
+          onOpenAuth={onOpenAuth}
+          coin={coin}
+        />
         <LearnSection isOpen={learnOpen} onClose={() => setLearnOpen(false)} />
         {tutorialOpen && (
           <TutorialPage onClose={() => setTutorialOpen(false)} />
@@ -1292,6 +1302,33 @@ function AppDashboard({
                 </div>
               );
             })}
+
+            {/* Opens ChartAnalyzeModal directly rather than switching
+                activeSection like every other item here — placed last,
+                after every section/category, rather than among them.
+                Every other item closes the mobile nav via the
+                activeSection-change effect above; this one doesn't touch
+                activeSection at all, so it has to close it explicitly. */}
+            <button
+              className="icon-strip-btn"
+              onClick={() => {
+                setChartAnalyzeOpen(true);
+                setMobileNavOpen(false);
+              }}
+              title={t("nav.analyzeChart")}
+            >
+              <span className="nav-badge--mobile nav-badge--pro">P</span>
+              <span className="nav-icon-wrap">
+                <NavIcon
+                  d={[
+                    "M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z",
+                    "M16 13a4 4 0 11-8 0 4 4 0 018 0z",
+                  ]}
+                />
+              </span>
+              <span className="icon-strip-label">{t("nav.analyzeChart")}</span>
+              <span className="icon-strip-elite-badge nav-badge--desktop nav-badge--pro">P</span>
+            </button>
           </div>
 
           {/* Desktop web relocates this whole block into .top-nav-bar
@@ -1786,6 +1823,12 @@ function AppDashboard({
                 />
                 <div className="chart-page-row">
                   <div className="chart-column">
+                    <TopMoversCarousel
+                      onSelectCoin={(symbol) => {
+                        setCoin(symbol as CoinSymbol);
+                        clearCandleCache();
+                      }}
+                    />
                     <div className="chart-mobile-tabs">
                       <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
                       <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
