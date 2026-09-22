@@ -210,7 +210,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* ── Footer ────────────────────────────────────── */}
           <div className="drawer-footer-block">
-            <p className="drawer-version">v0.1.0 · Binance · coinhintz · OpenAI GPT</p>
+            <p className="drawer-version">v0.1.0 · coinhintz</p>
             <p className="drawer-footer">{t("drawer.disclaimer")}</p>
           </div>
 

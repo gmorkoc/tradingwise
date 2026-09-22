@@ -1395,6 +1395,7 @@
     "riskcalc": "Calc. Posición",
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
+    "focusMode": "Enfoque",
     "swipeHint": "Desliza para abrir el menú",
     "logo": "📊 coinhintz.AI",
     "aiChat": "Chat IA"
@@ -1580,6 +1581,7 @@
     "reported": "Reportado",
     "signInToPost": "Inicia sesión para comentar",
     "upgradeToPost": "Hazte Pro para poder comentar",
+    "upgradeToRead": "Hazte Pro para leer la conversación",
     "upgrade": "Mejorar plan",
     "placeholder": "Comparte tu opinión sobre {{coin}}…",
     "post": "Publicar",

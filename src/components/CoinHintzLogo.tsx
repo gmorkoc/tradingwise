@@ -3,7 +3,7 @@ interface Props {
   variant?: "default" | "nav";
 }
 
-const LogoIcon = ({ size = 36, animated = false }: { size?: number; animated?: boolean }) => (
+export const LogoIcon = ({ size = 36, animated = false }: { size?: number; animated?: boolean }) => (
   <svg
     className="st-logo-icon"
     width={size}

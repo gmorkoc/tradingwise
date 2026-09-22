@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import type { Ticker24h } from "../services/coinglass";
+import { LogoIcon } from "./CoinHintzLogo";
 import "../styles/DailyBrief.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
@@ -177,12 +178,11 @@ function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) =>
 const DRAG_THRESHOLD = 40;
 const TAP_THRESHOLD = 6;
 
+// No thumbnail in the feed — the coinhintz mark reads better here than a
+// generic "no image" icon (still tinted per category via the background).
 const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({ category, className }) => (
   <div className={`${className} db-thumb-placeholder db-thumb-placeholder--${category}`}>
-    <svg width="40%" height="40%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 9h18M8 4v5M8 13h8M8 17h5" />
-    </svg>
+    <LogoIcon size={28} />
   </div>
 );
 

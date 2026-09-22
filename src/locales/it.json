@@ -1395,6 +1395,7 @@
     "riskcalc": "Calc. Posizione",
     "settings": "Impostazioni",
     "signOut": "Disconnetti",
+    "focusMode": "Focus",
     "swipeHint": "Scorri per aprire il menu",
     "logo": "📊 coinhintz.AI",
     "aiChat": "Chat IA"
@@ -1580,6 +1581,7 @@
     "reported": "Segnalato",
     "signInToPost": "Accedi per commentare",
     "upgradeToPost": "Passa a Pro per poter commentare",
+    "upgradeToRead": "Passa a Pro per leggere la discussione",
     "upgrade": "Passa a Pro",
     "placeholder": "Condividi la tua opinione su {{coin}}…",
     "post": "Pubblica",

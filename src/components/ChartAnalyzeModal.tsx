@@ -71,7 +71,12 @@ function renderAnalysis(text: string): React.ReactNode[] {
       nodes.push(<h4 key={`h${i}`} className="caz-result-heading">{chunk.trim()}</h4>);
       return;
     }
-    const body = chunk.replace(/^[:\s]+/, "").trim();
+    // Strip a leading "-" up front, regardless of whether whitespace
+    // follows it ("- Text" and "-Text" both happen in real output) — the
+    // split below only catches mid-string "- " occurrences reliably;
+    // relying on it alone for the very first bullet left a dangling
+    // dash whenever the model omitted the space ("-Strong uptrend...").
+    const body = chunk.replace(/^[:\s]+/, "").replace(/^-\s*/, "").trim();
     if (!body) return;
     const items = body.split(/\s*-\s+/).map(s => s.trim()).filter(Boolean);
     if (items.length >= 2) {
@@ -81,7 +86,7 @@ function renderAnalysis(text: string): React.ReactNode[] {
         </ul>
       );
     } else {
-      nodes.push(<p key={`p${i}`}>{parseInline(body, `${i}`)}</p>);
+      nodes.push(<p key={`p${i}`}>{parseInline(items[0] ?? body, `${i}`)}</p>);
     }
   });
   return nodes;

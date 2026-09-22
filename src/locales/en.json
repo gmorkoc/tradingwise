@@ -1494,6 +1494,7 @@
     "catTradingTools": "Trading Tools",
     "settings": "Settings",
     "signOut": "Sign Out",
+    "focusMode": "Focus",
     "swipeHint": "Swipe to open menu",
     "logo": "📊 coinhintz.AI",
     "aiChat": "AI Chat"
@@ -1719,6 +1720,7 @@
     "reported": "Reported",
     "signInToPost": "Sign in to post a comment",
     "upgradeToPost": "Upgrade to Pro to post comments",
+    "upgradeToRead": "Upgrade to Pro to read the discussion",
     "upgrade": "Upgrade",
     "placeholder": "Share your take on {{coin}}…",
     "post": "Post",

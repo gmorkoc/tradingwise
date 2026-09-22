@@ -740,61 +740,86 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     </div>
   );
 
+  // Free (or signed-out) users see the real feed rendered — just blurred
+  // and non-interactive, with an upgrade card over it — rather than the
+  // content simply not being there. Only kicks in once there's actual
+  // content to hide; loading/empty states already have their own CTA and
+  // nothing sensitive to obscure.
+  const feedLocked = !isPaid && !loading && comments.length > 0;
+
   const feed = (
-    <div className="coin-chat-feed" ref={feedRef}>
-      {showBotBanner && (
-        <div className="coin-chat-bot-banner">
-          <span className="coin-chat-bot-banner-icon">🤖</span>
-          <p className="coin-chat-bot-banner-text">
-            {t(
-              "coinChat.botBannerText",
-              "MarketPulse posts market updates here and answers questions — tag @MarketPulse anytime.",
-            )}
-          </p>
+    <div className="coin-chat-feed-wrap">
+      <div className={`coin-chat-feed${feedLocked ? " coin-chat-feed--blurred" : ""}`} ref={feedRef}>
+        {showBotBanner && (
+          <div className="coin-chat-bot-banner">
+            <span className="coin-chat-bot-banner-icon">🤖</span>
+            <p className="coin-chat-bot-banner-text">
+              {t(
+                "coinChat.botBannerText",
+                "MarketPulse posts market updates here and answers questions — tag @MarketPulse anytime.",
+              )}
+            </p>
+            <button
+              type="button"
+              className="coin-chat-bot-banner-close"
+              onClick={dismissBotBanner}
+              aria-label={t("coinChat.dismiss", "Dismiss")}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {loading ? (
+          <p className="coin-chat-empty">{t("common.loading")}</p>
+        ) : comments.length === 0 ? (
+          <div className="coin-chat-empty-state">
+            <div className="coin-chat-empty-icon">💬</div>
+            <p className="coin-chat-empty-title">{t("coinChat.emptyTitle", "No comments yet")}</p>
+            <p className="coin-chat-empty-sub">{t("coinChat.empty", { coin })}</p>
+            {!user ? (
+              <button type="button" className="coin-chat-empty-cta" onClick={onOpenAuth}>
+                {t("coinChat.signInToPost")}
+              </button>
+            ) : !isPaid ? (
+              <button type="button" className="coin-chat-empty-cta" onClick={() => onOpenUpgrade?.("pro")}>
+                {t("coinChat.upgradeToPost")}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            {loadingMore && <p className="coin-chat-empty">{t("common.loading")}</p>}
+            {topLevelComments.map((c) => {
+              const replies = repliesByParent.get(c.id);
+              return (
+                <Fragment key={c.id}>
+                  {renderComment(c)}
+                  {replies && replies.length > 0 && (
+                    <div className="coin-chat-thread">
+                      {replies.map((r) => renderComment(r))}
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
+          </>
+        )}
+      </div>
+      {feedLocked && (
+        <div className="coin-chat-lock-overlay">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="10" width="16" height="10" rx="2" />
+            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+          </svg>
+          <p className="coin-chat-lock-text">{t("coinChat.upgradeToRead", "Upgrade to Pro to read the discussion")}</p>
           <button
             type="button"
-            className="coin-chat-bot-banner-close"
-            onClick={dismissBotBanner}
-            aria-label={t("coinChat.dismiss", "Dismiss")}
+            className="coin-chat-upgrade-pill"
+            onClick={() => (user ? onOpenUpgrade?.("pro") : onOpenAuth?.())}
           >
-            ✕
+            {user ? t("coinChat.upgrade") : t("coinChat.signInToPost")}
           </button>
         </div>
-      )}
-      {loading ? (
-        <p className="coin-chat-empty">{t("common.loading")}</p>
-      ) : comments.length === 0 ? (
-        <div className="coin-chat-empty-state">
-          <div className="coin-chat-empty-icon">💬</div>
-          <p className="coin-chat-empty-title">{t("coinChat.emptyTitle", "No comments yet")}</p>
-          <p className="coin-chat-empty-sub">{t("coinChat.empty", { coin })}</p>
-          {!user ? (
-            <button type="button" className="coin-chat-empty-cta" onClick={onOpenAuth}>
-              {t("coinChat.signInToPost")}
-            </button>
-          ) : !isPaid ? (
-            <button type="button" className="coin-chat-empty-cta" onClick={() => onOpenUpgrade?.("pro")}>
-              {t("coinChat.upgradeToPost")}
-            </button>
-          ) : null}
-        </div>
-      ) : (
-        <>
-          {loadingMore && <p className="coin-chat-empty">{t("common.loading")}</p>}
-          {topLevelComments.map((c) => {
-            const replies = repliesByParent.get(c.id);
-            return (
-              <Fragment key={c.id}>
-                {renderComment(c)}
-                {replies && replies.length > 0 && (
-                  <div className="coin-chat-thread">
-                    {replies.map((r) => renderComment(r))}
-                  </div>
-                )}
-              </Fragment>
-            );
-          })}
-        </>
       )}
     </div>
   );

@@ -404,6 +404,15 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("coinchat-visible", String(showCoinChat));
   }, [showCoinChat]);
+  // Coinbase-style rail toggle (desktop only, see icon-strip-focus below) —
+  // hides Watchlist/Top Movers/Daily Brief so the chart is the only thing
+  // on screen. Persisted the same way as every other rail preference here.
+  const [distractionFree, setDistractionFree] = useState(
+    () => localStorage.getItem("distraction-free") === "true",
+  );
+  useEffect(() => {
+    localStorage.setItem("distraction-free", String(distractionFree));
+  }, [distractionFree]);
   // Desktop-only: stretches the floating dock to near full viewport height
   // instead of its usual capped 640px. Not persisted — always starts
   // collapsed, same as every other transient UI toggle in this file.
@@ -1140,25 +1149,21 @@ function AppDashboard({
     <button
       key={item.id}
       className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
-      onClick={() => setActiveSection(item.id)}
+      onClick={() => {
+        setActiveSection(item.id);
+        // Desktop-only: a flat item (never true for a category's own
+        // sub-items) closes an open flyout panel instead of leaving it
+        // open over a section it no longer matches. Guarded to desktop so
+        // mobile's inline accordion state (which this same item.category
+        // check would otherwise also touch) is never affected.
+        if (isDesktopWidth && !item.category) setOpenNavCategory(null);
+      }}
       title={t(item.labelKey)}
     >
-      {/* Mobile badge — left of icon */}
-      {item.requiredTier && (
-        <span className={`nav-badge--mobile nav-badge--${item.requiredTier}`}>
-          {item.requiredTier === "elite" ? "E" : "P"}
-        </span>
-      )}
       <span className="nav-icon-wrap">
         <NavIcon d={item.d} />
       </span>
       <span className="icon-strip-label">{t(item.labelKey)}</span>
-      {/* Desktop badge — after label */}
-      {item.requiredTier && (
-        <span className={`icon-strip-elite-badge nav-badge--desktop nav-badge--${item.requiredTier}`}>
-          {item.requiredTier === "elite" ? "E" : "P"}
-        </span>
-      )}
     </button>
   );
 
@@ -1281,11 +1286,17 @@ function AppDashboard({
             {NAV_CATEGORIES.map((cat) => {
               const items = NAV_ITEMS.filter((item) => !item.hidden && item.category === cat.id);
               const isOpen = openNavCategory === cat.id;
+              // Desktop-only: highlight the category itself when the
+              // current section is one of its items, even once its flyout
+              // is closed again — separate from `isOpen` (which mobile's
+              // own inline accordion still keys off unchanged) via its own
+              // "current" class.
+              const isCurrent = items.some((item) => item.id === activeSection);
               return (
                 <div className="icon-strip-cat" key={cat.id}>
                   <button
                     type="button"
-                    className={`icon-strip-cat-head${isOpen ? " open" : ""}`}
+                    className={`icon-strip-cat-head${isOpen ? " open" : ""}${isCurrent ? " current" : ""}`}
                     onClick={() => setOpenNavCategory((prev) => (prev === cat.id ? null : cat.id))}
                   >
                     <span className="icon-strip-cat-icon nav-icon-wrap">
@@ -1314,10 +1325,10 @@ function AppDashboard({
               onClick={() => {
                 setChartAnalyzeOpen(true);
                 setMobileNavOpen(false);
+                if (isDesktopWidth) setOpenNavCategory(null);
               }}
               title={t("nav.analyzeChart")}
             >
-              <span className="nav-badge--mobile nav-badge--pro">P</span>
               <span className="nav-icon-wrap">
                 <NavIcon
                   d={[
@@ -1327,7 +1338,6 @@ function AppDashboard({
                 />
               </span>
               <span className="icon-strip-label">{t("nav.analyzeChart")}</span>
-              <span className="icon-strip-elite-badge nav-badge--desktop nav-badge--pro">P</span>
             </button>
           </div>
 
@@ -1379,7 +1389,85 @@ function AppDashboard({
               </button>
             </div>
           )}
+
+          {/* Coinbase-style rail toggle — desktop only, always the rail's
+              last item regardless of whether icon-strip-bottom above it
+              rendered (it doesn't on desktop web, see that block's own
+              condition). */}
+          {isDesktopWidth && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={distractionFree}
+              aria-label={t("nav.focusMode", "Focus")}
+              className={`icon-strip-btn icon-strip-focus${distractionFree ? " active" : ""}`}
+              onClick={() => setDistractionFree((v) => !v)}
+              title={t("nav.focusMode", "Focus")}
+            >
+              <span className="nav-icon-wrap">
+                <NavIcon
+                  d={[
+                    "M4 21L4 14", "M4 10L4 3",
+                    "M12 21L12 12", "M12 8L12 3",
+                    "M20 21L20 16", "M20 12L20 3",
+                    "M1 14L7 14", "M9 8L15 8", "M17 16L23 16",
+                  ]}
+                />
+              </span>
+              <span className="icon-strip-label">{t("nav.focusMode", "Focus")}</span>
+              <span className={`icon-strip-focus-switch${distractionFree ? " on" : ""}`}>
+                <span className="icon-strip-focus-knob" />
+              </span>
+            </button>
+          )}
         </nav>
+
+        {/* Desktop-only Coinbase-style flyout — replaces the inline
+            accordion for min-width:641px (see .icon-strip-cat-items,
+            forced display:none at that width in App.css); mobile keeps
+            the original inline accordion untouched. */}
+        {openNavCategory && (() => {
+          const cat = NAV_CATEGORIES.find((c) => c.id === openNavCategory)!;
+          const items = NAV_ITEMS.filter((item) => !item.hidden && item.category === cat.id);
+          return (
+            <>
+              <div className="nav-cat-backdrop" onClick={() => setOpenNavCategory(null)} />
+              <div className="nav-cat-panel">
+                <div className="nav-cat-panel-header">
+                  <button
+                    type="button"
+                    className="nav-cat-panel-close"
+                    onClick={() => setOpenNavCategory(null)}
+                    aria-label={t("common.close", "Close")}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="nav-cat-panel-title">{t(cat.labelKey)}</div>
+                <div className="nav-cat-panel-items">
+                  {items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`nav-cat-panel-item${activeSection === item.id ? " active" : ""}`}
+                      onClick={() => {
+                        setActiveSection(item.id);
+                        setOpenNavCategory(null);
+                      }}
+                    >
+                      <span className="nav-icon-wrap">
+                        <NavIcon d={item.d} />
+                      </span>
+                      <span className="nav-cat-panel-item-label">{t(item.labelKey)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         <div className="main-panel">
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
@@ -1815,20 +1903,24 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                <Watchlist
-                  onSelectCoin={(symbol) => {
-                    setCoin(symbol as CoinSymbol);
-                    clearCandleCache();
-                  }}
-                />
+                {!distractionFree && (
+                  <Watchlist
+                    onSelectCoin={(symbol) => {
+                      setCoin(symbol as CoinSymbol);
+                      clearCandleCache();
+                    }}
+                  />
+                )}
                 <div className="chart-page-row">
                   <div className="chart-column">
-                    <TopMoversCarousel
-                      onSelectCoin={(symbol) => {
-                        setCoin(symbol as CoinSymbol);
-                        clearCandleCache();
-                      }}
-                    />
+                    {!distractionFree && (
+                      <TopMoversCarousel
+                        onSelectCoin={(symbol) => {
+                          setCoin(symbol as CoinSymbol);
+                          clearCandleCache();
+                        }}
+                      />
+                    )}
                     <div className="chart-mobile-tabs">
                       <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
                       <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
@@ -1912,7 +2004,7 @@ function AppDashboard({
                       <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
                     </div>
                   </div>
-                  {isWideDesktop && (
+                  {isWideDesktop && !distractionFree && (
                     <DailyBrief coinTickers={coinTickers} variant="page" />
                   )}
                 </div>
@@ -2422,7 +2514,7 @@ function AppDashboard({
       </div>
       {/* end app-shell-body */}
 
-      {!isWideDesktop && <DailyBrief coinTickers={coinTickers} />}
+      {!isWideDesktop && !distractionFree && <DailyBrief coinTickers={coinTickers} />}
       <PushToast />
 
       {priceTicker &&

@@ -1395,6 +1395,7 @@
     "riskcalc": "Pozisyon Hesaplayıcı",
     "settings": "Ayarlar",
     "signOut": "Çıkış Yap",
+    "focusMode": "Odak",
     "swipeHint": "Menüyü açmak için kaydır",
     "logo": "📊 coinhintz.AI",
     "aiChat": "YZ Sohbet"
@@ -1580,6 +1581,7 @@
     "reported": "Bildirildi",
     "signInToPost": "Yorum yapmak için giriş yap",
     "upgradeToPost": "Yorum yapmak için Pro'ya yükselt",
+    "upgradeToRead": "Tartışmayı okumak için Pro'ya yükselt",
     "upgrade": "Yükselt",
     "placeholder": "{{coin}} hakkındaki görüşünü paylaş…",
     "post": "Gönder",

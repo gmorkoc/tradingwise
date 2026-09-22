@@ -87,12 +87,29 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
       .select()
       .single();
 
-    // Username was claimed by someone else between the signup-form check
-    // and this row actually being created — vanishingly rare given the
-    // real-time check, but the user should still end up with a profile
-    // row rather than none at all over it.
+    // 23505 (unique_violation) fires for TWO different reasons here, and
+    // they need different recoveries:
+    //  1. This same row already exists — AuthContext.tsx calls loadProfile
+    //     from both its mount-time getSession() and its onAuthStateChange
+    //     handler (which Supabase also fires once on subscribe), so on a
+    //     brand-new signup both fire concurrently and race to insert the
+    //     same `id`. The loser must NOT treat this as "username taken" and
+    //     silently drop it — that was the actual bug (the signup form's
+    //     username never reappearing was this call winning the race with
+    //     a username-less fallback insert). Re-select the row the winner
+    //     already created instead — it has the real username.
+    //  2. The username itself collided with a different user's row
+    //     (its own `id` is genuinely new) — the signup form's real-time
+    //     check makes this vanishingly rare, but if it happens the user
+    //     should still end up with *a* profile row rather than none, so
+    //     this one retries the insert without the username.
     if (insertError?.code === "23505") {
-      ({ data: created } = await supabase.from("profiles").insert(base).select().single());
+      const { data: existing } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (existing) {
+        created = existing;
+      } else {
+        ({ data: created } = await supabase.from("profiles").insert(base).select().single());
+      }
     }
 
     return created as Profile | null;
