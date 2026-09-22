@@ -351,22 +351,19 @@
   max-width: 400px;
   background: var(--pc-panel);
   border-radius: 0;
+  /* Flush against .chart-column now that neither side has a margin/shadow
+     to separate them — this divider is the only thing marking where the
+     chart column ends and Daily Brief begins. Same --pc-border token
+     .price-chart-container/.ob-card use, so it matches in both themes. */
+  border-left: 1px solid var(--pc-border);
   overflow: hidden;
 }
 
-/* Light theme gives .price-chart-container/.ob-card a distinct rounded,
-   shadowed, borderless card with a 10px inset (PriceChart.css /
-   OrderBook.css, >=961px) — match that exactly instead of the dark
-   theme's flush frosted-glass panel above. */
-html[data-theme="light"] .chart-active .db-page {
-  /* Left margin skipped — .chart-page-row's own gap (App.css) already
-     separates this from the chart column, same reasoning as
-     .price-chart-container/.ob-card trimming their shared inner edge. */
-  margin: 10px 10px 10px 0;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 90px), var(--pc-panel);
-  box-shadow: var(--pc-shadow);
-}
+/* .price-chart-container/.ob-card dropped their own light-only rounded/
+   shadowed treatment for the same flat, square, flush look in both
+   themes (PriceChart.css / OrderBook.css) — this matches that: no
+   light-specific override left, both themes just use the flat rule
+   above. */
 
 .db-page-head {
   flex-shrink: 0;

@@ -86,13 +86,18 @@ html[data-theme="light"] .chart-active {
   padding: 12px 16px;
 }
 
-/* Dark theme's own padding/margin was smaller than light's — same size
-   change light theme makes below, without touching background/shadow/
-   radius this time (those stay dark theme's usual Aurora Glass look). */
+/* Both themes share the same flat structural treatment — square corners,
+   no shadow/sheen, just the plain --pc-bg fallback from the base rule
+   above — so the shape/spacing is identical and neither theme gets a
+   "card" look the other doesn't. */
 .chart-active
   .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  /* Right margin trimmed — this sits right next to .ob-card, and their
+     combined margins (10px + 10px) left an oversized gap between them. */
   margin: 10px 4px 10px 10px;
   padding: 18px 20px;
+  border-radius: 0;
+  border: none;
 }
 @media (max-width: 768px) {
   .chart-active
@@ -102,39 +107,7 @@ html[data-theme="light"] .chart-active {
        on real iOS devices, where every horizontal pixel matters more. */
     margin: 6px 2px 3px 3px;
     padding: 12px 4px;
-  }
-}
-
-html[data-theme="light"]
-  .chart-active
-  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-  /* Right margin trimmed — this sits right next to .ob-card, and their
-     combined margins (10px + 10px) left an oversized gap between them. */
-  margin: 10px 4px 10px 10px;
-  padding: 18px 20px;
-  border-radius: 16px;
-  border: none;
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.7) 0%,
-      rgba(255, 255, 255, 0) 90px
-    ),
-    var(--pc-panel);
-  box-shadow: var(--pc-shadow);
-}
-@media (max-width: 768px) {
-  html[data-theme="light"]
-    .chart-active
-    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    /* Right margin trimmed — on real phones (App.css's own max-width:640px
-       override puts .chart-section-wrap back to row direction, "side by
-       side on small phones"), this is the gap next to the resize handle
-       between this card and .ob-card. In the 641-960px range the wrap is
-       column-direction instead, where the bottom margin (unchanged) is
-       the one that matters. */
-    margin: 6px 2px 3px 3px;
-    padding: 10px 4px;
-    border-radius: 16px;
+    border-radius: 0;
   }
 }
 

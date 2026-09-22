@@ -16,8 +16,15 @@
 
 html[data-theme="light"] .chart-active .wl-strip {
   border: none;
+  /* Watchlist spans full width above .chart-page-row (chart column +
+     Daily Brief side by side below it) — this is the one line that
+     divides it from both, so it needs to stay even without the shadow. */
+  /* var(--color-border) (0.12 opacity) read as a dark line against this
+     card's light background — half its opacity, matching the same subtle
+     divider color already used elsewhere in light theme (.icon-strip's
+     border-right, .pticker-* borders, App.css). */
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 60%), var(--pc-panel);
-  box-shadow: var(--pc-shadow);
 }
 
 .wl-strip-label {

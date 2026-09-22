@@ -1,33 +1,20 @@
+/* Same flat structural treatment .price-chart-container uses
+   (PriceChart.css) — square corners, no shadow/sheen, plain --pc-bg — so
+   both cards (and both themes) share identical shape/spacing. Left
+   margin trimmed — matches .price-chart-container's own trimmed right
+   margin so the gap between the two cards isn't doubled. */
 .ob-card {
-  /* Same token .price-chart-container's own background uses (PriceChart.css)
-     so the two cards are pixel-identical in dark theme. */
   background: var(--pc-bg);
   border-radius: 0;
-  padding: 20px 16px;
+  border: none;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   overflow: visible;
-  height: 100%;
+  height: calc(100% - 20px);
   box-sizing: border-box;
   position: relative;
-  margin: 10px 4px 10px 10px;
-  padding: 18px 20px;
-}
-
-html[data-theme="light"] .chart-active .ob-card {
-  /* Left margin trimmed — matches .price-chart-container's own trimmed
-     right margin so the gap between the two cards isn't doubled. */
   margin: 10px 10px 10px 4px;
-  height: calc(100% - 20px);
-  border-left: none;
-  border-radius: 16px;
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.55) 0%,
-      rgba(255, 255, 255, 0) 80px
-    ),
-    var(--pc-panel);
-  box-shadow: var(--pc-shadow);
 }
 
 .ob-header {
@@ -263,13 +250,17 @@ html[data-theme="light"] .chart-active .ob-card {
 
 @media (max-width: 640px) {
   .ob-card {
-    padding: 12px 10px;
+    /* Matches .price-chart-container's own mobile padding exactly
+       (PriceChart.css, max-width:768px) — was 10px left/right here vs
+       4px there, so Order Book's title sat visibly further in than the
+       chart's own title above it. */
+    padding: 12px 4px;
   }
   .ob-filter-btn {
     padding: 2px 4px;
     font-size: 0.58rem;
   }
-  html[data-theme="light"] .chart-active .ob-card {
+  .chart-active .ob-card {
     /* Left margin trimmed to match .price-chart-container's own trimmed
        right margin — on real phones (App.css puts .chart-section-wrap
        back to row direction below 640px, "side by side on small
@@ -280,17 +271,22 @@ html[data-theme="light"] .chart-active .ob-card {
        range, where the wrap is column-direction instead. */
     margin: 6px 6px 6px 2px;
     height: calc(100% - 12px);
-    border-radius: 16px;
+    border-radius: 0;
   }
 }
 
 /* Chart/Order Book tabs (App.css, >=961px) mean only one of this card and
    .price-chart-container is ever visible at this width — no more "sits
    right next to it" adjacency to trim the left margin for, so both sides
-   match the same 10px inset .price-chart-container and .db-page use too. */
+   match the same 10px inset .price-chart-container and .db-page use too.
+   padding-left matches .price-chart-container's own >=961px override
+   (PriceChart.css) — Order Book sits under the same tabs when its tab is
+   active, so its content should start at the same x position as the tab
+   labels too, not just the chart's. */
 @media (min-width: 961px) {
-  html[data-theme="light"] .chart-active .ob-card {
+  .chart-active .ob-card {
     margin: 10px;
+    padding-left: 3px;
   }
 }
 
