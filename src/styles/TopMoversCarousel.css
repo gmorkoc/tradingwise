@@ -155,6 +155,9 @@
 .tmc-card-pct.down { color: var(--pc-danger); }
 
 @media (max-width: 640px) {
-  .tmc-strip { padding: 8px 12px; }
+  /* Left trimmed from 12px to 7px to match .price-chart-container's own
+     mobile left inset (PriceChart.css), so this row lines up with
+     Watchlist above and the chart below. */
+  .tmc-strip { padding: 8px 12px 8px 7px; }
   .tmc-card { width: 112px; padding: 7px 9px; }
 }

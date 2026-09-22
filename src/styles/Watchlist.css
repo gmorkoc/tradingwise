@@ -327,7 +327,10 @@ html:not([data-theme="light"]) .wl-add-btn {
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .wl-strip { gap: 8px; padding: 8px 12px; }
+  /* Left trimmed from 12px to 7px to match .price-chart-container's own
+     mobile left inset (PriceChart.css), so this row lines up with the
+     chart below it. */
+  .wl-strip { gap: 8px; padding: 8px 12px 8px 7px; }
   .wl-strip-label { font-size: 0.68rem; padding-right: 8px; gap: 4px; }
   .wl-chip-price { font-size: 0.78rem; }
   .wl-scroll { gap: 16px; }

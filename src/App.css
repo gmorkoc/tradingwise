@@ -3000,7 +3000,11 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     overflow: visible;
     flex-wrap: wrap;
     align-items: center;
-    padding: 8px 12px 6px;
+    /* Left trimmed from 12px to 7px to match .price-chart-container's own
+       mobile left inset (PriceChart.css) — this is the topmost bar on
+       the page, so its content should set the left edge every section
+       below lines up with. */
+    padding: 8px 12px 6px 7px;
     gap: 4px;
   }
 
@@ -3071,6 +3075,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 
   .mch-stat:first-child {
     margin-left: 0;
+    /* Its own 10px left padding (the rule above) on top of
+       .main-coin-header's 7px was still pushing this first stat well
+       past the 7px every other section on this page now lines up to —
+       zeroed just for the first item so the row's own item-to-item
+       spacing (the other stats keep their 10px) is untouched. */
+    padding-left: 0;
   }
 
   .mch-stat-label {
@@ -3100,7 +3110,14 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     position: relative;
     display: flex;
     gap: 6px;
-    margin: 8px 6px 6px;
+    /* margin-left trimmed from 6px to 4px so the tab labels' left edge
+       (4px margin + this rule's own 3px pill padding = 7px) lines up
+       with .price-chart-container's own 7px mobile inset (3px margin +
+       4px padding, PriceChart.css) below it — this only takes effect
+       <=640px; the >=961px desktop-tabs override further down in this
+       file sets its own margin-left:10px to match the chart at that
+       width instead. */
+    margin: 8px 6px 6px 4px;
     padding: 3px;
     background: var(--pc-panel-2);
     border-radius: 10px;
