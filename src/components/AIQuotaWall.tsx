@@ -23,7 +23,7 @@ const PLANS = [
     color: "#38bdf8",
     popular: true,
     priceId: () => PRICE_IDS.pro,
-    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "70 AI requests / week"],
+    features: ["AI Market Intelligence", "On-Chain AI Analysis", "Price Prediction Chart", "Liquidation Heatmap AI", "100 AI requests / week"],
   },
   {
     id: "elite",
@@ -58,17 +58,24 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
       <div className="aiqw-gate-row" style={{ "--gate-color": plan.color } as React.CSSProperties}>
         <div className="aiqw-gate-left">
           <div className="aiqw-gate-info">
-            <div className="aiqw-gate-title-row">
-              <span className="aiqw-gate-ai-badge">AI</span>
-              <span className="aiqw-gate-title">{featureTitle}</span>
-              <span className="aiqw-gate-tier-badge" style={{ color: plan.color, borderColor: `${plan.color}55`, background: `${plan.color}18` }}>
-                {plan.label.toUpperCase()}
-              </span>
-              <span className="aiqw-live-badge">
-                <span className="aiqw-live-dot" />
-                LIVE
-              </span>
-            </div>
+            {/* Skipped entirely (not just the title text) when there's no
+                featureTitle — that means the caller already shows its own
+                AI/PRO/LIVE badges next to a real title elsewhere (see
+                ChartAnalyzeModal's header), so repeating bare badges with
+                nothing to label here would just float alone. */}
+            {featureTitle && (
+              <div className="aiqw-gate-title-row">
+                <span className="aiqw-gate-ai-badge">AI</span>
+                <span className="aiqw-gate-title">{featureTitle}</span>
+                <span className="aiqw-gate-tier-badge" style={{ color: plan.color, borderColor: `${plan.color}55`, background: `${plan.color}18` }}>
+                  {plan.label.toUpperCase()}
+                </span>
+                <span className="aiqw-live-badge">
+                  <span className="aiqw-live-dot" />
+                  LIVE
+                </span>
+              </div>
+            )}
             {featureDesc && <span className="aiqw-gate-desc">{featureDesc}</span>}
             <div className="aiqw-gate-features">
               {plan.features.map(f => (
@@ -86,7 +93,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
           </span>
           <button
             className="aiqw-gate-btn"
-            style={{ background: plan.color, borderColor: plan.color }}
+            style={{ borderColor: plan.color }}
             onClick={() => handleUpgrade(plan)}
             disabled={loadingPlan === plan.id}
           >

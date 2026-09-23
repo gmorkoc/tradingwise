@@ -2,17 +2,26 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, Tier } from "../services/supabase";
 
-const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 25, elite: Infinity };
+const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 100, elite: Infinity };
 
-function getDayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+// ai_requests_week has always been named for a weekly reset, but this used
+// to just be today's date — so usage actually reset every day, not once a
+// week, despite every "X AI requests/week" the UI has ever shown. This
+// returns the Monday (UTC) of the current week instead, a stable key that
+// only changes once every 7 days, so profile.ai_requests_week finally
+// means what it's always said it means.
+function getWeekKey(): string {
+  const now = new Date();
+  const daysSinceMonday = (now.getUTCDay() + 6) % 7; // Mon=0 ... Sun=6
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday));
+  return monday.toISOString().slice(0, 10);
 }
 
 export function useAIQuota() {
   const { tier, profile } = useAuth();
   const [localUsed, setLocalUsed] = useState<number | null>(null);
 
-  const weekKey = useMemo(() => getDayKey(), []);
+  const weekKey = useMemo(() => getWeekKey(), []);
 
   const limit       = TIER_LIMITS[tier] ?? 5;
   const profileUsed = (profile?.ai_requests_week === weekKey)

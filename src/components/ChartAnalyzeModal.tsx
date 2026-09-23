@@ -251,7 +251,22 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
       <div className="caz-panel" role="dialog" aria-modal="true">
         <div className="caz-header">
           <div>
-            <h2 className="caz-title">{t("chartAnalyze.title", "Analyze a Chart")}</h2>
+            <div className="caz-title-row">
+              <h2 className="caz-title">{t("chartAnalyze.title", "Analyze a Chart")}</h2>
+              {/* Badges live here, next to the actual title, instead of
+                  floating alone on the gate card below with nothing to
+                  label — see AIQuotaWall's featureTitle-less gate mode. */}
+              {!isPaid && (
+                <>
+                  <span className="aiqw-gate-ai-badge">AI</span>
+                  <span className="aiqw-gate-tier-badge" style={{ color: "#38bdf8", borderColor: "#38bdf855", background: "#38bdf818" }}>PRO</span>
+                  <span className="aiqw-live-badge">
+                    <span className="aiqw-live-dot" />
+                    LIVE
+                  </span>
+                </>
+              )}
+            </div>
             <p className="caz-subtitle">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
           </div>
           <button className="caz-close" onClick={onClose} aria-label="Close">✕</button>
@@ -261,11 +276,13 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
         <input ref={libraryInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleFileInput} />
 
         {!isPaid ? (
+          // No featureTitle here — the modal's own header right above
+          // already says "Analyze a Chart" once; repeating it inside the
+          // gate card too just stacked the same title twice in a row.
           <AIQuotaWall
             used={used} limit={limit}
             onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth}
             planId="pro"
-            featureTitle={t("chartAnalyze.title", "Analyze a Chart")}
             featureDesc={t("chartAnalyze.gateDesc", "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take.")}
           />
         ) : analysis ? (

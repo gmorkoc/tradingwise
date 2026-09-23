@@ -1,22 +1,64 @@
-/* ── Horizontal gate banner (single-plan gate mode) ────────────────────── */
+/* ── Gate banner (single-plan gate mode) ──────────────────────────────────
+   Always a vertical card, not a width-dependent row — this renders inside
+   contexts as narrow as a 560px-capped modal and as wide as a full desktop
+   page section, and a viewport media query can't tell those apart (the
+   viewport can be 1600px wide while this card itself is still squeezed
+   into ~500px). A card that reads cleanly stacked works at every width;
+   a row that only works when there happens to be enough room doesn't. */
 .aiqw-gate-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 20px 22px;
+  margin: 12px;
   position: relative;
-  background: color-mix(in srgb, var(--gate-color, #0a84ff) 8%, transparent);
-  border-top: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent);
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 180% at 0% 0%, color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--gate-color, #0a84ff) 12%, transparent), color-mix(in srgb, var(--gate-color, #0a84ff) 4%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 28%, transparent);
+  box-shadow:
+    0 8px 28px color-mix(in srgb, var(--gate-color, #0a84ff) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--gate-color, #0a84ff) 15%, transparent);
+  transition: box-shadow 0.2s, transform 0.2s;
 }
+.aiqw-gate-row:hover {
+  box-shadow:
+    0 12px 36px color-mix(in srgb, var(--gate-color, #0a84ff) 26%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--gate-color, #0a84ff) 20%, transparent);
+}
+
+/* Slow-drifting glow orb behind the content — the gate's own accent
+   color, not the (currently unused) purple .aiqw-bg-orb further down. */
+.aiqw-gate-row::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -40px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gate-color, #0a84ff) 35%, transparent);
+  filter: blur(50px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.5;
+  animation: aiqw-gate-drift 6s ease-in-out infinite;
+}
+@keyframes aiqw-gate-drift {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  50%      { transform: translateY(-50%) scale(1.15); }
+}
+.aiqw-gate-left, .aiqw-gate-right { position: relative; z-index: 1; }
 
 .aiqw-gate-left {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
-  flex: 1;
+  width: 100%;
 }
 
 .aiqw-gate-plan-label {
@@ -38,27 +80,35 @@
 .aiqw-gate-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 7px;
   min-width: 0;
 }
 
 .aiqw-gate-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
 }
 
 .aiqw-gate-ai-badge {
   display: inline-flex;
   align-items: center;
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
   background: linear-gradient(135deg, #bf5af2, #0a84ff);
+  background-size: 200% 200%;
+  box-shadow: 0 0 10px rgba(191, 90, 242, 0.5);
   font-size: 0.55rem;
   font-weight: 900;
   letter-spacing: 0.06em;
   color: white;
   flex-shrink: 0;
+  animation: aiqw-badge-shine 3s ease-in-out infinite;
+}
+@keyframes aiqw-badge-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
 }
 
 .aiqw-gate-tier-badge {
@@ -74,8 +124,9 @@
 }
 
 .aiqw-gate-title {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--color-text);
   white-space: nowrap;
 }
@@ -141,13 +192,17 @@
 .aiqw-gate-right {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  flex-shrink: 0;
+  width: 100%;
+  padding-top: 14px;
+  margin-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--gate-color, #0a84ff) 18%, transparent);
 }
 
 .aiqw-gate-price {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 800;
   color: var(--color-text);
   white-space: nowrap;
   letter-spacing: -0.03em;
@@ -161,38 +216,44 @@
 }
 
 .aiqw-gate-btn {
-  padding: 9px 22px;
-  border-radius: 7px;
+  padding: 11px 26px;
+  border-radius: 9px;
   border: 1px solid transparent;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 800;
   cursor: pointer;
   color: white;
   white-space: nowrap;
   letter-spacing: 0.02em;
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--gate-color, #0a84ff) 100%, white 15%), var(--gate-color, #0a84ff));
   transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--gate-color, #0a84ff) 40%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--gate-color, #0a84ff) 45%, transparent);
 }
 .aiqw-gate-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  box-shadow: 0 0 20px color-mix(in srgb, var(--gate-color, #0a84ff) 60%, transparent);
+  opacity: 0.92;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--gate-color, #0a84ff) 60%, transparent);
 }
 .aiqw-gate-btn:active { transform: scale(0.97); }
-.aiqw-gate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.aiqw-gate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-@media (max-width: 600px) {
-  .aiqw-gate-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px 12px;
-  }
-  .aiqw-gate-left { width: 100%; }
-  .aiqw-gate-right {
-    width: 100%;
-    justify-content: space-between;
-  }
+/* A small, safe bump once there's genuinely more room to work with — kept
+   modest on purpose, since this same rule also fires inside the 560px-
+   capped ChartAnalyzeModal on any desktop-width browser window (the
+   viewport being wide doesn't mean this card is). */
+@media (min-width: 720px) {
+  .aiqw-gate-row { padding: 24px 26px; gap: 16px; }
+  .aiqw-gate-info { gap: 10px; }
+  .aiqw-gate-title { font-size: 1.05rem; }
+  .aiqw-gate-desc { font-size: 0.78rem; }
+  .aiqw-gate-features { gap: 6px 16px; }
+  .aiqw-gate-feature { font-size: 0.68rem; }
+  .aiqw-gate-price { font-size: 1.5rem; }
+  .aiqw-gate-btn { padding: 12px 28px; font-size: 0.9rem; }
+}
+
+@media (max-width: 420px) {
+  .aiqw-gate-row { padding: 14px 16px; gap: 10px; }
 }
 
 

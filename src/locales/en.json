@@ -450,10 +450,10 @@
     "aiUsage": {
       "unlimited": "Unlimited AI requests",
       "locked": "AI chat isn't included on the Free plan.",
-      "requestsUsed": "{{used}} of {{limit}} requests used today",
-      "resetsOn": "Resets tomorrow",
+      "requestsUsed": "{{used}} of {{limit}} requests used this week",
+      "resetsOn": "Resets next week",
       "upgradePro": "Upgrade to Pro",
-      "proHint": " for 25 AI requests/day, or Elite for unlimited.",
+      "proHint": " for 100 AI requests/week, or Elite for unlimited.",
       "upgradeElite": "Upgrade to Elite",
       "eliteHint": " for unlimited AI requests."
     },
@@ -557,8 +557,8 @@
   "quotaWall": {
     "freeTitle": "AI features require a paid plan",
     "freeDesc": "Upgrade to unlock AI-powered market analysis, predictions, and insights across every section.",
-    "capTitle": "Daily AI limit reached",
-    "capDesc": "You've used {{used}}/{{limit}} AI requests today. Resets tomorrow — upgrade for unlimited access.",
+    "capTitle": "Weekly AI limit reached",
+    "capDesc": "You've used {{used}}/{{limit}} AI requests this week. Resets next week — upgrade for unlimited access.",
     "getBtn": "Get {{plan}}",
     "redirecting": "Redirecting…",
     "usagePips": "{{used}}/{{limit}} used · resets Monday",
@@ -604,7 +604,7 @@
         }
       ],
       "cta": "Unlock Pro — $30.99/mo",
-      "trust": "70 AI requests/week · Instant access"
+      "trust": "100 AI requests/week · Instant access"
     },
     "elite": {
       "headline": "The Full Institutional Toolkit",
@@ -747,7 +747,7 @@
           "On-Chain AI Analysis",
           "Price Prediction Chart",
           "Liquidation Heatmap AI",
-          "70 AI requests / week"
+          "100 AI requests / week"
         ]
       },
       "elite": {
@@ -838,7 +838,7 @@
       "onchain": "On-Chain AI Analysis",
       "predChart": "Price Prediction Chart",
       "liqHeatmap": "Liquidation Heatmap AI",
-      "aiReqs": "70 AI requests / week"
+      "aiReqs": "100 AI requests / week"
     }
   },
   "landing": {
@@ -1020,7 +1020,7 @@
             "Price Prediction with scenarios",
             "Liquidation Heatmap AI",
             "Custom Strategy Alerts",
-            "70 AI requests / week"
+            "100 AI requests / week"
           ]
         },
         {
