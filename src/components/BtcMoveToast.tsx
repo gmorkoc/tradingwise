@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import type { BtcMoveAlert } from "../hooks/useBtcMoveAlert";
+import { formatLivePrice } from "./PriceChart";
 import "../styles/BtcMoveToast.css";
 
 const DURATION = 6000;
@@ -47,8 +48,11 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
 
   const isUp = alert.direction === "up";
   const color = isUp ? "#22c55e" : "#ef4444";
-  const fmtPrice = alert.price.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const fmtChange = Math.round(alert.change).toLocaleString("en-US");
+  // Whole-dollar rounding read fine for BTC ($84,231) but rounded a coin
+  // like NEAR ($4.43) down to a bare "$4" — reuse the same adaptive-decimal
+  // formatting the header price pill already uses instead of a fixed 0.
+  const fmtPrice = formatLivePrice(alert.price).replace(/^\$/, "");
+  const fmtChange = formatLivePrice(Math.abs(alert.change)).replace(/^\$/, "");
 
   const dismiss = () => { setVisible(false); onDismiss(); };
 

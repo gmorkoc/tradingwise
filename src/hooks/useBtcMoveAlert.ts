@@ -26,9 +26,18 @@ export function useBtcMoveAlert(coin: CoinSymbol) {
     anchorRef.current = null;
     setAlert(null);
 
+    // Switching coins mid-flight (a poll for the OLD coin already
+    // in-flight when the effect re-runs) used to corrupt the freshly-reset
+    // anchor: clearInterval only stops FUTURE ticks, it doesn't cancel a
+    // pending fetch, so that stale response would land after the reset
+    // above and write the old coin's price into anchorRef — the next real
+    // poll then diffed the new coin's price against it and fired a bogus
+    // "-99.99%" alert. Guard every response with this effect's own flag.
+    let cancelled = false;
+
     const poll = async () => {
       const candle = await coinglass.getLiveSecondCandle(coin);
-      if (!candle) return;
+      if (cancelled || !candle) return;
       const price = candle.close;
 
       if (anchorRef.current === null) {
@@ -46,7 +55,7 @@ export function useBtcMoveAlert(coin: CoinSymbol) {
 
     poll();
     const id = setInterval(poll, POLL_MS);
-    return () => clearInterval(id);
+    return () => { cancelled = true; clearInterval(id); };
   }, [coin]);
 
   const dismiss = () => setAlert(null);
