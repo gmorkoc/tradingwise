@@ -2514,6 +2514,45 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   display: inline;
 }
 
+/* Direction-tinted coin pill + change badge — shared by desktop and
+   mobile/iOS alike. */
+.mch-coin-btn--up {
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.14), rgba(22, 163, 74, 0.03));
+  border-color: rgba(22, 163, 74, 0.35);
+}
+.mch-coin-btn--down {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.14), rgba(225, 29, 72, 0.03));
+  border-color: rgba(225, 29, 72, 0.35);
+}
+.mch-coin-btn--up .mch-coin-price { color: var(--color-success); }
+.mch-coin-btn--down .mch-coin-price { color: var(--color-danger); }
+.mch-coin-chg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+.mch-coin-chg--up   { color: var(--color-success); background: rgba(22, 163, 74, 0.15); }
+.mch-coin-chg--down { color: var(--color-danger);  background: rgba(225, 29, 72, 0.15); }
+
+/* Before the 24h ticker resolves (change is still undefined), a wave
+   sweeps across the pill instead of it just sitting flat and neutral —
+   reads as "still figuring out bullish/bearish" rather than "no data". */
+.mch-coin-btn--pending {
+  background: linear-gradient(90deg, var(--color-input-bg) 25%, rgba(2, 132, 199, 0.14) 50%, var(--color-input-bg) 75%);
+  background-size: 200% 100%;
+  animation: mch-coin-wave 1.6s ease-in-out infinite;
+}
+@keyframes mch-coin-wave {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .price-source-badge {
   display: inline-flex;
   align-items: center;
@@ -2625,8 +2664,8 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  border: none;
   border-radius: 8px;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -2692,8 +2731,8 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   cursor: pointer;
   padding: 4px 10px;
   border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-input-bg);
+  border: none;
+  background: var(--color-surface-alt);
   transition:
     border-color 0.18s,
     box-shadow 0.18s;
@@ -3234,6 +3273,13 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: flex;
   }
 
+  /* "via Binance" (plus the double-click-for-fullscreen hint, which only
+     ever showed on hover anyway — meaningless on a touch screen) just adds
+     noise to the now-tinted mobile pill; desktop keeps both. */
+  .mch-coin-info .price-source {
+    display: none;
+  }
+
   .mch-right {
     margin-left: auto;
     padding-left: 6px;
@@ -3242,7 +3288,10 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     gap: 5px;
   }
 
-  /* Icon-only buttons on mobile — uniform 32×32 squares */
+  /* Icon-only SHAPE (uniform 32×32 squares) stays mobile-only — desktop's
+     versions of these buttons keep their text labels, so squaring them
+     off would clip that. The background/border treatment itself (below)
+     is shared with desktop now. */
   .mch-search-btn,
   .alerts-bell,
   .mch-portfolio {

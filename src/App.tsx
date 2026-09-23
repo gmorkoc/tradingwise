@@ -1543,7 +1543,11 @@ function AppDashboard({
                 </svg>
               </button>
               <button
-                className="mch-coin-btn"
+                className={`mch-coin-btn${
+                  coinTickers.get(coin)?.change !== undefined
+                    ? (coinTickers.get(coin)!.change >= 0 ? " mch-coin-btn--up" : " mch-coin-btn--down")
+                    : " mch-coin-btn--pending"
+                }`}
                 ref={coinPickerBtnRef}
                 onClick={() => {
                   if (coinBtnClickTimer.current) {
@@ -1584,6 +1588,14 @@ function AppDashboard({
                     </span>
                   </span>
                 </div>
+                {/* Mobile-only badge (see .mch-coin-chg in App.css) — desktop
+                    keeps the full .mch-stats ticker row instead, so this
+                    stays hidden there to avoid saying the same thing twice. */}
+                {coinTickers.get(coin)?.change !== undefined && (
+                  <span className={`mch-coin-chg${coinTickers.get(coin)!.change >= 0 ? " mch-coin-chg--up" : " mch-coin-chg--down"}`}>
+                    {coinTickers.get(coin)!.change >= 0 ? "▲" : "▼"} {Math.abs(coinTickers.get(coin)!.change).toFixed(1)}%
+                  </span>
+                )}
                 <span className="mch-coin-chevron">▾</span>
               </button>
             </div>
