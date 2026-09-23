@@ -17,6 +17,31 @@ async function authHeaders() {
   };
 }
 
+// A rejected edge function doesn't always come back as JSON — an expired
+// session gets a plain-text "Unauthorized" 401 (Supabase's own gateway,
+// before the function body even runs), a cold-start/gateway failure can
+// be an HTML error page, etc. Parsing straight to JSON in that case throws
+// a raw "Unexpected token..." SyntaxError that used to leak into the UI
+// verbatim (setError(e.message)) instead of a message a user could act
+// on. This centralizes the fetch+parse so every caller below gets a
+// sane, typed error either way.
+async function callBillingFn<T>(path: string, body: unknown): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${FN_BASE}/${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+
+  const raw = await res.text();
+  let data: any = null;
+  try { data = raw ? JSON.parse(raw) : null; } catch { /* not JSON, handled below */ }
+
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Your session has expired — please sign in again and retry.");
+    throw new Error((data && data.error) || raw || `Request failed (${res.status})`);
+  }
+  if (data === null) throw new Error("Unexpected response from server — please try again.");
+  if (data.error) throw new Error(data.error);
+  return data as T;
+}
+
 export async function redirectToCheckout(priceId: string): Promise<void> {
   // Apple Guideline 3.1.1: a digital subscription must go through In-App
   // Purchase on iOS, never an external payment flow — this is the actual
@@ -28,72 +53,27 @@ export async function redirectToCheckout(priceId: string): Promise<void> {
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
     throw new Error("Purchases on iOS go through the App Store, not this screen. Please try again in a moment.");
   }
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/create-checkout`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ priceId, origin: window.location.origin }),
-  });
-  const { url, error } = await res.json();
-  if (error) throw new Error(error);
+  const { url } = await callBillingFn<{ url: string }>("create-checkout", { priceId, origin: window.location.origin });
   window.location.href = url;
 }
 
 export async function redirectToBillingPortal(): Promise<void> {
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/billing-portal`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ origin: window.location.origin }),
-  });
-  const { url, error } = await res.json();
-  if (error) throw new Error(error);
+  const { url } = await callBillingFn<{ url: string }>("billing-portal", { origin: window.location.origin });
   window.location.href = url;
 }
 
 export async function previewUpgrade(newPriceId: string): Promise<{ amountDue: number; currency: string; scheduledAt?: string }> {
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/preview-upgrade`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ newPriceId }),
-  });
-  const { amountDue, currency, scheduledAt, error } = await res.json();
-  if (error) throw new Error(error);
-  return { amountDue, currency, scheduledAt };
+  return callBillingFn("preview-upgrade", { newPriceId });
 }
 
 export async function upgradePlan(newPriceId: string): Promise<{ isUpgrade: boolean; scheduledAt?: string; paymentSucceeded?: boolean }> {
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/upgrade-plan`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ newPriceId }),
-  });
-  const { error, isUpgrade, scheduledAt, paymentSucceeded } = await res.json();
-  if (error) throw new Error(error);
-  return { isUpgrade, scheduledAt, paymentSucceeded };
+  return callBillingFn("upgrade-plan", { newPriceId });
 }
 
 export async function reactivateSubscription(): Promise<void> {
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/reactivate-subscription`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({}),
-  });
-  const { error } = await res.json();
-  if (error) throw new Error(error);
+  await callBillingFn("reactivate-subscription", {});
 }
 
 export async function cancelSubscription(): Promise<{ accessUntil: string }> {
-  const headers = await authHeaders();
-  const res = await fetch(`${FN_BASE}/cancel-subscription`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({}),
-  });
-  const { error, accessUntil } = await res.json();
-  if (error) throw new Error(error);
-  return { accessUntil };
+  return callBillingFn("cancel-subscription", {});
 }
