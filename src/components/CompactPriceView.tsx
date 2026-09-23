@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { createChart, ColorType, LineSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol } from "../services/coinglass";
@@ -158,38 +159,53 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
     : `$${n.toFixed(0)}`;
 
   const change = current !== null && openPrice !== null ? current - openPrice : null;
+  const changePct = change !== null && openPrice ? (change / openPrice) * 100 : null;
   const changeUp = (change ?? 0) >= 0;
 
-  return (
-    <div className="cpv-root">
-      <div className="cpv-header">
-        <button type="button" className="cpv-back" onClick={onClose} aria-label={t("common.close", "Close")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-        <span className="cpv-coin">{coin}/USD</span>
-      </div>
-
-      <div className="cpv-price-row">
-        <span className={`cpv-price${changeUp ? " cpv-up" : " cpv-down"}`}>
-          {current !== null ? `$${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : "—"}
-        </span>
-        {change !== null && (
-          <span className={`cpv-change${changeUp ? " cpv-up" : " cpv-down"}`}>
-            {changeUp ? "▲" : "▼"} {Math.abs(change).toLocaleString(undefined, { maximumFractionDigits: 6 })}
-          </span>
-        )}
-      </div>
-
-      <div className="cpv-chart-wrap">
-        <div className="cpv-ticks">
-          {ticks.map(tick => (
-            <span key={tick.id} className={`cpv-tick${tick.isBuy ? " cpv-up" : " cpv-down"}`}>
-              {tick.isBuy ? "↑" : "↓"} {fmtUsd(tick.usd)}
-            </span>
-          ))}
+  // Portaled straight to <body> — same reasoning as CoinChat's own mobile
+  // sheet (see its createPortal calls): nested anywhere inside the normal
+  // component tree, a position:fixed + high z-index can still get trapped
+  // under whichever ancestor happens to create its own stacking context,
+  // and silently lose to *other* portaled UI (Daily Brief, the CoinChat
+  // dock) regardless of how high the z-index number is. Escaping to
+  // <body> is what actually guarantees this renders above everything.
+  return createPortal(
+    <div className="cpv-overlay">
+      <div className="cpv-root">
+        <div className="cpv-header">
+          <button type="button" className="cpv-back" onClick={onClose} aria-label={t("common.close", "Close")}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <span className="cpv-coin">{coin}/USD</span>
         </div>
-        <div className="cpv-chart" ref={containerRef} />
+
+        <div className="cpv-price-row">
+          <span className={`cpv-price${changeUp ? " cpv-up" : " cpv-down"}`}>
+            {current !== null ? `$${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : "—"}
+          </span>
+          {change !== null && changePct !== null && (
+            <span className={`cpv-change${changeUp ? " cpv-up" : " cpv-down"}`}>
+              {changeUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
+              <span className="cpv-change-abs">
+                (${Math.abs(change).toLocaleString(undefined, { maximumFractionDigits: 6 })})
+              </span>
+              <span className="cpv-change-window">1H</span>
+            </span>
+          )}
+        </div>
+
+        <div className="cpv-chart-wrap">
+          <div className="cpv-ticks">
+            {ticks.map(tick => (
+              <span key={tick.id} className={`cpv-tick${tick.isBuy ? " cpv-up" : " cpv-down"}`}>
+                {tick.isBuy ? "↑" : "↓"} {fmtUsd(tick.usd)}
+              </span>
+            ))}
+          </div>
+          <div className="cpv-chart" ref={containerRef} />
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

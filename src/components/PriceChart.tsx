@@ -3324,9 +3324,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       </div>
 
       {showCompactView && (
-        <div className="price-chart-compact-overlay">
-          <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
-        </div>
+        <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
       )}
     </div>
   );

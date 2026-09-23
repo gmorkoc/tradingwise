@@ -1,3 +1,23 @@
+/* Portaled to document.body (see the component) — the highest z-index
+   anywhere else in the app is 300001 (Drawer/AccountMenu/GlobalSearch),
+   so this needs to clear that comfortably to actually win regardless of
+   what else happens to be open (Daily Brief, the CoinChat dock, etc.). */
+.cpv-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400000;
+  background: var(--color-card-bg);
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+  padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
+  animation: cpv-fade-in 0.18s ease;
+}
+@keyframes cpv-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .cpv-root {
   display: flex;
   flex-direction: column;
@@ -47,8 +67,25 @@
   color: var(--color-text);
 }
 .cpv-change {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
   font-size: 0.95rem;
   font-weight: 700;
+}
+.cpv-change-abs {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.cpv-change-window {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--color-input-bg);
+  color: var(--color-text-muted);
 }
 .cpv-up { color: #22c55e; }
 .cpv-down { color: #fb7185; }
