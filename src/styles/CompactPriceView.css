@@ -54,6 +54,31 @@
   letter-spacing: 0.02em;
 }
 
+.cpv-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 99px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #22c55e;
+}
+.cpv-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: cpv-live-pulse 1.8s ease-in-out infinite;
+}
+@keyframes cpv-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.75); }
+}
+
 .cpv-price-row {
   display: flex;
   align-items: baseline;

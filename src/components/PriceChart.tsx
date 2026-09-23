@@ -2839,28 +2839,34 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   {t("chart.orderDepth")}
                 </span>
               </button>
-              <button
-                className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
-                onClick={() => setShowAstroChart(true)}
-                title={t("astro.title", "Astro Suggestions")}
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {/* Hidden for now — button removed, but showAstroChart/
+                  AstroSuggestions render logic below is untouched so this
+                  is a one-line revert (just uncomment) whenever it comes
+                  back. */}
+              {false && (
+                <button
+                  className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
+                  onClick={() => setShowAstroChart(true)}
+                  title={t("astro.title", "Astro Suggestions")}
                 >
-                  <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z" />
-                  <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
-                </svg>
-                <span className="chart-icon-label">
-                  {t("astro.title", "Astro Suggestions")}
-                </span>
-              </button>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z" />
+                    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
+                  </svg>
+                  <span className="chart-icon-label">
+                    {t("astro.title", "Astro Suggestions")}
+                  </span>
+                </button>
+              )}
               {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
                 <button
                   className="chart-depth-btn"
