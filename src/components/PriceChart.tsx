@@ -31,6 +31,7 @@ import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDraw
 import { ZoneAnalysisModal } from "./ZoneAnalysisModal";
 import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
+import { CompactPriceView } from "./CompactPriceView";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/PriceChart.css";
 
@@ -1049,6 +1050,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   const [showDepthProfile, setShowDepthProfile] = useState(false);
   const [showAstroChart, setShowAstroChart] = useState(false);
+  // Native iOS only — a full-screen, minimal price + live trade-tick view
+  // (see CompactPriceView.tsx), toggled on top of the full chart rather
+  // than replacing it.
+  const [showCompactView, setShowCompactView] = useState(false);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
@@ -2856,6 +2861,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   {t("astro.title", "Astro Suggestions")}
                 </span>
               </button>
+              {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+                <button
+                  className="chart-depth-btn"
+                  onClick={() => setShowCompactView(true)}
+                  title={t("chart.compactView", "Compact View")}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
+                    <circle cx="12" cy="12" r="4" />
+                  </svg>
+                  <span className="chart-icon-label">{t("chart.compactView", "Compact View")}</span>
+                </button>
+              )}
               <button
                 className="chart-screenshot-btn"
                 onClick={handleScreenshot}
@@ -3295,6 +3322,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           />
         )}
       </div>
+
+      {showCompactView && (
+        <div className="price-chart-compact-overlay">
+          <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
+        </div>
+      )}
     </div>
   );
 };

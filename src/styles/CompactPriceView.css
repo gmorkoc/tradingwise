@@ -1,0 +1,90 @@
+.cpv-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--color-card-bg);
+  padding: 16px;
+  gap: 16px;
+}
+
+.cpv-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cpv-back {
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cpv-back:hover { color: var(--color-text); }
+.cpv-coin {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.cpv-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cpv-price {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.cpv-change {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.cpv-up { color: #22c55e; }
+.cpv-down { color: #fb7185; }
+
+.cpv-chart-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.cpv-chart {
+  width: 100%;
+  height: 100%;
+}
+
+/* Live trade-size ticker — small colored ticks along the left edge,
+   newest at top, fading toward the bottom (matches the reference's
+   compact tape treatment without any of its wager UI). */
+.cpv-ticks {
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+.cpv-tick {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+.cpv-tick:nth-child(n+4) { opacity: 0.55; }
+.cpv-tick:nth-child(n+6) { opacity: 0.3; }
+
+@media (max-width: 640px) {
+  .cpv-price { font-size: 1.7rem; }
+}

@@ -86,6 +86,25 @@ html[data-theme="light"] .chart-active {
   padding: 12px 16px;
 }
 
+/* Full-viewport takeover, not just an in-place swap — matches the
+   reference this was modeled on being its own dedicated screen. See
+   CompactPriceView.tsx. */
+.price-chart-compact-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200500;
+  background: var(--color-card-bg);
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+  padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
+  animation: cpv-fade-in 0.18s ease;
+}
+@keyframes cpv-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Both themes share the same flat structural treatment — square corners,
    no shadow/sheen, just the plain --pc-bg fallback from the base rule
    above — so the shape/spacing is identical and neither theme gets a
