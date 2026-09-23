@@ -38,7 +38,13 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
   const [current, setCurrent] = useState<number | null>(null);
   const [openPrice, setOpenPrice] = useState<number | null>(null);
   const [ticks, setTicks] = useState<Tick[]>([]);
+  const [logoError, setLogoError] = useState(false);
   const tickIdRef = useRef(0);
+
+  // Reset the broken-image fallback whenever the coin changes, otherwise
+  // switching from a coin with no CoinCap icon to one that has one would
+  // stay stuck showing the letter placeholder.
+  useEffect(() => setLogoError(false), [coin]);
 
   // ── Chart: seed with 1min history, then tick live every second ──────────
   useEffect(() => {
@@ -176,12 +182,27 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
           <button type="button" className="cpv-back" onClick={onClose} aria-label={t("common.close", "Close")}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
-          <span className="cpv-coin">{coin}/USD</span>
-          <span className="cpv-live-badge">
-            <span className="cpv-live-dot" />
-            {t("chart.live", "LIVE")}
+          <span className="cpv-header-info">
+            <span className="cpv-coin-logo">
+              {!logoError ? (
+                <img
+                  src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                  alt=""
+                  loading="lazy"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="cpv-coin-logo-fallback">{coin[0] ?? "?"}</span>
+              )}
+            </span>
+            <span className="cpv-coin">{coin}/USD</span>
+            <span className="cpv-live-badge">
+              <span className="cpv-live-dot" />
+              {t("chart.live", "LIVE")}
+            </span>
           </span>
         </div>
+        <p className="cpv-subtitle">{t("chart.compactSubtitle", "Real-time price, updates every second")}</p>
 
         <div className="cpv-price-row">
           <span className={`cpv-price${changeUp ? " cpv-up" : " cpv-down"}`}>

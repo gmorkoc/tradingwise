@@ -1050,10 +1050,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   const [showDepthProfile, setShowDepthProfile] = useState(false);
   const [showAstroChart, setShowAstroChart] = useState(false);
-  // Native iOS only — a full-screen, minimal price + live trade-tick view
-  // (see CompactPriceView.tsx), toggled on top of the full chart rather
-  // than replacing it.
+  // Native iOS, or desktop web (not mobile web — the regular chart is
+  // already compact enough there) — a full-screen, minimal price + live
+  // trade-tick view (see CompactPriceView.tsx), toggled on top of the
+  // full chart rather than replacing it. Same min-width:641px breakpoint
+  // App.tsx's own isDesktopWidth uses.
   const [showCompactView, setShowCompactView] = useState(false);
+  const [isDesktopWidth, setIsDesktopWidth] = useState(() => window.matchMedia("(min-width: 641px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 641px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktopWidth(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   useEffect(() => {
@@ -2867,10 +2876,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                 </button>
               )}
-              {Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && (
+              {((Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
                 <button
                   className="chart-depth-btn"
-                  onClick={() => setShowCompactView(true)}
+                  onClick={() => {
+                    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                    setShowCompactView(true);
+                  }}
                   title={t("chart.compactView", "Compact View")}
                 >
                   <svg

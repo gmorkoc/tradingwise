@@ -169,6 +169,7 @@
     "orderDepth": "Order Depth",
     "compactView": "Compact View",
     "live": "LIVE",
+    "compactSubtitle": "Real-time price, updates every second",
     "expand": "Expand",
     "exit": "Exit",
     "predict": "✦ Predict",
