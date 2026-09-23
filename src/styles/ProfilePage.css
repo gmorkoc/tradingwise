@@ -519,6 +519,37 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
 .pp-btn--danger:hover:not(:disabled) { background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.55); }
 .pp-btn--danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Blocked users (Live Chat) ───────────────────────────────────────────── */
+.pp-blocked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pp-blocked-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-input-bg);
+}
+.pp-blocked-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-blocked-row .pp-btn {
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
 /* ── Danger zone card ────────────────────────────────────────────────────── */
 .pp-danger-card {
   border: 1px solid rgba(239, 68, 68, 0.2);

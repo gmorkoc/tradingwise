@@ -8,6 +8,7 @@ import { COINS, fetchCoinMarketCaps, fetchCoinChanges24h } from "../services/coi
 import {
   fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
   likeComment, unlikeComment, fetchMyLikedCommentIds, uploadChatImage,
+  blockUser, fetchBlockedUsers, type BlockedUser,
   subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
@@ -226,6 +227,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
+  // Users this account has blocked — a per-account preference (unlike
+  // likedIds, not tied to any one page/coin's comments), so it's fetched
+  // once per signed-in user below rather than alongside each page load.
+  // Management (unblocking) lives in ProfilePage now — this only needs
+  // the id list, to filter the feed and the @mention autocomplete.
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const blockedIds = new Set(blockedUsers.map((b) => b.id));
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [replyTarget, setReplyTarget] = useState<CoinComment | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -314,11 +322,17 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     let cancelled = false;
     const id = setTimeout(() => {
       searchUsernames(mentionQuery).then((names) => {
-        if (!cancelled) { setMentionResults(names); setMentionActiveIndex(0); }
+        if (cancelled) return;
+        // A blocked account shouldn't be tag-able either — no point
+        // hiding their comments if you can still @-mention them into a
+        // conversation they show up in.
+        const blockedNames = new Set(blockedUsers.map((b) => b.username.toLowerCase()));
+        setMentionResults(names.filter((n) => !blockedNames.has(n.toLowerCase())));
+        setMentionActiveIndex(0);
       });
     }, 200);
     return () => { cancelled = true; clearTimeout(id); };
-  }, [mentionQuery]);
+  }, [mentionQuery, blockedUsers]);
 
   // capacitor.config.ts sets Keyboard resize:'none' globally, so these
   // fixed-position elements never shrink for the keyboard on their own —
@@ -401,6 +415,13 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
 
     return () => { cancelled = true; unsubscribeFromCoinComments(channel); };
   }, [coin, user?.id]);
+
+  useEffect(() => {
+    if (!user) { setBlockedUsers([]); return; }
+    let cancelled = false;
+    fetchBlockedUsers(user.id).then((rows) => { if (!cancelled) setBlockedUsers(rows); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // Manual refresh — realtime (subscribeToCoinComments above) covers the
   // common case, but a dropped/reconnecting websocket can leave the feed
@@ -612,6 +633,18 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     try { await reportCoinComment(id, user.id); } catch { /* stays marked locally either way */ }
   };
 
+  // Hides every comment/reply from that user across every coin (blockedUsers
+  // isn't fetched per-coin) — optimistic, same "stays marked locally either
+  // way" reasoning as handleReport above.
+  const handleBlock = async (blockedUserId: string, blockedUsername: string) => {
+    if (!user) return;
+    setBlockedUsers((prev) => (
+      prev.some((b) => b.id === blockedUserId) ? prev : [{ id: blockedUserId, username: blockedUsername }, ...prev]
+    ));
+    setOpenMenuId(null);
+    try { await blockUser(user.id, blockedUserId, blockedUsername); } catch { /* stays marked locally either way */ }
+  };
+
   const handleLike = async (id: number) => {
     if (!user) { onOpenAuth?.(); return; }
     const wasLiked = likedIds.has(id);
@@ -654,10 +687,14 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
 
   // Group into one-level threads. comments is DESC (newest first) — reversed
   // here so the feed reads top-to-bottom oldest-to-newest, chat-style, with
-  // the latest message at the bottom instead of the top.
-  const topLevelComments = [...comments].filter((c) => !c.reply_to_id).reverse();
+  // the latest message at the bottom instead of the top. Blocked users'
+  // comments/replies are filtered out here — client-side, but backed by a
+  // real per-account blocked_users row (see fetchBlockedUserIds) rather
+  // than only a local preference.
+  const visibleComments = comments.filter((c) => !blockedIds.has(c.user_id));
+  const topLevelComments = [...visibleComments].filter((c) => !c.reply_to_id).reverse();
   const repliesByParent = new Map<number, CoinComment[]>();
-  for (const c of comments) {
+  for (const c of visibleComments) {
     if (!c.reply_to_id) continue;
     const list = repliesByParent.get(c.reply_to_id) ?? [];
     list.push(c);
@@ -697,13 +734,18 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
                       {t("coinChat.delete")}
                     </button>
                   ) : (
-                    <button
-                      type="button"
-                      disabled={reportedIds.has(c.id)}
-                      onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
-                    >
-                      {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        disabled={reportedIds.has(c.id)}
+                        onClick={() => { handleReport(c.id); setOpenMenuId(null); }}
+                      >
+                        {reportedIds.has(c.id) ? t("coinChat.reported") : t("coinChat.report")}
+                      </button>
+                      <button type="button" onClick={() => handleBlock(c.user_id, c.username)}>
+                        {t("coinChat.block", "Block @{{username}}", { username: c.username })}
+                      </button>
+                    </>
                   )}
                 </span>
               )}

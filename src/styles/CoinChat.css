@@ -496,7 +496,9 @@ html[data-theme="light"] .coin-chat-panel {
   position: absolute;
   top: calc(100% + 2px);
   right: 0;
-  min-width: 100px;
+  width: max-content;
+  min-width: 110px;
+  max-width: 200px;
   background: var(--pc-panel);
   border: 1px solid var(--pc-border);
   border-radius: 8px;
@@ -509,13 +511,16 @@ html[data-theme="light"] .coin-chat-panel {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 8px 12px;
+  padding: 6px 10px;
   background: none;
   border: none;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--pc-text);
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .coin-chat-comment-menu button:hover {

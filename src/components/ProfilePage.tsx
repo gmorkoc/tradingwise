@@ -8,7 +8,7 @@ import {
   ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, uploadAvatar, saveAvatarUrl,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
-import { backfillMyCommentAvatars } from "../services/coinChat";
+import { backfillMyCommentAvatars, fetchBlockedUsers, unblockUser, type BlockedUser } from "../services/coinChat";
 import { Avatar } from "./Avatar";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
@@ -47,12 +47,13 @@ const STATUS_CONFIG: Record<string, { tKey: string; color: string }> = {
   incomplete_expired: { tKey: "profile.status.incomplete_expired", color: "#f87171" },
 };
 
-type Tab = "overview" | "profile" | "security" | "notifications" | "activity" | "danger";
+type Tab = "overview" | "profile" | "security" | "blocked" | "notifications" | "activity" | "danger";
 
 const NAV_ITEMS: { id: Tab; label: string; danger?: boolean }[] = [
   { id: "overview",      label: "Overview" },
   { id: "profile",       label: "Profile Info" },
   { id: "security",      label: "Security" },
+  { id: "blocked",       label: "Blocked Users" },
   { id: "notifications", label: "Notifications" },
   { id: "activity",      label: "Activity" },
   { id: "danger",        label: "Danger Zone", danger: true },
@@ -155,6 +156,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [confirmPw,  setConfirmPw]  = useState("");
   const [pwSaved,    setPwSaved]    = useState(false);
   const [pwError,    setPwError]    = useState("");
+
+  // Moved here from CoinChat's own inline bar — one place to manage
+  // blocks instead of a small popover buried in the chat panel.
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+  useEffect(() => {
+    if (!isOpen || tab !== "blocked" || !user) return;
+    let cancelled = false;
+    setBlockedLoading(true);
+    fetchBlockedUsers(user.id).then((rows) => {
+      if (!cancelled) { setBlockedUsers(rows); setBlockedLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, tab, user?.id]);
+
+  const handleUnblock = async (blockedUserId: string) => {
+    if (!user) return;
+    setBlockedUsers((prev) => prev.filter((b) => b.id !== blockedUserId));
+    try { await unblockUser(user.id, blockedUserId); } catch { /* stays unblocked locally either way */ }
+  };
   const [showNew,    setShowNew]    = useState(false);
   const [showConfirm,setShowConfirm]= useState(false);
 
@@ -709,6 +730,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     {t("profile.security.changePassword")}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* ── Blocked users (Live Chat) ─────────────── */}
+            {tab === "blocked" && (
+              <div className="pp-pane">
+                <h3 className="pp-pane-title">{t("profile.blocked.title", "Blocked Users")}</h3>
+                <p className="pp-pane-sub">
+                  {t("profile.blocked.sub", "Blocked accounts can't appear in your Live Chat feed and can't be tagged by you.")}
+                </p>
+
+                {blockedLoading ? (
+                  <p className="pp-msg">{t("common.loading")}</p>
+                ) : blockedUsers.length === 0 ? (
+                  <p className="pp-pane-sub">{t("profile.blocked.empty", "You haven't blocked anyone.")}</p>
+                ) : (
+                  <div className="pp-blocked-list">
+                    {blockedUsers.map((b) => (
+                      <div className="pp-blocked-row" key={b.id}>
+                        <span className="pp-blocked-name">@{b.username}</span>
+                        <button className="pp-btn pp-btn--ghost" onClick={() => handleUnblock(b.id)}>
+                          {t("coinChat.unblock", "Unblock")}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

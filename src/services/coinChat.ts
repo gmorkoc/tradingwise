@@ -161,6 +161,43 @@ export async function reportCoinComment(commentId: number, reporterId: string): 
   if (error && error.code !== "23505") throw new Error(error.message);
 }
 
+export interface BlockedUser {
+  id: string;
+  username: string;
+}
+
+// Blocking is a per-account preference, not tied to any one comment or
+// coin — see fetchBlockedUsers below, fetched once per signed-in user
+// rather than re-fetched per page/coin the way fetchMyLikedCommentIds is.
+// blockedUsername is stamped from the comment the block was triggered
+// from (see CoinChat.tsx's handleBlock) — profiles' own RLS only lets a
+// user read their own row, so it can't be joined back later.
+export async function blockUser(blockerId: string, blockedId: string, blockedUsername: string): Promise<void> {
+  const { error } = await supabase
+    .from("blocked_users")
+    .insert({ blocker_id: blockerId, blocked_id: blockedId, blocked_username: blockedUsername });
+  if (error && error.code !== "23505") throw new Error(error.message);
+}
+
+export async function unblockUser(blockerId: string, blockedId: string): Promise<void> {
+  const { error } = await supabase
+    .from("blocked_users")
+    .delete()
+    .eq("blocker_id", blockerId)
+    .eq("blocked_id", blockedId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchBlockedUsers(userId: string): Promise<BlockedUser[]> {
+  const { data, error } = await supabase
+    .from("blocked_users")
+    .select("blocked_id, blocked_username")
+    .eq("blocker_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("fetchBlockedUsers failed:", error.message); return []; }
+  return (data ?? []).map((r) => ({ id: r.blocked_id as string, username: r.blocked_username as string }));
+}
+
 // One realtime channel per coin — the panel/sheet mounts and unmounts with
 // whichever coin is currently being viewed, so there's no need to manage
 // more than one subscription at a time.
