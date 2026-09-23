@@ -385,7 +385,6 @@ function AppDashboard({
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
-  const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert();
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const onboardingCheckedRef = useRef(false);
@@ -416,6 +415,10 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("coin", coin);
   }, [coin]);
+
+  // Follows the selected coin (not hardcoded to BTC) so the toast is
+  // relevant to whatever chart is actually open.
+  const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert(coin);
 
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and

@@ -15,6 +15,7 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100);
   const [dragY, setDragY] = useState(0);
+  const [logoError, setLogoError] = useState(false);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
   const touchStartYRef = useRef<number | null>(null);
@@ -25,6 +26,7 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
     setVisible(true);
     setProgress(100);
     setDragY(0);
+    setLogoError(false);
     startRef.current = performance.now();
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -93,17 +95,18 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
       <div className="btc-toast-glow" />
 
       <div className="btc-toast-inner">
-        {/* Left: BTC icon + direction */}
+        {/* Left: coin icon + direction */}
         <div className="btc-toast-left">
           <div className="btc-toast-btc-icon">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M9 8h4.5a2 2 0 0 1 0 4H9v4h5a2 2 0 0 0 0-4"/>
-              <line x1="9" y1="8" x2="9" y2="16"/>
-              <line x1="10.5" y1="6" x2="10.5" y2="8"/>
-              <line x1="13.5" y1="6" x2="13.5" y2="8"/>
-              <line x1="10.5" y1="16" x2="10.5" y2="18"/>
-              <line x1="13.5" y1="16" x2="13.5" y2="18"/>
-            </svg>
+            {!logoError ? (
+              <img
+                src={`https://assets.coincap.io/assets/icons/${alert.coin.toLowerCase()}@2x.png`}
+                alt=""
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <span className="btc-toast-icon-fallback">{alert.coin[0] ?? "?"}</span>
+            )}
           </div>
           <div className="btc-toast-arrow">
             {isUp ? (
@@ -118,11 +121,11 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
         <div className="btc-toast-body">
           <div className="btc-toast-label">
             <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
-            <span className="btc-toast-tag">BTC PRICE ALERT</span>
+            <span className="btc-toast-tag">{alert.coin} PRICE ALERT</span>
           </div>
           <div className="btc-toast-price">${fmtPrice}</div>
           <div className="btc-toast-change">
-            {isUp ? "▲" : "▼"} {isUp ? "+" : "−"}${fmtChange} in last move
+            {isUp ? "▲" : "▼"} {isUp ? "+" : "−"}${fmtChange} ({alert.changePct.toFixed(2)}%) in last move
           </div>
         </div>
 
