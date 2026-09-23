@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import type { Ticker24h } from "../services/coinglass";
-import { LogoIcon } from "./CoinHintzLogo";
 import "../styles/DailyBrief.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
@@ -178,12 +177,23 @@ function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) =>
 const DRAG_THRESHOLD = 40;
 const TAP_THRESHOLD = 6;
 
-// No thumbnail in the feed — the coinhintz mark reads better here than a
-// generic "no image" icon (still tinted per category via the background).
+// No thumbnail in the feed — a real category-themed photo (stored locally
+// in /public/daily-brief, not hotlinked) reads far better than an icon.
+// Same three images regardless of which specific outlet/article is missing
+// one, just varied by category.
+const CATEGORY_FALLBACK_IMG: Record<Category, string> = {
+  crypto: "/daily-brief/crypto.jpg",
+  markets: "/daily-brief/markets.jpg",
+  geopolitics: "/daily-brief/geopolitics.jpg",
+};
+
 const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({ category, className }) => (
-  <div className={`${className} db-thumb-placeholder db-thumb-placeholder--${category}`}>
-    <LogoIcon size={28} />
-  </div>
+  <img
+    className={`${className} db-thumb-placeholder db-thumb-placeholder--${category}`}
+    src={CATEGORY_FALLBACK_IMG[category]}
+    alt=""
+    loading="lazy"
+  />
 );
 
 type SheetState = "minimized" | "collapsed" | "expanded";

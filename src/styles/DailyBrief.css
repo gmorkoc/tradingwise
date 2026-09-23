@@ -210,15 +210,9 @@
   50%       { opacity: 0.4; transform: scale(0.7); }
 }
 
-.db-thumb-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.db-thumb-placeholder--crypto      { color: #22c55e; background: rgba(34, 197, 94, 0.14); }
-.db-thumb-placeholder--markets     { color: #38bdf8; background: rgba(56, 189, 248, 0.14); }
-.db-thumb-placeholder--geopolitics { color: #f97316; background: rgba(249, 115, 22, 0.14); }
+/* Now a real <img> (see ThumbPlaceholder) sharing .db-list-thumb's own
+   sizing/object-fit/border-radius — no per-category tint needed since the
+   photo itself already carries the category. */
 
 .db-list-chips {
   display: flex;
