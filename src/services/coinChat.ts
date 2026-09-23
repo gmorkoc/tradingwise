@@ -174,6 +174,20 @@ export interface BlockedUser {
   username: string;
 }
 
+// blockUser/unblockUser can be triggered from either CoinChat (the ⋮ menu)
+// or ProfilePage (the Blocked Users tab) — each keeps its own local copy
+// of the list for instant optimistic UI, but that leaves the OTHER one
+// stale until it happens to refetch (e.g. iOS's Profile sheet doesn't
+// remount on close, so an unblock there never reached an already-open
+// chat dock). This event is how the one that *didn't* trigger the change
+// hears about it and updates without a manual refresh.
+export const BLOCK_CHANGE_EVENT = "coin-chat-block-change";
+export interface BlockChangeDetail {
+  blocked: boolean;
+  id: string;
+  username?: string; // only present when blocked: true
+}
+
 // Blocking is a per-account preference, not tied to any one comment or
 // coin — see fetchBlockedUsers below, fetched once per signed-in user
 // rather than re-fetched per page/coin the way fetchMyLikedCommentIds is.
@@ -185,6 +199,9 @@ export async function blockUser(blockerId: string, blockedId: string, blockedUse
     .from("blocked_users")
     .insert({ blocker_id: blockerId, blocked_id: blockedId, blocked_username: blockedUsername });
   if (error && error.code !== "23505") throw new Error(error.message);
+  window.dispatchEvent(new CustomEvent<BlockChangeDetail>(BLOCK_CHANGE_EVENT, {
+    detail: { blocked: true, id: blockedId, username: blockedUsername },
+  }));
 }
 
 export async function unblockUser(blockerId: string, blockedId: string): Promise<void> {
@@ -194,6 +211,9 @@ export async function unblockUser(blockerId: string, blockedId: string): Promise
     .eq("blocker_id", blockerId)
     .eq("blocked_id", blockedId);
   if (error) throw new Error(error.message);
+  window.dispatchEvent(new CustomEvent<BlockChangeDetail>(BLOCK_CHANGE_EVENT, {
+    detail: { blocked: false, id: blockedId },
+  }));
 }
 
 export async function fetchBlockedUsers(userId: string): Promise<BlockedUser[]> {

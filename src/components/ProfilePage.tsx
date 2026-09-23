@@ -8,7 +8,10 @@ import {
   ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, uploadAvatar, saveAvatarUrl,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
-import { backfillMyCommentAvatars, fetchBlockedUsers, unblockUser, type BlockedUser } from "../services/coinChat";
+import {
+  backfillMyCommentAvatars, fetchBlockedUsers, unblockUser, BLOCK_CHANGE_EVENT,
+  type BlockedUser, type BlockChangeDetail,
+} from "../services/coinChat";
 import { Avatar } from "./Avatar";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
@@ -176,6 +179,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     setBlockedUsers((prev) => prev.filter((b) => b.id !== blockedUserId));
     try { await unblockUser(user.id, blockedUserId); } catch { /* stays unblocked locally either way */ }
   };
+
+  // Symmetric with CoinChat's own listener — picks up a block made from
+  // the chat's ⋮ menu without needing this tab to be reopened.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const { blocked, id, username } = (e as CustomEvent<BlockChangeDetail>).detail;
+      setBlockedUsers((prev) => {
+        if (blocked) {
+          return prev.some((b) => b.id === id) ? prev : [{ id, username: username ?? "" }, ...prev];
+        }
+        return prev.filter((b) => b.id !== id);
+      });
+    };
+    window.addEventListener(BLOCK_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(BLOCK_CHANGE_EVENT, onChange);
+  }, []);
   const [showNew,    setShowNew]    = useState(false);
   const [showConfirm,setShowConfirm]= useState(false);
 

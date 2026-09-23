@@ -8,7 +8,7 @@ import { COINS, fetchCoinMarketCaps, fetchCoinChanges24h } from "../services/coi
 import {
   fetchCoinComments, fetchCommentById, postCoinComment, deleteCoinComment, reportCoinComment,
   likeComment, unlikeComment, fetchMyLikedCommentIds, uploadChatImage,
-  blockUser, fetchBlockedUsers, type BlockedUser,
+  blockUser, fetchBlockedUsers, BLOCK_CHANGE_EVENT, type BlockedUser, type BlockChangeDetail,
   subscribeToCoinComments, unsubscribeFromCoinComments, searchUsernames, COIN_COMMENT_MAX_LENGTH,
   type CoinComment,
 } from "../services/coinChat";
@@ -423,6 +423,23 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
     fetchBlockedUsers(user.id).then((rows) => { if (!cancelled) setBlockedUsers(rows); });
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  // Picks up a block/unblock made elsewhere (ProfilePage's Blocked Users
+  // tab) without needing this dock to remount or refetch — see
+  // BLOCK_CHANGE_EVENT's own comment in coinChat.ts for why this exists.
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const { blocked, id, username } = (e as CustomEvent<BlockChangeDetail>).detail;
+      setBlockedUsers((prev) => {
+        if (blocked) {
+          return prev.some((b) => b.id === id) ? prev : [{ id, username: username ?? "" }, ...prev];
+        }
+        return prev.filter((b) => b.id !== id);
+      });
+    };
+    window.addEventListener(BLOCK_CHANGE_EVENT, onChange);
+    return () => window.removeEventListener(BLOCK_CHANGE_EVENT, onChange);
+  }, []);
 
   // Manual refresh — realtime (subscribeToCoinComments above) covers the
   // common case, but a dropped/reconnecting websocket can leave the feed
