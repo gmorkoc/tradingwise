@@ -226,6 +226,7 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const [uploadingImage, setUploadingImage] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false); // mobile swipe-up sheet only
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
+  const [showReportToast, setShowReportToast] = useState(false);
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   // Users this account has blocked — a per-account preference (unlike
   // likedIds, not tied to any one page/coin's comments), so it's fetched
@@ -630,6 +631,8 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
   const handleReport = async (id: number) => {
     if (!user) return;
     setReportedIds((prev) => new Set(prev).add(id));
+    setShowReportToast(true);
+    setTimeout(() => setShowReportToast(false), 2500);
     try { await reportCoinComment(id, user.id); } catch { /* stays marked locally either way */ }
   };
 
@@ -791,6 +794,9 @@ export function CoinChat({ coin, onOpenAuth, onOpenUpgrade, onCloseDesktop, expa
 
   const feed = (
     <div className="coin-chat-feed-wrap">
+      {showReportToast && (
+        <div className="coin-chat-report-toast">{t("coinChat.reportedToast", "Reported to admin")}</div>
+      )}
       <div className={`coin-chat-feed${feedLocked ? " coin-chat-feed--blurred" : ""}`} ref={feedRef}>
         {showBotBanner && (
           <div className="coin-chat-bot-banner">

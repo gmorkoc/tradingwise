@@ -1585,6 +1585,7 @@
     "block": "@{{username}} engelle",
     "unblock": "Engeli kaldır",
     "blockedCount": "{{count}} engellendi",
+    "reportedToast": "Yöneticiye bildirildi",
     "upgrade": "Yükselt",
     "placeholder": "{{coin}} hakkındaki görüşünü paylaş…",
     "post": "Gönder",

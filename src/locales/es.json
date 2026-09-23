@@ -1585,6 +1585,7 @@
     "block": "Bloquear a @{{username}}",
     "unblock": "Desbloquear",
     "blockedCount": "{{count}} bloqueados",
+    "reportedToast": "Reportado al administrador",
     "upgrade": "Mejorar plan",
     "placeholder": "Comparte tu opinión sobre {{coin}}…",
     "post": "Publicar",

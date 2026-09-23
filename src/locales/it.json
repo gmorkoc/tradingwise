@@ -1585,6 +1585,7 @@
     "block": "Blocca @{{username}}",
     "unblock": "Sblocca",
     "blockedCount": "{{count}} bloccati",
+    "reportedToast": "Segnalato all'amministratore",
     "upgrade": "Passa a Pro",
     "placeholder": "Condividi la tua opinione su {{coin}}…",
     "post": "Pubblica",

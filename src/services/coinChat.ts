@@ -159,6 +159,14 @@ export async function reportCoinComment(commentId: number, reporterId: string): 
   // A duplicate report (already reported by this user) isn't worth
   // surfacing as an error — the outcome the user wanted already happened.
   if (error && error.code !== "23505") throw new Error(error.message);
+
+  // Only email on a genuinely new report — a repeat report from the same
+  // user (23505 above) already sent one the first time. Fire-and-forget,
+  // same pattern as postCoinComment's own notify-mention call — a failed
+  // email shouldn't surface as the report itself having failed.
+  if (!error) {
+    supabase.functions.invoke("notify-admin", { body: { event: "report", commentId, reporterId } }).catch(() => {});
+  }
 }
 
 export interface BlockedUser {

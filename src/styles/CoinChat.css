@@ -232,6 +232,29 @@ html[data-theme="light"] .coin-chat-panel {
   position: relative;
 }
 
+.coin-chat-report-toast {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px var(--color-shadow);
+  z-index: 30;
+  pointer-events: none;
+  animation: coinChatReportToast 2.5s ease forwards;
+}
+@keyframes coinChatReportToast {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+}
+
 .coin-chat-feed {
   flex: 1;
   min-height: 0;
