@@ -248,41 +248,34 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
 
   return (
     <div className="caz-overlay" ref={backdropRef} onClick={handleBackdrop}>
-      <div className="caz-panel" role="dialog" aria-modal="true">
-        <div className="caz-header">
-          <div>
-            <div className="caz-title-row">
+      <div className={`caz-panel${!isPaid ? " caz-panel--gated" : ""}`} role="dialog" aria-modal="true">
+        {isPaid ? (
+          <div className="caz-header">
+            <div>
               <h2 className="caz-title">{t("chartAnalyze.title", "Analyze a Chart")}</h2>
-              {/* Badges live here, next to the actual title, instead of
-                  floating alone on the gate card below with nothing to
-                  label — see AIQuotaWall's featureTitle-less gate mode. */}
-              {!isPaid && (
-                <>
-                  <span className="aiqw-gate-ai-badge">AI</span>
-                  <span className="aiqw-gate-tier-badge" style={{ color: "#38bdf8", borderColor: "#38bdf855", background: "#38bdf818" }}>PRO</span>
-                  <span className="aiqw-live-badge">
-                    <span className="aiqw-live-dot" />
-                    LIVE
-                  </span>
-                </>
-              )}
+              <p className="caz-subtitle">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
             </div>
-            <p className="caz-subtitle">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
+            <button className="caz-close" onClick={onClose} aria-label="Close">✕</button>
           </div>
-          <button className="caz-close" onClick={onClose} aria-label="Close">✕</button>
-        </div>
+        ) : (
+          // Gated: no white header strip at all — the promo card below
+          // fills the entire panel edge to edge, title/badges included,
+          // and this floats directly on top of it instead.
+          <button className="caz-close caz-close--floating" onClick={onClose} aria-label="Close">✕</button>
+        )}
 
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handleFileInput} />
         <input ref={libraryInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleFileInput} />
 
         {!isPaid ? (
-          // No featureTitle here — the modal's own header right above
-          // already says "Analyze a Chart" once; repeating it inside the
-          // gate card too just stacked the same title twice in a row.
+          // The header above is just a close button when gated (see
+          // caz-header--gated) — this card is the sole title-bearing
+          // content, not a duplicate of a plain-text header title.
           <AIQuotaWall
             used={used} limit={limit}
             onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth}
             planId="pro"
+            featureTitle={t("chartAnalyze.title", "Analyze a Chart")}
             featureDesc={t("chartAnalyze.gateDesc", "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take.")}
           />
         ) : analysis ? (

@@ -29,6 +29,7 @@
   flex-direction: column;
   animation: caz-slide-up 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  position: relative;
 }
 @keyframes caz-slide-up {
   from { transform: translateY(20px); opacity: 0; }
@@ -44,12 +45,49 @@
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
+/* Gated: no header strip at all — the promo card fills the whole panel
+   edge to edge (see .caz-panel--gated below), so the close button floats
+   directly on top of it instead of sitting in its own white area. */
+.caz-close--floating {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  font-size: 0.7rem;
+  border-radius: 0;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+}
+.caz-close--floating:hover {
+  color: var(--color-text);
+}
+
+/* The promo card becomes the entire panel's content — no margin/inset,
+   no separate border-radius (.caz-panel's own overflow:hidden clips it
+   to match), so there's no white gap anywhere, including behind the
+   close button above. */
+.caz-panel--gated {
+  padding: 0;
+}
+.caz-panel--gated .aiqw-gate-row {
+  margin: 0;
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  justify-content: center;
+  /* Clearance so the title/badges never sit under the floating close
+     button in the corner above. */
+  padding-top: 52px;
+}
 .caz-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 4px; }
 .caz-title { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--color-text); letter-spacing: -0.01em; }
 .caz-subtitle { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
 .caz-close {
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
+  background: none;
+  border: none;
   color: var(--color-text-muted);
   font-size: 1rem;
   cursor: pointer;
