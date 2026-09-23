@@ -599,7 +599,7 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI — Full Chart Analysis",
+          "title": "Inside the Candle — Full Chart Analysis",
           "desc": "Elliott Wave, ICT/SMC, Wyckoff — GPT-4o interprets every move on your chart."
         },
         {
@@ -652,7 +652,7 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI",
+          "title": "Inside the Candle",
           "desc": "Elliott Wave · ICT/SMC · Wyckoff"
         },
         {
@@ -1390,7 +1390,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluenza",
     "fundingbot": "Bot Funding",
-    "candleai": "Candele IA",
+    "candleai": "Dentro la Candela AI",
     "markets": "Mercati Globali",
     "riskcalc": "Calc. Posizione",
     "settings": "Impostazioni",

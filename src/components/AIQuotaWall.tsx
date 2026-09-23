@@ -33,7 +33,7 @@ const PLANS = [
     color: "#a78bfa",
     popular: false,
     priceId: () => PRICE_IDS.elite,
-    features: ["Everything in Pro — unlimited", "Gann Analysis AI", "Coinbase Premium AI", "Early access to features"],
+    features: ["Everything in Pro — unlimited", "Inside the Candle", "Coinbase Premium AI", "Early access to features"],
   },
 ];
 

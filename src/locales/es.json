@@ -599,18 +599,13 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI — Full Chart Analysis",
+          "title": "Inside the Candle — Full Chart Analysis",
           "desc": "Elliott Wave, ICT/SMC, Wyckoff — GPT-4o interprets every move on your chart."
         },
         {
           "icon": "〰️",
           "title": "Elliott Wave Projections",
           "desc": "5-wave auto-detection with Fibonacci price targets for the next 1–2 waves."
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9, Gann angles, cycle forecasts — exclusive to Elite."
         },
         {
           "icon": "🏦",
@@ -641,7 +636,7 @@
       "cta": "Activar Elite — $59.99/mes",
       "trust": "IA ilimitada · Incluye todo de Pro",
       "pro_headline": "Un Paso Antes de Elite",
-      "pro_sub": "Ya tienes todo en Pro. Añade 8 herramientas exclusivas de Elite por solo $29 más al mes.",
+      "pro_sub": "Ya tienes todo en Pro. Añade 7 herramientas exclusivas de Elite por solo $29 más al mes.",
       "pro_cta": "Actualizar desde Pro — $59.99/mes",
       "pro_trust": "+$29/mes · Conserva todas las funciones Pro"
     },
@@ -652,18 +647,13 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI",
+          "title": "Inside the Candle",
           "desc": "Elliott Wave · ICT/SMC · Wyckoff"
         },
         {
           "icon": "〰️",
           "title": "Elliott Wave",
           "desc": "5-wave detection · Fibonacci targets"
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9 · angles · cycle forecasts"
         },
         {
           "icon": "🏦",
@@ -1390,7 +1380,7 @@
     "orderflow": "Dinero Inteligente",
     "signals": "Confluencia",
     "fundingbot": "Bot Funding",
-    "candleai": "Velas IA",
+    "candleai": "Dentro de la Vela IA",
     "markets": "Mercados Globales",
     "riskcalc": "Calc. Posición",
     "settings": "Configuración",

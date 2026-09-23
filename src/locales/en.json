@@ -612,18 +612,13 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI — Full Chart Analysis",
+          "title": "Inside the Candle — Full Chart Analysis",
           "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — GPT-4o reads your chart and explains every move in plain language."
         },
         {
           "icon": "〰️",
           "title": "Elliott Wave Projections",
           "desc": "Auto-detects 5-wave impulse & ABC patterns with Fibonacci price targets for the next 1–2 waves ahead."
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9, Gann angles, and cycle forecasts interpreted by GPT-4o — exclusive to Elite."
         },
         {
           "icon": "🏦",
@@ -654,7 +649,7 @@
       "cta": "Unlock Elite — $59.99/mo",
       "trust": "Unlimited AI · Includes everything in Pro",
       "pro_headline": "One Upgrade Away From Elite",
-      "pro_sub": "You already have everything in Pro. Add 8 exclusive Elite tools for just $29 more per month.",
+      "pro_sub": "You already have everything in Pro. Add 7 exclusive Elite tools for just $29 more per month.",
       "pro_cta": "Upgrade from Pro — $59.99/mo",
       "pro_trust": "+$29/mo · Keep all your Pro features"
     },
@@ -665,18 +660,13 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "CandleAI",
+          "title": "Inside the Candle",
           "desc": "Elliott Wave · ICT/SMC · Wyckoff"
         },
         {
           "icon": "〰️",
           "title": "Elliott Wave",
           "desc": "5-wave detection · Fibonacci targets"
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9 · angles · cycle forecasts"
         },
         {
           "icon": "🏦",
@@ -754,7 +744,7 @@
         "label": "Elite",
         "features": [
           "Everything in Pro — unlimited",
-          "Gann Analysis AI",
+          "Inside the Candle",
           "Coinbase Premium AI",
           "Early access to new features"
         ]
@@ -831,7 +821,7 @@
     "perMonth": "/mo",
     "lf": {
       "elitePro": "Everything in Pro — unlimited",
-      "gann": "Gann Analysis AI",
+      "candleai": "Inside the Candle",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Early access to new features",
       "aiMkt": "AI Market Intelligence",
@@ -976,7 +966,7 @@
       "pillWyckoff": "Wyckoff Phases",
       "pillElliott": "Elliott Wave",
       "pillTradePlan": "Trade Plan",
-      "cta": "Unlock CandleAI"
+      "cta": "Unlock Inside the Candle"
     },
     "heatmap": {
       "label": "Liquidation Heatmap",
@@ -1482,7 +1472,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluence",
     "fundingbot": "Funding Bot",
-    "candleai": "Candle AI",
+    "candleai": "Inside the Candle",
     "markets": "Global Markets",
     "altanalysis": "Alt Analysis",
     "riskcalc": "Position Size Calc",
@@ -1890,7 +1880,7 @@
       },
       {
         "label": "Advanced",
-        "desc": "You know your way around. Full data access, all tools unlocked — liquidation maps, on-chain metrics, Gann analysis."
+        "desc": "You know your way around. Full data access, all tools unlocked — liquidation maps, on-chain metrics, candle pattern AI."
       },
       {
         "label": "Expert",

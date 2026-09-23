@@ -5,7 +5,7 @@ import "../styles/GlobalSearch.css";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
 export type SectionId =
-  | "chart" | "candleai" | "feargreed" | "heatmap" | "onchain" | "gann"
+  | "chart" | "candleai" | "feargreed" | "heatmap" | "onchain"
   | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals"
   | "fundingbot" | "markets";
 
@@ -25,7 +25,7 @@ const COIN_ICONS: Record<string, string> = {
 
 const SECTIONS: { id: SectionId; label: string; desc: string; icon: string }[] = [
   { id: "chart",      label: "Price Chart",       desc: "Live candlestick chart with indicators",     icon: "📈" },
-  { id: "candleai",   label: "Candle AI",          desc: "AI pattern analysis, smart money, forecasts", icon: "✦" },
+  { id: "candleai",   label: "Inside the Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦" },
   { id: "feargreed",  label: "Fear & Greed",       desc: "Market sentiment gauge",                     icon: "🌡" },
   { id: "heatmap",    label: "Liquidation Heatmap",desc: "Futures liquidation zones",                  icon: "🔥" },
   { id: "onchain",    label: "On-Chain Metrics",   desc: "Network data and whale activity",            icon: "⛓" },

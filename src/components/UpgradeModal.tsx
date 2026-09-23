@@ -79,7 +79,7 @@ const PLANS = [
 
 // Feature locale keys exclusive to each tier (used for "you'll lose" confirmation list)
 const EXCLUSIVE_FEATURE_KEYS: Record<string, string[]> = {
-  elite: ["upgradeModal.lf.elitePro", "upgradeModal.lf.gann", "upgradeModal.lf.coinbase", "upgradeModal.lf.earlyAccess"],
+  elite: ["upgradeModal.lf.elitePro", "upgradeModal.lf.candleai", "upgradeModal.lf.coinbase", "upgradeModal.lf.earlyAccess"],
   pro:   ["upgradeModal.lf.aiMkt", "upgradeModal.lf.onchain", "upgradeModal.lf.predChart", "upgradeModal.lf.liqHeatmap", "upgradeModal.lf.aiReqs"],
 };
 

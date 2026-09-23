@@ -65,7 +65,6 @@ import "./App.css";
 // sections they actually open. PriceChart stays a static import above
 // since "chart" is the default section, needed immediately on load.
 const LiquidationHeatmap = lazy(() => import("./components/LiquidationHeatmap").then(m => ({ default: m.LiquidationHeatmap })));
-const GannAnalysis = lazy(() => import("./components/GannAnalysis").then(m => ({ default: m.GannAnalysis })));
 const HTFAnalysis = lazy(() => import("./components/HTFAnalysis").then(m => ({ default: m.HTFAnalysis })));
 const OnChainMetrics = lazy(() => import("./components/OnChainMetrics").then(m => ({ default: m.OnChainMetrics })));
 const PositionFlows = lazy(() => import("./components/PositionFlows").then(m => ({ default: m.PositionFlows })));
@@ -94,7 +93,6 @@ type SectionId =
   | "chart"
   | "heatmap"
   | "onchain"
-  | "gann"
   | "htf"
   | "chat"
   | "positions"
@@ -173,13 +171,6 @@ const NAV_ITEMS: {
     requiredTier: "pro",
     category: "market",
     d: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
-  },
-  {
-    id: "gann",
-    labelKey: "nav.gann",
-    requiredTier: "pro",
-    hidden: true,
-    d: "M22 12h-4l-3 9L9 3l-3 9H2",
   },
   {
     id: "positions",
@@ -2027,22 +2018,6 @@ function AppDashboard({
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                 />
-              )}
-              {activeSection === "gann" && (
-                <BlurGate
-                  requiredTier="pro"
-                  featureName="Gann Analysis"
-                  onOpenAuth={onOpenAuth}
-                  onOpenUpgrade={onOpenUpgrade}
-                  className="bg-root--top"
-                >
-                  <GannAnalysis
-                    coin={coin}
-                    currentPrice={btcData?.price}
-                    onOpenAuth={onOpenAuth}
-                    onOpenUpgrade={onOpenUpgrade}
-                  />
-                </BlurGate>
               )}
               {activeSection === "htf" && (
                 <HTFAnalysis
