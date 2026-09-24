@@ -15,6 +15,10 @@ import {
   fetchBn,
 } from "./services/coinglass";
 import { CATALOG } from "./services/coinCatalog";
+// Cash is an Asset Calculator-only concept — deliberately NOT added to the
+// shared CATALOG, which Watchlist/price-fetching/search all iterate over
+// assuming every entry is a real tradeable coin with a Binance pair.
+const CASH_ID = "cash";
 import { fetchBinancePrices } from "./services/binancePrices";
 import { consumePendingCoinMention } from "./services/pushNotifications";
 import { initWebPushMessageRouting } from "./services/webPush";
@@ -682,12 +686,17 @@ function AppDashboard({
     let totalAssetValue = 0;
     let totalCostBasis = 0;
     for (const p of positions) {
-      const symbol = CATALOG.find(c => c.id === p.catalogId)?.symbol;
-      const price = symbol ? positionPrices.get(symbol) : undefined;
+      // Cash isn't in the shared CATALOG (that array backs Watchlist/price
+      // fetching/search too — a "coin" with no real market would break all
+      // of those) — it's a local sentinel just for this calculator, always
+      // worth $1/unit, no price fetch needed.
+      const isCash = p.catalogId === CASH_ID;
+      const symbol = isCash ? "USD" : CATALOG.find(c => c.id === p.catalogId)?.symbol;
+      const price = isCash ? 1 : (symbol ? positionPrices.get(symbol) : undefined);
       const amount = Number(p.amount) || 0;
-      const cost = Number(p.cost) || 0;
+      const cost = isCash ? 0 : (Number(p.cost) || 0);
       totalAssetValue += price ? amount * price : 0;
-      totalCostBasis += amount * cost;
+      totalCostBasis += isCash ? amount : amount * cost;
     }
     return { totalAssetValue, totalCostBasis, profitLoss: totalAssetValue - totalCostBasis };
   }, [positions, positionPrices]);
@@ -2392,11 +2401,12 @@ function AppDashboard({
 
                 <div className="asset-positions-list">
                   {positions.map((pos) => {
+                    const isCash = pos.catalogId === CASH_ID;
                     const meta = CATALOG.find((c) => c.id === pos.catalogId);
-                    const symbol = meta?.symbol ?? "";
-                    const price = positionPrices.get(symbol);
+                    const symbol = isCash ? "USD" : (meta?.symbol ?? "");
+                    const price = isCash ? 1 : positionPrices.get(symbol);
                     const amount = Number(pos.amount) || 0;
-                    const cost = Number(pos.cost) || 0;
+                    const cost = isCash ? 0 : (Number(pos.cost) || 0);
                     const value = price ? amount * price : 0;
                     const pnl = value - amount * cost;
                     return (
@@ -2408,6 +2418,7 @@ function AppDashboard({
                             updatePosition(pos.id, { catalogId: e.target.value })
                           }
                         >
+                          <option value={CASH_ID}>💵 Cash (USD)</option>
                           {CATALOG.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.symbol} — {c.name}
@@ -2427,33 +2438,46 @@ function AppDashboard({
                           onChange={(e) =>
                             updatePosition(pos.id, { amount: e.target.value })
                           }
-                          placeholder={t("assetCalc.amountLabel", { coin: symbol })}
+                          placeholder={isCash ? t("assetCalc.cashLabel") : t("assetCalc.amountLabel", { coin: symbol })}
                         />
 
+                        {/* Cost basis doesn't mean anything for cash — a dollar
+                            is always worth a dollar, no P&L to track. Kept as
+                            a real (disabled) <input>, not a swapped-out <div>
+                            — the mobile grid layout positions these fields by
+                            :nth-of-type(input), which a differently-tagged
+                            element would silently fall out of. */}
                         <input
                           type="number"
                           min="0"
                           step="0.01"
                           className="asset-position-input"
-                          value={pos.cost}
+                          disabled={isCash}
+                          value={isCash ? "" : pos.cost}
                           onFocus={() =>
                             pos.cost === "0" && updatePosition(pos.id, { cost: "" })
                           }
                           onChange={(e) =>
                             updatePosition(pos.id, { cost: e.target.value })
                           }
-                          placeholder={t("assetCalc.costLabel", { coin: symbol })}
+                          placeholder={isCash ? "—" : t("assetCalc.costLabel", { coin: symbol })}
                         />
 
                         <div className="asset-position-result">
-                          <span className="asset-position-live-price">
-                            {price ? t("assetCalc.priceAt", { price: formatCurrency(price) }) : "—"}
-                          </span>
-                          <span
-                            className={`asset-position-pnl${pnl >= 0 ? " positive" : " negative"}`}
-                          >
-                            {amount > 0 ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}` : "—"}
-                          </span>
+                          {isCash ? (
+                            <span className="asset-position-live-price">{t("assetCalc.cashNote")}</span>
+                          ) : (
+                            <>
+                              <span className="asset-position-live-price">
+                                {price ? t("assetCalc.priceAt", { price: formatCurrency(price) }) : "—"}
+                              </span>
+                              <span
+                                className={`asset-position-pnl${pnl >= 0 ? " positive" : " negative"}`}
+                              >
+                                {amount > 0 ? `${pnl >= 0 ? "+" : ""}${formatCurrency(pnl)}` : "—"}
+                              </span>
+                            </>
+                          )}
                         </div>
 
                         <button

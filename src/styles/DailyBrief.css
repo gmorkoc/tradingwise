@@ -245,6 +245,11 @@
   color: var(--color-text);
 }
 
+.db-chip-price {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
 .db-chip--ticker.up .db-chip-change   { color: var(--color-success); }
 .db-chip--ticker.down .db-chip-change { color: var(--color-danger); }
 

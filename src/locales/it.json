@@ -1942,7 +1942,7 @@
       ]
     },
     "candleai": {
-      "title": "Candele IA",
+      "title": "Inside the Candle",
       "desc": "Analisi in tempo reale delle candele con IA. Legge ogni candela, identifica cosa stanno facendo i market maker e prevede la prossima mossa.",
       "tags": [
         "Pattern Candele",

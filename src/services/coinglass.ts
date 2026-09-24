@@ -1501,7 +1501,7 @@ export async function fetchCoinChanges24h(): Promise<Map<string, CoinSnapshot>> 
 
 // ── 24h High/Low from Binance ticker ─────────────────────────────────────────
 
-export interface Ticker24h { high: number; low: number; change: number; }
+export interface Ticker24h { high: number; low: number; change: number; price: number; }
 
 let ticker24hCache: Map<string, Ticker24h> | null = null;
 let ticker24hFetchedAt = 0;
@@ -1533,7 +1533,10 @@ export async function fetchCoin24hTickers(
       const high = parseFloat(row.highPrice ?? '0');
       const low  = parseFloat(row.lowPrice  ?? '0');
       if (!high && !low) continue;
-      map.set(sym, { high, low, change: parseFloat(row.priceChangePercent ?? '0') });
+      // Binance's 24hr ticker already returns lastPrice in this same
+      // response — no extra request needed to show it alongside % change.
+      const price = parseFloat(row.lastPrice ?? '0');
+      map.set(sym, { high, low, change: parseFloat(row.priceChangePercent ?? '0'), price });
     }
   } catch {
     if (ticker24hCache) return ticker24hCache;

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import type { Ticker24h } from "../services/coinglass";
+import { formatLivePrice } from "./PriceChart";
 import "../styles/DailyBrief.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
@@ -97,6 +98,7 @@ function renderChip(label: string, _category: Category, coinTickers?: Map<string
     return (
       <span key={label} className={`db-chip db-chip--ticker${up ? " up" : " down"}`}>
         <span className="db-chip-symbol">{label}</span>{" "}
+        {ticker.price > 0 && <span className="db-chip-price">{formatLivePrice(ticker.price)}</span>}{" "}
         <span className="db-chip-change">{up ? "+" : ""}{ticker.change.toFixed(2)}%</span>
       </span>
     );

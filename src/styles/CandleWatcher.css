@@ -1955,7 +1955,13 @@
   font-weight: 700;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  /* The Cycle Phase chip's value is always short enough for one line, but
+     Halving Cycle's ("Bear market phase · 888d post-halving") is not —
+     nowrap let it spill past the pill's rounded edge instead of wrapping
+     inside it. */
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
 }
 .cw-macro-chip--bull .cw-macro-chip-val    { color: #22c55e; }
 .cw-macro-chip--bear .cw-macro-chip-val    { color: #ef4444; }

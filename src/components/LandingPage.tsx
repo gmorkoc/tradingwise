@@ -190,7 +190,7 @@ function FearGreedGauge({ value = 72 }: { value?: number }) {
 // Mini annotated candlestick chart for the CandleAI flagship promo — same
 // OHLC series + EMA math shared with the hero's card collage, plus the
 // smart-money overlays (order block, fair value gap, CHoCH/BOS, AI target)
-// that make this read as the real AI Candle Watcher screen rather than a
+// that make this read as the real Inside the Candle screen rather than a
 // generic price chart. Colors are fixed semantic hex (bull/bear/AI accent),
 // not a theme-token violation — see LandingPage.css's CandleAI promo
 // comment for why.
@@ -360,7 +360,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
     </section>
 
     {/* ── CandleAI flagship promo ─────────────────────────────────────────
-        Built from the real AI Candle Watcher screen (annotated chart, AI
+        Built from the real Inside the Candle screen (annotated chart, AI
         Read panel, Live Tape) — replaces the old Sidekick chat mock and
         AI panel mock, merged into one bento section right after the hero,
         TickScan's own pattern of leading with the real tool. */}
@@ -370,7 +370,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
           <div className="lp-cai-tile lp-cai-tile--chart">
             <div className="lp-cai-chart-hd">
               <span className="lp-cai-chart-logo">✦</span>
-              <span className="lp-cai-chart-name">AI Candle Watcher</span>
+              <span className="lp-cai-chart-name">Inside the Candle</span>
               <span className="lp-cai-chart-pair">BTC/USD · 4H</span>
               <span className="lp-cai-forecast-pill"><span className="dot" />{t("landing.candleAI.forecastPill")}</span>
             </div>

@@ -62,7 +62,11 @@
   width: 340px;
   max-width: calc(100vw - 24px);
   box-sizing: border-box;
-  background: var(--color-card-bg);
+  /* --color-card-bg is intentionally translucent (for normal card UI
+     sitting inline in the page) — wrong choice for a floating popover
+     with page content sitting directly behind it, which just showed
+     through. --color-background is fully opaque. */
+  background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
@@ -321,7 +325,7 @@
   align-items: center;
   gap: 12px;
   padding: 13px 15px;
-  background: var(--color-card-bg);
+  background: var(--color-background);
   border: 1px solid rgba(56, 189, 248, 0.35);
   border-left: 3px solid #38bdf8;
   border-radius: 13px;
