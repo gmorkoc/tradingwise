@@ -94,6 +94,15 @@ export function BuySignals({ onOpenUpgrade }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Tapping the in-app toast (useBuySignalRealtime.ts / PushToast.tsx)
+  // opens this panel directly, same convention as the coin-mention/
+  // strategy-alert tap routing.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-buy-signals", onOpen);
+    return () => window.removeEventListener("open-buy-signals", onOpen);
+  }, []);
+
   const handleClick = () => {
     if (!isElite) { onOpenUpgrade(); return; }
     setOpen((v) => !v);

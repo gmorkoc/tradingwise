@@ -29,6 +29,7 @@ import { LeveragePopup } from "./components/LeveragePopup";
 import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { BuySignals } from "./components/BuySignals";
+import { useBuySignalRealtime } from "./hooks/useBuySignalRealtime";
 import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
@@ -789,6 +790,11 @@ function AppDashboard({
   }, []);
 
   const { tier, user, profile, signOut } = useAuth();
+  // Shows the in-app buy-signal toast anywhere in the app, the instant it
+  // fires — independent of whether a push notification actually made it
+  // through (browser push subscriptions can go stale; this doesn't rely
+  // on one at all).
+  useBuySignalRealtime(tier);
   useEffect(() => {
     if (profile && !onboardingCheckedRef.current) {
       onboardingCheckedRef.current = true;

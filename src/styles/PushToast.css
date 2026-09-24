@@ -11,27 +11,59 @@
   left: 12px;
   margin: 0 auto;
   max-width: 380px;
-  z-index: 100050;
+  /* Highest in the app on purpose — this needs to win over literally
+     everything else that can be open (Compact View's own 400000, the
+     highest anything else reaches, Drawer/AccountMenu/GlobalSearch's
+     300001), same "portal to body + clear the real ceiling" reasoning as
+     those. */
+  z-index: 500000;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
-  background: var(--color-card-bg);
+  gap: 13px;
+  padding: 14px 16px;
+  background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
   cursor: pointer;
-  animation: push-toast-in 0.25s ease;
+  animation: push-toast-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
 @keyframes push-toast-in {
-  from { opacity: 0; transform: translateY(-16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Buy-signal variant — a green glow/border instead of the neutral default,
+   same accent color the Buy Signals panel itself uses. */
+.push-toast--buy-signal {
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.12), 0 0 24px rgba(34, 197, 94, 0.18);
 }
 
 .push-toast-icon {
   font-size: 1.3rem;
   flex-shrink: 0;
+}
+
+.push-toast-icon--buy-signal {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #22c55e;
+}
+
+.push-toast-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #22c55e;
 }
 
 .push-toast-avatar {
@@ -58,18 +90,19 @@
 }
 
 .push-toast-body strong {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 .push-toast-body span {
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   color: var(--color-text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.35;
 }
 
 .push-toast-close {
@@ -80,4 +113,97 @@
   font-size: 0.72rem;
   padding: 2px;
   flex-shrink: 0;
+}
+
+/* ── Rich buy-signal layout — coin logo + price up top, then every
+   signal on its OWN row (not one run-on joined string), so nothing
+   reads as a cramped, stacked block. ─────────────────────────────────── */
+.push-toast--rich {
+  /* NOT position: relative — that would override the base .push-toast's
+     position: fixed and drop this into normal document flow instead of
+     floating (a real bug caught while verifying: it rendered ~900px down
+     the page, off-screen, until this was removed). position: fixed
+     already establishes a containing block on its own, which is all
+     .push-toast-close--rich's position: absolute needs. */
+  max-width: 400px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.push-toast-close--rich {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.8rem;
+}
+
+.push-toast-rich-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-right: 20px; /* clears the absolute close button */
+}
+
+.push-toast-coin-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+}
+.push-toast-coin-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.push-toast-coin-logo-fallback {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+}
+
+.push-toast-rich-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-grow: 1;
+  min-width: 0;
+}
+.push-toast-coin-pair {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.push-toast-coin-price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.push-toast-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.push-toast-signal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.push-toast-signal-row svg {
+  flex-shrink: 0;
+  color: #22c55e;
 }
