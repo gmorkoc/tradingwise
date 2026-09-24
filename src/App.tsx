@@ -28,6 +28,7 @@ import { LearnSection } from "./components/LearnSection";
 import { LeveragePopup } from "./components/LeveragePopup";
 import { CoinHintzLogo } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
+import { BuySignals } from "./components/BuySignals";
 import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
@@ -1834,6 +1835,7 @@ function AppDashboard({
                 </svg>
               </button>
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
+              <BuySignals onOpenUpgrade={onOpenUpgrade} />
               <button
                 className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
                 onClick={() => setNotificationsEnabled(!notificationsEnabled)}

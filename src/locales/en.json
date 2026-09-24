@@ -56,6 +56,13 @@
     "clickToRefresh": "Click to refresh",
     "openCalculator": "Open Asset Calculator"
   },
+  "buySignals": {
+    "title": "Buy Signals",
+    "subtitle": "Daily technical confluence scan",
+    "loading": "Scanning…",
+    "empty": "No coins are currently in a buy zone. Check back after the next daily scan.",
+    "disclaimer": "Not a price prediction — a documented confluence of oversold/reversal-associated conditions. Actual prices can and do keep falling."
+  },
   "assetCalc": {
     "title": "💼 Asset Calculator",
     "amountLabel": "{{coin}} Amount",

@@ -1,0 +1,213 @@
+/* ── Trigger button (matches .alerts-bell exactly) ────────────────────────── */
+.buysig-bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, box-shadow 0.15s;
+}
+.buysig-bell:hover {
+  color: var(--color-text);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+.buysig-bell--active {
+  color: #22c55e;
+}
+.buysig-bell-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #06220f;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ── Panel — centered modal, not an anchored popover (richer/taller
+   content than Price Alerts' small list, so it gets its own scroll
+   region instead of trying to stay pinned under the bell). ────────────── */
+.buysig-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  z-index: 200000;
+}
+
+.buysig-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200001;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  box-sizing: border-box;
+  /* --color-card-bg is intentionally translucent (normal inline card UI) —
+     wrong choice for a full modal with page content behind it, same fix
+     as the Price Alerts panel bug earlier. */
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: buysig-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes buysig-in {
+  from { opacity: 0; transform: translate(-50%, -46%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.buysig-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.buysig-panel-title {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.buysig-panel-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.buysig-panel-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.buysig-panel-close:hover { color: var(--color-text); }
+
+.buysig-list {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.buysig-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 24px 8px;
+  margin: 0;
+}
+
+.buysig-card {
+  border-radius: 14px;
+  background: var(--color-card-bg);
+  border: 1px solid rgba(34, 197, 94, 0.32);
+  padding: 14px;
+}
+.buysig-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.buysig-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.buysig-card-name {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.buysig-card-coin {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.buysig-card-price {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+.buysig-card-score {
+  flex-shrink: 0;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 8px;
+  padding: 4px 9px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #22c55e;
+}
+
+.buysig-card-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.buysig-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+.buysig-check svg { flex-shrink: 0; }
+.buysig-check--hit {
+  color: var(--color-text-secondary);
+  opacity: 1;
+}
+.buysig-check--hit svg { color: #22c55e; }
+
+.buysig-disclaimer {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  padding: 12px 18px;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .buysig-panel {
+    max-width: calc(100vw - 24px);
+    max-height: 80vh;
+  }
+}
