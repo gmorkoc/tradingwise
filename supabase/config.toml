@@ -401,6 +401,11 @@ verify_jwt = false
 [functions.market-pulse-bot]
 verify_jwt = false
 
+# Invoked only by pg_cron (buy_signal_scan_cron migration), never by a
+# client — checks its own x-cron-secret header instead of a user JWT.
+[functions.buy-signal-scan]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
