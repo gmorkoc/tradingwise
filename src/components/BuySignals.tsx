@@ -68,7 +68,9 @@ export function BuySignals({ onOpenUpgrade }: Props) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<BuySignalRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [highlightCoin, setHighlightCoin] = useState<string | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const fetchSignals = async () => {
     setLoading(true);
@@ -96,15 +98,34 @@ export function BuySignals({ onOpenUpgrade }: Props) {
 
   // Tapping the in-app toast (useBuySignalRealtime.ts / PushToast.tsx)
   // opens this panel directly, same convention as the coin-mention/
-  // strategy-alert tap routing.
+  // strategy-alert tap routing — and now carries which coin the toast was
+  // actually about, so opening from a specific alert scrolls to and
+  // highlights that card instead of just landing on the top of the list.
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ coin?: string }>).detail;
+      setHighlightCoin(detail?.coin ?? null);
+      setOpen(true);
+    };
     window.addEventListener("open-buy-signals", onOpen);
     return () => window.removeEventListener("open-buy-signals", onOpen);
   }, []);
 
+  // Scroll to + highlight the coin the toast was about, once its card has
+  // actually rendered (rows load async after the panel opens). Clears
+  // after a few seconds so the glow reads as "here it is," not a
+  // permanent state.
+  useEffect(() => {
+    if (!open || !highlightCoin) return;
+    const el = cardRefs.current[highlightCoin];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = setTimeout(() => setHighlightCoin(null), 3000);
+    return () => clearTimeout(timer);
+  }, [open, rows, highlightCoin]);
+
   const handleClick = () => {
     if (!isElite) { onOpenUpgrade(); return; }
+    setHighlightCoin(null); // opening via the bell, not a specific toast — no stale target from last time
     setOpen((v) => !v);
   };
 
@@ -145,19 +166,31 @@ export function BuySignals({ onOpenUpgrade }: Props) {
                     <p className="buysig-empty">{t("buySignals.empty", "No coins are currently in a buy zone. Check back after the next daily scan.")}</p>
                   )}
                   {rows.map((row) => (
-                    <div key={row.coin} className="buysig-card">
+                    <div
+                      key={row.coin}
+                      ref={(el) => { cardRefs.current[row.coin] = el; }}
+                      className={`buysig-card${highlightCoin === row.coin ? " buysig-card--highlight" : ""}`}
+                    >
                       <div className="buysig-card-head">
                         <div className="buysig-card-icon" style={{ background: COIN_COLORS[row.coin] ?? "#7c8ba8" }}>
                           {row.coin[0]}
                         </div>
                         <div className="buysig-card-name">
-                          <span className="buysig-card-coin">{row.coin} / USD</span>
-                          <span className="buysig-card-price">
-                            ${row.price.toLocaleString(undefined, { maximumFractionDigits: row.price < 1 ? 6 : 2 })}
+                          <span className="buysig-card-coin">
+                            {row.coin} / USD
+                            <span className="buysig-card-price">
+                              ${row.price.toLocaleString(undefined, { maximumFractionDigits: row.price < 1 ? 6 : 2 })}
+                            </span>
                           </span>
                         </div>
+                        {/* Confidence is confluence strength, not a probability —
+                            we've never backtested this, so it labels how many of
+                            the 4 conditions agree, not "how likely this is right." */}
                         <div className="buysig-card-score">
-                          {row.score}/{row.max_score}
+                          <span className="buysig-card-score-frac">{row.score}/{row.max_score}</span>
+                          <span className="buysig-card-confidence">
+                            {row.score >= row.max_score ? "Strong" : "Moderate"}
+                          </span>
                         </div>
                       </div>
                       <div className="buysig-card-checks">

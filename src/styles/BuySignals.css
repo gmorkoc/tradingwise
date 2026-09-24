@@ -102,9 +102,9 @@
   background: none;
   border: none;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
+  font-size: 1.15rem;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 4px 6px;
   flex-shrink: 0;
 }
 .buysig-panel-close:hover { color: var(--color-text); }
@@ -130,6 +130,20 @@
   background: var(--color-card-bg);
   border: 1px solid rgba(34, 197, 94, 0.32);
   padding: 14px;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Briefly emphasizes the card a toast/sheet's "View Full Breakdown"
+   deep-linked to (see BuySignals.tsx's highlightCoin) — fades on its own
+   after a few seconds rather than staying a permanent state. */
+.buysig-card--highlight {
+  border-color: rgba(34, 197, 94, 0.9);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25), 0 0 24px rgba(34, 197, 94, 0.3);
+  animation: buysig-card-highlight-pulse 1s ease-in-out 2;
+}
+@keyframes buysig-card-highlight-pulse {
+  0%, 100% { background: var(--color-card-bg); }
+  50%      { background: rgba(34, 197, 94, 0.1); }
 }
 .buysig-card-head {
   display: flex;
@@ -155,24 +169,46 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Coin name and price on the same line now, not stacked. */
 .buysig-card-coin {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
   font-size: 0.85rem;
   font-weight: 800;
   color: var(--color-text);
 }
 .buysig-card-price {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
+  font-weight: 600;
   color: var(--color-text-muted);
 }
+
 .buysig-card-score {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.4);
   border-radius: 8px;
-  padding: 4px 9px;
+  padding: 4px 10px;
+}
+.buysig-card-score-frac {
   font-size: 0.82rem;
   font-weight: 800;
   color: #22c55e;
+  line-height: 1;
+}
+.buysig-card-confidence {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #16a34a;
+  line-height: 1;
 }
 
 .buysig-card-checks {

@@ -59,11 +59,32 @@
 }
 
 .push-toast-eyebrow {
-  font-size: 0.62rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  font-size: 0.64rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #22c55e;
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  padding: 2px 7px 2px 6px;
+  border-radius: 999px;
+  margin-bottom: 2px;
+}
+.push-toast-eyebrow::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: push-toast-eyebrow-pulse 1.6s ease-in-out infinite;
+}
+@keyframes push-toast-eyebrow-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
 }
 
 .push-toast-avatar {
@@ -128,27 +149,243 @@
   max-width: 400px;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 9px;
+  padding: 13px 16px;
 }
 
 .push-toast-close--rich {
   position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 1.1rem;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── iOS bottom sheet variant — same content, presented as a native-style
+   sheet sliding up from the bottom instead of a card dropping from the
+   top (see IS_IOS in PushToast.tsx). Same idea as Daily Brief's own
+   mobile sheet, just for this one alert instead of the whole feed. ────── */
+.push-toast--sheet {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* Auto, not a fixed 50vh — with a fixed height the 4 signal chips could
+     need their own internal scroll depending on content length, when they
+     always fit on their own with the sheet just sizing to them. Capped by
+     max-height only as a safety net for an unusually long body. */
+  height: auto;
+  max-width: none;
+  max-height: 82vh;
+  width: 100%;
+  margin: 0;
+  border-radius: 24px 24px 0 0;
+  border-bottom: none;
+  padding: 10px 20px calc(16px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  /* Gradient wash instead of a flat fill — subtle green glow rising from
+     the hero section, fading back to the normal background lower down. */
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(34, 197, 94, 0.16), transparent 60%),
+    var(--color-background);
+  box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.16);
+  animation: push-toast-sheet-in 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+}
+@keyframes push-toast-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.push-toast-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  align-self: center;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+/* Bigger on iOS specifically — this is the sheet's only dismiss control
+   now (the "Close" button below the signal chips was redundant since
+   tapping anywhere else on the sheet already opens the full breakdown),
+   so it needs to be an easy, unambiguous tap target on its own. */
+.push-toast--sheet .push-toast-close--rich {
   top: 12px;
   right: 12px;
-  font-size: 0.8rem;
+  width: 36px;
+  height: 36px;
+  font-size: 1.3rem;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+
+/* ── Hero: big glowing logo, coin, price, score ───────────────────────── */
+.push-toast-sheet-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0 18px;
+  flex-shrink: 0;
+}
+
+.push-toast-sheet-logo-ring {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.22), transparent 70%);
+  margin-bottom: 6px;
+  position: relative;
+}
+.push-toast-sheet-logo-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(34, 197, 94, 0.45);
+  animation: push-toast-ring-pulse 2.2s ease-out infinite;
+}
+@keyframes push-toast-ring-pulse {
+  0%   { transform: scale(0.82); opacity: 0.9; }
+  70%  { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
+.push-toast-coin-logo--lg {
+  width: 58px;
+  height: 58px;
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.35);
+}
+.push-toast-coin-logo--lg .push-toast-coin-logo-fallback {
+  font-size: 1.4rem;
+}
+
+/* Coin name and price sit on the same line now, not stacked. */
+.push-toast-sheet-pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.push-toast-sheet-price {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confidence = confluence strength (how many of the 4 conditions agree),
+   not a probability — this has never been backtested, so it never reads
+   as "how likely this is right." */
+.push-toast-sheet-confidence {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-top: 6px;
+}
+.push-toast-sheet-confidence--strong {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* ── Signal chips — individual cards instead of plain rows, now that
+   there's real room to give each one weight. ─────────────────────────── */
+.push-toast-signals--chips {
+  gap: 8px !important;
+}
+.push-toast-signal-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.push-toast-signal-chip svg {
+  flex-shrink: 0;
+  color: #22c55e;
+}
+
+
+/* ── Investment disclaimer — every buy-signal toast, every platform. ───── */
+p.push-toast-disclaimer {
+  flex-shrink: 0;
+  margin: 10px 0 0;
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+/* The compact fallback layout's version is a <span> inside .push-toast-body,
+   which otherwise line-clamps every span to 2 lines and colors it like
+   body copy — overridden here so it reads as a distinct, muted footnote. */
+span.push-toast-disclaimer--compact {
+  display: block;
+  -webkit-line-clamp: unset;
+  font-size: 0.62rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-top: 2px;
 }
 
 .push-toast-rich-head {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding-right: 20px; /* clears the absolute close button */
+  gap: 9px;
+  padding-right: 20px; /* clearance from the absolute close button */
+}
+
+/* Confidence = confluence strength (how many of the 4 conditions agree),
+   not a probability — this has never been backtested. */
+.push-toast-confidence {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.push-toast-confidence--strong {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .push-toast-coin-logo {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -164,7 +401,7 @@
   object-fit: cover;
 }
 .push-toast-coin-logo-fallback {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--color-text-muted);
 }
@@ -176,30 +413,36 @@
   flex-grow: 1;
   min-width: 0;
 }
+
+/* Price sits right next to the pair name on the same line now, not off
+   at the far end of the row — also what kept it crowding the close
+   button before. */
 .push-toast-coin-pair {
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--color-text);
 }
 
 .push-toast-coin-price {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--color-text-secondary);
-  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 
 .push-toast-signals {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .push-toast-signal-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
