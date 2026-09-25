@@ -178,6 +178,10 @@ function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) =>
 
 const DRAG_THRESHOLD = 40;
 const TAP_THRESHOLD = 6;
+// A tap-detected sheet toggle waits this long before actually applying —
+// long enough to see a same-instant backgrounding (see endDrag), short
+// enough that a real tap still feels instant.
+const TAP_CONFIRM_DELAY_MS = 200;
 
 // No thumbnail in the feed — a real category-themed photo (stored locally
 // in /public/daily-brief, not hotlinked) reads far better than an icon.
@@ -299,7 +303,21 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     setDragY(0);
 
     if (Math.abs(delta) < TAP_THRESHOLD) {
-      setSheetState((s) => (s === "collapsed" ? "expanded" : "collapsed"));
+      // Splitting pointercancel from pointerup (below) turned out not to be
+      // the whole story — on a real device this still toggled the sheet
+      // open on some app-minimizes, meaning iOS sometimes delivers a
+      // genuine pointerup (not cancel) with near-zero movement for the
+      // exact same reason: the swipe-to-home gesture zone and this drag
+      // handle both live at the bottom of the screen, so the touch that
+      // starts the system gesture also reads as a real tap here before iOS
+      // finishes taking over. Since the event type alone can't be trusted,
+      // this buffers the actual toggle by one tick and cancels it if the
+      // page is backgrounded within that window on either side — covers
+      // both "tap event, then hide" and "hide, then tap event" orderings.
+      setTimeout(() => {
+        if (document.visibilityState === "hidden") return;
+        setSheetState((s) => (s === "collapsed" ? "expanded" : "collapsed"));
+      }, TAP_CONFIRM_DELAY_MS);
     } else if (delta < -DRAG_THRESHOLD) {
       // dragged up
       setSheetState((s) => (s === "minimized" ? "collapsed" : "expanded"));
