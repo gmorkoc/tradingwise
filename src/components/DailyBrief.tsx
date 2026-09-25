@@ -309,6 +309,20 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     }
   };
 
+  // A pointercancel is NOT a completed tap — iOS fires exactly this right as
+  // its own swipe-to-home/app-switcher gesture takes over a touch that
+  // started on the sheet (minimizing/backgrounding the app), typically
+  // before any real movement was recorded. Reusing endDrag's tap-detection
+  // for it meant that interrupted touch — near-zero delta, same as a real
+  // tap — was toggling the sheet open every time someone backgrounded the
+  // app with a finger over it. Cancel just abandons the gesture: reset drag
+  // state, don't touch sheetState at all.
+  const cancelDrag = () => {
+    dragStartY.current = null;
+    setDragging(false);
+    setDragY(0);
+  };
+
   const rows = items.map((item, i) => {
     const chips = extractChips(item.title);
     return (
@@ -390,7 +404,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={endDrag}
-          onPointerCancel={endDrag}
+          onPointerCancel={cancelDrag}
           style={dragging ? { transition: "none" } : undefined}
         >
           <span className="db-handle" />

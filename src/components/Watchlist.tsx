@@ -165,6 +165,20 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
     localStorage.setItem("watchlistCoins_v1", JSON.stringify(watchedIds));
   }, [watchedIds]);
 
+  // PushToast's "+ Watchlist" button (buy/sell signal toasts) writes
+  // localStorage directly so it works even when this component isn't
+  // mounted — this picks the change up live when it is, instead of only on
+  // next mount.
+  useEffect(() => {
+    const onAdd = (e: Event) => {
+      const coin = (e as CustomEvent<{ coin?: string }>).detail?.coin;
+      if (!coin) return;
+      setWatchedIds((prev) => prev.includes(coin) ? prev : [...prev, coin]);
+    };
+    window.addEventListener("watchlist-add", onAdd);
+    return () => window.removeEventListener("watchlist-add", onAdd);
+  }, []);
+
   // Price refresh every 30s
   useEffect(() => {
     if (watchedIds.length === 0) { setLoading(false); return; }

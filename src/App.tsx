@@ -794,7 +794,7 @@ function AppDashboard({
   // fires — independent of whether a push notification actually made it
   // through (browser push subscriptions can go stale; this doesn't rely
   // on one at all).
-  useBuySignalRealtime(tier);
+  useBuySignalRealtime(tier, profile);
   useEffect(() => {
     if (profile && !onboardingCheckedRef.current) {
       onboardingCheckedRef.current = true;

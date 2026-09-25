@@ -140,3 +140,9 @@ export function calcVolRatio(candles: CandleDataPoint[], period = 20): number | 
   const cur = recent[recent.length - 1].volume ?? 0;
   return avg === 0 ? null : cur / avg;
 }
+
+export function calcSMA(candles: CandleDataPoint[], period: number): number | null {
+  if (candles.length < period) return null;
+  const closes = candles.slice(-period).map(c => c.close);
+  return closes.reduce((s, v) => s + v, 0) / period;
+}

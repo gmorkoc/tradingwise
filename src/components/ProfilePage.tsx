@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   supabase, saveAlertSound, saveNotificationPref, saveUsername, isUsernameAvailable, USERNAME_PATTERN,
   ALERT_SOUNDS, fetchAccountEvents, subscriptionProvider, uploadAvatar, saveAvatarUrl,
+  saveSignalMinConfidence, toggleMutedSignalCoin, hasAccess,
   type AlertSound, type AccountEvent, type NotificationPrefKey,
 } from "../services/supabase";
 import {
@@ -431,6 +432,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
         delete next[key];
         return next;
       });
+    }
+  };
+
+  const [confidenceSaving, setConfidenceSaving] = useState(false);
+  const handleMinConfidenceChange = async (value: "low" | "medium" | "high") => {
+    if (!user || confidenceSaving) return;
+    setConfidenceSaving(true);
+    try {
+      await saveSignalMinConfidence(user.id, value);
+      await refreshProfile();
+    } catch (err) {
+      console.error("Failed to save signal_min_confidence:", err);
+    } finally {
+      setConfidenceSaving(false);
+    }
+  };
+
+  const [unmutingCoin, setUnmutingCoin] = useState<string | null>(null);
+  const handleUnmuteCoin = async (coin: string) => {
+    if (!user || unmutingCoin) return;
+    setUnmutingCoin(coin);
+    try {
+      await toggleMutedSignalCoin(user.id, coin, authProfile?.signal_muted_coins ?? []);
+      await refreshProfile();
+    } catch (err) {
+      console.error("Failed to unmute signal coin:", err);
+    } finally {
+      setUnmutingCoin(null);
     }
   };
 
@@ -862,6 +891,73 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     <span className="pp-switch-thumb" />
                   </button>
                 </div>
+
+                {hasAccess(tier, "elite") && (
+                  <>
+                    <div className="pp-notif-row">
+                      <div>
+                        <p className="pp-notif-label">{t("profile.notifications.buySignals.label", "Buy Signals")}</p>
+                        <p className="pp-notif-desc">{t("profile.notifications.buySignals.desc", "A push when a coin newly enters a buy-zone confluence.")}</p>
+                      </div>
+                      <button type="button" role="switch" aria-checked={notifPrefValue("notify_buy_signals")}
+                        className={`pp-switch${notifPrefValue("notify_buy_signals") ? " pp-switch--on" : ""}`}
+                        onClick={() => handleNotifPrefChange("notify_buy_signals", !notifPrefValue("notify_buy_signals"))}>
+                        <span className="pp-switch-thumb" />
+                      </button>
+                    </div>
+
+                    <div className="pp-notif-row">
+                      <div>
+                        <p className="pp-notif-label">{t("profile.notifications.sellSignals.label", "Sell Signals")}</p>
+                        <p className="pp-notif-desc">{t("profile.notifications.sellSignals.desc", "A push when a coin newly enters a sell-zone confluence.")}</p>
+                      </div>
+                      <button type="button" role="switch" aria-checked={notifPrefValue("notify_sell_signals")}
+                        className={`pp-switch${notifPrefValue("notify_sell_signals") ? " pp-switch--on" : ""}`}
+                        onClick={() => handleNotifPrefChange("notify_sell_signals", !notifPrefValue("notify_sell_signals"))}>
+                        <span className="pp-switch-thumb" />
+                      </button>
+                    </div>
+
+                    <h3 className="pp-pane-title">{t("profile.signalConfidence.title", "Minimum Signal Confidence")}</h3>
+                    <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                      {t("profile.signalConfidence.hint", "Only notify for buy/sell signals at or above this confidence.")}
+                    </p>
+                    <div className="pp-stat-row">
+                      {(["low", "medium", "high"] as const).map((level) => (
+                        <button
+                          key={level}
+                          className={`pp-btn${(authProfile?.signal_min_confidence ?? "low") === level ? " pp-btn--primary" : " pp-btn--ghost"}`}
+                          onClick={() => handleMinConfidenceChange(level)}
+                          disabled={confidenceSaving}
+                        >
+                          {(authProfile?.signal_min_confidence ?? "low") === level ? "✓ " : ""}
+                          {level === "low" ? t("profile.signalConfidence.low", "Low+") : level === "medium" ? t("profile.signalConfidence.medium", "Medium+") : t("profile.signalConfidence.high", "High only")}
+                        </button>
+                      ))}
+                    </div>
+
+                    {(authProfile?.signal_muted_coins ?? []).length > 0 && (
+                      <>
+                        <h3 className="pp-pane-title" style={{ marginTop: 14 }}>{t("profile.mutedCoins.title", "Muted Coins")}</h3>
+                        <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                          {t("profile.mutedCoins.hint", "No buy/sell signal alerts for these, even above your confidence threshold.")}
+                        </p>
+                        <div className="pp-stat-row" style={{ flexWrap: "wrap" }}>
+                          {(authProfile?.signal_muted_coins ?? []).map((coin) => (
+                            <button
+                              key={coin}
+                              className="pp-btn pp-btn--ghost"
+                              onClick={() => handleUnmuteCoin(coin)}
+                              disabled={unmutingCoin === coin}
+                            >
+                              {coin} ✕
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
 
                 <div className="pp-divider" />
 

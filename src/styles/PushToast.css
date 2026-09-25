@@ -34,11 +34,20 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Buy-signal variant — a green glow/border instead of the neutral default,
-   same accent color the Buy Signals panel itself uses. */
+/* Buy/sell-signal variant — a colored glow/border instead of the neutral
+   default, same accent colors the Buy Signals panel itself uses. Direction
+   sets the actual color via these two custom properties (defaulted to the
+   buy/green accent so anything that forgets to set them still renders
+   sanely); .push-toast--sell overrides both to red. */
 .push-toast--buy-signal {
-  border-color: rgba(34, 197, 94, 0.4);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.12), 0 0 24px rgba(34, 197, 94, 0.18);
+  --signal-accent: #22c55e;
+  --signal-accent-rgb: 34, 197, 94;
+  border-color: rgba(var(--signal-accent-rgb), 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(var(--signal-accent-rgb), 0.12), 0 0 24px rgba(var(--signal-accent-rgb), 0.18);
+}
+.push-toast--sell {
+  --signal-accent: #fb7185;
+  --signal-accent-rgb: 251, 113, 133;
 }
 
 .push-toast-icon {
@@ -53,9 +62,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(34, 197, 94, 0.14);
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  color: #22c55e;
+  background: rgba(var(--signal-accent-rgb), 0.14);
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.35);
+  color: var(--signal-accent);
 }
 
 .push-toast-eyebrow {
@@ -68,8 +77,8 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #16a34a;
-  background: rgba(34, 197, 94, 0.16);
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: rgba(var(--signal-accent-rgb), 0.16);
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.4);
   padding: 2px 7px 2px 6px;
   border-radius: 999px;
   margin-bottom: 2px;
@@ -79,7 +88,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--signal-accent);
   animation: push-toast-eyebrow-pulse 1.6s ease-in-out infinite;
 }
 @keyframes push-toast-eyebrow-pulse {
@@ -189,9 +198,9 @@
   /* Gradient wash instead of a flat fill — subtle green glow rising from
      the hero section, fading back to the normal background lower down. */
   background:
-    radial-gradient(120% 90% at 50% 0%, rgba(34, 197, 94, 0.16), transparent 60%),
+    radial-gradient(120% 90% at 50% 0%, rgba(var(--signal-accent-rgb), 0.16), transparent 60%),
     var(--color-background);
-  box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(34, 197, 94, 0.16);
+  box-shadow: 0 -16px 56px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(var(--signal-accent-rgb), 0.16);
   animation: push-toast-sheet-in 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   flex-direction: column;
@@ -243,7 +252,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--signal-accent-rgb), 0.22), transparent 70%);
   margin-bottom: 6px;
   position: relative;
 }
@@ -252,7 +261,7 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1.5px solid rgba(34, 197, 94, 0.45);
+  border: 1.5px solid rgba(var(--signal-accent-rgb), 0.45);
   animation: push-toast-ring-pulse 2.2s ease-out infinite;
 }
 @keyframes push-toast-ring-pulse {
@@ -264,8 +273,8 @@
 .push-toast-coin-logo--lg {
   width: 58px;
   height: 58px;
-  border: 2px solid rgba(34, 197, 94, 0.5);
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.35);
+  border: 2px solid rgba(var(--signal-accent-rgb), 0.5);
+  box-shadow: 0 0 20px rgba(var(--signal-accent-rgb), 0.35);
 }
 .push-toast-coin-logo--lg .push-toast-coin-logo-fallback {
   font-size: 1.4rem;
@@ -307,8 +316,8 @@
 }
 .push-toast-sheet-confidence--strong {
   color: #16a34a;
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(var(--signal-accent-rgb), 0.15);
+  border-color: rgba(var(--signal-accent-rgb), 0.4);
 }
 
 /* ── Signal chips — individual cards instead of plain rows, now that
@@ -322,8 +331,8 @@
   gap: 10px;
   padding: 11px 14px;
   border-radius: 12px;
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid rgba(34, 197, 94, 0.22);
+  background: rgba(var(--signal-accent-rgb), 0.08);
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.22);
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--color-text-secondary);
@@ -331,9 +340,40 @@
 }
 .push-toast-signal-chip svg {
   flex-shrink: 0;
-  color: #22c55e;
+  color: var(--signal-accent);
 }
 
+
+/* ── Actionable buttons — Add to Watchlist / Mute this coin. Own row,
+   stopPropagation'd so tapping a button doesn't also trigger handleTap's
+   "open the panel" behavior. ─────────────────────────────────────────── */
+.push-toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+.push-toast-actions--compact { margin-top: 8px; }
+.push-toast-action-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.35);
+  background: rgba(var(--signal-accent-rgb), 0.1);
+  color: var(--signal-accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.push-toast-action-btn:hover:not(:disabled) { background: rgba(var(--signal-accent-rgb), 0.18); }
+.push-toast-action-btn:disabled { opacity: 0.55; cursor: default; }
+.push-toast-action-btn--mute {
+  border-color: var(--color-border);
+  background: var(--color-card-bg);
+  color: var(--color-text-secondary);
+}
+.push-toast-action-btn--mute:hover:not(:disabled) { background: var(--color-hover, rgba(148, 163, 184, 0.12)); }
 
 /* ── Investment disclaimer — every buy-signal toast, every platform. ───── */
 p.push-toast-disclaimer {
@@ -379,8 +419,8 @@ span.push-toast-disclaimer--compact {
 }
 .push-toast-confidence--strong {
   color: #16a34a;
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(var(--signal-accent-rgb), 0.15);
+  border-color: rgba(var(--signal-accent-rgb), 0.4);
 }
 
 .push-toast-coin-logo {
@@ -448,5 +488,5 @@ span.push-toast-disclaimer--compact {
 }
 .push-toast-signal-row svg {
   flex-shrink: 0;
-  color: #22c55e;
+  color: var(--signal-accent);
 }

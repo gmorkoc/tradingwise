@@ -13,6 +13,10 @@
   transition: bottom 0.22s ease;
 }
 
+/* Always exactly one of these — never stacked, never resized to fit more
+   than one alert. When several whale txs queue up, this same card just
+   swaps its content (see WhaleAlerts.tsx's advance()/current state) and
+   the small +N badge in the label hints there's more behind it. */
 .whale-alert {
   pointer-events: auto;
   position: relative;
@@ -67,6 +71,18 @@
   letter-spacing: 0.13em;
   color: var(--color-primary);
   line-height: 1.2;
+}
+
+/* "+N" — more alerts queued behind the one currently showing. */
+.whale-alert-count {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text-secondary);
+  background: var(--color-input-bg);
+  border-radius: 5px;
+  padding: 0 5px;
 }
 
 .whale-sentiment {

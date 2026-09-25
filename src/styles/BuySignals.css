@@ -58,7 +58,7 @@
   transform: translate(-50%, -50%);
   z-index: 200001;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   max-height: 85vh;
   box-sizing: border-box;
   /* --color-card-bg is intentionally translucent (normal inline card UI) —
@@ -126,24 +126,35 @@
 }
 
 .buysig-card {
+  /* Buy is the default accent; --sell overrides all three to red. Same
+     "fixed hex in both themes" simplification the original green-only
+     version already used, not theme-varied. */
+  --signal-accent: #22c55e;
+  --signal-accent-rgb: 34, 197, 94;
+  --signal-accent-dark: #16a34a;
   border-radius: 14px;
   background: var(--color-card-bg);
-  border: 1px solid rgba(34, 197, 94, 0.32);
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.32);
   padding: 14px;
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.buysig-card--sell {
+  --signal-accent: #fb7185;
+  --signal-accent-rgb: 251, 113, 133;
+  --signal-accent-dark: #dc2626;
 }
 
 /* Briefly emphasizes the card a toast/sheet's "View Full Breakdown"
    deep-linked to (see BuySignals.tsx's highlightCoin) — fades on its own
    after a few seconds rather than staying a permanent state. */
 .buysig-card--highlight {
-  border-color: rgba(34, 197, 94, 0.9);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25), 0 0 24px rgba(34, 197, 94, 0.3);
+  border-color: rgba(var(--signal-accent-rgb), 0.9);
+  box-shadow: 0 0 0 3px rgba(var(--signal-accent-rgb), 0.25), 0 0 24px rgba(var(--signal-accent-rgb), 0.3);
   animation: buysig-card-highlight-pulse 1s ease-in-out 2;
 }
 @keyframes buysig-card-highlight-pulse {
   0%, 100% { background: var(--color-card-bg); }
-  50%      { background: rgba(34, 197, 94, 0.1); }
+  50%      { background: rgba(var(--signal-accent-rgb), 0.1); }
 }
 .buysig-card-head {
   display: flex;
@@ -170,6 +181,15 @@
   flex-direction: column;
 }
 
+.buysig-card-direction {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--signal-accent-dark);
+  margin-bottom: 1px;
+}
+
 /* Coin name and price on the same line now, not stacked. */
 .buysig-card-coin {
   display: inline-flex;
@@ -191,15 +211,15 @@
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: rgba(var(--signal-accent-rgb), 0.15);
+  border: 1px solid rgba(var(--signal-accent-rgb), 0.4);
   border-radius: 8px;
   padding: 4px 10px;
 }
 .buysig-card-score-frac {
   font-size: 0.82rem;
   font-weight: 800;
-  color: #22c55e;
+  color: var(--signal-accent);
   line-height: 1;
 }
 .buysig-card-confidence {
@@ -207,9 +227,41 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #16a34a;
+  color: var(--signal-accent-dark);
   line-height: 1;
 }
+/* Low/Medium/High — same accent hue throughout, weight/opacity carries the
+   tier instead so it doesn't compete with the buy/sell (green/red) color
+   coding already doing double duty on this badge. */
+.buysig-card-confidence--low { opacity: 0.6; font-weight: 600; }
+.buysig-card-confidence--high { opacity: 1; }
+
+.buysig-card-mute {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.buysig-card-mute:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+.buysig-card-mute--active {
+  color: var(--signal-accent-dark);
+  border-color: rgba(var(--signal-accent-rgb), 0.5);
+  background: rgba(var(--signal-accent-rgb), 0.1);
+}
+.buysig-card-mute:disabled { opacity: 0.5; cursor: default; }
 
 .buysig-card-checks {
   display: flex;
@@ -229,7 +281,7 @@
   color: var(--color-text-secondary);
   opacity: 1;
 }
-.buysig-check--hit svg { color: #22c55e; }
+.buysig-check--hit svg { color: var(--signal-accent); }
 
 .buysig-disclaimer {
   font-size: 0.68rem;

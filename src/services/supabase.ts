@@ -32,6 +32,10 @@ export interface Profile {
   notify_upgrade_reminders: boolean;
   notify_strategy_alerts: boolean;
   notify_breaking_news: boolean;
+  notify_buy_signals: boolean;
+  notify_sell_signals: boolean;
+  signal_muted_coins: string[];
+  signal_min_confidence: "low" | "medium" | "high";
   avatar_url: string | null;
 }
 
@@ -179,7 +183,7 @@ export async function saveAlertSound(userId: string, sound: AlertSound): Promise
   if (error) throw new Error(error.message);
 }
 
-export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders" | "notify_strategy_alerts" | "notify_breaking_news";
+export type NotificationPrefKey = "notify_daily_brief" | "notify_price_alerts" | "notify_upgrade_reminders" | "notify_strategy_alerts" | "notify_breaking_news" | "notify_buy_signals" | "notify_sell_signals";
 
 export async function saveNotificationPref(userId: string, key: NotificationPrefKey, value: boolean): Promise<void> {
   const { error } = await supabase
@@ -187,6 +191,31 @@ export async function saveNotificationPref(userId: string, key: NotificationPref
     .update({ [key]: value })
     .eq("id", userId);
   if (error) throw new Error(error.message);
+}
+
+export async function saveSignalMinConfidence(userId: string, value: "low" | "medium" | "high"): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ signal_min_confidence: value })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+}
+
+// Toggle a single coin in/out of signal_muted_coins — read-modify-write
+// rather than a set column update, since Postgres array append/remove
+// needs the current array anyway and this keeps the call site a one-liner
+// (used from both the Buy Signals panel's per-card mute button and the
+// push toast's own "Mute this coin" action).
+export async function toggleMutedSignalCoin(userId: string, coin: string, currentMuted: string[]): Promise<string[]> {
+  const next = currentMuted.includes(coin)
+    ? currentMuted.filter((c) => c !== coin)
+    : [...currentMuted, coin];
+  const { error } = await supabase
+    .from("profiles")
+    .update({ signal_muted_coins: next })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  return next;
 }
 
 export interface AccountEvent {

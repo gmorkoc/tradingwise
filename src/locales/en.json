@@ -57,11 +57,18 @@
     "openCalculator": "Open Asset Calculator"
   },
   "buySignals": {
-    "title": "Buy Signals",
-    "subtitle": "Daily technical confluence scan",
+    "title": "Buy & Sell Signals",
+    "subtitle": "4h technical confluence scan",
     "loading": "Scanning…",
-    "empty": "No coins are currently in a buy zone. Check back after the next daily scan.",
-    "disclaimer": "Not a price prediction — a documented confluence of oversold/reversal-associated conditions. Actual prices can and do keep falling."
+    "empty": "No coins are currently in a buy or sell zone. Check back after the next scan.",
+    "disclaimer": "Not a price prediction — a documented confluence of overbought/oversold/reversal-associated conditions. Actual prices can and do keep moving against the signal.",
+    "buy": "BUY",
+    "sell": "SELL",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "mute": "Mute {{coin}}",
+    "unmute": "Unmute {{coin}}"
   },
   "assetCalc": {
     "title": "💼 Asset Calculator",
@@ -496,11 +503,30 @@
         "label": "Upgrade Reminders",
         "desc": "Occasional reminders about what Pro and Elite unlock."
       },
+      "buySignals": {
+        "label": "Buy Signals",
+        "desc": "A push when a coin newly enters a buy-zone confluence."
+      },
+      "sellSignals": {
+        "label": "Sell Signals",
+        "desc": "A push when a coin newly enters a sell-zone confluence."
+      },
       "permissionDenied": "Push notifications are turned off for coinhintz in iOS Settings — the toggles below won't do anything until you enable them there.",
       "openSettings": "Open Settings",
       "permissionPrompt": "You haven't enabled push notifications on this device yet.",
       "enable": "Enable",
       "enableFailed": "Couldn't reach the system permission dialog. Try Settings instead."
+    },
+    "signalConfidence": {
+      "title": "Minimum Signal Confidence",
+      "hint": "Only notify for buy/sell signals at or above this confidence.",
+      "low": "Low+",
+      "medium": "Medium+",
+      "high": "High only"
+    },
+    "mutedCoins": {
+      "title": "Muted Coins",
+      "hint": "No buy/sell signal alerts for these, even above your confidence threshold."
     },
     "info": {
       "displayName": "Display Name",
@@ -676,6 +702,11 @@
           "desc": "Elliott Wave · ICT/SMC · Wyckoff"
         },
         {
+          "icon": "🎯",
+          "title": "Buy & Sell Signals",
+          "desc": "4h technical confluence scan, every coin"
+        },
+        {
           "icon": "〰️",
           "title": "Elliott Wave",
           "desc": "5-wave detection · Fibonacci targets"
@@ -756,6 +787,7 @@
         "label": "Elite",
         "features": [
           "Everything in Pro — unlimited",
+          "Buy & Sell Signals",
           "Inside the Candle",
           "Coinbase Premium AI",
           "Early access to features"
@@ -1033,6 +1065,7 @@
           "cta": "Go Elite",
           "features": [
             "Everything in Pro — unlimited",
+            "Buy & Sell Signals",
             "Inside the Candle",
             "Coinbase Premium AI",
             "Early access to features"
