@@ -307,12 +307,10 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
             >
               <div className="caz-hero">
                 <div className="caz-hero-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 5H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2z" />
-                    <circle cx="12.5" cy="11.5" r="1.5" />
-                    <path d="M6 15l3-3 2.5 2.5L16 10l4 4" />
-                    <path d="M4 9v10a2 2 0 002 2h10" />
-                  </svg>
+                  {/* The exact candlesticks + breakout-arrow mark supplied
+                      for this sheet (cropped to the graphic, background
+                      keyed out) instead of a generic photo/gallery icon. */}
+                  <img src="/analyze-chart-logo.png" alt="" className="caz-hero-logo" />
                 </div>
                 <h3 className="caz-hero-title">{t("chartAnalyze.addYourChart", "Add Your Chart")}</h3>
                 <p className="caz-hero-sub">{t("chartAnalyze.pickSubtitle", "Take a photo or pick from your gallery")}</p>
@@ -339,7 +337,18 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
               </div>
 
               {!Capacitor.isNativePlatform() && (
-                <p className="caz-drop-hint">{t("chartAnalyze.dropHint", "or drag and drop image files here")}</p>
+                <button
+                  type="button"
+                  className="caz-drop-area"
+                  onClick={handlePickLibrary}
+                  disabled={images.length >= MAX_IMAGES}
+                >
+                  <svg className="caz-drop-area-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 16V4M12 4l-4 4M12 4l4 4" />
+                    <path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+                  </svg>
+                  <span>{t("chartAnalyze.dropHint", "or drag and drop image files here")}</span>
+                </button>
               )}
             </div>
 

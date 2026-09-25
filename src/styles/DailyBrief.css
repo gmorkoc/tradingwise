@@ -356,6 +356,19 @@
      .price-chart-container/.ob-card use, so it matches in both themes. */
   border-left: 1px solid var(--pc-border);
   overflow: hidden;
+  /* .chart-page-row (the flex row this sits in) has no explicit height —
+     it just grows to match .chart-column's tall content, and .main-content
+     (the real scroll container, App.css) scrolls the whole row together.
+     Without this, .db-page-list's overflow-y:auto below never has a
+     bounded box to actually scroll within, so scrolling the news list
+     just scrolled the entire page instead. Pinning this panel to the top
+     of .main-content and capping its own height to the visible viewport
+     (matching .top-nav-bar's 64px, App.css) gives .db-page-list a real
+     box to scroll inside, independent of how tall the chart side gets. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100vh - 64px - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
 }
 
 /* .price-chart-container/.ob-card dropped their own light-only rounded/

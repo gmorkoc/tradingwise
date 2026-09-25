@@ -122,11 +122,35 @@
   border-color: var(--color-success);
   background: color-mix(in srgb, var(--color-success) 8%, transparent);
 }
-.caz-drop-hint {
-  margin: -4px 0 0;
-  text-align: center;
-  font-size: 0.76rem;
+.caz-drop-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 12px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--color-border);
+  background: transparent;
   color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.caz-drop-area:hover:not(:disabled) {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+}
+.caz-drop-area:disabled { opacity: 0.5; cursor: not-allowed; }
+.caz-drop-area-icon { width: 22px; height: 22px; opacity: 0.8; }
+/* Whole-panel drag-over (dragging anywhere in .caz-dropzone, not just this
+   box) lights this up too, since the actual drop target is the whole area. */
+.caz-dropzone--active .caz-drop-area {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
 }
 
 .caz-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 8px 0 4px; }
@@ -142,6 +166,7 @@
   margin-bottom: 8px;
 }
 .caz-hero-icon svg { width: 38px; height: 38px; }
+.caz-hero-logo { width: 52px; height: 52px; object-fit: contain; }
 .caz-hero-title { margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--color-text); }
 .caz-hero-sub { margin: 0; font-size: 0.82rem; color: var(--color-text-secondary); }
 
@@ -370,4 +395,15 @@
   .caz-header { padding: 18px 18px 14px; }
   .caz-body, .caz-result { padding: 16px 18px 20px; }
   .caz-pick-btn { padding: 16px 10px; }
+}
+
+/* Desktop gets a taller, roomier sheet — the mobile sizing above was
+   cramped when stretched onto a full desktop viewport. */
+@media (min-width: 641px) {
+  .caz-panel { max-height: 92vh; }
+  .caz-hero { padding: 20px 0 8px; gap: 8px; }
+  .caz-hero-icon { width: 96px; height: 96px; }
+  .caz-hero-logo { width: 60px; height: 60px; }
+  .caz-body { gap: 18px; }
+  .caz-pick-btn { padding: 16px 18px; }
 }
