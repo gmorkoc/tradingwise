@@ -4,15 +4,43 @@ import { useTranslation } from "react-i18next";
 import { squarify } from "../utils/treemap";
 import "../styles/MarketHeatmap.css";
 
+// CoinGecko's multi-period request suffixes every field with
+// "_in_currency" (except the bare 24h one, kept for back-compat) once more
+// than one period is requested — fetched together in one call so
+// switching the interval tab is instant, no refetch.
+type Interval = "1h" | "24h" | "7d" | "30d" | "1y";
+const INTERVALS: { key: Interval; label: string }[] = [
+  { key: "1h", label: "1H" },
+  { key: "24h", label: "1D" },
+  { key: "7d", label: "1W" },
+  { key: "30d", label: "1M" },
+  { key: "1y", label: "1Y" },
+];
+
 interface CoinRow {
   id: string;
   symbol: string;
   name: string;
   image: string;
   current_price: number;
-  price_change_percentage_24h: number | null;
+  price_change_percentage_1h_in_currency: number | null;
+  price_change_percentage_24h_in_currency: number | null;
+  price_change_percentage_7d_in_currency: number | null;
+  price_change_percentage_30d_in_currency: number | null;
+  price_change_percentage_1y_in_currency: number | null;
   market_cap: number;
   total_volume: number;
+}
+
+function changeForInterval(c: CoinRow, interval: Interval): number {
+  const map: Record<Interval, number | null> = {
+    "1h": c.price_change_percentage_1h_in_currency,
+    "24h": c.price_change_percentage_24h_in_currency,
+    "7d": c.price_change_percentage_7d_in_currency,
+    "30d": c.price_change_percentage_30d_in_currency,
+    "1y": c.price_change_percentage_1y_in_currency,
+  };
+  return map[interval] ?? 0;
 }
 
 // CoinGecko's free tier is a shared, fairly low per-minute quota across
@@ -36,7 +64,7 @@ function sleep(ms: number): Promise<void> {
 // call to the same endpoint). Not a CORS workaround; CoinGecko's own edge
 // is what's rejecting Vercel's outbound IP specifically.
 async function fetchCoins(): Promise<CoinRow[]> {
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=24h&sparkline=false`;
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=1h,24h,7d,30d,1y&sparkline=false`;
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < TTL) return cache[url].data;
 
@@ -101,6 +129,7 @@ export function MarketHeatmap() {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [hover, setHover] = useState<HoverState | null>(null);
   const [imgError, setImgError] = useState<Set<string>>(new Set());
+  const [changeInterval, setChangeInterval] = useState<Interval>("24h");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -132,38 +161,61 @@ export function MarketHeatmap() {
     return () => ro.disconnect();
   }, []);
 
-  // Flat treemap, no sector grouping — matches CoinMarketCap's own crypto
-  // heatmap (coinmarketcap.com/crypto-heatmap), which this was asked to
-  // follow exactly: one squarified layout across every coin, sized purely
-  // by market cap.
-  const tileRects = useMemo(() => {
-    if (size.width < 10 || size.height < 10 || coins.length === 0) return [];
-
+  // Dominance = this coin's share of the total market cap shown in the
+  // heatmap (not all of crypto — just the coins actually rendered here),
+  // same convention as the reference's per-tile "Dominance : X%". Shared
+  // by both layouts below — only the packing algorithm differs.
+  const tiles = useMemo(() => {
     const included = coins.filter(c => !STABLECOINS.has(c.symbol.toUpperCase()) && c.market_cap > 0);
-    // Dominance = this coin's share of the total market cap shown in the
-    // heatmap (not all of crypto — just the coins actually rendered here),
-    // same convention as the reference's per-tile "Dominance : X%".
     const totalCap = included.reduce((s, c) => s + c.market_cap, 0);
-    const tiles: Tile[] = included.map(c => ({
+    return included.map((c): Tile => ({
       symbol: c.symbol.toUpperCase(),
       name: c.name,
       image: c.image,
       price: c.current_price,
-      change: c.price_change_percentage_24h ?? 0,
+      change: changeForInterval(c, changeInterval),
       marketCap: c.market_cap,
       volume: c.total_volume,
       dominance: totalCap > 0 ? (c.market_cap / totalCap) * 100 : 0,
     }));
+  }, [coins, changeInterval]);
 
-    return squarify(tiles.map(t => ({ value: t.marketCap, item: t })), 0, 0, size.width, size.height);
-  }, [coins, size]);
+  // Flat treemap, no sector grouping — matches CoinMarketCap's own crypto
+  // heatmap (coinmarketcap.com/crypto-heatmap), which this was asked to
+  // follow exactly: one squarified layout across every coin.
+  //
+  // Raw market cap for layout sizing makes BTC ~5000x bigger than the
+  // smallest of these 120 coins — squarify would give it a huge chunk of
+  // the canvas and reduce most small-caps to sub-pixel slivers. sqrt()
+  // compresses that ratio to ~75x, the standard fix for this exact
+  // long-tail-visibility problem: BTC still reads as clearly the biggest,
+  // but every coin stays a real, visible, labeled cell instead of
+  // disappearing.
+  const tileRects = useMemo(() => {
+    if (size.width < 10 || size.height < 10 || tiles.length === 0) return [];
+    return squarify(tiles.map(t => ({ value: Math.sqrt(t.marketCap), item: t })), 0, 0, size.width, size.height);
+  }, [tiles, size]);
 
   return (
     <div className="mhm-root">
-      {/* Title/description now live in SectionBanner (App.tsx renders it
-          above this for every non-chart section) — no separate header here
-          anymore. The 3-minute auto-refresh (see the effect above) covers
-          staying current without a manual button. */}
+      {/* Title/description live in SectionBanner (App.tsx renders it above
+          this for every non-chart section) — this bar is just the
+          interval tabs, not a resurrected duplicate header. */}
+      <div className="mhm-controls">
+        <div className="mhm-interval-toggle" role="group" aria-label={t("marketHeatmap.interval", "Interval")}>
+          {INTERVALS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`mhm-view-btn${changeInterval === key ? " active" : ""}`}
+              onClick={() => setChangeInterval(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {error && !loading && (
         <p className="mhm-error">⚠️ {t("marketHeatmap.error", "Couldn't load market data.")} {error}</p>
       )}

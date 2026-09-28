@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
 import type { Ticker24h } from "../services/coinglass";
 import { formatLivePrice } from "./PriceChart";
 import "../styles/DailyBrief.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+
+// Native: keep the reader inside the app via an in-app browser instead of
+// handing off to Safari. Web: let the anchor's own target="_blank" handle it.
+const openNewsLink = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+  if (Capacitor.isNativePlatform()) {
+    e.preventDefault();
+    Browser.open({ url });
+  }
+};
 
 type Category = "crypto" | "markets" | "geopolitics";
 
@@ -341,15 +351,28 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     setDragY(0);
   };
 
-  const rows = items.map((item, i) => {
+  // The "blog" card — a single, always-crypto lead story with its own
+  // mini timeline of the next couple of updates underneath it (the Yahoo
+  // Finance "markets blog" layout this was asked to match), pulled out of
+  // the flat list rather than just being items[0]/[1]/[2]: the full feed
+  // is a mix of crypto/markets/geopolitics sorted purely by time, so the
+  // newest item overall isn't reliably a crypto story.
+  const cryptoItems = items.filter((i) => i.category === "crypto");
+  const featured = cryptoItems[0];
+  const timelineItems = featured ? cryptoItems.slice(1, 3) : [];
+  const usedUrls = new Set([featured, ...timelineItems].filter(Boolean).map((i) => i!.url));
+  const latestItems = items.filter((item) => !usedUrls.has(item.url));
+
+  const renderRow = (item: BriefItem, key: string) => {
     const chips = extractChips(item.title);
     return (
       <a
-        key={`${item.url}-${i}`}
+        key={key}
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
         className="db-list-item"
+        onClick={(e) => openNewsLink(e, item.url)}
       >
         {item.thumbnail ? (
           <img className="db-list-thumb" src={item.thumbnail} alt="" loading="lazy" />
@@ -369,7 +392,58 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
         </span>
       </a>
     );
-  });
+  };
+
+  const latestRows = latestItems.map((item, i) => renderRow(item, `${item.url}-${i}`));
+
+  const featuredCard = featured && (
+    <div className="db-featured">
+      <div className="db-featured-badge">
+        <div className="top-nav-logo">
+          coinhint<span className="top-nav-logo-accent">z</span>
+        </div>
+        <span className="db-featured-brand-sub">{t("dailyBrief.blogBrandSub", "crypto market blog")}</span>
+      </div>
+      <a
+        href={featured.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="db-featured-main"
+        onClick={(e) => openNewsLink(e, featured.url)}
+      >
+        {featured.thumbnail ? (
+          <img className="db-featured-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+        ) : (
+          <ThumbPlaceholder className="db-featured-thumb" category={featured.category} />
+        )}
+        <span className="db-featured-title">{featured.title}</span>
+        {(() => {
+          const chips = extractChips(featured.title);
+          return chips.length > 0 && (
+            <span className="db-list-chips">{chips.map((c) => renderChip(c, featured.category, coinTickers))}</span>
+          );
+        })()}
+      </a>
+      {timelineItems.length > 0 && (
+        <div className="db-timeline">
+          {timelineItems.map((item, i) => (
+            <a
+              key={item.url}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`db-timeline-item${i === timelineItems.length - 1 ? " db-timeline-item--last" : ""}`}
+              onClick={(e) => openNewsLink(e, item.url)}
+            >
+              <span className="db-timeline-marker" />
+              <span className="db-timeline-time">{timeAgo(item.pubDate, t)}</span>
+              <span className="db-timeline-title">{item.title}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   if (variant === "page") {
     if (items.length === 0) return null;
@@ -382,17 +456,21 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
             {t("nav.live")}
           </span>
         </div>
-        <div className="db-page-list">{rows}</div>
+        <div className="db-page-list">
+          {featuredCard}
+          {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
+          {latestRows}
+        </div>
       </aside>
     );
   }
 
   if (items.length === 0 || dismissed || chatActive) return null;
 
-  // Collapsed teaser always shows the latest headline — the pager (and the
-  // single-story "featured" card it drove) is gone now that the full list
-  // renders at every width, see .db-card-list below.
-  const current = items[0];
+  // Collapsed teaser shows the same lead story the featured blog card
+  // below expands into, not just whatever's newest overall (which could
+  // be a non-crypto item).
+  const current = featured ?? items[0];
 
   return (
     <>
@@ -441,7 +519,11 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
         </div>
 
         <div className="db-card">
-          <div className="db-card-list">{rows}</div>
+          <div className="db-card-list">
+            {featuredCard}
+            {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
+            {latestRows}
+          </div>
         </div>
       </div>
     </>

@@ -48,6 +48,16 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
+
+// Mobile header pill only — drops the decimal portion for prices >= $1000
+// (e.g. "$83,646" instead of "$83,646.00") to keep the pill on one row.
+// Desktop keeps formatLivePrice's full precision everywhere else.
+function formatHeaderPriceMobile(p: number): string {
+  if (p >= 1000) {
+    return `$${Math.round(p).toLocaleString("en-US")}`;
+  }
+  return formatLivePrice(p);
+}
 import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -1604,9 +1614,14 @@ function AppDashboard({
                     <span className="mch-coin-quote">/USD</span>
                   </span>
                   {Number.isFinite(livePrice ?? btcData?.price) && (
-                    <span className="mch-coin-price">
-                      {formatLivePrice(livePrice ?? btcData!.price!)}
-                    </span>
+                    <>
+                      <span className="mch-coin-price mch-coin-price--full">
+                        {formatLivePrice(livePrice ?? btcData!.price!)}
+                      </span>
+                      <span className="mch-coin-price mch-coin-price--short">
+                        {formatHeaderPriceMobile(livePrice ?? btcData!.price!)}
+                      </span>
+                    </>
                   )}
                   <span className="price-source">
                     via Binance{" "}
@@ -2558,7 +2573,9 @@ function AppDashboard({
       </div>
       {/* end app-shell-body */}
 
-      {!isWideDesktop && !distractionFree && <DailyBrief coinTickers={coinTickers} />}
+      {!isWideDesktop && !distractionFree && !chartFullscreen && activeSection === "chart" && (
+        <DailyBrief coinTickers={coinTickers} />
+      )}
       <PushToast />
 
       {priceTicker &&

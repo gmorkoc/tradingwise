@@ -214,6 +214,130 @@
    sizing/object-fit/border-radius — no per-category tint needed since the
    photo itself already carries the category. */
 
+/* ── Featured blog card — the Yahoo Finance "markets blog" layout: one
+   lead crypto story up top with its own mini timeline of the next couple
+   of updates underneath, sitting above the flat "Your latest" list. ──── */
+.db-featured {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 6px;
+}
+
+.db-featured-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 12px 14px 8px;
+}
+/* .top-nav-logo is sized for the real top nav bar (18px, and itself
+   display:flex/align-items:center internally) — scaled down here to sit
+   as plain inline text next to the subtitle instead of a full logo
+   lockup, so baseline alignment between the two actually lines up. */
+.db-featured-badge .top-nav-logo {
+  display: inline;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+
+.db-featured-brand-sub {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.db-featured-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 10px;
+  text-decoration: none;
+}
+
+.db-featured-thumb {
+  width: 100%;
+  height: 150px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-border);
+}
+
+.db-featured-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.32;
+  color: var(--color-text);
+}
+
+.db-featured-main:active .db-featured-title {
+  color: var(--color-primary);
+}
+
+/* Vertical connector line runs through every marker via each item's own
+   ::after (a line from that item's dot down to the next one's), so it
+   naturally stops after the last item without a separate absolutely-
+   positioned overlay to size. */
+.db-timeline {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 14px 6px 22px;
+}
+
+.db-timeline-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 16px 16px;
+  text-decoration: none;
+}
+.db-timeline-item.db-timeline-item--last { padding-bottom: 0; }
+
+.db-timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e11d48;
+  flex-shrink: 0;
+}
+
+.db-timeline-item:not(.db-timeline-item--last)::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 12px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.db-timeline-time {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.db-timeline-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+.db-timeline-item:active .db-timeline-title {
+  color: var(--color-primary);
+}
+
+.db-section-label {
+  padding: 12px 14px 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
 .db-list-chips {
   display: flex;
   flex-wrap: wrap;

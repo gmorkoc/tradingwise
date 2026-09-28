@@ -2499,6 +2499,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
+.mch-coin-price--short {
+  display: none;
+}
 .mch-coin-chevron {
   display: none;
 }
@@ -3106,10 +3109,20 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     width: calc(100% - 16px);
     border-radius: 8px;
     font-size: 0.68rem;
-    justify-content: space-between;
+    gap: 12px;
+    justify-content: flex-start;
+  }
+  .icon-strip .icon-strip-cat-head .icon-strip-cat-chev {
+    margin-left: auto;
   }
   .icon-strip .icon-strip-cat-head:hover { background: var(--color-input-bg); }
-  .icon-strip .icon-strip-cat-head .icon-strip-cat-label { display: block; }
+  .icon-strip .icon-strip-cat-head .icon-strip-cat-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+  }
   .icon-strip .icon-strip-cat-chev { width: 13px; height: 13px; }
 
   /* Hide floating left E bubble; show inline elite badge after label */
@@ -3287,6 +3300,15 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
      noise to the now-tinted mobile pill; desktop keeps both. */
   .mch-coin-info .price-source {
     display: none;
+  }
+
+  /* Same stacked pair/price layout as desktop — only the decimal portion
+     of the price is dropped so the pill stays compact on mobile/iOS. */
+  .mch-coin-price--full {
+    display: none;
+  }
+  .mch-coin-price--short {
+    display: inline;
   }
 
   .mch-right {

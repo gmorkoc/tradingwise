@@ -73,7 +73,8 @@
   "marketHeatmap": {
     "loading": "Loading…",
     "error": "Couldn't load market data.",
-    "dominance": "Dominance"
+    "dominance": "Dominance",
+    "interval": "Interval"
   },
   "assetCalc": {
     "title": "💼 Asset Calculator",
@@ -2368,6 +2369,8 @@
     "showLess": "Show less",
     "minimize": "Minimize",
     "close": "Close",
-    "expand": "Expand"
+    "expand": "Expand",
+    "blogBrandSub": "crypto market blog",
+    "latest": "Your latest"
   }
 }
