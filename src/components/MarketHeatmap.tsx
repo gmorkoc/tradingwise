@@ -29,8 +29,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Straight to CoinGecko, not through /gecko-api — confirmed live that
+// CoinGecko blocks that server-side Vercel proxy (403, empty body) while
+// happily allowing this exact same request made directly from a real
+// browser origin (200, matches GlobalMarkets.tsx's own already-working
+// call to the same endpoint). Not a CORS workaround; CoinGecko's own edge
+// is what's rejecting Vercel's outbound IP specifically.
 async function fetchCoins(): Promise<CoinRow[]> {
-  const url = `/gecko-api/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=24h&sparkline=false`;
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=24h&sparkline=false`;
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < TTL) return cache[url].data;
 
