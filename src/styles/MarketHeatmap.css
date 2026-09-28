@@ -1,0 +1,178 @@
+.mhm-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 16px;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+
+.mhm-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #fb7185;
+  flex-shrink: 0;
+}
+
+.mhm-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.mhm-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a0a0a;
+}
+
+.mhm-tile {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  color: #fff;
+  cursor: default;
+  transition: filter 0.15s;
+}
+.mhm-tile:hover { filter: brightness(1.12); }
+
+.mhm-tile-symbol {
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.mhm-tile-price {
+  font-weight: 500;
+  line-height: 1;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+.mhm-tile-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  margin-top: 3px;
+}
+.mhm-tile-dominance {
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.85;
+  white-space: nowrap;
+  margin-top: 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* Font sizes for symbol/price/change/dominance are all set inline per tile
+   (MarketHeatmap.tsx) — continuous scaling against the tile's own
+   dimensions reads much better across the full size range a treemap
+   produces than a handful of fixed breakpoints. */
+
+/* ── Hover tooltip — portaled to <body>, follows the cursor. ───────────── */
+.mhm-tooltip {
+  position: fixed;
+  z-index: 300000;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mhm-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mhm-tooltip-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+.mhm-tooltip-icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.mhm-tooltip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mhm-tooltip-symbol {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.mhm-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mhm-tooltip-label { font-size: 0.7rem; color: var(--color-text-muted); }
+.mhm-tooltip-value { font-size: 0.76rem; font-weight: 600; color: var(--color-text); }
+
+.mhm-tooltip-price-wrap { display: flex; align-items: center; gap: 6px; }
+.mhm-tooltip-price { font-size: 0.8rem; font-weight: 700; color: var(--color-text); }
+
+.mhm-tooltip-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.mhm-tooltip-badge.up { color: #22c55e; background: rgba(34, 197, 94, 0.15); }
+.mhm-tooltip-badge.down { color: #fb7185; background: rgba(251, 113, 133, 0.15); }
+
+@media (max-width: 640px) {
+  /* Symbol/price/change/dominance are all sized inline per tile against
+     the tile's own pixel dimensions (MarketHeatmap.tsx) — that already
+     scales down naturally on a smaller viewport since the canvas itself
+     is smaller, no separate mobile override needed here. */
+  .mhm-root { padding: 10px; gap: 8px; }
+}

@@ -15,6 +15,7 @@ const ICONS: Partial<Record<string, string>> = {
   riskcalc:    "⛨",
   gann:        "✕",
   markets:     "⊕",
+  marketheatmap: "▦",
   altanalysis: "◆",
   options:     "Ω",
   correlation: "⋈",

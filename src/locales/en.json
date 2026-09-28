@@ -70,6 +70,11 @@
     "mute": "Mute {{coin}}",
     "unmute": "Unmute {{coin}}"
   },
+  "marketHeatmap": {
+    "loading": "Loading…",
+    "error": "Couldn't load market data.",
+    "dominance": "Dominance"
+  },
   "assetCalc": {
     "title": "💼 Asset Calculator",
     "amountLabel": "{{coin}} Amount",
@@ -1520,6 +1525,7 @@
     "fundingbot": "Funding Bot",
     "candleai": "Inside the Candle",
     "markets": "Global Markets",
+    "marketheatmap": "Market Heatmap",
     "altanalysis": "Alt Analysis",
     "riskcalc": "Position Size Calc",
     "options": "Options",
@@ -2151,6 +2157,15 @@
         "Market Overview",
         "Sector Performance",
         "Volume Leaders"
+      ]
+    },
+    "marketheatmap": {
+      "title": "Market Heatmap",
+      "desc": "Top 120 coins by market cap, sized by cap, colored by 24h change.",
+      "tags": [
+        "Market Cap",
+        "24h Change",
+        "Market Dominance"
       ]
     },
     "altanalysis": {

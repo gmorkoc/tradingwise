@@ -84,6 +84,7 @@ const AltAnalysis = lazy(() => import("./components/AltAnalysis").then(m => ({ d
 const OptionsAnalytics = lazy(() => import("./components/OptionsAnalytics").then(m => ({ default: m.OptionsAnalytics })));
 const CorrelationMatrix = lazy(() => import("./components/CorrelationMatrix").then(m => ({ default: m.CorrelationMatrix })));
 const StrategyAlerts = lazy(() => import("./components/StrategyAlerts").then(m => ({ default: m.StrategyAlerts })));
+const MarketHeatmap = lazy(() => import("./components/MarketHeatmap").then(m => ({ default: m.MarketHeatmap })));
 
 // Shown briefly the first time a section's chunk is fetched — negligible
 // on subsequent visits since the chunk stays cached.
@@ -111,7 +112,8 @@ type SectionId =
   | "riskcalc"
   | "options"
   | "correlation"
-  | "strategyalerts";
+  | "strategyalerts"
+  | "marketheatmap";
 
 interface Position { id: string; catalogId: string; amount: string; cost: string }
 
@@ -231,6 +233,15 @@ const NAV_ITEMS: {
       "M11.5 3a17 17 0 0 0 0 18",
       "M12.5 3a17 17 0 0 1 0 18",
     ],
+  },
+  {
+    id: "marketheatmap",
+    labelKey: "nav.marketheatmap",
+    requiredTier: "pro",
+    category: "market",
+    // Uneven rectangles suggesting a treemap — distinct from the equal-
+    // quadrant liquidation heatmap icon above.
+    d: ["M3 3h10v10H3z", "M15 3h6v5h-6z", "M15 10h6v10h-6z", "M3 15h6v6H3z", "M11 15h4v6h-4z"],
   },
   {
     id: "altanalysis",
@@ -2092,6 +2103,17 @@ function AppDashboard({
                 </BlurGate>
               )}
               {activeSection === "markets" && <GlobalMarkets />}
+              {activeSection === "marketheatmap" && (
+                <BlurGate
+                  requiredTier="pro"
+                  featureName="Market Heatmap"
+                  onOpenAuth={onOpenAuth}
+                  onOpenUpgrade={onOpenUpgrade}
+                  className="bg-root--top"
+                >
+                  <MarketHeatmap />
+                </BlurGate>
+              )}
               {activeSection === "altanalysis" && (
                 <BlurGate
                   requiredTier="elite"
