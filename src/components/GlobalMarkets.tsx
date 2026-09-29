@@ -67,11 +67,17 @@ function fmtDate(ts: number, days: number): string {
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
 const TTL = { global: 60_000, chart: 120_000, coins: 90_000 };
+const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 
 async function cgFetch<T>(url: string, ttl: number): Promise<T> {
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
-  const res = await fetch(url, { headers: { accept: "application/json" } });
+  // Key goes in the query string, not an x-cg-demo-api-key header — a
+  // custom header triggers a CORS preflight that CoinGecko's own
+  // Access-Control-Allow-Headers doesn't list, so the browser blocks the
+  // real request before it goes out. The query param needs no preflight.
+  const fetchUrl = CG_API_KEY ? `${url}${url.includes("?") ? "&" : "?"}x_cg_demo_api_key=${CG_API_KEY}` : url;
+  const res = await fetch(fetchUrl, { headers: { accept: "application/json" } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   cache[url] = { data, ts: now };

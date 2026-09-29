@@ -86,8 +86,16 @@ function sleep(ms: number): Promise<void> {
 // browser origin (200, matches GlobalMarkets.tsx's own already-working
 // call to the same endpoint). Not a CORS workaround; CoinGecko's own edge
 // is what's rejecting Vercel's outbound IP specifically.
+const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
+
 async function fetchCoins(): Promise<CoinRow[]> {
-  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=1h,24h,7d,30d,1y&sparkline=false`;
+  // Key goes in the query string, not an x-cg-demo-api-key header — a
+  // custom header triggers a CORS preflight, and CoinGecko's own
+  // Access-Control-Allow-Headers response doesn't list it, so the browser
+  // blocks the real request before it ever goes out (confirmed via a
+  // manual OPTIONS preflight: 403). The query param needs no preflight.
+  const keyParam = CG_API_KEY ? `&x_cg_demo_api_key=${CG_API_KEY}` : "";
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=1h,24h,7d,30d,1y&sparkline=false${keyParam}`;
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < TTL) return cache[url].data;
   if (!cache[url]) {
