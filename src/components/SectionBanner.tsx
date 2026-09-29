@@ -20,27 +20,18 @@ const ICONS: Partial<Record<string, string>> = {
   options:     "Ω",
   correlation: "⋈",
   strategyalerts: "⚑",
+  // A single candle body — the bar-chart-lines mark it replaced didn't
+  // read as distinct from other sections; this one at least ties back to
+  // what the section is actually named after.
+  candleai:    "▮",
 };
-
-// The candle emoji rendered in its own fixed color (not the blue accent
-// every other section icon takes via currentColor), and didn't read as a
-// deliberate glyph next to the rest of this set — a simple bar-chart
-// stroke icon (same mark used for the portfolio icon elsewhere) matches
-// both the accent color and the rest of ICONS' plain-symbol style.
-const CandleaiIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
-  </svg>
-);
 
 interface Props { section: string }
 
 export const SectionBanner: React.FC<Props> = ({ section }) => {
   const { t } = useTranslation();
 
-  const icon = section === "candleai" ? <CandleaiIcon /> : ICONS[section];
+  const icon = ICONS[section];
   if (!icon) return null;
 
   const b = {

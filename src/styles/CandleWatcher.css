@@ -291,6 +291,53 @@
   align-items: start;
 }
 
+.cw-grid--panel-collapsed {
+  grid-template-columns: 1fr;
+}
+
+/* One solid pill is the whole control — no separate button chrome around
+   it, matching a plain iOS-style labeled switch rather than a bordered
+   toolbar button with a switch stuck inside it. */
+.cw-panel-toggle-btn {
+  height: 26px;
+  padding: 2px;
+  border-radius: 999px;
+  border: none;
+  background: #3f3f46;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.cw-panel-toggle-btn:hover { background: #52525b; }
+
+.cw-panel-toggle-btn--collapsed {
+  flex-direction: row-reverse;
+}
+
+.cw-panel-toggle-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.cw-panel-toggle-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  padding-right: 10px;
+}
+.cw-panel-toggle-btn--collapsed .cw-panel-toggle-label {
+  padding-right: 0;
+  padding-left: 10px;
+}
+
 .cw-resize-handle {
   display: flex;
   align-items: stretch;
@@ -302,14 +349,7 @@
 }
 
 .cw-resize-handle-grip {
-  width: 1px;
-  background: transparent;
-  transition: background 0.15s ease;
-}
-
-.cw-resize-handle:hover .cw-resize-handle-grip,
-.cw-resize-handle:active .cw-resize-handle-grip {
-  background: var(--color-primary);
+  display: none;
 }
 
 /* ── Left: chart + indicator bar ─────────────────────────────────────────── */
@@ -2476,6 +2516,10 @@
 @media (max-width: 900px) {
   .cw-grid { grid-template-columns: 1fr; }
   .cw-resize-handle { display: none; }
+  /* The panel stacks below the chart at this width instead of sitting
+     beside it — hiding it can't "stretch" anything here, so the toggle
+     that only makes sense for the side-by-side desktop layout goes too. */
+  .cw-panel-toggle-btn { display: none; }
 }
 
 @media (max-width: 600px) {

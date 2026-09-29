@@ -770,10 +770,10 @@ function generateForecastCandles(
 
 interface EWPivot { time: UTCTimestamp; price: number; label: string; pivotType: "high" | "low" }
 interface EWProjection { label: string; price: number; color: string; isMain: boolean }
-interface EWResult { pattern: "impulse" | "corrective" | "none"; direction: "bullish" | "bearish" | "unknown"; pivots: EWPivot[]; currentWave: string; description: string; complete: boolean; projections: EWProjection[]; projectionPath: Array<{ time: UTCTimestamp; value: number }> }
+interface EWResult { pattern: "impulse" | "corrective" | "none"; direction: "bullish" | "bearish" | "unknown"; pivots: EWPivot[]; currentWave: string; description: string; complete: boolean; projections: EWProjection[]; projectionPath: Array<{ time: UTCTimestamp; value: number }>; invalidation: number | null }
 
 function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
-  const empty: EWResult = { pattern: "none", direction: "unknown", pivots: [], currentWave: "—", description: "Insufficient data", complete: false, projections: [], projectionPath: [] };
+  const empty: EWResult = { pattern: "none", direction: "unknown", pivots: [], currentWave: "—", description: "Insufficient data", complete: false, projections: [], projectionPath: [], invalidation: null };
   if (candles.length < 20) return empty;
 
   const lastCandle = candles[candles.length - 1];
@@ -897,7 +897,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
         { time: (now+avgDur) as UTCTimestamp, value: aT },
         { time: (now+Math.round(avgDur*1.6)) as UTCTimestamp, value: bT },
         { time: (now+Math.round(avgDur*2.6)) as UTCTimestamp, value: cT },
-      ] };
+      ],
+      // A new high above the wave-5 top means the impulse wasn't actually
+      // done — the "correction expected" call is wrong.
+      invalidation: p5.price };
   }
 
   if (bestBearIdx >= 0 && bestBearScore < SCORE_THRESHOLD) {
@@ -918,7 +921,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
         { time: (now+avgDur) as UTCTimestamp, value: aT },
         { time: (now+Math.round(avgDur*1.6)) as UTCTimestamp, value: bT },
         { time: (now+Math.round(avgDur*2.6)) as UTCTimestamp, value: cT },
-      ] };
+      ],
+      // A new low below the wave-5 bottom means the impulse wasn't
+      // actually done — the "correction expected" call is wrong.
+      invalidation: p5.price };
   }
 
   // In-progress: wave 4 complete → wave 5 forming (5 pivots)
@@ -944,7 +950,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           projectionPath:[
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t162 },
-          ] };
+          ],
+          // A break back below the wave-4 low means wave 5 never
+          // materialized — the impulse count is dead.
+          invalidation: p4.price };
       }
     }
     // Bearish
@@ -967,7 +976,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           projectionPath:[
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t162 },
-          ] };
+          ],
+          // A break back above the wave-4 high means wave 5 never
+          // materialized — the impulse count is dead.
+          invalidation: p4.price };
       }
     }
   }
@@ -996,7 +1008,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t382 },
             { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: w5proj },
-          ] };
+          ],
+          // Wave 4 can't trade back into wave 1's territory — a break
+          // below the wave-1 high breaks the impulsive structure.
+          invalidation: p1.price };
       }
     }
     // Bearish
@@ -1020,7 +1035,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
             { time: now, value: nowPrice },
             { time: (now+avgDur) as UTCTimestamp, value: t382 },
             { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: w5proj },
-          ] };
+          ],
+          // Wave 4 can't trade back into wave 1's territory — a break
+          // above the wave-1 low breaks the impulsive structure.
+          invalidation: p1.price };
       }
     }
 
@@ -1040,7 +1058,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           { time: now, value: nowPrice },
           { time: (now+avgDur) as UTCTimestamp, value: qc.price+drop*0.618 },
           { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: q0.price },
-        ] };
+        ],
+        // A new low below C means the correction wasn't actually over —
+        // the "bullish reversal expected" call is wrong.
+        invalidation: qc.price };
     }
     if (q0.type==="low"&&qa.type==="high"&&qb.type==="low"&&qc.type==="high" && qb.price>q0.price && qc.price>qa.price) {
       const rise=qc.price-q0.price, avgDur=Math.round((qc.time-q0.time)/3);
@@ -1056,7 +1077,10 @@ function detectElliottWaves(candles: CandleDataPoint[]): EWResult {
           { time: now, value: nowPrice },
           { time: (now+avgDur) as UTCTimestamp, value: qc.price-rise*0.618 },
           { time: (now+Math.round(avgDur*2)) as UTCTimestamp, value: q0.price },
-        ] };
+        ],
+        // A new high above C means the correction wasn't actually over —
+        // the "bearish reversal expected" call is wrong.
+        invalidation: qc.price };
     }
   }
 
@@ -1249,6 +1273,88 @@ function detectRetests(candles: CandleDataPoint[], ict: ICTResult): RetestEvent[
   return retests.slice(-8);
 }
 
+// ── Volume Profile ────────────────────────────────────────────────────────────
+// Candle-based approximation (no tick data available) — buckets each
+// candle's volume into a price bin by its typical price ((h+l+c)/3), not
+// spread across its full range. Standard simplification for retail tools
+// working from OHLCV bars; genuinely accurate volume-at-price needs order
+// book/tick data no public API here provides.
+
+interface VolumeProfileResult { poc: number; vah: number; val: number }
+
+function detectVolumeProfile(candles: CandleDataPoint[], bins = 30): VolumeProfileResult | null {
+  if (candles.length < 10) return null;
+  const highs = candles.map(c => c.high), lows = candles.map(c => c.low);
+  const max = Math.max(...highs), min = Math.min(...lows);
+  if (!(max > min)) return null;
+
+  const binSize = (max - min) / bins;
+  const volAtBin = new Array(bins).fill(0);
+  for (const c of candles) {
+    const typical = (c.high + c.low + c.close) / 3;
+    const idx = Math.min(bins - 1, Math.max(0, Math.floor((typical - min) / binSize)));
+    volAtBin[idx] += c.volume || 0;
+  }
+
+  const totalVol = volAtBin.reduce((a, b) => a + b, 0);
+  if (totalVol <= 0) return null;
+
+  let pocIdx = 0;
+  for (let i = 1; i < bins; i++) if (volAtBin[i] > volAtBin[pocIdx]) pocIdx = i;
+
+  // Grow the value area outward from POC, always taking whichever
+  // neighbor has more volume, until 70% of total volume is enclosed.
+  let loIdx = pocIdx, hiIdx = pocIdx, acc = volAtBin[pocIdx];
+  const target = totalVol * 0.7;
+  while (acc < target && (loIdx > 0 || hiIdx < bins - 1)) {
+    const nextLoVol = loIdx > 0 ? volAtBin[loIdx - 1] : -1;
+    const nextHiVol = hiIdx < bins - 1 ? volAtBin[hiIdx + 1] : -1;
+    if (nextHiVol >= nextLoVol) { hiIdx++; acc += volAtBin[hiIdx]; }
+    else { loIdx--; acc += volAtBin[loIdx]; }
+  }
+
+  return {
+    poc: min + (pocIdx + 0.5) * binSize,
+    vah: min + (hiIdx + 1) * binSize,
+    val: min + loIdx * binSize,
+  };
+}
+
+// ── Session reference levels ──────────────────────────────────────────────────
+// Daily open, the current week's Monday open/high/low, and previous day's
+// high/low — the fixed reference levels ICT-style traders anchor to,
+// independent of whatever interval is currently on screen.
+
+interface SessionLevels {
+  dailyOpen: number;
+  weeklyOpen: number;
+  mondayHigh: number;
+  mondayLow: number;
+  prevDayHigh: number;
+  prevDayLow: number;
+}
+
+function computeSessionLevels(dailyCandles: CandleDataPoint[]): SessionLevels | null {
+  if (dailyCandles.length < 2) return null;
+  const last = dailyCandles[dailyCandles.length - 1];
+  const prev = dailyCandles[dailyCandles.length - 2];
+
+  let monday: CandleDataPoint | null = null;
+  for (let i = dailyCandles.length - 1; i >= 0; i--) {
+    if (new Date(Number(dailyCandles[i].time) * 1000).getUTCDay() === 1) { monday = dailyCandles[i]; break; }
+  }
+  if (!monday) return null;
+
+  return {
+    dailyOpen: last.open,
+    weeklyOpen: monday.open,
+    mondayHigh: monday.high,
+    mondayLow: monday.low,
+    prevDayHigh: prev.high,
+    prevDayLow: prev.low,
+  };
+}
+
 // ── AI Analysis ───────────────────────────────────────────────────────────────
 
 async function getMMAnalysis(
@@ -1259,6 +1365,8 @@ async function getMMAnalysis(
   pattern: Pattern,
   wyckoff?: WyckoffResult | null,
   ict?: ICTResult | null,
+  sessionLevels?: SessionLevels | null,
+  volumeProfile?: VolumeProfileResult | null,
 ): Promise<AIRead | null> {
   const last = candles[candles.length - 1];
   const recent50 = candles.slice(-35).map(c => ({
@@ -1274,7 +1382,7 @@ async function getMMAnalysis(
   const ema50rel  = ind.ema50 != null ? (last.close > ind.ema50 ? `ABOVE $${ind.ema50.toFixed(2)} ✓` : `BELOW $${ind.ema50.toFixed(2)} ✗`) : "N/A";
   const ew = detectElliottWaves(candles);
   const ewLabel = ew.pattern !== "none"
-    ? `${ew.pattern === "impulse" ? "Impulse" : "Corrective"} ${ew.direction} — ${ew.description}`
+    ? `${ew.pattern === "impulse" ? "Impulse" : "Corrective"} ${ew.direction} — ${ew.description}${ew.invalidation != null ? ` (invalidated on a break of $${ew.invalidation.toFixed(2)})` : ""}`
     : "No clear pattern detected";
 
   const prompt = `You are an elite crypto market analyst specializing in reading market maker (MM) and institutional order flow from raw candlestick action. Your job: decode what smart money is doing on this ${intervalLabel} chart of ${coin}/USD and predict the next move with conviction.
@@ -1304,6 +1412,8 @@ TECHNICAL SNAPSHOT:
 - Liquidity Pools: ${ict?.liquidityPools.length ? ict.liquidityPools.map(lp => `${lp.type === "buy" ? "BSL" : "SSL"} $${lp.price.toFixed(2)} (×${lp.count})`).join(", ") : "none"}
 - Premium/Discount: ${ict?.pd ? `Range $${ict.pd.low.toFixed(2)}–$${ict.pd.high.toFixed(2)}, EQ $${ict.pd.mid.toFixed(2)}, price is in ${last.close > ict.pd.mid ? "PREMIUM (sell bias)" : "DISCOUNT (buy bias)"}` : "N/A"}
 - OTE Zone: ${ict?.ote ? `${ict.ote.type} $${ict.ote.bottom.toFixed(2)}–$${ict.ote.top.toFixed(2)} (0.618–0.705 fib)` : "none"}
+- Volume Profile (2W): ${volumeProfile ? `POC $${volumeProfile.poc.toFixed(2)}, Value Area $${volumeProfile.val.toFixed(2)}–$${volumeProfile.vah.toFixed(2)}, price is ${last.close > volumeProfile.vah ? "ABOVE value (extended)" : last.close < volumeProfile.val ? "BELOW value (extended)" : "INSIDE value area"}` : "N/A"}
+- Session Levels: ${sessionLevels ? `Daily Open $${sessionLevels.dailyOpen.toFixed(2)}, Weekly Open $${sessionLevels.weeklyOpen.toFixed(2)}, Monday H/L $${sessionLevels.mondayHigh.toFixed(2)}/$${sessionLevels.mondayLow.toFixed(2)}, Prev Day H/L $${sessionLevels.prevDayHigh.toFixed(2)}/$${sessionLevels.prevDayLow.toFixed(2)}` : "N/A"}
 
 ANALYSIS PROCESS — follow these steps in your "thinking" field before finalizing any output:
 1. Narrate the last 50 candles as a story: where did volume spike, where were wicks absorbed, where did price stall?
@@ -1668,6 +1778,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const macroCtxRef          = useRef<MacroContextData | null>(null);
   const [mtfBiases, setMtfBiases] = useState<MTFBias[]>([]);
   const [weeklyCycle, setWeeklyCycle] = useState<{ candles: CandleDataPoint[]; tema14: number[]; tema21: number[] } | null>(null);
+  const [volumeProfile, setVolumeProfile] = useState<VolumeProfileResult | null>(null);
+  const volumeProfileRef = useRef<VolumeProfileResult | null>(null);
+  const volProfileLinesRef = useRef<IPriceLine[]>([]);
+  const [sessionLevels, setSessionLevels] = useState<SessionLevels | null>(null);
+  const sessionLevelsRef = useRef<SessionLevels | null>(null);
+  const sessionLinesRef = useRef<IPriceLine[]>([]);
   const [cycleExpanded, setCycleExpanded] = useState(false);
   const [showVolMethodology, setShowVolMethodology] = useState(false);
   const volCone = useMemo(() => {
@@ -1681,6 +1797,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const saved = Number(localStorage.getItem("cwSidebarWidth"));
     return saved >= 300 && saved <= 720 ? saved : 440;
   });
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(
+    () => localStorage.getItem("cwRightPanelCollapsed") === "1"
+  );
+  useEffect(() => {
+    localStorage.setItem("cwRightPanelCollapsed", rightPanelCollapsed ? "1" : "0");
+  }, [rightPanelCollapsed]);
   const resizeStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
@@ -1701,6 +1823,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const showElliottRef       = useRef(false);
   const [showElliott, setShowElliott] = useState(false);
   const [elliottResult, setElliottResult] = useState<EWResult | null>(null);
+  const showVolProfileRef    = useRef(false);
+  const [showVolProfile, setShowVolProfile] = useState(false);
+  const showSessionLevelsRef = useRef(false);
+  const [showSessionLevels, setShowSessionLevels] = useState(false);
 
   const interval = INTERVALS[intervalIdx];
   const isDark   = theme === "dark";
@@ -1746,8 +1872,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const bbLower  = chart.addSeries(LineSeries, { color: "rgba(99,102,241,0.5)", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false });
     const ema20    = chart.addSeries(LineSeries, { color: "#38bdf8", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
     const ema50    = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-    const elliott      = chart.addSeries(LineSeries, { color: "#a78bfa", lineWidth: 2, lineStyle: 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-    const elliottProj  = chart.addSeries(LineSeries, { color: "#a78bfa", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const elliott      = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 4, lineStyle: 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+    const elliottProj  = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 3, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
 
     chartRef.current           = chart;
     elliottSeriesRef.current   = elliott;
@@ -2028,6 +2154,44 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       });
     });
 
+    // Volume Profile (POC/VAH/VAL) — independent of the active interval,
+    // fetched separately (see the dedicated effect); redrawn here on every
+    // feedChart call using whatever's currently cached in the ref, plus
+    // re-triggered directly once that fetch actually resolves.
+    volProfileLinesRef.current.forEach(pl => { try { candleSeriesRef.current?.removePriceLine(pl); } catch {} });
+    volProfileLinesRef.current = [];
+    const vp = volumeProfileRef.current;
+    if (showVolProfileRef.current && vp && candleSeriesRef.current) {
+      const addVpLine = (price: number, title: string, width: 1 | 2, style: LineStyle) => {
+        const pl = candleSeriesRef.current!.createPriceLine({
+          price, color: "#eab308", lineWidth: width, lineStyle: style, axisLabelVisible: true, title,
+        });
+        volProfileLinesRef.current.push(pl);
+      };
+      addVpLine(vp.poc, "POC", 2, LineStyle.Solid);
+      addVpLine(vp.vah, "VAH", 1, LineStyle.Dashed);
+      addVpLine(vp.val, "VAL", 1, LineStyle.Dashed);
+    }
+
+    // Session reference levels (daily/weekly open, Monday H/L, prev-day H/L)
+    sessionLinesRef.current.forEach(pl => { try { candleSeriesRef.current?.removePriceLine(pl); } catch {} });
+    sessionLinesRef.current = [];
+    const sl = sessionLevelsRef.current;
+    if (showSessionLevelsRef.current && sl && candleSeriesRef.current) {
+      const addSessionLine = (price: number, title: string, color: string) => {
+        const pl = candleSeriesRef.current!.createPriceLine({
+          price, color, lineWidth: 1, lineStyle: LineStyle.Dotted, axisLabelVisible: true, title,
+        });
+        sessionLinesRef.current.push(pl);
+      };
+      addSessionLine(sl.dailyOpen,   "Daily Open",  "rgba(148,163,184,0.8)");
+      addSessionLine(sl.weeklyOpen,  "Weekly Open", "rgba(129,140,248,0.8)");
+      addSessionLine(sl.mondayHigh,  "Mon.H",       "rgba(244,63,94,0.7)");
+      addSessionLine(sl.mondayLow,   "Mon.L",       "rgba(244,63,94,0.7)");
+      addSessionLine(sl.prevDayHigh, "PDH",         "rgba(56,189,248,0.6)");
+      addSessionLine(sl.prevDayLow,  "PDL",         "rgba(56,189,248,0.6)");
+    }
+
     // Elliott Wave detection & chart overlay
     const ew = detectElliottWaves(data);
     setElliottResult(ew);
@@ -2070,6 +2234,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         });
         elliottPriceLinesRef.current.push(pl);
       });
+      if (ew.invalidation != null) {
+        const pl = elliottSeriesRef.current.createPriceLine({
+          price: ew.invalidation,
+          color: "#ef4444",
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          title: "Invalidation",
+        });
+        elliottPriceLinesRef.current.push(pl);
+      }
     }
 
     // Divergence + Elliott markers — all merged and sorted by time
@@ -2084,14 +2259,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         size: 1,
       }));
       const ewColor = ew.direction === "bullish" ? "#a78bfa" : "#f472b6";
-      const ewMarkers: SeriesMarker<UTCTimestamp>[] = showElliott && ew.pivots.length >= 2
+      const ewMarkers: SeriesMarker<UTCTimestamp>[] = showElliottRef.current && ew.pivots.length >= 2
         ? ew.pivots.filter(p => p.label !== "0").map(p => ({
             time: p.time,
             position: (p.pivotType === "high" ? "aboveBar" : "belowBar") as "aboveBar" | "belowBar",
             color: ewColor,
             shape: "circle" as const,
-            text: `W${p.label}`,
-            size: 1,
+            // Bare label — impulse waves are "1".."5", corrective legs are
+            // "A"/"B"/"C"; a "W" prefix on those read as "WA"/"WB"/"WC",
+            // which isn't real Elliott notation.
+            text: p.label,
+            size: 2,
           }))
         : [];
       const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers, ...retestMarkers, ...ewMarkers]
@@ -2180,7 +2358,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // Uncertainty fan — bolder lines
     if (bullPath.length) {
       const bs = chartRef.current.addSeries(LineSeries, {
-        color: "rgba(34,197,94,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed,
+        color: "rgba(34,197,94,0.85)", lineWidth: 3, lineStyle: LineStyle.Dashed,
         priceLineVisible: false, lastValueVisible: false,
       });
       bs.setData(bullPath);
@@ -2188,7 +2366,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }
     if (bearPath.length) {
       const bs = chartRef.current.addSeries(LineSeries, {
-        color: "rgba(239,68,68,0.45)", lineWidth: 1, lineStyle: LineStyle.Dashed,
+        color: "rgba(239,68,68,0.85)", lineWidth: 3, lineStyle: LineStyle.Dashed,
         priceLineVisible: false, lastValueVisible: false,
       });
       bs.setData(bearPath);
@@ -2203,7 +2381,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const tl = candleSeriesRef.current.createPriceLine({
       price: targetPrice,
       color: targetColor,
-      lineWidth: 2,
+      lineWidth: 4,
       lineStyle: LineStyle.Solid,
       axisLabelVisible: true,
       title: `AI Target ${pctLabel}  $${targetPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
@@ -2258,6 +2436,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     elliottSeriesRef.current?.applyOptions({ visible: next });
     elliottProjSeriesRef.current?.applyOptions({ visible: next });
 
+    // Wave-number markers are computed inside feedChart (reading
+    // showElliottRef, not this state) — re-run it now so they actually
+    // appear/disappear the moment the toggle is clicked, not just on the
+    // next candle refresh.
+    if (candlesRef.current.length > 0) feedChart(candlesRef.current);
+
     // Remove old price lines
     elliottPriceLinesRef.current.forEach(pl => { try { elliottSeriesRef.current?.removePriceLine(pl); } catch {} });
     elliottPriceLinesRef.current = [];
@@ -2275,6 +2459,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         });
         elliottPriceLinesRef.current.push(pl);
       });
+      if (elliottResultRef.current.invalidation != null) {
+        const pl = elliottSeriesRef.current.createPriceLine({
+          price: elliottResultRef.current.invalidation,
+          color: "#ef4444",
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          title: "Invalidation",
+        });
+        elliottPriceLinesRef.current.push(pl);
+      }
 
       // Pan chart to show full wave: first detected pivot → last projection point
       const ew = elliottResultRef.current;
@@ -2293,7 +2488,27 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       // Restore to show recent candle data
       chartRef.current.timeScale().fitContent();
     }
-  }, [showElliott]);
+  }, [showElliott, feedChart]);
+
+  // ── Volume Profile / Session Levels toggles ─────────────────────────────────
+  // Off by default — with Elliott, ICT, and the AI forecast all able to be on
+  // at once too, leaving these always-on made the chart's price-line column
+  // unreadable. feedChart is re-run immediately so the lines actually
+  // appear/disappear on click rather than waiting for the next candle refresh.
+
+  const toggleVolProfile = useCallback(() => {
+    const next = !showVolProfile;
+    setShowVolProfile(next);
+    showVolProfileRef.current = next;
+    if (candlesRef.current.length > 0) feedChart(candlesRef.current);
+  }, [showVolProfile, feedChart]);
+
+  const toggleSessionLevels = useCallback(() => {
+    const next = !showSessionLevels;
+    setShowSessionLevels(next);
+    showSessionLevelsRef.current = next;
+    if (candlesRef.current.length > 0) feedChart(candlesRef.current);
+  }, [showSessionLevels, feedChart]);
 
   // ── Fetch candles ────────────────────────────────────────────────────────────
 
@@ -2486,6 +2701,30 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }).catch(() => {});
   }, [coin, isElite]);
 
+  // Volume Profile — fixed 2-week lookback at 1h resolution, independent
+  // of whatever interval is active on the main chart (matches how a real
+  // "2W" volume profile reference is meant to work).
+  useEffect(() => {
+    if (!isElite || !coin) return;
+    coinglass.getCandles(coin as string, "1h", 336).then(cs => {
+      const vp = detectVolumeProfile(cs);
+      volumeProfileRef.current = vp;
+      setVolumeProfile(vp);
+      if (candlesRef.current.length > 0) feedChart(candlesRef.current);
+    }).catch(() => {});
+  }, [coin, isElite, feedChart]);
+
+  // Session reference levels — daily candles, independent of active interval
+  useEffect(() => {
+    if (!isElite || !coin) return;
+    coinglass.getCandles(coin as string, "1d", 10).then(cs => {
+      const sl = computeSessionLevels(cs);
+      sessionLevelsRef.current = sl;
+      setSessionLevels(sl);
+      if (candlesRef.current.length > 0) feedChart(candlesRef.current);
+    }).catch(() => {});
+  }, [coin, isElite, feedChart]);
+
   // Run AI + macro fetch when flagged — elite only
   useEffect(() => {
     if (!isElite || !triggerAI.current || candles.length < 20) return;
@@ -2520,7 +2759,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // back to a coin/interval we just looked at) — reuse it instead of
     // spending AI quota on an answer that can't have changed.
     const mmPromise = cached ? Promise.resolve<AIRead | null>(cached.aiRead)
-      : getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict);
+      : getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current);
 
     Promise.all([
       mmPromise,
@@ -2667,6 +2906,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             { label: "Sell-Side Liquidity", value: ssl.length ? ssl.map(l => `$${l.price.toLocaleString(undefined, { maximumFractionDigits: 0 })} ×${l.count}`).join(" · ") : "None detected", color: ssl.length ? "#ef4444" : undefined },
             { label: "OTE Zone", value: scanIct?.ote ? `$${scanIct.ote.bottom.toFixed(0)} – $${scanIct.ote.top.toFixed(0)} (0.618–0.705)` : "Not identified", color: scanIct?.ote ? "#818cf8" : undefined },
             { label: "Premium / Discount", value: scanIct?.pd ? (lastClose > scanIct.pd.mid ? `PREMIUM — sell bias (EQ $${scanIct.pd.mid.toFixed(0)})` : `DISCOUNT — buy bias (EQ $${scanIct.pd.mid.toFixed(0)})`) : "—", color: scanIct?.pd ? (lastClose > scanIct.pd.mid ? "#ef4444" : "#22c55e") : undefined },
+            { label: "Volume Profile (2W)", value: volumeProfile ? `POC $${volumeProfile.poc.toFixed(0)} · VA $${volumeProfile.val.toFixed(0)}–$${volumeProfile.vah.toFixed(0)}` : "Calculating…", color: "#eab308" },
+            { label: "Session Levels", value: sessionLevels ? `Mon.H $${sessionLevels.mondayHigh.toFixed(0)} · Daily Open $${sessionLevels.dailyOpen.toFixed(0)}` : "Calculating…", color: "#f43f5e" },
           ];
           const active = ((scanStep % rows.length) + rows.length) % rows.length;
           const current = rows[active];
@@ -2740,6 +2981,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             >
               ↻
             </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!rightPanelCollapsed}
+              className={`cw-panel-toggle-btn${rightPanelCollapsed ? " cw-panel-toggle-btn--collapsed" : ""}`}
+              onClick={() => setRightPanelCollapsed(v => !v)}
+              title={rightPanelCollapsed ? "Show Elliott Wave / AI panel" : "Hide panel — stretch chart"}
+            >
+              <span className="cw-panel-toggle-knob" />
+              <span className="cw-panel-toggle-label">{rightPanelCollapsed ? "SHOW" : "HIDE"}</span>
+            </button>
           </div>
         </div>
 
@@ -2781,7 +3033,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         )}
 
         {/* ── Main grid ── */}
-        <div className="cw-grid" style={{ "--cw-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}>
+        <div
+          className={`cw-grid${rightPanelCollapsed ? " cw-grid--panel-collapsed" : ""}`}
+          style={{ "--cw-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}
+        >
 
           {/* Left: chart + indicators */}
           <div className="cw-left">
@@ -2957,6 +3212,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             )}
           </div>
 
+          {/* Fully hidden when collapsed — the header's toggle button
+              (cw-panel-toggle-btn) is the only way back in, since nothing
+              of the panel remains in the grid to click. */}
+          {!rightPanelCollapsed && (
+            <>
           {/* Drag handle to resize the sidebar */}
           <div
             className="cw-resize-handle"
@@ -3020,6 +3280,27 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
             {rightTab === "wave" && (
               <>
+            {/* ── Volume Profile / Session Levels toggles — off by default ── */}
+            <div className="cw-ai-card cw-overlay-toggles-card">
+              <div className="cw-ai-header">
+                <span className="cw-ai-badge cw-ew-badge">▤ Chart Overlays</span>
+              </div>
+              <button
+                className={`cw-elliott-btn${showVolProfile ? " cw-elliott-btn--active" : ""}`}
+                onClick={toggleVolProfile}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18M7 16v3M11 10v9M15 13v6M19 7v12" /></svg>
+                {showVolProfile ? "✕ Hide Volume Profile" : "Show Volume Profile (POC/VAH/VAL)"}
+              </button>
+              <button
+                className={`cw-elliott-btn${showSessionLevels ? " cw-elliott-btn--active" : ""}`}
+                onClick={toggleSessionLevels}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4" /></svg>
+                {showSessionLevels ? "✕ Hide Session Levels" : "Show Session Levels (Daily/Weekly/Mon/PDH-L)"}
+              </button>
+            </div>
+
             {/* ── Elliott Wave card ── */}
             {elliottResult && (() => {
               const hasPattern = elliottResult.pattern !== "none";
@@ -3842,6 +4123,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           </div>
 
           </div>
+            </>
+          )}
         </div>
 
       </div>

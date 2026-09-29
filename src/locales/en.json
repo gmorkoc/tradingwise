@@ -2143,11 +2143,12 @@
     },
     "candleai": {
       "title": "Inside the Candle",
-      "desc": "Real-time candlestick analysis powered by AI. Reads every candle, identifies what market makers are doing, and calls the next move with key levels to watch.",
+      "desc": "AI reads every candle and tells you what market makers are doing — combining Elliott Wave (with invalidation levels), ICT/Smart Money Concepts (order blocks, fair value gaps, liquidity pools, premium/discount), Wyckoff phases, and Volume Profile into one directional call with key levels to watch.",
       "tags": [
-        "Pattern Recognition",
-        "Market Maker Reading",
-        "Smart Money",
+        "Elliott Wave",
+        "ICT / SMC",
+        "Wyckoff",
+        "Volume Profile",
         "Elite Only"
       ]
     },
