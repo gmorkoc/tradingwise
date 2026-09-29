@@ -17,6 +17,13 @@ const openNewsLink = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
   }
 };
 
+// Same in-app-browser behavior as openNewsLink, but for a <button> (no
+// href/target of its own to fall back on for the web case).
+const openExternalLink = (url: string) => {
+  if (Capacitor.isNativePlatform()) Browser.open({ url });
+  else window.open(url, "_blank", "noopener,noreferrer");
+};
+
 type Category = "crypto" | "markets" | "geopolitics";
 
 interface BriefItem {
@@ -177,6 +184,59 @@ async function fetchBrief(): Promise<BriefItem[]> {
   return deduped.sort((a, b) => b.pubDate - a.pubDate).slice(0, 25);
 }
 
+// ── Featured video ────────────────────────────────────────────────────────────
+// A video actually about the lead story, not just whatever a fixed
+// channel uploaded most recently — search.list ranked by relevance
+// against the headline itself. Costs 100 quota units/call (vs. 1 for a
+// plain playlist fetch), but this only re-runs when the featured headline
+// itself changes (see the effect below), and results are cached per
+// headline in localStorage, so a 10,000/day free quota comfortably covers
+// real usage.
+const YT_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined;
+const YT_LS_PREFIX = "db-video-cache-v2:";
+
+interface FeaturedVideo { videoId: string; title: string; channel: string; thumb: string; publishedAt: number }
+
+async function fetchVideoForTitle(title: string): Promise<FeaturedVideo | null> {
+  if (!YT_API_KEY || !title.trim()) return null;
+  const cacheKey = YT_LS_PREFIX + title.trim().toLowerCase();
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) return JSON.parse(raw) as FeaturedVideo;
+  } catch { /* ignore */ }
+
+  const base = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&order=relevance&maxResults=1&safeSearch=strict&q=${encodeURIComponent(title)}&key=${YT_API_KEY}`;
+  try {
+    // This headline is live news, so a video actually made about it (last
+    // 2 weeks) reads as relevant — a plain relevance sort with no date
+    // bound tends to surface old, high-engagement explainer videos that
+    // happen to share keywords instead. Falls back to that broader search
+    // only when nothing recent exists, rather than showing nothing.
+    const publishedAfter = new Date(Date.now() - 14 * 86_400_000).toISOString();
+    let res = await fetch(`${base}&publishedAfter=${publishedAfter}`);
+    let data = await res.json();
+    let item = data?.items?.[0];
+    if (!item?.id?.videoId) {
+      res = await fetch(base);
+      data = await res.json();
+      item = data?.items?.[0];
+    }
+    if (!item?.id?.videoId) return null;
+
+    const video: FeaturedVideo = {
+      videoId: item.id.videoId,
+      title: item.snippet.title,
+      channel: item.snippet.channelTitle,
+      thumb: item.snippet.thumbnails?.high?.url ?? item.snippet.thumbnails?.default?.url ?? "",
+      publishedAt: new Date(item.snippet.publishedAt).getTime(),
+    };
+    try { localStorage.setItem(cacheKey, JSON.stringify(video)); } catch { /* ignore */ }
+    return video;
+  } catch {
+    return null;
+  }
+}
+
 function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
   if (mins < 60) return t("dailyBrief.minutesAgo", { count: mins });
@@ -235,6 +295,9 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
   const [scrollHidden, setScrollHidden] = useState(false);
   const [chatActive, setChatActive] = useState(false);
   const [newUrls, setNewUrls] = useState<Set<string>>(new Set());
+  const [video, setVideo] = useState<FeaturedVideo | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoEmbedFailed, setVideoEmbedFailed] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const knownUrlsRef = useRef<Set<string> | null>(null);
   const listRowsRef = useRef<HTMLDivElement>(null);
@@ -424,6 +487,35 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
   const usedUrls = new Set([featured, ...timelineItems].filter(Boolean).map((i) => i!.url));
   const latestItems = items.filter((item) => !usedUrls.has(item.url));
 
+  // Re-searches only when the lead headline itself changes, not on a
+  // timer — same "don't spend quota on an answer that can't have
+  // changed" principle as Inside the Candle's AI cache.
+  useEffect(() => {
+    if (!featured) { setVideo(null); return; }
+    let cancelled = false;
+    setVideoPlaying(false);
+    setVideoEmbedFailed(false);
+    fetchVideoForTitle(featured.title).then((v) => { if (!cancelled) setVideo(v); });
+    return () => { cancelled = true; };
+  }, [featured?.title]);
+
+  // YouTube's embedded player posts its own error events (invalid embed
+  // origin, or the uploader disabled embedding for this specific video) —
+  // catch that and swap to a plain "watch on YouTube" link instead of
+  // leaving YouTube's own error card sitting inside the card.
+  useEffect(() => {
+    if (!videoPlaying) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== "https://www.youtube.com") return;
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (data?.event === "onError") setVideoEmbedFailed(true);
+      } catch { /* ignore non-JSON postMessages */ }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [videoPlaying]);
+
   const renderRow = (item: BriefItem) => {
     const chips = extractChips(item.title);
     return (
@@ -466,26 +558,121 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
         </div>
         <span className="db-featured-brand-sub">{t("dailyBrief.blogBrandSub", "crypto market blog")}</span>
       </div>
-      <a
-        href={featured.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="db-featured-main"
-        onClick={(e) => openNewsLink(e, featured.url)}
-      >
-        {featured.thumbnail ? (
-          <img className="db-featured-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+      <div className="db-featured-main">
+        {/* A video actually about this headline (see fetchVideoForTitle)
+            replaces the static photo entirely — click-to-play, so no
+            iframe loads until tapped. Falls back to the plain photo when
+            no matching video was found. */}
+        {video ? (
+          videoPlaying ? (
+            videoEmbedFailed ? (
+              <div className="db-video-frame-wrap">
+                <button
+                  type="button"
+                  className="db-video-thumb-btn"
+                  onClick={() => openExternalLink(`https://www.youtube.com/watch?v=${video.videoId}`)}
+                >
+                  {featured.thumbnail ? (
+                    <img className="db-video-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+                  ) : (
+                    <ThumbPlaceholder className="db-video-thumb" category={featured.category} />
+                  )}
+                  <span className="db-video-play">▶</span>
+                  <span className="db-video-info">
+                    <span className="db-video-channel">Can't play here — watch on YouTube</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="db-video-close"
+                  onClick={() => { setVideoPlaying(false); setVideoEmbedFailed(false); }}
+                  aria-label="Back to thumbnail"
+                  title="Back to thumbnail"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="db-video-frame-wrap">
+                <iframe
+                  className="db-video-frame"
+                  // "origin" has to be the app's real https:// domain, not
+                  // wherever this is actually running — on iOS, Capacitor
+                  // serves from capacitor://localhost, which YouTube's
+                  // player rejects as an invalid embed origin (error 153)
+                  // without this override.
+                  src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1&playsinline=1&enablejsapi=1&origin=https://www.coinhintz.io`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+                <button
+                  type="button"
+                  className="db-video-close"
+                  onClick={() => setVideoPlaying(false)}
+                  aria-label="Back to thumbnail"
+                  title="Back to thumbnail"
+                >
+                  ✕
+                </button>
+              </div>
+            )
+          ) : (
+            <button
+              type="button"
+              className="db-video-thumb-btn"
+              onClick={() => {
+                // YouTube's embedded player won't initialize inside
+                // Capacitor's capacitor://localhost WebView on iOS (not
+                // an https origin, regardless of the ?origin= param) —
+                // open it in the in-app browser instead of trying to
+                // embed it inline there. A real web browser has no such
+                // restriction, so the inline embed stays for web.
+                if (Capacitor.isNativePlatform()) {
+                  openExternalLink(`https://www.youtube.com/watch?v=${video.videoId}`);
+                } else {
+                  setVideoPlaying(true);
+                }
+              }}
+            >
+              {featured.thumbnail ? (
+                <img className="db-video-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+              ) : (
+                <ThumbPlaceholder className="db-video-thumb" category={featured.category} />
+              )}
+              <span className="db-video-play">▶</span>
+            </button>
+          )
         ) : (
-          <ThumbPlaceholder className="db-featured-thumb" category={featured.category} />
+          <a
+            href={featured.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => openNewsLink(e, featured.url)}
+          >
+            {featured.thumbnail ? (
+              <img className="db-featured-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+            ) : (
+              <ThumbPlaceholder className="db-featured-thumb" category={featured.category} />
+            )}
+          </a>
         )}
-        <span className="db-featured-title">{featured.title}</span>
-        {(() => {
-          const chips = extractChips(featured.title);
-          return chips.length > 0 && (
-            <span className="db-list-chips">{chips.map((c) => renderChip(c, featured.category, coinTickers))}</span>
-          );
-        })()}
-      </a>
+        <a
+          href={featured.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="db-featured-title-link"
+          onClick={(e) => openNewsLink(e, featured.url)}
+        >
+          <span className="db-featured-title">{featured.title}</span>
+          {(() => {
+            const chips = extractChips(featured.title);
+            return chips.length > 0 && (
+              <span className="db-list-chips">{chips.map((c) => renderChip(c, featured.category, coinTickers))}</span>
+            );
+          })()}
+        </a>
+      </div>
       {timelineItems.length > 0 && (
         <div className="db-timeline">
           {timelineItems.map((item, i) => (

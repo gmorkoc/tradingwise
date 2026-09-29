@@ -4,10 +4,15 @@ import { COINS, CoinSymbol } from "../services/coinglass";
 import "../styles/GlobalSearch.css";
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
+// Mirrors App.tsx's own SectionId — kept as a separate literal union since
+// App.tsx casts this component's onSectionSelect value with `as SectionId`
+// rather than importing this type, so nothing else enforces the two stay
+// in sync. If a section is added/renamed in App.tsx's NAV_ITEMS, add it
+// here too (and to SECTIONS below) or search for it silently goes nowhere.
 export type SectionId =
-  | "chart" | "candleai" | "feargreed" | "heatmap" | "onchain"
-  | "htf" | "chat" | "etf" | "positions" | "orderflow" | "signals"
-  | "fundingbot" | "markets";
+  | "chart" | "candleai" | "heatmap" | "onchain" | "positions" | "htf"
+  | "orderflow" | "signals" | "fundingbot" | "riskcalc" | "markets"
+  | "marketheatmap" | "altanalysis" | "options" | "correlation" | "strategyalerts";
 
 interface SearchResult {
   id: string;
@@ -23,20 +28,44 @@ const COIN_ICONS: Record<string, string> = {
   DOGE: "Ð", ADA: "₳", NEAR: "Ⓝ", RENDER: "⬡", ZEC: "ⓩ",
 };
 
-const SECTIONS: { id: SectionId; label: string; desc: string; icon: string }[] = [
-  { id: "chart",      label: "Price Chart",       desc: "Live candlestick chart with indicators",     icon: "📈" },
-  { id: "candleai",   label: "Inside the Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦" },
-  { id: "feargreed",  label: "Fear & Greed",       desc: "Market sentiment gauge",                     icon: "🌡" },
-  { id: "heatmap",    label: "Liquidation Heatmap",desc: "Futures liquidation zones",                  icon: "🔥" },
-  { id: "onchain",    label: "On-Chain Metrics",   desc: "Network data and whale activity",            icon: "⛓" },
-  { id: "etf",        label: "ETF Inflows",        desc: "Bitcoin ETF flow tracker",                   icon: "🏦" },
-  { id: "positions",  label: "Positions & Flows",  desc: "Long/short ratios and taker volume",         icon: "⚖" },
-  { id: "htf",        label: "HTF Analysis",       desc: "Higher timeframe structure and bias",        icon: "🔭" },
-  { id: "orderflow",  label: "Order Flow",         desc: "Footprint chart and delta analysis",         icon: "📊" },
-  { id: "signals",    label: "Signals",            desc: "AI-generated trade signals",                 icon: "⚡" },
-  { id: "fundingbot", label: "Funding Bot",        desc: "Funding rates across exchanges",             icon: "%" },
-  { id: "markets",    label: "Global Markets",     desc: "Market cap, dominance, top coins overview",  icon: "🌐" },
-  { id: "chat",       label: "AI Chat",            desc: "Ask anything about crypto markets",          icon: "💬" },
+// `keywords` catches the natural-language way someone would actually type
+// a query — not just the page's own title — so e.g. "monthly returns"
+// finds HTF Analysis and "heatmap" doesn't only find the (differently
+// named) Liquidation Heatmap. Sourced from each page's own
+// sectionBanner.<id>.tags in en.json plus common phrasing on top.
+const SECTIONS: { id: SectionId; label: string; desc: string; icon: string; keywords: string[] }[] = [
+  { id: "chart", label: "Price Chart", desc: "Live candlestick chart with indicators", icon: "📈",
+    keywords: ["candles", "candlestick", "live chart", "technical chart", "price action", "tradingview"] },
+  { id: "candleai", label: "Inside the Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦",
+    keywords: ["pattern recognition", "market maker", "smart money", "candle reading", "ai candle", "order blocks", "fair value gap", "wyckoff", "elliott wave"] },
+  { id: "heatmap", label: "Liquidation Heatmap", desc: "Futures liquidation zones and stop-hunt levels", icon: "🔥",
+    keywords: ["liquidation map", "liquidity zones", "stop hunt", "liq levels", "long liquidations", "short liquidations", "leverage liquidations", "liquidation clusters"] },
+  { id: "onchain", label: "On-Chain Metrics", desc: "Network data, exchange flows and whale activity", icon: "⛓",
+    keywords: ["whale activity", "whale movements", "exchange flows", "blockchain data", "wallet tracking", "miner data", "network activity", "hash rate"] },
+  { id: "positions", label: "Positions & Flows", desc: "Long/short ratios and taker buy/sell volume", icon: "⚖",
+    keywords: ["long short ratio", "crowd positioning", "taker volume", "traders", "squeeze risk"] },
+  { id: "htf", label: "HTF Analysis", desc: "Higher timeframe structure, macro trend and bias", icon: "🔭",
+    keywords: ["higher timeframe", "monthly returns", "weekly returns", "monthly performance", "weekly performance", "multi-timeframe", "macro trend", "monthly chart", "weekly chart", "structure levels", "returns"] },
+  { id: "orderflow", label: "Order Flow", desc: "Footprint chart, delta and large-order tape", icon: "📊",
+    keywords: ["footprint chart", "delta analysis", "tape reading", "large orders", "institutional orders", "smart money flow"] },
+  { id: "signals", label: "Signals", desc: "AI-generated, multi-exchange confluence trade signals", icon: "⚡",
+    keywords: ["trade signals", "buy sell signals", "confluence", "momentum signals", "ai signals"] },
+  { id: "fundingbot", label: "Funding Bot", desc: "Perpetual funding rates across exchanges", icon: "%",
+    keywords: ["funding rate", "perp funding", "carry trade", "leverage extremes"] },
+  { id: "riskcalc", label: "Position Size Calc", desc: "Position sizing, dollar risk and R:R calculator", icon: "🧮",
+    keywords: ["position size", "risk calculator", "position sizing", "stop loss calculator", "lot size", "risk management", "trade size"] },
+  { id: "markets", label: "Global Markets", desc: "Market cap, dominance, top coins overview", icon: "🌐",
+    keywords: ["market overview", "market cap", "dominance", "top coins", "volume leaders", "sector performance"] },
+  { id: "marketheatmap", label: "Market Heatmap", desc: "Top coins by market cap, sized by cap, colored by 24h change", icon: "▦",
+    keywords: ["treemap", "coin map", "market cap map", "visual market overview", "coinmarketcap heatmap"] },
+  { id: "altanalysis", label: "Alt Analysis", desc: "AI-powered analysis for alternative cryptocurrencies", icon: "◈",
+    keywords: ["altcoin analysis", "alt prediction", "altcoin ai", "alt coin", "altseason"] },
+  { id: "options", label: "Options", desc: "BTC/ETH options data — open interest, max pain, IV", icon: "◎",
+    keywords: ["options data", "deribit", "max pain", "open interest", "implied volatility", "put call ratio"] },
+  { id: "correlation", label: "Correlation", desc: "Cross-asset correlation vs gold, DXY and the S&P 500", icon: "⇄",
+    keywords: ["correlation matrix", "btc eth correlation", "cross asset", "gold correlation", "sp500 correlation", "dxy", "regime shift"] },
+  { id: "strategyalerts", label: "Strategy Alerts", desc: "Custom rules engine — indicator and price alerts", icon: "🔔",
+    keywords: ["custom alerts", "rules engine", "strategy builder", "price condition alerts", "if this then alert"] },
 ];
 
 /* ── Props ─────────────────────────────────────────────────────────────────── */
@@ -82,9 +111,14 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect }: P
       }
     });
 
-    /* Section matches */
+    /* Section matches — every word in the query has to show up somewhere
+       in the section's label/desc/id/keywords (in any order), not just as
+       one literal substring of the label. Catches phrasing like "monthly
+       returns" (an HTF keyword) or "heatmap market" typed out of order. */
+    const qWords = q.split(/\s+/).filter(Boolean);
     SECTIONS.forEach(s => {
-      if (s.label.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)) {
+      const haystack = `${s.label} ${s.desc} ${s.id} ${s.keywords.join(" ")}`.toLowerCase();
+      if (qWords.every(w => haystack.includes(w))) {
         results.push({
           id:        `section-${s.id}`,
           type:      "section",
