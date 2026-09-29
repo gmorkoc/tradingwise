@@ -44,14 +44,37 @@ function changeForInterval(c: CoinRow, interval: Interval): number {
 }
 
 // CoinGecko's free tier is a shared, fairly low per-minute quota across
-// every visitor hitting /gecko-api — a 429 here is normal under any real
-// traffic, not a broken integration. 3-minute cache (vs. the 90s other
-// panels use) plus a couple of backed-off retries specifically for 429s
-// absorbs that instead of surfacing a raw error on the first hiccup.
-const TTL = 180_000;
+// every visitor hitting it directly — a 429 (or even a CORS-less network
+// "Failed to fetch") here is normal under any real traffic, not a broken
+// integration. 5-minute cache plus backed-off retries (covering both 429
+// responses and outright network failures) absorbs that; a localStorage
+// mirror of the cache means a fresh page load — new visitor, hard reload,
+// whatever — has a same-session-or-older fallback to show instead of a
+// blank error the moment the quota's already spent.
+const TTL = 300_000;
 const cache: Record<string, { data: CoinRow[]; ts: number }> = {};
 const COIN_COUNT = 120;
-const RETRY_DELAYS_MS = [1500, 4000];
+const RETRY_DELAYS_MS = [1500, 4000, 8000];
+const LS_KEY = "mhm-coins-cache-v1";
+
+function readLsCache(url: string): { data: CoinRow[]; ts: number } | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.url === url ? { data: parsed.data, ts: parsed.ts } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLsCache(url: string, data: CoinRow[], ts: number) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ url, data, ts }));
+  } catch {
+    // Private mode / storage full — in-memory cache still covers this tab.
+  }
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,23 +90,36 @@ async function fetchCoins(): Promise<CoinRow[]> {
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COIN_COUNT}&page=1&price_change_percentage=1h,24h,7d,30d,1y&sparkline=false`;
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < TTL) return cache[url].data;
-
-  let lastStatus = 0;
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-    const res = await fetch(url, { headers: { accept: "application/json" } });
-    if (res.ok) {
-      const data = await res.json();
-      cache[url] = { data, ts: now };
-      return data;
-    }
-    lastStatus = res.status;
-    if (res.status !== 429 || attempt === RETRY_DELAYS_MS.length) break;
-    await sleep(RETRY_DELAYS_MS[attempt]);
+  if (!cache[url]) {
+    const ls = readLsCache(url);
+    if (ls) cache[url] = ls;
+    if (ls && now - ls.ts < TTL) return ls.data;
   }
-  // A still-fresh (if stale) cached response beats a hard error after a
-  // rate limit — the heatmap just doesn't reflect the last couple minutes.
+
+  let lastError = "";
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { accept: "application/json" } });
+      if (res.ok) {
+        const data = await res.json();
+        cache[url] = { data, ts: now };
+        writeLsCache(url, data, now);
+        return data;
+      }
+      lastError = `HTTP ${res.status}`;
+      if (res.status !== 429) break;
+    } catch (e) {
+      // Network-level failure (CORS block, offline, extension) — fetch()
+      // throws before a status even exists, so this needs its own retry
+      // path rather than falling through the res.ok check above.
+      lastError = e instanceof Error ? e.message : "Network error";
+    }
+    if (attempt < RETRY_DELAYS_MS.length) await sleep(RETRY_DELAYS_MS[attempt]);
+  }
+  // Any cached response — even one older than TTL — beats a hard error
+  // once retries are exhausted; the heatmap just shows slightly stale data.
   if (cache[url]) return cache[url].data;
-  throw new Error(`HTTP ${lastStatus}`);
+  throw new Error(lastError || "Failed to fetch");
 }
 
 // Stablecoins have no meaningful price change — there's nothing for a
