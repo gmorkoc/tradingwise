@@ -183,6 +183,23 @@
   padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
 }
 
+.db-list-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* New-story entrance (featured card swap, a fresh timeline slot) — the
+   flat list below animates its own reorder via JS-measured FLIP instead
+   (DailyBrief.tsx), since those rows genuinely shift position rather than
+   just appearing in a fixed slot. */
+@keyframes db-item-enter {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.db-item--new {
+  animation: db-item-enter 0.4s ease;
+}
+
 .db-live {
   display: flex;
   align-items: center;
@@ -452,6 +469,15 @@
   /* Bigger sliver on touch screens so it's easy to tap/drag back open */
   .db-sheet--minimized {
     transform: translateY(calc(100% - 28px + var(--db-drag-y)));
+  }
+
+  /* Fluid, edge-to-edge on iOS/mobile web — no side gutter, no 660px cap
+     (moot at these widths anyway, but explicit beats relying on the
+     viewport happening to be narrower than it). */
+  .db-sheet {
+    left: var(--native-safe-area-left, env(safe-area-inset-left));
+    right: var(--native-safe-area-right, env(safe-area-inset-right));
+    max-width: none;
   }
 }
 

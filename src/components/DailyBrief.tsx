@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { useTranslation } from "react-i18next";
@@ -234,7 +234,12 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
   const [chatActive, setChatActive] = useState(false);
+  const [newUrls, setNewUrls] = useState<Set<string>>(new Set());
   const dragStartY = useRef<number | null>(null);
+  const knownUrlsRef = useRef<Set<string> | null>(null);
+  const listRowsRef = useRef<HTMLDivElement>(null);
+  const prevRowRectsRef = useRef<Map<string, DOMRect>>(new Map());
+  const listMountedRef = useRef(false);
 
   // Coin chat (mobile sheet / reply takeover) dispatches this when it
   // opens/closes — hide completely rather than risk stacking on top of it
@@ -269,23 +274,79 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     return () => document.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
-  const load = useCallback(async () => {
+  // Diffs each fetch against the URLs we've already shown so genuinely new
+  // stories (not just the same feed re-sorted) get an entrance animation —
+  // skipped on the very first load (knownUrlsRef starts null) so the whole
+  // initial 25-item list doesn't animate in at once.
+  const load = useCallback(async (cancelledRef?: { current: boolean }) => {
     const brief = await fetchBrief();
-    if (brief.length > 0) setItems(brief);
+    if (cancelledRef?.current || brief.length === 0) return;
+    const freshUrls = new Set(brief.map((i) => i.url));
+    if (knownUrlsRef.current) {
+      const added = new Set<string>();
+      for (const url of freshUrls) if (!knownUrlsRef.current.has(url)) added.add(url);
+      if (added.size > 0) {
+        setNewUrls(added);
+        window.setTimeout(() => setNewUrls(new Set()), 900);
+      }
+    }
+    knownUrlsRef.current = freshUrls;
+    setItems(brief);
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const brief = await fetchBrief();
-      if (!cancelled && brief.length > 0) setItems(brief);
-    })();
-    const interval = window.setInterval(load, 15 * 60 * 1000);
+    const cancelledRef = { current: false };
+    load(cancelledRef);
+    const interval = window.setInterval(() => load(), 10 * 60 * 1000);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       window.clearInterval(interval);
     };
   }, [load]);
+
+  // FLIP: animate the flat list settling into its new order whenever a
+  // fresh story pushes everything else down a slot — measures each row's
+  // position before this render (captured at the end of the previous run)
+  // against where it landed just now, then plays the delta as a transform
+  // instead of letting the reorder snap instantly. Skipped on the very
+  // first mount (nothing to animate from yet).
+  useLayoutEffect(() => {
+    const container = listRowsRef.current;
+    if (!container) return;
+    const rows = Array.from(container.querySelectorAll<HTMLElement>("[data-db-flip]"));
+    if (!listMountedRef.current) {
+      rows.forEach((el) => prevRowRectsRef.current.set(el.dataset.dbFlip!, el.getBoundingClientRect()));
+      listMountedRef.current = true;
+      return;
+    }
+    rows.forEach((el) => {
+      const key = el.dataset.dbFlip!;
+      const newRect = el.getBoundingClientRect();
+      const oldRect = prevRowRectsRef.current.get(key);
+      el.style.transition = "none";
+      if (oldRect) {
+        const dy = oldRect.top - newRect.top;
+        if (Math.abs(dy) > 1) el.style.transform = `translateY(${dy}px)`;
+      } else {
+        el.style.transform = "translateY(-10px)";
+        el.style.opacity = "0";
+      }
+      // Force layout so the "from" state above actually applies before the
+      // transition-on rAF flips it — otherwise the browser coalesces both
+      // style writes into one frame and nothing animates.
+      void el.offsetHeight;
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 0.35s ease, opacity 0.35s ease";
+        el.style.transform = "";
+        el.style.opacity = "";
+      });
+      prevRowRectsRef.current.set(key, newRect);
+    });
+    const currentKeys = new Set(rows.map((el) => el.dataset.dbFlip));
+    for (const key of prevRowRectsRef.current.keys()) {
+      if (!currentKeys.has(key)) prevRowRectsRef.current.delete(key);
+    }
+  }, [items]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragStartY.current = e.clientY;
@@ -363,15 +424,16 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
   const usedUrls = new Set([featured, ...timelineItems].filter(Boolean).map((i) => i!.url));
   const latestItems = items.filter((item) => !usedUrls.has(item.url));
 
-  const renderRow = (item: BriefItem, key: string) => {
+  const renderRow = (item: BriefItem) => {
     const chips = extractChips(item.title);
     return (
       <a
-        key={key}
+        key={item.url}
+        data-db-flip={item.url}
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="db-list-item"
+        className={`db-list-item${newUrls.has(item.url) ? " db-item--new" : ""}`}
         onClick={(e) => openNewsLink(e, item.url)}
       >
         {item.thumbnail ? (
@@ -394,10 +456,10 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     );
   };
 
-  const latestRows = latestItems.map((item, i) => renderRow(item, `${item.url}-${i}`));
+  const latestRows = latestItems.map((item) => renderRow(item));
 
   const featuredCard = featured && (
-    <div className="db-featured">
+    <div className={`db-featured${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
       <div className="db-featured-badge">
         <div className="top-nav-logo">
           coinhint<span className="top-nav-logo-accent">z</span>
@@ -432,7 +494,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`db-timeline-item${i === timelineItems.length - 1 ? " db-timeline-item--last" : ""}`}
+              className={`db-timeline-item${i === timelineItems.length - 1 ? " db-timeline-item--last" : ""}${newUrls.has(item.url) ? " db-item--new" : ""}`}
               onClick={(e) => openNewsLink(e, item.url)}
             >
               <span className="db-timeline-marker" />
@@ -459,7 +521,9 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
         <div className="db-page-list">
           {featuredCard}
           {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
-          {latestRows}
+          <div ref={listRowsRef} className="db-list-rows">
+            {latestRows}
+          </div>
         </div>
       </aside>
     );
@@ -522,7 +586,9 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
           <div className="db-card-list">
             {featuredCard}
             {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
-            {latestRows}
+            <div ref={listRowsRef} className="db-list-rows">
+              {latestRows}
+            </div>
           </div>
         </div>
       </div>
