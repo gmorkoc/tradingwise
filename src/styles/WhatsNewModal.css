@@ -1,0 +1,295 @@
+/* Not a blocking modal — no backdrop, doesn't dim or trap the rest of the
+   page. Docks in a corner and slides in from off-screen right, same
+   fixed-position/high-z-index convention PushToast.css already uses for
+   "floats over everything, doesn't block anything" UI. */
+.wn-card {
+  /* This component's own accent — matches the CMC-style reference exactly
+     rather than pulling the app's indigo --color-primary, which reads
+     more purple than blue next to it. */
+  --wn-blue: #3762f6;
+  --wn-blue-soft: rgba(55, 98, 246, 0.12);
+  position: fixed;
+  bottom: max(16px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  right: 16px;
+  z-index: 2000;
+  width: 500px;
+  height: 520px;
+  max-width: calc(100vw - 32px);
+  /* Translucent background, not a faded-out element — opacity on .wn-card
+     itself would wash out the text/buttons too, not just let the page
+     show through behind it. */
+  background: color-mix(in srgb, var(--color-card-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+  animation: wn-slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Expand swaps this same card into a real centered modal — .wn-fs-backdrop
+   below positions it, so it drops the fixed corner placement and size here. */
+.wn-card--fullscreen {
+  position: static;
+  width: 100%;
+  height: auto;
+  max-width: 640px;
+  animation: none;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+}
+
+.wn-fs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top))) 16px max(16px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  animation: wn-fs-fade-in 0.2s ease;
+}
+
+@keyframes wn-fs-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes wn-slide-in {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.wn-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 14px 12px 16px;
+}
+.wn-header .wn-badge,
+.wn-header .wn-icon-btn {
+  align-self: center;
+}
+
+.wn-badge {
+  flex-shrink: 0;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--wn-blue);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.wn-header-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* .top-nav-logo is sized for the real top nav bar (18px, and its own
+   display:flex — a BLOCK-level flex container, which forces a line break
+   around it). A descendant selector here beats that on specificity
+   regardless of stylesheet load order — a bare co-equal class lost that
+   tie once already. Same override DailyBrief.css uses for its own
+   featured-card badge. */
+.wn-header-title .top-nav-logo {
+  display: inline;
+  font-size: 0.98rem;
+  letter-spacing: -0.2px;
+}
+
+/* Bare icon, no button chrome — SVGs silently failed to render in this
+   exact spot (confirmed twice, matches the same mystery seen on
+   CandleWatcher's panel-toggle button), so this is text glyphs again. */
+.wn-icon-btn {
+  flex-shrink: 0;
+  width: auto;
+  height: auto;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+.wn-icon-btn:hover { color: var(--color-text); }
+
+.wn-icon-glyph {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.15s;
+}
+.wn-icon-glyph--collapse {
+  transform: rotate(180deg);
+}
+
+.wn-hero {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 16px;
+  margin-bottom: 24px;
+  height: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wn-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  border-radius: 10px;
+}
+
+.wn-hero-icon {
+  font-size: 3.2rem;
+  color: #fff;
+  opacity: 0.95;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.wn-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.wn-title {
+  margin: 0 0 10px;
+  padding: 0 18px;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.wn-desc {
+  margin: 0 auto 20px;
+  padding: 0 18px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.wn-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 20px;
+}
+
+.wn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.wn-dot.active {
+  background: var(--wn-blue);
+  transform: scale(1.3);
+}
+
+.wn-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.wn-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.wn-checkbox input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--wn-blue);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wn-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wn-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.wn-btn--plain {
+  background: var(--color-input-bg);
+  border-color: transparent;
+  color: var(--color-text-secondary);
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.wn-btn--plain:hover { background: var(--color-border); }
+
+.wn-btn--ghost {
+  background: transparent;
+  border-color: var(--wn-blue);
+  color: var(--wn-blue);
+}
+.wn-btn--ghost:hover { background: var(--wn-blue-soft); }
+
+.wn-btn--primary {
+  background: var(--wn-blue);
+  border-color: var(--wn-blue);
+  color: #fff;
+}
+.wn-btn--primary:hover { opacity: 0.9; }
+
+@media (max-width: 480px) {
+  .wn-card, .wn-card--fullscreen { right: 0; bottom: max(0px, var(--native-safe-area-bottom, env(safe-area-inset-bottom))); left: 0; width: auto; max-width: none; border-radius: 18px 18px 0 0; }
+  .wn-footer { flex-wrap: wrap; }
+  .wn-actions { width: 100%; }
+  .wn-actions .wn-btn { flex: 1; }
+}

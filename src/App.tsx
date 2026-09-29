@@ -38,6 +38,7 @@ import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
 import { TopMoversCarousel } from "./components/TopMoversCarousel";
 import { OnboardingWizard } from "./components/OnboardingWizard";
+import { WhatsNewModal } from "./components/WhatsNewModal";
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
 import { WhaleAlerts } from "./components/WhaleAlerts";
@@ -414,6 +415,7 @@ function AppDashboard({
   }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const onboardingCheckedRef = useRef(false);
   const [showCoinChat, setShowCoinChat] = useState(
     () => localStorage.getItem("coinchat-visible") !== "false",
@@ -819,8 +821,22 @@ function AppDashboard({
   useEffect(() => {
     if (profile && !onboardingCheckedRef.current) {
       onboardingCheckedRef.current = true;
-      if (!profile.trader_level && !localStorage.getItem("onb_never_show"))
+      if (!profile.trader_level && !localStorage.getItem("onb_never_show")) {
         setShowOnboarding(true);
+      } else if (
+        !localStorage.getItem("whats_new_seen_v1") &&
+        isWideDesktop &&
+        !Capacitor.isNativePlatform()
+      ) {
+        // Desktop web only — corner-docked feature announcements don't
+        // translate to iOS/mobile web's narrower layout. Skipped when the
+        // onboarding wizard is about to show instead — stacking two
+        // full-screen intro modals on the same load is a lot to dump on
+        // someone; a brand-new user sees this on their next visit once
+        // onboarding's own flag is set. Delayed so it doesn't fight for
+        // attention the instant the page finishes loading.
+        window.setTimeout(() => setShowWhatsNew(true), 3000);
+      }
     }
   }, [profile]);
 
@@ -1205,6 +1221,15 @@ function AppDashboard({
         <OnboardingWizard
           onComplete={() => setShowOnboarding(false)}
           onSkip={() => setShowOnboarding(false)}
+        />
+      )}
+      {showWhatsNew && isWideDesktop && !Capacitor.isNativePlatform() && activeSection === "chart" && (
+        <WhatsNewModal
+          onClose={() => setShowWhatsNew(false)}
+          onNavigate={(section) => {
+            if (section === "analyze-chart") setChartAnalyzeOpen(true);
+            else setActiveSection(section as SectionId);
+          }}
         />
       )}
       <ProfilePage
