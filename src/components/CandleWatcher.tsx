@@ -2299,6 +2299,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
   const triggerAI = useRef(false);
   const suppressAIRef = useRef(false); // true when page returns from background — don't auto-run AI
+  // Keyed by coin|interval|candle-open-time — reused whenever the same
+  // candle gets re-triggered (manual refresh mid-candle, or flipping
+  // coin/interval back and forth) so it doesn't re-spend AI quota for a
+  // question it's already answered; a genuinely new candle gets a fresh key.
+  const aiCacheRef = useRef<Map<string, { aiRead: AIRead; predData: PredictionResponse | null }>>(new Map());
 
   const fetchCandles = useCallback(async (triggerAnalysis = false) => {
     const data = await coinglass.getCandles(coin, interval.value, interval.limit);
@@ -2494,6 +2499,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     aiCancelledRef.current = false;
     setAiLoading(true);
 
+    const last = candles[candles.length - 1];
+    const cacheKey = `${coin}|${interval.value}|${last.time}`;
+    const cached = aiCacheRef.current.get(cacheKey);
+
     // Fetch HTF candles for multi-timeframe liquidity pockets
     const HTF_FRAMES = [
       { tf: "12h", label: "12H", limit: 40,  color: "#818cf8" },
@@ -2507,8 +2516,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         .catch(() => ({ ...f, pools: [] as LiqPool[] }))
     );
 
+    // Same candle already analyzed (manual refresh mid-candle, or flipping
+    // back to a coin/interval we just looked at) — reuse it instead of
+    // spending AI quota on an answer that can't have changed.
+    const mmPromise = cached ? Promise.resolve<AIRead | null>(cached.aiRead)
+      : getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict);
+
     Promise.all([
-      getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict),
+      mmPromise,
       getMacroContext(coin as string).catch(() => null),
       coinglass.getAllBTCData(coin as string).catch(() => null),
       fetchFearGreed().catch(() => null),
@@ -2517,7 +2532,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       if (aiCancelledRef.current) return;
       if (res) {
         setAiRead(res);
-        const last = candles[candles.length - 1];
         setMmFeed(prev => {
           const entry: MMFeedEntry = {
             id: `${coin}-${last.time}`,
@@ -2533,6 +2547,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           }
           return [...prev.slice(-49), entry];
         });
+        if (!cached) aiCacheRef.current.set(cacheKey, { aiRead: res, predData: null });
       }
       if (macro) setMacroCtx(macro);
 
@@ -2563,9 +2578,17 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       }
 
       setAiLoading(false);
-      if (btcLive) {
+      if (cached) {
+        if (cached.predData) setPredData(cached.predData);
+      } else if (btcLive) {
         openai.getPricePrediction(btcLive, fearGreed ?? undefined)
-          .then(pred => { if (pred?.success) setPredData(pred); })
+          .then(pred => {
+            if (pred?.success) {
+              setPredData(pred);
+              const entry = aiCacheRef.current.get(cacheKey);
+              if (entry) entry.predData = pred;
+            }
+          })
           .catch(() => {});
       }
     });
@@ -2712,8 +2735,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             )}
             <button
               className="cw-refresh-btn"
-              onClick={() => fetchCandles(true)}
-              title="Refresh + re-analyze"
+              onClick={() => fetchCandles(false)}
+              title="Refresh price data — AI only re-runs once a new candle closes"
             >
               ↻
             </button>
