@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn } from "../services/coinglass";
 import { calcEMA, calcRSI, calcRSIArray, calcMACD, calcTEMA, calcBB, calcATR, calcVolRatio } from "../services/indicators";
@@ -1355,6 +1358,162 @@ function computeSessionLevels(dailyCandles: CandleDataPoint[]): SessionLevels | 
   };
 }
 
+// ── Historical Fractal / Pattern-Analog Detector ────────────────────────────────
+// Not a rule-based classifier like Elliott/ICT/Wyckoff above — an empirical
+// similarity search. Takes the current W-candle window, normalizes it to pure
+// shape (% change from the window's own start, so absolute price and
+// volatility level don't matter), then slides the same window across the
+// historical corpus looking for past shapes that scored close on normalized
+// Euclidean distance. For each match, reads what price actually did over the
+// next F candles — the result is a distribution of real outcomes, not a
+// prediction, same framing as the forecast fan/volatility cone elsewhere in
+// this file.
+
+interface FractalMatch {
+  startTime: UTCTimestamp;
+  time: UTCTimestamp;
+  forwardEndTime: UTCTimestamp;
+  similarity: number;
+  forwardReturn: number;
+  // Normalized % change from the match window's own start, covering the
+  // full window + forward horizon — lets the UI plot this match's whole
+  // path (the part that lines up with "now" AND what happened after)
+  // overlaid against the live window on one shared axis.
+  path: number[];
+  // % change from the match's OWN end (day 0 = "today" for that analog),
+  // one entry per day through the forward horizon — separate from `path`
+  // because a detail view wants "how far did it swing before landing here,"
+  // which has to be measured from the analog's own present, not its
+  // window's start.
+  forwardPath: number[];
+}
+interface FractalAnalogsResult {
+  matches: FractalMatch[];
+  upCount: number;
+  avgForwardReturn: number;
+  windowSize: number;
+  forwardHorizon: number;
+  // Same normalization as each match's path, but for the live/current
+  // window — only windowSize long since there's no "after" yet.
+  currentPath: number[];
+  currentStart: UTCTimestamp;
+  currentEnd: UTCTimestamp;
+}
+
+// Daily-candle, month-scale windows specifically — this is meant to answer
+// "has this coin traced this same ~month-long shape before," not to
+// shape-match on whatever interval happens to be on screen (1h/4h shapes
+// are too noisy/short-lived for this kind of analog to mean much).
+const FRACTAL_WINDOW = 30;
+const FRACTAL_HORIZON = 15;
+const FRACTAL_TOP_K = 5;
+const FRACTAL_MIN_HISTORY = 365;
+
+function shapeOf(candles: CandleDataPoint[], start: number, len: number): number[] {
+  const base = candles[start].close;
+  const out = new Array(len);
+  for (let i = 0; i < len; i++) out[i] = (candles[start + i].close - base) / base;
+  return out;
+}
+
+// Largest peak-to-trough drop and trough-to-peak rise within a % change
+// path — used to characterize a window's choppiness for the detail view
+// beyond just its net start-to-end move.
+function maxDrawdownRally(path: number[]): { maxDrawdown: number; maxRally: number } {
+  let runningMax = path[0], runningMin = path[0];
+  let maxDrawdown = 0, maxRally = 0;
+  for (let i = 1; i < path.length; i++) {
+    const dd = path[i] - runningMax;
+    if (dd < maxDrawdown) maxDrawdown = dd;
+    const rl = path[i] - runningMin;
+    if (rl > maxRally) maxRally = rl;
+    runningMax = Math.max(runningMax, path[i]);
+    runningMin = Math.min(runningMin, path[i]);
+  }
+  return { maxDrawdown, maxRally };
+}
+
+function detectFractalAnalogs(
+  currentCandles: CandleDataPoint[],
+  historicalCandles: CandleDataPoint[],
+  windowSize = FRACTAL_WINDOW,
+  forwardHorizon = FRACTAL_HORIZON,
+  topK = FRACTAL_TOP_K,
+): FractalAnalogsResult | null {
+  if (currentCandles.length < windowSize || historicalCandles.length < windowSize + forwardHorizon + FRACTAL_MIN_HISTORY) {
+    return null;
+  }
+
+  const currentShape = shapeOf(currentCandles, currentCandles.length - windowSize, windowSize);
+
+  // Every historical window that ends far enough from the corpus's own end
+  // to have a real forward outcome to read, scanned oldest-first.
+  const lastStart = historicalCandles.length - windowSize - forwardHorizon;
+  const candidates: { idx: number; distance: number }[] = [];
+  for (let start = 0; start <= lastStart; start++) {
+    const shape = shapeOf(historicalCandles, start, windowSize);
+    let sumSq = 0;
+    for (let i = 0; i < windowSize; i++) {
+      const d = shape[i] - currentShape[i];
+      sumSq += d * d;
+    }
+    candidates.push({ idx: start, distance: Math.sqrt(sumSq) });
+  }
+  candidates.sort((a, b) => a.distance - b.distance);
+
+  // Greedily take the best non-overlapping matches — without this, the top
+  // K would just be near-duplicate windows one candle apart from each other.
+  const picked: { idx: number; distance: number }[] = [];
+  for (const c of candidates) {
+    if (picked.some(p => Math.abs(p.idx - c.idx) < windowSize)) continue;
+    picked.push(c);
+    if (picked.length >= topK) break;
+  }
+  if (picked.length === 0) return null;
+
+  // Similarity as an absolute 0-100% score, anchored to the MEDIAN
+  // distance across the entire historical scan (every `candidates` entry,
+  // already computed above) rather than either (a) the worst of just the
+  // 5 picks — self-referential, a 6% reading didn't mean "6% similar," it
+  // meant "the least-close of whichever 5 happened to be closest" — or
+  // (b) a single-sample estimate derived from currentShape's own RMS,
+  // which Monte Carlo testing showed has high sampling variance (a 30-point
+  // sample's RMS swings a lot trial to trial), making the % unstable in a
+  // way that has nothing to do with actual match quality. The full
+  // candidate population (typically thousands of windows) gives a far
+  // more stable "what's a typical/unremarkable distance for this coin"
+  // reference: 0 distance = 100%, at-or-past the population median = 0%.
+  const noiseFloor = candidates[Math.floor(candidates.length / 2)].distance || 1e-9;
+  const matches: FractalMatch[] = picked.map(({ idx, distance }) => {
+    const matchEndIdx = idx + windowSize - 1;
+    const endClose = historicalCandles[matchEndIdx].close;
+    const fwdClose = historicalCandles[matchEndIdx + forwardHorizon].close;
+    const forwardPath: number[] = [];
+    for (let h = 0; h <= forwardHorizon; h++) {
+      forwardPath.push((historicalCandles[matchEndIdx + h].close - endClose) / endClose);
+    }
+    return {
+      startTime: historicalCandles[idx].time as UTCTimestamp,
+      time: historicalCandles[matchEndIdx].time as UTCTimestamp,
+      forwardEndTime: historicalCandles[matchEndIdx + forwardHorizon].time as UTCTimestamp,
+      similarity: Math.max(0, Math.min(100, Math.round((1 - distance / noiseFloor) * 100))),
+      forwardReturn: (fwdClose - endClose) / endClose * 100,
+      forwardPath,
+      path: shapeOf(historicalCandles, idx, windowSize + forwardHorizon),
+    };
+  });
+
+  const upCount = matches.filter(m => m.forwardReturn > 0).length;
+  const avgForwardReturn = matches.reduce((sum, m) => sum + m.forwardReturn, 0) / matches.length;
+
+  return {
+    matches, upCount, avgForwardReturn, windowSize, forwardHorizon,
+    currentPath: currentShape,
+    currentStart: currentCandles[currentCandles.length - windowSize].time as UTCTimestamp,
+    currentEnd: currentCandles[currentCandles.length - 1].time as UTCTimestamp,
+  };
+}
+
 // ── AI Analysis ───────────────────────────────────────────────────────────────
 
 async function getMMAnalysis(
@@ -1367,6 +1526,7 @@ async function getMMAnalysis(
   ict?: ICTResult | null,
   sessionLevels?: SessionLevels | null,
   volumeProfile?: VolumeProfileResult | null,
+  fractalAnalogs?: FractalAnalogsResult | null,
 ): Promise<AIRead | null> {
   const last = candles[candles.length - 1];
   const recent50 = candles.slice(-35).map(c => ({
@@ -1414,6 +1574,7 @@ TECHNICAL SNAPSHOT:
 - OTE Zone: ${ict?.ote ? `${ict.ote.type} $${ict.ote.bottom.toFixed(2)}–$${ict.ote.top.toFixed(2)} (0.618–0.705 fib)` : "none"}
 - Volume Profile (2W): ${volumeProfile ? `POC $${volumeProfile.poc.toFixed(2)}, Value Area $${volumeProfile.val.toFixed(2)}–$${volumeProfile.vah.toFixed(2)}, price is ${last.close > volumeProfile.vah ? "ABOVE value (extended)" : last.close < volumeProfile.val ? "BELOW value (extended)" : "INSIDE value area"}` : "N/A"}
 - Session Levels: ${sessionLevels ? `Daily Open $${sessionLevels.dailyOpen.toFixed(2)}, Weekly Open $${sessionLevels.weeklyOpen.toFixed(2)}, Monday H/L $${sessionLevels.mondayHigh.toFixed(2)}/$${sessionLevels.mondayLow.toFixed(2)}, Prev Day H/L $${sessionLevels.prevDayHigh.toFixed(2)}/$${sessionLevels.prevDayLow.toFixed(2)}` : "N/A"}
+- Monthly Fractal (daily candles, ${FRACTAL_WINDOW}d window): ${fractalAnalogs ? `${fractalAnalogs.upCount}/${fractalAnalogs.matches.length} similar month-long setups rose over the next ${fractalAnalogs.forwardHorizon} days, avg forward return ${fractalAnalogs.avgForwardReturn >= 0 ? "+" : ""}${fractalAnalogs.avgForwardReturn.toFixed(2)}%` : "N/A"}
 
 ANALYSIS PROCESS — follow these steps in your "thinking" field before finalizing any output:
 1. Narrate the last 50 candles as a story: where did volume spike, where were wicks absorbed, where did price stall?
@@ -1744,7 +1905,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [mmFeed, setMmFeed] = useState<MMFeedEntry[]>([]);
-  const [rightTab, setRightTab] = useState<"wave" | "narration" | "read" | "plan">("read");
+  const [rightTab, setRightTab] = useState<"wave" | "narration" | "read" | "plan" | "fractal">("read");
   const [aiLoading, setAiLoading] = useState(false);
   const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
@@ -1784,6 +1945,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [sessionLevels, setSessionLevels] = useState<SessionLevels | null>(null);
   const sessionLevelsRef = useRef<SessionLevels | null>(null);
   const sessionLinesRef = useRef<IPriceLine[]>([]);
+  const [fractalAnalogs, setFractalAnalogs] = useState<FractalAnalogsResult | null>(null);
+  const fractalAnalogsRef = useRef<FractalAnalogsResult | null>(null);
+  const [fractalLoading, setFractalLoading] = useState(false);
+  const [selectedFractalIdx, setSelectedFractalIdx] = useState(0);
+  const [expandedFractalIdx, setExpandedFractalIdx] = useState<number | null>(null);
   const [cycleExpanded, setCycleExpanded] = useState(false);
   const [showVolMethodology, setShowVolMethodology] = useState(false);
   const volCone = useMemo(() => {
@@ -2519,6 +2685,15 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // coin/interval back and forth) so it doesn't re-spend AI quota for a
   // question it's already answered; a genuinely new candle gets a fresh key.
   const aiCacheRef = useRef<Map<string, { aiRead: AIRead; predData: PredictionResponse | null }>>(new Map());
+  // Belt-and-suspenders on top of the candle-keyed cache above: even if
+  // something re-fires triggerAI for a coin/interval we just ran AI on
+  // (rapid tab switching, a race, future code touching this), never spend
+  // AI quota on it again within 5 minutes. Keyed by coin|interval only
+  // (not candle time) since real candle closes are always >=15min apart
+  // anyway — this only ever blocks abnormal rapid re-fires, never a
+  // legitimate new candle.
+  const lastAiCallAtRef = useRef<Map<string, number>>(new Map());
+  const AI_COOLDOWN_MS = 5 * 60 * 1000;
 
   const fetchCandles = useCallback(async (triggerAnalysis = false) => {
     const data = await coinglass.getCandles(coin, interval.value, interval.limit);
@@ -2725,6 +2900,33 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }).catch(() => {});
   }, [coin, isElite, feedChart]);
 
+  // Historical fractal/pattern-analog search — always on DAILY candles
+  // regardless of what interval is on screen, since this is specifically
+  // hunting for month-scale shape repeats (30-day window), not shape-matching
+  // whatever short interval the chart happens to be set to. Both the "live"
+  // window and the historical search corpus come from this same daily pull,
+  // so it only needs to re-run on coin change, not interval change.
+  useEffect(() => {
+    if (!isElite || !coin) return;
+    setFractalLoading(true);
+    // 6000 daily candles (~16y) comfortably exceeds any coin's actual
+    // history on Binance (oldest USDT pairs go back to ~2017) — the fetch
+    // paginates backward and stops itself the moment it runs out of real
+    // data (fetchBinanceKlines's `page.length < MAX_PER_REQ` early-exit in
+    // coinglass.ts), so this reaches all the way back to listing for every
+    // coin without wasting requests on younger ones.
+    coinglass.getCandles(coin as string, "1d", 6000).then(cs => {
+      const fa = detectFractalAnalogs(cs, cs);
+      fractalAnalogsRef.current = fa;
+      setFractalAnalogs(fa);
+      setSelectedFractalIdx(0);
+      setExpandedFractalIdx(null);
+    }).catch(() => {
+      fractalAnalogsRef.current = null;
+      setFractalAnalogs(null);
+    }).finally(() => setFractalLoading(false));
+  }, [coin, isElite]);
+
   // Run AI + macro fetch when flagged — elite only
   useEffect(() => {
     if (!isElite || !triggerAI.current || candles.length < 20) return;
@@ -2742,6 +2944,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const cacheKey = `${coin}|${interval.value}|${last.time}`;
     const cached = aiCacheRef.current.get(cacheKey);
 
+    const throttleKey = `${coin}|${interval.value}`;
+    const inCooldown = !cached && (Date.now() - (lastAiCallAtRef.current.get(throttleKey) ?? 0)) < AI_COOLDOWN_MS;
+
     // Fetch HTF candles for multi-timeframe liquidity pockets
     const HTF_FRAMES = [
       { tf: "12h", label: "12H", limit: 40,  color: "#818cf8" },
@@ -2757,9 +2962,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
     // Same candle already analyzed (manual refresh mid-candle, or flipping
     // back to a coin/interval we just looked at) — reuse it instead of
-    // spending AI quota on an answer that can't have changed.
+    // spending AI quota on an answer that can't have changed. And even on
+    // a genuine cache miss, never fire twice within AI_COOLDOWN_MS for the
+    // same coin/interval — see lastAiCallAtRef above.
     const mmPromise = cached ? Promise.resolve<AIRead | null>(cached.aiRead)
-      : getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current);
+      : inCooldown ? Promise.resolve<AIRead | null>(null)
+      : (lastAiCallAtRef.current.set(throttleKey, Date.now()),
+         getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current));
 
     Promise.all([
       mmPromise,
@@ -2819,6 +3028,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       setAiLoading(false);
       if (cached) {
         if (cached.predData) setPredData(cached.predData);
+      } else if (inCooldown) {
+        // skip — within the 5min AI cooldown, leave whatever prediction is already showing
       } else if (btcLive) {
         openai.getPricePrediction(btcLive, fearGreed ?? undefined)
           .then(pred => {
@@ -2943,6 +3154,314 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 >
                   ✕
                 </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── Monthly Fractal Detail Modal ── */}
+        {expandedFractalIdx !== null && fractalAnalogs && fractalAnalogs.matches[expandedFractalIdx] && (() => {
+          const fa = fractalAnalogs;
+          const m = fa.matches[expandedFractalIdx];
+          const fmtFull = (t: UTCTimestamp) => new Date(Number(t) * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+
+          const panMainChartTo = (match: FractalMatch) => {
+            if (!chartRef.current) return;
+            const span = fa.windowSize * 86_400;
+            chartRef.current.timeScale().setVisibleRange({
+              from: (Number(match.time) - span) as UTCTimestamp,
+              to: (Number(match.time) + fa.forwardHorizon * 86_400) as UTCTimestamp,
+            });
+          };
+
+          const W = 760, H = 320;
+          const total = fa.windowSize + fa.forwardHorizon;
+          const allVals = [...fa.currentPath, ...m.path];
+          const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+          const pad = (maxV - minV) * 0.08 || 0.01;
+          const yOf = (v: number) => H - ((v - (minV - pad)) / ((maxV + pad) - (minV - pad))) * H;
+          const xOf = (i: number) => (i / (total - 1)) * W;
+          const todayX = xOf(fa.windowSize - 1);
+
+          const lineD = (vals: number[]) => vals.map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+          const areaD = (vals: number[]) => `${lineD(vals)} L${xOf(vals.length - 1).toFixed(2)},${H} L${xOf(0).toFixed(2)},${H} Z`;
+
+          const nowD = lineD(fa.currentPath);
+          const nowAreaD = areaD(fa.currentPath);
+          const pastFullD = lineD(m.path);
+          const pastPastD = lineD(m.path.slice(0, fa.windowSize));
+          const pastAreaD = areaD(m.path.slice(0, fa.windowSize));
+
+          const winPath = m.path.slice(0, fa.windowSize);
+          const windowMove = winPath[winPath.length - 1] * 100;
+          const { maxDrawdown: winDD, maxRally: winRally } = maxDrawdownRally(winPath);
+
+          const fwd = m.forwardPath;
+          let peakVal = fwd[0], peakDay = 0, troughVal = fwd[0], troughDay = 0;
+          for (let d = 1; d < fwd.length; d++) {
+            if (fwd[d] > peakVal) { peakVal = fwd[d]; peakDay = d; }
+            if (fwd[d] < troughVal) { troughVal = fwd[d]; troughDay = d; }
+          }
+          const fmtDay = (offsetDays: number) => new Date((Number(m.time) + offsetDays * 86_400) * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+          // Redraws the chart straight from the same path data as the SVG
+          // above (rather than rasterizing the live <svg> node) — avoids
+          // cross-browser/WKWebView quirks with foreignObject-free SVG
+          // rasterization, and keeps the exported image independent of
+          // whatever the DOM happens to be doing at click time.
+          const handleSaveChart = async () => {
+            const scale = 2;
+            const padX = 28, padTop = 86, axisH = 22, legendH = 48, bottomPad = 18;
+            const totalW = W + padX * 2;
+            const totalH = padTop + H + axisH + legendH + bottomPad;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = totalW * scale;
+            canvas.height = totalH * scale;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = "#0b0f19";
+            ctx.fillRect(0, 0, totalW, totalH);
+
+            ctx.textBaseline = "alphabetic";
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#e5e7eb";
+            ctx.font = "bold 19px -apple-system, system-ui, sans-serif";
+            ctx.fillText(`${coin}/USD — Monthly Fractal`, padX, 32);
+            ctx.fillStyle = "#a78bfa";
+            ctx.font = "bold 12px -apple-system, system-ui, sans-serif";
+            ctx.fillText(`${m.similarity}% match`, padX, 51);
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "12.5px -apple-system, system-ui, sans-serif";
+            ctx.fillText(
+              `${fmtFull(m.startTime)} – ${fmtFull(m.time)} (${fa.windowSize}d) → next ${fa.forwardHorizon}d thru ${fmtFull(m.forwardEndTime)}`,
+              padX, 70,
+            );
+
+            ctx.save();
+            ctx.translate(padX, padTop);
+
+            ctx.strokeStyle = "rgba(255,255,255,0.18)";
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(todayX, 0);
+            ctx.lineTo(todayX, H);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const pathOf = (vals: number[]) => {
+              ctx.beginPath();
+              vals.forEach((v, i) => {
+                const x = xOf(i), y = yOf(v);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+              });
+            };
+            const drawArea = (vals: number[], top: string, bottom: string) => {
+              pathOf(vals);
+              ctx.lineTo(xOf(vals.length - 1), H);
+              ctx.lineTo(xOf(0), H);
+              ctx.closePath();
+              const grad = ctx.createLinearGradient(0, 0, 0, H);
+              grad.addColorStop(0, top);
+              grad.addColorStop(1, bottom);
+              ctx.fillStyle = grad;
+              ctx.fill();
+            };
+            const drawLine = (vals: number[], color: string, width: number, opacity: number, dash?: number[]) => {
+              pathOf(vals);
+              ctx.strokeStyle = color;
+              ctx.globalAlpha = opacity;
+              ctx.lineWidth = width;
+              ctx.lineCap = "round";
+              ctx.lineJoin = "round";
+              ctx.setLineDash(dash ?? []);
+              ctx.stroke();
+              ctx.globalAlpha = 1;
+              ctx.setLineDash([]);
+            };
+
+            drawArea(m.path.slice(0, fa.windowSize), "rgba(249,115,22,0.22)", "rgba(249,115,22,0)");
+            drawArea(fa.currentPath, "rgba(56,189,248,0.28)", "rgba(56,189,248,0)");
+            drawLine(m.path, "#f97316", 2, 0.55, [6, 4]);
+            drawLine(m.path.slice(0, fa.windowSize), "#f97316", 3, 1);
+            drawLine(fa.currentPath, "#38bdf8", 3.5, 1);
+
+            ctx.restore();
+
+            ctx.font = "11px -apple-system, system-ui, sans-serif";
+            ctx.fillStyle = "#64748b";
+            ctx.textAlign = "left";
+            ctx.fillText(fmtFull(m.startTime), padX, padTop + H + 16);
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#94a3b8";
+            ctx.fillText(`${fmtFull(m.time)} · today`, padX + todayX, padTop + H + 16);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#64748b";
+            ctx.fillText(fmtFull(m.forwardEndTime), padX + W, padTop + H + 16);
+            ctx.textAlign = "left";
+
+            const legendY1 = padTop + H + axisH + 14;
+            ctx.fillStyle = "#38bdf8";
+            ctx.beginPath(); ctx.arc(padX + 4, legendY1 - 4, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "12px -apple-system, system-ui, sans-serif";
+            ctx.fillText(`Now — ${fmtFull(fa.currentStart)} to ${fmtFull(fa.currentEnd)}`, padX + 14, legendY1);
+
+            const legendY2 = legendY1 + 20;
+            ctx.fillStyle = "#f97316";
+            ctx.beginPath(); ctx.arc(padX + 4, legendY2 - 4, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#94a3b8";
+            ctx.fillText(`Fractal (${m.similarity}% match) — ${fmtFull(m.startTime)} to ${fmtFull(m.forwardEndTime)}`, padX + 14, legendY2);
+
+            const dataUrl = canvas.toDataURL("image/png");
+            const filename = `${coin}-monthly-fractal-${new Date(Number(m.time) * 1000).toISOString().slice(0, 10)}.png`;
+
+            if (Capacitor.isNativePlatform()) {
+              // Same reason as PriceChart's screenshot button: <a download>
+              // is a no-op in a WKWebView, so write to the app's cache dir
+              // and hand it to the native share sheet, where "Save Image"
+              // drops it straight into Photos.
+              try {
+                const base64 = dataUrl.split(",")[1];
+                const written = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache });
+                await Share.share({ url: written.uri, dialogTitle: "Save fractal chart" });
+              } catch (err) {
+                console.error("Fractal chart save failed:", err);
+              }
+              return;
+            }
+
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = filename;
+            link.click();
+          };
+
+          return (
+            <div className="cw-fractal-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setExpandedFractalIdx(null); }}>
+              <div className="cw-fractal-modal-card">
+                <div className="cw-fractal-modal-header">
+                  <span className="cw-fractal-modal-title"><span className="cw-fractal-modal-title-icon">◎</span> Monthly Fractal <span className="cw-fractal-modal-title-sim">{m.similarity}% match</span></span>
+                  <button className="cw-fractal-modal-close" onClick={() => setExpandedFractalIdx(null)} aria-label="Close">✕</button>
+                </div>
+                <p className="cw-fractal-modal-range">
+                  {fmtFull(m.startTime)} – {fmtFull(m.time)} <span className="cw-fractal-match-len">({fa.windowSize}d)</span> → next {fa.forwardHorizon}d thru {fmtFull(m.forwardEndTime)}
+                </p>
+
+                {/* Switch between the other matches without leaving the modal */}
+                <div className="cw-fractal-modal-pills-label">Other matches for this coin — click to compare</div>
+                <div className="cw-fractal-modal-pills">
+                  {fa.matches.map((pm, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`cw-fractal-modal-pill${i === expandedFractalIdx ? " cw-fractal-modal-pill--active" : ""}`}
+                      title={`Match #${i + 1} — ${pm.similarity}% shape similarity, ${pm.forwardReturn >= 0 ? "+" : ""}${pm.forwardReturn.toFixed(1)}% over the next ${fa.forwardHorizon} days`}
+                      onClick={() => {
+                        setExpandedFractalIdx(i);
+                        setSelectedFractalIdx(i);
+                        panMainChartTo(pm);
+                      }}
+                    >
+                      <span className="cw-fractal-modal-pill-idx">#{i + 1}</span>
+                      <span className="cw-fractal-modal-pill-stat">
+                        <span className="cw-fractal-modal-pill-num">{pm.similarity}%</span>
+                        <span className="cw-fractal-modal-pill-tag">match</span>
+                      </span>
+                      <span className="cw-fractal-modal-pill-stat">
+                        <span className={`cw-fractal-modal-pill-num${pm.forwardReturn >= 0 ? " up" : " down"}`}>
+                          {pm.forwardReturn >= 0 ? "+" : ""}{pm.forwardReturn.toFixed(1)}%
+                        </span>
+                        <span className="cw-fractal-modal-pill-tag">next {fa.forwardHorizon}d</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="cw-fractal-modal-chart-wrap">
+                  <button className="cw-fractal-modal-save-btn" onClick={handleSaveChart} title="Save chart as an image">
+                    ⬇ Save
+                  </button>
+                  <svg className="cw-fractal-modal-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="cwFractalNowFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                      </linearGradient>
+                      <linearGradient id="cwFractalPastFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <line x1={todayX} y1="0" x2={todayX} y2={H} className="cw-fractal-overlay-todayline" />
+                    <path d={pastAreaD} fill="url(#cwFractalPastFill)" stroke="none" />
+                    <path d={nowAreaD} fill="url(#cwFractalNowFill)" stroke="none" />
+                    <path d={pastFullD} fill="none" stroke="#f97316" strokeWidth="2" strokeOpacity="0.55" strokeDasharray="6 4" strokeLinecap="round" />
+                    <path d={pastPastD} fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={nowD} fill="none" stroke="#38bdf8" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="cw-fractal-overlay-axis">
+                  <span>{fmtFull(m.startTime)}</span>
+                  <span className="cw-fractal-overlay-axis-today">{fmtFull(m.time)} · today</span>
+                  <span>{fmtFull(m.forwardEndTime)}</span>
+                </div>
+                <div className="cw-fractal-overlay-legend">
+                  <span><span className="cw-fractal-overlay-dot" style={{ background: "#38bdf8" }} /> Now — {fmtFull(fa.currentStart)} to {fmtFull(fa.currentEnd)}</span>
+                  <span><span className="cw-fractal-overlay-dot" style={{ background: "#f97316" }} /> Fractal — {fmtFull(m.startTime)} to {fmtFull(m.forwardEndTime)}</span>
+                </div>
+
+                <div className="cw-fractal-rows">
+                  <div className="cw-fractal-rows-heading">This window &middot; {fa.windowSize} days</div>
+                  <div className="cw-fractal-row">
+                    <span className="cw-fractal-row-label">Window move</span>
+                    <span className={`cw-fractal-row-val${windowMove >= 0 ? " up" : " down"}`}>{windowMove >= 0 ? "+" : ""}{windowMove.toFixed(2)}%</span>
+                  </div>
+                  <div className="cw-fractal-row">
+                    <span className="cw-fractal-row-label">Max rally in window</span>
+                    <span className="cw-fractal-row-val up">+{(winRally * 100).toFixed(2)}%</span>
+                  </div>
+                  <div className="cw-fractal-row cw-fractal-row--last">
+                    <span className="cw-fractal-row-label">Max drawdown in window</span>
+                    <span className="cw-fractal-row-val down">{(winDD * 100).toFixed(2)}%</span>
+                  </div>
+
+                  <div className="cw-fractal-rows-heading">After &middot; next {fa.forwardHorizon} days</div>
+                  <div className="cw-fractal-row">
+                    <span className="cw-fractal-row-label">Forward move</span>
+                    <span className={`cw-fractal-row-val${m.forwardReturn >= 0 ? " up" : " down"}`}>{m.forwardReturn >= 0 ? "+" : ""}{m.forwardReturn.toFixed(2)}%</span>
+                  </div>
+                  <div className="cw-fractal-row">
+                    <span className="cw-fractal-row-label">Forward peak</span>
+                    <span className="cw-fractal-row-val-wrap">
+                      <span className="cw-fractal-row-val up">+{(peakVal * 100).toFixed(2)}%</span>
+                      <span className="cw-fractal-row-sub">{fmtDay(peakDay)}</span>
+                    </span>
+                  </div>
+                  <div className="cw-fractal-row cw-fractal-row--last">
+                    <span className="cw-fractal-row-label">Forward trough</span>
+                    <span className="cw-fractal-row-val-wrap">
+                      <span className="cw-fractal-row-val down">{(troughVal * 100).toFixed(2)}%</span>
+                      <span className="cw-fractal-row-sub">{fmtDay(troughDay)}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="cw-fractal-modal-footer">
+                  <p className="cw-elliott-hint">
+                    What actually happened this one time — not a forecast for right now. The path stops being a shape-match the moment it passes the "today" line; everything to the right is just history repeating a habit, or not.
+                  </p>
+                  <button
+                    type="button"
+                    className="cw-fractal-modal-chart-btn"
+                    onClick={() => { panMainChartTo(m); setExpandedFractalIdx(null); }}
+                  >
+                    View on price chart →
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -3273,6 +3792,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
                 </span>
                 <span>Trade Plan</span>
+              </button>
+              <button
+                className={`cw-right-tab cw-right-tab--fractal${rightTab === "fractal" ? " cw-right-tab--active" : ""}`}
+                onClick={() => setRightTab("fractal")}
+                title="Monthly Fractals"
+              >
+                <span className="cw-right-tab-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
+                </span>
+                <span>Monthly</span>
               </button>
             </div>
 
@@ -4118,6 +4647,136 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               )}
             </div>
             )}
+
+            {rightTab === "fractal" && (() => {
+              const fa = fractalAnalogs;
+              const activeIdx = fa ? Math.min(selectedFractalIdx, fa.matches.length - 1) : 0;
+              const active = fa?.matches[activeIdx];
+
+              return (
+                <div className="cw-ai-card">
+                  <div className="cw-ai-header">
+                    <span className="cw-ai-badge">◎ Monthly Fractals</span>
+                  </div>
+                  <p className="cw-elliott-hint">
+                    Daily candles, last {FRACTAL_WINDOW} days vs the {FRACTAL_TOP_K} closest month-long shapes this coin has traced before — not a prediction, just what actually happened those other times over the {FRACTAL_HORIZON} days after.
+                  </p>
+
+                  {fractalLoading && (
+                    <div className="cw-ai-loading">
+                      <div className="cw-ai-spinner" />
+                      <span>Searching daily history…</span>
+                    </div>
+                  )}
+
+                  {!fractalLoading && !fa && (
+                    <div className="cw-ai-empty">
+                      <p>Not enough daily history on this coin yet ({FRACTAL_MIN_HISTORY}+ days needed) to search for monthly analogs.</p>
+                    </div>
+                  )}
+
+                  {!fractalLoading && fa && active && (() => {
+                    const W = 280, H = 130;
+                    const total = fa.windowSize + fa.forwardHorizon;
+                    const allVals = [...fa.currentPath, ...active.path];
+                    const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+                    const pad = (maxV - minV) * 0.08 || 0.01;
+                    const yOf = (v: number) => H - ((v - (minV - pad)) / ((maxV + pad) - (minV - pad))) * H;
+                    const xOf = (i: number) => (i / (total - 1)) * W;
+                    const todayX = xOf(fa.windowSize - 1);
+
+                    const nowD = fa.currentPath.map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+                    const pastFullD = active.path.map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+                    const pastPastD = active.path.slice(0, fa.windowSize).map((v, i) => `${i === 0 ? "M" : "L"}${xOf(i).toFixed(2)},${yOf(v).toFixed(2)}`).join(" ");
+
+                    const fmt = (t: UTCTimestamp) => new Date(Number(t) * 1000).toLocaleDateString(undefined, { year: "2-digit", month: "short", day: "numeric" });
+
+                    return (
+                      <button
+                        type="button"
+                        className="cw-fractal-overlay cw-fractal-overlay--clickable"
+                        onClick={() => setExpandedFractalIdx(activeIdx)}
+                        title="Click to expand with full analysis"
+                      >
+                        <span className="cw-fractal-overlay-expand">⤢ Expand</span>
+                        <svg className="cw-fractal-overlay-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                          <line x1={todayX} y1="0" x2={todayX} y2={H} className="cw-fractal-overlay-todayline" />
+                          {/* Full fractal path (past window + what happened after), faint */}
+                          <path d={pastFullD} fill="none" stroke="#f97316" strokeWidth="1.25" strokeOpacity="0.55" strokeDasharray="3 2" />
+                          {/* Fractal's own window portion, solid — this is the part being compared to "now" */}
+                          <path d={pastPastD} fill="none" stroke="#f97316" strokeWidth="1.75" />
+                          {/* Live window, always solid + on top */}
+                          <path d={nowD} fill="none" stroke="#38bdf8" strokeWidth="2" />
+                        </svg>
+                        <div className="cw-fractal-overlay-axis">
+                          <span>{fmt(active.startTime)}</span>
+                          <span className="cw-fractal-overlay-axis-today">{fmt(active.time)} · today</span>
+                          <span>{fmt(active.forwardEndTime)}</span>
+                        </div>
+                        <div className="cw-fractal-overlay-legend">
+                          <span><span className="cw-fractal-overlay-dot" style={{ background: "#38bdf8" }} /> Now — {fmt(fa.currentStart)} to {fmt(fa.currentEnd)}</span>
+                          <span><span className="cw-fractal-overlay-dot" style={{ background: "#f97316" }} /> Fractal ({active.similarity}% match) — {fmt(active.startTime)} to {fmt(active.forwardEndTime)}</span>
+                        </div>
+                      </button>
+                    );
+                  })()}
+
+                  {!fractalLoading && fa && (
+                    <>
+                      <div className={`cw-fractal-summary cw-fractal-summary--${fa.avgForwardReturn >= 0 ? "up" : "down"}`}>
+                        <span className="cw-fractal-summary-text">
+                          {fa.matches.length} matches found · {fa.upCount}/{fa.matches.length} rose over the next {fa.forwardHorizon} days
+                        </span>
+                        <span className="cw-fractal-summary-val">
+                          {fa.avgForwardReturn >= 0 ? "+" : ""}{fa.avgForwardReturn.toFixed(2)}% avg
+                        </span>
+                      </div>
+
+                      {fa.matches.map((m, i) => {
+                        const fmtFull = (t: UTCTimestamp) => new Date(Number(t) * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+                        const fmtShort = (t: UTCTimestamp) => new Date(Number(t) * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                        const daysAgo = Math.round((Date.now() / 1000 - Number(m.time)) / 86_400);
+                        const agoLabel = daysAgo < 1 ? "today"
+                          : daysAgo < 60 ? `${daysAgo}d ago`
+                          : daysAgo < 730 ? `${Math.round(daysAgo / 30)}mo ago`
+                          : `${(daysAgo / 365).toFixed(1)}y ago`;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            className={`cw-fractal-match${i === activeIdx ? " cw-fractal-match--active" : ""}`}
+                            onClick={() => {
+                              setSelectedFractalIdx(i);
+                              setExpandedFractalIdx(i);
+                              if (!chartRef.current) return;
+                              const span = fa.windowSize * 86_400;
+                              chartRef.current.timeScale().setVisibleRange({
+                                from: (Number(m.time) - span) as UTCTimestamp,
+                                to: (Number(m.time) + fa.forwardHorizon * 86_400) as UTCTimestamp,
+                              });
+                            }}
+                          >
+                            <span className="cw-fractal-match-main">
+                              <span className="cw-fractal-match-range">
+                                {fmtFull(m.startTime)} – {fmtFull(m.time)}
+                                <span className="cw-fractal-match-len"> ({fa.windowSize}d)</span>
+                              </span>
+                              <span className="cw-fractal-match-ago">{agoLabel} · #{i + 1} of {fa.matches.length}</span>
+                            </span>
+                            <span className="cw-fractal-match-side">
+                              <span className="cw-fractal-match-sim">{m.similarity}% match</span>
+                              <span className={`cw-fractal-match-ret${m.forwardReturn >= 0 ? " up" : " down"}`}>
+                                {m.forwardReturn >= 0 ? "▲" : "▼"} {Math.abs(m.forwardReturn).toFixed(2)}% over the {fa.forwardHorizon}d after: {fmtShort(m.time)} → {fmtShort(m.forwardEndTime)}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             </div>
           </div>

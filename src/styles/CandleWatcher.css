@@ -2007,6 +2007,474 @@
 .cw-macro-chip--bear .cw-macro-chip-val    { color: #ef4444; }
 .cw-macro-chip--neutral .cw-macro-chip-val { color: var(--color-text-secondary); }
 
+/* ── Historical Fractal / Pattern-Analog tab ────────────────────────────────── */
+
+.cw-fractal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  margin-bottom: 12px;
+}
+.cw-fractal-summary--up   { border-color: rgba(34,197,94,0.3);  background: rgba(34,197,94,0.06); }
+.cw-fractal-summary--down { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
+
+.cw-fractal-summary-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+
+.cw-fractal-summary-val {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.cw-fractal-summary--up .cw-fractal-summary-val   { color: #22c55e; }
+.cw-fractal-summary--down .cw-fractal-summary-val { color: #ef4444; }
+
+.cw-fractal-match {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card-bg);
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cw-fractal-match:hover { background: var(--color-input-bg); border-color: var(--color-primary); }
+.cw-fractal-match--active {
+  border-color: var(--color-primary);
+  background: var(--color-input-bg);
+}
+
+.cw-fractal-match-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.cw-fractal-match-range {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cw-fractal-match-len {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.cw-fractal-match-ago {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.cw-fractal-match-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.cw-fractal-match-sim {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.cw-fractal-match-ret {
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.cw-fractal-match-ret.up   { color: #22c55e; }
+.cw-fractal-match-ret.down { color: #ef4444; }
+
+.cw-fractal-overlay {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px 8px;
+  margin-bottom: 12px;
+  background: var(--color-card-bg);
+}
+
+.cw-fractal-overlay--clickable {
+  text-align: inherit;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.cw-fractal-overlay--clickable:hover {
+  border-color: #a78bfa;
+  background: var(--color-input-bg);
+}
+.cw-fractal-overlay--clickable:hover .cw-fractal-overlay-expand {
+  opacity: 1;
+}
+
+.cw-fractal-overlay-expand {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.14);
+  color: #a78bfa;
+  font-size: 0.62rem;
+  font-weight: 800;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.cw-fractal-overlay-chart {
+  width: 100%;
+  height: 110px;
+  display: block;
+}
+
+.cw-fractal-overlay-todayline {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.cw-fractal-overlay-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.cw-fractal-overlay-axis-today {
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.cw-fractal-overlay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.cw-fractal-overlay-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cw-fractal-overlay-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Monthly Fractal Detail Modal ─────────────────────────────────────────── */
+
+.cw-fractal-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: rgba(6, 9, 15, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cw-overlay-in 0.2s ease both;
+}
+
+.cw-fractal-modal-card {
+  position: relative;
+  width: min(1040px, 100%);
+  max-height: min(92vh, 920px);
+  overflow-y: auto;
+  background:
+    radial-gradient(1200px 300px at 15% -10%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(900px 260px at 100% 0%, rgba(249, 115, 22, 0.08), transparent 55%),
+    var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  padding: 26px 30px 30px;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
+  animation: cw-card-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cw-fractal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.cw-fractal-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.cw-fractal-modal-title-icon {
+  color: #a78bfa;
+  font-size: 1.1rem;
+}
+
+.cw-fractal-modal-title-sim {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.14);
+  color: #a78bfa;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.cw-fractal-modal-save-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-card-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+}
+.cw-fractal-modal-save-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+  transform: translateY(-1px);
+}
+
+.cw-fractal-modal-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.cw-fractal-modal-close:hover { color: var(--color-text); }
+
+.cw-fractal-modal-range {
+  margin: 0 0 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.cw-fractal-modal-pills-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.cw-fractal-modal-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.cw-fractal-modal-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-input-bg);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.cw-fractal-modal-pill:hover { border-color: var(--color-primary); transform: translateY(-1px); }
+.cw-fractal-modal-pill--active {
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.cw-fractal-modal-pill-idx {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+}
+
+.cw-fractal-modal-pill-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.cw-fractal-modal-pill-num {
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.cw-fractal-modal-pill-num.up   { color: #22c55e; }
+.cw-fractal-modal-pill-num.down { color: #ef4444; }
+
+.cw-fractal-modal-pill-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.cw-fractal-modal-chart-wrap {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px 16px 10px;
+  background: var(--color-input-bg);
+  margin-bottom: 10px;
+}
+
+.cw-fractal-modal-chart {
+  width: 100%;
+  height: 300px;
+  display: block;
+}
+
+.cw-fractal-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.cw-fractal-modal-footer .cw-elliott-hint {
+  margin: 0;
+  flex: 1;
+}
+
+.cw-fractal-modal-chart-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #38bdf8, #a78bfa);
+  color: #0b0f19;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.cw-fractal-modal-chart-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.cw-fractal-rows {
+  margin: 20px 0 20px;
+}
+
+.cw-fractal-rows-heading {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 4px 2px 8px;
+}
+.cw-fractal-rows-heading:not(:first-child) {
+  padding-top: 18px;
+}
+
+.cw-fractal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+.cw-fractal-row--last {
+  border-bottom: none;
+}
+
+.cw-fractal-row-label {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.cw-fractal-row-val {
+  font-size: 1.02rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.cw-fractal-row-val.up   { color: #22c55e; }
+.cw-fractal-row-val.down { color: #ef4444; }
+
+.cw-fractal-row-val-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.cw-fractal-row-sub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 640px) {
+  .cw-fractal-modal-card { padding: 16px 16px 20px; }
+  .cw-fractal-modal-chart { height: 200px; }
+  .cw-fractal-modal-footer { flex-direction: column; align-items: stretch; }
+  .cw-fractal-modal-chart-btn { width: 100%; }
+}
+
 /* ── Trade Wizard ────────────────────────────────────────────────────────── */
 
 .cw-wizard {

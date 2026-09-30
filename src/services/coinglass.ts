@@ -994,7 +994,7 @@ export async function getTakerBuySellVol(
 ): Promise<TakerVolData | null> {
   const symbol = toCgSymbol(coin);
   try {
-    const res = await api.get('futures/taker-buy-sell-vol/history', {
+    const res = await api.get('futures/taker-buy-sell-volume/history', {
       params: { symbol, interval, limit, exchange },
     });
     if (res.data?.code !== '0' || !res.data.data?.length) return null;
@@ -1022,7 +1022,7 @@ export async function getTakerBuySellHistory(
 ): Promise<TakerVolHistory[]> {
   const symbol = toCgSymbol(coin);
   try {
-    const res = await api.get('futures/taker-buy-sell-vol/history', {
+    const res = await api.get('futures/taker-buy-sell-volume/history', {
       params: { symbol, interval, limit, exchange },
     });
     if (res.data?.code !== '0') return [];
@@ -1152,7 +1152,7 @@ export async function getAllExchangeTakerVol(
 
   const results = await Promise.allSettled(
     TAKER_EXCHANGE_LIST.map(exchange =>
-      api.get('futures/taker-buy-sell-vol/history', {
+      api.get('futures/taker-buy-sell-volume/history', {
         params: { symbol, interval, limit: 1, exchange },
       }).catch(() => null)
     )
