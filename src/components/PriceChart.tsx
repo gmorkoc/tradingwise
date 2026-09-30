@@ -1138,6 +1138,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
 
     const onMove = (e: TouchEvent) => {
+      // A 2nd finger landing mid-gesture (pinch-to-zoom) was still being
+      // tracked through touches[0] alone — if that one finger happened to
+      // drift more vertically than horizontally during the pinch (common,
+      // since pinch fingers rarely move in a perfectly mirrored line), this
+      // fired stopPropagation+preventDefault in the CAPTURE phase, killing
+      // the pinch before lightweight-charts' own canvas handler ever saw
+      // it. Bail out entirely once a 2nd finger is down, same as the other
+      // touch handler below already does.
+      if (e.touches.length >= 2) { scrolling = false; return; }
       const dy = startY - e.touches[0].clientY;
       const dx = startX - e.touches[0].clientX;
       if (scrolling === null) scrolling = Math.abs(dy) > Math.abs(dx);
