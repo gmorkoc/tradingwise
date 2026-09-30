@@ -876,6 +876,8 @@
   border: 1px solid var(--color-border);
   border-radius: 14px;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: cw-right-panel;
 }
 
 .cw-right-tabs {
@@ -2108,6 +2110,31 @@
 .cw-fractal-match-ret.up   { color: #22c55e; }
 .cw-fractal-match-ret.down { color: #ef4444; }
 
+/* The side column's forward-return line is a long nowrap string ("▲
+   75.14% over the 15d after: Aug 30 → Sep 14") — on a narrower right
+   panel (smaller desktop widths, or the sidebar resized down) that
+   string alone was wide enough to crush the date column down to a
+   word-per-line wrap. A container query (tracks the panel's actual
+   width, not the viewport) switches the row to a stacked layout before
+   that happens. */
+@container cw-right-panel (max-width: 380px) {
+  .cw-fractal-match {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .cw-fractal-match-side {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .cw-fractal-match-ret {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
 .cw-fractal-overlay {
   position: relative;
   display: block;
@@ -2284,6 +2311,13 @@
   transform: translateY(-1px);
 }
 
+.cw-fractal-modal-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .cw-fractal-modal-close {
   flex-shrink: 0;
   width: 30px;
@@ -2303,72 +2337,93 @@
 }
 .cw-fractal-modal-close:hover { color: var(--color-text); }
 
+/* Mobile/iOS-only "collapse back to peek bar" button — hidden everywhere
+   else; only shown inside the 640px breakpoint below. */
+.cw-fractal-modal-collapse-btn {
+  display: none;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+/* Text-glyph chevrons ("⌄", "▾"...) kept rendering at inconsistent sizes
+   and vertical positions against "✕" — different Unicode symbols have
+   different font metrics, so matching them by eyeballing font-size never
+   converged. A CSS border-triangle has exact, fixed dimensions with no
+   font involved at all, so it's pixel-identical everywhere. */
+.cw-fractal-modal-collapse-tri {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid currentColor;
+}
+.cw-fractal-modal-collapse-btn:hover { color: var(--color-text); }
+
+/* Mobile/iOS peek bar — the condensed "just tapped a match" state. Hidden
+   everywhere else (desktop, and mobile once expanded); only shown inside
+   the 640px breakpoint below while collapsed. */
+.cw-fractal-peek-bar {
+  display: none;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cw-fractal-peek-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: #a78bfa;
+}
+
+.cw-fractal-peek-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cw-fractal-peek-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-fractal-peek-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-fractal-peek-chevron {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
 .cw-fractal-modal-range {
   margin: 0 0 16px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-}
-
-.cw-fractal-modal-pills-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  margin-bottom: 8px;
-}
-
-.cw-fractal-modal-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.cw-fractal-modal-pill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-input-bg);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
-}
-.cw-fractal-modal-pill:hover { border-color: var(--color-primary); transform: translateY(-1px); }
-.cw-fractal-modal-pill--active {
-  border-color: #a78bfa;
-  background: rgba(167, 139, 250, 0.12);
-}
-
-.cw-fractal-modal-pill-idx {
-  font-size: 0.66rem;
-  font-weight: 800;
-  color: var(--color-text-muted);
-}
-
-.cw-fractal-modal-pill-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.15;
-}
-
-.cw-fractal-modal-pill-num {
-  font-size: 0.76rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-secondary);
-}
-.cw-fractal-modal-pill-num.up   { color: #22c55e; }
-.cw-fractal-modal-pill-num.down { color: #ef4444; }
-
-.cw-fractal-modal-pill-tag {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
 .cw-fractal-modal-chart-wrap {
@@ -2469,10 +2524,96 @@
 }
 
 @media (max-width: 640px) {
-  .cw-fractal-modal-card { padding: 16px 16px 20px; }
+  /* Mobile/iOS: no floating centered dialog — the match detail docks to
+     the bottom of the screen instead, either as a small non-blocking peek
+     bar (default, right after tapping a match) or expanded to a full
+     bottom sheet. Desktop is untouched; this block only fires under
+     640px. */
+  .cw-fractal-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+    /* Dims the whole page behind the expanded sheet, same as desktop.
+       Safe to do now that the card itself is fully opaque (--color-
+       surface, no alpha) — back when it used --color-card-bg (90%
+       opaque), this same dark backdrop bled a tint through the card and
+       made the expanded sheet read as a different color than the peek
+       bar. The peek variant below overrides this back to transparent,
+       since that state is meant to stay non-blocking. */
+    background: rgba(6, 9, 15, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .cw-fractal-modal-card {
+    width: 100%;
+    max-width: none;
+    max-height: 88vh;
+    margin: 0;
+    border-radius: 22px 22px 0 0;
+    padding: 16px 16px 20px;
+    /* Flat, fully OPAQUE color — not the desktop gradient, and not
+       --color-card-bg either, which is translucent by design
+       (rgba(...,0.9)). A translucent card blends with whatever sits
+       behind it, and that differed between the peek bar (transparent
+       backdrop, sitting right over page content) and the expanded sheet
+       (same backdrop now, but still compositing with content of
+       different brightness at different scroll positions) — so the same
+       CSS value kept rendering as visibly different colors. --color-
+       surface has no alpha channel, so this is now genuinely identical
+       pixels regardless of what's behind it. */
+    background: var(--color-surface);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
+  }
   .cw-fractal-modal-chart { height: 200px; }
   .cw-fractal-modal-footer { flex-direction: column; align-items: stretch; }
   .cw-fractal-modal-chart-btn { width: 100%; }
+  .cw-fractal-modal-collapse-btn { display: inline-flex; }
+
+  /* 3 equal-width matches per row instead of flex-wrap's 2 — a grid
+     guarantees exactly 3 regardless of how wide any single pill's text
+     happens to be, wrapping #5 alone onto its own row cleanly. */
+  .cw-fractal-modal-pills {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  /* Stacking idx + both 2-line stats vertically made each pill 5 lines
+     tall. Keep the pill a ROW like before (idx and both numbers side by
+     side, one line total) and drop the "MATCH"/"NEXT 15D" tags instead —
+     that's the "reduce content, not height" fix; the tags were also
+     redundant with the row's hover tooltip and the "Other matches..."
+     heading above. */
+  .cw-fractal-modal-pill {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 7px 4px;
+  }
+  .cw-fractal-modal-pill-idx { font-size: 0.62rem; }
+  .cw-fractal-modal-pill-stat { flex-direction: row; }
+  .cw-fractal-modal-pill-num { font-size: 0.72rem; }
+  .cw-fractal-modal-pill-tag { display: none; }
+
+  /* Collapsed (peek) state — reached only via the collapse button now
+     (a fresh tap always opens straight to the full sheet below). Still
+     non-blocking: the backdrop doesn't catch taps at all, so the rest
+     of the app stays fully usable, only the small bar itself is
+     interactive. */
+  .cw-fractal-modal-backdrop--peek {
+    pointer-events: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .cw-fractal-modal-backdrop--peek .cw-fractal-modal-card {
+    pointer-events: auto;
+    max-height: none;
+    border-radius: 20px 20px 0 0;
+    padding: 10px 14px;
+    box-shadow: 0 -6px 26px rgba(0, 0, 0, 0.5);
+  }
+  .cw-fractal-modal-backdrop--peek .cw-fractal-peek-bar { display: flex; }
+  .cw-fractal-modal-backdrop--peek .cw-fractal-modal-full-content { display: none; }
 }
 
 /* ── Trade Wizard ────────────────────────────────────────────────────────── */

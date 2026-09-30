@@ -1950,6 +1950,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [fractalLoading, setFractalLoading] = useState(false);
   const [selectedFractalIdx, setSelectedFractalIdx] = useState(0);
   const [expandedFractalIdx, setExpandedFractalIdx] = useState<number | null>(null);
+  // Mobile/iOS only (desktop always shows the full sheet — see the
+  // @media(max-width:640px) rules in CandleWatcher.css): a freshly-opened
+  // match starts as a small non-blocking peek bar docked at the bottom
+  // instead of a full-screen takeover, so it doesn't feel like a modal
+  // popping up over everything. Tapping the bar expands it to the same
+  // full detail sheet desktop always shows.
+  const [mobilePeekExpanded, setMobilePeekExpanded] = useState(false);
   const [cycleExpanded, setCycleExpanded] = useState(false);
   const [showVolMethodology, setShowVolMethodology] = useState(false);
   const volCone = useMemo(() => {
@@ -3341,45 +3348,34 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           };
 
           return (
-            <div className="cw-fractal-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setExpandedFractalIdx(null); }}>
+            <div
+              className={`cw-fractal-modal-backdrop${!mobilePeekExpanded ? " cw-fractal-modal-backdrop--peek" : ""}`}
+              onMouseDown={(e) => { if (e.target === e.currentTarget) setExpandedFractalIdx(null); }}
+            >
               <div className="cw-fractal-modal-card">
+                {/* Mobile/iOS peek bar — only visible (via CSS) at mobile widths while collapsed */}
+                <button type="button" className="cw-fractal-peek-bar" onClick={() => setMobilePeekExpanded(true)}>
+                  <span className="cw-fractal-peek-icon">◎</span>
+                  <span className="cw-fractal-peek-text">
+                    <span className="cw-fractal-peek-title">Monthly Fractal · #{expandedFractalIdx + 1}</span>
+                    <span className="cw-fractal-peek-sub">{m.similarity}% match · {m.forwardReturn >= 0 ? "+" : ""}{m.forwardReturn.toFixed(1)}% next {fa.forwardHorizon}d</span>
+                  </span>
+                  <span className="cw-fractal-peek-chevron">⌃</span>
+                </button>
+
+                <div className="cw-fractal-modal-full-content">
                 <div className="cw-fractal-modal-header">
                   <span className="cw-fractal-modal-title"><span className="cw-fractal-modal-title-icon">◎</span> Monthly Fractal <span className="cw-fractal-modal-title-sim">{m.similarity}% match</span></span>
-                  <button className="cw-fractal-modal-close" onClick={() => setExpandedFractalIdx(null)} aria-label="Close">✕</button>
+                  <div className="cw-fractal-modal-header-actions">
+                    <button className="cw-fractal-modal-collapse-btn" onClick={() => setMobilePeekExpanded(false)} aria-label="Collapse to peek bar" title="Collapse">
+                      <span className="cw-fractal-modal-collapse-tri" />
+                    </button>
+                    <button className="cw-fractal-modal-close" onClick={() => setExpandedFractalIdx(null)} aria-label="Close">✕</button>
+                  </div>
                 </div>
                 <p className="cw-fractal-modal-range">
                   {fmtFull(m.startTime)} – {fmtFull(m.time)} <span className="cw-fractal-match-len">({fa.windowSize}d)</span> → next {fa.forwardHorizon}d thru {fmtFull(m.forwardEndTime)}
                 </p>
-
-                {/* Switch between the other matches without leaving the modal */}
-                <div className="cw-fractal-modal-pills-label">Other matches for this coin — click to compare</div>
-                <div className="cw-fractal-modal-pills">
-                  {fa.matches.map((pm, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={`cw-fractal-modal-pill${i === expandedFractalIdx ? " cw-fractal-modal-pill--active" : ""}`}
-                      title={`Match #${i + 1} — ${pm.similarity}% shape similarity, ${pm.forwardReturn >= 0 ? "+" : ""}${pm.forwardReturn.toFixed(1)}% over the next ${fa.forwardHorizon} days`}
-                      onClick={() => {
-                        setExpandedFractalIdx(i);
-                        setSelectedFractalIdx(i);
-                        panMainChartTo(pm);
-                      }}
-                    >
-                      <span className="cw-fractal-modal-pill-idx">#{i + 1}</span>
-                      <span className="cw-fractal-modal-pill-stat">
-                        <span className="cw-fractal-modal-pill-num">{pm.similarity}%</span>
-                        <span className="cw-fractal-modal-pill-tag">match</span>
-                      </span>
-                      <span className="cw-fractal-modal-pill-stat">
-                        <span className={`cw-fractal-modal-pill-num${pm.forwardReturn >= 0 ? " up" : " down"}`}>
-                          {pm.forwardReturn >= 0 ? "+" : ""}{pm.forwardReturn.toFixed(1)}%
-                        </span>
-                        <span className="cw-fractal-modal-pill-tag">next {fa.forwardHorizon}d</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
 
                 <div className="cw-fractal-modal-chart-wrap">
                   <button className="cw-fractal-modal-save-btn" onClick={handleSaveChart} title="Save chart as an image">
@@ -3461,6 +3457,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   >
                     View on price chart →
                   </button>
+                </div>
                 </div>
               </div>
             </div>
@@ -4695,7 +4692,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                       <button
                         type="button"
                         className="cw-fractal-overlay cw-fractal-overlay--clickable"
-                        onClick={() => setExpandedFractalIdx(activeIdx)}
+                        onClick={() => { setExpandedFractalIdx(activeIdx); setMobilePeekExpanded(true); }}
                         title="Click to expand with full analysis"
                       >
                         <span className="cw-fractal-overlay-expand">⤢ Expand</span>
@@ -4748,6 +4745,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                             onClick={() => {
                               setSelectedFractalIdx(i);
                               setExpandedFractalIdx(i);
+                              setMobilePeekExpanded(true);
                               if (!chartRef.current) return;
                               const span = fa.windowSize * 86_400;
                               chartRef.current.timeScale().setVisibleRange({
