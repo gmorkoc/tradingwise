@@ -417,8 +417,11 @@ function AppDashboard({
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const onboardingCheckedRef = useRef(false);
+  // Defaults closed — a brand-new visitor with no stored preference yet
+  // was getting the chat panel open on their very first load, since this
+  // used to default to open unless explicitly told "false".
   const [showCoinChat, setShowCoinChat] = useState(
-    () => localStorage.getItem("coinchat-visible") !== "false",
+    () => localStorage.getItem("coinchat-visible") === "true",
   );
   useEffect(() => {
     localStorage.setItem("coinchat-visible", String(showCoinChat));
