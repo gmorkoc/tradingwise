@@ -17,7 +17,7 @@ interface Slide {
 // been overwritten in place multiple times while iterating on the crops,
 // and browsers cache images more aggressively than a page reload
 // reliably busts. Bump this whenever the files change again.
-const IMG_V = "4";
+const IMG_V = "5";
 
 const SLIDES: Slide[] = [
   {
