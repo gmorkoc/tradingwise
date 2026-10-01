@@ -19,7 +19,7 @@
   z-index: 400;
   max-width: 660px;
   margin: 0 auto;
-  background: #ffffff;
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
@@ -43,7 +43,7 @@
 .db-sheet--expanded {
   max-height: 78vh;
   z-index: 100002;
-  background: #ffffff;
+  background: var(--color-surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-color: var(--color-border);
