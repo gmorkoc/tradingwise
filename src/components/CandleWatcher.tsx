@@ -1976,6 +1976,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   useEffect(() => {
     localStorage.setItem("cwRightPanelCollapsed", rightPanelCollapsed ? "1" : "0");
   }, [rightPanelCollapsed]);
+  const [feedCollapsed, setFeedCollapsed] = useState(
+    () => localStorage.getItem("cwFeedCollapsed") === "1"
+  );
+  useEffect(() => {
+    localStorage.setItem("cwFeedCollapsed", feedCollapsed ? "1" : "0");
+  }, [feedCollapsed]);
   const resizeStartRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [showForecast, setShowForecast] = useState(false);
   const [forecastConviction, setForecastConviction] = useState(0);
@@ -3347,13 +3353,15 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             link.click();
           };
 
-          return (
-            <div
-              className={`cw-fractal-modal-backdrop${!mobilePeekExpanded ? " cw-fractal-modal-backdrop--peek" : ""}`}
-              onMouseDown={(e) => { if (e.target === e.currentTarget) setExpandedFractalIdx(null); }}
-            >
-              <div className="cw-fractal-modal-card">
-                {/* Mobile/iOS peek bar — only visible (via CSS) at mobile widths while collapsed */}
+          // Collapsed (mobile/iOS peek) state renders as its own small fixed
+          // bar, not the full backdrop with its class toggled — WKWebView has
+          // a known repaint bug where a fixed, backdrop-filter:blur element
+          // that flips to a transparent/no-blur state on the SAME layer can
+          // get stuck painted solid instead of showing the page through it.
+          // A fresh, separate element on each state never hits that path.
+          if (!mobilePeekExpanded) {
+            return (
+              <div className="cw-fractal-peek-standalone">
                 <button type="button" className="cw-fractal-peek-bar" onClick={() => setMobilePeekExpanded(true)}>
                   <span className="cw-fractal-peek-icon">◎</span>
                   <span className="cw-fractal-peek-text">
@@ -3362,7 +3370,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   </span>
                   <span className="cw-fractal-peek-chevron">⌃</span>
                 </button>
+              </div>
+            );
+          }
 
+          return (
+            <div
+              className="cw-fractal-modal-backdrop"
+              onMouseDown={(e) => { if (e.target === e.currentTarget) setExpandedFractalIdx(null); }}
+            >
+              <div className="cw-fractal-modal-card">
                 <div className="cw-fractal-modal-full-content">
                 <div className="cw-fractal-modal-header">
                   <span className="cw-fractal-modal-title"><span className="cw-fractal-modal-title-icon">◎</span> Monthly Fractal <span className="cw-fractal-modal-title-sim">{m.similarity}% match</span></span>
@@ -3693,8 +3710,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
             {/* Live candle tape — same width as chart */}
             {feedCandles.length >= 3 && (
-              <div className="cw-feed">
-                <div className="cw-feed-header">
+              <div className={`cw-feed${feedCollapsed ? " cw-feed--collapsed" : ""}`}>
+                <button
+                  type="button"
+                  className="cw-feed-header"
+                  onClick={() => setFeedCollapsed(v => !v)}
+                  aria-expanded={!feedCollapsed}
+                  title={feedCollapsed ? "Expand Live Tape" : "Collapse Live Tape"}
+                >
                   <span className="cw-feed-label">
                     <span className="cw-feed-live-dot" />
                     Live Tape
@@ -3707,23 +3730,27 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         <span className="cw-feed-candle-close-value">{candleCountdown}</span>
                       </div>
                     )}
+                    <span className="cw-feed-collapse-label">{feedCollapsed ? "Expand" : "Collapse"}</span>
+                    <span className="cw-feed-collapse-tri" />
                   </div>
-                </div>
-                <div className="cw-tape">
-                  {[...feedCandles].reverse().map((c, i) => {
-                    const origIdx = feedCandles.length - 1 - i;
-                    return (
-                      <CandleTapeRow
-                        key={c.time}
-                        candle={c}
-                        prev1={feedCandles[Math.max(0, origIdx - 1)]}
-                        prev2={feedCandles[Math.max(0, origIdx - 2)]}
-                        isLast={origIdx === feedCandles.length - 1}
-                        isNew={isNewRow(origIdx)}
-                      />
-                    );
-                  })}
-                </div>
+                </button>
+                {!feedCollapsed && (
+                  <div className="cw-tape">
+                    {[...feedCandles].reverse().map((c, i) => {
+                      const origIdx = feedCandles.length - 1 - i;
+                      return (
+                        <CandleTapeRow
+                          key={c.time}
+                          candle={c}
+                          prev1={feedCandles[Math.max(0, origIdx - 1)]}
+                          prev2={feedCandles[Math.max(0, origIdx - 2)]}
+                          isLast={origIdx === feedCandles.length - 1}
+                          isNew={isNewRow(origIdx)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
