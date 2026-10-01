@@ -2232,26 +2232,38 @@
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  /* Side drawer, not a centered dialog — docks flush against the right
+     edge, full height, and slides in from off-screen right instead of
+     fading/scaling in from the middle of the screen. */
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
   animation: cw-overlay-in 0.2s ease both;
 }
 
 .cw-fractal-modal-card {
   position: relative;
-  width: min(1040px, 100%);
-  max-height: min(92vh, 920px);
+  width: min(560px, 100%);
+  height: 100%;
+  max-height: none;
   overflow-y: auto;
   background:
     radial-gradient(1200px 300px at 15% -10%, rgba(56, 189, 248, 0.10), transparent 60%),
     radial-gradient(900px 260px at 100% 0%, rgba(249, 115, 22, 0.08), transparent 55%),
     var(--color-card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 22px;
+  border-right: none;
+  /* Square against the right edge it's docked to; rounded only where it
+     meets the dimmed page to its left. */
+  border-radius: 22px 0 0 22px;
   padding: 26px 30px 30px;
-  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
-  animation: cw-card-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: -32px 0 90px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
+  animation: cw-side-sheet-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cw-side-sheet-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .cw-fractal-modal-header {
@@ -2549,6 +2561,12 @@
     max-height: 88vh;
     margin: 0;
     border-radius: 22px 22px 0 0;
+    /* Desktop's side-drawer override (above) strips the right border and
+       slides in from the right — this is a BOTTOM sheet instead, so both
+       need resetting: full border restored, slide direction switched to
+       come up from the bottom where it's actually docked. */
+    border-right: 1px solid var(--color-border);
+    animation: cw-bottom-sheet-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
     padding: 16px 16px 20px;
     /* Flat, fully OPAQUE color — not the desktop gradient, and not
        --color-card-bg either, which is translucent by design
@@ -2614,6 +2632,11 @@
   }
   .cw-fractal-modal-backdrop--peek .cw-fractal-peek-bar { display: flex; }
   .cw-fractal-modal-backdrop--peek .cw-fractal-modal-full-content { display: none; }
+}
+
+@keyframes cw-bottom-sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Trade Wizard ────────────────────────────────────────────────────────── */
