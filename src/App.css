@@ -2946,6 +2946,10 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
        through the status bar / safe-area strip. Only show it once the
        drawer is actually open. */
     border-right: none;
+    /* Inherited by every tappable descendant (nav buttons, categories,
+       profile row) so iOS's native tap-flash never shows, on top of the
+       per-element overrides below that also kill :hover/:active bg. */
+    -webkit-tap-highlight-color: transparent;
   }
   .icon-strip.mobile-open {
     z-index: 300001;
@@ -3062,10 +3066,14 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     width: calc(100% - 16px);
     background: none !important;
     color: var(--color-text-muted);
+    /* iOS/WKWebView shows its own native tap-flash on top of any CSS
+       :hover/:active handling below — neither of those alone stops it. */
+    -webkit-tap-highlight-color: transparent;
   }
-  .icon-strip .icon-strip-btn:hover {
-    background: var(--color-input-bg) !important;
-    color: var(--color-text);
+  .icon-strip .icon-strip-btn:hover,
+  .icon-strip .icon-strip-btn:active,
+  .icon-strip .icon-strip-btn:focus {
+    background: none !important;
   }
   .icon-strip .icon-strip-btn.active {
     background: none !important;
@@ -3112,6 +3120,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     font-size: 0.68rem;
     gap: 12px;
     justify-content: flex-start;
+    -webkit-tap-highlight-color: transparent;
   }
   .icon-strip .icon-strip-cat-head .icon-strip-cat-chev {
     /* Sits right after the label (flex row + gap already spaces it),
@@ -3126,7 +3135,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   .icon-strip .icon-strip-cat-head.open .icon-strip-cat-chev {
     transform: rotate(-90deg);
   }
-  .icon-strip .icon-strip-cat-head:hover { background: var(--color-input-bg); }
+  .icon-strip .icon-strip-cat-head:hover,
+  .icon-strip .icon-strip-cat-head:active,
+  .icon-strip .icon-strip-cat-head:focus { background: none; }
   .icon-strip .icon-strip-cat-head .icon-strip-cat-label {
     display: block;
     /* The base rule sets flex:1, stretching this to fill the row and
@@ -3185,8 +3196,10 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     border-radius: 8px;
     color: var(--color-text-muted);
   }
-  .icon-strip .icon-strip-bottom .icon-strip-btn:hover {
-    background: var(--color-card-bg);
+  .icon-strip .icon-strip-bottom .icon-strip-btn:hover,
+  .icon-strip .icon-strip-bottom .icon-strip-btn:active,
+  .icon-strip .icon-strip-bottom .icon-strip-btn:focus {
+    background: none;
   }
   .icon-strip .icon-strip-bottom .icon-strip-btn .icon-strip-label {
     font-size: 0.88rem;
@@ -3278,20 +3291,29 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     position: fixed;
     top: 0;
     bottom: 0;
-    left: 320px;
+    left: 290px;
     right: 0;
-    background: #fff;
+    /* A light highlight tint, not a theme-matched color — matching the
+       page's own dark background (e.g. --color-surface, #0f172a) made
+       this invisible in dark theme: a dark overlay on a near-black page
+       has no contrast to read against. A bright tint reads as a visible
+       "elevated" layer regardless of theme, same reasoning dark-mode UIs
+       generally use a light overlay rather than a darker one for this.
+       The alpha lives in the color itself (not a separate `opacity`,
+       which would multiply against it unpredictably — the exact kind of
+       double-transparency bug this file hit earlier with the fractal
+       modal's peek bar). */
+    background: rgba(255, 255, 255, 0.16);
     z-index: 99999999999;
     border-top-left-radius: 50px;
     border-bottom-left-radius: 50px;
-    opacity: .3;
     /* A real elevation shadow, not a single flat blur — a tight, sharp
        "contact" layer close to the edge plus a broader, softer ambient
        layer further out (the same two-layer technique behind most
        material/card shadows). Both offset purely left (0 vertical), so
        it reads on the left edge — where the two rounded corners are —
        without smearing across the top/bottom/right edges too. */
-    box-shadow: -2px 0 4px rgba(0, 0, 0, 0), -10px 0 28px rgba(0, 0, 0, 0.3);
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0), -10px 0 28px rgba(0, 0, 0, 0.08);
   }
 
   .news-ticker-tag {

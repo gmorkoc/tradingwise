@@ -35,6 +35,7 @@ export interface Profile {
   notify_buy_signals: boolean;
   notify_sell_signals: boolean;
   signal_muted_coins: string[];
+  signal_watchlist_coins: string[];
   signal_min_confidence: "low" | "medium" | "high";
   avatar_url: string | null;
 }
@@ -213,6 +214,22 @@ export async function toggleMutedSignalCoin(userId: string, coin: string, curren
   const { error } = await supabase
     .from("profiles")
     .update({ signal_muted_coins: next })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  return next;
+}
+
+// Same read-modify-write pattern as toggleMutedSignalCoin above, for the
+// opposite list — coins the user specifically wants to track. A non-empty
+// signal_watchlist_coins also narrows which coins buy-signal-scan's push
+// notifications fire for (see that edge function's recipients filter).
+export async function toggleWatchlistSignalCoin(userId: string, coin: string, currentWatchlist: string[]): Promise<string[]> {
+  const next = currentWatchlist.includes(coin)
+    ? currentWatchlist.filter((c) => c !== coin)
+    : [...currentWatchlist, coin];
+  const { error } = await supabase
+    .from("profiles")
+    .update({ signal_watchlist_coins: next })
     .eq("id", userId);
   if (error) throw new Error(error.message);
   return next;

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
-import { supabase, hasAccess, toggleMutedSignalCoin } from "../services/supabase";
+import { supabase, hasAccess, toggleMutedSignalCoin, toggleWatchlistSignalCoin } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { COINS } from "../services/coinglass";
 import "../styles/BuySignals.css";
 
 interface SignalHit { id: string; label: string; value: number }
@@ -103,6 +104,10 @@ export function BuySignals({ onOpenUpgrade }: Props) {
   const [loading, setLoading] = useState(false);
   const [highlightCoin, setHighlightCoin] = useState<string | null>(null);
   const [mutingCoin, setMutingCoin] = useState<string | null>(null);
+  const [watchlistingCoin, setWatchlistingCoin] = useState<string | null>(null);
+  const [watchlistRows, setWatchlistRows] = useState<BuySignalRow[]>([]);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [addSearch, setAddSearch] = useState("");
   const bellRef = useRef<HTMLButtonElement>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -117,6 +122,20 @@ export function BuySignals({ onOpenUpgrade }: Props) {
     setLoading(false);
   };
 
+  // Watchlisted coins show their CURRENT score regardless of is_active —
+  // buy-signal-scan upserts a row for every scanned coin every 4h whether
+  // or not it crosses the threshold, so this is just "whatever the last
+  // scan found" rather than only the coins currently flashing.
+  const watchlistCoins = profile?.signal_watchlist_coins ?? [];
+  const fetchWatchlistSignals = async (coins: string[]) => {
+    if (coins.length === 0) { setWatchlistRows([]); return; }
+    const { data, error } = await supabase
+      .from("buy_signals")
+      .select("*")
+      .in("coin", coins);
+    if (!error && data) setWatchlistRows(data as BuySignalRow[]);
+  };
+
   // Fetch once on mount (so the trigger button's count badge is right even
   // before anyone opens it) and again every time it's opened, since the
   // scan itself only refreshes every 4h — no need to poll while closed.
@@ -126,6 +145,13 @@ export function BuySignals({ onOpenUpgrade }: Props) {
   // being upgrade-walled — this keeps the feature invisible below elite.
   useEffect(() => { if (isElite) fetchSignals(); }, [isElite]);
   useEffect(() => { if (open && isElite) fetchSignals(); }, [open, isElite]);
+  useEffect(() => {
+    if (open && isElite) fetchWatchlistSignals(watchlistCoins);
+    // watchlistCoins is a derived array (new reference every render), so
+    // this depends on its actual contents (joined) rather than the array
+    // itself, or it'd refire on every render regardless of real changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isElite, watchlistCoins.join(",")]);
 
   useEffect(() => {
     if (!open) return;
@@ -182,6 +208,104 @@ export function BuySignals({ onOpenUpgrade }: Props) {
 
   const mutedCoins = profile?.signal_muted_coins ?? [];
 
+  const handleWatchlist = async (coin: string) => {
+    if (!user || watchlistingCoin) return;
+    setWatchlistingCoin(coin);
+    try {
+      await toggleWatchlistSignalCoin(user.id, coin, profile?.signal_watchlist_coins ?? []);
+      await refreshProfile();
+    } catch (err) {
+      console.error("Failed to update watchlisted signal coins:", err);
+    } finally {
+      setWatchlistingCoin(null);
+    }
+  };
+
+  // Shared by the main active-signals list and the My Watchlist section —
+  // same card, same checklist, since a watchlisted coin's row carries its
+  // current score/signals either way (buy-signal-scan upserts every
+  // scanned coin every 4h regardless of is_active).
+  const renderCard = (row: BuySignalRow) => {
+    const confidence = confidenceOf(row);
+    const isMuted = mutedCoins.includes(row.coin);
+    const isWatched = watchlistCoins.includes(row.coin);
+    return (
+      <div
+        key={`${row.coin}-${row.direction}`}
+        ref={(el) => { cardRefs.current[row.coin] = el; }}
+        className={`buysig-card buysig-card--${row.direction}${highlightCoin === row.coin ? " buysig-card--highlight" : ""}`}
+      >
+        <div className="buysig-card-head">
+          <div className="buysig-card-icon" style={{ background: COIN_COLORS[row.coin] ?? "#7c8ba8" }}>
+            {row.coin[0]}
+          </div>
+          <div className="buysig-card-name">
+            <span className={`buysig-card-direction buysig-card-direction--${row.direction}`}>
+              {row.direction === "buy" ? t("buySignals.buy", "BUY") : t("buySignals.sell", "SELL")}
+            </span>
+            <span className="buysig-card-coin">
+              {row.coin} / USD
+              <span className="buysig-card-price">
+                ${row.price.toLocaleString(undefined, { maximumFractionDigits: row.price < 1 ? 6 : 2 })}
+              </span>
+            </span>
+          </div>
+          {/* Confidence is confluence strength, not a probability —
+              we've never backtested this, so it labels how many of
+              the 7 conditions agree, not "how likely this is right." */}
+          <div className="buysig-card-score">
+            <span className="buysig-card-score-frac">{row.score}/{row.max_score}</span>
+            <span className={`buysig-card-confidence buysig-card-confidence--${confidence}`}>
+              {confidence === "high" ? t("buySignals.high", "High") : confidence === "medium" ? t("buySignals.medium", "Medium") : t("buySignals.low", "Low")}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={`buysig-card-watch${isWatched ? " buysig-card-watch--active" : ""}`}
+            onClick={() => handleWatchlist(row.coin)}
+            disabled={watchlistingCoin === row.coin}
+            title={isWatched ? t("buySignals.unwatch", "Remove {{coin}} from watchlist", { coin: row.coin }) : t("buySignals.watch", "Add {{coin}} to watchlist", { coin: row.coin })}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={isWatched ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.8 21 12 17.3 6.2 21 7.8 14.1 2.5 9.5 9.5 8.9 12 2.5l2.5 6.4 7 .6-5.3 4.6z" /></svg>
+          </button>
+          <button
+            type="button"
+            className={`buysig-card-mute${isMuted ? " buysig-card-mute--active" : ""}`}
+            onClick={() => handleMute(row.coin)}
+            disabled={mutingCoin === row.coin}
+            title={isMuted ? t("buySignals.unmute", "Unmute {{coin}}", { coin: row.coin }) : t("buySignals.mute", "Mute {{coin}}", { coin: row.coin })}
+          >
+            {isMuted ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" /></svg>
+            )}
+          </button>
+        </div>
+        <div className="buysig-card-checks">
+          {SIGNAL_DEFS.map((def) => {
+            const hit = def.hit(row);
+            return (
+              <div key={def.id} className={`buysig-check${hit ? " buysig-check--hit" : ""}`}>
+                {hit ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="9" /></svg>
+                )}
+                <span>{def.label(row)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const addSearchLower = addSearch.trim().toLowerCase();
+  const addableCoins = COINS.filter((c) =>
+    !watchlistCoins.includes(c.symbol)
+    && (c.symbol.toLowerCase().includes(addSearchLower) || c.name.toLowerCase().includes(addSearchLower)));
+
   return (
     <>
       <button
@@ -212,77 +336,82 @@ export function BuySignals({ onOpenUpgrade }: Props) {
                 </div>
 
                 <div className="buysig-list">
+                  {/* My Watchlist — coins the user specifically wants to track, shown
+                      with their current score even when below the active threshold.
+                      A non-empty watchlist also narrows which coins push notifications
+                      fire for server-side. */}
+                  <div className="buysig-watchlist-section">
+                    <div className="buysig-watchlist-header">
+                      <span className="buysig-watchlist-title">{t("buySignals.watchlistTitle", "My Watchlist")}</span>
+                      <button
+                        type="button"
+                        className="buysig-add-btn"
+                        onClick={() => setShowAddPicker((v) => !v)}
+                      >
+                        {showAddPicker ? "✕" : `+ ${t("buySignals.addCoin", "Add coin")}`}
+                      </button>
+                    </div>
+
+                    {showAddPicker && (
+                      <div className="buysig-add-picker">
+                        <input
+                          type="text"
+                          className="buysig-add-search"
+                          placeholder={t("buySignals.searchCoin", "Search a coin…")}
+                          value={addSearch}
+                          onChange={(e) => setAddSearch(e.target.value)}
+                          autoFocus
+                        />
+                        <div className="buysig-add-results">
+                          {addableCoins.slice(0, 30).map((c) => (
+                            <button
+                              key={c.symbol}
+                              type="button"
+                              className="buysig-add-result"
+                              disabled={watchlistingCoin === c.symbol}
+                              onClick={() => { handleWatchlist(c.symbol); setAddSearch(""); }}
+                            >
+                              <span className="buysig-add-result-icon" style={{ background: COIN_COLORS[c.symbol] ?? "#7c8ba8" }}>
+                                {c.symbol[0]}
+                              </span>
+                              <span className="buysig-add-result-symbol">{c.symbol}</span>
+                              <span className="buysig-add-result-name">{c.name}</span>
+                            </button>
+                          ))}
+                          {addableCoins.length === 0 && (
+                            <p className="buysig-empty">{t("buySignals.noMatch", "No matching coins")}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {watchlistCoins.length === 0 ? (
+                      <p className="buysig-empty">{t("buySignals.watchlistEmpty", "Add a coin to always see its current signal status here, even when it's not actively flashing.")}</p>
+                    ) : (
+                      watchlistCoins.map((coin) => {
+                        const coinRows = watchlistRows.filter((r) => r.coin === coin);
+                        if (coinRows.length === 0) {
+                          return (
+                            <div key={coin} className="buysig-watch-pending">
+                              <span className="buysig-card-icon" style={{ background: COIN_COLORS[coin] ?? "#7c8ba8" }}>{coin[0]}</span>
+                              <span>{coin} — {t("buySignals.watchPending", "waiting for the next scan")}</span>
+                            </div>
+                          );
+                        }
+                        return coinRows.map((row) => renderCard(row));
+                      })
+                    )}
+                  </div>
+
+                  <div className="buysig-divider" />
+
                   {loading && rows.length === 0 && (
                     <p className="buysig-empty">{t("buySignals.loading", "Scanning…")}</p>
                   )}
                   {!loading && rows.length === 0 && (
                     <p className="buysig-empty">{t("buySignals.empty", "No coins are currently in a buy or sell zone. Check back after the next scan.")}</p>
                   )}
-                  {rows.map((row) => {
-                    const confidence = confidenceOf(row);
-                    const isMuted = mutedCoins.includes(row.coin);
-                    return (
-                      <div
-                        key={`${row.coin}-${row.direction}`}
-                        ref={(el) => { cardRefs.current[row.coin] = el; }}
-                        className={`buysig-card buysig-card--${row.direction}${highlightCoin === row.coin ? " buysig-card--highlight" : ""}`}
-                      >
-                        <div className="buysig-card-head">
-                          <div className="buysig-card-icon" style={{ background: COIN_COLORS[row.coin] ?? "#7c8ba8" }}>
-                            {row.coin[0]}
-                          </div>
-                          <div className="buysig-card-name">
-                            <span className={`buysig-card-direction buysig-card-direction--${row.direction}`}>
-                              {row.direction === "buy" ? t("buySignals.buy", "BUY") : t("buySignals.sell", "SELL")}
-                            </span>
-                            <span className="buysig-card-coin">
-                              {row.coin} / USD
-                              <span className="buysig-card-price">
-                                ${row.price.toLocaleString(undefined, { maximumFractionDigits: row.price < 1 ? 6 : 2 })}
-                              </span>
-                            </span>
-                          </div>
-                          {/* Confidence is confluence strength, not a probability —
-                              we've never backtested this, so it labels how many of
-                              the 7 conditions agree, not "how likely this is right." */}
-                          <div className="buysig-card-score">
-                            <span className="buysig-card-score-frac">{row.score}/{row.max_score}</span>
-                            <span className={`buysig-card-confidence buysig-card-confidence--${confidence}`}>
-                              {confidence === "high" ? t("buySignals.high", "High") : confidence === "medium" ? t("buySignals.medium", "Medium") : t("buySignals.low", "Low")}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className={`buysig-card-mute${isMuted ? " buysig-card-mute--active" : ""}`}
-                            onClick={() => handleMute(row.coin)}
-                            disabled={mutingCoin === row.coin}
-                            title={isMuted ? t("buySignals.unmute", "Unmute {{coin}}", { coin: row.coin }) : t("buySignals.mute", "Mute {{coin}}", { coin: row.coin })}
-                          >
-                            {isMuted ? (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>
-                            ) : (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z" /><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" /></svg>
-                            )}
-                          </button>
-                        </div>
-                        <div className="buysig-card-checks">
-                          {SIGNAL_DEFS.map((def) => {
-                            const hit = def.hit(row);
-                            return (
-                              <div key={def.id} className={`buysig-check${hit ? " buysig-check--hit" : ""}`}>
-                                {hit ? (
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                                ) : (
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="9" /></svg>
-                                )}
-                                <span>{def.label(row)}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {rows.map((row) => renderCard(row))}
                 </div>
 
                 <p className="buysig-disclaimer">

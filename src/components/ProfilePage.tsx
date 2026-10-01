@@ -230,6 +230,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const [pushEnabling,   setPushEnabling]   = useState(false);
   const [pushError,      setPushError]      = useState("");
 
+  // These two used to sit below the `if (!isOpen) return null;` early
+  // return further down — only ever called once the modal was actually
+  // open, so React saw a different hook count between the closed and open
+  // renders ("Rendered more hooks than during the previous render"),
+  // crashing the whole tree white every time the modal opened. Hooks must
+  // run unconditionally on every render, so these live up here with all
+  // the others now.
+  const [confidenceSaving, setConfidenceSaving] = useState(false);
+  const [unmutingCoin, setUnmutingCoin] = useState<string | null>(null);
+
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Full UI reset — only on a fresh open. This must NOT also depend on
@@ -435,7 +445,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     }
   };
 
-  const [confidenceSaving, setConfidenceSaving] = useState(false);
   const handleMinConfidenceChange = async (value: "low" | "medium" | "high") => {
     if (!user || confidenceSaving) return;
     setConfidenceSaving(true);
@@ -449,7 +458,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
     }
   };
 
-  const [unmutingCoin, setUnmutingCoin] = useState<string | null>(null);
   const handleUnmuteCoin = async (coin: string) => {
     if (!user || unmutingCoin) return;
     setUnmutingCoin(coin);

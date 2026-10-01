@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
   // below, since it varies per coin/direction, not just per user.
   const { data: eliteProfiles } = await supabaseAdmin
     .from("profiles")
-    .select("id, alert_sound, notify_buy_signals, notify_sell_signals, signal_muted_coins, signal_min_confidence")
+    .select("id, alert_sound, notify_buy_signals, notify_sell_signals, signal_muted_coins, signal_watchlist_coins, signal_min_confidence")
     .eq("tier", "elite")
     .or("notify_buy_signals.eq.true,notify_sell_signals.eq.true");
   const allProfiles = eliteProfiles ?? [];
@@ -219,10 +219,16 @@ Deno.serve(async (req) => {
         const confidence = confidenceOf(result.score);
         const confidenceRank = CONFIDENCE_RANK[confidence];
         const directionKey = direction === "buy" ? "notify_buy_signals" : "notify_sell_signals";
-        const recipients = allProfiles.filter((p) =>
-          p[directionKey]
-          && !(p.signal_muted_coins ?? []).includes(coin)
-          && confidenceRank >= (CONFIDENCE_RANK[p.signal_min_confidence ?? "low"] ?? 0));
+        const recipients = allProfiles.filter((p) => {
+          const watchlist = p.signal_watchlist_coins ?? [];
+          // An empty watchlist = unchanged behavior (notify for every
+          // qualifying coin). A non-empty one narrows it down to just
+          // the coins the user actually asked to be told about.
+          return p[directionKey]
+            && !(p.signal_muted_coins ?? []).includes(coin)
+            && confidenceRank >= (CONFIDENCE_RANK[p.signal_min_confidence ?? "low"] ?? 0)
+            && (watchlist.length === 0 || watchlist.includes(coin));
+        });
         if (recipients.length === 0) continue;
 
         const label = direction === "buy" ? "Possible Buy Zone" : "Possible Sell Zone";

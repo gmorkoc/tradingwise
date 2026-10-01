@@ -283,6 +283,156 @@
 }
 .buysig-check--hit svg { color: var(--signal-accent); }
 
+/* ── My Watchlist ─────────────────────────────────────────────────────── */
+
+.buysig-watchlist-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buysig-watchlist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.buysig-watchlist-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.buysig-add-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.buysig-add-btn:hover {
+  color: var(--color-text);
+}
+
+.buysig-add-picker {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card-bg);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.buysig-add-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  padding: 8px 10px;
+}
+.buysig-add-search:focus { outline: none; border-color: var(--color-primary); }
+
+.buysig-add-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.buysig-add-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 7px 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.buysig-add-result:hover:not(:disabled) { background: var(--color-input-bg); }
+.buysig-add-result:disabled { opacity: 0.5; cursor: default; }
+
+.buysig-add-result-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.buysig-add-result-symbol {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.buysig-add-result-name {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+.buysig-watch-pending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  padding: 10px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+}
+
+.buysig-card-watch {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.buysig-card-watch:hover:not(:disabled) {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+.buysig-card-watch--active {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.1);
+}
+.buysig-card-watch:disabled { opacity: 0.5; cursor: default; }
+
+.buysig-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 2px 0;
+}
+
 .buysig-disclaimer {
   font-size: 0.68rem;
   color: var(--color-text-muted);
