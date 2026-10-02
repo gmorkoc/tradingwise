@@ -457,12 +457,24 @@
 }
 
 .db-section-label {
+  position: relative;
   padding: 12px 14px 6px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-muted);
+}
+
+/* Same light, inset divider as between list items — separates the
+   featured card above from "Your latest" below. */
+.db-section-label::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
 }
 
 .db-list-chips {
@@ -517,11 +529,24 @@
 }
 
 .db-list-item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
   text-decoration: none;
+}
+
+/* Inset divider (not edge-to-edge) — a pseudo-element instead of a real
+   border so it can stop short of both side edges independently of the
+   item's own padding. */
+.db-list-item:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
 }
 
 .db-list-thumb {
@@ -584,6 +609,24 @@
     right: var(--native-safe-area-right, env(safe-area-inset-right));
     max-width: none;
   }
+
+  /* The sheet itself goes edge-to-edge above, but the card and its content
+     still carried the same 14px side gutter used at every width — on a
+     narrow phone screen that reads as a lot of wasted margin either side
+     of the headline/thumbnail. Tightened here, not removed outright, so
+     there's still a little breathing room. */
+  .db-card { margin-left: 6px; margin-right: 6px; }
+  .db-featured-badge,
+  .db-featured-main,
+  .db-section-label,
+  .db-list-item {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  /* Left stays 22px — that's room for the timeline dot/marker graphic
+     (.db-timeline-marker), not a side gutter, so it isn't part of this. */
+  .db-timeline { padding-right: 8px; }
+  .db-section-label::before { left: 8px; right: 8px; }
 }
 
 @media (max-width: 480px) {

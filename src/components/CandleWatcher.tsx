@@ -2917,10 +2917,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // regardless of what interval is on screen, since this is specifically
   // hunting for month-scale shape repeats (30-day window), not shape-matching
   // whatever short interval the chart happens to be set to. Both the "live"
-  // window and the historical search corpus come from this same daily pull,
-  // so it only needs to re-run on coin change, not interval change.
+  // window and the historical search corpus come from this same daily pull.
+  // Re-runs on coin change AND every time the Monthly Fractals tab is
+  // (re)opened — rightTab is in the deps and the effect only fetches while
+  // it's the active tab, so switching away and back always gets a fresh
+  // pull instead of showing whatever was last computed (prices/candles can
+  // have moved on since). `cancelled` guards against a slower in-flight
+  // fetch for a since-abandoned coin/tab state clobbering a newer one.
   useEffect(() => {
-    if (!isElite || !coin) return;
+    if (!isElite || !coin || rightTab !== "fractal") return;
+    let cancelled = false;
     setFractalLoading(true);
     // 6000 daily candles (~16y) comfortably exceeds any coin's actual
     // history on Binance (oldest USDT pairs go back to ~2017) — the fetch
@@ -2929,16 +2935,19 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // coinglass.ts), so this reaches all the way back to listing for every
     // coin without wasting requests on younger ones.
     coinglass.getCandles(coin as string, "1d", 6000).then(cs => {
+      if (cancelled) return;
       const fa = detectFractalAnalogs(cs, cs);
       fractalAnalogsRef.current = fa;
       setFractalAnalogs(fa);
       setSelectedFractalIdx(0);
       setExpandedFractalIdx(null);
     }).catch(() => {
+      if (cancelled) return;
       fractalAnalogsRef.current = null;
       setFractalAnalogs(null);
-    }).finally(() => setFractalLoading(false));
-  }, [coin, isElite]);
+    }).finally(() => { if (!cancelled) setFractalLoading(false); });
+    return () => { cancelled = true; };
+  }, [coin, isElite, rightTab]);
 
   // Run AI + macro fetch when flagged — elite only
   useEffect(() => {

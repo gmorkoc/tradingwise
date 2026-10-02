@@ -1,0 +1,1176 @@
+/* ── Floating trigger ──────────────────────────────────────────────────────
+   Dark capsule + a small glowing sphere, idle-status read ("Agent ready") —
+   a generic status-pill pattern, built fresh here (own markup/timing/
+   values), not copied from any reference. */
+.ta-trigger {
+  position: fixed;
+  right: 12px;
+  bottom: 148px; /* sits above CoinChat's mobile trigger (bottom:88px) so the two never overlap */
+  z-index: 260;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 20px 8px 8px;
+  border: none;
+  border-radius: 999px;
+  background: #0a0d1c;
+  color: #d8dbe4;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  transition: padding 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ta-trigger--open { display: none; }
+/* Light theme — light fill, dark text. The glowing orb itself stays the
+   same blue in both themes. */
+html[data-theme="light"] .ta-trigger {
+  background: #ffffff;
+  color: #1c1a3a;
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+}
+/* Resting state — settles down to just the circle after a few idle
+   seconds (see the component's collapse timeout), the orb's own padding
+   becoming the button's full hit area instead of a wide labeled pill. */
+.ta-trigger--collapsed {
+  padding: 8px;
+}
+
+.ta-trigger-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fb7185;
+  box-shadow: 0 0 0 2px #0a0d1c, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+  animation: ta-trigger-dot-pulse 1.6s ease-in-out infinite;
+}
+html[data-theme="light"] .ta-trigger-dot {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+}
+@keyframes ta-trigger-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.25); opacity: 0.75; }
+}
+
+.ta-trigger-label {
+  margin-left: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  transition: max-width 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, margin-left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ta-trigger--collapsed .ta-trigger-label {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+}
+
+.ta-trigger-cursor {
+  display: inline-block;
+  width: 1px;
+  height: 0.9em;
+  margin-left: 2px;
+  background: currentColor;
+  vertical-align: text-bottom;
+  animation: ta-cursor-blink 0.9s step-end infinite;
+}
+@keyframes ta-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* Lit sphere with a soft terminator — a bright crescent fading through
+   mid-blue into deep navy/black shadow, like a sunlit planet/moon, not a
+   flat uniformly-lit disc. */
+.ta-trigger-orb {
+  position: relative;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #05070f;
+  box-shadow:
+    0 0 10px 2px rgba(130, 180, 255, 0.5),
+    0 0 20px 6px rgba(80, 140, 255, 0.3);
+  animation: ta-orb-glow 3.2s ease-in-out infinite, ta-orb-scale 3.2s ease-in-out infinite;
+}
+/* The "sunlit" gradient rotates continuously around the sphere's own
+   center — a square exactly circumscribing the circular clip, so rotating
+   it never reveals a gap, and its off-center bright spot sweeps the
+   terminator around like a slowly rotating planet. */
+.ta-trigger-orb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 12%, #f3f8ff 0%, #cfe4ff 20%, #6fa3e8 44%, #2a52a0 66%, #16305f 88%, #0a1430 100%);
+  animation: ta-orb-rotate 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes ta-orb-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* One-shot entrance (mount only) — overrides the two infinite animations
+   above for its short duration via source order, a bright overshoot pop
+   instead of the gentle idle breathe, then hands back off to them once
+   the component drops this class (see TradingAgent.tsx). */
+.ta-trigger-orb--pop {
+  animation: ta-orb-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes ta-orb-pop {
+  0%   { transform: scale(0.3); box-shadow: 0 0 0 0 rgba(170, 210, 255, 0); }
+  45%  { transform: scale(1.25); box-shadow: 0 0 26px 10px rgba(170, 210, 255, 0.9), 0 0 50px 18px rgba(120, 170, 255, 0.6); }
+  100% { transform: scale(1); box-shadow: 0 0 10px 2px rgba(130, 180, 255, 0.5), 0 0 20px 6px rgba(80, 140, 255, 0.3); }
+}
+@keyframes ta-orb-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 10px 2px rgba(130, 180, 255, 0.5),
+      0 0 20px 6px rgba(80, 140, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 14px 4px rgba(150, 195, 255, 0.75),
+      0 0 30px 10px rgba(90, 150, 255, 0.5);
+  }
+}
+@keyframes ta-orb-scale {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+@media (min-width: 641px) {
+  .ta-trigger { right: 20px; bottom: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-trigger-orb, .ta-trigger-orb::before { animation: none; }
+}
+
+/* ── Panel shell ───────────────────────────────────────────────────────────
+   Glossy/elegant glass — soft gradients, frosted blur, gentle shadows —
+   not the neon-terminal look this started as. One token set (--ta-*),
+   fully redefined for light mode below. */
+.ta-panel {
+  --ta-accent: #6ea8ff;
+  --ta-accent-2: #a78bfa;
+  --ta-bg-1: #14182a;
+  --ta-bg-2: #0a0c18;
+  --ta-text: #eef0f7;
+  --ta-text-dim: #9298ad;
+  --ta-border: rgba(255, 255, 255, 0.1);
+  --ta-overlay: rgba(255, 255, 255, 0.04);
+  --ta-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: var(--ta-text);
+  border: 1px solid var(--ta-border);
+  overflow: hidden;
+}
+/* ── "Agent ready" panel intro — plays once per open, over the content ──── */
+.ta-panel-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
+  animation: ta-panel-intro-fade 3.1s ease both;
+  pointer-events: none;
+}
+.ta-panel-intro-orb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+.ta-panel-intro-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ta-text);
+  letter-spacing: 0.01em;
+}
+@keyframes ta-panel-intro-fade {
+  0%      { opacity: 0; }
+  5%, 75% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-panel-intro { animation: none; opacity: 0; }
+}
+html[data-theme="light"] .ta-panel {
+  --ta-bg-1: #ffffff;
+  --ta-bg-2: #f2f4fa;
+  --ta-text: #1a2030;
+  --ta-text-dim: #767f93;
+  --ta-border: rgba(30, 40, 70, 0.1);
+  --ta-overlay: rgba(20, 30, 60, 0.04);
+}
+
+/* Desktop: right-docked floating panel */
+@media (min-width: 641px) {
+  .ta-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 820px;
+    height: min(880px, calc(100vh - 40px));
+    border-radius: 20px;
+    box-shadow: 0 40px 110px rgba(0, 0, 0, 0.48), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
+    z-index: 260;
+    /* Two-stage entrance, anchored bottom-right (where the trigger sits):
+       height first (scaleY, growing upward — "bottom to top"), then width
+       (scaleX, growing from the right edge leftward) once the height has
+       mostly settled, both via one keyframe so they run in that order
+       rather than simultaneously. */
+    transform-origin: bottom right;
+    animation: ta-panel-in-desktop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes ta-panel-in-desktop {
+  0%   { transform: scaleY(0.08) scaleX(0.9); opacity: 0; }
+  55%  { transform: scaleY(1) scaleX(0.9); opacity: 1; }
+  100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+
+/* Mobile: full-screen sheet (portaled to <body>) */
+@media (max-width: 640px) {
+  .ta-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 300100;
+    border: none;
+    border-radius: 0;
+    padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+    padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
+    animation: ta-panel-in-mobile 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+@keyframes ta-panel-in-mobile {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-panel { animation: none; }
+}
+
+.ta-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--ta-border);
+  flex-shrink: 0;
+}
+.ta-head-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ta-text);
+}
+.ta-head-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.ta-head-actions { display: flex; align-items: center; gap: 2px; }
+.ta-head-icon-btn {
+  border: none;
+  background: none;
+  color: var(--ta-text-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 8px;
+}
+.ta-head-icon-btn:hover { color: var(--ta-text); background: var(--ta-overlay); }
+.ta-head-close {
+  border: none;
+  background: none;
+  color: var(--ta-text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.ta-head-close:hover { color: var(--ta-text); }
+
+/* ── Conversation history ────────────────────────────────────────────────── */
+.ta-history {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  gap: 10px;
+}
+.ta-history-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ta-history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+  background: var(--ta-overlay);
+  border: 1px solid transparent;
+}
+.ta-history-item--active { border-color: var(--ta-accent); }
+.ta-history-item-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--ta-text);
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ta-history-item-preview {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ta-history-item-meta {
+  font-size: 0.68rem;
+  color: var(--ta-text-dim);
+}
+.ta-history-item-delete {
+  border: none;
+  background: none;
+  color: var(--ta-text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 10px;
+  flex-shrink: 0;
+}
+.ta-history-item-delete:hover { color: #fb7185; }
+.ta-history-back {
+  border: 1px solid var(--ta-border);
+  background: transparent;
+  color: var(--ta-text);
+  border-radius: 999px;
+  padding: 9px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Portfolio summary strip ─────────────────────────────────────────────── */
+.ta-portfolio {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ta-border);
+  flex-shrink: 0;
+}
+.ta-portfolio-cash {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+.ta-portfolio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+}
+.ta-portfolio-label::before {
+  content: "$";
+  font-family: var(--ta-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ta-accent);
+}
+.ta-portfolio-value {
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.ta-portfolio-value--editable {
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.ta-portfolio-value--editable:hover { opacity: 0.8; }
+.ta-portfolio-cash-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ta-portfolio-cash-edit-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ta-portfolio-cash-edit-link:hover { color: var(--ta-accent); }
+.ta-portfolio-cash-edit {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--ta-border);
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+.ta-portfolio-cash-prefix {
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ta-accent);
+}
+.ta-portfolio-cash-input {
+  width: 100px;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--ta-text);
+}
+.ta-portfolio-positions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ta-position {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: var(--ta-text-dim);
+  background: var(--ta-overlay);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.ta-position-coin { font-weight: 700; color: var(--ta-text); flex-shrink: 0; }
+.ta-position-qty { flex: 1; text-align: right; font-family: var(--ta-mono); color: var(--ta-text-dim); }
+.ta-position-close {
+  flex-shrink: 0;
+  border: 1px solid var(--ta-border);
+  background: none;
+  color: var(--ta-text-dim);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ta-position-close:hover { border-color: #fb7185; color: #fb7185; }
+.ta-position-close:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Message feed ──────────────────────────────────────────────────────── */
+.ta-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ta-feed::-webkit-scrollbar { width: 5px; }
+.ta-feed::-webkit-scrollbar-thumb { background: var(--ta-border); border-radius: 999px; }
+
+.ta-empty {
+  font-size: 0.82rem;
+  color: var(--ta-text-dim);
+  line-height: 1.7;
+  text-align: center;
+  margin: auto;
+  padding: 0 14px;
+}
+
+.ta-msg { max-width: 88%; }
+.ta-msg--user { align-self: flex-end; }
+.ta-msg--agent { align-self: flex-start; }
+
+.ta-msg-text {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+/* iMessage bubble colors — the blue "sent" bubble is the same fixed blue
+   in both themes (real iMessage doesn't recolor it for dark mode either);
+   only the gray "received" bubble swaps per theme below. */
+.ta-msg--user .ta-msg-text {
+  background: #0b93f6;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.ta-msg--agent .ta-msg-text {
+  background: #3b3b3d;
+  border: none;
+  color: #e9e9eb;
+  border-bottom-left-radius: 4px;
+}
+html[data-theme="light"] .ta-msg--agent .ta-msg-text {
+  background: #e9e9eb;
+  color: #000;
+}
+
+/* ── Typing indicator ──────────────────────────────────────────────────── */
+/* A real bubble (same gray as a normal agent reply), not a borderless
+   floating row — a transparent row sitting right next to the blurred
+   .ta-panel backdrop-filter is what was rendering as a stray gray smear on
+   iOS (WebKit's known repaint-artifact behavior for a no-background element
+   that's animating, inside a blurred ancestor). Giving it its own solid
+   background sidesteps that class of bug entirely instead of chasing it. */
+.ta-msg-text.ta-typing {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #3b3b3d;
+  border: none;
+  border-bottom-left-radius: 4px;
+}
+html[data-theme="light"] .ta-msg-text.ta-typing {
+  background: #e9e9eb;
+}
+.ta-msg-text.ta-typing .ta-thinking-orb { margin-top: 2px; }
+.ta-thinking-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ta-thinking-label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ta-text-dim);
+}
+/* Same glowing-orb look as the trigger button, scaled down — the agent
+   "thinking" feel carries through instead of a generic three-dot spinner. */
+.ta-thinking-orb {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #8fc3ff 0%, #3f7fd9 42%, #122a5c 82%, #0a1738 100%);
+  box-shadow:
+    0 0 6px 1px rgba(130, 180, 255, 0.5),
+    0 0 12px 3px rgba(80, 140, 255, 0.3);
+  animation: ta-thinking-orb-glow 1.3s ease-in-out infinite, ta-orb-scale 1.3s ease-in-out infinite;
+}
+@keyframes ta-thinking-orb-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 6px 1px rgba(130, 180, 255, 0.5),
+      0 0 12px 3px rgba(80, 140, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 9px 2px rgba(150, 195, 255, 0.8),
+      0 0 18px 5px rgba(90, 150, 255, 0.55);
+  }
+}
+
+/* ── News sources ──────────────────────────────────────────────────────── */
+.ta-sources {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ta-sources-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+}
+.ta-sources-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ta-sources-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  color: var(--ta-text-dim);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ta-sources-chip:hover { color: var(--ta-text); border-color: var(--ta-accent); }
+
+/* ── Proposal card ─────────────────────────────────────────────────────── */
+.ta-proposal {
+  margin-top: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  padding: 12px 14px;
+}
+.ta-proposal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ta-proposal-side {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.ta-proposal-side--buy { color: #22c55e; background: rgba(34, 197, 94, 0.14); }
+.ta-proposal-side--sell { color: #fb7185; background: rgba(251, 113, 133, 0.14); }
+.ta-proposal-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--ta-accent);
+  background: rgba(110, 168, 255, 0.14);
+}
+.ta-proposal-coin { font-weight: 700; font-size: 0.84rem; color: var(--ta-text); }
+.ta-proposal-market {
+  margin-left: auto;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ta-text-dim);
+  border: 1px solid var(--ta-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.ta-proposal-details {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 10px;
+  margin-bottom: 10px;
+}
+.ta-proposal-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--ta-text-dim);
+}
+.ta-proposal-detail strong {
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  color: var(--ta-text);
+}
+.ta-proposal-detail strong.ta-proposal-tp { color: #22c55e; }
+.ta-proposal-detail strong.ta-proposal-sl { color: #fb7185; }
+.ta-proposal-pnl {
+  font-family: var(--ta-mono);
+  font-weight: 600;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+.ta-proposal-reason {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--ta-accent);
+  background: var(--ta-overlay);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--ta-text-dim);
+}
+.ta-proposal-actions { display: flex; gap: 8px; }
+.ta-proposal-confirm,
+.ta-proposal-dismiss {
+  flex: 1;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ta-proposal-confirm {
+  border: none;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3);
+}
+.ta-proposal-confirm:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+.ta-proposal-dismiss {
+  border: 1px solid var(--ta-border);
+  background: transparent;
+  color: var(--ta-text-dim);
+}
+.ta-proposal-status {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+}
+
+/* ── Basket proposal ───────────────────────────────────────────────────── */
+.ta-basket-legs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ta-basket-leg {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ta-border);
+}
+.ta-basket-leg:last-child { border-bottom: none; padding-bottom: 0; }
+.ta-basket-leg .ta-proposal-row { margin-bottom: 6px; }
+.ta-basket-leg .ta-proposal-details { margin-bottom: 0; }
+.ta-basket-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 8px;
+  margin-bottom: 10px;
+  border-top: 1px solid var(--ta-border);
+  font-size: 0.78rem;
+  color: var(--ta-text-dim);
+}
+.ta-basket-total strong {
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  color: var(--ta-text);
+}
+
+/* ── Clarifying question ───────────────────────────────────────────────── */
+.ta-question {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ta-question-prompt {
+  margin: 0 0 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ta-text);
+}
+.ta-question-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.ta-question-option:disabled { opacity: 0.55; cursor: default; }
+.ta-question-option-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ta-text);
+}
+.ta-question-option-desc {
+  font-size: 0.74rem;
+  color: var(--ta-text-dim);
+}
+
+/* ── Watch chip ─────────────────────────────────────────────────────────── */
+.ta-watch {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  padding: 8px 8px 8px 14px;
+}
+.ta-watch-text {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--ta-text-dim);
+}
+.ta-watch-text strong { color: var(--ta-text); font-weight: 700; }
+.ta-watch-cancel {
+  flex-shrink: 0;
+  border: 1px solid var(--ta-border);
+  background: transparent;
+  color: var(--ta-text-dim);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ta-watch-cancel:disabled { opacity: 0.5; cursor: default; }
+.ta-watch-status {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+  padding-right: 6px;
+}
+.ta-watch--triggered { border-color: rgba(34, 197, 94, 0.35); }
+.ta-watch--triggered .ta-watch-status { color: #22c55e; }
+.ta-watch--cancelled { opacity: 0.6; }
+
+.ta-error {
+  margin: 0 18px 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(251, 113, 133, 0.12);
+  font-size: 0.78rem;
+  color: #fb7185;
+  flex-shrink: 0;
+}
+
+/* ── Onboarding / consent gate ───────────────────────────────────────────── */
+.ta-onboard {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ta-onboard-disclaimer {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--ta-text-dim);
+  background: var(--ta-overlay);
+  border: 1px solid var(--ta-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.ta-onboard-disclaimer strong { color: var(--ta-text); }
+.ta-onboard-chips { display: flex; flex-wrap: nowrap; gap: 8px; }
+.ta-onboard-chip {
+  flex: 1;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  color: var(--ta-text);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ta-onboard-chip--active {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  color: #fff;
+}
+.ta-onboard-chips--wrap { flex-wrap: wrap; }
+.ta-onboard-chips--wrap .ta-onboard-chip { flex: 0 0 auto; }
+.ta-onboard-toggle-row { display: flex; gap: 8px; }
+.ta-onboard-toggle-row .ta-onboard-chip { flex: 1; }
+.ta-focus-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid rgba(110, 168, 255, 0.4);
+  color: var(--ta-text);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin: 5px 6px 5px 0;
+}
+.ta-focus-pill-x {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--ta-bg-2);
+  color: var(--ta-text);
+  font-size: 0.55rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 0 0 1.5px var(--ta-border);
+}
+.ta-focus-pill-x:hover { background: #fb7185; color: #fff; box-shadow: 0 0 0 1.5px #fb7185; }
+.ta-onboard-suggestions {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  border: 1px solid var(--ta-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ta-onboard-suggestion {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 8px 12px;
+  background: var(--ta-overlay);
+  border: none;
+  color: var(--ta-text-dim);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ta-onboard-suggestion strong { color: var(--ta-text); font-weight: 700; }
+.ta-onboard-suggestion:hover { background: var(--ta-border); }
+.ta-onboard-input {
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  color: var(--ta-text);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+}
+.ta-onboard-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  border-radius: 10px;
+  padding: 0 12px;
+}
+.ta-onboard-custom--tags {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding: 6px 8px;
+}
+.ta-onboard-custom--tags .ta-onboard-chip--active {
+  flex: 0 0 auto;
+}
+.ta-onboard-custom--tags .ta-onboard-input--inline {
+  padding: 3px 4px;
+  min-width: 90px;
+}
+.ta-onboard-custom-prefix {
+  font-size: 0.85rem;
+  color: var(--ta-text-dim);
+  flex-shrink: 0;
+}
+.ta-onboard-input--inline {
+  border: none;
+  background: none;
+  padding: 9px 0;
+  flex: 1;
+  min-width: 0;
+}
+.ta-onboard-input:focus {
+  outline: none;
+  border-color: var(--ta-accent);
+  box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.14);
+}
+/* Higher specificity than the rule above (both classes, not one) so this
+   reliably wins regardless of source order — the inline balance input
+   sits inside .ta-onboard-custom, which already shows its own border; it
+   shouldn't ALSO grow a focus ring of its own. */
+.ta-onboard-input.ta-onboard-input--inline:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+.ta-onboard-custom--invalid {
+  border-color: #fb7185;
+}
+.ta-onboard-field-error {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  color: #fb7185;
+}
+.ta-onboard-field-hint {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  color: var(--ta-text-dim);
+}
+.ta-onboard-help-link {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ta-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.ta-onboard-help {
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  border-radius: 12px;
+}
+.ta-onboard-help-question {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ta-text);
+}
+.ta-onboard-help-question strong { color: var(--ta-accent); }
+.ta-onboard-continue {
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  box-shadow: 0 8px 20px rgba(110, 168, 255, 0.3);
+  cursor: pointer;
+}
+.ta-onboard-continue:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+/* ── Guided onboarding steps (one question at a time) ────────────────────── */
+.ta-onboard-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ta-onboard-step--active {
+  animation: ta-step-in 0.3s ease both;
+}
+@keyframes ta-step-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.ta-onboard-step-question {
+  margin: 0;
+  align-self: flex-start;
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  background: var(--ta-overlay);
+  border: 1px solid var(--ta-border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ta-text);
+}
+.ta-onboard-sublabel {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+}
+.ta-onboard-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.ta-onboard-typing-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+}
+.ta-onboard-step--done {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--ta-text-dim);
+  opacity: 0.7;
+}
+.ta-onboard-step-check {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+/* ── Composer ──────────────────────────────────────────────────────────── */
+.ta-composer {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--ta-border);
+  flex-shrink: 0;
+}
+.ta-composer-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--ta-border);
+  border-radius: 999px;
+  background: var(--ta-overlay);
+  color: var(--ta-text);
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.ta-composer-input::placeholder { color: var(--ta-text-dim); }
+.ta-composer-input:focus {
+  outline: none;
+  border-color: var(--ta-accent);
+  box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.14);
+}
+.ta-composer-send {
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 0 20px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3);
+}
+.ta-composer-send:disabled { opacity: 0.45; cursor: default; box-shadow: none; }

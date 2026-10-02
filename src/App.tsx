@@ -19,6 +19,10 @@ import { CATALOG } from "./services/coinCatalog";
 // shared CATALOG, which Watchlist/price-fetching/search all iterate over
 // assuming every entry is a real tradeable coin with a Binance pair.
 const CASH_ID = "cash";
+// Hidden for now (not removed — may come back, or stay alongside the new
+// Trading Agent as a separate feature; nothing in CoinChat.tsx/css/service
+// was touched). Flip to true to bring it back.
+const SHOW_COIN_CHAT = false;
 import { fetchBinancePrices } from "./services/binancePrices";
 import { consumePendingCoinMention } from "./services/pushNotifications";
 import { initWebPushMessageRouting } from "./services/webPush";
@@ -34,6 +38,7 @@ import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
+import { TradingAgent } from "./components/TradingAgent";
 import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
 import { TopMoversCarousel } from "./components/TopMoversCarousel";
@@ -2043,8 +2048,8 @@ function AppDashboard({
                         onOpenAuth={onOpenAuth}
                         onOpenUpgrade={onOpenUpgrade}
                         onFullscreenChange={setChartFullscreen}
-                        coinChatOpen={showCoinChat}
-                        onToggleCoinChat={() => setShowCoinChat((v) => !v)}
+                        coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
+                        onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                       />
                       <div
                         className="chart-resize-handle"
@@ -2221,7 +2226,7 @@ function AppDashboard({
           </div>
         </div>
 
-        {activeSection === "chart" && (
+        {SHOW_COIN_CHAT && activeSection === "chart" && (
           <aside
             className={`coin-chat-dock${showCoinChat ? " coin-chat-dock--open" : ""}${chatExpanded ? " coin-chat-dock--expanded" : ""}`}
           >
@@ -2605,6 +2610,7 @@ function AppDashboard({
         <DailyBrief coinTickers={coinTickers} />
       )}
       <PushToast />
+      <TradingAgent selectedCoin={coin} />
 
       {priceTicker &&
         (pipWindow

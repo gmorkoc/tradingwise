@@ -1546,6 +1546,23 @@ export async function fetchCoin24hTickers(
   return map;
 }
 
+// Uncached single-symbol spot price — deliberately bypasses the shared
+// ticker24hCache above. That cache is a single blob keyed to whatever coin
+// list the last caller asked for (fine for a dashboard ticker tape, where
+// every caller wants the same batch); but a trade-execution price lookup
+// for one specific coin must never silently return a stale cache that
+// happens to be missing that exact coin because some other page/action
+// last populated it with a different coin list.
+export async function fetchLivePrice(coin: string): Promise<number | null> {
+  try {
+    const res = await bnApi.get('/api/v3/ticker/price', { params: { symbol: `${coin}USDT` } });
+    const price = parseFloat(res.data?.price ?? '0');
+    return price > 0 ? price : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchFundingRate(coin: string): Promise<number | null> {
   try {
     const symbol = coin === 'BTC' ? 'BTCUSDT' : `${coin}USDT`;
