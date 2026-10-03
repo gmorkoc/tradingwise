@@ -6,8 +6,11 @@
 import { fetchKlines } from "./klines.ts";
 import { calcRSI, calcMACD, calcBB, calcATR, calcVolRatio, calcSMA, CandleDataPoint } from "./indicators.ts";
 
+export type MarketInterval = "1h" | "4h" | "1d";
+
 export interface MarketContext {
   coin: string;
+  interval: MarketInterval;
   price: number;
   rsi: number | null;
   macdHist: number | null;
@@ -18,16 +21,24 @@ export interface MarketContext {
   riskPct: number | null;
 }
 
-// A real desk trader never reads one timeframe in isolation — the 1h data
-// drives entry timing/momentum, but a 4h SMA20-vs-SMA50 trend read decides
-// whether a setup is "with the trend" (higher conviction) or "counter-trend"
-// (needs a much stronger reason to take). Fetched alongside the 1h candles
-// so this costs one extra request, not a second round trip.
-export async function getMarketContext(coin: string): Promise<MarketContext | null> {
+// The timeframe one step up from each supported interval — used for the
+// higher-timeframe trend read, same "never read one timeframe in
+// isolation" reasoning regardless of which interval is the primary one.
+const HTF_FOR: Record<MarketInterval, string> = { "1h": "4h", "4h": "1d", "1d": "1w" };
+
+// Default ("4h") is deliberate, not arbitrary — it matches the number this
+// app's own header widget shows elsewhere (coinglass.ts's getAllBTCData,
+// also built off 4h candles). Reasoning off a different timeframe than what
+// the user can see on screen caused real, repeated confusion (a user
+// quoting the header's RSI, which never matched what a watch here was
+// actually checking) before this was aligned. A standing watch can still
+// choose "1h" or "1d" explicitly (see agent_watches.interval) when the user
+// wants faster or slower alerts than the header's own default.
+export async function getMarketContext(coin: string, interval: MarketInterval = "4h"): Promise<MarketContext | null> {
   try {
     const [candles, htfCandles]: [CandleDataPoint[], CandleDataPoint[]] = await Promise.all([
-      fetchKlines(coin, "1h", 100),
-      fetchKlines(coin, "4h", 60),
+      fetchKlines(coin, interval, 100),
+      fetchKlines(coin, HTF_FOR[interval], 60),
     ]);
     if (candles.length < 20) return null;
     const price = candles[candles.length - 1].close;
@@ -47,6 +58,7 @@ export async function getMarketContext(coin: string): Promise<MarketContext | nu
 
     return {
       coin,
+      interval,
       price,
       rsi: calcRSI(candles),
       macdHist: macd.hist,

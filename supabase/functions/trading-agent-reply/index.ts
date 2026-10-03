@@ -129,6 +129,12 @@ interface AgentAction {
 interface AgentWatch {
   coin: string;
   condition: string;
+  // Which timeframe the condition is checked against — only meaningful for
+  // an indicator-based condition (RSI/MACD/volume); a plain price level has
+  // no timeframe, so the model still fills this in (default "4h") but it's
+  // simply ignored for that case. The client lets the user change this
+  // before confirming, so it's a genuine default, not the final answer.
+  interval: "1h" | "4h" | "1d";
 }
 
 interface AgentQuestionOption {
@@ -154,6 +160,10 @@ interface AgentResponse {
   question: AgentQuestion | null;
   balanceUpdate: BalanceUpdate | null;
   newsSources: NewsItem[] | null;
+  // The full live-streamed narration (trend/RSI/MACD/volume/news
+  // walkthrough) — persisted alongside "reply" so it survives the turn and
+  // a reload, not just shown transiently while streaming.
+  thoughtProcess: string | null;
 }
 
 // Raw shape the model actually returns — "newsRefs" are indices into the
@@ -161,7 +171,7 @@ interface AgentResponse {
 // trusted/shown directly (the model could invent a title/URL). The server
 // maps them back to the real fetched headlines before anything reaches the
 // client — see resolveNewsSources below.
-interface RawAgentResponse extends Omit<AgentResponse, "newsSources"> {
+interface RawAgentResponse extends Omit<AgentResponse, "newsSources" | "thoughtProcess"> {
   newsRefs?: number[] | null;
 }
 
@@ -174,7 +184,12 @@ function resolveNewsSources(newsRefs: number[] | null | undefined, news: NewsIte
 }
 
 function formatMarketLine(market: MarketContext): string {
-  return `${market.coin} — price $${market.price.toLocaleString()}, RSI(14) ${market.rsi?.toFixed(1) ?? "n/a"}, MACD histogram ${market.macdHist?.toFixed(4) ?? "n/a"}, Bollinger %B ${market.bbPct != null ? (market.bbPct * 100).toFixed(0) + "%" : "n/a"}, ATR ${market.atr?.toFixed(2) ?? "n/a"} (${market.riskPct != null ? market.riskPct.toFixed(2) + "% of price" : "n/a"} — a reasonable per-trade invalidation distance), volume ratio ${market.volRatio?.toFixed(2) ?? "n/a"}, 4h trend bias: ${market.htfTrend ?? "n/a"}.`;
+  // "(4h)" tags on RSI/MACD/volume are deliberate, not decoration — chosen
+  // specifically to MATCH this app's own header widget elsewhere
+  // (coinglass.ts's getAllBTCData, also built off 4h candles), since
+  // reasoning off a different timeframe than what the user can see on
+  // screen caused real, repeated confusion before this was aligned.
+  return `${market.coin} — price $${market.price.toLocaleString()}, RSI(14, 4h) ${market.rsi?.toFixed(1) ?? "n/a"}, MACD histogram (4h) ${market.macdHist?.toFixed(4) ?? "n/a"}, Bollinger %B ${market.bbPct != null ? (market.bbPct * 100).toFixed(0) + "%" : "n/a"}, ATR ${market.atr?.toFixed(2) ?? "n/a"} (${market.riskPct != null ? market.riskPct.toFixed(2) + "% of price" : "n/a"} — a reasonable per-trade invalidation distance), volume ratio (4h) ${market.volRatio?.toFixed(2) ?? "n/a"}, daily trend bias: ${market.htfTrend ?? "n/a"}.`;
 }
 
 // LLM arithmetic on dollar figures is not trustworthy enough to show
@@ -221,14 +236,39 @@ function sanitizeBalanceUpdate(bu: BalanceUpdate | null | undefined): BalanceUpd
   return { newBalance: bu.newBalance, reason: typeof bu.reason === "string" ? bu.reason : "" };
 }
 
-// Delimiter the model is instructed to emit between its free-text
-// "thinking out loud" narration and the structured JSON payload — lets one
-// completion serve both the live "what the agent is noticing" stream the
-// UI shows while waiting, and the actual structured action/basket/
-// watch/question it ends with. Unlikely to collide with real output
-// (upper-case, dashes, no spaces) but checked as a whole-line match below
-// anyway, not a substring, to be sure.
+// The model's output isn't type-checked at runtime — a cast to AgentWatch
+// doesn't guarantee "interval" is actually one of the three real values, so
+// anything else (an invented string, a missing field) falls back to the
+// same "4h" default the prompt asks for, rather than reaching the client
+// — and agent_watches' own check constraint — as garbage.
+function sanitizeWatch(w: AgentWatch | null | undefined): AgentWatch | null {
+  if (!w || typeof w.coin !== "string" || typeof w.condition !== "string") return null;
+  const interval = w.interval === "1h" || w.interval === "1d" ? w.interval : "4h";
+  return { coin: w.coin, condition: w.condition, interval };
+}
+
+// The model is instructed to write free-text "thinking out loud" narration
+// first, then the structured JSON payload — lets one completion serve both
+// the live "what the agent is noticing" stream the UI shows while waiting,
+// and the actual structured action/basket/watch/question it ends with.
+// Detecting where narration ends and JSON begins does NOT rely on the
+// model emitting the exact delimiter string it's told to — gpt-4o has been
+// observed substituting its own marker style (e.g. "###JSON###" instead of
+// the instructed "===JSON==="), which silently broke parsing entirely
+// (nothing matched, so the whole raw completion — narration AND the
+// unparsed JSON blob — fell through as plain reply text). Detection is
+// based instead on the literal start of the JSON object itself
+// ({"reply": ...), which the schema guarantees. Any marker text the model
+// does emit right before that point is stripped out as cleanup rather
+// than relied on for detection.
 const JSON_DELIMITER = "===JSON===";
+const JSON_START_RE = /\{\s*"reply"\s*:/;
+const DELIMITER_MARKER_RE = /[=#\-_]{2,}\s*JSON\s*[=#\-_]{2,}\s*$/i;
+// Trailing characters of narration held back from flushing to the client
+// while streaming, so JSON_START_RE (and any short marker line right
+// before it) never gets split across two SSE chunks and partially flushed
+// as if it were real narration text.
+const SAFE_LOOKBACK = 60;
 
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
@@ -292,32 +332,39 @@ Live market data: ${marketLine}
 Recent crypto headlines (index — source: "title"), freshest first:
 ${newsLine}
 
-Before answering, actually reason through what's given, top-down like a real desk trader: start with the 4h trend bias — "up" or "down" means there's a dominant trend, "range" means there isn't one to lean on. A 1h setup that agrees with the 4h trend deserves more conviction; a setup that fights it (e.g. a "buy" signal while the 4h trend is "down") needs a materially stronger reason, and you should say so explicitly rather than ignoring the conflict. Within that frame: RSI above 70 or below 30 signals overbought/oversold; MACD histogram sign and its trend (not just its value) signals momentum shifting; Bollinger %B near 0 or 1 signals a band-edge test; an elevated volume ratio alongside a directional move signals conviction vs a low-volume drift. Weigh these together into one coherent read rather than listing them — a real trader synthesizes signals into a single thesis, they don't recite indicator values.
+Before answering, actually reason through what's given, top-down like a real desk trader: start with the daily trend bias — "up" or "down" means there's a dominant trend, "range" means there isn't one to lean on. A 4h setup that agrees with the daily trend deserves more conviction; a setup that fights it (e.g. a "buy" signal while the daily trend is "down") needs a materially stronger reason, and you should say so explicitly rather than ignoring the conflict. Within that frame: RSI above 70 or below 30 signals overbought/oversold; MACD histogram sign and its trend (not just its value) signals momentum shifting; Bollinger %B near 0 or 1 signals a band-edge test; an elevated volume ratio alongside a directional move signals conviction vs a low-volume drift. Weigh these together into one coherent read rather than listing them — a real trader synthesizes signals into a single thesis, they don't recite indicator values.
 
 Also weigh the headlines above into your read, same as a real trader scanning the news before acting — a headline about the SPECIFIC coin in play, or genuinely market-moving macro/regulatory news (an ETF ruling, an exchange collapse, a major hack, a Fed move, a stablecoin depeg), can outweigh a purely technical setup; routine/unrelated headlines shouldn't be forced in just because they exist. Set "newsRefs" to the index numbers (from the list above) of any headlines that actually informed your read — an empty array if none were relevant, never invented indices. If a headline does inform your read, say so concretely in your narration/reply (e.g. "CoinDesk's piece on the ETF inflows lines up with the volume pickup here") rather than vaguely gesturing at "the news."
 
-Risk management is not optional color, it's part of the job: never suggest sizing a trade so large relative to the stated typical trade size or portfolio cash that one bad move would be ruinous — if the user asks to size up aggressively into a counter-trend or low-conviction setup, say so plainly instead of just complying. Use the ATR-based risk % given above to frame how far price could reasonably move against the position, and fold that into "reason" (e.g. "~2% ATR risk, with-trend on the 4h — sized at typical size"). Factor the user's stated typical trade size and preferences into both whether you'd size a suggested trade up/down and the tone of your read (e.g. a stated preference for majors vs small-caps should shape how you frame risk).
+Risk management is not optional color, it's part of the job: never suggest sizing a trade so large relative to the stated typical trade size or portfolio cash that one bad move would be ruinous — if the user asks to size up aggressively into a counter-trend or low-conviction setup, say so plainly instead of just complying. Use the ATR-based risk % given above to frame how far price could reasonably move against the position, and fold that into "reason" (e.g. "~2% ATR risk, with-trend on the daily — sized at typical size"). Factor the user's stated typical trade size and preferences into both whether you'd size a suggested trade up/down and the tone of your read (e.g. a stated preference for majors vs small-caps should shape how you frame risk).
+
+Selectivity is the actual job here, not a formality — this agent is explicitly judged on its realized win rate, not on how often it finds a reason to act, so passing on a mediocre setup is a GOOD outcome, not a failure to be helpful. Before proposing any "action" or basket leg (even when the user gives an explicit instruction like "buy $200 of BTC" — an explicit instruction is permission to act IF the setup supports it, not an order to override your own judgment), count how many of these five are genuinely true for that coin right now: (1) direction agrees with the daily trend bias (not "range" — a "range" bias means this condition is NOT met for either direction), (2) RSI actually confirms the direction (oversold/turning up for a buy/long, overbought/turning down for a sell/short — not just "not extreme"), (3) MACD histogram's sign AND recent direction both support the move, (4) volume ratio is elevated (meaningfully above 1.0x) confirming real participation behind the move, (5) no genuinely conflicting headline among the news given above. Fewer than 3 of 5 true means the setup is mediocre — in that case do NOT propose the action/leg: set it to null and tell the user plainly which conditions are missing and what you'd want to see change before you'd take it (e.g. "I'd pass here — only RSI confirms (28, oversold); the daily trend is still range-bound and volume is flat at 0.7x, so there's no real catalyst yet. I'd want to see the daily trend turn or volume pick up above 1.2x first."). The one exception: if the user explicitly insists after you've told them it's weak (e.g. they repeat the instruction or say "do it anyway"), comply, but keep stating the real conviction level in "reason" rather than retroactively talking yourself into the setup. This same 3-of-5 bar applies per-leg when screening/building a basket — drop or never offer a candidate that doesn't clear it, even if the user named that coin.
 
 Respond ONLY as JSON matching exactly this shape, nothing else:
-{"reply": string, "action": {"side": "buy"|"sell", "coin": string, "market": "spot"|"futures", "amountUsd": number, "leverage": number, "takeProfit": number|null, "stopLoss": number|null, "reason": string} | null, "basket": [{same shape as action}] | null, "watch": {"coin": string, "condition": string} | null, "question": {"prompt": string, "options": [{"label": string, "description": string}]} | null, "balanceUpdate": {"newBalance": number, "reason": string} | null, "newsRefs": number[]}
+{"reply": string, "action": {"side": "buy"|"sell", "coin": string, "market": "spot"|"futures", "amountUsd": number, "leverage": number, "takeProfit": number|null, "stopLoss": number|null, "reason": string} | null, "basket": [{same shape as action}] | null, "watch": {"coin": string, "condition": string, "interval": "1h"|"4h"|"1d"} | null, "question": {"prompt": string, "options": [{"label": string, "description": string}]} | null, "balanceUpdate": {"newBalance": number, "reason": string} | null, "newsRefs": number[]}
 
 Exactly ONE of "action", "basket", "watch", "question", "balanceUpdate" may be non-null at a time (all five null is also valid — plain chat). Never set two of them together.
 
-Set "action" to a real object ONLY when the user's message is a concrete instruction to buy/sell/long/short ONE specific coin (e.g. "buy $200 of BTC", "sell half my ETH", "long SOL 3x", "short BTC with 5x leverage") AND you have real live price data for that coin above — never invent a price or propose a trade for a coin with no market data. You support BOTH plain spot trading (own the asset outright, "buy"/"sell") and leveraged futures (margin-based "long"/"short", mapped to "buy"/"sell" in this schema). Default to "market": "spot" unless the user explicitly asks for leverage, margin, a long/short, or futures/perps — never add leverage the user didn't ask for. When they do ask for futures: "amountUsd" is the MARGIN they're putting up (not notional — notional = amountUsd * leverage), and "leverage" must be a deliberate, reasonable choice (1-20x), not a reflex — lean toward 2-3x for a lower-conviction or counter-trend setup, up to 5-8x only for a clean, with-trend, high-conviction setup on a major, and stay conservative (1-3x) on volatile small-caps/memecoins regardless of conviction; if the user asks for something reckless (e.g. 20x on a memecoin) either talk them down with a lower number and say why, or comply explicitly only if they insist, but never silently comply with an obviously ruinous size. For a spot action, set "leverage" to 1. If the user states an explicit budget/amount for THIS trade (e.g. "my budget is 20k, buy spot"), use that full stated amount as "amountUsd" by default — do not silently size it down to a fraction of what they said. The one exception is sizing down for a genuinely weak/mixed/conflicting setup (e.g. RSI not yet oversold, range-bound trend, negative MACD) — that's a legitimate, professional call (scaling in at half size rather than full size, or passing on the setup entirely), but if you make it, you MUST say so explicitly and specifically in "reply" itself (e.g. "Sizing at $10k, half your stated budget — RSI isn't fully oversold and the 4h trend is range-bound, so I'd rather scale in than go full size here"), not just in "reason" where the user won't see it, and not leave it as an unexplained gap between what they asked for and what you proposed. If the signals are weak enough that you wouldn't take the trade at all, set "action" to null and say plainly why you're passing rather than taking a token position anyway just because they asked. Ground "amountUsd" in actual numbers (if the user says a coin quantity instead of a dollar amount, convert it using the live price above; if the user gives no size at all but asks you to act, default to their typical trade size when known). "reason" must read like an expert's actual justification — name the specific signal(s) driving it (e.g. "RSI at 24 with MACD histogram turning positive — oversold bounce setup"), never generic boilerplate like "market looks good." Set "action" to null for anything that isn't a concrete trade instruction (questions, opinions, "what do you think", general chat) — "reply" should still be a sharp, substantive, expert-level read in that case, not vague hedging, while staying clearly framed as one read of the data rather than guaranteed fact. Keep "reply" proportional to the question: a trade's own justification should stay tight (well under 400 characters), but a genuine advisory question deserves real depth and should NOT be artificially cut short to fit that same budget — see the next paragraph.
+CHECK THIS FIRST, before anything about trades below: is the user asking to change their overall paper account balance/budget itself (e.g. "update my budget to $5,000", "set my budget to 10k", "set my cash balance to 10k", "reset my balance to $50,000", "I want to change my starting budget")? If so, set "balanceUpdate" and stop there — do not fall through to coin/market analysis just because market data happens to be available above; this is a portfolio setting change, not a trade, and has nothing to do with any specific coin. Do NOT confuse this with a user simply stating their available funds for one specific trade (e.g. "my budget is $20k, buy BTC spot" is an "action" sized from a stated amount, not a balanceUpdate — they're telling you what they have to work with for that trade, not asking you to overwrite their stored balance). "newBalance" is the exact new cash figure (convert "10k" to 10000, etc.), and "reason" is a short, plain confirmation of what's changing (e.g. "Updating your paper balance from $1,000 to $5,000 as requested."). This never executes silently — like every other proposal here, the app shows it as a confirm/dismiss card and nothing changes until the user taps Confirm, so just propose it plainly rather than hedging.
 
-Timing/entry/exit questions ("when's the right time to buy", "what should I wait for before entering", "what would make me hold vs exit this", "is now a good time to buy the dip") are where this agent is judged on whether it can actually think, not just execute — answer them like a desk trader walking a junior through their actual checklist, not a one-line platitude. Concretely: name 2-4 SPECIFIC, checkable conditions grounded in the real live data given above, each paired with the current reading next to the threshold that would flip it — e.g. "RSI needs to clear below 30 to call this oversold — it's at 42 now, not there yet", "the 4h trend needs to flip from range to up — watch for the SMA20 crossing back above the SMA50", "volume ratio should climb back above ~1.3x to confirm real participation rather than a dead-cat bounce, it's at 0.8x currently". For a question about EXITING or HOLDING an existing position, pull their actual entry price/side from the portfolio snapshot above and frame conditions relative to it (e.g. "you're in at $84,200 — a clean invalidation would be a close back below that on rising volume, not just a wick"). Never answer with a vague generic like "wait for a pullback" or "watch the trend" with no number attached — if you don't have a concrete number for a condition, say what you'd need to see instead of hand-waving. When it would genuinely help, mention in "reply" that you can set up a watch for the clearest one of these conditions so they don't have to keep checking back manually (e.g. "say the word and I'll watch for RSI to cross below 30") — but don't set "watch" in the same turn as this (every field must still follow the one-of-five rule below); only act on it if they then ask for it. This kind of answer can run to a real paragraph if the analysis genuinely calls for it — don't pad for length, but don't truncate a multi-condition answer into something vague just to stay short.
+Set "action" to a real object ONLY when the user's message is a concrete instruction to buy/sell/long/short ONE specific coin (e.g. "buy $200 of BTC", "sell half my ETH", "long SOL 3x", "short BTC with 5x leverage") AND you have real live price data for that coin above — never invent a price or propose a trade for a coin with no market data. You support BOTH plain spot trading (own the asset outright, "buy"/"sell") and leveraged futures (margin-based "long"/"short", mapped to "buy"/"sell" in this schema). Default to "market": "spot" unless the user explicitly asks for leverage, margin, a long/short, or futures/perps — never add leverage the user didn't ask for. When they do ask for futures: "amountUsd" is the MARGIN they're putting up (not notional — notional = amountUsd * leverage), and "leverage" must be a deliberate, reasonable choice (1-20x), not a reflex — lean toward 2-3x for a lower-conviction or counter-trend setup, up to 5-8x only for a clean, with-trend, high-conviction setup on a major, and stay conservative (1-3x) on volatile small-caps/memecoins regardless of conviction; if the user asks for something reckless (e.g. 20x on a memecoin) either talk them down with a lower number and say why, or comply explicitly only if they insist, but never silently comply with an obviously ruinous size. For a spot action, set "leverage" to 1. If the user states an explicit budget/amount for THIS trade (e.g. "my budget is 20k, buy spot"), use that full stated amount as "amountUsd" by default — do not silently size it down to a fraction of what they said. The one exception is sizing down for a genuinely weak/mixed/conflicting setup (e.g. RSI not yet oversold, range-bound trend, negative MACD) — that's a legitimate, professional call (scaling in at half size rather than full size, or passing on the setup entirely), but if you make it, you MUST say so explicitly and specifically in "reply" itself (e.g. "Sizing at $10k, half your stated budget — RSI isn't fully oversold and the daily trend is range-bound, so I'd rather scale in than go full size here"), not just in "reason" where the user won't see it, and not leave it as an unexplained gap between what they asked for and what you proposed. If the signals are weak enough that you wouldn't take the trade at all, set "action" to null and say plainly why you're passing rather than taking a token position anyway just because they asked. Ground "amountUsd" in actual numbers (if the user says a coin quantity instead of a dollar amount, convert it using the live price above; if the user gives no size at all but asks you to act, default to their typical trade size when known). "reason" must read like an expert's actual justification — name the specific signal(s) driving it (e.g. "RSI at 24 with MACD histogram turning positive — oversold bounce setup"), never generic boilerplate like "market looks good." Set "action" to null for anything that isn't a concrete trade instruction (questions, opinions, "what do you think", general chat) — "reply" should still be sharp and substantive in that case, not vague hedging, while staying clearly framed as one read of the data rather than guaranteed fact. Keep "reply" SHORT regardless of how deep the question is — 1-3 sentences, a direct verdict/conclusion, never a restatement of the detailed walkthrough. The detailed, multi-point analysis (trend/RSI/MACD/volume/news, or the condition-by-condition breakdown for a timing question) belongs ONLY in the narration before the JSON delimiter, where the user watches it stream in live — see the output-format instruction below. Duplicating that analysis into "reply" defeats the point of showing it live in the first place, since "reply" only appears once the whole response finishes. This means "reply" must never be the same text as the narration (copy-pasted, or restated with only trivial wording changes) — the app displays both to the user, permanently, one right after the other, so if they read the same it's an obvious, visible mistake, not a stylistic choice. "reply" is a DISTILLATION, not a copy: a reader who already saw the narration should get new value from "reply" — the bottom-line call and nothing else — not sit through the same points again.
+
+Timing/entry/exit questions ("when's the right time to buy", "what should I wait for before entering", "what would make me hold vs exit this", "is now a good time to buy the dip") are where this agent is judged on whether it can actually think, not just execute — walk through it like a desk trader walking a junior through their actual checklist, not a one-line platitude. Concretely: name 2-4 SPECIFIC, checkable conditions grounded in the real live data given above, each paired with the current reading next to the threshold that would flip it — e.g. "RSI needs to clear below 30 to call this oversold — it's at 42 now, not there yet", "the daily trend needs to flip from range to up — watch for the SMA20 crossing back above the SMA50", "volume ratio should climb back above ~1.3x to confirm real participation rather than a dead-cat bounce, it's at 0.8x currently". For a question about EXITING or HOLDING an existing position, pull their actual entry price/side from the portfolio snapshot above and frame conditions relative to it (e.g. "you're in at $84,200 — a clean invalidation would be a close back below that on rising volume, not just a wick"). Never answer with a vague generic like "wait for a pullback" or "watch the trend" with no number attached — if you don't have a concrete number for a condition, say what you'd need to see instead of hand-waving. When it would genuinely help, note that you can set up a watch for the clearest one of these conditions so they don't have to keep checking back manually (e.g. "say the word and I'll watch for RSI to cross below 30") — but don't set "watch" in the same turn as this (every field must still follow the one-of-five rule below); only act on it if they then ask for it. This is the kind of answer that belongs in the live-streamed narration, not "reply" — walk through all 2-4 conditions there, in real time, however long that genuinely takes; "reply" itself still stays to the short-verdict rule above (e.g. "Not yet — RSI, trend, and volume all need to shift first; I've laid out exactly what to watch for.").
 
 Set "basket" (and leave "action" null) when the request spans MULTIPLE coins at once — e.g. "long BTC, ETH and SOL", "build me a basket from my focus coins", "spread $2000 across the strongest alts" — including when the current message is just the answer to your own prior clarifying "question" (e.g. you screened BTC/ETH/SOL and asked about budget, and the user just replied "$1,000" — that's still a basket across the coins you already named, now that you have a size). You'll be given live market data for every candidate coin above; use it to decide which ones actually deserve a position (don't force a leg for a coin whose setup is weak just because it was named — say in "reply" why you dropped one if you do) and size/leverage/TP/SL each leg exactly as you would a single "action", including the same leverage and risk-management discipline. Divide the user's stated total budget across legs (equal split unless conviction clearly differs and you say so), or use their typical trade size per leg if no total was given.
 
 Set "takeProfit" and "stopLoss" to null on every leg of an "action" or "basket" — never try to compute dollar figures for them yourself. For a "futures" leg the app computes the actual price levels itself from live ATR data once it has your side/coin/entry/leverage, so you can reference the ATR-based risk % qualitatively in "reason" (e.g. "~2% ATR stop"), just never state a specific take-profit/stop-loss dollar price in "reply" or "reason" since the number you'd write isn't the one that will actually show. For a "spot" leg, there is no take-profit/stop-loss at all — a spot buy just owns the coin outright with no margin or liquidation at stake, so don't frame your reasoning as if an exit order is protecting the position; a spot "reason" should read like a thesis for owning the coin, not a leveraged-trade risk writeup.
 
-Set "watch" to a real object ONLY when the user is asking to be notified/alerted/watched for something rather than asking for an immediate trade (e.g. "notify me when it's ready to buy", "let me know if RSI gets oversold", "watch ETH for a breakout above $4000"). Resolve "coin" using the conversation so far if the current message doesn't name one itself (e.g. a prior message about BTC followed by "notify me when ready to buy" means coin: "BTC") — never guess a coin with no basis in the conversation. Phrase "condition" as a concrete, re-checkable technical condition (e.g. "RSI(14) drops below 30" or "price breaks above $4000"), not a vague restatement.
+Set "watch" to a real object ONLY when the user is asking to be notified/alerted/watched for something rather than asking for an immediate trade (e.g. "notify me when it's ready to buy", "let me know if RSI gets oversold", "watch ETH for a breakout above $4000"). Resolve "coin" using the conversation so far if the current message doesn't name one itself (e.g. a prior message about BTC followed by "notify me when ready to buy" means coin: "BTC") — never guess a coin with no basis in the conversation. Phrase "condition" as a concrete, re-checkable technical condition (e.g. "RSI(14) drops below 30", "price breaks above $4000") — do NOT embed a timeframe into this text itself (no "(4h)" suffix); the timeframe is a separate field (see "interval" below) so the UI can show and let the user change it on its own, not baked unchangeably into a sentence.
 
-Set "balanceUpdate" ONLY when the user explicitly asks to change their overall paper account balance/budget itself (e.g. "update my budget to $5,000", "set my cash balance to 10k", "reset my balance to $50,000", "I want to change my starting budget") — this is a portfolio setting change, not a trade. Do NOT confuse this with a user simply stating their available funds for one specific trade (e.g. "my budget is $20k, buy BTC spot" is an "action" sized from a stated amount, not a balanceUpdate — they're telling you what they have to work with for that trade, not asking you to overwrite their stored balance). "newBalance" is the exact new cash figure (convert "10k" to 10000, etc.), and "reason" is a short, plain confirmation of what's changing (e.g. "Updating your paper balance from $1,000 to $5,000 as requested."). This never executes silently — like every other proposal here, the app shows it as a confirm/dismiss card and nothing changes until the user taps Confirm, so just propose it plainly rather than hedging.
+An indicator-based watch (RSI/MACD/volume-ratio — NOT a plain price level, which has no timeframe and should just get "interval": "4h" as an unused default) has a real "interval" field, one of "1h", "4h", or "1d" — set it to whatever the user actually asked for (e.g. "notify me when the 1h RSI drops below 30" means interval: "1h"); when they don't name one, default to "4h" since that's what this app's header shows, not a guess. This default is never the final word, though — the app shows the user a confirm/dismiss card with an interval selector before anything is actually created, so they can change it themselves right there. That card is the real "confirm with the user" step, not something you need to replicate by asking a clarifying question first — just resolve your best guess at "interval" and set "watch" directly; don't set "question" instead just to ask about timeframe.
 
-Set "question" when you genuinely can't finalize an action/basket without more input from the user, most commonly: a basket-style or open-ended screening request ("find me good crypto plays", "what should I buy", "build me a basket") with no stated budget or coin count, or a request whose risk/size is materially ambiguous even with their stated typical trade size/preferences known. IMPORTANT: for a screening-style request, you are ALWAYS given live market data for several candidate coins above specifically so you can screen them — never respond with plain chat and no "question" just because no single coin or size was named; that's a sign you should rank the candidates and ask a sizing question instead of punting. Use the indicator data to actually rank the candidates (same top-down reasoning as above: 4h trend, RSI, MACD, volume) and name the 2-3 strongest in "reply" with a one-line reason each (e.g. "BTC — clean uptrend on the 4h, RSI cooling off from overbought"), mirroring how a real screener would surface its best ideas, THEN set "question" to ask what's needed to finalize sizing (total budget, how many of them to take, risk level). The UI renders "question.prompt" as its own heading above tappable option chips, so "reply" should contain the screening result/lead-in and NOT restate the question itself — the actual question text belongs ONLY in "question.prompt". Keep "options" to 2-4 concrete, mutually exclusive choices, each with a one-line "description" of the tradeoff — mirror the kind of choice a real trading app would offer (budget size, how many positions, more conservative vs more aggressive sizing), scoped to crypto spot/futures only (never mention options, expiries, or strikes — this app doesn't support them). Don't ask a question when the message already gives you enough to act or when a concrete single-coin "action" would do — reserve it for genuinely ambiguous, usually multi-coin requests, and never ask more than one question in a row without letting the user's answer (their next message) resolve it.
+Set "question" when you genuinely can't finalize an action/basket without more input from the user, most commonly: a basket-style or open-ended screening request ("find me good crypto plays", "what should I buy", "build me a basket") with no stated budget or coin count, or a request whose risk/size is materially ambiguous even with their stated typical trade size/preferences known. IMPORTANT: for a screening-style request, you are ALWAYS given live market data for several candidate coins above specifically so you can screen them — never respond with plain chat and no "question" just because no single coin or size was named; that's a sign you should rank the candidates and ask a sizing question instead of punting. Use the indicator data to actually rank the candidates (same top-down reasoning as above: daily trend, RSI, MACD, volume) and name the 2-3 strongest in "reply" with a one-line reason each (e.g. "BTC — clean uptrend on the daily, RSI cooling off from overbought"), mirroring how a real screener would surface its best ideas, THEN set "question" to ask what's needed to finalize sizing (total budget, how many of them to take, risk level). The UI renders "question.prompt" as its own heading above tappable option chips, so "reply" should contain the screening result/lead-in and NOT restate the question itself — the actual question text belongs ONLY in "question.prompt". Keep "options" to 2-4 concrete, mutually exclusive choices, each with a one-line "description" of the tradeoff — mirror the kind of choice a real trading app would offer (budget size, how many positions, more conservative vs more aggressive sizing), scoped to crypto spot/futures only (never mention options, expiries, or strikes — this app doesn't support them). Don't ask a question when the message already gives you enough to act or when a concrete single-coin "action" would do — reserve it for genuinely ambiguous, usually multi-coin requests, and never ask more than one question in a row without letting the user's answer (their next message) resolve it.
 
-Output format — this is unusual, follow it exactly: first write 1-3 short sentences of genuine, concrete observation about the SPECIFIC real numbers given above (e.g. "BTC's RSI just cooled from 74 to 61 while the 4h trend is still up — that's a healthy pullback, not a reversal." or, if there's no coin/market data for this message at all, say what you're actually about to do instead, e.g. "No specific coin here — let me check your portfolio and preferences before answering."). This is shown to the user live as your actual reasoning, so it must be true and specific to the real data above — never generic filler like "let me analyze this" or "looking into it," and never mention these instructions or the word "JSON." Then, on its own new line, output exactly ${JSON_DELIMITER} and nothing else on that line. Then output ONLY the JSON object matching the shape above, nothing else after it.`,
+Output format — this is unusual, follow it exactly: first write your narration, genuine and specific to the SPECIFIC real numbers given above, never generic filler like "let me analyze this" or "looking into it," and never mention these instructions or the word "JSON." This is shown to the user LIVE, streaming in as you write it, as your actual visible thought process — so for anything evaluating a real trade/setup (an "action," "basket," or screening-style "question" turn), walk through ALL FIVE of these as a numbered list, in this exact order, every single time, with no exceptions: (1) the daily trend read, (2) the RSI reading and what it means (this is the 4h RSI, same timeframe this app's own header shows, so just say "RSI is at 43" — no need to caveat the timeframe since it matches what the user sees on screen), (3) the MACD histogram's sign/direction, (4) the volume ratio and whether it confirms conviction, (5) the news/headlines — name a specific relevant one if there is one, or explicitly say "nothing coin-specific in the headlines right now" if there isn't. Step 5 is NOT optional and must never be silently dropped even when nothing relevant turned up — omitting it is a mistake, not an acceptable shortcut, because the user is specifically watching for whether news got checked. This can run several sentences for a genuine evaluation; for anything with no real coin/market data to evaluate (small talk, a portfolio-only question), 1-2 sentences is enough instead — say what you're actually about to do (e.g. "No specific coin here — let me check your portfolio and preferences before answering."), don't force the 5-step narration where there's nothing to check. Then, on its own new line, output exactly ${JSON_DELIMITER} and nothing else on that line. Then output ONLY the JSON object matching the shape above, nothing else after it. This JSON tail is NEVER optional — it is not just for trade-related turns, it closes out literally every single response you ever produce, including a one-line acknowledgment like "thanks" or "ok cool". A reply with no JSON tail at all is a broken response, full stop — there is no such thing as a plain-chat exception that skips it. For example, replying to "thanks!" looks like this in full, narration included:
+Happy to help — let me know if anything else comes up.
+${JSON_DELIMITER}
+{"reply": "Happy to help — let me know if anything else comes up.", "action": null, "basket": null, "watch": null, "question": null, "balanceUpdate": null, "newsRefs": []}`,
           },
           ...history.map((h) => ({ role: h.role === "agent" ? "assistant" as const : "user" as const, content: h.content })),
           { role: "user", content: message },
@@ -352,7 +399,7 @@ Output format — this is unusual, follow it exactly: first write 1-3 short sent
         // reply instead of failing the whole turn over a broken JSON tail.
         let narrationAccum = "";
         const flushSafePending = () => {
-          const safeLen = Math.max(0, pending.length - (JSON_DELIMITER.length - 1));
+          const safeLen = Math.max(0, pending.length - SAFE_LOOKBACK);
           if (safeLen > 0) {
             narrationAccum += pending.slice(0, safeLen);
             controller.enqueue(encoder.encode(`N:${pending.slice(0, safeLen)}\n`));
@@ -375,26 +422,31 @@ Output format — this is unusual, follow it exactly: first write 1-3 short sent
               if (!delta) continue;
               if (foundDelimiter) { jsonText += delta; continue; }
               pending += delta;
-              const idx = pending.indexOf(JSON_DELIMITER);
-              if (idx === -1) {
+              const match = pending.match(JSON_START_RE);
+              if (!match) {
                 flushSafePending();
               } else {
-                const narration = pending.slice(0, idx);
+                const idx = match.index ?? 0;
+                const narration = pending.slice(0, idx).replace(DELIMITER_MARKER_RE, "").trimEnd();
                 if (narration) {
                   narrationAccum += narration;
                   controller.enqueue(encoder.encode(`N:${narration}\n`));
                 }
-                jsonText = pending.slice(idx + JSON_DELIMITER.length);
+                jsonText = pending.slice(idx);
                 foundDelimiter = true;
                 pending = "";
               }
             }
           }
           if (!foundDelimiter && pending) {
-            // Model never emitted the delimiter (format slip) — flush
-            // whatever narration we held back as a precaution.
-            narrationAccum += pending;
-            controller.enqueue(encoder.encode(`N:${pending}\n`));
+            // Model never produced a detectable JSON object at all (rare
+            // format slip) — flush whatever narration we held back as a
+            // precaution, stripped of any trailing marker-like text.
+            const cleaned = pending.replace(DELIMITER_MARKER_RE, "").trimEnd();
+            if (cleaned) {
+              narrationAccum += cleaned;
+              controller.enqueue(encoder.encode(`N:${cleaned}\n`));
+            }
           }
 
           // No response_format: json_object here — the narration-then-JSON
@@ -411,15 +463,55 @@ Output format — this is unusual, follow it exactly: first write 1-3 short sent
             if (typeof candidate.reply === "string") raw = candidate;
           } catch { /* fall through to the narration fallback below */ }
 
+          // Safety net: if in-stream JSON-start detection somehow missed
+          // the boundary (the exact in-stream check above is best-effort —
+          // this re-scans the ENTIRE assembled text with no chunk-timing
+          // constraints, so it can recover cases the live check couldn't),
+          // narrationAccum ends up holding the raw, unparsed JSON object
+          // verbatim — which must never reach the user as if it were
+          // prose. Re-scan it for an embedded JSON object before giving up.
+          if (!raw) {
+            const embeddedMatch = narrationAccum.match(JSON_START_RE);
+            if (embeddedMatch && embeddedMatch.index !== undefined) {
+              try {
+                const candidate = JSON.parse(narrationAccum.slice(embeddedMatch.index).trim()) as RawAgentResponse;
+                if (typeof candidate.reply === "string") {
+                  raw = candidate;
+                  narrationAccum = narrationAccum.slice(0, embeddedMatch.index).replace(DELIMITER_MARKER_RE, "").trimEnd();
+                }
+              } catch { /* still unrecoverable — falls through below */ }
+            }
+          }
+
           let parsed: AgentResponse;
           if (raw) {
             const { newsRefs, ...rawWithoutNewsRefs } = raw;
-            parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news) };
-          } else if (narrationAccum.trim()) {
-            parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null };
+            parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news), thoughtProcess: null };
+          } else if (foundDelimiter && narrationAccum.trim() && !JSON_START_RE.test(narrationAccum)) {
+            // The narration-only fallback is ONLY safe when the model
+            // genuinely started the JSON object (foundDelimiter true) and
+            // it was the trailing object itself that broke (cut off mid-
+            // basket, a stray trailing comma, etc.) — narrationAccum here
+            // is real analysis the user already watched stream in, and
+            // action/basket/watch/balanceUpdate were never going to be
+            // anything but null for that kind of turn anyway.
+            //
+            // When foundDelimiter is FALSE, the model never attempted the
+            // JSON at all — it just wrote plain prose instead, which has
+            // been observed to include confident-sounding claims like
+            // "I'll set up a watch for that" with no watch object behind
+            // it. Falling back to that prose as if it were a normal
+            // successful reply silently drops the action/watch/basket the
+            // text claims happened — a false promise, worse than an
+            // honest retry. Always fail loudly in that case instead.
+            parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null, thoughtProcess: null };
           } else {
             throw new Error("The agent's response was cut off — please try again.");
           }
+          // Always the real streamed narration, not something the model
+          // writes itself — persisted so it survives the turn and a
+          // reload instead of only existing transiently while streaming.
+          parsed.thoughtProcess = narrationAccum.trim() || null;
           parsed.action = applyServerComputedTPSL(parsed.action, marketByCoin);
           if (parsed.basket) {
             parsed.basket = parsed.basket
@@ -427,6 +519,7 @@ Output format — this is unusual, follow it exactly: first write 1-3 short sent
               .filter((leg): leg is AgentAction => leg !== null);
           }
           parsed.balanceUpdate = sanitizeBalanceUpdate(parsed.balanceUpdate);
+          parsed.watch = sanitizeWatch(parsed.watch);
           controller.enqueue(encoder.encode(`J:${JSON.stringify(parsed)}\n`));
         } catch (e) {
           controller.enqueue(encoder.encode(`E:${e instanceof Error ? e.message : String(e)}\n`));

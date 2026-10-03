@@ -10,7 +10,7 @@
 // already use.
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
 import { sendWebPush, getWebPushSubscriptions } from "../_shared/webpush.ts";
-import { getMarketContext, MarketContext } from "../_shared/market.ts";
+import { getMarketContext, MarketContext, MarketInterval } from "../_shared/market.ts";
 
 const CRON_SECRET = Deno.env.get("CRON_SECRET")!;
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
@@ -21,6 +21,7 @@ interface WatchRow {
   conversation_id: string;
   coin: string;
   condition_text: string;
+  interval: MarketInterval;
 }
 
 type PositionSide = "long" | "short";
@@ -57,13 +58,14 @@ async function fetchPrice(coin: string): Promise<number | null> {
 // snapshot via a cheap, non-streaming model call — strict JSON out, no
 // narration needed since nothing here is shown to the user live.
 async function classifyWatch(watch: WatchRow, market: MarketContext): Promise<{ triggered: boolean; explanation: string } | null> {
+  const iv = market.interval;
   const prompt = `Coin: ${market.coin}
 Price: $${market.price.toLocaleString()}
-RSI(14, 1h): ${market.rsi != null ? market.rsi.toFixed(1) : "n/a"}
-MACD histogram (1h): ${market.macdHist != null ? market.macdHist.toFixed(4) : "n/a"}
-Bollinger %B (1h): ${market.bbPct != null ? market.bbPct.toFixed(2) : "n/a"}
-4h trend: ${market.htfTrend ?? "n/a"}
-Volume ratio (1h vs 20-period avg): ${market.volRatio != null ? market.volRatio.toFixed(2) : "n/a"}
+RSI(14, ${iv}): ${market.rsi != null ? market.rsi.toFixed(1) : "n/a"}
+MACD histogram (${iv}): ${market.macdHist != null ? market.macdHist.toFixed(4) : "n/a"}
+Bollinger %B (${iv}): ${market.bbPct != null ? market.bbPct.toFixed(2) : "n/a"}
+Higher-timeframe trend: ${market.htfTrend ?? "n/a"}
+Volume ratio (${iv} vs 20-period avg): ${market.volRatio != null ? market.volRatio.toFixed(2) : "n/a"}
 
 Watch condition: "${watch.condition_text}"
 
@@ -136,7 +138,7 @@ async function autoClosePosition(pos: FuturesPositionRow, price: number, reason:
     qty: pos.qty, price, reason: `Auto-closed: ${reason.replace("_", " ")}`,
     market: "futures", position_side: pos.side, leverage: pos.leverage, margin_usd: pos.margin_usd,
     liquidation_price: pos.liquidation_price, take_profit_price: pos.take_profit_price,
-    stop_loss_price: pos.stop_loss_price, close_reason: reason,
+    stop_loss_price: pos.stop_loss_price, close_reason: reason, realized_pnl: pnl,
   });
   return pnl;
 }
@@ -168,14 +170,23 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // Keyed "COIN:interval" — different watches on the same coin can now ask
+  // for different timeframes (see agent_watches.interval), so the cache
+  // can no longer assume one market snapshot per coin covers every watch.
   const marketCache = new Map<string, MarketContext | null>();
-  const getMarket = async (coin: string): Promise<MarketContext | null> => {
-    if (!marketCache.has(coin)) marketCache.set(coin, await getMarketContext(coin));
-    return marketCache.get(coin)!;
+  const getMarket = async (coin: string, interval: MarketInterval): Promise<MarketContext | null> => {
+    const key = `${coin}:${interval}`;
+    if (!marketCache.has(key)) marketCache.set(key, await getMarketContext(coin, interval));
+    return marketCache.get(key)!;
   };
+  // Separate from marketCache's per-interval keying — any interval's last
+  // close is a fine stand-in for "current price" when checking a TP/SL/
+  // liquidation level, so this reuses whichever market fetch happened to
+  // run first for that coin instead of triggering a redundant price call.
+  const priceByCoin = new Map<string, number>();
   const priceCache = new Map<string, number | null>();
   const getPrice = async (coin: string): Promise<number | null> => {
-    if (marketCache.has(coin)) return marketCache.get(coin)?.price ?? null;
+    if (priceByCoin.has(coin)) return priceByCoin.get(coin)!;
     if (!priceCache.has(coin)) priceCache.set(coin, await fetchPrice(coin));
     return priceCache.get(coin)!;
   };
@@ -185,13 +196,14 @@ Deno.serve(async (req) => {
   const errors: unknown[] = [];
 
   const { data: watches } = await supabaseAdmin
-    .from("agent_watches").select("id, user_id, conversation_id, coin, condition_text").eq("active", true);
+    .from("agent_watches").select("id, user_id, conversation_id, coin, condition_text, interval").eq("active", true);
 
   for (const watch of (watches ?? []) as WatchRow[]) {
     watchesChecked++;
     try {
-      const market = await getMarket(watch.coin);
+      const market = await getMarket(watch.coin, watch.interval);
       if (!market) continue;
+      if (!priceByCoin.has(watch.coin)) priceByCoin.set(watch.coin, market.price);
       const result = await classifyWatch(watch, market);
       await supabaseAdmin.from("agent_watches").update({ last_checked_at: new Date().toISOString() }).eq("id", watch.id);
       if (!result?.triggered) continue;

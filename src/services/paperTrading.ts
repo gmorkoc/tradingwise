@@ -50,10 +50,13 @@ export interface AgentAction {
   price: number | null;
 }
 
+export type MarketInterval = "1h" | "4h" | "1d";
+
 export interface AgentWatch {
   id: string;
   coin: string;
   conditionText: string;
+  interval: MarketInterval;
   active: boolean;
   triggeredAt: string | null;
   createdAt: string;
@@ -92,7 +95,17 @@ export interface AgentMessage {
   balanceUpdate: BalanceUpdate | null;
   newsSources: NewsSource[] | null;
   actionStatus: "pending" | "confirmed" | "dismissed" | null;
+  // The proposed watch (coin + condition) the agent wants to set up —
+  // mirrors action/basket/balanceUpdate's pending/confirmed/dismissed
+  // pattern (via actionStatus) rather than auto-creating the real
+  // agent_watches row on arrival, so the user explicitly confirms the
+  // condition (and its timeframe) before anything actually gets watched.
+  watch: { coin: string; condition: string; interval: MarketInterval } | null;
   watchId: string | null;
+  // The agent's full reasoning walkthrough (trend/RSI/MACD/volume/news) —
+  // persisted so it's still there on reload, not just shown transiently
+  // while streaming.
+  thoughtProcess: string | null;
   createdAt: string;
 }
 
@@ -184,25 +197,29 @@ export async function acceptConsentAndOnboard(userId: string, answers: Onboardin
   if (error) throw new Error(error.message);
 }
 
-const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch_id, created_at";
+const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, created_at";
 
 function rowToMessage(m: {
   id: number; conversation_id: string; role: "user" | "agent"; content: string;
   action: AgentAction | null; basket: AgentAction[] | null; question: AgentQuestion | null;
   balance_update: BalanceUpdate | null;
-  news_sources: NewsSource[] | null; action_status: AgentMessage["actionStatus"]; watch_id: string | null; created_at: string;
+  news_sources: NewsSource[] | null; action_status: AgentMessage["actionStatus"];
+  watch: { coin: string; condition: string; interval: MarketInterval } | null; watch_id: string | null;
+  thought_process: string | null; created_at: string;
 }): AgentMessage {
   return {
     id: m.id,
     conversationId: m.conversation_id,
     role: m.role,
     content: m.content,
+    watch: m.watch,
     watchId: m.watch_id,
     action: m.action,
     basket: m.basket,
     question: m.question,
     balanceUpdate: m.balance_update,
     newsSources: m.news_sources,
+    thoughtProcess: m.thought_process,
     actionStatus: m.action_status,
     createdAt: m.created_at,
   };
@@ -264,7 +281,8 @@ async function insertMessage(
   userId: string, conversationId: string, role: "user" | "agent", content: string,
   action: AgentAction | null, watchId: string | null = null,
   basket: AgentAction[] | null = null, question: AgentQuestion | null = null,
-  newsSources: NewsSource[] | null = null, balanceUpdate: BalanceUpdate | null = null
+  newsSources: NewsSource[] | null = null, balanceUpdate: BalanceUpdate | null = null,
+  thoughtProcess: string | null = null, watch: { coin: string; condition: string; interval: MarketInterval } | null = null
 ): Promise<AgentMessage> {
   const { data, error } = await supabase
     .from("agent_messages")
@@ -278,13 +296,35 @@ async function insertMessage(
       question,
       balance_update: balanceUpdate,
       news_sources: newsSources,
-      action_status: action || basket || balanceUpdate ? "pending" : null,
+      action_status: action || basket || balanceUpdate || watch ? "pending" : null,
+      watch,
       watch_id: watchId,
+      thought_process: thoughtProcess,
     })
     .select(MESSAGE_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return rowToMessage(data);
+}
+
+/** Called when the user taps Confirm on a proposed watch — this is the
+ *  moment the real agent_watches row (and its re-checking by
+ *  agent-watch-scan) actually begins; before this, the condition is just
+ *  text sitting in the message, never evaluated. */
+export async function confirmWatch(
+  messageId: number, userId: string, conversationId: string, watch: { coin: string; condition: string; interval: MarketInterval }
+): Promise<void> {
+  const { data: watchRow, error: watchErr } = await supabase
+    .from("agent_watches")
+    .insert({ user_id: userId, conversation_id: conversationId, coin: watch.coin, condition_text: watch.condition, interval: watch.interval })
+    .select("id")
+    .single();
+  if (watchErr) throw new Error(watchErr.message);
+  const { error } = await supabase
+    .from("agent_messages")
+    .update({ action_status: "confirmed", watch_id: watchRow.id })
+    .eq("id", messageId);
+  if (error) throw new Error(error.message);
 }
 
 export interface HistoryTurn {
@@ -362,28 +402,23 @@ export async function sendAgentMessage(
 
   let parsedResult: {
     reply: string; action: AgentAction | null; basket: AgentAction[] | null;
-    watch: { coin: string; condition: string } | null; question: AgentQuestion | null;
+    watch: { coin: string; condition: string; interval: MarketInterval } | null; question: AgentQuestion | null;
     balanceUpdate: BalanceUpdate | null; newsSources: NewsSource[] | null;
+    thoughtProcess: string | null;
   };
   try {
     parsedResult = JSON.parse(jsonLine.slice(2));
   } catch {
     throw new Error("The agent's response was cut off — please try again.");
   }
-  const { reply, action, basket, watch, question, balanceUpdate, newsSources } = parsedResult;
+  const { reply, action, basket, watch, question, balanceUpdate, newsSources, thoughtProcess } = parsedResult;
 
-  let watchId: string | null = null;
-  if (watch) {
-    const { data: watchRow, error: watchErr } = await supabase
-      .from("agent_watches")
-      .insert({ user_id: userId, conversation_id: conversationId, coin: watch.coin, condition_text: watch.condition })
-      .select("id")
-      .single();
-    if (watchErr) throw new Error(watchErr.message);
-    watchId = watchRow.id;
-  }
-
-  return insertMessage(userId, conversationId, "agent", reply, action, watchId, basket, question, newsSources, balanceUpdate);
+  // Proposed, not created yet — same pending/confirmed/dismissed gate as
+  // action/basket/balanceUpdate (see confirmWatch above). The user confirms
+  // the exact condition (and its timeframe) before anything real starts
+  // being watched, instead of this silently happening the moment a reply
+  // streams in.
+  return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch);
 }
 
 export async function cancelWatch(watchId: string): Promise<void> {
@@ -396,12 +431,12 @@ export async function cancelWatch(watchId: string): Promise<void> {
 export async function fetchWatchesForConversation(userId: string, conversationId: string): Promise<AgentWatch[]> {
   const { data, error } = await supabase
     .from("agent_watches")
-    .select("id, coin, condition_text, active, triggered_at, created_at")
+    .select("id, coin, condition_text, interval, active, triggered_at, created_at")
     .eq("user_id", userId)
     .eq("conversation_id", conversationId);
   if (error) throw new Error(error.message);
   return (data ?? []).map((w) => ({
-    id: w.id, coin: w.coin, conditionText: w.condition_text,
+    id: w.id, coin: w.coin, conditionText: w.condition_text, interval: w.interval,
     active: w.active, triggeredAt: w.triggered_at, createdAt: w.created_at,
   }));
 }
@@ -409,13 +444,13 @@ export async function fetchWatchesForConversation(userId: string, conversationId
 export async function fetchWatch(watchId: string): Promise<AgentWatch | null> {
   const { data, error } = await supabase
     .from("agent_watches")
-    .select("id, coin, condition_text, active, triggered_at, created_at")
+    .select("id, coin, condition_text, interval, active, triggered_at, created_at")
     .eq("id", watchId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
   return {
-    id: data.id, coin: data.coin, conditionText: data.condition_text,
+    id: data.id, coin: data.coin, conditionText: data.condition_text, interval: data.interval,
     active: data.active, triggeredAt: data.triggered_at, createdAt: data.created_at,
   };
 }
@@ -475,13 +510,14 @@ export async function updateCashBalance(userId: string, newBalance: number): Pro
 
 async function logTrade(
   userId: string, action: AgentAction, qty: number, price: number, positionSide: "long" | "short",
-  leverage: number | null, marginUsd: number | null, liquidationPrice: number | null
+  leverage: number | null, marginUsd: number | null, liquidationPrice: number | null,
+  realizedPnl: number | null = null
 ): Promise<void> {
   const { error } = await supabase.from("paper_trades").insert({
     user_id: userId, coin: action.coin, side: action.side, qty, price, reason: action.reason,
     market: action.market, position_side: positionSide, leverage, margin_usd: marginUsd,
     liquidation_price: liquidationPrice, take_profit_price: action.takeProfit, stop_loss_price: action.stopLoss,
-    close_reason: "manual",
+    close_reason: "manual", realized_pnl: realizedPnl,
   });
   if (error) throw new Error(error.message);
 }
@@ -510,6 +546,7 @@ export async function executeTrade(userId: string, action: AgentAction): Promise
 
   if (action.market === "spot") {
     const qty = action.amountUsd / price;
+    let spotRealizedPnl: number | null = null;
     if (action.side === "buy") {
       if (action.amountUsd > portfolio.cashBalance) {
         throw new InsufficientFundsError(
@@ -533,8 +570,9 @@ export async function executeTrade(userId: string, action: AgentAction): Promise
         await upsertPosition(userId, action.coin, "spot", "long", remainingQty, existing.avgEntryPrice, 1, remainingQty * existing.avgEntryPrice, null, existing.takeProfitPrice, existing.stopLossPrice);
       }
       await setCashBalance(userId, portfolio.cashBalance + action.amountUsd);
+      spotRealizedPnl = (price - existing.avgEntryPrice) * qty;
     }
-    await logTrade(userId, action, qty, price, "long", 1, null, null);
+    await logTrade(userId, action, qty, price, "long", 1, null, null, spotRealizedPnl);
     return;
   }
 
@@ -599,7 +637,7 @@ export async function executeTrade(userId: string, action: AgentAction): Promise
     await deletePosition(userId, action.coin, "futures");
     await setCashBalance(userId, portfolio.cashBalance + existing.marginUsd + pnl);
   }
-  await logTrade(userId, action, closedQty, price, existing.side, existing.leverage, existing.marginUsd, existing.liquidationPrice);
+  await logTrade(userId, action, closedQty, price, existing.side, existing.leverage, existing.marginUsd, existing.liquidationPrice, pnl);
 }
 
 // Executes each leg of a basket proposal sequentially (not in parallel) —
@@ -612,6 +650,37 @@ export async function executeBasket(userId: string, basket: AgentAction[]): Prom
   for (const leg of basket) {
     await executeTrade(userId, leg);
   }
+}
+
+export interface AgentPerformance {
+  wins: number;
+  losses: number;
+  totalClosed: number;
+  winRate: number | null;
+  totalPnl: number;
+}
+
+// Real win/loss record from actual closed trades (realized_pnl is only ever
+// set on a close — see logTrade/agent-watch-scan), not a vanity number —
+// this is what backs the win-rate readout in the portfolio header.
+export async function fetchAgentPerformance(userId: string): Promise<AgentPerformance> {
+  const { data, error } = await supabase
+    .from("paper_trades")
+    .select("realized_pnl")
+    .eq("user_id", userId)
+    .not("realized_pnl", "is", null);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as { realized_pnl: number }[];
+  const wins = rows.filter((r) => r.realized_pnl > 0).length;
+  const totalClosed = rows.length;
+  return {
+    wins,
+    losses: totalClosed - wins,
+    totalClosed,
+    winRate: totalClosed > 0 ? wins / totalClosed : null,
+    totalPnl: rows.reduce((sum, r) => sum + r.realized_pnl, 0),
+  };
 }
 
 // Closes a position outright at the current live price, bypassing the
@@ -632,9 +701,10 @@ export async function closePosition(userId: string, position: PaperPosition): Pr
   };
 
   if (position.market === "spot") {
+    const spotPnl = (price - position.avgEntryPrice) * position.qty;
     await deletePosition(userId, position.coin, "spot");
     await setCashBalance(userId, portfolio.cashBalance + position.qty * price);
-    await logTrade(userId, closeAction, position.qty, price, "long", 1, null, null);
+    await logTrade(userId, closeAction, position.qty, price, "long", 1, null, null, spotPnl);
     return;
   }
 
@@ -643,5 +713,5 @@ export async function closePosition(userId: string, position: PaperPosition): Pr
     : (position.avgEntryPrice - price) * position.qty;
   await deletePosition(userId, position.coin, "futures");
   await setCashBalance(userId, portfolio.cashBalance + position.marginUsd + pnl);
-  await logTrade(userId, closeAction, position.qty, price, position.side, position.leverage, position.marginUsd, position.liquidationPrice);
+  await logTrade(userId, closeAction, position.qty, price, position.side, position.leverage, position.marginUsd, position.liquidationPrice, pnl);
 }

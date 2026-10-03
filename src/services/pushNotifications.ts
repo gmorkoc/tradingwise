@@ -86,6 +86,8 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
           window.dispatchEvent(new CustomEvent("open-coin-mention", { detail }));
         } else if (data?.type === "strategy_alert" && data.strategyId) {
           window.dispatchEvent(new CustomEvent("open-strategy-alert", { detail: { strategyId: data.strategyId, coin: data.coin } }));
+        } else if (data?.type === "agent_watch" || data?.type === "agent_position_close") {
+          window.dispatchEvent(new CustomEvent("open-trading-agent"));
         }
       });
 

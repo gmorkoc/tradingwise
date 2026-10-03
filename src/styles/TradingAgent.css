@@ -161,6 +161,13 @@ html[data-theme="light"] .ta-trigger-dot {
   --ta-bg-2: #0a0c18;
   --ta-text: #eef0f7;
   --ta-text-dim: #9298ad;
+  /* Shared by .ta-thinking-label and .ta-msg--agent .ta-msg-text on
+     purpose — the live-streamed "thinking" text becomes that exact
+     bubble's content the moment the reply resolves, so they read from one
+     variable rather than two hardcoded colors that can drift apart.
+     Near-white, matching real iOS iMessage dark-mode received-bubble text
+     (not a muted/dim gray). */
+  --ta-agent-text: #f2f2f7;
   --ta-border: rgba(255, 255, 255, 0.1);
   --ta-overlay: rgba(255, 255, 255, 0.04);
   --ta-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
@@ -216,6 +223,8 @@ html[data-theme="light"] .ta-panel {
   --ta-bg-2: #f2f4fa;
   --ta-text: #1a2030;
   --ta-text-dim: #767f93;
+  /* Real iMessage light-mode received-bubble text is black, not gray. */
+  --ta-agent-text: #000000;
   --ta-border: rgba(30, 40, 70, 0.1);
   --ta-overlay: rgba(20, 30, 60, 0.04);
 }
@@ -271,7 +280,7 @@ html[data-theme="light"] .ta-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px;
+  padding: 8px 18px;
   border-bottom: 1px solid var(--ta-border);
   flex-shrink: 0;
 }
@@ -281,39 +290,51 @@ html[data-theme="light"] .ta-panel {
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   color: var(--ta-text);
 }
 .ta-head-badge {
   font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #fff;
   background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
-  padding: 3px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
 }
 .ta-head-actions { display: flex; align-items: center; gap: 2px; }
+/* Full 44x44pt-ish hit area (Apple's own minimum recommendation) around a
+   small glyph — the glyph itself doesn't need to grow, just what's
+   actually tappable around it. */
 .ta-head-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 42px;
   border: none;
   background: none;
   color: var(--ta-text-dim);
-  font-size: 0.95rem;
+  font-size: 1.15rem;
   cursor: pointer;
-  padding: 4px 7px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .ta-head-icon-btn:hover { color: var(--ta-text); background: var(--ta-overlay); }
 .ta-head-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 42px;
   border: none;
   background: none;
   color: var(--ta-text-dim);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  padding: 4px 6px;
+  border-radius: 10px;
 }
-.ta-head-close:hover { color: var(--ta-text); }
+.ta-head-close:hover { color: var(--ta-text); background: var(--ta-overlay); }
 
 /* ── Conversation history ────────────────────────────────────────────────── */
 .ta-history {
@@ -385,17 +406,94 @@ html[data-theme="light"] .ta-panel {
   cursor: pointer;
 }
 
+/* ── Browser-notification opt-in banner ──────────────────────────────────── */
+.ta-webpush-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--ta-border);
+  flex-shrink: 0;
+}
+.ta-webpush-banner-text {
+  flex: 1;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--ta-text-dim);
+}
+.ta-webpush-banner-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--ta-accent);
+  background: transparent;
+  color: var(--ta-accent);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ta-webpush-banner-btn:disabled { opacity: 0.6; cursor: default; }
+.ta-webpush-banner-error {
+  padding: 0 18px 10px;
+  font-size: 0.72rem;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
 /* ── Portfolio summary strip ─────────────────────────────────────────────── */
 .ta-portfolio {
   padding: 14px 18px;
   border-bottom: 1px solid var(--ta-border);
   flex-shrink: 0;
 }
+.ta-portfolio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+.ta-portfolio-toggle-chevron {
+  display: inline-block;
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+.ta-portfolio-toggle-chevron--collapsed { transform: rotate(-90deg); }
 .ta-portfolio-cash {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   margin-bottom: 0;
+}
+.ta-portfolio-performance {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.ta-portfolio-winrate {
+  font-family: var(--ta-mono);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.ta-portfolio-winrate--good { color: #22c55e; }
+.ta-portfolio-winrate--bad { color: #fb7185; }
+.ta-portfolio-winrate-detail {
+  margin-left: 6px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--ta-text-dim);
 }
 .ta-portfolio-label {
   display: inline-flex;
@@ -474,6 +572,27 @@ html[data-theme="light"] .ta-panel {
   flex-direction: column;
   gap: 6px;
 }
+.ta-portfolio-positions-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+  margin-bottom: 2px;
+  cursor: pointer;
+}
+.ta-portfolio-positions-chevron {
+  display: inline-block;
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+.ta-portfolio-positions-chevron--collapsed { transform: rotate(-90deg); }
 .ta-position {
   display: flex;
   align-items: center;
@@ -522,9 +641,17 @@ html[data-theme="light"] .ta-panel {
   padding: 0 14px;
 }
 
-.ta-msg { max-width: 88%; }
+.ta-msg { max-width: 88%; display: flex; flex-direction: column; }
 .ta-msg--user { align-self: flex-end; }
 .ta-msg--agent { align-self: flex-start; }
+.ta-msg-time {
+  margin-top: 3px;
+  padding: 0 4px;
+  font-size: 0.66rem;
+  color: var(--ta-text-dim);
+}
+.ta-msg--user .ta-msg-time { align-self: flex-end; }
+.ta-msg--agent .ta-msg-time { align-self: flex-start; }
 
 .ta-msg-text {
   margin: 0;
@@ -541,16 +668,53 @@ html[data-theme="light"] .ta-panel {
   color: #fff;
   border-bottom-right-radius: 4px;
 }
+/* Color AND font-size/weight/line-height intentionally match
+   .ta-thinking-label exactly — this bubble's content IS what was just
+   streaming in the gray typing indicator a moment earlier, so keeping the
+   exact same look through that handoff avoids the text visibly
+   reflowing/recoloring the instant the real message replaces it. */
 .ta-msg--agent .ta-msg-text {
   background: #3b3b3d;
   border: none;
-  color: #e9e9eb;
+  color: var(--ta-agent-text);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.5;
   border-bottom-left-radius: 4px;
 }
 html[data-theme="light"] .ta-msg--agent .ta-msg-text {
   background: #e9e9eb;
-  color: #000;
 }
+/* The orb next to every agent bubble, not just the live typing indicator
+   — same glyph/animation (.ta-thinking-orb), reused here so a resolved
+   agent reply keeps the exact look it had while it was still streaming. */
+.ta-msg-sender { display: flex; align-items: center; margin: 0 0 4px 2px; }
+/* Permanent, not collapsible — the whole point is this stays visible after
+   the response lands and on reload, not just while streaming. */
+.ta-thought-process {
+  margin: 0 0 8px 2px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--ta-accent);
+  background: var(--ta-overlay);
+  border-radius: 0 8px 8px 0;
+}
+.ta-thought-process-label {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+  margin-bottom: 3px;
+}
+.ta-thought-process-text {
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ta-text-dim);
+}
+.ta-msg-orb { flex-shrink: 0; }
 
 /* ── Typing indicator ──────────────────────────────────────────────────── */
 /* A real bubble (same gray as a normal agent reply), not a borderless
@@ -582,7 +746,7 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   font-size: 0.82rem;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--ta-text-dim);
+  color: var(--ta-agent-text);
 }
 /* Same glowing-orb look as the trigger button, scaled down — the agent
    "thinking" feel carries through instead of a generic three-dot spinner. */
@@ -834,6 +998,50 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   color: var(--ta-text-dim);
 }
 .ta-watch-text strong { color: var(--ta-text); font-weight: 700; }
+.ta-watch-interval-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ta-border);
+  color: var(--ta-text-dim);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ta-watch-interval {
+  margin: 10px 0;
+}
+.ta-watch-interval-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+  margin-bottom: 6px;
+}
+.ta-watch-interval-options {
+  display: flex;
+  gap: 6px;
+}
+.ta-watch-interval-btn {
+  flex: 1;
+  border: 1px solid var(--ta-border);
+  background: transparent;
+  color: var(--ta-text-dim);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ta-watch-interval-btn--active {
+  border-color: var(--ta-accent);
+  background: var(--ta-accent);
+  color: #fff;
+}
 .ta-watch-cancel {
   flex-shrink: 0;
   border: 1px solid var(--ta-border);

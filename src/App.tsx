@@ -30,7 +30,7 @@ import { Drawer } from "./components/Drawer";
 import { AccountMenu } from "./components/AccountMenu";
 import { LearnSection } from "./components/LearnSection";
 import { LeveragePopup } from "./components/LeveragePopup";
-import { CoinHintzLogo } from "./components/CoinHintzLogo";
+import { CoinHintzLogo, LogoIcon } from "./components/CoinHintzLogo";
 import { PriceAlerts } from "./components/PriceAlerts";
 import { BuySignals } from "./components/BuySignals";
 import { useBuySignalRealtime } from "./hooks/useBuySignalRealtime";
@@ -1963,10 +1963,14 @@ function AppDashboard({
               style={{ height: ptrPullDistance }}
             >
               {(ptrPullDistance > 0 || ptrRefreshing) && (
-                <div
-                  className={`ptr-spinner${ptrRefreshing ? " ptr-spinner--spinning" : ""}`}
+                <span
+                  className="ptr-logo-wrap"
                   style={!ptrRefreshing ? { transform: `rotate(${ptrProgress * 360}deg)` } : undefined}
-                />
+                >
+                  {ptrRefreshing && <span className="ptr-logo-glow" />}
+                  {ptrRefreshing && <span className="ptr-logo-ring" />}
+                  <LogoIcon size={26} animated={ptrRefreshing} />
+                </span>
               )}
             </div>
             {profile?.subscription_status === "past_due" && (

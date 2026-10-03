@@ -3,12 +3,13 @@ import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../services/supabase";
+import { supabase, hasAccess } from "../services/supabase";
 import { COINS } from "../services/coinglass";
+import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsentAndOnboard,
-  fetchConversations, deleteConversation, addAgentNote, cancelWatch, fetchWatchesForConversation,
-  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate,
+  fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAgentPerformance,
+  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval,
 } from "../services/paperTrading";
 
 const DEFAULT_STARTING_BALANCE = 100000;
@@ -32,6 +33,8 @@ function estimateNetPnl(action: AgentAction): { profit: number; loss: number } |
   return { profit, loss };
 }
 const formatPnl = (n: number): string => `${n >= 0 ? "+" : "-"}$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const formatMsgTime = (iso: string): string =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
 // crypto.randomUUID() requires a secure context (https, or localhost) —
 // it's undefined (not just throwing) when testing over a plain-http local
@@ -72,13 +75,55 @@ interface Props {
 }
 
 export function TradingAgent({ selectedCoin }: Props) {
-  const { user } = useAuth();
+  const { user, tier } = useAuth();
   const isDesktop = useIsDesktop();
 
   const [open, setOpen] = useState(() => localStorage.getItem("tradingAgentOpen") === "true");
   useEffect(() => {
     localStorage.setItem("tradingAgentOpen", String(open));
   }, [open]);
+
+  // Tapping a watch-triggered/position-closed push notification (web or
+  // native — see webPush.ts/pushNotifications.ts's "agent_watch"/
+  // "agent_position_close" routing) dispatches this so the panel actually
+  // opens instead of the tap just focusing/launching the app with nothing
+  // else happening.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("open-trading-agent", onOpen);
+    return () => window.removeEventListener("open-trading-agent", onOpen);
+  }, []);
+
+  // Browser notifications require an explicit user action to request
+  // (see webPush.ts) — agent-watch-scan already sends a web push the
+  // moment a watch triggers or a position auto-closes, but without this
+  // prompt most desktop users would never have a subscription row at all,
+  // so that push would have nobody to deliver to.
+  const [webPushSubscribed, setWebPushSubscribed] = useState(true); // assume yes until checked, so the prompt never flashes on native/unsupported
+  const [webPushPrompting, setWebPushPrompting] = useState(false);
+  const [webPushError, setWebPushError] = useState<string | null>(null);
+  useEffect(() => {
+    if (isWebPushAvailable()) isWebPushSubscribed().then(setWebPushSubscribed);
+  }, []);
+  const handleEnableWebPush = async () => {
+    if (!user) return;
+    setWebPushPrompting(true);
+    setWebPushError(null);
+    const result = await subscribeWebPush(user.id);
+    setWebPushSubscribed(result.ok);
+    if (!result.ok) setWebPushError(result.error ?? "Couldn't enable browser notifications");
+    setWebPushPrompting(false);
+  };
+
+  // Collapses the whole cash+positions block (not just positions) down to
+  // a single header row — remembered across reopens, same persistence
+  // pattern as `open`.
+  const [portfolioCollapsed, setPortfolioCollapsed] = useState(
+    () => localStorage.getItem("tradingAgentPortfolioCollapsed") === "true"
+  );
+  useEffect(() => {
+    localStorage.setItem("tradingAgentPortfolioCollapsed", String(portfolioCollapsed));
+  }, [portfolioCollapsed]);
 
   // A short "connecting" sequence plays over the panel every time it
   // opens, before the actual chat/onboarding content underneath is
@@ -186,6 +231,7 @@ export function TradingAgent({ selectedCoin }: Props) {
   }, [phase]);
 
   const [portfolio, setPortfolio] = useState<PaperPortfolio | null>(null);
+  const [performance, setPerformance] = useState<AgentPerformance | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [watches, setWatches] = useState<Map<string, AgentWatch>>(new Map());
   const [draft, setDraft] = useState("");
@@ -195,6 +241,11 @@ export function TradingAgent({ selectedCoin }: Props) {
   // model generates from the real market data it just fetched.
   const [liveThinking, setLiveThinking] = useState("");
   const [executingId, setExecutingId] = useState<number | null>(null);
+  // The agent's proposed interval is a default, not the final answer — the
+  // user can change it right on the proposal card before confirming, so
+  // each pending watch message tracks its own (possibly edited) choice
+  // here rather than always reading m.watch.interval back out.
+  const [watchIntervalDrafts, setWatchIntervalDrafts] = useState<Record<number, MarketInterval>>({});
   const [cancellingWatchId, setCancellingWatchId] = useState<string | null>(null);
   const [closingPosition, setClosingPosition] = useState<string | null>(null);
   const [editingCash, setEditingCash] = useState(false);
@@ -362,12 +413,14 @@ export function TradingAgent({ selectedCoin }: Props) {
 
   const loadAll = useCallback(async (convId: string) => {
     if (!user) return;
-    const [p, m, w] = await Promise.all([
+    const [p, m, w, perf] = await Promise.all([
       fetchPortfolio(user.id), fetchAgentMessages(user.id, convId), fetchWatchesForConversation(user.id, convId),
+      fetchAgentPerformance(user.id),
     ]);
     setPortfolio(p);
     setMessages(m);
     setWatches(new Map(w.map((x) => [x.id, x])));
+    setPerformance(perf);
   }, [user]);
 
   const loadConversations = useCallback(async () => {
@@ -446,7 +499,8 @@ export function TradingAgent({ selectedCoin }: Props) {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, sending]);
 
-  if (!user) return null;
+  // Pro+ feature — free users don't get the trigger/panel at all.
+  if (!user || !hasAccess(tier, "pro")) return null;
 
   const handleNewConversation = () => {
     setConversationId(newConversationId());
@@ -506,7 +560,9 @@ export function TradingAgent({ selectedCoin }: Props) {
       balanceUpdate: null,
       newsSources: null,
       actionStatus: null,
+      watch: null,
       watchId: null,
+      thoughtProcess: null,
       createdAt: new Date().toISOString(),
     }]);
     try {
@@ -560,6 +616,21 @@ export function TradingAgent({ selectedCoin }: Props) {
       await loadAll(conversationId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't update your balance — please try again.");
+    } finally {
+      setExecutingId(null);
+    }
+  };
+
+  const handleConfirmWatch = async (m: AgentMessage) => {
+    if (!m.watch || executingId) return;
+    setExecutingId(m.id);
+    setError("");
+    try {
+      const interval = watchIntervalDrafts[m.id] ?? m.watch.interval;
+      await confirmWatch(m.id, user!.id, conversationId, { ...m.watch, interval });
+      await loadAll(conversationId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't set up that watch — please try again.");
     } finally {
       setExecutingId(null);
     }
@@ -633,7 +704,7 @@ export function TradingAgent({ selectedCoin }: Props) {
         </div>
       )}
       <div className="ta-head">
-        <span className="ta-head-title">✦ Trading Agent <span className="ta-head-badge">Paper</span></span>
+        <span className="ta-head-title">✦ Trading Agent <span className="ta-head-badge">AI Powered</span></span>
         <div className="ta-head-actions">
           <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title="New chat" aria-label="New chat">
             +
@@ -952,8 +1023,30 @@ export function TradingAgent({ selectedCoin }: Props) {
         </div>
       ) : (
         <>
+          {isWebPushAvailable() && !webPushSubscribed && (
+            <div className="ta-webpush-banner">
+              <span className="ta-webpush-banner-text">Get a browser alert when a watch or position triggers, even with this closed.</span>
+              <button type="button" className="ta-webpush-banner-btn" onClick={handleEnableWebPush} disabled={webPushPrompting}>
+                🔔 {webPushPrompting ? "Enabling…" : "Enable"}
+              </button>
+            </div>
+          )}
+          {webPushError && <div className="ta-webpush-banner-error">{webPushError}</div>}
           {portfolio && (
             <div className="ta-portfolio">
+              <button
+                type="button"
+                className="ta-portfolio-toggle"
+                onClick={() => setPortfolioCollapsed((v) => !v)}
+                aria-expanded={!portfolioCollapsed}
+              >
+                Portfolio
+                <span className={`ta-portfolio-toggle-chevron${portfolioCollapsed ? " ta-portfolio-toggle-chevron--collapsed" : ""}`}>
+                  ▾
+                </span>
+              </button>
+              {!portfolioCollapsed && (
+              <>
               <div className="ta-portfolio-cash">
                 <span className="ta-portfolio-label">Cash</span>
                 {editingCash ? (
@@ -984,8 +1077,20 @@ export function TradingAgent({ selectedCoin }: Props) {
                   </span>
                 )}
               </div>
+              {performance && performance.totalClosed > 0 && (
+                <div className="ta-portfolio-performance">
+                  <span className="ta-portfolio-label">Win Rate</span>
+                  <span className={`ta-portfolio-winrate${(performance.winRate ?? 0) >= 0.5 ? " ta-portfolio-winrate--good" : " ta-portfolio-winrate--bad"}`}>
+                    {Math.round((performance.winRate ?? 0) * 100)}%
+                    <span className="ta-portfolio-winrate-detail">
+                      ({performance.wins}W–{performance.losses}L)
+                    </span>
+                  </span>
+                </div>
+              )}
               {portfolio.positions.length > 0 && (
                 <div className="ta-portfolio-positions">
+                  <span className="ta-portfolio-positions-label">Current Positions</span>
                   {portfolio.positions.map((p) => {
                     const key = `${p.coin}:${p.market}`;
                     return (
@@ -1005,6 +1110,8 @@ export function TradingAgent({ selectedCoin }: Props) {
                   })}
                 </div>
               )}
+              </>
+              )}
             </div>
           )}
 
@@ -1016,7 +1123,28 @@ export function TradingAgent({ selectedCoin }: Props) {
             )}
             {messages.map((m) => (
               <div key={m.id} className={`ta-msg ta-msg--${m.role}`}>
+                {m.role === "agent" && (
+                  <div className="ta-msg-sender">
+                    <span className="ta-thinking-orb ta-msg-orb" />
+                  </div>
+                )}
+                {/* The model is told to keep "reply" to a short verdict separate
+                    from the narration, but for a trivial turn (small talk,
+                    no real analysis) it sometimes writes the same short text
+                    for both instead of a real walkthrough. When they match
+                    (normalizing whitespace so a harmless formatting
+                    difference doesn't defeat the check), there's no real
+                    "thought process" to show — it's just the answer, so
+                    render it once as a normal reply bubble, not as the
+                    dim/italic thought-process styling. */}
+                {m.thoughtProcess && m.content.replace(/\s+/g, " ").trim() !== m.thoughtProcess.replace(/\s+/g, " ").trim() && (
+                  <div className="ta-thought-process">
+                    <span className="ta-thought-process-label">Thought process</span>
+                    <p className="ta-thought-process-text">{m.thoughtProcess}</p>
+                  </div>
+                )}
                 <p className="ta-msg-text">{m.content}</p>
+                <span className="ta-msg-time">{formatMsgTime(m.createdAt)}</span>
                 {m.newsSources && m.newsSources.length > 0 && (
                   <div className="ta-sources">
                     <span className="ta-sources-label">
@@ -1222,12 +1350,68 @@ export function TradingAgent({ selectedCoin }: Props) {
                     ))}
                   </div>
                 )}
+                {/* Hidden once confirmed — the live watchId chip just below
+                    takes over as the authoritative "it's active" display
+                    (with its own Cancel/triggered state), so this proposal
+                    card would otherwise just be a stale duplicate of it. */}
+                {m.watch && m.actionStatus !== "confirmed" && (
+                  <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
+                    <div className="ta-proposal-row">
+                      <span className="ta-proposal-badge">👁 Watch</span>
+                    </div>
+                    <div className="ta-proposal-details">
+                      <div className="ta-proposal-detail">
+                        <span>{m.watch.coin}</span>
+                        <strong>{m.watch.condition}</strong>
+                      </div>
+                    </div>
+                    {/* Only meaningful for an indicator-based condition — a
+                        plain price level has no timeframe to pick. */}
+                    {m.actionStatus === "pending" && /rsi|macd|volume/i.test(m.watch.condition) && (
+                      <div className="ta-watch-interval">
+                        <span className="ta-watch-interval-label">Timeframe</span>
+                        <div className="ta-watch-interval-options">
+                          {(["1h", "4h", "1d"] as MarketInterval[]).map((iv) => (
+                            <button
+                              key={iv}
+                              type="button"
+                              className={`ta-watch-interval-btn${(watchIntervalDrafts[m.id] ?? m.watch!.interval) === iv ? " ta-watch-interval-btn--active" : ""}`}
+                              onClick={() => setWatchIntervalDrafts((prev) => ({ ...prev, [m.id]: iv }))}
+                            >
+                              {iv === "1d" ? "Daily" : iv}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {m.actionStatus === "pending" ? (
+                      <div className="ta-proposal-actions">
+                        <button
+                          type="button"
+                          className="ta-proposal-confirm"
+                          onClick={() => handleConfirmWatch(m)}
+                          disabled={executingId === m.id}
+                        >
+                          {executingId === m.id ? "Setting up…" : "Confirm"}
+                        </button>
+                        <button type="button" className="ta-proposal-dismiss" onClick={() => handleDismiss(m)}>
+                          Dismiss
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="ta-proposal-status">Dismissed</span>
+                    )}
+                  </div>
+                )}
                 {m.watchId && watches.get(m.watchId) && (() => {
                   const w = watches.get(m.watchId)!;
                   return (
                     <div className={`ta-watch${w.active ? "" : w.triggeredAt ? " ta-watch--triggered" : " ta-watch--cancelled"}`}>
                       <span className="ta-watch-text">
                         👁 Watching <strong>{w.coin}</strong> — {w.conditionText}
+                        {/rsi|macd|volume/i.test(w.conditionText) && (
+                          <span className="ta-watch-interval-tag">{w.interval === "1d" ? "Daily" : w.interval}</span>
+                        )}
                       </span>
                       {w.active ? (
                         <button
