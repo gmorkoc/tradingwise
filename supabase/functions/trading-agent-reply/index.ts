@@ -272,7 +272,7 @@ const SAFE_LOOKBACK = 60;
 
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
-  marketByCoin: Map<string, MarketContext>, news: NewsItem[]
+  marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[]
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -284,9 +284,18 @@ async function streamReply(
     });
   }
 
+  // Naming which coin(s) were actually resolved (from the message, prior
+  // conversation, or the user's own focus-coin preference — see
+  // resolveCoins) even when their live data fetch failed is deliberate:
+  // without this, the no-data fallback reads as "no coin was mentioned at
+  // all," which is actively wrong and misleading when a focus coin WAS
+  // known the whole time — just its price/indicators couldn't be fetched
+  // this run. Those are different situations and must not read the same.
   const marketLine = markets.length
     ? markets.map(formatMarketLine).join("\n")
-    : "No live market data available for the coin(s) mentioned (if any) — do not propose a trade without a real current price.";
+    : resolvedCoins.length > 0
+      ? `Live market data fetch FAILED this run for ${resolvedCoins.join(", ")} (a real, known coin — from the message, conversation, or the user's own focus-coin preference, not a guess) — do not claim no coin was named or that you need more context about which coin; say plainly that you know they're asking about ${resolvedCoins[0]} but the live price/indicator fetch failed, and suggest trying again shortly. Never propose a trade without a real current price.`
+      : "No coin could be resolved from the message, the conversation so far, or the user's focus-coin preference — this genuinely is the situation to ask which coin they mean.";
   const newsLine = news.length
     ? news.map((n, i) => `[${i}] ${n.source}: "${n.title}"`).join("\n")
     : "No recent crypto headlines were available this run.";
@@ -302,30 +311,12 @@ async function streamReply(
     portfolio.focusCoins.length ? `focused on trading: ${portfolio.focusCoins.join(", ")}` : null,
   ].filter(Boolean).join("; ") || "no stated preferences yet";
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // Full gpt-4o, not mini — this one's job is to reason carefully
-        // through real indicator data like an experienced trader would,
-        // not just produce a plausible-sounding reply.
-        model: "gpt-4o",
-        // No response_format: json_object here — the output is free-text
-        // narration followed by JSON_DELIMITER then the JSON payload, not
-        // a pure JSON document, so json_object mode would reject it. That
-        // also means there's no structural guarantee the trailing JSON is
-        // well-formed (json_object mode used to give us that for free) —
-        // generous max_tokens heads off the most common cause of broken
-        // JSON, getting cut off mid-object on a long basket reply.
-        stream: true,
-        max_tokens: 2000,
-        messages: [
+  const baseMessages = [
           {
-            role: "system",
+            role: "system" as const,
             content: `You are an expert crypto technical analyst and trader embedded in a paper-trading app — think and reason the way a seasoned prop desk trader would, not a generic assistant. This is SIMULATED trading only (no real money, no real exchange), so you act directly on the user's instructions rather than just suggesting.
 
-Portfolio: cash $${portfolio.cashBalance.toLocaleString()}, open positions: ${positionsLine}. User preferences: ${prefsLine}. Leveraged futures trading is ${portfolio.allowLeverage ? "ENABLED" : "DISABLED"} for this user${portfolio.allowLeverage ? "" : " — you may ONLY propose spot trades (\"market\": \"spot\", \"leverage\": 1); if they ask for leverage/margin/long/short/futures, tell them plainly it's off in their settings and that they can enable it from the onboarding/consent screen, and do not propose a futures action"}.
+Portfolio: cash $${portfolio.cashBalance.toLocaleString()}, open positions: ${positionsLine}. User preferences: ${prefsLine}. Leveraged futures trading is ${portfolio.allowLeverage ? "ENABLED" : "DISABLED"} for this user${portfolio.allowLeverage ? "" : " — you may ONLY propose spot trades (\"market\": \"spot\", \"leverage\": 1); if they ask for leverage/margin/long/short/futures, tell them plainly it's off in their settings and that they can enable it from the onboarding/consent screen, and do not propose a futures action"}. This portfolio/preferences line is ALWAYS real, already-known information about this specific user (confirmed at onboarding, not a guess) — for an open-ended ask like "what's a good move for me" with no coin named in the message itself, this is exactly where the coin and sizing come from. Never claim "no coin was mentioned" or "I need more context on your strategy" when focus coins or a typical trade size are listed here — that claim would be factually wrong, since you already have them right above; use them instead of asking for what you already know.
 
 Live market data: ${marketLine}
 
@@ -357,7 +348,9 @@ Set "takeProfit" and "stopLoss" to null on every leg of an "action" or "basket" 
 
 Set "watch" to a real object ONLY when the user is asking to be notified/alerted/watched for something rather than asking for an immediate trade (e.g. "notify me when it's ready to buy", "let me know if RSI gets oversold", "watch ETH for a breakout above $4000"). Resolve "coin" using the conversation so far if the current message doesn't name one itself (e.g. a prior message about BTC followed by "notify me when ready to buy" means coin: "BTC") — never guess a coin with no basis in the conversation. Phrase "condition" as a concrete, re-checkable technical condition (e.g. "RSI(14) drops below 30", "price breaks above $4000") — do NOT embed a timeframe into this text itself (no "(4h)" suffix); the timeframe is a separate field (see "interval" below) so the UI can show and let the user change it on its own, not baked unchangeably into a sentence.
 
-An indicator-based watch (RSI/MACD/volume-ratio — NOT a plain price level, which has no timeframe and should just get "interval": "4h" as an unused default) has a real "interval" field, one of "1h", "4h", or "1d" — set it to whatever the user actually asked for (e.g. "notify me when the 1h RSI drops below 30" means interval: "1h"); when they don't name one, default to "4h" since that's what this app's header shows, not a guess. This default is never the final word, though — the app shows the user a confirm/dismiss card with an interval selector before anything is actually created, so they can change it themselves right there. That card is the real "confirm with the user" step, not something you need to replicate by asking a clarifying question first — just resolve your best guess at "interval" and set "watch" directly; don't set "question" instead just to ask about timeframe.
+A vaguer ask about an EXISTING position — "let me know if we profit or lose", "watch this and tell me the results", "notify me how it goes" — still needs a real, concrete "condition", never a vague one and never a reason to skip "watch" entirely: ground it in that position's actual entry price from the portfolio snapshot above. Phrase it as a meaningful move away from entry in either direction (e.g. "price moves more than 2% away from the $2,688.07 entry, up or down" — 2% is a reasonable default absent a stated threshold, since "any" move technically starts at the very next tick and would be useless), not a vague restatement of "profit or loss." If they later say what threshold they actually want, use that instead. The point is: there is ALWAYS a concrete price- or indicator-based condition available from real data above for this kind of ask — never leave "watch" null and fall back to a question or plain chat just because the user's own phrasing was loose.
+
+An indicator-based watch (RSI/MACD/volume-ratio — NOT a plain price level, which has no timeframe and should just get "interval": "4h" as an unused default) has a real "interval" field, one of "1h", "4h", or "1d" — set it to whatever the user actually asked for (e.g. "notify me when the 1h RSI drops below 30" means interval: "1h"); when they don't name one, default to "4h" since that's what this app's header shows, not a guess. This default is never the final word, though — the app shows the user a confirm/dismiss card with an interval selector before anything is actually created, so they can change it themselves right there, and they may pick something different from your default. Because of that, do NOT state a specific timeframe in "reply" or the narration when proposing a watch (no "on the 4h timeframe", no "(4h)", nothing that commits to a number) — describe the condition itself only (e.g. "Setting a watch for RSI to drop below 30" — not "...on the 4h timeframe"), since the interval the user actually confirms may not match what you wrote. The confirm card and the resulting watch chip are the one accurate, live source of truth for which timeframe it's actually on, not your prose. That card is also the real "confirm with the user" step, not something you need to replicate by asking a clarifying question first — just resolve your best guess at "interval" and set "watch" directly; don't set "question" instead just to ask about timeframe.
 
 Set "question" when you genuinely can't finalize an action/basket without more input from the user, most commonly: a basket-style or open-ended screening request ("find me good crypto plays", "what should I buy", "build me a basket") with no stated budget or coin count, or a request whose risk/size is materially ambiguous even with their stated typical trade size/preferences known. IMPORTANT: for a screening-style request, you are ALWAYS given live market data for several candidate coins above specifically so you can screen them — never respond with plain chat and no "question" just because no single coin or size was named; that's a sign you should rank the candidates and ask a sizing question instead of punting. Use the indicator data to actually rank the candidates (same top-down reasoning as above: daily trend, RSI, MACD, volume) and name the 2-3 strongest in "reply" with a one-line reason each (e.g. "BTC — clean uptrend on the daily, RSI cooling off from overbought"), mirroring how a real screener would surface its best ideas, THEN set "question" to ask what's needed to finalize sizing (total budget, how many of them to take, risk level). The UI renders "question.prompt" as its own heading above tappable option chips, so "reply" should contain the screening result/lead-in and NOT restate the question itself — the actual question text belongs ONLY in "question.prompt". Keep "options" to 2-4 concrete, mutually exclusive choices, each with a one-line "description" of the tradeoff — mirror the kind of choice a real trading app would offer (budget size, how many positions, more conservative vs more aggressive sizing), scoped to crypto spot/futures only (never mention options, expiries, or strikes — this app doesn't support them). Don't ask a question when the message already gives you enough to act or when a concrete single-coin "action" would do — reserve it for genuinely ambiguous, usually multi-coin requests, and never ask more than one question in a row without letting the user's answer (their next message) resolve it.
 
@@ -367,151 +360,205 @@ ${JSON_DELIMITER}
 {"reply": "Happy to help — let me know if anything else comes up.", "action": null, "basket": null, "watch": null, "question": null, "balanceUpdate": null, "newsRefs": []}`,
           },
           ...history.map((h) => ({ role: h.role === "agent" ? "assistant" as const : "user" as const, content: h.content })),
-          { role: "user", content: message },
-        ],
+          { role: "user" as const, content: message },
+  ];
+
+  // One full OpenAI completion + the narration/JSON split-parse, isolated
+  // so it can be retried wholesale (see below) rather than only ever
+  // running once. `onNarration`, when given, emits each narration chunk
+  // live as "N:" to the client — used for the first attempt so the user
+  // watches real reasoning stream in; the retry attempt omits it (see the
+  // comment at its call site for why).
+  async function callOnce(
+    extraReminder: string | null, onNarration?: (chunk: string) => void
+  ): Promise<{ raw: RawAgentResponse | null; narrationAccum: string; foundDelimiter: boolean }> {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // Full gpt-4o, not mini — this one's job is to reason carefully
+        // through real indicator data like an experienced trader would,
+        // not just produce a plausible-sounding reply.
+        model: "gpt-4o",
+        // No response_format: json_object here — the output is free-text
+        // narration followed by JSON_DELIMITER then the JSON payload, not
+        // a pure JSON document, so json_object mode would reject it. That
+        // also means there's no structural guarantee the trailing JSON is
+        // well-formed (json_object mode used to give us that for free) —
+        // generous max_tokens heads off the most common cause of broken
+        // JSON, getting cut off mid-object on a long basket reply.
+        stream: true,
+        max_tokens: 2000,
+        messages: extraReminder ? [...baseMessages, { role: "system" as const, content: extraReminder }] : baseMessages,
       }),
     });
     if (!res.ok || !res.body) {
       const errText = res.body ? await res.text() : "no response body";
-      return new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode(`E:openai http ${res.status}: ${errText.slice(0, 300)}\n`));
-          controller.close();
-        },
-      });
+      throw new Error(`openai http ${res.status}: ${errText.slice(0, 300)}`);
     }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    let sseBuffer = "";
+    // `pending` holds narration text seen but not yet confirmed safe to
+    // flush — the tail could be the start of JSON_DELIMITER arriving split
+    // across chunks, so only the portion that's too long to possibly be a
+    // delimiter prefix gets emitted each time.
+    let pending = "";
+    let foundDelimiter = false;
+    let jsonText = "";
+    // Mirrors every narration chunk ever produced — kept so a malformed/
+    // truncated JSON tail has a fallback: the narration already streamed
+    // to the user as real text, so it can stand in as the reply instead of
+    // failing the whole turn over a broken JSON tail.
+    let narrationAccum = "";
+    const flushSafePending = () => {
+      const safeLen = Math.max(0, pending.length - SAFE_LOOKBACK);
+      if (safeLen > 0) {
+        narrationAccum += pending.slice(0, safeLen);
+        onNarration?.(pending.slice(0, safeLen));
+        pending = pending.slice(safeLen);
+      }
+    };
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      sseBuffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") continue;
+        let delta = "";
+        try { delta = JSON.parse(payload).choices?.[0]?.delta?.content ?? ""; } catch { continue; }
+        if (!delta) continue;
+        if (foundDelimiter) { jsonText += delta; continue; }
+        pending += delta;
+        const match = pending.match(JSON_START_RE);
+        if (!match) {
+          flushSafePending();
+        } else {
+          const idx = match.index ?? 0;
+          const narration = pending.slice(0, idx).replace(DELIMITER_MARKER_RE, "").trimEnd();
+          if (narration) {
+            narrationAccum += narration;
+            onNarration?.(narration);
+          }
+          jsonText = pending.slice(idx);
+          foundDelimiter = true;
+          pending = "";
+        }
+      }
+    }
+    if (!foundDelimiter && pending) {
+      // Model never produced a detectable JSON object at all (rare format
+      // slip) — flush whatever narration we held back as a precaution,
+      // stripped of any trailing marker-like text.
+      const cleaned = pending.replace(DELIMITER_MARKER_RE, "").trimEnd();
+      if (cleaned) {
+        narrationAccum += cleaned;
+        onNarration?.(cleaned);
+      }
+    }
+
+    // No response_format: json_object here — the narration-then-JSON
+    // format is incompatible with it, so nothing structurally guarantees
+    // the trailing JSON is well-formed or shaped right.
+    let raw: RawAgentResponse | null = null;
+    try {
+      const candidate = JSON.parse(jsonText.trim()) as RawAgentResponse;
+      if (typeof candidate.reply === "string") raw = candidate;
+    } catch { /* fall through to the narration fallback below */ }
+
+    // Safety net: if in-stream JSON-start detection somehow missed the
+    // boundary (the exact in-stream check above is best-effort — this
+    // re-scans the ENTIRE assembled text with no chunk-timing constraints,
+    // so it can recover cases the live check couldn't), narrationAccum
+    // ends up holding the raw, unparsed JSON object verbatim — which must
+    // never reach the user as if it were prose. Re-scan it for an embedded
+    // JSON object before giving up.
+    if (!raw) {
+      const embeddedMatch = narrationAccum.match(JSON_START_RE);
+      if (embeddedMatch && embeddedMatch.index !== undefined) {
+        try {
+          const candidate = JSON.parse(narrationAccum.slice(embeddedMatch.index).trim()) as RawAgentResponse;
+          if (typeof candidate.reply === "string") {
+            raw = candidate;
+            narrationAccum = narrationAccum.slice(0, embeddedMatch.index).replace(DELIMITER_MARKER_RE, "").trimEnd();
+          }
+        } catch { /* still unrecoverable — falls through below */ }
+      }
+    }
+
+    return { raw, narrationAccum, foundDelimiter };
+  }
+
+  // Resolves one attempt's output into a usable AgentResponse, or null when
+  // it's unrecoverable — the caller treats null as "retry," not "fail,"
+  // except on the final attempt.
+  function resolveAttempt(attempt: { raw: RawAgentResponse | null; narrationAccum: string; foundDelimiter: boolean }): AgentResponse | null {
+    const { raw, narrationAccum, foundDelimiter } = attempt;
+    let parsed: AgentResponse;
+    if (raw) {
+      const { newsRefs, ...rawWithoutNewsRefs } = raw;
+      parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news), thoughtProcess: null };
+    } else if (foundDelimiter && narrationAccum.trim() && !JSON_START_RE.test(narrationAccum)) {
+      // The narration-only fallback is ONLY safe when the model genuinely
+      // started the JSON object (foundDelimiter true) and it was the
+      // trailing object itself that broke (cut off mid-basket, a stray
+      // trailing comma, etc.) — narrationAccum here is real analysis the
+      // user already watched stream in, and action/basket/watch/
+      // balanceUpdate were never going to be anything but null for that
+      // kind of turn anyway.
+      //
+      // When foundDelimiter is FALSE, the model never attempted the JSON
+      // at all — it just wrote plain prose instead, which has been
+      // observed to include confident-sounding claims like "I'll set up a
+      // watch for that" with no watch object behind it. Falling back to
+      // that prose as if it were a normal successful reply silently drops
+      // the action/watch/basket the text claims happened — a false
+      // promise, worse than retrying. Not recoverable here.
+      parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null, thoughtProcess: null };
+    } else {
+      return null;
+    }
+    // Always the real streamed narration, not something the model writes
+    // itself — persisted so it survives the turn and a reload instead of
+    // only existing transiently while streaming.
+    parsed.thoughtProcess = narrationAccum.trim() || null;
+    return parsed;
+  }
+
+  try {
     return new ReadableStream<Uint8Array>({
       async start(controller) {
-        let sseBuffer = "";
-        // `pending` holds narration text seen but not yet confirmed safe to
-        // flush — the tail could be the start of JSON_DELIMITER arriving
-        // split across chunks, so only the portion that's too long to
-        // possibly be a delimiter prefix gets emitted each time.
-        let pending = "";
-        let foundDelimiter = false;
-        let jsonText = "";
-        // Mirrors every "N:" chunk ever sent — kept so a malformed/
-        // truncated JSON tail has a fallback: the narration already
-        // streamed to the user as real text, so it can stand in as the
-        // reply instead of failing the whole turn over a broken JSON tail.
-        let narrationAccum = "";
-        const flushSafePending = () => {
-          const safeLen = Math.max(0, pending.length - SAFE_LOOKBACK);
-          if (safeLen > 0) {
-            narrationAccum += pending.slice(0, safeLen);
-            controller.enqueue(encoder.encode(`N:${pending.slice(0, safeLen)}\n`));
-            pending = pending.slice(safeLen);
-          }
-        };
         try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            sseBuffer += decoder.decode(value, { stream: true });
-            const lines = sseBuffer.split("\n");
-            sseBuffer = lines.pop() ?? "";
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
-              const payload = line.slice(6).trim();
-              if (payload === "[DONE]") continue;
-              let delta = "";
-              try { delta = JSON.parse(payload).choices?.[0]?.delta?.content ?? ""; } catch { continue; }
-              if (!delta) continue;
-              if (foundDelimiter) { jsonText += delta; continue; }
-              pending += delta;
-              const match = pending.match(JSON_START_RE);
-              if (!match) {
-                flushSafePending();
-              } else {
-                const idx = match.index ?? 0;
-                const narration = pending.slice(0, idx).replace(DELIMITER_MARKER_RE, "").trimEnd();
-                if (narration) {
-                  narrationAccum += narration;
-                  controller.enqueue(encoder.encode(`N:${narration}\n`));
-                }
-                jsonText = pending.slice(idx);
-                foundDelimiter = true;
-                pending = "";
-              }
-            }
-          }
-          if (!foundDelimiter && pending) {
-            // Model never produced a detectable JSON object at all (rare
-            // format slip) — flush whatever narration we held back as a
-            // precaution, stripped of any trailing marker-like text.
-            const cleaned = pending.replace(DELIMITER_MARKER_RE, "").trimEnd();
-            if (cleaned) {
-              narrationAccum += cleaned;
-              controller.enqueue(encoder.encode(`N:${cleaned}\n`));
-            }
-          }
-
-          // No response_format: json_object here — the narration-then-JSON
-          // format is incompatible with it, so nothing structurally
-          // guarantees the trailing JSON is well-formed or shaped right.
-          // Rather than fail the whole turn over a broken/missing JSON
-          // tail, fall back to the narration itself as the reply (it
-          // already streamed to the user as real text) with no
-          // action/basket/watch/question — a plain answer beats an error
-          // whenever there's real narration to fall back to.
-          let raw: RawAgentResponse | null = null;
+          let parsed: AgentResponse | null = null;
           try {
-            const candidate = JSON.parse(jsonText.trim()) as RawAgentResponse;
-            if (typeof candidate.reply === "string") raw = candidate;
-          } catch { /* fall through to the narration fallback below */ }
-
-          // Safety net: if in-stream JSON-start detection somehow missed
-          // the boundary (the exact in-stream check above is best-effort —
-          // this re-scans the ENTIRE assembled text with no chunk-timing
-          // constraints, so it can recover cases the live check couldn't),
-          // narrationAccum ends up holding the raw, unparsed JSON object
-          // verbatim — which must never reach the user as if it were
-          // prose. Re-scan it for an embedded JSON object before giving up.
-          if (!raw) {
-            const embeddedMatch = narrationAccum.match(JSON_START_RE);
-            if (embeddedMatch && embeddedMatch.index !== undefined) {
-              try {
-                const candidate = JSON.parse(narrationAccum.slice(embeddedMatch.index).trim()) as RawAgentResponse;
-                if (typeof candidate.reply === "string") {
-                  raw = candidate;
-                  narrationAccum = narrationAccum.slice(0, embeddedMatch.index).replace(DELIMITER_MARKER_RE, "").trimEnd();
-                }
-              } catch { /* still unrecoverable — falls through below */ }
-            }
+            const attempt1 = await callOnce(null, (chunk) => controller.enqueue(encoder.encode(`N:${chunk}\n`)));
+            parsed = resolveAttempt(attempt1);
+          } catch { /* HTTP/network failure on attempt 1 — eligible for retry below, same as a parse failure */ }
+          if (!parsed) {
+            // One silent retry before giving up — a format slip (the model
+            // skipping the JSON tail entirely) has been common enough to
+            // be worth one more try rather than failing the turn outright.
+            // Not live-streamed: the user already watched attempt 1's
+            // narration arrive and go nowhere (if it produced any at all),
+            // so a second stream of narration layered on top would read as
+            // two different answers overlapping rather than one retry. The
+            // extra reminder nudges past the exact failure mode this path
+            // exists for.
+            try {
+              const attempt2 = await callOnce(
+                "Reminder: your last response for this turn was missing its required JSON tail. Every response — even a short one — MUST end with the delimiter line and then the JSON object, with no exceptions. Do not forget it this time."
+              );
+              parsed = resolveAttempt(attempt2);
+            } catch { /* final attempt also failed — falls through to the error below */ }
           }
-
-          let parsed: AgentResponse;
-          if (raw) {
-            const { newsRefs, ...rawWithoutNewsRefs } = raw;
-            parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news), thoughtProcess: null };
-          } else if (foundDelimiter && narrationAccum.trim() && !JSON_START_RE.test(narrationAccum)) {
-            // The narration-only fallback is ONLY safe when the model
-            // genuinely started the JSON object (foundDelimiter true) and
-            // it was the trailing object itself that broke (cut off mid-
-            // basket, a stray trailing comma, etc.) — narrationAccum here
-            // is real analysis the user already watched stream in, and
-            // action/basket/watch/balanceUpdate were never going to be
-            // anything but null for that kind of turn anyway.
-            //
-            // When foundDelimiter is FALSE, the model never attempted the
-            // JSON at all — it just wrote plain prose instead, which has
-            // been observed to include confident-sounding claims like
-            // "I'll set up a watch for that" with no watch object behind
-            // it. Falling back to that prose as if it were a normal
-            // successful reply silently drops the action/watch/basket the
-            // text claims happened — a false promise, worse than an
-            // honest retry. Always fail loudly in that case instead.
-            parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null, thoughtProcess: null };
-          } else {
+          if (!parsed) {
             throw new Error("The agent's response was cut off — please try again.");
           }
-          // Always the real streamed narration, not something the model
-          // writes itself — persisted so it survives the turn and a
-          // reload instead of only existing transiently while streaming.
-          parsed.thoughtProcess = narrationAccum.trim() || null;
           parsed.action = applyServerComputedTPSL(parsed.action, marketByCoin);
           if (parsed.basket) {
             parsed.basket = parsed.basket
@@ -589,13 +636,20 @@ Deno.serve(async (req) => {
     // independent, no reason to pay for them sequentially.
     const coins = resolveCoins(message, safeHistory, portfolio.focusCoins, selectedCoin).slice(0, 6);
     const [marketResults, news] = await Promise.all([
-      Promise.all(coins.map(getMarketContext)),
+      // NOT coins.map(getMarketContext) — Array.map passes (element, index,
+      // array) to its callback, and getMarketContext's second parameter is
+      // "interval", not an index. That silently fed the array index in as
+      // the interval (0 for any single-coin request) once "interval" was
+      // added, which isn't a valid timeframe — every fetch failed and
+      // silently returned null, making "live market data unavailable"
+      // happen on EVERY request instead of only on genuine API failures.
+      Promise.all(coins.map((c) => getMarketContext(c))),
       fetchCryptoNews(),
     ]);
     const markets = marketResults.filter((m): m is MarketContext => m !== null);
 
     const marketByCoin = new Map(markets.map((m) => [m.coin.toUpperCase(), m]));
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the
