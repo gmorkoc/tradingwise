@@ -1,0 +1,148 @@
+/* Floating bottom nav — visual only for now, see FloatingNavBar.tsx.
+   Shape: near-full-width floating pill (margins on both sides, not edge-
+   to-edge), active item expands into a solid filled chip with icon+label,
+   everything else is a plain icon. Colors are copied directly from
+   TradingAgent.css's .ta-trigger (the "Agent Ready" floating button) —
+   not this app's global --color-* tokens — so these two floating buttons
+   that sit on screen together actually match each other, not just each
+   independently matching the rest of the app.
+
+   Comparison variant: Agent sits flush in the row as a plain 5th icon
+   (.fnb-agent-item), not raised above the bar in a cut notch — see
+   FloatingNavBar.tsx's comment at the return statement. */
+.fnb-bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  /* Equal distribution across the full bar width. */
+  justify-content: space-between;
+  padding: 6px;
+  border-radius: 999px;
+  background: #0a0d1c;
+  border: none;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  transform-origin: bottom center;
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
+}
+html[data-theme="light"] .fnb-bar {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+}
+/* "The icon becomes the brief" — the bar shrinks back down into roughly
+   the Daily Brief icon's own footprint and fades out as DailyBrief mounts
+   in its place, instead of the two sitting on screen at once. Scaling
+   from transform-origin: bottom center (not just fading) is what sells
+   the "this is turning into that" read rather than "this just vanished." */
+.fnb-bar--brief-open {
+  transform: scale(0.14);
+  opacity: 0;
+  pointer-events: none;
+}
+.fnb-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  height: 50px;
+  border: none;
+  background: none;
+  /* Matches .ta-trigger's own text color exactly, not a global app token
+     — lighter + thinner than the original full --color-text/strokeWidth
+     2.5 combo, which read as too dark/heavy against the bar. */
+  color: #d8dbe4;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, flex 0.18s ease;
+}
+html[data-theme="light"] .fnb-item { color: #1c1a3a; }
+.fnb-item svg { stroke-width: 1.8; }
+.fnb-item:hover { background: rgba(127, 127, 127, 0.12); }
+.fnb-item--active {
+  /* Takes up more than an even 1/5 share since it also carries the label
+     — flex-grow higher than the plain icon buttons reflects that instead
+     of forcing them all to the exact same width regardless of content. */
+  flex: 1.6;
+  background: var(--color-primary);
+  color: #fff;
+}
+/* The light-theme override above (html[data-theme="light"] .fnb-item) has
+   higher specificity than plain .fnb-item--active, so without this it was
+   winning even on the active pill — darkening white text down to navy on
+   top of the still-blue background in light theme. The active pill's
+   background is the same --color-primary blue in both themes, so its text
+   should always stay white regardless of theme, same specificity level as
+   the rule it needs to beat. */
+html[data-theme="light"] .fnb-item--active { color: #fff; }
+.fnb-item-label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fnb-item-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Unread notification count — same small-circle-badge shape as
+   .buysig-bell-count, just repositioned for this bar's bigger icon. */
+.fnb-item-badge {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 2px solid #0a0d1c;
+}
+html[data-theme="light"] .fnb-item-badge { border-color: #ffffff; }
+
+/* ── Agent item — same .fnb-item row shape/sizing as the other four, with
+   the orb (TradingAgent.css's .ta-trigger-orb, reused verbatim — same
+   infinite glow/rotate/scale animations) standing in for an svg icon,
+   sized to match their 22x22 viewBox exactly. */
+.fnb-agent-item { padding: 0; }
+.fnb-agent-orb-inline {
+  /* A <button>'s <span> child is inline by default — width/height on an
+     inline, non-replaced element are ignored entirely. .fnb-item-icon-wrap
+     is already display:flex (see above), which blockifies this the same
+     way .ta-trigger's own inline-flex does for its orb child. Slightly
+     bigger than the other icons' 22px — still a flat row item, just given
+     a touch more presence. */
+  width: 34px;
+  height: 34px;
+}
+.fnb-agent-dot {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fb7185;
+  box-shadow: 0 0 0 2px #0a0d1c, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+  animation: ta-trigger-dot-pulse 1.6s ease-in-out infinite;
+}
+html[data-theme="light"] .fnb-agent-dot {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+}
+
+@media (min-width: 900px) {
+  /* A floating native-app-style nav doesn't belong on a wide desktop
+     layout that already has .icon-strip for navigation. */
+  .fnb-bar { display: none; }
+}

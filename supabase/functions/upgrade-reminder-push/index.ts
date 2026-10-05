@@ -1,4 +1,5 @@
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 
 // Once-daily nudge for free-tier users (see the matching cron migration —
 // the schedule itself is what keeps this to once a day, no extra state
@@ -31,9 +32,14 @@ Deno.serve(async (req) => {
 
   const soundByUser = await getSoundsByUser(tokens.map(t => t.user_id));
   const accessToken = await getAccessToken();
+  const upgradePushData = { type: "upgrade_reminder" };
   const results = await Promise.all(tokens.map(({ token, user_id }) =>
-    sendPush(accessToken, token, TITLE, BODY, soundByUser.get(user_id) ?? "bell", { type: "upgrade_reminder" })
+    sendPush(accessToken, token, TITLE, BODY, soundByUser.get(user_id) ?? "bell", upgradePushData)
   ));
+  const uniqueFreeUserIds = [...new Set(tokens.map(t => t.user_id))];
+  await logNotifications(uniqueFreeUserIds.map((userId) => ({
+    userId, type: "upgrade_reminder", title: TITLE, body: BODY, data: upgradePushData,
+  })));
 
   return new Response(
     JSON.stringify({ freeUsers: freeUsers.length, sent: results.filter(Boolean).length, total: tokens.length }),

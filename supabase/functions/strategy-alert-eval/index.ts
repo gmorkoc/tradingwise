@@ -1,5 +1,6 @@
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
 import { sendWebPush, getWebPushSubscriptions } from "../_shared/webpush.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 import { fetchKlines } from "../_shared/klines.ts";
 import {
   CandleDataPoint,
@@ -211,6 +212,8 @@ Deno.serve(async (req) => {
         } else {
           debug.push({ webPushAttempt: false, reason: "no subscriptions for this user" });
         }
+
+        await logNotifications([{ userId: strategy.user_id, type: "strategy_alert", title, body: summary, data: pushData }]);
       } catch (err) {
         console.error(`strategy ${strategy.id} / ${coin} failed:`, err);
       }

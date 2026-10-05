@@ -1,5 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabase";
+import { routeNotificationTap } from "../utils/notificationRouting";
 
 // Web Push (browser) — the equivalent of pushNotifications.ts's FCM/APNs
 // pipeline, but for plain web browsers instead of the native iOS app.
@@ -99,18 +100,7 @@ export function initWebPushMessageRouting(): void {
   messageListenerInit = true;
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.source !== "web-push") return;
-    const data = event.data.data as { type?: string; url?: string; coin?: string; commentId?: string; strategyId?: string } | undefined;
-    if (data?.type === "daily_brief" && data.url) {
-      window.open(data.url, "_blank");
-    } else if (data?.type === "upgrade_reminder") {
-      window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
-    } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
-      window.dispatchEvent(new CustomEvent("open-coin-mention", { detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) } }));
-    } else if (data?.type === "strategy_alert" && data.strategyId) {
-      window.dispatchEvent(new CustomEvent("open-strategy-alert", { detail: { strategyId: data.strategyId, coin: data.coin } }));
-    } else if (data?.type === "agent_watch" || data?.type === "agent_position_close") {
-      window.dispatchEvent(new CustomEvent("open-trading-agent"));
-    }
+    routeNotificationTap(event.data.data);
   });
 }
 

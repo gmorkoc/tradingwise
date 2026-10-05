@@ -8,6 +8,7 @@
 // buy_signals.signals for exactly which conditions fired and why.
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
 import { sendWebPush, getWebPushSubscriptions } from "../_shared/webpush.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 import { fetchKlines } from "../_shared/klines.ts";
 import { fetchPositioning } from "../_shared/positioning.ts";
 import {
@@ -255,6 +256,10 @@ Deno.serve(async (req) => {
             await Promise.all(webSubs.map((sub) => sendWebPush(sub, title, body, pushData)));
           }
         }
+
+        await logNotifications(recipientIds.map((userId) => ({
+          userId, type: "buy_signal", title, body, data: pushData,
+        })));
       }
     } catch (err) {
       console.error(`buy-signal-scan failed for ${coin}:`, err);

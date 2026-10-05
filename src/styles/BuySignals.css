@@ -443,9 +443,37 @@
   flex-shrink: 0;
 }
 
+/* Mobile (narrow viewport, same breakpoint the rest of the floating-nav
+   mobile work uses) — full-screen, slides down from the top, same
+   treatment as NotificationsCenter.css's .notif-panel/@keyframes
+   notif-slide-down, not a centered backdrop modal. Desktop (the bell in
+   .mch-right, isWideDesktop) is untouched — still the original centered
+   modal, this only ever applies below 640px. */
 @media (max-width: 640px) {
-  .buysig-panel {
-    max-width: calc(100vw - 24px);
-    max-height: 80vh;
+  .buysig-backdrop {
+    display: none;
   }
+  .buysig-panel {
+    inset: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    animation: buysig-slide-down 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .buysig-panel-header {
+    padding-top: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)));
+  }
+  .buysig-disclaimer {
+    padding-bottom: max(12px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  }
+}
+@keyframes buysig-slide-down {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
 }

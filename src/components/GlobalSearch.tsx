@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
+import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import { COINS, CoinSymbol } from "../services/coinglass";
 import "../styles/GlobalSearch.css";
 
@@ -74,14 +76,20 @@ interface Props {
   onClose: () => void;
   onCoinSelect: (coin: CoinSymbol) => void;
   onSectionSelect: (section: SectionId) => void;
+  // "modal" (default): the existing centered, backdrop-dimmed ⌘K-style
+  // overlay. "docked": renders as a card directly above FloatingNavBar
+  // instead — no dark backdrop, positioned to read as physically attached
+  // to the nav bar rather than a separate floating layer.
+  variant?: "modal" | "docked";
 }
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
-export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect }: Props) {
+export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "modal" }: Props) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef  = useRef<HTMLInputElement>(null);
   const listRef   = useRef<HTMLUListElement>(null);
+  const dockedRef = useRef<HTMLDivElement>(null);
 
   /* Reset on open */
   useEffect(() => {
@@ -91,6 +99,27 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect }: P
       setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);
+
+  // capacitor.config.ts sets Keyboard resize:'none', so .gs-docked (a
+  // position:fixed card already anchored just above FloatingNavBar) never
+  // shrinks away from the keyboard on its own — the keyboard just covers
+  // it. Same fix CoinChat.tsx/TradingAgent.tsx already use for their own
+  // fixed-position panels: push it up by the keyboard height on show, put
+  // it back on hide. The base offset is .gs-docked's own CSS `bottom`
+  // (nav-bar height + gaps), so this adds on top of it rather than
+  // replacing it.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || variant !== "docked") return;
+    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
+      if (dockedRef.current) {
+        dockedRef.current.style.bottom = `calc(18px + env(safe-area-inset-bottom) + 62px + 8px + ${info.keyboardHeight}px)`;
+      }
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      if (dockedRef.current) dockedRef.current.style.bottom = "";
+    });
+    return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
+  }, [variant]);
 
   /* Build results */
   const results: SearchResult[] = [];
@@ -169,87 +198,109 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect }: P
 
   const coinResults    = results.filter(r => r.type === "coin");
   const sectionResults = results.filter(r => r.type === "section");
+  const docked = variant === "docked";
 
-  return ReactDOM.createPortal(
-    <div className="gs-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gs-modal">
-        {/* Search input */}
-        <div className="gs-input-wrap">
-          <svg className="gs-input-icon" width="16" height="16" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            ref={inputRef}
-            className="gs-input"
-            placeholder="Search coins, sections, features…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={handleKey}
-          />
-          {query && (
-            <button className="gs-clear" onClick={() => setQuery("")}>✕</button>
-          )}
-          <kbd className="gs-esc-hint">esc</kbd>
-        </div>
+  const content = (
+    <>
+      {/* Search input */}
+      <div className="gs-input-wrap">
+        <svg className="gs-input-icon" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          ref={inputRef}
+          className="gs-input"
+          placeholder="Search coins, sections, features…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={handleKey}
+        />
+        {query && (
+          <button className="gs-clear" onClick={() => setQuery("")}>✕</button>
+        )}
+        {/* "esc" is a desktop-keyboard concept — meaningless (and nothing
+            to tap) on the docked mobile variant, so it's modal-only. */}
+        {!docked && <kbd className="gs-esc-hint">esc</kbd>}
+      </div>
 
-        {/* Results */}
-        <ul className="gs-list" ref={listRef}>
-          {results.length === 0 && (
-            <li className="gs-empty">No results for "{query}"</li>
-          )}
+      {/* Results */}
+      <ul className="gs-list" ref={listRef}>
+        {results.length === 0 && (
+          <li className="gs-empty">No results for "{query}"</li>
+        )}
 
-          {coinResults.length > 0 && (
-            <>
-              <li className="gs-group-label">Coins</li>
-              {coinResults.map(r => {
-                const idx = results.indexOf(r);
-                return (
-                  <li key={r.id}
-                    className={`gs-item${idx === clampedIdx ? " gs-item--active" : ""}`}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                    onClick={r.action}
-                  >
-                    <span className="gs-item-icon gs-item-icon--coin">{r.icon}</span>
+        {coinResults.length > 0 && (
+          <>
+            <li className="gs-group-label">Coins</li>
+            {coinResults.map(r => {
+              const idx = results.indexOf(r);
+              return (
+                <li key={r.id}
+                  className={`gs-item${idx === clampedIdx ? " gs-item--active" : ""}`}
+                  onMouseEnter={() => setActiveIdx(idx)}
+                  onClick={r.action}
+                >
+                  <span className="gs-item-icon gs-item-icon--coin">{r.icon}</span>
+                  <span className="gs-item-primary">{r.primary}</span>
+                  <span className="gs-item-sym">{r.secondary}</span>
+                  <span className="gs-item-arrow">→</span>
+                </li>
+              );
+            })}
+          </>
+        )}
+
+        {sectionResults.length > 0 && (
+          <>
+            <li className="gs-group-label">{query ? "Pages" : "All Pages"}</li>
+            {sectionResults.map(r => {
+              const idx = results.indexOf(r);
+              return (
+                <li key={r.id}
+                  className={`gs-item${idx === clampedIdx ? " gs-item--active" : ""}`}
+                  onMouseEnter={() => setActiveIdx(idx)}
+                  onClick={r.action}
+                >
+                  <span className="gs-item-icon">{r.icon}</span>
+                  <span className="gs-item-body">
                     <span className="gs-item-primary">{r.primary}</span>
-                    <span className="gs-item-sym">{r.secondary}</span>
-                    <span className="gs-item-arrow">→</span>
-                  </li>
-                );
-              })}
-            </>
-          )}
+                    <span className="gs-item-secondary">{r.secondary}</span>
+                  </span>
+                  <span className="gs-item-arrow">→</span>
+                </li>
+              );
+            })}
+          </>
+        )}
+      </ul>
 
-          {sectionResults.length > 0 && (
-            <>
-              <li className="gs-group-label">{query ? "Pages" : "All Pages"}</li>
-              {sectionResults.map(r => {
-                const idx = results.indexOf(r);
-                return (
-                  <li key={r.id}
-                    className={`gs-item${idx === clampedIdx ? " gs-item--active" : ""}`}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                    onClick={r.action}
-                  >
-                    <span className="gs-item-icon">{r.icon}</span>
-                    <span className="gs-item-body">
-                      <span className="gs-item-primary">{r.primary}</span>
-                      <span className="gs-item-secondary">{r.secondary}</span>
-                    </span>
-                    <span className="gs-item-arrow">→</span>
-                  </li>
-                );
-              })}
-            </>
-          )}
-        </ul>
-
+      {!docked && (
         <div className="gs-footer">
           <span><kbd>↑↓</kbd> navigate</span>
           <span><kbd>↵</kbd> open</span>
           <span><kbd>esc</kbd> close</span>
         </div>
-      </div>
+      )}
+    </>
+  );
+
+  if (docked) {
+    return ReactDOM.createPortal(
+      <>
+        {/* Invisible click-outside catcher — unlike the modal variant,
+            there's no dimmed backdrop (the chart stays fully visible), but
+            tapping anywhere outside the docked card still closes it. */}
+        <div className="gs-docked-catcher" onMouseDown={onClose} />
+        <div className="gs-docked" ref={dockedRef}>{content}</div>
+      </>,
+      document.body
+    );
+  }
+
+  return ReactDOM.createPortal(
+    <div className="gs-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="gs-modal">{content}</div>
     </div>,
     document.body
   );

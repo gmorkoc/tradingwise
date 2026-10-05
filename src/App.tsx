@@ -46,6 +46,8 @@ import { OnboardingWizard } from "./components/OnboardingWizard";
 import { WhatsNewModal } from "./components/WhatsNewModal";
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
+import { FloatingNavBar } from "./components/FloatingNavBar";
+import { NotificationsCenter } from "./components/NotificationsCenter";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
@@ -379,6 +381,44 @@ function AppDashboard({
     const hash = window.location.hash.slice(1) as SectionId;
     return NAV_ITEMS.some((n) => n.id === hash) ? hash : "chart";
   });
+  // Hidden by default — used to render unconditionally whenever on the
+  // chart tab (mobile), which collided visually with FloatingNavBar.
+  // Toggled from FloatingNavBar's "Daily Brief" item instead, which
+  // animates itself out as this comes in (see .fnb-bar--brief-open) so
+  // the nav bar reads as "becoming" the brief rather than the two
+  // stacking. DailyBrief's own close (X) button calls onDismiss below to
+  // keep this in sync — without that, closing it from inside would leave
+  // this stuck true with the nav bar still hidden and no way back.
+  const [dailyBriefOpen, setDailyBriefOpen] = useState(false);
+  // Badge count shown on FloatingNavBar's Notifications icon — kept in
+  // sync by NotificationsCenter itself (mount-time fetch, and again
+  // whenever something there changes it) via onUnreadCountChange, rather
+  // than this component owning its own fetch too.
+  const [notificationsCenterOpen, setNotificationsCenterOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  // Mirrors TradingAgent's own internal `unread` state (dispatched via a
+  // plain event, same convention as the rest of this cross-component
+  // signaling) so FloatingNavBar's raised Agent button can show the same
+  // dot its desktop trigger does, without lifting that state up here.
+  const [agentUnread, setAgentUnread] = useState(false);
+  useEffect(() => {
+    const onUnreadChange = (e: Event) => {
+      setAgentUnread(!!(e as CustomEvent<{ unread: boolean }>).detail?.unread);
+    };
+    window.addEventListener("trading-agent-unread-change", onUnreadChange);
+    return () => window.removeEventListener("trading-agent-unread-change", onUnreadChange);
+  }, []);
+  // Mirrors BuySignals' own internal `open` state, same reason/convention
+  // as agentUnread above — lets FloatingNavBar's Signals icon drop its
+  // active state the moment the panel actually closes.
+  const [signalsOpen, setSignalsOpen] = useState(false);
+  useEffect(() => {
+    const onOpenChange = (e: Event) => {
+      setSignalsOpen(!!(e as CustomEvent<{ open: boolean }>).detail?.open);
+    };
+    window.addEventListener("buy-signals-open-change", onOpenChange);
+    return () => window.removeEventListener("buy-signals-open-change", onOpenChange);
+  }, []);
   // CandleWatcher stays mounted (display:none, not unmounted) once first
   // opened so its chart state/zoom/drawings survive switching away and
   // back — but deferring that first mount until actually visited (instead
@@ -496,9 +536,33 @@ function AppDashboard({
     return () => window.removeEventListener("open-strategy-alert", onOpenStrategyAlert);
   }, []);
   useEffect(() => {
+    // Tapping a price-alert push/notification jumps to that coin's chart —
+    // there's no dedicated price-alert page, the chart itself is "the
+    // subject." Dispatched by routeNotificationTap (src/utils/
+    // notificationRouting.ts) for type "price_alert".
+    const onOpenPriceAlert = (e: Event) => {
+      const detail = (e as CustomEvent<{ coin?: string }>).detail;
+      if (!detail?.coin) return;
+      setCoin(detail.coin as CoinSymbol);
+      clearCandleCache();
+      setActiveSection("chart");
+    };
+    window.addEventListener("open-price-alert", onOpenPriceAlert);
+    return () => window.removeEventListener("open-price-alert", onOpenPriceAlert);
+  }, []);
+  useEffect(() => {
     // No-op on native (isWebPushAvailable() gates the actual subscription),
     // but safe/cheap to register unconditionally — just a message listener.
     initWebPushMessageRouting();
+  }, []);
+  useEffect(() => {
+    // Optimistic +1 the instant a push lands in the foreground (same event
+    // PushToast.tsx reacts to) — the edge function logs the real row around
+    // the same time, so this just avoids the badge lagging a full refetch.
+    // NotificationsCenter resyncs to the true count whenever it's opened.
+    const onPushToast = () => setUnreadNotifCount((n) => n + 1);
+    window.addEventListener("push-toast", onPushToast);
+    return () => window.removeEventListener("push-toast", onPushToast);
   }, []);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1422,6 +1486,20 @@ function AppDashboard({
               <button
                 className="icon-strip-btn"
                 onClick={() => {
+                  setAssetPanelOpen((v) => !v);
+                  setMobileNavOpen(false);
+                }}
+                title={t("header.openCalculator")}
+              >
+                <span className="nav-icon-wrap">
+                  <NavIcon d={["M18 20V10", "M12 20V4", "M6 20V14"]} />
+                </span>
+                <span className="icon-strip-label">{t("header.openCalculator")}</span>
+              </button>
+
+              <button
+                className="icon-strip-btn"
+                onClick={() => {
                   setDrawerOpen(true);
                   setMobileNavOpen(false);
                 }}
@@ -1881,76 +1959,118 @@ function AppDashboard({
 
 
             <div className="mch-right">
-              <button
-                className="mch-search-btn"
-                onClick={() => setGlobalSearch(true)}
-                title="Search (⌘K)"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
+              {/* Search, notifications, and the portfolio ($) button are
+                  desktop-only here — mobile gets those from FloatingNavBar
+                  instead. BuySignals stays mounted for both (hideTrigger
+                  on mobile only, since FloatingNavBar's Signals icon opens
+                  it via the "open-buy-signals" event either way) — this
+                  row is otherwise exactly what was on desktop before any
+                  of that mobile work. */}
+              {isWideDesktop && (
+                <button
+                  className="mch-search-btn"
+                  onClick={() => setGlobalSearch(true)}
+                  title="Search (⌘K)"
                 >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-              </button>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </button>
+              )}
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
-              <BuySignals onOpenUpgrade={onOpenUpgrade} />
-              <button
-                className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                role="switch"
-                aria-checked={notificationsEnabled}
-                aria-label="Notifications"
-                title={notificationsEnabled ? "Notifications on — click to disable all alerts" : "Notifications off — click to enable"}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
+              {/* The notifications FEED (this button) vs the notifications
+                  TOGGLE (the next one, on/off permission switch) — same
+                  distinction FloatingNavBar's two bell icons already make
+                  on mobile, mirrored here since desktop had no path to the
+                  feed at all otherwise. */}
+              {isWideDesktop && (
+                <button
+                  className="mch-search-btn mch-notif-feed-btn"
+                  onClick={() => setNotificationsCenterOpen(true)}
+                  title="Notifications"
                 >
-                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  {!notificationsEnabled && <line x1="3" y1="3" x2="21" y2="21" />}
-                </svg>
-              </button>
-              <div
-                className="mch-portfolio"
-                onClick={() => setAssetPanelOpen((v) => !v)}
-                title={t("header.openCalculator")}
-              >
-                <svg
-                  className="mch-portfolio-icon"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  {unreadNotifCount > 0 && (
+                    <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
+                  )}
+                </button>
+              )}
+              {isWideDesktop && (
+                <button
+                  className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  role="switch"
+                  aria-checked={notificationsEnabled}
+                  aria-label="Notifications"
+                  title={notificationsEnabled ? "Notifications on — click to disable all alerts" : "Notifications off — click to enable"}
                 >
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-                <span className="mch-portfolio-label">{t("header.portfolioValue")}</span>
-                <span
-                  className={`mch-portfolio-value${hasAnyPosition && portfolioDirection ? ` ${portfolioDirection}` : ""}`}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    {!notificationsEnabled && <line x1="3" y1="3" x2="21" y2="21" />}
+                  </svg>
+                </button>
+              )}
+              {isWideDesktop && (
+                <div
+                  className="mch-portfolio"
+                  onClick={() => setAssetPanelOpen((v) => !v)}
+                  title={t("header.openCalculator")}
                 >
-                  {hasAnyPosition ? formatCurrency(totalAssetValue) : "—"}
-                </span>
-              </div>
+                  <svg
+                    className="mch-portfolio-icon"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                  <span className="mch-portfolio-label">{t("header.portfolioValue")}</span>
+                  <span
+                    className={`mch-portfolio-value${hasAnyPosition && portfolioDirection ? ` ${portfolioDirection}` : ""}`}
+                  >
+                    {hasAnyPosition ? formatCurrency(totalAssetValue) : "—"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2414,6 +2534,11 @@ function AppDashboard({
             setActiveSection("chart");
           }}
           onSectionSelect={(s) => setActiveSection(s as SectionId)}
+          // Mobile's only remaining path to this is FloatingNavBar's
+          // Search icon (the old mobile header search button was moved
+          // there) — "docked" attaches it directly above the nav bar
+          // instead of the centered ⌘K-style modal desktop still uses.
+          variant={isWideDesktop ? "modal" : "docked"}
         />
 
         {assetPanelOpen && (
@@ -2610,11 +2735,33 @@ function AppDashboard({
       </div>
       {/* end app-shell-body */}
 
-      {!isWideDesktop && !distractionFree && !chartFullscreen && activeSection === "chart" && (
-        <DailyBrief coinTickers={coinTickers} />
+      {!isWideDesktop && !distractionFree && !chartFullscreen && activeSection === "chart" && dailyBriefOpen && (
+        <DailyBrief coinTickers={coinTickers} onDismiss={() => setDailyBriefOpen(false)} />
       )}
       <PushToast />
-      <TradingAgent selectedCoin={coin} />
+      <TradingAgent selectedCoin={coin} hideTrigger={!isWideDesktop} />
+      <NotificationsCenter
+        open={notificationsCenterOpen}
+        onClose={() => setNotificationsCenterOpen(false)}
+        onUnreadCountChange={setUnreadNotifCount}
+      />
+      {/* Mobile/iOS only by design, not just CSS — FloatingNavBar.css also
+          hides it at desktop widths, but gating the mount itself here too
+          means none of its click handlers or active-pill state exist on
+          desktop at all. */}
+      {!isWideDesktop && !distractionFree && !chartFullscreen && (
+        <FloatingNavBar
+          onOpenNotifications={() => setNotificationsCenterOpen(true)}
+          notificationsOpen={notificationsCenterOpen}
+          unreadNotificationCount={unreadNotifCount}
+          signalsOpen={signalsOpen}
+          onSearch={() => setGlobalSearch(true)}
+          searchOpen={globalSearch}
+          dailyBriefOpen={dailyBriefOpen}
+          onToggleDailyBrief={() => setDailyBriefOpen((v) => !v)}
+          agentUnread={agentUnread}
+        />
+      )}
 
       {priceTicker &&
         (pipWindow

@@ -93,13 +93,28 @@ const COIN_COLORS: Record<string, string> = {
   ADA: "#0033ad", DOGE: "#c2a633", SUI: "#4da2ff",
 };
 
-interface Props { onOpenUpgrade: () => void }
+interface Props {
+  onOpenUpgrade: () => void;
+  // When the trigger button is moved elsewhere (the floating nav bar,
+  // which opens this the same way — dispatching "open-buy-signals",
+  // already listened for below), this skips rendering this component's
+  // own header button while keeping its panel/state/listeners intact.
+  hideTrigger?: boolean;
+}
 
-export function BuySignals({ onOpenUpgrade }: Props) {
+export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   const { t } = useTranslation();
   const { tier, user, profile, refreshProfile } = useAuth();
   const isElite = hasAccess(tier, "elite");
   const [open, setOpen] = useState(false);
+  // Lets FloatingNavBar's Signals icon drop its active/selected state the
+  // moment this panel actually closes (however it closes — the ✕ button,
+  // backdrop click, Escape), instead of staying highlighted purely because
+  // it was the last icon tapped. Same event-bus convention as TradingAgent's
+  // "trading-agent-unread-change".
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("buy-signals-open-change", { detail: { open } }));
+  }, [open]);
   const [rows, setRows] = useState<BuySignalRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [highlightCoin, setHighlightCoin] = useState<string | null>(null);
@@ -308,18 +323,20 @@ export function BuySignals({ onOpenUpgrade }: Props) {
 
   return (
     <>
-      <button
-        ref={bellRef}
-        className={`buysig-bell${rows.length > 0 ? " buysig-bell--active" : ""}`}
-        onClick={handleClick}
-        title={t("buySignals.title", "Buy & Sell Signals")}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17l6-6 4 4 8-8" />
-          <path d="M15 7h6v6" />
-        </svg>
-        {rows.length > 0 && <span className="buysig-bell-count">{rows.length}</span>}
-      </button>
+      {!hideTrigger && (
+        <button
+          ref={bellRef}
+          className={`buysig-bell${rows.length > 0 ? " buysig-bell--active" : ""}`}
+          onClick={handleClick}
+          title={t("buySignals.title", "Buy & Sell Signals")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 17l6-6 4 4 8-8" />
+            <path d="M15 7h6v6" />
+          </svg>
+          {rows.length > 0 && <span className="buysig-bell-count">{rows.length}</span>}
+        </button>
+      )}
 
       {ReactDOM.createPortal(
         <>

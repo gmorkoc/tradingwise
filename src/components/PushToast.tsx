@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { Avatar } from "./Avatar";
 import { useAuth } from "../contexts/AuthContext";
 import { toggleMutedSignalCoin } from "../services/supabase";
+import { routeNotificationTap } from "../utils/notificationRouting";
 import "../styles/PushToast.css";
 
 const IS_IOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
@@ -95,21 +95,7 @@ export function PushToast() {
   const data = toast.data;
 
   const handleTap = () => {
-    if ((data?.type === "daily_brief" || data?.type === "breaking_news") && data.url) {
-      Browser.open({ url: data.url });
-    } else if (data?.type === "upgrade_reminder") {
-      window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
-    } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
-      window.dispatchEvent(new CustomEvent("open-coin-mention", {
-        detail: { coin: data.coin, commentId: parseInt(data.commentId, 10) },
-      }));
-    } else if (data?.type === "strategy_alert" && data.strategyId) {
-      window.dispatchEvent(new CustomEvent("open-strategy-alert", {
-        detail: { strategyId: data.strategyId, coin: data.coin },
-      }));
-    } else if (data?.type === "buy_signal") {
-      window.dispatchEvent(new CustomEvent("open-buy-signals", { detail: { coin: data.coin } }));
-    }
+    routeNotificationTap(data);
     setToast(null);
   };
 

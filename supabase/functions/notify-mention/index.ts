@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { supabaseAdmin, getAccessToken, sendPush } from "../_shared/fcm.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,22 +73,25 @@ Deno.serve(async (req) => {
     let accessToken: string | null = null;
     const ensureAccessToken = async () => (accessToken ??= await getAccessToken());
 
+    const notifiedUserIds = new Set<string>();
     if (tokenRows && tokenRows.length > 0) {
       const title = `@${comment.username} mentioned you`;
       const body = `New message in the ${comment.coin} chat`;
+      const pushData = {
+        type: "coin_mention",
+        coin: comment.coin,
+        commentId: String(commentId),
+        username: comment.username,
+        ...(comment.avatar_url ? { avatarUrl: comment.avatar_url } : {}),
+      };
       for (const t of tokenRows) {
         const recipient = recipientById.get(t.user_id);
         if (!recipient || recipient.notify_mentions === false) continue;
         const at = await ensureAccessToken();
-        const ok = await sendPush(at, t.token, title, body, recipient.alert_sound ?? "bell", {
-          type: "coin_mention",
-          coin: comment.coin,
-          commentId: String(commentId),
-          username: comment.username,
-          ...(comment.avatar_url ? { avatarUrl: comment.avatar_url } : {}),
-        });
-        if (ok) sentCount++;
+        const ok = await sendPush(at, t.token, title, body, recipient.alert_sound ?? "bell", pushData);
+        if (ok) { sentCount++; notifiedUserIds.add(t.user_id); }
       }
+      await logNotifications([...notifiedUserIds].map((userId) => ({ userId, type: "coin_mention", title, body, data: pushData })));
     }
 
     await supabaseAdmin.from("mention_notifications").update({ sent: true }).eq("comment_id", commentId);

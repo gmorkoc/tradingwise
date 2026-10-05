@@ -205,3 +205,49 @@
   color: var(--color-text-secondary);
   margin-right: 3px;
 }
+
+/* ── Docked variant — attached directly above FloatingNavBar, same
+   floating-button color system (.ta-trigger / .fnb-bar) instead of the
+   modal's --color-card-bg, so the two read as one group. Still dims the
+   rest of the screen behind it, same as the centered modal's .gs-overlay,
+   so it's clearly a focused state and not just another panel on the page. */
+.gs-docked-catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 69;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  animation: gs-docked-catcher-in 0.18s ease;
+}
+@keyframes gs-docked-catcher-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.gs-docked {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  /* Directly above .fnb-bar: its own bottom offset (18px + safe-area)
+     plus its height (~62px: 50px item + 6px top/bottom padding) plus a
+     small 8px gap. */
+  bottom: calc(18px + env(safe-area-inset-bottom) + 62px + 8px);
+  z-index: 70;
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #0a0d1c;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  animation: gs-docked-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+}
+html[data-theme="light"] .gs-docked {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+}
+@keyframes gs-docked-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
+}
+.gs-docked .gs-input-wrap { border-bottom: 1px solid var(--color-border); }
+.gs-docked .gs-list { max-height: 38vh; }

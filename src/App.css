@@ -2690,6 +2690,28 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 }
 .mch-search-label { font-weight: 500; }
 
+/* ── Notifications feed button — distinct from the toggle below (which
+   reuses .mch-search-btn's plain icon look); this one needs a relative
+   anchor for its unread-count badge. */
+.mch-notif-feed-btn { position: relative; }
+.mch-notif-feed-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 /* ── Notifications toggle (icon button, matches .mch-search-btn) ─────────── */
 .mch-notif-btn--off {
   color: #ef4444;

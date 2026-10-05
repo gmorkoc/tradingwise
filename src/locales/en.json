@@ -54,7 +54,7 @@
     "currentValue": "Current Value",
     "portfolioValue": "Portfolio",
     "clickToRefresh": "Click to refresh",
-    "openCalculator": "Open Asset Calculator"
+    "openCalculator": "Asset Calculator"
   },
   "buySignals": {
     "title": "Buy & Sell Signals",

@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { supabase } from "./supabase";
+import { routeNotificationTap } from "../utils/notificationRouting";
 
 // Android isn't wired up yet (no google-services.json in android/app), so
 // this only runs on iOS for now — same gating pattern as revenuecat.ts.
@@ -67,28 +67,18 @@ export async function initPushNotifications(supabaseUserId: string): Promise<voi
         });
       });
 
-      // Tapping a daily-brief-push notification opens straight to that
-      // article — same destination as tapping the item inside the app.
-      // Tapping an upgrade-reminder-push opens the Upgrade modal, and
-      // tapping a coin-mention push jumps to that comment — both live in
-      // App.tsx, well above this plain service module, so they're reached
-      // via a plain DOM event instead (same pattern as
-      // useNotificationsEnabled.ts's cross-component toggle).
+      // Routing itself (which event to dispatch / url to open per type) is
+      // shared with PushToast.tsx and webPush.ts via routeNotificationTap —
+      // this listener only adds the one thing unique to a cold-launch OS
+      // tap: stashing the coin-mention detail so AppDashboard can drain it
+      // once its own "open-coin-mention" listener exists (see
+      // consumePendingCoinMention above).
       FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {
-        const data = notification.data as { type?: string; url?: string; coin?: string; commentId?: string; strategyId?: string } | undefined;
-        if ((data?.type === "daily_brief" || data?.type === "breaking_news") && data.url) {
-          Browser.open({ url: data.url });
-        } else if (data?.type === "upgrade_reminder") {
-          window.dispatchEvent(new CustomEvent("open-upgrade-modal"));
-        } else if (data?.type === "coin_mention" && data.coin && data.commentId) {
-          const detail = { coin: data.coin, commentId: parseInt(data.commentId, 10) };
-          pendingCoinMention = detail;
-          window.dispatchEvent(new CustomEvent("open-coin-mention", { detail }));
-        } else if (data?.type === "strategy_alert" && data.strategyId) {
-          window.dispatchEvent(new CustomEvent("open-strategy-alert", { detail: { strategyId: data.strategyId, coin: data.coin } }));
-        } else if (data?.type === "agent_watch" || data?.type === "agent_position_close") {
-          window.dispatchEvent(new CustomEvent("open-trading-agent"));
+        const data = notification.data as { type?: string; coin?: string; commentId?: string } | undefined;
+        if (data?.type === "coin_mention" && data.coin && data.commentId) {
+          pendingCoinMention = { coin: data.coin, commentId: parseInt(data.commentId, 10) };
         }
+        routeNotificationTap(data);
       });
 
       // capacitor.config.ts sets presentationOptions to [] so a push that

@@ -10,6 +10,7 @@
 // already use.
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
 import { sendWebPush, getWebPushSubscriptions } from "../_shared/webpush.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 import { getMarketContext, MarketContext, MarketInterval } from "../_shared/market.ts";
 
 const CRON_SECRET = Deno.env.get("CRON_SECRET")!;
@@ -163,6 +164,7 @@ async function notifyUser(userId: string, title: string, body: string, pushData:
   if (webSubs.length > 0) {
     await Promise.all(webSubs.map((sub) => sendWebPush(sub, title, body, pushData)));
   }
+  await logNotifications([{ userId, type: pushData.type, title, body, data: pushData }]);
 }
 
 Deno.serve(async (req) => {
@@ -213,7 +215,7 @@ Deno.serve(async (req) => {
         .update({ active: false, triggered_at: new Date().toISOString() }).eq("id", watch.id);
       await supabaseAdmin.from("agent_messages").insert({
         user_id: watch.user_id, conversation_id: watch.conversation_id, role: "agent",
-        content: `👁 Your ${watch.coin} watch triggered — ${result.explanation}`, watch_id: watch.id,
+        content: `Your ${watch.coin} watch triggered — ${result.explanation}`, watch_id: watch.id,
       });
 
       const title = `${watch.coin} — watch triggered`;

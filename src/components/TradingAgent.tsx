@@ -8,7 +8,7 @@ import { COINS } from "../services/coinglass";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsentAndOnboard,
-  fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAgentPerformance,
+  fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance,
   AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval,
 } from "../services/paperTrading";
 
@@ -72,16 +72,37 @@ function useIsDesktop(): boolean {
 
 interface Props {
   selectedCoin?: string | null;
+  // Mobile-only (FloatingNavBar renders the trigger itself there, raised
+  // in the bar's center) — desktop keeps this component's own floating
+  // "Agent Ready" button exactly as before, untouched by that mobile work.
+  hideTrigger?: boolean;
 }
 
-export function TradingAgent({ selectedCoin }: Props) {
+// Plain monochrome SVG, not an emoji — a colored bell emoji stood out
+// jarringly next to this panel's otherwise text-glyph icons (+, ☰, ✕).
+// Reused everywhere a watch/alert needs an icon so they all match.
+function BellIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "-2px", flexShrink: 0 }}>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const { user, tier } = useAuth();
   const isDesktop = useIsDesktop();
 
-  const [open, setOpen] = useState(() => localStorage.getItem("tradingAgentOpen") === "true");
-  useEffect(() => {
-    localStorage.setItem("tradingAgentOpen", String(open));
-  }, [open]);
+  // Deliberately NOT persisted to localStorage (unlike portfolioCollapsed
+  // below) — localStorage survives a full close+relaunch (a fresh WebView/
+  // JS process), so persisting this reopened the panel automatically even
+  // after the user had genuinely closed the app, not just backgrounded it.
+  // Plain in-memory state gives exactly the wanted behavior for free: a
+  // real background→foreground cycle (the process stays alive) leaves this
+  // untouched, so the panel is still open if it was open right before
+  // minimizing; a true close+reopen is a new process that starts closed.
+  const [open, setOpen] = useState(false);
 
   // Tapping a watch-triggered/position-closed push notification (web or
   // native — see webPush.ts/pushNotifications.ts's "agent_watch"/
@@ -92,6 +113,17 @@ export function TradingAgent({ selectedCoin }: Props) {
     const onOpen = () => setOpen(true);
     window.addEventListener("open-trading-agent", onOpen);
     return () => window.removeEventListener("open-trading-agent", onOpen);
+  }, []);
+
+  // FloatingNavBar's own raised Agent button (mobile, see hideTrigger
+  // above) dispatches this on tap instead of calling setOpen directly —
+  // it's a toggle (open AND close), unlike "open-trading-agent" above
+  // (notification taps should always open, never accidentally close an
+  // already-open panel).
+  useEffect(() => {
+    const onToggle = () => setOpen((v) => !v);
+    window.addEventListener("toggle-trading-agent", onToggle);
+    return () => window.removeEventListener("toggle-trading-agent", onToggle);
   }, []);
 
   // Browser notifications require an explicit user action to request
@@ -234,6 +266,11 @@ export function TradingAgent({ selectedCoin }: Props) {
   const [performance, setPerformance] = useState<AgentPerformance | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [watches, setWatches] = useState<Map<string, AgentWatch>>(new Map());
+  // Every watch across every conversation, for the dedicated watchlist
+  // view — distinct from `watches` above, which is only the current
+  // conversation's (used for inline chips in the feed).
+  const [allWatches, setAllWatches] = useState<AgentWatch[]>([]);
+  const [showWatches, setShowWatches] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   // The agent's own real reasoning text, streamed in live as it arrives —
@@ -311,12 +348,40 @@ export function TradingAgent({ selectedCoin }: Props) {
     experienced: { balance: 100000, riskPct: 0.05 },
   };
   const [onboardExperience, setOnboardExperience] = useState<ExperienceLevel | null>(null);
-  const selectExperience = (level: ExperienceLevel) => {
+  // The other onboarding questions (balance/trade size/focus coins/
+  // leverage) deliberately re-ask every new conversation — intent/risk
+  // appetite can change chat to chat. Experience level is different: it's
+  // just a label picking sensible starting defaults, not something that
+  // meaningfully changes day to day, so it's the one step worth letting
+  // the user skip for good once they've answered it the first time.
+  const REMEMBERED_EXPERIENCE_KEY = "tradingAgentRememberedExperience";
+  const [rememberedExperience, setRememberedExperience] = useState<ExperienceLevel | null>(() => {
+    const v = localStorage.getItem(REMEMBERED_EXPERIENCE_KEY);
+    return v === "new" || v === "some" || v === "experienced" ? v : null;
+  });
+  const [rememberExperienceChoice, setRememberExperienceChoice] = useState(true);
+  const selectExperience = (level: ExperienceLevel, remember: boolean) => {
     const { balance, riskPct } = EXPERIENCE_DEFAULTS[level];
     setOnboardExperience(level);
     setOnboardBalance(String(balance));
     setOnboardTradeSize(String(Math.round(balance * riskPct)));
     setOnboardStep(2);
+    if (remember) {
+      localStorage.setItem(REMEMBERED_EXPERIENCE_KEY, level);
+      setRememberedExperience(level);
+    }
+  };
+  // Bypasses the question entirely once a prior answer is remembered — the
+  // user never sees step 1 at all, it just resolves straight through to
+  // step 2 with the remembered defaults already applied.
+  useEffect(() => {
+    if (onboardStep === 1 && rememberedExperience) selectExperience(rememberedExperience, false);
+  }, [onboardStep, rememberedExperience]);
+  const forgetExperience = () => {
+    localStorage.removeItem(REMEMBERED_EXPERIENCE_KEY);
+    setRememberedExperience(null);
+    setOnboardExperience(null);
+    setOnboardStep(1);
   };
   const [balanceHelpOpen, setBalanceHelpOpen] = useState(false);
   const [tradeSizeHelpOpen, setTradeSizeHelpOpen] = useState(false);
@@ -442,6 +507,13 @@ export function TradingAgent({ selectedCoin }: Props) {
   // open/conversationId into the handler so the channel only subscribes
   // once per user instead of resubscribing on every state change.
   const [unread, setUnread] = useState(false);
+  // Lets FloatingNavBar's raised Agent button show the same unread dot
+  // this component's own trigger does, without lifting `unread` state up
+  // to App.tsx — same event-bus convention the rest of this cross-
+  // component signaling already uses (open-trading-agent, etc.).
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("trading-agent-unread-change", { detail: { unread } }));
+  }, [unread]);
   const openRef = useRef(open);
   const conversationIdRef = useRef(conversationId);
   useEffect(() => { openRef.current = open; if (open) setUnread(false); }, [open]);
@@ -486,18 +558,56 @@ export function TradingAgent({ selectedCoin }: Props) {
   // behind it is ever exposed, during a keyboard transition or otherwise.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    // Adding padding-bottom shrinks the feed's clientHeight without
+    // touching its scrollTop — the scroll position that was previously
+    // "at the bottom" is now short of the new, smaller bottom, leaving the
+    // latest message hidden behind the keyboard until the user manually
+    // scrolls. Re-scrolling to bottom on both the "will" (fires
+    // immediately, keeps it from visibly lagging the keyboard's own slide-
+    // up) and "did" (fires once the keyboard animation — and this panel's
+    // own padding transition — has actually finished, correcting for any
+    // layout settling the first call ran ahead of) events covers both ends
+    // of the transition.
+    const scrollFeedToBottom = () => {
+      feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "auto" });
+    };
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
       if (panelRef.current) panelRef.current.style.paddingBottom = `${info.keyboardHeight}px`;
+      scrollFeedToBottom();
     });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+    const didShowSub = Keyboard.addListener("keyboardDidShow", scrollFeedToBottom);
+    // keyboardWillHide, not keyboardDidHide — this panel's outer box stays
+    // pinned via inset:0 regardless of padding (see the comment above this
+    // effect), so unlike the bottom-shifting approach this padding change
+    // was never unsafe to start early. Resetting it on "will" instead lets
+    // the CSS transition (see .ta-panel in TradingAgent.css) run IN SYNC
+    // with the keyboard's own dismiss animation; waiting for "did" meant
+    // the composer only started sliding back down once the keyboard had
+    // already fully disappeared, which read as a late, disconnected jump
+    // — most visible right after sending a message, since tapping Send
+    // blurs the composer input and dismisses the keyboard immediately.
+    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
       if (panelRef.current) panelRef.current.style.paddingBottom = "";
     });
-    return () => { showSub.then((s) => s.remove()); hideSub.then((s) => s.remove()); };
+    return () => {
+      showSub.then((s) => s.remove());
+      didShowSub.then((s) => s.remove());
+      hideSub.then((s) => s.remove());
+    };
   }, []);
 
+  // liveThinking is in the deps too, not just messages/sending — without
+  // it, the feed only jumped to the bottom once a message was added or
+  // sending toggled, so the narration streaming in live (liveThinking
+  // updates many times per response, well before the message itself
+  // lands) kept growing past the visible area with no scroll following
+  // it. "auto" (instant), not "smooth" — chunks can arrive every ~50-100ms
+  // during streaming, faster than a smooth scroll animation can finish,
+  // which looked stuttery; instant keeps new text visible the moment it
+  // renders, same as other chat apps' live-streaming scroll behavior.
   useEffect(() => {
-    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
+    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "auto" });
+  }, [messages, sending, liveThinking]);
 
   // Pro+ feature — free users don't get the trigger/panel at all.
   if (!user || !hasAccess(tier, "pro")) return null;
@@ -506,17 +616,36 @@ export function TradingAgent({ selectedCoin }: Props) {
     setConversationId(newConversationId());
     setMessages([]);
     setShowHistory(false);
+    setShowWatches(false);
     setOnboardStep(0);
   };
 
   const handleOpenHistory = async () => {
+    // showHistory/showWatches are two independent flags gating alternate
+    // views in the same spot — without clearing the other one here, going
+    // Watches -> History -> (tap a conversation) left showWatches stuck
+    // true, so opening a conversation dropped the user back on
+    // Notifications instead of the chat they just tapped.
+    setShowWatches(false);
     setShowHistory(true);
     try { await loadConversations(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+
+  const loadAllWatches = useCallback(async () => {
+    if (!user) return;
+    setAllWatches(await fetchAllWatches(user.id));
+  }, [user]);
+
+  const handleOpenWatches = async () => {
+    setShowHistory(false);
+    setShowWatches(true);
+    try { await loadAllWatches(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
 
   const handleOpenConversation = async (id: string) => {
     setConversationId(id);
     setShowHistory(false);
+    setShowWatches(false);
   };
 
   const handleDeleteConversation = async (id: string) => {
@@ -629,6 +758,7 @@ export function TradingAgent({ selectedCoin }: Props) {
       const interval = watchIntervalDrafts[m.id] ?? m.watch.interval;
       await confirmWatch(m.id, user!.id, conversationId, { ...m.watch, interval });
       await loadAll(conversationId);
+      if (showWatches) await loadAllWatches();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't set up that watch — please try again.");
     } finally {
@@ -688,6 +818,7 @@ export function TradingAgent({ selectedCoin }: Props) {
     try {
       await cancelWatch(watchId);
       await loadAll(conversationId);
+      if (showWatches) await loadAllWatches();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't cancel the watch — please try again.");
     } finally {
@@ -704,13 +835,19 @@ export function TradingAgent({ selectedCoin }: Props) {
         </div>
       )}
       <div className="ta-head">
-        <span className="ta-head-title">✦ Trading Agent <span className="ta-head-badge">AI Powered</span></span>
+        <span className="ta-head-title-row">
+          <span className="ta-head-online-badge" aria-hidden="true" />
+          <span className="ta-head-title">Agent Ready</span>
+        </span>
         <div className="ta-head-actions">
           <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title="New chat" aria-label="New chat">
             +
           </button>
           <button type="button" className="ta-head-icon-btn" onClick={handleOpenHistory} title="History" aria-label="History">
             ☰
+          </button>
+          <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title="Watchlist" aria-label="Watchlist">
+            <BellIcon size={16} />
           </button>
           <button type="button" className="ta-head-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
         </div>
@@ -744,7 +881,55 @@ export function TradingAgent({ selectedCoin }: Props) {
             Back to chat
           </button>
         </div>
-      ) : messages.length === 0 ? (
+      ) : showWatches ? (() => {
+        const active = allWatches.filter((w) => w.active);
+        const triggered = allWatches.filter((w) => !w.active && w.triggeredAt);
+        return (
+          <div className="ta-history">
+            <div className="ta-history-list">
+              <p className="ta-watchlist-section-title">Active watches</p>
+              {active.length === 0 && <p className="ta-empty">No active watches.</p>}
+              {active.map((w) => (
+                <div key={w.id} className="ta-watchlist-item">
+                  <div className="ta-watchlist-item-main">
+                    <span className="ta-watchlist-item-coin"><BellIcon /> {w.coin}</span>
+                    <span className="ta-watchlist-item-condition">
+                      {w.conditionText}
+                      {/rsi|macd|volume/i.test(w.conditionText) && (
+                        <span className="ta-watch-interval-tag">{w.interval === "1d" ? "Daily" : w.interval}</span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="ta-watch-cancel"
+                    onClick={() => handleCancelWatch(w.id)}
+                    disabled={cancellingWatchId === w.id}
+                  >
+                    {cancellingWatchId === w.id ? "…" : "Cancel"}
+                  </button>
+                </div>
+              ))}
+
+              <p className="ta-watchlist-section-title ta-watchlist-section-title--notifications">Notifications</p>
+              {triggered.length === 0 && <p className="ta-empty">No triggered watches yet.</p>}
+              {triggered.map((w) => (
+                <div key={w.id} className="ta-watchlist-item ta-watchlist-item--triggered">
+                  <div className="ta-watchlist-item-main">
+                    <span className="ta-watchlist-item-coin"><BellIcon /> {w.coin}</span>
+                    <span className="ta-watchlist-item-condition">{w.conditionText}</span>
+                    <span className="ta-watchlist-item-time">{w.triggeredAt ? formatMsgTime(w.triggeredAt) : ""}</span>
+                  </div>
+                  <span className="ta-watch-status">✓ Triggered</span>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="ta-history-back" onClick={() => setShowWatches(false)}>
+              Back to chat
+            </button>
+          </div>
+        );
+      })() : messages.length === 0 ? (
         <div className="ta-onboard">
           {needsConsent && (
             <>
@@ -778,16 +963,24 @@ export function TradingAgent({ selectedCoin }: Props) {
                   <p className="ta-onboard-step-question">How would you describe your trading experience?</p>
                   <p className="ta-onboard-field-hint">This just sets sensible starting defaults below — you can change anything afterward.</p>
                   <div className="ta-onboard-chips ta-onboard-chips--wrap">
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("new")}>
+                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("new", rememberExperienceChoice)}>
                       New to trading
                     </button>
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("some")}>
+                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("some", rememberExperienceChoice)}>
                       Some experience
                     </button>
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("experienced")}>
+                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("experienced", rememberExperienceChoice)}>
                       Very experienced
                     </button>
                   </div>
+                  <label className="ta-onboard-remember">
+                    <input
+                      type="checkbox"
+                      checked={rememberExperienceChoice}
+                      onChange={(e) => setRememberExperienceChoice(e.target.checked)}
+                    />
+                    Remember this and skip asking next time
+                  </label>
                 </>
               )}
             </div>
@@ -795,6 +988,11 @@ export function TradingAgent({ selectedCoin }: Props) {
           {onboardStep > 1 && (
             <div className="ta-onboard-step ta-onboard-step--done">
               <span className="ta-onboard-step-check">✓</span> Experience: {onboardExperience === "new" ? "New to trading" : onboardExperience === "some" ? "Some experience" : "Very experienced"}
+              {rememberedExperience && (
+                <button type="button" className="ta-onboard-step-forget" onClick={forgetExperience}>
+                  Change
+                </button>
+              )}
             </div>
           )}
 
@@ -810,6 +1008,13 @@ export function TradingAgent({ selectedCoin }: Props) {
                   <p className="ta-onboard-step-question">How much paper balance do you want to start with, and how much do you typically put into a single trade?</p>
 
                   <label className="ta-onboard-sublabel" htmlFor="ta-onboard-balance">Starting balance</label>
+                  {/* No autoFocus — this step used to only ever be reached
+                      via a manual tap on an experience chip, which counted
+                      as a real user gesture that justified it. With a
+                      remembered experience level, step 1 now auto-advances
+                      straight here with zero taps at all (see
+                      rememberedExperience's effect), so autofocusing would
+                      pop the keyboard the instant the panel opens. */}
                   <div className={`ta-onboard-custom${onboardBalance && !balanceValid ? " ta-onboard-custom--invalid" : ""}`}>
                     <span className="ta-onboard-custom-prefix">$</span>
                     <input
@@ -820,7 +1025,6 @@ export function TradingAgent({ selectedCoin }: Props) {
                       value={onboardBalance}
                       onChange={(e) => setOnboardBalance(sanitizeAmountInput(e.target.value))}
                       placeholder="Enter an amount"
-                      autoFocus
                     />
                   </div>
                   {onboardBalance && !balanceValid ? (
@@ -1123,11 +1327,6 @@ export function TradingAgent({ selectedCoin }: Props) {
             )}
             {messages.map((m) => (
               <div key={m.id} className={`ta-msg ta-msg--${m.role}`}>
-                {m.role === "agent" && (
-                  <div className="ta-msg-sender">
-                    <span className="ta-thinking-orb ta-msg-orb" />
-                  </div>
-                )}
                 {/* The model is told to keep "reply" to a short verdict separate
                     from the narration, but for a trivial turn (small talk,
                     no real analysis) it sometimes writes the same short text
@@ -1357,7 +1556,7 @@ export function TradingAgent({ selectedCoin }: Props) {
                 {m.watch && m.actionStatus !== "confirmed" && (
                   <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
                     <div className="ta-proposal-row">
-                      <span className="ta-proposal-badge">👁 Watch</span>
+                      <span className="ta-proposal-badge"><BellIcon /> Watch</span>
                     </div>
                     <div className="ta-proposal-details">
                       <div className="ta-proposal-detail">
@@ -1408,7 +1607,7 @@ export function TradingAgent({ selectedCoin }: Props) {
                   return (
                     <div className={`ta-watch${w.active ? "" : w.triggeredAt ? " ta-watch--triggered" : " ta-watch--cancelled"}`}>
                       <span className="ta-watch-text">
-                        👁 Watching <strong>{w.coin}</strong> — {w.conditionText}
+                        <BellIcon /> Watching <strong>{w.coin}</strong> — {w.conditionText}
                         {/rsi|macd|volume/i.test(w.conditionText) && (
                           <span className="ta-watch-interval-tag">{w.interval === "1d" ? "Daily" : w.interval}</span>
                         )}
@@ -1466,7 +1665,7 @@ export function TradingAgent({ selectedCoin }: Props) {
 
   return (
     <>
-      {phase !== "hidden" && (
+      {phase !== "hidden" && !hideTrigger && (
         <button
           type="button"
           className={`ta-trigger${open ? " ta-trigger--open" : ""}${phase === "pop" ? " ta-trigger--collapsed" : ""}`}

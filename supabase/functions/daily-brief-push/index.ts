@@ -1,4 +1,5 @@
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 
 // Server-side twin of DailyBrief.tsx's fetchBrief() — same feeds and
 // relevance filtering, run on a cron schedule (see the matching migration)
@@ -110,14 +111,19 @@ async function sendBreakingNewsIfImportant(freshItems: BriefItem[]): Promise<num
 
   const soundByUser = await getSoundsByUser(tokens.map((t) => t.user_id));
   const accessToken = await getAccessToken();
+  const pushData = { type: "breaking_news", url: headline.url };
   const results = await Promise.all(tokens.map(({ token, user_id }) =>
     sendPush(
       accessToken, token, "🚨 Breaking", headline.title,
       soundByUser.get(user_id) ?? "bell",
-      { type: "breaking_news", url: headline.url },
+      pushData,
       "time-sensitive",
     )
   ));
+  const uniqueUserIds = [...new Set(tokens.map((t) => t.user_id))];
+  await logNotifications(uniqueUserIds.map((userId) => ({
+    userId, type: "breaking_news", title: "🚨 Breaking", body: headline.title, data: pushData,
+  })));
   return results.filter(Boolean).length;
 }
 
@@ -234,9 +240,14 @@ Deno.serve(async (req) => {
 
   const soundByUser = await getSoundsByUser(tokens.map(t => t.user_id));
   const accessToken = await getAccessToken();
+  const dailyBriefPushData = { type: "daily_brief", url: headline.url };
   const results = await Promise.all(tokens.map(({ token, user_id }) =>
-    sendPush(accessToken, token, title, body, soundByUser.get(user_id) ?? "bell", { type: "daily_brief", url: headline.url })
+    sendPush(accessToken, token, title, body, soundByUser.get(user_id) ?? "bell", dailyBriefPushData)
   ));
+  const uniqueDailyBriefUserIds = [...new Set(tokens.map(t => t.user_id))];
+  await logNotifications(uniqueDailyBriefUserIds.map((userId) => ({
+    userId, type: "daily_brief", title, body, data: dailyBriefPushData,
+  })));
 
   return new Response(
     JSON.stringify({ fetched: items.length, fresh: freshItems.length, sent: results.filter(Boolean).length, total: tokens.length, breakingSent }),

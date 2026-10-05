@@ -283,12 +283,22 @@ interface Props {
   // rendered in-flow next to the chart on desktop — see its render branch
   // below and .db-page in DailyBrief.css.
   variant?: "sheet" | "page";
+  // Fires when the user taps this sheet's own close (X) button — lets a
+  // parent that conditionally mounts this component (e.g. FloatingNavBar's
+  // morph toggle) know to unmount it too, instead of the parent still
+  // thinking it's open while this has quietly gone dormant via its own
+  // internal `dismissed` state.
+  onDismiss?: () => void;
 }
 
-export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) => {
+export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", onDismiss }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
-  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  // "expanded" (not the old teaser-first "collapsed") — this is now only
+  // ever mounted by an explicit tap on FloatingNavBar's Daily Brief icon
+  // (see App.tsx's dailyBriefOpen), a deliberate "I want to read this"
+  // action, not an always-present ambient teaser anymore.
+  const [sheetState, setSheetState] = useState<SheetState>("expanded");
   const [dismissed, setDismissed] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -474,6 +484,18 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
     setDragging(false);
     setDragY(0);
   };
+
+  // "expanded" is the only real resting state from this entry point now —
+  // dragging (or tapping the handle) away from it used to land on
+  // "collapsed" as its own docked teaser state, with "minimized" a further
+  // drag beyond that. Neither is wanted here: any move off "expanded"
+  // should act exactly like hitting the close (X) button, immediately,
+  // not animate down into a docked sliver first. Catching both states
+  // (not just "minimized") means the very first drag-down already closes
+  // it — no second drag needed to actually make it go away.
+  useEffect(() => {
+    if (sheetState === "collapsed" || sheetState === "minimized") onDismiss?.();
+  }, [sheetState, onDismiss]);
 
   // The "blog" card — a single, always-crypto lead story with its own
   // mini timeline of the next couple of updates underneath it (the Yahoo
@@ -736,7 +758,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet" }) 
           <div className="db-traffic-lights">
             <button
               className="db-tl-btn db-tl-btn--close"
-              onClick={(e) => { e.stopPropagation(); setDismissed(true); }}
+              onClick={(e) => { e.stopPropagation(); setDismissed(true); onDismiss?.(); }}
               aria-label={t("dailyBrief.close")}
               title={t("dailyBrief.close")}
             >

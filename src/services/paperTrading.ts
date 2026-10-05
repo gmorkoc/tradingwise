@@ -441,6 +441,26 @@ export async function fetchWatchesForConversation(userId: string, conversationId
   }));
 }
 
+// Every watch the user has across every conversation, not scoped to one —
+// backs the dedicated watchlist view, since a watch set up in an older
+// chat is just as real/active as one from the current conversation and
+// shouldn't require digging back through chat history to find or cancel.
+// Active ones first (most actionable), then most-recently-triggered.
+export async function fetchAllWatches(userId: string): Promise<AgentWatch[]> {
+  const { data, error } = await supabase
+    .from("agent_watches")
+    .select("id, coin, condition_text, interval, active, triggered_at, created_at")
+    .eq("user_id", userId)
+    .order("active", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((w) => ({
+    id: w.id, coin: w.coin, conditionText: w.condition_text, interval: w.interval,
+    active: w.active, triggeredAt: w.triggered_at, createdAt: w.created_at,
+  }));
+}
+
 export async function fetchWatch(watchId: string): Promise<AgentWatch | null> {
   const { data, error } = await supabase
     .from("agent_watches")

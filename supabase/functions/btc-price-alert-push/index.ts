@@ -1,4 +1,5 @@
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
+import { logNotifications } from "../_shared/notificationLog.ts";
 
 // Server-side twin of useBtcMoveAlert.ts's anchor/threshold logic, but with
 // a much larger threshold since this fires a push notification (interrupts
@@ -66,9 +67,12 @@ Deno.serve(async (req) => {
         const direction = diff > 0 ? "up" : "down";
         const title = `BTC ${direction === "up" ? "▲" : "▼"} $${Math.round(btcPrice).toLocaleString("en-US")}`;
         const body = `${direction === "up" ? "+" : "-"}$${Math.round(Math.abs(diff)).toLocaleString("en-US")} move`;
+        const pushData = { type: "price_alert", coin: "BTC" };
         const soundByUser = await getSoundsByUser(tokens.map(t => t.user_id));
         const token = await ensureAccessToken();
-        const results = await Promise.all(tokens.map(({ token: t, user_id }) => sendPush(token, t, title, body, soundByUser.get(user_id) ?? "bell")));
+        const results = await Promise.all(tokens.map(({ token: t, user_id }) => sendPush(token, t, title, body, soundByUser.get(user_id) ?? "bell", pushData)));
+        const uniqueUserIds = [...new Set(tokens.map(t => t.user_id))];
+        await logNotifications(uniqueUserIds.map((userId) => ({ userId, type: "price_alert", title, body, data: pushData })));
         btcResult = { price: btcPrice, moved: true, sent: results.filter(Boolean).length, total: tokens.length };
       } else {
         btcResult = { price: btcPrice, moved: true, sent: 0 };
@@ -102,8 +106,10 @@ Deno.serve(async (req) => {
 
     const title = `${alert.coin} ${alert.direction === "above" ? "▲" : "▼"} $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
     const body = `${alert.direction === "above" ? "Went above" : "Dropped below"} your $${alert.target_price.toLocaleString("en-US", { maximumFractionDigits: 2 })} alert`;
+    const pushData = { type: "price_alert", coin: alert.coin };
     const token = await ensureAccessToken();
-    await Promise.all(userTokens.map(({ token: t }) => sendPush(token, t, title, body, userProfile?.alert_sound ?? "bell")));
+    await Promise.all(userTokens.map(({ token: t }) => sendPush(token, t, title, body, userProfile?.alert_sound ?? "bell", pushData)));
+    await logNotifications([{ userId: alert.user_id, type: "price_alert", title, body, data: pushData }]);
     userAlertsFired++;
   }
 
