@@ -177,18 +177,26 @@
   overflow: hidden;
 }
 
-.notif-item-time {
+/* A plain flex row, not the dot's own absolute positioning over the top-
+   right corner — that collided with this text directly (the dot doesn't
+   know how wide "8m ago" vs. "2d ago" actually renders, so it just sat on
+   top of whatever was there). Gap between them keeps the two apart
+   regardless of timestamp length. */
+.notif-item-meta {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.notif-item-time {
   font-size: 0.68rem;
   color: var(--color-text-muted);
   white-space: nowrap;
-  padding-top: 2px;
 }
 
 .notif-item-dot {
-  position: absolute;
-  top: 12px;
-  right: 8px;
+  flex-shrink: 0;
   width: 7px;
   height: 7px;
   border-radius: 50%;

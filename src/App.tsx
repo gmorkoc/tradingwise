@@ -936,15 +936,40 @@ function AppDashboard({
       .catch(() => {});
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  // Segmented Chart/Order Book tabs — real phones only (see App.css's own
-  // max-width:640px block); desktop/tablet widths ignore this entirely and
-  // keep showing both side by side, resizable.
+  // Segmented Chart/Order Book tabs — real phones (<=640px) and full
+  // desktop (>=961px, see App.css); the in-between tablet range ignores
+  // this entirely and keeps showing both side by side, resizable.
   const [mobileChartTab, setMobileChartTab] = useState<"chart" | "orderbook">("chart");
-  // Which way the tab switch is "moving" — Order Book is to the right, so
-  // switching to it plays a bullish (green) swipe; back to Chart plays a
-  // bearish (red) one. Purely cosmetic, replayed via the flash span's
-  // `key` (see the JSX) — doesn't affect which tab actually shows.
-  const [tabSwipeDir, setTabSwipeDir] = useState<"bull" | "bear">("bull");
+  // Simple two-icon segmented switch, mounted once in the top bar
+  // (.mch-right) at every width.
+  const chartModeToggle = (
+    <div className="chart-mobile-tabs">
+      <button
+        type="button"
+        className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
+        title={t("chart.tabLabel", "Chart")}
+        onClick={() => setMobileChartTab("chart")}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17l5-5 4 4 8-9" />
+          <path d="M14 7h6v6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
+        title={t("orderBook.title")}
+        onClick={() => setMobileChartTab("orderbook")}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="6" />
+          <line x1="21" y1="11" x2="6" y2="11" />
+          <line x1="15" y1="16" x2="6" y2="16" />
+          <line x1="12" y1="21" x2="6" y2="21" />
+        </svg>
+      </button>
+    </div>
+  );
   const [obSize, setObSize] = useState({ h: 380, w: 135 });
   const [obResizeIntro, setObResizeIntro] = useState(false);
   const chartWrapRef = useRef<HTMLDivElement>(null);
@@ -1966,6 +1991,7 @@ function AppDashboard({
                   it via the "open-buy-signals" event either way) — this
                   row is otherwise exactly what was on desktop before any
                   of that mobile work. */}
+              {activeSection === "chart" && chartModeToggle}
               {isWideDesktop && (
                 <button
                   className="mch-search-btn"
@@ -2109,7 +2135,15 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                {!distractionFree && (
+                {/* Desktop keeps its original order — Watchlist and Top
+                    Movers both above the chart. Mobile/iOS reorders to
+                    chart first, then Watchlist, then Top Movers below (see
+                    the two mobile-only mounts after .chart-page-row) —
+                    same component, just called at a different point in
+                    the tree depending on platform, not a CSS-only reorder
+                    (Top Movers needs to actually leave .chart-column, not
+                    just look like it moved). */}
+                {isWideDesktop && !distractionFree && (
                   <Watchlist
                     onSelectCoin={(symbol) => {
                       setCoin(symbol as CoinSymbol);
@@ -2119,7 +2153,7 @@ function AppDashboard({
                 )}
                 <div className="chart-page-row">
                   <div className="chart-column">
-                    {!distractionFree && (
+                    {isWideDesktop && !distractionFree && (
                       <TopMoversCarousel
                         onSelectCoin={(symbol) => {
                           setCoin(symbol as CoinSymbol);
@@ -2127,30 +2161,6 @@ function AppDashboard({
                         }}
                       />
                     )}
-                    <div className="chart-mobile-tabs">
-                      <div className={`chart-mobile-tab-indicator chart-mobile-tab-indicator--${mobileChartTab}`} />
-                      <span key={mobileChartTab} className={`chart-mobile-tab-flash chart-mobile-tab-flash--${mobileChartTab} chart-mobile-tab-flash--${tabSwipeDir}`} />
-                      <button
-                        type="button"
-                        className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
-                        onClick={() => {
-                          if (mobileChartTab !== "chart") setTabSwipeDir("bear");
-                          setMobileChartTab("chart");
-                        }}
-                      >
-                        {t("chart.tabLabel", "Chart")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
-                        onClick={() => {
-                          if (mobileChartTab !== "orderbook") setTabSwipeDir("bull");
-                          setMobileChartTab("orderbook");
-                        }}
-                      >
-                        {t("orderBook.title")}
-                      </button>
-                    </div>
                     <div
                       className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
                       ref={chartWrapRef}
@@ -2214,6 +2224,22 @@ function AppDashboard({
                     <DailyBrief coinTickers={coinTickers} variant="page" />
                   )}
                 </div>
+                {!isWideDesktop && !distractionFree && (
+                  <Watchlist
+                    onSelectCoin={(symbol) => {
+                      setCoin(symbol as CoinSymbol);
+                      clearCandleCache();
+                    }}
+                  />
+                )}
+                {!isWideDesktop && !distractionFree && (
+                  <TopMoversCarousel
+                    onSelectCoin={(symbol) => {
+                      setCoin(symbol as CoinSymbol);
+                      clearCandleCache();
+                    }}
+                  />
+                )}
               </>
             )}
             {activeSection !== "chart" && (

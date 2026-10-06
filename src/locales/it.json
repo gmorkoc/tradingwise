@@ -130,7 +130,7 @@
     "defaultMessage": "Ciao! Posso aiutarti ad analizzare i dati di mercato di {{coin}} e rispondere a domande sulle tendenze delle criptovalute. Chiedimi qualsiasi cosa sulla situazione attuale del mercato!"
   },
   "chart": {
-    "title": "📈 Grafico Prezzo {{coin}}",
+    "title": "{{coin}}",
     "live": "● LIVE",
     "loading": "Caricamento dati grafico...",
     "noData": "Nessun dato grafico disponibile",

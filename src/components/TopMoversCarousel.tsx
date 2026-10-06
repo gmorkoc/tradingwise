@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "../styles/TopMoversCarousel.css";
-import { fetchTopMovers, TopMover } from "../services/binancePrices";
+import { fetchTopMovers, fetchSparklines, TopMover } from "../services/binancePrices";
+import { Sparkline } from "./Watchlist";
 
 interface Props {
   onSelectCoin?: (symbol: string) => void;
@@ -12,6 +13,8 @@ function fmtPrice(p: number): string {
   if (p >= 1)    return p.toFixed(4);
   return p.toFixed(6);
 }
+
+const LIST_COLLAPSED_COUNT = 5;
 
 // Card-carousel take on the same top-movers banner (see TopMoversBanner.tsx
 // for the static-pill-row version) — same fetchTopMovers ranking, just
@@ -24,6 +27,19 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
   const [loading, setLoading] = useState(true);
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Matches Watchlist.tsx's own breakpoint — same "horizontal strip on
+  // desktop, vertical list on mobile" split.
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 640px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 640px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  // Only the mobile list shows these — the desktop card row never had
+  // room for one (see the file-header comment above), still true there.
+  const [sparklines, setSparklines] = useState<Map<string, number[]>>(new Map());
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,9 +54,77 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
+  useEffect(() => {
+    if (!isMobile || movers.length === 0) return;
+    const symbols = movers.map(m => m.symbol);
+    fetchSparklines(symbols).then(setSparklines);
+  }, [isMobile, movers]);
+
   if (!loading && movers.length === 0) return null;
 
   const scrollBy = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
+
+  if (isMobile) {
+    const shown = showAll ? movers : movers.slice(0, LIST_COLLAPSED_COUNT);
+    return (
+      <div className="tmc-list">
+        <div className="tmc-list-head">
+          <span className="tmc-list-title">{t("topMovers.title")}</span>
+          <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+        </div>
+        {loading ? (
+          <div className="tmc-loading">{t("topMovers.loading")}</div>
+        ) : (
+          <div className="tmc-list-rows">
+            {shown.map(m => {
+              const up = m.pct >= 0;
+              const spark = sparklines.get(m.symbol) ?? [];
+              return (
+                <button
+                  key={m.symbol}
+                  type="button"
+                  className="tmc-list-row"
+                  onClick={() => onSelectCoin?.(m.symbol)}
+                >
+                  <span className="tmc-list-icon">
+                    {!imgErrors.has(m.symbol) ? (
+                      <img
+                        className="tmc-list-icon-img"
+                        src={`https://assets.coincap.io/assets/icons/${m.symbol.toLowerCase()}@2x.png`}
+                        alt=""
+                        loading="lazy"
+                        onError={() => setImgErrors(prev => new Set([...prev, m.symbol]))}
+                      />
+                    ) : (
+                      <span className="tmc-card-icon--fallback tmc-list-icon-img">{m.symbol[0]}</span>
+                    )}
+                  </span>
+                  <span className="tmc-list-names">
+                    <span className="tmc-list-name">{m.name}</span>
+                    <span className="tmc-list-sym">{m.symbol}</span>
+                  </span>
+                  {spark.length > 1 && (
+                    <Sparkline prices={spark} positive={up} width={64} height={28} className="tmc-list-spark" />
+                  )}
+                  <span className="tmc-list-figures">
+                    <span className="tmc-list-price">${fmtPrice(m.price)}</span>
+                    <span className={`tmc-list-pct${up ? " up" : " down"}`}>
+                      {up ? "↗" : "↘"} {Math.abs(m.pct).toFixed(2)}%
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!loading && movers.length > LIST_COLLAPSED_COUNT && (
+          <button type="button" className="tmc-list-showmore" onClick={() => setShowAll(v => !v)}>
+            {showAll ? t("topMovers.showLess", "Show less") : t("topMovers.showMore", "Show more")}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="tmc-strip">

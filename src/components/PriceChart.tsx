@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
@@ -101,6 +102,27 @@ const INTERVAL_SHORT: Record<TimeInterval, string> = {
 
 // Intervals that require at least Pro
 const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
+
+// Mobile only — the full interval list doesn't fit one row, so only these
+// show as pills; the rest are reachable via the trailing "more" button,
+// which opens the native select (still rendered for every interval).
+const PRIMARY_INTERVALS = new Set<TimeInterval>(["1min", "1h", "4h", "1day", "1week", "all"]);
+
+// Shared with the day-hl-badge and the mobile price header — both show a
+// change/high-low figure "as of" a window matched to the selected candle
+// interval, so they need to agree on what that window is called.
+const HL_WINDOW_LABEL: Record<TimeInterval, string> = {
+  "1sec": "30M",
+  "1min": "1H",
+  "5min": "24H",
+  "15min": "48H",
+  "1h": "24H",
+  "4h": "24H",
+  "6h": "24H",
+  "1day": "24H",
+  "1week": "7D",
+  "all": "ATH",
+};
 
 const FIB_LEVELS = [
   { ratio: 0, label: "0", color: "rgba(251,191,36,0.85)" },
@@ -1033,6 +1055,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [isLive, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
+  const [dayChangePercent, setDayChangePercent] = useState<number | null>(null);
+  const [dayChangeAbs, setDayChangeAbs] = useState<number | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceDirection, setPriceDirection] = useState<"up" | "down" | null>(null);
   const prevPriceRef = useRef<number | null>(null);
@@ -1044,7 +1068,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     prevPriceRef.current = price;
     setCurrentPrice(price);
   }, []);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [intervalSheetOpen, setIntervalSheetOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayLineRefs = useRef<any[]>([]);
 
@@ -1671,6 +1695,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             const dLow = Math.min(...hlCandles.map((c) => c.low));
             setDayHigh(dHigh);
             setDayLow(dLow);
+            const windowOpen = hlCandles[0].open;
+            if (windowOpen) {
+              setDayChangeAbs(lastPrice - windowOpen);
+              setDayChangePercent(((lastPrice - windowOpen) / windowOpen) * 100);
+            } else {
+              setDayChangeAbs(null);
+              setDayChangePercent(null);
+            }
             const hlHigh = candleRef.current?.createPriceLine({
               price: dHigh,
               color: "#facc15",
@@ -1692,6 +1724,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           } else {
             setDayHigh(null);
             setDayLow(null);
+            setDayChangeAbs(null);
+            setDayChangePercent(null);
           }
 
           const newBanner = analyzeInterval(data, INTERVAL_LABELS[interval]);
@@ -1892,16 +1926,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   useEffect(() => {
     lastCandlesRef.current = [];
   }, [coin]);
-
-  // ── Close indicator menu on outside click ───────────────────────────────
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handle = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [menuOpen]);
 
   // ── Overlay visibility ───────────────────────────────────────────────────
   useEffect(() => {
@@ -2426,9 +2450,217 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     link.click();
   };
 
-  // Indicators dropdown + interval pills — rendered beside the title normally,
-  // but relocated into the legend row (with Save/Exit) in fullscreen so all
-  // chart controls live in one place instead of splitting across two rows.
+  // The checkbox list — shared between desktop's positioned dropdown and
+  // mobile's bottom sheet (indicatorsControl below).
+  const indicatorsList = (
+    <>
+      <div className="indicators-menu-group-label">
+        {t("chart.overlays")}
+      </div>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showBB}
+          onChange={(e) => setShowBB(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "rgba(251,113,133,0.85)" }}
+        />
+        <span>{t("chart.bollingerBands")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showEMA20}
+          onChange={(e) => setShowEMA20(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#4ade80" }}
+        />
+        <span>{t("chart.ema20")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showEMA50}
+          onChange={(e) => setShowEMA50(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#fb923c" }}
+        />
+        <span>{t("chart.ema50")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showEMA200}
+          onChange={(e) => setShowEMA200(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#c084fc" }}
+        />
+        <span>{t("chart.ema200")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showMA20}
+          onChange={(e) => setShowMA20(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#818cf8" }}
+        />
+        <span>{t("chart.ma20")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showMA50}
+          onChange={(e) => setShowMA50(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#f472b6" }}
+        />
+        <span>{t("chart.ma50")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showMA200}
+          onChange={(e) => setShowMA200(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#facc15" }}
+        />
+        <span>{t("chart.ma200")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showCME}
+          onChange={(e) => setShowCME(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "rgba(251,191,36,0.85)" }}
+        />
+        <span>{t("chart.cmeGaps")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showGann}
+          onChange={(e) => {
+            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+            setShowGann(e.target.checked);
+          }}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#f97316" }}
+        />
+        <span>Gann Pivots</span>
+        <span className="tier-badge tier-badge--pro">P</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showFib}
+          onChange={(e) => {
+            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+            setShowFib(e.target.checked);
+          }}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "rgba(251,191,36,0.85)" }}
+        />
+        <span>Fibonacci Levels</span>
+        <span className="tier-badge tier-badge--pro">P</span>
+      </label>
+      <div className="indicators-menu-divider" />
+      <div className="indicators-menu-group-label">
+        {t("chart.subcharts")}
+      </div>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showRSI}
+          onChange={(e) => setShowRSI(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#818cf8" }}
+        />
+        <span>{t("chart.rsi14")}</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showMACD}
+          onChange={(e) => setShowMACD(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#f97316" }}
+        />
+        <span>{t("chart.macd1269")}</span>
+      </label>
+    </>
+  );
+
+  // Indicators toggle — icon button matches Order Depth/Save/Expand
+  // (chart-legend-actions), same spot on desktop and mobile. Desktop opens
+  // the classic positioned dropdown under the button; mobile opens a
+  // bottom sheet instead — same indicatorsList content either way.
+  const indicatorsControl = (
+    <div className="indicators-menu-wrapper">
+      <button
+        className={`chart-depth-btn${menuOpen ? " chart-depth-btn--active" : ""}`}
+        onClick={() => setMenuOpen((v) => !v)}
+        title={t("chart.indicators")}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14" />
+          <line x1="4" y1="10" x2="4" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12" y2="3" />
+          <line x1="20" y1="21" x2="20" y2="16" />
+          <line x1="20" y1="12" x2="20" y2="3" />
+          <line x1="1" y1="14" x2="7" y2="14" />
+          <line x1="9" y1="8" x2="15" y2="8" />
+          <line x1="17" y1="16" x2="23" y2="16" />
+        </svg>
+        <span className="chart-icon-label">{t("chart.indicators")}</span>
+      </button>
+      {menuOpen && (isDesktopWidth ? (
+        <div className="indicators-menu">{indicatorsList}</div>
+      ) : ReactDOM.createPortal(
+        <>
+          <div className="indicators-sheet-backdrop" onClick={() => setMenuOpen(false)} />
+          <div className="indicators-sheet">
+            <div className="indicators-sheet-header">
+              <span className="indicators-sheet-title">{t("chart.indicators")}</span>
+              <button type="button" className="indicators-sheet-close" onClick={() => setMenuOpen(false)}>✕</button>
+            </div>
+            <div className="indicators-menu indicators-menu--sheet">{indicatorsList}</div>
+          </div>
+        </>,
+        document.body,
+      ))}
+    </div>
+  );
+
+  // Interval pills — rendered beside the title normally, but relocated
+  // into the legend row (with Save/Exit) in fullscreen so all chart
+  // controls live in one place instead of splitting across two rows.
   const chartControlsPanel = (
     <div className="chart-header-controls">
       {isFullscreen && (
@@ -2453,178 +2685,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <span className="chart-icon-label">{t("chart.save")}</span>
         </button>
       )}
-      <div className="indicators-menu-wrapper" ref={menuRef}>
-        <button
-          className={`indicators-toggle${menuOpen ? " indicators-toggle--active" : ""}`}
-          onClick={() => setMenuOpen((v) => !v)}
-        >
-          ◈ {t("chart.indicators")} {menuOpen ? "▴" : "▾"}
-        </button>
-        {menuOpen && (
-          <div className="indicators-menu">
-            <div className="indicators-menu-group-label">
-              {t("chart.overlays")}
-            </div>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showBB}
-                onChange={(e) => setShowBB(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "rgba(251,113,133,0.85)" }}
-              />
-              <span>{t("chart.bollingerBands")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showEMA20}
-                onChange={(e) => setShowEMA20(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#4ade80" }}
-              />
-              <span>{t("chart.ema20")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showEMA50}
-                onChange={(e) => setShowEMA50(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#fb923c" }}
-              />
-              <span>{t("chart.ema50")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showEMA200}
-                onChange={(e) => setShowEMA200(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#c084fc" }}
-              />
-              <span>{t("chart.ema200")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showMA20}
-                onChange={(e) => setShowMA20(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#818cf8" }}
-              />
-              <span>{t("chart.ma20")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showMA50}
-                onChange={(e) => setShowMA50(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#f472b6" }}
-              />
-              <span>{t("chart.ma50")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showMA200}
-                onChange={(e) => setShowMA200(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#facc15" }}
-              />
-              <span>{t("chart.ma200")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showCME}
-                onChange={(e) => setShowCME(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "rgba(251,191,36,0.85)" }}
-              />
-              <span>{t("chart.cmeGaps")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showGann}
-                onChange={(e) => {
-                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                  setShowGann(e.target.checked);
-                }}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#f97316" }}
-              />
-              <span>Gann Pivots</span>
-              <span className="tier-badge tier-badge--pro">P</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showFib}
-                onChange={(e) => {
-                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                  setShowFib(e.target.checked);
-                }}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "rgba(251,191,36,0.85)" }}
-              />
-              <span>Fibonacci Levels</span>
-              <span className="tier-badge tier-badge--pro">P</span>
-            </label>
-            <div className="indicators-menu-divider" />
-            <div className="indicators-menu-group-label">
-              {t("chart.subcharts")}
-            </div>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showRSI}
-                onChange={(e) => setShowRSI(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#818cf8" }}
-              />
-              <span>{t("chart.rsi14")}</span>
-            </label>
-            <label className="indicators-menu-item">
-              <input
-                type="checkbox"
-                checked={showMACD}
-                onChange={(e) => setShowMACD(e.target.checked)}
-              />
-              <span
-                className="indicators-menu-dot"
-                style={{ background: "#f97316" }}
-              />
-              <span>{t("chart.macd1269")}</span>
-            </label>
-          </div>
-        )}
-      </div>
-      {/* Desktop: fancy pill buttons */}
+      {/* Desktop: fancy pill buttons. Mobile only shows PRIMARY_INTERVALS
+          (see .interval-pill--secondary in PriceChart.css) plus the
+          trailing "more" button, which opens a bottom sheet listing every
+          interval instead of replacing the pills entirely. */}
       <div className="interval-pills">
         {INTERVALS.map((opt) => {
           const needsPro = PRO_INTERVALS.has(opt);
@@ -2633,7 +2697,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           return (
             <button
               key={opt}
-              className={`interval-pill${interval === opt ? " interval-pill--active" : ""}${locked ? " interval-pill--locked" : ""}`}
+              className={`interval-pill${interval === opt ? ` interval-pill--active${trend === "bullish" ? " interval-pill--active-bull" : trend === "bearish" ? " interval-pill--active-bear" : ""}` : ""}${locked ? " interval-pill--locked" : ""}${PRIMARY_INTERVALS.has(opt) ? "" : " interval-pill--secondary"}`}
               title={INTERVAL_LABELS[opt]}
               onClick={() => {
                 if (locked) { onOpenUpgrade?.("pro"); return; }
@@ -2647,30 +2711,60 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </button>
           );
         })}
+        <button
+          type="button"
+          className="interval-pill-more"
+          title="More intervals"
+          onClick={() => setIntervalSheetOpen(true)}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+        </button>
       </div>
 
-      {/* Mobile: native dropdown */}
-      <select
-        className="interval-select interval-select--mobile"
-        value={interval}
-        onChange={(e) => {
-          const val = e.target.value as TimeInterval;
-          if (PRO_INTERVALS.has(val) && !isPaid) { onOpenUpgrade?.("pro"); return; }
-          setInterval(val);
-        }}
-      >
-        {INTERVALS.map((opt) => {
-          const needsPro = PRO_INTERVALS.has(opt);
-          const trend    = trends[opt];
-          const arrow    = trend === "bullish" ? " ↑" : trend === "bearish" ? " ↓" : "";
-          const pro      = needsPro ? " · PRO" : "";
-          return (
-            <option key={opt} value={opt}>
-              {INTERVAL_LABELS[opt]}{arrow}{pro}
-            </option>
-          );
-        })}
-      </select>
+      {intervalSheetOpen && ReactDOM.createPortal(
+        <>
+          <div className="interval-sheet-backdrop" onClick={() => setIntervalSheetOpen(false)} />
+          <div className="interval-sheet">
+            <div className="interval-sheet-header">
+              <span className="interval-sheet-title">{t("chart.selectInterval", "Select Interval")}</span>
+              <button type="button" className="interval-sheet-close" onClick={() => setIntervalSheetOpen(false)}>✕</button>
+            </div>
+            <div className="interval-sheet-list">
+              {INTERVALS.map((opt) => {
+                const needsPro = PRO_INTERVALS.has(opt);
+                const locked   = needsPro && !isPaid;
+                const trend    = trends[opt];
+                return (
+                  <button
+                    type="button"
+                    key={opt}
+                    className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
+                    onClick={() => {
+                      if (locked) { onOpenUpgrade?.("pro"); return; }
+                      setInterval(opt);
+                      setIntervalSheetOpen(false);
+                    }}
+                  >
+                    <span className="interval-sheet-item-label">
+                      {INTERVAL_LABELS[opt]}
+                      {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                        : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                        : null}
+                    </span>
+                    {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                      : interval === opt ? <span className="interval-sheet-item-check">✓</span>
+                      : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>,
+        document.body,
+      )}
     </div>
   );
 
@@ -2724,28 +2818,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     Unlock Status
                   </button>
                 )}
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
                 {dayHigh !== null && dayLow !== null && (
-                  <span className="day-hl-badge">
+                  <span className="day-hl-badge" style={{ marginLeft: "auto" }}>
                     <span className="day-hl-label">
-                      {interval === "1sec"
-                        ? "30M"
-                        : interval === "1min"
-                          ? "1H"
-                          : interval === "5min"
-                            ? "24H"
-                            : interval === "15min"
-                              ? "48H"
-                              : interval === "1h"
-                                ? "24H"
-                                : interval === "1week"
-                                  ? "7D"
-                                  : interval === "all"
-                                    ? "ATH"
-                                    : "24H"}
+                      {HL_WINDOW_LABEL[interval]}
                     </span>
                     <span className="day-hl-high">
                       H: {formatLivePrice(dayHigh)}
@@ -2756,6 +2832,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </span>
                   </span>
                 )}
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
                 {divergence && isPaid && (
                   <span className={`div-badge div-badge--${divergence.type}`}>
                     {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
@@ -2817,6 +2897,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </>
             )}
             <div className="chart-legend-actions">
+              {indicatorsControl}
               {isFullscreen && chartControlsPanel}
               <button
                 className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
@@ -2988,7 +3069,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {banner && isPaid && (
           <div
-            key={banner.title}
             className={`interval-banner interval-banner--${banner.sentiment}`}
           >
             <div className="interval-banner-header">
@@ -3057,6 +3137,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {error && lastCandlesRef.current.length === 0 && (
           <div className="chart-error">⚠️ {error}</div>
+        )}
+
+        {!isFullscreen && currentPrice !== null && (
+          <div className="chart-mobile-price-header">
+            <span
+              className={`chart-mobile-price${priceDirection ? ` chart-mobile-price--${priceDirection}` : ""}`}
+            >
+              {formatLivePrice(currentPrice)}
+            </span>
+            {dayChangePercent !== null && dayChangeAbs !== null && (
+              <span
+                className={`chart-mobile-price-change chart-mobile-price-change--${dayChangePercent >= 0 ? "up" : "down"}`}
+              >
+                <span className="chart-mobile-price-change-arrow">
+                  {dayChangePercent >= 0 ? "↗" : "↘"}
+                </span>
+                {formatLivePrice(Math.abs(dayChangeAbs))} ({Math.abs(dayChangePercent).toFixed(2)}%)
+                <span className="chart-mobile-price-change-period">
+                  {HL_WINDOW_LABEL[interval]}
+                </span>
+              </span>
+            )}
+          </div>
         )}
 
         <div
@@ -3287,28 +3390,30 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
               </div>
             </div>
-            <p
-              key={`summary-${patternInsight.name}`}
-              className="pattern-insight-summary pi-fade-in"
-            >
-              {patternInsight.summary}
-            </p>
-            <p
-              key={`narrative-${patternInsight.name}`}
-              className="pattern-insight-narrative pi-fade-in pi-fade-in--d1"
-            >
-              {patternInsight.narrative}
-            </p>
-            <div className="pattern-insight-next">
-              <span className="pattern-insight-next-label">
-                {t("chart.nextMove")}
-              </span>
+            <div className="pattern-insight-body-scroll">
               <p
-                key={`nextmove-${patternInsight.name}`}
-                className="pattern-insight-next-text pi-fade-in pi-fade-in--d2"
+                key={`summary-${patternInsight.name}`}
+                className="pattern-insight-summary pi-fade-in"
               >
-                {patternInsight.nextMove}
+                {patternInsight.summary}
               </p>
+              <p
+                key={`narrative-${patternInsight.name}`}
+                className="pattern-insight-narrative pi-fade-in pi-fade-in--d1"
+              >
+                {patternInsight.narrative}
+              </p>
+              <div className="pattern-insight-next">
+                <span className="pattern-insight-next-label">
+                  {t("chart.nextMove")}
+                </span>
+                <p
+                  key={`nextmove-${patternInsight.name}`}
+                  className="pattern-insight-next-text pi-fade-in pi-fade-in--d2"
+                >
+                  {patternInsight.nextMove}
+                </p>
+              </div>
             </div>
           </div>
         ) : null}

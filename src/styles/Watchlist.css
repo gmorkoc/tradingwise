@@ -269,6 +269,56 @@ html:not([data-theme="light"]) .wl-add-btn {
   overflow: hidden;
 }
 
+/* Full screen on mobile/iOS — a 240px anchored popover was cramped for a
+   coin search; this is the same "takes over the screen, ✕ to close"
+   treatment NotificationsCenter/BuySignals already use there. Flex
+   column so .wl-dropdown-list (flex:1) is the one thing that scrolls,
+   with the header/input staying put above it. */
+@media (max-width: 640px) {
+  .wl-dropdown {
+    position: fixed;
+    inset: 0;
+    top: 0;
+    right: 0;
+    width: 100%;
+    /* The base rule's --color-card-bg is deliberately translucent
+       (0.9–0.95 alpha) for a small popover sitting over other content —
+       wrong here, where this now covers the whole screen and there's
+       nothing wanted bleeding through behind it. */
+    background: var(--color-background);
+    border: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 200010;
+  }
+}
+
+.wl-dropdown-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top))) 16px 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .wl-dropdown-header { display: flex; }
+}
+.wl-dropdown-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--pc-text);
+}
+.wl-dropdown-close {
+  background: none;
+  border: none;
+  color: var(--pc-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.wl-dropdown-close:hover { color: var(--pc-text); }
+
 .wl-search-input {
   width: 100%;
   background: transparent;
@@ -289,6 +339,14 @@ html:not([data-theme="light"]) .wl-add-btn {
   padding: 4px 0;
   scrollbar-width: thin;
   scrollbar-color: var(--pc-border) transparent;
+}
+@media (max-width: 640px) {
+  .wl-dropdown-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  }
 }
 
 .wl-dropdown-item {
@@ -339,4 +397,132 @@ html:not([data-theme="light"]) .wl-add-btn {
   .wl-nav-btn { display: none; }
   .wl-search-wrap { margin-left: 0; }
   .wl-add-btn { padding: 5px 8px; font-size: 0.68rem; }
+}
+
+/* ── Mobile/iOS vertical list variant — see Watchlist.tsx's isMobile
+   branch. A plain stacked list (icon, name/symbol, sparkline, price/%)
+   instead of the horizontal chip strip above, same data either way. ──── */
+.wl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 16px 8px;
+}
+.wl-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+.wl-list-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pc-text);
+}
+.wl-list-arrow {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--pc-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wl-list-rows {
+  display: flex;
+  flex-direction: column;
+}
+.wl-list-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wl-list-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.wl-list-row-main:disabled { cursor: default; }
+.wl-list-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wl-list-icon .wl-coin-img { width: 100%; height: 100%; }
+.wl-list-icon .wl-coin-placeholder { width: 100%; height: 100%; font-size: 0.85rem; }
+.wl-list-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.wl-list-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--pc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wl-list-sym {
+  font-size: 0.78rem;
+  color: var(--pc-text-muted);
+}
+.wl-list-spark { flex-shrink: 0; }
+.wl-list-figures {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.wl-list-price {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--pc-text);
+}
+.wl-list-pct { font-size: 0.78rem; font-weight: 600; }
+.wl-list-pct.up { color: var(--pc-success); }
+.wl-list-pct.down { color: var(--pc-danger); }
+.wl-list-remove {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--pc-danger);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.wl-list-manage {
+  margin-top: 10px;
+  padding: 11px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pc-accent-soft);
+  color: var(--pc-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
 }

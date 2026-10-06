@@ -404,6 +404,71 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: #fb7185;
 }
 
+/* Big price readout above the chart canvas, Robinhood/Coinbase-style —
+   mobile/iOS only (hidden by default; shown below). Desktop keeps the
+   compact .chart-current-price-group in the fullscreen header instead,
+   so this never doubles up there. */
+.chart-mobile-price-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .chart-mobile-price-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 6px 12px;
+  }
+
+  .chart-mobile-price {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--pc-text);
+    transition: color 0.25s ease;
+  }
+
+  .chart-mobile-price--up {
+    color: var(--pc-success);
+  }
+
+  .chart-mobile-price--down {
+    color: var(--pc-danger);
+  }
+
+  .chart-mobile-price-change {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chart-mobile-price-change--up {
+    color: var(--pc-success);
+  }
+
+  .chart-mobile-price-change--down {
+    color: var(--pc-danger);
+  }
+
+  .chart-mobile-price-change-arrow {
+    font-size: 0.8rem;
+  }
+
+  .chart-mobile-price-change-period {
+    margin-left: 2px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--pc-panel-2);
+    color: var(--pc-text-muted);
+    font-weight: 700;
+    font-size: 0.74rem;
+  }
+}
+
 .chart-dblclick-wrap::after {
   content: "⛶  Double-click for fullscreen";
   position: absolute;
@@ -996,6 +1061,23 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   background: #5850ec;
 }
 
+/* Active pill tints bullish/bearish instead of the flat accent color when
+   that interval's own trend (same signal driving its little arrow) is
+   known — same --pc-success/--pc-danger tokens the price-change text
+   uses (.chart-mobile-price-change--up/--down, PriceChart.css), so the
+   color means the same thing in both places. */
+.interval-pill--active.interval-pill--active-bull {
+  background: var(--pc-success);
+  /* Dark theme's --pc-success/--pc-danger are pastel (light green/pink) —
+     the white text .interval-pill--active normally uses has poor contrast
+     on them, so these two variants override it to a dark, legible color. */
+  color: #052e16;
+}
+.interval-pill--active.interval-pill--active-bear {
+  background: var(--pc-danger);
+  color: #450a0a;
+}
+
 .interval-pill--locked:hover {
   border-color: rgba(167, 139, 250, 0.35);
   color: #c4b5fd;
@@ -1015,6 +1097,12 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 }
 .interval-pill-trend--down {
   color: #fb7185;
+}
+
+/* Mobile-only "more" button — see the max-width:768px block for its
+   visible styling; desktop fits every interval as a pill already. */
+.interval-pill-more {
+  display: none;
 }
 
 /* light theme */
@@ -1042,6 +1130,19 @@ html[data-theme="light"] .interval-pill--active {
   border-color: rgba(56, 189, 248, 0.5);
   color: #0284c7;
   box-shadow: 0 2px 8px rgba(56, 189, 248, 0.15);
+}
+
+html[data-theme="light"] .interval-pill--active.interval-pill--active-bull {
+  background: color-mix(in srgb, var(--pc-success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--pc-success) 45%, transparent);
+  color: var(--pc-success);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pc-success) 15%, transparent);
+}
+html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
+  background: color-mix(in srgb, var(--pc-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pc-danger) 40%, transparent);
+  color: var(--pc-danger);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pc-danger) 15%, transparent);
 }
 
 html[data-theme="light"] .interval-pill--locked:hover {
@@ -1421,6 +1522,7 @@ html[data-theme="light"] .cap-overlay-feature {
     flex: 1;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -1430,15 +1532,89 @@ html[data-theme="light"] .cap-overlay-feature {
     padding: 6px 10px;
   }
 
-  /* Hide desktop pills, show native select */
-  .interval-pills {
+  /* Tab-style pill row instead of the native dropdown — its own full-width
+     row (flex-basis:100% wraps it below the indicators toggle, which stays
+     shrink-to-fit on the first line), each pill growing equally to fill
+     that width edge to edge like a segmented control. Only
+     PRIMARY_INTERVALS show as pills (.interval-pill--secondary hidden
+     below); the rest stay reachable through the trailing "more" button,
+     which opens the bottom sheet (.interval-sheet, not scoped to this
+     media query since it's portaled to document.body). */
+  .interval-select--mobile {
     display: none;
   }
-  .interval-select--mobile {
-    display: block;
-    flex: 1;
+  .interval-pills {
+    display: flex;
+    flex-wrap: nowrap;
+    flex: 1 1 100%;
+    width: 100%;
     min-width: 0;
+    background: none;
+    border: none;
+    backdrop-filter: none;
+    padding: 0;
+    gap: 2px;
+  }
+  .interval-pill {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 4px;
+    border-radius: 999px;
     font-size: 0.78rem;
+  }
+  .interval-pill--secondary {
+    display: none;
+  }
+  .interval-pill--active {
+    background: var(--pc-accent);
+  }
+  html[data-theme="light"] .interval-pill--active {
+    background: var(--pc-accent);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: none;
+  }
+  /* Dark theme's pastel --pc-success/--pc-danger need dark text for
+     contrast (same reasoning as the desktop variant above); light theme's
+     versions are solid/dark enough that the white text already inherited
+     from .interval-pill--active stays legible, so it's left alone. */
+  .interval-pill--active.interval-pill--active-bull {
+    background: var(--pc-success);
+    color: #052e16;
+  }
+  .interval-pill--active.interval-pill--active-bear {
+    background: var(--pc-danger);
+    color: #450a0a;
+  }
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bull {
+    background: var(--pc-success);
+    color: #fff;
+  }
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
+    background: var(--pc-danger);
+    color: #fff;
+  }
+  /* index.css's global `button { padding: 0.6em 1.2em }` was only being
+     overridden on the left (padding-left below) — the inherited ~9.6px
+     top/bottom and ~19px right were squeezing the 15px icon into almost
+     no visible space, the same invisible-icon bug as the header toggle
+     earlier. */
+  .interval-pill-more {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    margin-left: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--pc-text-muted);
+    cursor: pointer;
+  }
+  html[data-theme="light"] .interval-pills {
+    background: none;
+    border-color: transparent;
   }
 
   /* Live Chat's own mobile trigger (.coin-chat-trigger in CoinChat.css)
@@ -1459,20 +1635,35 @@ html[data-theme="light"] .cap-overlay-feature {
     justify-content: center;
   }
 
-  /* Zone signal banner — compact on mobile */
+  /* Zone signal banner — compact and a fixed height on mobile/iOS, so a
+     longer/shorter AI-generated title or body on a later refresh never
+     changes how much space this takes up (it was pushing the chart
+     itself down/up every time new analysis text came in) — the title
+     truncates to one line, the body clamps to 2, instead of growing. */
   .interval-banner {
+    height: 92px;
+    box-sizing: border-box;
     padding: 10px 12px;
     margin-bottom: 10px;
     border-radius: 12px;
+    overflow: hidden;
   }
 
   .interval-banner-title {
     font-size: 0.82rem;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .interval-banner-body {
     font-size: 0.76rem;
     line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Legend — hide indicator labels, keep action buttons */
@@ -1484,6 +1675,101 @@ html[data-theme="light"] .cap-overlay-feature {
     margin-bottom: 6px;
     min-height: 24px;
   }
+}
+
+/* ── Interval bottom sheet ("more" button) ───────────────────────────────
+   Portaled to document.body (PriceChart.tsx), so it's outside .chart-active
+   — uses the app's global --color-* tokens, not --pc-*, for the same
+   reason the top-bar toggle needed that fix (--pc-* is only defined inside
+   the chart card's own scoped wrapper and is undefined out here). */
+.interval-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200020;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.interval-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200021;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+}
+
+.interval-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.interval-sheet-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.interval-sheet-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.interval-sheet-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 8px;
+}
+
+.interval-sheet-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 10px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.interval-sheet-item--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.interval-sheet-item--locked {
+  color: var(--color-text-muted);
+}
+
+.interval-sheet-item-pro {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #a78bfa;
+}
+
+.interval-sheet-item-check {
+  color: var(--color-primary);
+  font-weight: 800;
 }
 
 @media (max-width: 480px) {
@@ -1897,6 +2183,74 @@ html[data-theme="light"] .cap-overlay-feature {
   margin: 4px 8px;
 }
 
+/* ── Indicators bottom sheet (replaces the old positioned dropdown) ──────
+   Portaled to document.body, so plain --color-* tokens (same ones
+   .indicators-menu already used) rather than --pc-*. Multi-select stays
+   intact since nothing here closes the sheet on a checkbox change — only
+   the backdrop and close button do. */
+.indicators-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200020;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.indicators-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200021;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+}
+
+.indicators-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.indicators-sheet-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.indicators-sheet-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.indicators-menu--sheet {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.indicators-menu--sheet .indicators-menu-item {
+  padding: 12px;
+  white-space: normal;
+}
+
 /* ── Sub-chart panels (RSI / MACD) ───────────────────────────────────── */
 .sub-charts {
   margin-top: 6px;
@@ -2053,6 +2407,27 @@ html[data-theme="light"] .pattern-insight {
      same value in dark and light, on every device including iOS). */
   .pattern-insight {
     border-radius: 12px;
+  }
+
+  /* Fixed height on mobile/iOS — a longer/shorter AI-generated summary,
+     narrative or next-move on a later refresh was changing how tall this
+     whole card was, shifting the watchlist/top-movers content below it
+     up or down every time new analysis text came in. Full text stays
+     intact (no per-field clamping) — whatever doesn't fit in the fixed
+     height scrolls inside the card instead of being cut off. */
+  .pattern-insight {
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pattern-insight-header {
+    flex-shrink: 0;
+  }
+  .pattern-insight-body-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

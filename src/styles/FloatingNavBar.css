@@ -14,7 +14,7 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(18px + env(safe-area-inset-bottom));
+  bottom: 16px;
   z-index: 60;
   display: flex;
   align-items: center;
@@ -30,7 +30,11 @@
 }
 html[data-theme="light"] .fnb-bar {
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+  /* Neutral gray, not navy-tinted — a hairline border plus a soft, tight
+     shadow is what actually separates a white pill from a white page
+     (the reference screenshot's bar), a wide colored glow doesn't. */
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 /* "The icon becomes the brief" — the bar shrinks back down into roughly
    the Daily Brief icon's own footprint and fades out as DailyBrief mounts
@@ -59,7 +63,9 @@ html[data-theme="light"] .fnb-bar {
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, flex 0.18s ease;
 }
-html[data-theme="light"] .fnb-item { color: #1c1a3a; }
+/* Neutral dark gray (not navy) — matches the reference screenshot's
+   light-mode bottom nav icon color. */
+html[data-theme="light"] .fnb-item { color: #3c3c43; }
 .fnb-item svg { stroke-width: 1.8; }
 .fnb-item:hover { background: rgba(127, 127, 127, 0.12); }
 .fnb-item--active {
@@ -115,7 +121,10 @@ html[data-theme="light"] .fnb-item-badge { border-color: #ffffff; }
    the orb (TradingAgent.css's .ta-trigger-orb, reused verbatim — same
    infinite glow/rotate/scale animations) standing in for an svg icon,
    sized to match their 22x22 viewBox exactly. */
-.fnb-agent-item { padding: 0; }
+/* Extra breathing room from its two immediate neighbors (Signals, Daily
+   Brief) specifically — margin on this one item only, so it doesn't
+   touch the Notifications↔Signals or Daily Brief↔Search gaps at all. */
+.fnb-agent-item { padding: 0; margin: 0 10px; }
 .fnb-agent-orb-inline {
   /* A <button>'s <span> child is inline by default — width/height on an
      inline, non-replaced element are ignored entirely. .fnb-item-icon-wrap
@@ -123,8 +132,8 @@ html[data-theme="light"] .fnb-item-badge { border-color: #ffffff; }
      way .ta-trigger's own inline-flex does for its orb child. Slightly
      bigger than the other icons' 22px — still a flat row item, just given
      a touch more presence. */
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
 }
 .fnb-agent-dot {
   position: absolute;

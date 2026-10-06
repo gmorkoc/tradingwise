@@ -1358,10 +1358,6 @@ select {
   gap: 6px;
 }
 
-/* Groups the tab strip with chart-section-wrap so both are constrained to
-   the chart column's own width — without this, .chart-mobile-tabs (a
-   sibling of .db-page inside .chart-page-row otherwise) would stretch
-   across the sidebar's width too. */
 .chart-column {
   display: flex;
   flex-direction: column;
@@ -1377,11 +1373,12 @@ select {
   min-width: 0;
 }
 
-/* Shown on real phones (<=640px) and full desktop (>=961px) — see the
-   combined media query further down for both the tab strip itself and
-   the "only one panel visible" logic it drives. The in-between tablet
-   range (641-960px) keeps chart + order book stacked, no tabs — see the
-   max-width:960px block below. */
+/* Mounted in the top bar (.mch-right in App.tsx), shown on real phones
+   (<=640px) and full desktop (>=961px) — see the combined media query
+   further down for both the toggle itself and the "only one panel
+   visible" logic it drives. The in-between tablet range (641-960px)
+   keeps chart + order book stacked, no tabs — see the max-width:960px
+   block below. */
 .chart-mobile-tabs {
   display: none;
 }
@@ -2669,6 +2666,15 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   flex-shrink: 0;
 }
 
+/* Chart/Order Book toggle, mounted directly in the top bar (same spot at
+   every width) — reset its own spacing to sit inline with the other icon
+   buttons here instead of the standalone margins it'd want sitting above
+   the chart card. */
+.mch-right .chart-mobile-tabs {
+  margin: 0;
+  flex-shrink: 0;
+}
+
 .mch-search-btn {
   display: flex;
   align-items: center;
@@ -2805,6 +2811,16 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   background: var(--color-card-bg);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+/* Same cutoff FloatingNavBar.css hides the floating bar above — below it,
+   the bar is fixed on top of this scroll area with nothing reserving
+   space for it, so whatever's last in the page (now Top Movers' Show
+   more button on the chart tab) could end up permanently covered,
+   unreachable no matter how far down you scroll. */
+@media (max-width: 899px) {
+  .main-content {
+    padding-bottom: 90px;
+  }
 }
 
 /* ── Pull-to-refresh indicator ───────────────────────────────────────────
@@ -3380,6 +3396,13 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   .mch-menu-btn {
     display: flex;
   }
+  /* Coin pair/price/change pill — redundant now that the big price readout
+     lives right above the chart (.chart-mobile-price-header, PriceChart.css),
+     so the top bar stays just menu + toggle + alerts (coin switching is
+     still reachable via FloatingNavBar's Search icon). */
+  .mch-coin-btn {
+    display: none;
+  }
 
   /* "via Binance" (plus the double-click-for-fullscreen hint, which only
      ever showed on hover anyway — meaningless on a touch screen) just adds
@@ -3490,91 +3513,47 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
    (641-960px) is untouched — still the two-panel stacked+resizable
    layout in the max-width:960px block above. */
 @media (max-width: 640px), (min-width: 961px) {
+  /* Simple iOS-style icon toggle — dark pill, two circular icon buttons,
+     active one filled solid. Mounted in the always-present top bar
+     (.mch-right), NOT inside .chart-active, so this uses the app's global
+     --color-* tokens rather than --pc-* (those only exist inside the
+     chart card's own scoped wrapper and are undefined out here — using
+     them made the pill background and active-state gradient both resolve
+     to nothing, rendering a white icon on a transparent/white backdrop:
+     technically present, just invisible). */
   .chart-mobile-tabs {
-    position: relative;
     display: flex;
-    gap: 6px;
-    /* margin-left trimmed from 6px to 4px so the tab labels' left edge
-       (4px margin + this rule's own 3px pill padding = 7px) lines up
-       with .price-chart-container's own 7px mobile inset (3px margin +
-       4px padding, PriceChart.css) below it — this only takes effect
-       <=640px; the >=961px desktop-tabs override further down in this
-       file sets its own margin-left:10px to match the chart at that
-       width instead. */
+    gap: 2px;
     margin: 8px 6px 6px 4px;
     padding: 3px;
-    background: var(--pc-panel-2);
-    border-radius: 10px;
-    overflow: hidden;
+    background: var(--color-surface-alt);
+    border-radius: 999px;
   }
   .chart-mobile-tab {
-    position: relative;
-    z-index: 2;
-    flex: 1;
-    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    /* Zeroes out index.css's global `button { padding: 0.6em 1.2em }` —
+       left in place, that padding alone was enough to push/clip the 14px
+       icon out of view inside a fixed 28px box. */
+    padding: 0;
+    box-sizing: border-box;
     background: none;
     border: none;
-    border-radius: 8px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--pc-text-muted);
+    border-radius: 50%;
+    color: var(--color-text-muted);
     cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.25s ease, background 0.25s ease, color 0.2s ease;
   }
   .chart-mobile-tab.active {
-    color: #fff;
-  }
-
-  /* Steady-state active pill — slides between the two tabs. Has to be a
-     separate element (not the button's own background) because CSS can't
-     smoothly transition between two different gradients, only `transform`. */
-  .chart-mobile-tab-indicator {
-    position: absolute;
-    top: 3px;
-    bottom: 3px;
-    left: 3px;
-    width: calc(50% - 4.5px);
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--pc-accent) 0%, var(--pc-accent-2) 100%);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 12px rgba(129, 140, 248, 0.45);
-    transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);
-    z-index: 1;
-  }
-  .chart-mobile-tab-indicator--orderbook {
-    transform: translateX(calc(100% + 6px));
-  }
-
-  /* Transient bullish (green, moving to Order Book) / bearish (red, moving
-     to Chart) flash — replayed on every switch via the span's `key`
-     (App.tsx), independent of the indicator's own steady-state color. */
-  @keyframes chart-tab-swipe-flash {
-    0%   { opacity: 0.85; transform: scaleX(1); }
-    100% { opacity: 0; transform: scaleX(1.35); }
-  }
-  .chart-mobile-tab-flash {
-    position: absolute;
-    top: 3px;
-    bottom: 3px;
-    width: calc(50% - 4.5px);
-    border-radius: 8px;
-    pointer-events: none;
-    animation: chart-tab-swipe-flash 0.45s ease-out forwards;
-    z-index: 1;
-  }
-  .chart-mobile-tab-flash--chart {
-    left: 3px;
-  }
-  .chart-mobile-tab-flash--orderbook {
-    left: calc(50% + 1.5px);
-  }
-  .chart-mobile-tab-flash--bull {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-  .chart-mobile-tab-flash--bear {
-    background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .chart-mobile-tab-flash { animation: none; display: none; }
-    .chart-mobile-tab-indicator { transition: none; }
+    opacity: 1;
+    color: #0f172a;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   }
 
   .chart-section-wrap {
@@ -3598,59 +3577,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     width: auto !important;
     min-width: 0;
     height: auto !important;
-  }
-}
-
-/* Desktop-only refinement — the phone-sized pill above (chunky, edge to
-   edge for a touch target, saturated gradient chip) reads as oversized
-   and out of place once it's a small control next to a desktop toolbar.
-   Same indicator/flash mechanic, but sized to fit "Order Book" on one
-   line and recolored as a quiet tinted segment instead of a loud
-   gradient block — closer to a native macOS/desktop segmented control. */
-@media (min-width: 961px) {
-  .chart-mobile-tabs {
-    align-self: flex-start;
-    width: 320px;
-    /* Bottom margin skipped — the chart/order-book card's own top margin
-       (10px, PriceChart.css/OrderBook.css) already provides that gap, so
-       adding one here would double it and make top/bottom uneven. */
-    margin: 10px 0 0 10px;
-    padding: 3px;
-    gap: 4px;
-  }
-  .chart-mobile-tab {
-    padding: 6px 0;
-    font-size: 0.78rem;
-    white-space: nowrap;
-  }
-  /* White by default (matches the mobile-size rule above, which sits
-     against a solid accent-gradient pill and needs plain white for
-     contrast). This desktop pill is much softer (--pc-accent-soft below,
-     translucent, not solid) — dark theme's dark surrounding tab bar keeps
-     white perfectly readable against that, but light theme's white tab
-     bar doesn't, so light theme alone gets the colored accent text back. */
-  .chart-mobile-tab.active {
-    color: #fff;
-  }
-  html[data-theme="light"] .chart-mobile-tab.active {
-    color: var(--pc-accent);
-  }
-  .chart-mobile-tab-indicator,
-  .chart-mobile-tab-flash {
-    top: 3px;
-    bottom: 3px;
-    left: 3px;
-    width: calc(50% - 5px);
-  }
-  .chart-mobile-tab-indicator {
-    background: var(--pc-accent-soft);
-    box-shadow: none;
-  }
-  .chart-mobile-tab-flash--orderbook {
-    left: calc(50% + 2px);
-  }
-  .chart-mobile-tab-indicator--orderbook {
-    transform: translateX(calc(100% + 4px));
   }
 }
 

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -20,9 +22,13 @@ const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
 const CHARTABLE_SYMBOLS = new Set<string>(COINS.map(c => c.symbol));
 
 /* ── Sparkline ──────────────────────────────────────────────────────────── */
-function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }) {
+// Exported — TopMoversCarousel's own mobile list view reuses this exact
+// implementation instead of a second copy.
+export function Sparkline({ prices, positive, width, height, className }: {
+  prices: number[]; positive: boolean; width?: number; height?: number; className?: string;
+}) {
   if (prices.length < 2) return null;
-  const W = 44, H = 18;
+  const W = width ?? 44, H = height ?? 18;
   // Only downsample large series (e.g. CoinGecko 168-pt); Binance gives 7 pts already
   const sample = prices.length > 20 ? prices.filter((_, i) => i % 4 === 0) : prices;
   const min = Math.min(...sample);
@@ -35,7 +41,7 @@ function Sparkline({ prices, positive }: { prices: number[]; positive: boolean }
   }).join(" ");
   const color = positive ? "#4ade80" : "#fb7185";
   return (
-    <svg className="wl-chip-spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+    <svg className={className ?? "wl-chip-spark"} width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       <polyline points={pts} fill="none" stroke={color}
         strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
@@ -158,6 +164,9 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const [search,     setSearch]     = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [imgErrors,  setImgErrors]  = useState<Set<string>>(new Set());
+  // Mobile-only list view's "Manage" toggle — reveals a remove (×) per
+  // row, same removeCoin the desktop chip strip's own × already uses.
+  const [manageMode, setManageMode] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -217,6 +226,26 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
     return () => document.removeEventListener("mousedown", handle);
   }, [searchOpen]);
 
+  // iOS: capacitor.config.ts sets Keyboard resize:'none', so nothing
+  // shrinks the WebView for the keyboard on its own. .wl-dropdown is
+  // full-screen on mobile now (flex column, .wl-dropdown-list is the
+  // flex:1 scrollable part) — padding its bottom by the keyboard height
+  // is all that's needed to keep the keyboard from covering the last few
+  // results, same fix CoinChat/TradingAgent's own fixed panels already
+  // use for the same underlying problem.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !searchOpen) return;
+    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
+      const list = searchRef.current?.querySelector(".wl-dropdown-list") as HTMLElement | null;
+      if (list) list.style.paddingBottom = `${info.keyboardHeight}px`;
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      const list = searchRef.current?.querySelector(".wl-dropdown-list") as HTMLElement | null;
+      if (list) list.style.paddingBottom = "";
+    });
+    return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
+  }, [searchOpen]);
+
   const addCoin = (id: string) => {
     if (!watchedIds.includes(id)) setWatchedIds(prev => [...prev, id]);
     setSearchOpen(false);
@@ -247,6 +276,133 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
   );
 
   const scrollBy = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
+
+  const searchDropdown = searchOpen && (
+    <div className="wl-dropdown">
+      {/* Full-screen on mobile (see .wl-dropdown's own @media override) —
+          tap-outside-to-close doesn't apply there, so this is the only
+          way out in that mode. Harmless extra control on desktop too. */}
+      <div className="wl-dropdown-header">
+        <span className="wl-dropdown-title">{t("watchlist.addCoin")}</span>
+        <button type="button" className="wl-dropdown-close" onClick={() => { setSearchOpen(false); setSearch(""); }}>✕</button>
+      </div>
+      <input
+        className="wl-search-input"
+        placeholder={t("watchlist.searchPlaceholder")}
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        autoFocus
+      />
+      <div className="wl-dropdown-list">
+        {filteredCatalog.slice(0, 20).map(c => (
+          <button key={c.id} className="wl-dropdown-item" onClick={() => addCoin(c.id)}>
+            <span className="wl-dropdown-sym">{c.symbol}</span>
+            <span className="wl-dropdown-name">{c.name}</span>
+          </button>
+        ))}
+        {filteredCatalog.length === 0 && (
+          <div className="wl-dropdown-empty">{t("watchlist.noResults")}</div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Mobile/iOS — vertical row list (icon, name/symbol, sparkline, price/
+  // change) instead of the horizontal scrolling chip strip desktop keeps
+  // below. Same data/state (priceData, sparklines, watchedIds, addCoin,
+  // removeCoin) as the desktop branch, just a different shape — nothing
+  // about how the watchlist itself works changes, only how it's drawn.
+  if (isMobile) {
+    return (
+      <div className="wl-list">
+        <div className="wl-list-head">
+          <span className="wl-list-title">{t("watchlist.title")}</span>
+          <div className="wl-search-wrap" ref={searchRef}>
+            {manageMode && (
+              <button type="button" className="wl-list-arrow" onClick={() => setSearchOpen(v => !v)}>
+                {t("watchlist.addMore", "Add More")} +
+              </button>
+            )}
+            {searchDropdown}
+          </div>
+        </div>
+
+        {loading && watchedIds.length > 0 && (
+          <div className="wl-loading">{t("watchlist.loading")}</div>
+        )}
+        {!loading && watchedIds.length === 0 && (
+          <div className="wl-empty">{t("watchlist.emptyText")}</div>
+        )}
+
+        {!loading && watchedIds.length > 0 && (
+          <div className="wl-list-rows">
+            {watchedIds.map(id => {
+              const meta = CATALOG.find(c => c.id === id);
+              const symbol = (meta?.symbol ?? "").toUpperCase();
+              const entry = priceData.get(symbol);
+              const spark = sparklines.get(symbol) ?? [];
+              const pct = entry?.pct ?? 0;
+              const up = pct >= 0;
+              const chartable = !!onSelectCoin && CHARTABLE_SYMBOLS.has(symbol);
+              return (
+                <div key={id} className="wl-list-row">
+                  <button
+                    type="button"
+                    className="wl-list-row-main"
+                    onClick={() => chartable && onSelectCoin!(symbol)}
+                    disabled={!chartable}
+                  >
+                    <span className="wl-list-icon">
+                      {!imgErrors.has(symbol) ? (
+                        <img
+                          className="wl-coin-img"
+                          src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
+                          alt={symbol}
+                          loading="lazy"
+                          onError={() => setImgErrors(prev => new Set([...prev, symbol]))}
+                        />
+                      ) : (
+                        <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
+                      )}
+                    </span>
+                    <span className="wl-list-names">
+                      <span className="wl-list-name">{meta?.name ?? symbol}</span>
+                      <span className="wl-list-sym">{symbol}</span>
+                    </span>
+                    {spark.length > 1 && (
+                      <Sparkline prices={spark} positive={up} width={64} height={28} className="wl-list-spark" />
+                    )}
+                    <span className="wl-list-figures">
+                      <span className="wl-list-price">{entry ? `$${fmtPrice(entry.price)}` : "—"}</span>
+                      {entry && (
+                        <span className={`wl-list-pct${up ? " up" : " down"}`}>
+                          {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  {manageMode && (
+                    <button
+                      type="button"
+                      className="wl-list-remove"
+                      onClick={() => removeCoin(id)}
+                      aria-label={t("watchlist.removeTitle")}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <button type="button" className="wl-list-manage" onClick={() => setManageMode(v => !v)}>
+          {manageMode ? t("watchlist.done", "Done") : t("watchlist.manage", "Manage")}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="wl-strip">
@@ -297,30 +453,9 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
         <button className="wl-nav-btn" onClick={() => scrollBy(1)} aria-label="Scroll right">›</button>
         <div className="wl-search-wrap" ref={searchRef}>
           <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
-            {t(isMobile ? "watchlist.addCoinShort" : "watchlist.addCoin")}
+            {t("watchlist.addCoin")}
           </button>
-          {searchOpen && (
-            <div className="wl-dropdown">
-              <input
-                className="wl-search-input"
-                placeholder={t("watchlist.searchPlaceholder")}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                autoFocus
-              />
-              <div className="wl-dropdown-list">
-                {filteredCatalog.slice(0, 20).map(c => (
-                  <button key={c.id} className="wl-dropdown-item" onClick={() => addCoin(c.id)}>
-                    <span className="wl-dropdown-sym">{c.symbol}</span>
-                    <span className="wl-dropdown-name">{c.name}</span>
-                  </button>
-                ))}
-                {filteredCatalog.length === 0 && (
-                  <div className="wl-dropdown-empty">{t("watchlist.noResults")}</div>
-                )}
-              </div>
-            </div>
-          )}
+          {searchDropdown}
         </div>
       </div>
     </div>

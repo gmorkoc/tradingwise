@@ -32,3 +32,12 @@ dist-ssr
 # .env.*.local above doesn't match this shape (it ends in .functions, not
 # .local), and it was sitting untracked with a real OpenAI key in it.
 .env.local.*
+
+# Local-only build artifacts and platform scaffolding — not part of the
+# tracked source tree (xcarchive/.ipa exports, a stray Android platform
+# add, misc local assets, Supabase CLI local state).
+/build
+/android
+/assets
+supabase/.branches
+supabase/.temp/start-secrets

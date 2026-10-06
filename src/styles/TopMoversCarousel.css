@@ -161,3 +161,99 @@
   .tmc-strip { padding: 8px 12px 8px 7px; }
   .tmc-card { width: 112px; padding: 7px 9px; }
 }
+
+/* ── Mobile/iOS vertical list variant — see TopMoversCarousel.tsx's
+   isMobile branch. Same row shape as Watchlist.css's .wl-list-* (icon,
+   name/symbol, sparkline, price/%) so the two sections read as one
+   family stacked on the page, just this one collapses to 5 rows with a
+   Show more/less toggle instead of a Manage button. */
+.tmc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 16px 8px;
+}
+.tmc-list-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.tmc-list-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pc-text);
+}
+.tmc-list-rows {
+  display: flex;
+  flex-direction: column;
+}
+.tmc-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.tmc-list-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tmc-list-icon-img { width: 100%; height: 100%; font-size: 0.85rem; }
+.tmc-list-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tmc-list-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--pc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tmc-list-sym {
+  font-size: 0.78rem;
+  color: var(--pc-text-muted);
+}
+.tmc-list-spark { flex-shrink: 0; }
+.tmc-list-figures {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.tmc-list-price {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--pc-text);
+}
+.tmc-list-pct { font-size: 0.78rem; font-weight: 600; }
+.tmc-list-pct.up { color: var(--pc-success); }
+.tmc-list-pct.down { color: var(--pc-danger); }
+.tmc-list-showmore {
+  margin-top: 10px;
+  padding: 11px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pc-accent-soft);
+  color: var(--pc-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}

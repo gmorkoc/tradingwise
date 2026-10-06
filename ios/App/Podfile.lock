@@ -9,6 +9,8 @@ PODS:
     - Capacitor
   - CapacitorCommunityAppleSignIn (6.0.0):
     - Capacitor
+  - CapacitorCommunitySpeechRecognition (6.0.1):
+    - Capacitor
   - CapacitorCordova (6.2.1)
   - CapacitorFilesystem (6.0.4):
     - Capacitor
@@ -87,6 +89,7 @@ DEPENDENCIES:
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
+  - "CapacitorCommunitySpeechRecognition (from `../../node_modules/@capacitor-community/speech-recognition`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
@@ -119,6 +122,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/camera"
   CapacitorCommunityAppleSignIn:
     :path: "../../node_modules/@capacitor-community/apple-sign-in"
+  CapacitorCommunitySpeechRecognition:
+    :path: "../../node_modules/@capacitor-community/speech-recognition"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
@@ -140,6 +145,7 @@ SPEC CHECKSUMS:
   CapacitorBrowser: 9e9a268445f9472b04b68320930c59bdc4d360fa
   CapacitorCamera: 36dd808d7a49f946c1743b41d518208777e1fbd9
   CapacitorCommunityAppleSignIn: c8bba4ca8ff6ff843367ece13ee8af24e9266eb9
+  CapacitorCommunitySpeechRecognition: ed0f9d7e56d52dadd9cfd921d430e99ddb196981
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
   CapacitorFilesystem: 45e086a4396be03456c3d53d34b17c89169dd8cd
   CapacitorFirebaseMessaging: 3b4ff762b42ad3137c911a96ec06bf8bfd6fb122
@@ -158,6 +164,6 @@ SPEC CHECKSUMS:
   RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
   RevenuecatPurchasesCapacitor: 05a6dc8ba13e6cc072202c2dddcb4556abf45259
 
-PODFILE CHECKSUM: 3efb9c80fa1ba065f1442e596409d28bd1905b3a
+PODFILE CHECKSUM: 63a853ff729238aabb6eb778538fdcbbb6dec72f
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0

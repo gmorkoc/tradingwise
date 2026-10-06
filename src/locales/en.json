@@ -152,7 +152,7 @@
     "defaultMessage": "Hello! I can help you analyze {{coin}} market data and answer questions about cryptocurrency trends. Ask me anything about the current market situation!"
   },
   "chart": {
-    "title": "📈 {{coin}} Price Chart",
+    "title": "{{coin}}",
     "tabLabel": "Chart",
     "live": "● LIVE",
     "loading": "Loading chart data...",

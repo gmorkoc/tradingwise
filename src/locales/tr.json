@@ -130,7 +130,7 @@
     "defaultMessage": "Merhaba! {{coin}} piyasa verilerini analiz etmene ve kripto para trendleri hakkındaki sorularını yanıtlamana yardımcı olabilirim. Mevcut piyasa durumu hakkında her şeyi sorabilirsin!"
   },
   "chart": {
-    "title": "📈 {{coin}} Fiyat Grafiği",
+    "title": "{{coin}}",
     "live": "● CANLI",
     "loading": "Grafik verileri yükleniyor...",
     "noData": "Grafik verisi yok",

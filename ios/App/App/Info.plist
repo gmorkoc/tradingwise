@@ -37,6 +37,10 @@
 	<string>coinhintz needs access to your photo library to attach images to the AI chat for analysis, or to set a profile photo.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>coinhintz may save a photo you take back to your photo library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>coinhintz uses your microphone so you can speak a message to the Trading Agent instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>coinhintz uses speech recognition to turn what you say to the Trading Agent into text.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

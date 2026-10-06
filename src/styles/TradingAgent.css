@@ -1479,3 +1479,122 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3);
 }
 .ta-composer-send:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+
+/* ── Speech-to-text (iOS only, see TradingAgent.tsx's SPEECH_AVAILABLE) ── */
+.ta-composer-mic {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--ta-border);
+  border-radius: 50%;
+  background: var(--ta-overlay);
+  color: var(--ta-text-dim);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.ta-composer-mic:hover:not(:disabled) { color: var(--ta-text); border-color: var(--ta-accent); }
+.ta-composer-mic:disabled { opacity: 0.45; cursor: default; }
+.ta-composer-mic--active {
+  color: #fff;
+  border-color: transparent;
+  background: #fb7185;
+  animation: ta-mic-pulse 1.3s ease-in-out infinite;
+}
+@keyframes ta-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5); }
+  50%      { box-shadow: 0 0 0 7px rgba(251, 113, 133, 0); }
+}
+
+/* ── Listening overlay — takes over the whole panel while actively
+   recording, same backdrop treatment as .ta-panel-intro. ──────────────── */
+.ta-listening-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  /* Extra bottom clearance so the orb/transcript never sit under the
+     full-width Cancel bar docked at the bottom (see .ta-listening-cancel). */
+  padding: 32px 32px calc(90px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  box-sizing: border-box;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
+  cursor: pointer;
+  animation: ta-listening-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes ta-listening-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Bigger + a faster, stronger pulse than the idle trigger orb — reads as
+   "actively capturing" rather than just idling. .ta-trigger-orb::before's
+   own gradient-rotate keeps running unchanged (animation isn't inherited,
+   so that rule still applies on its own); this only overrides the main
+   element's glow/scale timing. */
+.ta-listening-orb {
+  width: 120px;
+  height: 120px;
+  animation: ta-listening-orb-glow 1.4s ease-in-out infinite, ta-listening-orb-scale 1.4s ease-in-out infinite;
+}
+@keyframes ta-listening-orb-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px 6px rgba(130, 180, 255, 0.55), 0 0 44px 14px rgba(80, 140, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 32px 12px rgba(150, 195, 255, 0.85), 0 0 64px 24px rgba(90, 150, 255, 0.55);
+  }
+}
+@keyframes ta-listening-orb-scale {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+.ta-listening-transcript {
+  max-width: 420px;
+  min-height: 2.6em;
+  margin: 0;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ta-text);
+}
+.ta-listening-hint {
+  font-size: 0.78rem;
+  color: var(--ta-text-dim);
+}
+/* Explicit "never mind" — discards instead of sending, see
+   handleMicCancel in TradingAgent.tsx. Own stopPropagation keeps a tap
+   here from also triggering the overlay's stop-and-send. Full-width
+   across the bottom, clear of the safe area (top-right corner collided
+   with the status bar/notch on mobile, barely tappable there) — same
+   safe-area-bottom convention as .ta-composer above. */
+.ta-listening-cancel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-top: 1px solid var(--ta-border);
+  border-radius: 0;
+  background: var(--ta-overlay);
+  color: var(--ta-text-dim);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 16px 16px calc(16px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.ta-listening-cancel:hover { color: var(--ta-text); background: rgba(255, 255, 255, 0.06); }
+@media (prefers-reduced-motion: reduce) {
+  .ta-listening-orb, .ta-listening-orb::before { animation: none; }
+}

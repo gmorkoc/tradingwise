@@ -141,8 +141,10 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange }: Prop
                 <span className="notif-item-title">{n.title}</span>
                 <span className="notif-item-text">{n.body}</span>
               </span>
-              <span className="notif-item-time">{formatRelativeTime(n.created_at)}</span>
-              {!n.read && <span className="notif-item-dot" />}
+              <span className="notif-item-meta">
+                {!n.read && <span className="notif-item-dot" />}
+                <span className="notif-item-time">{formatRelativeTime(n.created_at)}</span>
+              </span>
             </button>
           ))}
         </div>

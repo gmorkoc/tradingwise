@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { COINS } from "../services/coinglass";
@@ -51,6 +52,12 @@ const newConversationId = (): string => {
   });
 };
 import "../styles/TradingAgent.css";
+
+// iOS only (native SFSpeechRecognizer via the Capacitor plugin) — same
+// scoping as push notifications/RevenueCat IAP elsewhere in this app.
+// Desktop/web keep typing only; a Web Speech API path would need its own
+// separate handling and isn't added here.
+const SPEECH_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
 // Self-contained global widget (own floating trigger + panel), not wired
 // into App.tsx's chart-grid layout like CoinChat's docked sidebar — this
@@ -181,9 +188,6 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
 
     setPanelIntro(true);
     (async () => {
-      await typeOut("Connected", 45);
-      await sleep(700);
-      if (cancelled) return;
       await typeOut("Agent ready", 45);
       await sleep(1400);
       if (!cancelled) setPanelIntro(false);
@@ -273,6 +277,19 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const [showWatches, setShowWatches] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [listening, setListening] = useState(false);
+  // Live partial transcript shown in the listening overlay as words come
+  // in. Mirrored into a ref too — the native "listeningState: stopped"
+  // listener (registered once, see below) needs the true latest value at
+  // the moment speech ends, and reading state directly there would see
+  // whatever was current when that listener closure was created, not now.
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const liveTranscriptRef = useRef("");
+  // Own silence detection, not just trusting the native plugin's own
+  // endpointing (inconsistent across devices/OS versions in partialResults
+  // mode) — reset on every new partial result, and firing stop()s the
+  // session if 2s pass with nothing new, same as the user going quiet.
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The agent's own real reasoning text, streamed in live as it arrives —
   // not a simulated/templated indicator, the actual narration tokens the
   // model generates from the real market data it just fetched.
@@ -702,6 +719,97 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       await loadAll(conversationId);
       setSending(false);
     }
+  };
+
+  // Always-current ref to handleSend — registered once below in a
+  // mount-only effect (so the native listeners aren't torn down and
+  // re-added on every render), which would otherwise close over whichever
+  // handleSend existed at mount and send with stale conversationId/history.
+  const handleSendRef = useRef(handleSend);
+  useEffect(() => { handleSendRef.current = handleSend; });
+  // Set right before stopping for an explicit Cancel (see handleMicCancel)
+  // — the "listeningState: stopped" listener below fires either way (a
+  // manual stop and a cancel both end the same native session the same
+  // way), and this is what tells it to discard instead of send.
+  const speechCancelledRef = useRef(false);
+
+  // 4s of no new partial result = treat it as the user going quiet and
+  // stop on our own, rather than trusting however long (or whether at
+  // all) the native session's own endpointing decides to wait in
+  // partialResults mode.
+  const armSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => {
+      SpeechRecognition.stop().catch(() => { /* already stopped */ });
+    }, 4000);
+  };
+  const clearSilenceTimer = () => {
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+  };
+
+  useEffect(() => {
+    if (!SPEECH_AVAILABLE) return;
+    const partialSub = SpeechRecognition.addListener("partialResults", ({ matches }) => {
+      const text = matches?.[0] ?? "";
+      liveTranscriptRef.current = text;
+      setLiveTranscript(text);
+      armSilenceTimer();
+    });
+    const stateSub = SpeechRecognition.addListener("listeningState", ({ status }) => {
+      if (status !== "stopped") return;
+      clearSilenceTimer();
+      setListening(false);
+      const transcript = liveTranscriptRef.current.trim();
+      const cancelled = speechCancelledRef.current;
+      liveTranscriptRef.current = "";
+      speechCancelledRef.current = false;
+      setLiveTranscript("");
+      if (transcript && !cancelled) handleSendRef.current(transcript);
+    });
+    return () => {
+      clearSilenceTimer();
+      partialSub.then((h) => h.remove());
+      stateSub.then((h) => h.remove());
+    };
+  }, []);
+
+  // Tap to start, tap (anywhere on the listening overlay) to stop early —
+  // partialResults:true streams words in live as they're recognized (see
+  // the "partialResults" listener below, feeding liveTranscript) instead
+  // of waiting silently until the end, closer to how ChatGPT's voice mode
+  // shows your words arriving as you speak. Either this manual stop or the
+  // plugin's own silence detection ends the native session the same way
+  // (the "listeningState" listener below reacts to both identically),
+  // finalizing whatever's been captured and sending it as the message —
+  // unlike handleMicCancel below, which ends it the same way but discards.
+  const handleMicTap = async () => {
+    if (listening) {
+      try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
+      return;
+    }
+    try {
+      const { speechRecognition } = await SpeechRecognition.checkPermissions();
+      if (speechRecognition !== "granted") {
+        const req = await SpeechRecognition.requestPermissions();
+        if (req.speechRecognition !== "granted") return;
+      }
+      liveTranscriptRef.current = "";
+      setLiveTranscript("");
+      setListening(true);
+      armSilenceTimer();
+      await SpeechRecognition.start({ language: "en-US", maxResults: 1, partialResults: true });
+    } catch (err) {
+      setListening(false);
+      console.error("Speech recognition failed:", err);
+    }
+  };
+
+  // Explicit "never mind" — stops the same way handleMicTap's early-stop
+  // does, but flags it first so the listener above discards the transcript
+  // instead of sending it.
+  const handleMicCancel = async () => {
+    speechCancelledRef.current = true;
+    try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
   };
 
   const handleConfirm = async (m: AgentMessage) => {
@@ -1651,14 +1759,53 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-              placeholder="Tell the agent what to do…"
-              disabled={sending}
+              placeholder={listening ? "Listening…" : "Tell the agent what to do…"}
+              disabled={sending || listening}
             />
+            {SPEECH_AVAILABLE && (
+              <button
+                type="button"
+                className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}`}
+                onClick={handleMicTap}
+                disabled={sending}
+                aria-label={listening ? "Stop listening" : "Speak to the agent"}
+                title={listening ? "Stop listening" : "Speak to the agent"}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="2" width="6" height="11" rx="3" />
+                  <path d="M5 10a7 7 0 0 0 14 0" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                  <line x1="8" y1="22" x2="16" y2="22" />
+                </svg>
+              </button>
+            )}
             <button type="button" className="ta-composer-send" onClick={() => handleSend()} disabled={sending || !draft.trim()}>
               {sending ? "…" : "Send"}
             </button>
           </div>
         </>
+      )}
+
+      {/* Takes over the panel while actively listening — the orb (same
+          element/animations as the trigger button's, just bigger) plus a
+          live, continuously-updating transcript is the ChatGPT-voice-mode
+          read the user asked for: see words as they're recognized, not
+          silence until you're done. Tapping anywhere ends the turn and
+          sends whatever's been captured (same as letting silence end it
+          naturally — see the "listeningState" listener above). */}
+      {listening && (
+        <div className="ta-listening-overlay" onClick={handleMicTap} role="button" aria-label="Stop listening and send">
+          <button
+            type="button"
+            className="ta-listening-cancel"
+            onClick={(e) => { e.stopPropagation(); handleMicCancel(); }}
+          >
+            Cancel
+          </button>
+          <span className="ta-trigger-orb ta-listening-orb" />
+          <p className="ta-listening-transcript">{liveTranscript || "Listening…"}</p>
+          <span className="ta-listening-hint">Tap anywhere to stop and send</span>
+        </div>
       )}
     </div>
   );
