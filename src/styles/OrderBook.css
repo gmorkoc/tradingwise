@@ -7,19 +7,45 @@
   background: var(--pc-bg);
   border-radius: 0;
   border: none;
-  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   overflow: visible;
   height: calc(100% - 20px);
   box-sizing: border-box;
   position: relative;
-  margin: 10px 10px 10px 4px;
+  margin: 0 4px 10px 10px;
+  padding: 0 20px 18px 3px;
 }
 
+/* Exact same margin/padding/layout as .chart-header (PriceChart.css),
+   base rule and both breakpoints, so "Order Book" lines up with "BTC
+   Price Chart" at every width on both desktop and iOS/mobile. */
 .ob-header {
-  margin-bottom: 8px;
-  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 8px;
+}
+
+@media (min-width: 769px) {
+  .ob-header {
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .ob-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 .ob-title {
@@ -27,6 +53,19 @@
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--pc-text);
+}
+
+@media (max-width: 768px) {
+  .ob-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 480px) {
+  .ob-title {
+    font-size: 1.25rem;
+  }
 }
 
 /* ── Exchange row ────────────────────────────────────────────────────────── */
@@ -261,15 +300,7 @@
     font-size: 0.58rem;
   }
   .chart-active .ob-card {
-    /* Left margin trimmed to match .price-chart-container's own trimmed
-       right margin — on real phones (App.css puts .chart-section-wrap
-       back to row direction below 640px, "side by side on small
-       phones"), this is the gap next to the resize handle between the
-       two cards. Top margin matches .price-chart-container's own (6px)
-       so the two cards line up instead of one sitting lower than the
-       other. Top/bottom values here still matter for the 641-960px
-       range, where the wrap is column-direction instead. */
-    margin: 6px 6px 6px 2px;
+    margin: 0;
     height: calc(100% - 12px);
     border-radius: 0;
   }
@@ -285,25 +316,15 @@
    labels too, not just the chart's. */
 @media (min-width: 961px) {
   .chart-active .ob-card {
-    margin: 10px;
+    margin: 0;
     padding-left: 3px;
   }
 }
 
-/* Mirrors .chart-header h3's own breakpoints exactly (PriceChart.css) so
-   "Order Book" and "BTC Price Chart" stay the same size at every width —
-   without this, .ob-title stayed at its full 1.2rem while the chart
-   title shrank on a narrow phone, making Order Book's title look huge
-   by comparison. */
 @media (max-width: 768px) {
-  .ob-title {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .ob-title {
-    font-size: 0.9rem;
+  .ob-card {
+    margin: 0;
+    padding: 8px 16px;
   }
 }
 

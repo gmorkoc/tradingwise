@@ -16,7 +16,7 @@ import {
   SeriesMarker,
   UTCTimestamp,
 } from "lightweight-charts";
-import { coinglass, CandleDataPoint, CoinSymbol } from "../services/coinglass";
+import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot } from "../services/coinglass";
 import { ZoneResult, ZoneSignal } from "./PriceChart.types";
 import {
   getCandlePatternAnalysis,
@@ -46,6 +46,7 @@ type TimeInterval =
   | "6h"
   | "1day"
   | "1week"
+  | "1month"
   | "all";
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
 
@@ -53,9 +54,11 @@ interface PriceChartProps {
   refreshTrigger?: number;
   theme?: "dark" | "light";
   coin?: CoinSymbol;
+  quoteVolume24h?: number;
   onZoneChange?: (zone: ZoneResult | null, price: number) => void;
   onOpenAuth?: () => void;
   onOpenUpgrade?: (plan?: "pro" | "elite") => void;
+  onOpenCoinPicker?: (anchor: HTMLElement) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   coinChatOpen?: boolean;
   onToggleCoinChat?: () => void;
@@ -71,6 +74,7 @@ const INTERVALS: TimeInterval[] = [
   "6h",
   "1day",
   "1week",
+  "1month",
   "all",
 ];
 
@@ -84,6 +88,7 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "6h": "6H  (~15 days)",
   "1day": "1D  (90 days)",
   "1week": "1W  (52 weeks)",
+  "1month": "1M  (24 months)",
   "all": "ALL (full history)",
 };
 
@@ -97,6 +102,7 @@ const INTERVAL_SHORT: Record<TimeInterval, string> = {
   "6h": "6H",
   "1day": "1D",
   "1week": "1W",
+  "1month": "1M",
   "all": "ALL",
 };
 
@@ -106,7 +112,7 @@ const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
 // Mobile only — the full interval list doesn't fit one row, so only these
 // show as pills; the rest are reachable via the trailing "more" button,
 // which opens the native select (still rendered for every interval).
-const PRIMARY_INTERVALS = new Set<TimeInterval>(["1min", "1h", "4h", "1day", "1week", "all"]);
+const PRIMARY_INTERVALS = new Set<TimeInterval>(["1h", "4h", "1day", "1week", "1month", "all"]);
 
 // Shared with the day-hl-badge and the mobile price header — both show a
 // change/high-low figure "as of" a window matched to the selected candle
@@ -121,7 +127,45 @@ const HL_WINDOW_LABEL: Record<TimeInterval, string> = {
   "6h": "24H",
   "1day": "24H",
   "1week": "7D",
+  "1month": "30D",
   "all": "ATH",
+};
+
+// Full coin name for the chart title ("Bitcoin" rather than "BTC") — COINS
+// already carries this (services/coinglass.ts), just keyed by symbol here
+// for an O(1) lookup instead of re-scanning the array on every render.
+const COIN_FULL_NAME: Record<string, string> = Object.fromEntries(
+  COINS.map((c) => [c.symbol, c.name]),
+);
+
+// Coin avatar (mobile header, right column) — glyph + brand color per
+// coin, same glyph set App.tsx/GlobalSearch.tsx/PriceTickerFullscreen.tsx
+// each keep their own copy of rather than sharing.
+const COIN_GLYPHS: Record<string, string> = {
+  BTC: "₿",
+  ETH: "Ξ",
+  XRP: "◈",
+  SOL: "◎",
+  BNB: "⬡",
+  SUI: "⬟",
+  DOGE: "Ð",
+  ADA: "₳",
+  NEAR: "Ⓝ",
+  RENDER: "⬡",
+  ZEC: "ⓩ",
+};
+const COIN_COLORS: Record<string, string> = {
+  BTC: "#f7931a",
+  ETH: "#627eea",
+  XRP: "#23292f",
+  SOL: "#9945ff",
+  BNB: "#f0b90b",
+  SUI: "#4da2ff",
+  DOGE: "#c2a633",
+  ADA: "#0033ad",
+  NEAR: "#000000",
+  RENDER: "#6633cc",
+  ZEC: "#f4b728",
 };
 
 const FIB_LEVELS = [
@@ -138,6 +182,20 @@ export function formatLivePrice(p: number): string {
   if (p >= 1000) return `$${p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (p >= 1) return `$${p.toFixed(4)}`;
   return `$${p.toFixed(6)}`;
+}
+
+function formatCompactVolume(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+function formatClockTime(at: number): string {
+  return new Date(at).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 // ── Utility: Bollinger Bands ────────────────────────────────────────────────
@@ -560,10 +618,17 @@ function patternCacheKey(coin: string, interval: string) {
 function readPatternCache(
   coin: string,
   interval: string,
-): PatternInsight | null {
+): { data: PatternInsight; at: number } | null {
   try {
     const r = localStorage.getItem(patternCacheKey(coin, interval));
-    return r ? JSON.parse(r) : null;
+    if (!r) return null;
+    const parsed = JSON.parse(r);
+    // Older cache entries (written before the "at" timestamp was added)
+    // are a bare PatternInsight, not the {data,at} wrapper.
+    if (parsed && typeof parsed === "object" && "data" in parsed && "at" in parsed) {
+      return parsed as { data: PatternInsight; at: number };
+    }
+    return { data: parsed as PatternInsight, at: Date.now() };
   } catch {
     return null;
   }
@@ -574,7 +639,10 @@ function writePatternCache(
   data: PatternInsight,
 ) {
   try {
-    localStorage.setItem(patternCacheKey(coin, interval), JSON.stringify(data));
+    localStorage.setItem(
+      patternCacheKey(coin, interval),
+      JSON.stringify({ data, at: Date.now() }),
+    );
   } catch {}
 }
 
@@ -642,7 +710,7 @@ const GANN_CYCLE_OFFSETS: Record<string, { label: string; seconds: number }[]> =
   };
 
 function gannCycleGroup(interval: string): string {
-  if (interval === "1day" || interval === "1week") return "daily";
+  if (interval === "1day" || interval === "1week" || interval === "1month") return "daily";
   if (interval === "1h" || interval === "4h" || interval === "6h")
     return "hourly";
   return "minutes";
@@ -1018,8 +1086,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   refreshTrigger,
   theme = "dark",
   coin = "BTC",
+  quoteVolume24h,
   onZoneChange,
   onOpenUpgrade = () => {},
+  onOpenCoinPicker,
   onFullscreenChange,
   coinChatOpen,
   onToggleCoinChat,
@@ -1033,9 +1103,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [error, setError] = useState("");
   const [trends, setTrends] = useState<IntervalTrends>({});
   const [banner, setBanner] = useState<IntervalAnalysis | null>(null);
+  const [bannerAt, setBannerAt] = useState<number | null>(null);
   const [zone, setZone] = useState<ZoneResult | null>(null);
   const [patternInsight, setPatternInsight] = useState<PatternInsight | null>(
-    () => readPatternCache(coin, "1h"),
+    () => readPatternCache(coin, "1h")?.data ?? null,
+  );
+  const [patternInsightAt, setPatternInsightAt] = useState<number | null>(
+    () => readPatternCache(coin, "1h")?.at ?? null,
   );
   const [showBB, setShowBB] = useState(true);
   const [showRSI, setShowRSI] = useState(false);
@@ -1052,9 +1126,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCME, setShowCME] = useState(true);
-  const [isLive, setIsLive] = useState(false);
+  const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
+  const [bidPrice, setBidPrice] = useState<number | null>(null);
+  const [askPrice, setAskPrice] = useState<number | null>(null);
+  const [baseVolume24h, setBaseVolume24h] = useState<number | null>(null);
   const [dayChangePercent, setDayChangePercent] = useState<number | null>(null);
   const [dayChangeAbs, setDayChangeAbs] = useState<number | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
@@ -1730,12 +1807,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
           const newBanner = analyzeInterval(data, INTERVAL_LABELS[interval]);
           setBanner(newBanner);
+          setBannerAt(newBanner ? Date.now() : null);
 
           // Show cached or rule-based insight immediately; fallback is trend-aware
           const cached = readPatternCache(coin, interval);
-          setPatternInsight(
-            cached ?? trendAwarePattern(data, newBanner?.sentiment ?? null),
-          );
+          if (cached) {
+            setPatternInsight(cached.data);
+            setPatternInsightAt(cached.at);
+          } else {
+            setPatternInsight(trendAwarePattern(data, newBanner?.sentiment ?? null));
+            setPatternInsightAt(Date.now());
+          }
           // Only call AI if quota allows
           if (!exceeded) {
             consume().then((ok) => {
@@ -1743,6 +1825,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               getCandlePatternAnalysis(coin, interval, data).then((res) => {
                 if (res.success && res.result) {
                   setPatternInsight(res.result);
+                  setPatternInsightAt(Date.now());
                   writePatternCache(coin, interval, res.result);
                 }
               });
@@ -1875,6 +1958,35 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     rsiDivMarkersRef.current = null;
   }, [interval, coin]);
 
+  // ── Bid/ask + base-asset volume for the fullscreen stats bar ─────────────
+  // Only polled while that bar is actually on screen (fullscreen, any
+  // width — mobile and desktop both show it now) — it's the only
+  // consumer, and Binance's /24hr ticker is cheap but no reason to hit it
+  // in the background.
+  useEffect(() => {
+    if (!isFullscreen) {
+      setBidPrice(null);
+      setAskPrice(null);
+      setBaseVolume24h(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      const snap = await getTickerSnapshot(coin);
+      if (!cancelled && snap) {
+        setBidPrice(snap.bid);
+        setAskPrice(snap.ask);
+        setBaseVolume24h(snap.volume);
+      }
+    };
+    poll();
+    const timer = window.setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [coin, isFullscreen]);
+
   // ── Live polling (1sec + 1min) ───────────────────────────────────────────
   useEffect(() => {
     if (interval !== "1sec" && interval !== "1min") {
@@ -1914,8 +2026,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ── Clear stale state on coin/refresh change ─────────────────────────────
   useEffect(() => {
     setBanner(null);
+    setBannerAt(null);
     setZone(null);
     setPatternInsight(null);
+    setPatternInsightAt(null);
     setTrends({});
     coinglass
       .getIntervalTrends(coin)
@@ -2000,7 +2114,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const candles = lastCandlesRef.current;
     if (candles.length === 0) return;
     const n =
-      interval === "1week" || interval === "all"
+      interval === "1week" || interval === "1month" || interval === "all"
         ? 3
         : interval === "1day" || interval === "4h" || interval === "6h"
           ? 5
@@ -2623,7 +2737,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const indicatorsControl = (
     <div className="indicators-menu-wrapper">
       <button
-        className={`chart-depth-btn${menuOpen ? " chart-depth-btn--active" : ""}`}
+        className={`chart-depth-btn chart-indicators-btn${menuOpen ? " chart-depth-btn--active" : ""}`}
         onClick={() => setMenuOpen((v) => !v)}
         title={t("chart.indicators")}
       >
@@ -2658,33 +2772,34 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
+  // Mobile-only right column — just 24h volume now; price/change moved to
+  // its own row under the coin name on the left (chart-mobile-price-row,
+  // in the JSX below). Still takes chartControlsPanel's normal spot in
+  // .chart-header-right on mobile, since mobile shows interval pills in
+  // their own standalone row instead (see the two render sites below,
+  // split on isDesktopWidth).
+  const mobileStatsBlock = (
+    <div className="chart-mobile-stats">
+      <span
+        className="chart-mobile-avatar"
+        style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+      >
+        {COIN_GLYPHS[coin] ?? coin[0]}
+      </span>
+      {quoteVolume24h !== undefined && quoteVolume24h > 0 && (
+        <span className="chart-mobile-vol">
+          <span className="chart-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
+          <span className="chart-mobile-vol-value">{formatCompactVolume(quoteVolume24h)}</span>
+        </span>
+      )}
+    </div>
+  );
+
   // Interval pills — rendered beside the title normally, but relocated
   // into the legend row (with Save/Exit) in fullscreen so all chart
   // controls live in one place instead of splitting across two rows.
   const chartControlsPanel = (
     <div className="chart-header-controls">
-      {isFullscreen && (
-        <button
-          className="chart-screenshot-btn"
-          onClick={handleScreenshot}
-          title="Save chart as PNG"
-        >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-          <span className="chart-icon-label">{t("chart.save")}</span>
-        </button>
-      )}
       {/* Desktop: fancy pill buttons. Mobile only shows PRIMARY_INTERVALS
           (see .interval-pill--secondary in PriceChart.css) plus the
           trailing "more" button, which opens a bottom sheet listing every
@@ -2697,6 +2812,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           return (
             <button
               key={opt}
+              data-interval={opt}
               className={`interval-pill${interval === opt ? ` interval-pill--active${trend === "bullish" ? " interval-pill--active-bull" : trend === "bearish" ? " interval-pill--active-bear" : ""}` : ""}${locked ? " interval-pill--locked" : ""}${PRIMARY_INTERVALS.has(opt) ? "" : " interval-pill--secondary"}`}
               title={INTERVAL_LABELS[opt]}
               onClick={() => {
@@ -2704,10 +2820,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 setInterval(opt);
               }}
             >
-              {INTERVAL_SHORT[opt]}
-              {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                : null}
+              <span className="interval-pill-label">
+                {INTERVAL_SHORT[opt]}
+                {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                  : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                  : null}
+              </span>
             </button>
           );
         })}
@@ -2782,104 +2900,315 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <div className="chart-fs-header-group">
           <div className="chart-header">
             <div className="chart-header-left">
-              <div className="chart-title-row">
-                <h3>{t("chart.title", { coin })}</h3>
-                {isFullscreen && currentPrice !== null && (
-                  <span className="chart-current-price-group">
+              {/* Fullscreen (mobile/iOS and desktop alike): exchange-style
+                  stats grid (High/Low · Bid/Ask · Vol) + price/change
+                  line, replacing the name/LIVE/zone-signal/div-badge row
+                  entirely — picked over the badge-based header directions
+                  above. Only normal (non-fullscreen) mobile/desktop keep
+                  the original title row below/further down. */}
+              {isFullscreen ? (
+                <div className="chart-fs-header-block">
+                  <div className="chart-fs-coin-row">
                     <span
-                      className={`chart-current-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
+                      className="chart-fs-coin-avatar"
+                      style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
                     >
-                      {formatLivePrice(currentPrice)}
+                      {COIN_GLYPHS[coin] ?? coin[0]}
                     </span>
-                    <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
-                  </span>
-                )}
-                {(interval === "1sec" || interval === "1min") && isLive && (
-                  <span className="live-badge">{t("chart.live")}</span>
-                )}
-                {zone && isPaid && (
-                  <span className={`zone-signal zone-signal--${zone.signal}`}>
-                    <span className="zone-signal-live" />
-                    {zone.signal === "strong-buy" && t("chart.strongBuy")}
-                    {zone.signal === "buy" && t("chart.buy")}
-                    {zone.signal === "oversold" && t("chart.oversold")}
-                    {zone.signal === "overbought" && t("chart.overbought")}
-                    {zone.signal === "neutral" && t("chart.neutralZone")}
-                    {zone.signal === "sell" && t("chart.sell")}
-                    {zone.signal === "strong-sell" && t("chart.strongSell")}
-                  </span>
-                )}
-                {!isPaid && (
-                  <button
-                    className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
-                    onClick={() => onOpenUpgrade?.("pro")}
-                  >
-                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                    Unlock Status
-                  </button>
-                )}
+                    <h3
+                      className="chart-fs-coin-name chart-title-tappable"
+                      onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                    >
+                      {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
+                      <svg className="chart-title-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </h3>
+                  </div>
+                  {currentPrice !== null && (
+                    <div className="chart-fs-price-line">
+                      <span
+                        className={`chart-current-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
+                      >
+                        {formatLivePrice(currentPrice)}
+                      </span>
+                      {dayChangeAbs !== null && dayChangePercent !== null && (
+                        <span
+                          className={`chart-fs-price-change${dayChangePercent >= 0 ? " chart-fs-price-change--up" : " chart-fs-price-change--down"}`}
+                        >
+                          {dayChangeAbs >= 0 ? "+" : "-"}{formatLivePrice(Math.abs(dayChangeAbs))}
+                          {" "}({dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="chart-fs-info-row">
+                  <div className="chart-fs-stats-grid">
+                    <div className="chart-fs-stat-col">
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--up">
+                          {dayHigh !== null ? formatLivePrice(dayHigh) : "—"}
+                        </span>
+                      </div>
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--down">
+                          {dayLow !== null ? formatLivePrice(dayLow) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="chart-fs-stat-col chart-fs-stat-col--center">
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--up">
+                          {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
+                        </span>
+                      </div>
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--down">
+                          {askPrice !== null ? formatLivePrice(askPrice) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="chart-fs-stat-col chart-fs-stat-col--right">
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
+                        <span className="chart-fs-stat-value">
+                          {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
+                        </span>
+                      </div>
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
+                        <span className="chart-fs-stat-value">
+                          {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {zone && isPaid && (() => {
+                    const bucket =
+                      zone.signal === "oversold" || zone.signal === "buy" || zone.signal === "strong-buy"
+                        ? "oversold"
+                        : zone.signal === "overbought" || zone.signal === "sell" || zone.signal === "strong-sell"
+                        ? "overbought"
+                        : "neutral";
+                    const pct = bucket === "oversold" ? 0 : bucket === "overbought" ? 100 : 50;
+                    const label =
+                      bucket === "oversold" ? t("chart.oversold")
+                      : bucket === "overbought" ? t("chart.overbought")
+                      : t("chart.neutralZone");
+                    return (
+                      <div className="chart-fs-meter">
+                        <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                        <div className="chart-fs-meter-row">
+                          <span className="chart-fs-meter-track">
+                            <span
+                              className={`chart-fs-meter-dot chart-fs-meter-dot--${bucket}`}
+                              style={{ left: `${pct}%` }}
+                            />
+                          </span>
+                          <span className={`chart-fs-meter-value chart-fs-meter-value--${bucket}`}>{label}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {!isPaid && (
+                    <button
+                      className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                      onClick={() => onOpenUpgrade?.("pro")}
+                    >
+                      <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                      Unlock Status
+                    </button>
+                  )}
+                  {isPaid && (() => {
+                    const bucket = divergence?.type === "bearish" ? "bearish" : divergence?.type === "bullish" ? "bullish" : "none";
+                    const pct = bucket === "bearish" ? 0 : bucket === "bullish" ? 100 : 50;
+                    const label =
+                      bucket === "bearish" ? t("chart.bearish", "Bearish")
+                      : bucket === "bullish" ? t("chart.bullish", "Bullish")
+                      : t("chart.none", "None");
+                    return (
+                      <div className="chart-fs-meter">
+                        <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                        <div className="chart-fs-meter-row">
+                          <span className="chart-fs-meter-track chart-fs-meter-track--rev">
+                            <span
+                              className={`chart-fs-meter-dot chart-fs-meter-dot--${bucket === "bearish" ? "overbought" : bucket === "bullish" ? "oversold" : "neutral"}`}
+                              style={{ left: `${pct}%` }}
+                            />
+                          </span>
+                          <span className={`chart-fs-meter-value chart-fs-meter-value--${bucket === "bearish" ? "overbought" : bucket === "bullish" ? "oversold" : "neutral"}`}>{label}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {!isPaid && (
+                    <button
+                      className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                      onClick={() => onOpenUpgrade?.("pro")}
+                    >
+                      <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                      Unlock Divergence
+                    </button>
+                  )}
+                  </div>
+                </div>
+              ) : !isDesktopWidth ? (
+                <div className="chart-fs-header-block">
+                  <div className="chart-title-row">
+                    <h3
+                      className="chart-title-tappable"
+                      onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                    >
+                      {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
+                      <svg className="chart-title-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </h3>
+                    {zone && isPaid && (
+                      <span className={`zone-signal zone-signal--${zone.signal}`}>
+                        <span className="zone-signal-live" />
+                        {zone.signal === "strong-buy" && t("chart.strongBuy")}
+                        {zone.signal === "buy" && t("chart.buy")}
+                        {zone.signal === "oversold" && t("chart.oversold")}
+                        {zone.signal === "overbought" && t("chart.overbought")}
+                        {zone.signal === "neutral" && t("chart.neutralZone")}
+                        {zone.signal === "sell" && t("chart.sell")}
+                        {zone.signal === "strong-sell" && t("chart.strongSell")}
+                      </span>
+                    )}
+                    {!isPaid && (
+                      <button
+                        className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                        onClick={() => onOpenUpgrade?.("pro")}
+                      >
+                        <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                        Unlock Status
+                      </button>
+                    )}
+                    {divergence && isPaid && (
+                      <span className={`div-badge div-badge--${divergence.type}`}>
+                        {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
+                      </span>
+                    )}
+                    {!isPaid && (
+                      <button
+                        className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                        onClick={() => onOpenUpgrade?.("pro")}
+                      >
+                        <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                        Unlock Divergence
+                      </button>
+                    )}
+                  </div>
+                  {dayHigh !== null && dayLow !== null && (
+                    <div className="chart-fs-stat-col chart-fs-stat-col--row">
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(dayHigh)}</span>
+                      </div>
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(dayLow)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                <div className="chart-title-row">
+                  <h3>{t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}</h3>
+                  {isFullscreen && currentPrice !== null && (
+                    <span className="chart-current-price-group">
+                      <span
+                        className={`chart-current-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
+                      >
+                        {formatLivePrice(currentPrice)}
+                      </span>
+                      <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                    </span>
+                  )}
+                  {zone && isPaid && (
+                    <span className={`zone-signal zone-signal--${zone.signal}`}>
+                      <span className="zone-signal-live" />
+                      {zone.signal === "strong-buy" && t("chart.strongBuy")}
+                      {zone.signal === "buy" && t("chart.buy")}
+                      {zone.signal === "oversold" && t("chart.oversold")}
+                      {zone.signal === "overbought" && t("chart.overbought")}
+                      {zone.signal === "neutral" && t("chart.neutralZone")}
+                      {zone.signal === "sell" && t("chart.sell")}
+                      {zone.signal === "strong-sell" && t("chart.strongSell")}
+                    </span>
+                  )}
+                  {!isPaid && (
+                    <button
+                      className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                      onClick={() => onOpenUpgrade?.("pro")}
+                    >
+                      <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                      Unlock Status
+                    </button>
+                  )}
+                  {divergence && isPaid && (
+                    <span className={`div-badge div-badge--${divergence.type}`}>
+                      {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
+                    </span>
+                  )}
+                  {!isPaid && (
+                    <button
+                      className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                      onClick={() => onOpenUpgrade?.("pro")}
+                    >
+                      <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                      Unlock Divergence
+                    </button>
+                  )}
+                </div>
                 {dayHigh !== null && dayLow !== null && (
-                  <span className="day-hl-badge" style={{ marginLeft: "auto" }}>
-                    <span className="day-hl-label">
-                      {HL_WINDOW_LABEL[interval]}
-                    </span>
-                    <span className="day-hl-high">
-                      H: {formatLivePrice(dayHigh)}
-                    </span>
-                    <span className="day-hl-sep"> · </span>
-                    <span className="day-hl-low">
-                      L: {formatLivePrice(dayLow)}
-                    </span>
-                  </span>
+                  <div className="chart-fs-stat-col chart-fs-stat-col--row">
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(dayHigh)}</span>
+                    </div>
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(dayLow)}</span>
+                    </div>
+                  </div>
                 )}
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                {divergence && isPaid && (
-                  <span className={`div-badge div-badge--${divergence.type}`}>
-                    {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
-                  </span>
-                )}
-                {!isPaid && (
-                  <button
-                    className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
-                    onClick={() => onOpenUpgrade?.("pro")}
+                </>
+              )}
+              {!isFullscreen && currentPrice !== null && (
+                <div className="chart-mobile-price-row">
+                  <span
+                    className={`chart-mobile-price${priceDirection ? ` chart-mobile-price--${priceDirection}` : ""}`}
                   >
-                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                    Unlock Divergence
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="chart-header-right">
-              {!isFullscreen && chartControlsPanel}
-              {isFullscreen && (
-                <div className="chart-title-actions">
-                  <button
-                    className="chart-fullscreen-btn"
-                    onClick={toggleFullscreen}
-                    title="Exit fullscreen"
-                  >
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                    {formatLivePrice(currentPrice)}
+                  </span>
+                  {dayChangePercent !== null && dayChangeAbs !== null && (
+                    <span
+                      className={`chart-mobile-price-change chart-mobile-price-change--${dayChangePercent >= 0 ? "up" : "down"}`}
                     >
-                      <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
-                    </svg>
-                    <span className="chart-icon-label">
-                      {t("chart.exit")}
+                      <span className="chart-mobile-price-change-arrow">
+                        {dayChangePercent >= 0 ? "↗" : "↘"}
+                      </span>
+                      {formatLivePrice(Math.abs(dayChangeAbs))} ({Math.abs(dayChangePercent).toFixed(2)}%)
+                      <span className="chart-mobile-price-change-period">
+                        {HL_WINDOW_LABEL[interval]}
+                      </span>
                     </span>
-                  </button>
+                  )}
                 </div>
               )}
             </div>
+            {!isFullscreen && (
+              <div className="chart-header-right">
+                {mobileStatsBlock}
+              </div>
+            )}
           </div>
 
           <div className="chart-legend">
@@ -2991,62 +3320,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="chart-icon-label">{t("chart.compactView", "Compact View")}</span>
                 </button>
               )}
-              <button
-                className="chart-screenshot-btn"
-                onClick={handleScreenshot}
-                title="Save chart as PNG"
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-                <span className="chart-icon-label">{t("chart.save")}</span>
-              </button>
-              <button
-                className="chart-fullscreen-btn"
-                onClick={toggleFullscreen}
-                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-              >
-                {isFullscreen ? (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
-                  </svg>
-                )}
-                <span className="chart-icon-label">
-                  {isFullscreen ? t("chart.exit") : t("chart.expand")}
-                </span>
-              </button>
               {onToggleCoinChat && Capacitor.getPlatform() !== "ios" && (
                 <button
                   className={`chart-livechat-pill${coinChatOpen ? " chart-livechat-pill--active" : ""}`}
@@ -3074,6 +3347,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="interval-banner-header">
               <span className="interval-banner-title pi-fade-in">{banner.title}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {bannerAt !== null && (
+                  <span className="pattern-insight-updated">
+                    {t("chart.lastUpdated", "Updated")} {formatClockTime(bannerAt)}
+                  </span>
+                )}
                 <span className="aiqw-live-badge">
                   <span className="aiqw-live-dot" />
                   LIVE
@@ -3139,29 +3417,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div className="chart-error">⚠️ {error}</div>
         )}
 
-        {!isFullscreen && currentPrice !== null && (
-          <div className="chart-mobile-price-header">
-            <span
-              className={`chart-mobile-price${priceDirection ? ` chart-mobile-price--${priceDirection}` : ""}`}
-            >
-              {formatLivePrice(currentPrice)}
-            </span>
-            {dayChangePercent !== null && dayChangeAbs !== null && (
-              <span
-                className={`chart-mobile-price-change chart-mobile-price-change--${dayChangePercent >= 0 ? "up" : "down"}`}
-              >
-                <span className="chart-mobile-price-change-arrow">
-                  {dayChangePercent >= 0 ? "↗" : "↘"}
-                </span>
-                {formatLivePrice(Math.abs(dayChangeAbs))} ({Math.abs(dayChangePercent).toFixed(2)}%)
-                <span className="chart-mobile-price-change-period">
-                  {HL_WINDOW_LABEL[interval]}
-                </span>
-              </span>
-            )}
-          </div>
-        )}
-
         <div
           style={{ position: "relative" }}
           onDoubleClick={toggleFullscreen}
@@ -3196,6 +3451,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             onZoneComplete={handleZoneComplete}
           />
           <button
+            className="chart-reset-view-btn chart-save-view-btn"
+            onClick={handleScreenshot}
+            title="Save chart as PNG"
+          >
+            {t("chart.save")}
+          </button>
+          <button
             className="chart-reset-view-btn"
             onClick={() => {
               chartRef.current?.timeScale().fitContent();
@@ -3204,6 +3466,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             }}
           >
             {t("chart.reset")}
+          </button>
+          <button
+            className="chart-reset-view-btn chart-expand-view-btn"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? t("chart.exit") : t("chart.expand")}
           </button>
           {isFullscreen && (
             <div className="chart-zone-btn-row">
@@ -3233,6 +3502,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
           )}
         </div>
+
+        {/* Normal (non-fullscreen) only, mobile and desktop alike —
+            fullscreen still shows this in .chart-legend-actions instead.
+            Interval pills get their own full-width row below the chart
+            canvas rather than sharing chart-header-right with
+            mobileStatsBlock (mobile) or sitting in the header row
+            (desktop, previously). */}
+        {!isFullscreen && (
+          <div className="chart-interval-row-standalone">{chartControlsPanel}</div>
+        )}
 
         {showDepthProfile && (
           <OrderBookProfileModal
@@ -3381,6 +3660,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {patternInsight.name}
               </span>
               <div className="pattern-insight-header-right">
+                {patternInsightAt !== null && (
+                  <span className="pattern-insight-updated">
+                    {t("chart.lastUpdated", "Updated")} {formatClockTime(patternInsightAt)}
+                  </span>
+                )}
                 <span className="aiqw-live-badge">
                   <span className="aiqw-live-dot" />
                   LIVE

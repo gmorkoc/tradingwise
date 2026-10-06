@@ -76,6 +76,15 @@
 }
 .tmc-scroll::-webkit-scrollbar { display: none; }
 
+/* Above the mobile cutoff, that 2px left padding nudged the cards 2px
+   further right than .tmc-title above them and the chart below — zeroed
+   so both line up on .tmc-strip's own 13px inset exactly. */
+@media (min-width: 769px) {
+  .tmc-scroll {
+    padding-left: 0;
+  }
+}
+
 .tmc-loading {
   font-size: 0.76rem;
   color: var(--pc-text-muted);
@@ -153,6 +162,17 @@
 .tmc-card-pct { font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
 .tmc-card-pct.up { color: var(--pc-success); }
 .tmc-card-pct.down { color: var(--pc-danger); }
+
+/* Above the 768px mobile cutoff, .price-chart-container's own left inset
+   is margin-left:10px + padding-left:3px = 13px (PriceChart.css's
+   unconditional rule) — this row's own title (.tmc-title) has no left
+   padding of its own, so matching that here lines "Today's Top Movers"
+   up with the chart below it. */
+@media (min-width: 769px) {
+  .tmc-strip {
+    padding-left: 13px;
+  }
+}
 
 @media (max-width: 640px) {
   /* Left trimmed from 12px to 7px to match .price-chart-container's own

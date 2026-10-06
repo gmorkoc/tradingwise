@@ -733,7 +733,10 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
 
   return (
     <>
-      <div className="cdt-toolbar" style={{ top: chartRect.top + 8, left: chartRect.left + 8 }}>
+      <div
+        className="cdt-toolbar"
+        style={{ top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }}
+      >
         {TOOL_LIST.map(t => (
           <button
             key={t.id}

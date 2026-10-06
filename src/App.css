@@ -91,7 +91,14 @@ html[data-theme="light"] body {
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, #4f46e5, #818cf8, #4ade80, #2563eb, #4f46e5);
+  background: conic-gradient(
+    from 0deg,
+    #4f46e5,
+    #818cf8,
+    #4ade80,
+    #2563eb,
+    #4f46e5
+  );
   animation: logo-spin 1.4s linear infinite;
   pointer-events: none;
   mask: radial-gradient(circle at center, transparent 85%, white 87%);
@@ -102,34 +109,63 @@ html[data-theme="light"] body {
   position: absolute;
   inset: -14px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.4) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(79, 70, 229, 0.4) 0%,
+    transparent 70%
+  );
   animation: boot-glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
 }
 
 /* ── Boot keyframes ─────────────────────────────────────────────────────── */
 @keyframes boot-screen-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes boot-pop {
-  from { opacity: 0; transform: scale(0.6); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes boot-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes boot-glow-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 @keyframes logo-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Logo "C" draw-in (loading state) ──────────────────────────────────── */
@@ -145,13 +181,32 @@ html[data-theme="light"] body {
 }
 
 @keyframes logo-c-draw {
-  0%   { stroke-dashoffset: 1; opacity: 0; }
-  5%   { opacity: 1; }
-  40%  { stroke-dashoffset: 0; opacity: 1; }
-  65%  { stroke-dashoffset: 0; opacity: 1; }
-  80%  { opacity: 0; }
-  81%  { stroke-dashoffset: 1; opacity: 0; }
-  100% { stroke-dashoffset: 1; opacity: 0; }
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  40% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  65% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  80% {
+    opacity: 0;
+  }
+  81% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
 }
 
 html,
@@ -159,16 +214,14 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 35%),
+  background: radial-gradient(
+      circle at top,
+      rgba(56, 189, 248, 0.08),
+      transparent 35%
+    ),
     linear-gradient(180deg, #06090f 0%, #070d16 100%);
   color: var(--color-text);
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -184,8 +237,17 @@ select {
   font: inherit;
   border: none;
   outline: none;
+  /* outline:none alone doesn't suppress it — iOS Safari/WKWebView draws
+     its own tap-highlight rectangle (a separate overlay box) on any tap
+     target unless this is set. No effect on desktop/web rendering. */
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* iOS Safari/WKWebView keeps native system chrome on a <button> unless
+   appearance is explicitly reset — without this, native corner rendering
+   can fight with any custom border-radius a button sets, only visible on
+   device (desktop WebKit doesn't apply the same native skin). */
+button,
 select {
   appearance: none;
   -webkit-appearance: none;
@@ -226,9 +288,7 @@ select {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .coin-picker-btn:hover {
@@ -324,9 +384,16 @@ select {
   scrollbar-color: var(--color-border) transparent;
 }
 
-.coin-picker-list::-webkit-scrollbar { width: 4px; }
-.coin-picker-list::-webkit-scrollbar-track { background: transparent; }
-.coin-picker-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+.coin-picker-list::-webkit-scrollbar {
+  width: 4px;
+}
+.coin-picker-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.coin-picker-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
 
 .coin-picker-item {
   display: flex;
@@ -341,7 +408,9 @@ select {
   transition: background 0.12s ease;
 }
 
-.coin-picker-item:hover { background: var(--color-input-bg); }
+.coin-picker-item:hover {
+  background: var(--color-input-bg);
+}
 .coin-picker-item.active {
   background: var(--color-primary-soft);
   color: var(--color-primary);
@@ -400,10 +469,21 @@ select {
   white-space: nowrap;
 }
 
-.coin-picker-hl-high { color: #22c55e; }
-.coin-picker-hl-sep  { color: var(--color-text-secondary); opacity: 0.4; }
-.coin-picker-hl-low  { color: #fb7185; }
-.coin-picker-hl-na   { color: var(--color-text-secondary); opacity: 0.35; font-size: 0.6rem; }
+.coin-picker-hl-high {
+  color: #22c55e;
+}
+.coin-picker-hl-sep {
+  color: var(--color-text-secondary);
+  opacity: 0.4;
+}
+.coin-picker-hl-low {
+  color: #fb7185;
+}
+.coin-picker-hl-na {
+  color: var(--color-text-secondary);
+  opacity: 0.35;
+  font-size: 0.6rem;
+}
 
 .app-header {
   background: var(--color-header-bg);
@@ -414,7 +494,8 @@ select {
      WKWebView, so MainViewController.swift injects the real UIKit value as
      --native-safe-area-top; env() is the fallback for Android / browsers /
      installed PWA, where it works normally. */
-  padding: max(24px, var(--native-safe-area-top, env(safe-area-inset-top))) 24px 20px;
+  padding: max(24px, var(--native-safe-area-top, env(safe-area-inset-top))) 24px
+    20px;
 }
 
 .header-content {
@@ -525,7 +606,6 @@ select {
   display: inline-block;
 }
 
-
 .st-logo--wave .st-logo-char {
   animation: st-wave 0.85s ease-in-out infinite;
 }
@@ -543,9 +623,7 @@ select {
 .app-title-btn {
   cursor: pointer;
   user-select: none;
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .app-title-btn:hover {
@@ -725,8 +803,12 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.asset-position-pnl.positive { color: var(--color-success); }
-.asset-position-pnl.negative { color: var(--color-danger); }
+.asset-position-pnl.positive {
+  color: var(--color-success);
+}
+.asset-position-pnl.negative {
+  color: var(--color-danger);
+}
 
 .asset-position-remove {
   flex-shrink: 0;
@@ -781,9 +863,7 @@ select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   min-width: 160px;
 }
 
@@ -812,9 +892,7 @@ select {
 
 .header-portfolio--clickable {
   cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
 .header-portfolio--clickable:hover {
@@ -870,10 +948,7 @@ select {
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -980,9 +1055,7 @@ select {
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .asset-close-btn:hover {
@@ -1052,7 +1125,9 @@ select {
   flex-shrink: 0;
   transition: opacity 0.15s;
 }
-.pastdue-banner-btn:hover { opacity: 0.85; }
+.pastdue-banner-btn:hover {
+  opacity: 0.85;
+}
 
 .error-banner {
   background: rgba(251, 113, 133, 0.12);
@@ -1203,7 +1278,8 @@ select {
 
 @media (max-width: 768px) {
   .app-header {
-    padding: max(18px, var(--native-safe-area-top, env(safe-area-inset-top))) 18px 18px;
+    padding: max(18px, var(--native-safe-area-top, env(safe-area-inset-top)))
+      18px 18px;
   }
 
   .header-content h1 {
@@ -1236,8 +1312,12 @@ select {
     max-width: none;
   }
 
-  .asset-position-input:nth-of-type(1) { grid-area: amount; }
-  .asset-position-input:nth-of-type(2) { grid-area: cost; }
+  .asset-position-input:nth-of-type(1) {
+    grid-area: amount;
+  }
+  .asset-position-input:nth-of-type(2) {
+    grid-area: cost;
+  }
 
   .asset-position-result {
     grid-area: result;
@@ -1405,10 +1485,22 @@ select {
 }
 
 @keyframes resize-hint-pulse {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  75%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
 }
 
 .chart-section-wrap > .price-chart-container {
@@ -1419,6 +1511,8 @@ select {
 .chart-section-wrap > .ob-card {
   width: 264px;
   flex-shrink: 0;
+  margin: 0 4px 10px 10px;
+  padding: 0 20px 18px 3px;
 }
 
 @media (max-width: 960px) {
@@ -1618,7 +1712,9 @@ html[data-theme="light"] .icon-strip {
 /* Desktop rail never widens, so the wordmark never has room — Coinbase's
    own rail shows just the mark too, no text beside it. */
 @media (min-width: 641px) {
-  .icon-strip-logo .st-logo-wordmark { display: none; }
+  .icon-strip-logo .st-logo-wordmark {
+    display: none;
+  }
 }
 
 .icon-strip-nav {
@@ -1634,7 +1730,9 @@ html[data-theme="light"] .icon-strip {
   padding: 6px 0;
   scrollbar-width: none;
 }
-.icon-strip-nav::-webkit-scrollbar { display: none; }
+.icon-strip-nav::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── Nav accordion categories ─────────────────────────────────────────── */
 .icon-strip-cat {
@@ -1662,7 +1760,9 @@ html[data-theme="light"] .icon-strip {
   white-space: nowrap;
   overflow: hidden;
 }
-.icon-strip-cat-head:hover { color: var(--color-text-secondary); }
+.icon-strip-cat-head:hover {
+  color: var(--color-text-secondary);
+}
 
 .icon-strip-cat-head .icon-strip-cat-icon {
   flex-shrink: 0;
@@ -1680,7 +1780,9 @@ html[data-theme="light"] .icon-strip {
   flex-shrink: 0;
   transition: transform 0.15s;
 }
-.icon-strip-cat-head.open .icon-strip-cat-chev { transform: rotate(90deg); }
+.icon-strip-cat-head.open .icon-strip-cat-chev {
+  transform: rotate(90deg);
+}
 
 /* max-height (not display:none) so both the mobile tap-toggle and the
    desktop hover-reveal below can animate smoothly instead of snapping. */
@@ -1692,7 +1794,10 @@ html[data-theme="light"] .icon-strip {
   max-height: 280px;
   transition: max-height 0.22s ease, opacity 0.18s ease;
 }
-.icon-strip-cat-items.collapsed { max-height: 0; opacity: 0; }
+.icon-strip-cat-items.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
 
 /* Desktop rail — icon over label, centered, always visible (no hover
    reveal — nothing to reveal, it's permanently expanded). Clicking a
@@ -1734,12 +1839,16 @@ html[data-theme="light"] .icon-strip {
     font-size: 0.62rem;
     line-height: 1.15;
   }
-  .icon-strip-cat-chev { display: none; }
+  .icon-strip-cat-chev {
+    display: none;
+  }
 
   /* Desktop swaps the inline accordion for a Coinbase-style flyout next to
      the rail (.nav-cat-panel below) — mobile keeps the inline list above
      untouched. */
-  .icon-strip-cat-items { display: none; }
+  .icon-strip-cat-items {
+    display: none;
+  }
 }
 
 /* ── Category flyout (desktop only) ───────────────────────────────────────
@@ -1852,7 +1961,10 @@ html[data-theme="light"] .icon-strip {
 /* Never shown below 641px — mobile's original inline accordion (above)
    is the only expand/collapse behavior there. */
 @media (max-width: 640px) {
-  .nav-cat-backdrop, .nav-cat-panel { display: none !important; }
+  .nav-cat-backdrop,
+  .nav-cat-panel {
+    display: none !important;
+  }
 }
 
 .icon-strip-bottom {
@@ -1880,9 +1992,7 @@ html[data-theme="light"] .icon-strip {
   justify-content: flex-start;
   gap: 10px;
   color: var(--color-text-muted);
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.15s, color 0.15s;
   padding: 7px 12px 7px 14px;
   flex-shrink: 0;
   position: relative;
@@ -1919,7 +2029,9 @@ html[data-theme="light"] .icon-strip {
   .icon-strip-btn.active {
     background: var(--color-primary-soft) !important;
   }
-  .nav-icon-circle { background: none !important; }
+  .nav-icon-circle {
+    background: none !important;
+  }
 }
 .icon-strip-btn:hover .nav-icon-circle {
   background: none;
@@ -1966,7 +2078,9 @@ html[data-theme="light"] .icon-strip {
 }
 
 /* Mobile E badge — hidden on desktop */
-.nav-badge--mobile { display: none !important; }
+.nav-badge--mobile {
+  display: none !important;
+}
 
 .icon-strip-lock {
   position: static;
@@ -2013,7 +2127,9 @@ html[data-theme="light"] .icon-strip {
 
 @media (min-width: 641px) {
   .icon-strip-elite-badge,
-  .icon-strip-lock { opacity: 1; }
+  .icon-strip-lock {
+    opacity: 1;
+  }
 }
 
 .icon-strip-label {
@@ -2154,9 +2270,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
   position: relative;
   display: flex;
   align-items: center;
-  transition:
-    background 0.2s,
-    border-color 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 .icon-strip-theme-pill.light .theme-pill-track {
   background: rgba(255, 200, 20, 0.15);
@@ -2173,9 +2287,7 @@ html[data-theme="light"] .icon-strip-quota-bar {
   position: absolute;
   left: 1px;
   top: 1px;
-  transition:
-    left 0.2s,
-    background 0.2s;
+  transition: left 0.2s, background 0.2s;
   color: #fff;
 }
 .icon-strip-theme-pill.light .theme-pill-knob {
@@ -2191,8 +2303,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
 .icon-strip-theme-pill:hover {
   background: none;
 }
-
-
 
 /* ── Focus mode switch (desktop only, Coinbase's own "Advanced" toggle
    at the bottom of its rail) — .icon-strip-btn gives it the exact same
@@ -2275,6 +2385,17 @@ html[data-theme="light"] .icon-strip-quota-bar {
 }
 html[data-theme="light"] .top-nav-bar {
   border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
+/* This bar has no mobile-width treatment at all — above the 768px mobile
+   cutoff, .price-chart-container's own left inset is margin-left:10px +
+   padding-left:3px = 13px (PriceChart.css's unconditional rule); this bar
+   had no matching inset at any width above 768px, so nothing on the page
+   lined up with the chart below it. */
+@media (min-width: 769px) {
+  .top-nav-bar {
+    padding-left: 13px;
+  }
 }
 
 /* Wordmark before the search bar, Yahoo-style — text only, no icon mark
@@ -2420,6 +2541,15 @@ html[data-theme="light"] .main-coin-header {
   border-bottom-color: rgba(15, 23, 42, 0.06);
 }
 
+/* Same margin-left:10px + padding-left:3px pattern as
+   .price-chart-container's own unconditional rule (PriceChart.css). */
+@media (min-width: 769px) {
+  .main-coin-header {
+    margin-left: 10px;
+    padding-left: 3px;
+  }
+}
+
 .mch-left {
   display: flex;
   align-items: center;
@@ -2455,9 +2585,7 @@ html[data-theme="light"] .main-coin-header {
   padding: 6px 12px;
   cursor: pointer;
   color: var(--color-text);
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s;
+  transition: border-color 0.18s, box-shadow 0.18s;
   white-space: nowrap;
 }
 html[data-theme="light"] .mch-coin-btn:not(:hover) {
@@ -2526,15 +2654,27 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 /* Direction-tinted coin pill + change badge — shared by desktop and
    mobile/iOS alike. */
 .mch-coin-btn--up {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.14), rgba(22, 163, 74, 0.03));
+  background: linear-gradient(
+    135deg,
+    rgba(22, 163, 74, 0.14),
+    rgba(22, 163, 74, 0.03)
+  );
   border-color: rgba(22, 163, 74, 0.35);
 }
 .mch-coin-btn--down {
-  background: linear-gradient(135deg, rgba(225, 29, 72, 0.14), rgba(225, 29, 72, 0.03));
+  background: linear-gradient(
+    135deg,
+    rgba(225, 29, 72, 0.14),
+    rgba(225, 29, 72, 0.03)
+  );
   border-color: rgba(225, 29, 72, 0.35);
 }
-.mch-coin-btn--up .mch-coin-price { color: var(--color-success); }
-.mch-coin-btn--down .mch-coin-price { color: var(--color-danger); }
+.mch-coin-btn--up .mch-coin-price {
+  color: var(--color-success);
+}
+.mch-coin-btn--down .mch-coin-price {
+  color: var(--color-danger);
+}
 .mch-coin-chg {
   display: inline-flex;
   align-items: center;
@@ -2546,20 +2686,35 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   margin-left: 2px;
   flex-shrink: 0;
 }
-.mch-coin-chg--up   { color: var(--color-success); background: rgba(22, 163, 74, 0.15); }
-.mch-coin-chg--down { color: var(--color-danger);  background: rgba(225, 29, 72, 0.15); }
+.mch-coin-chg--up {
+  color: var(--color-success);
+  background: rgba(22, 163, 74, 0.15);
+}
+.mch-coin-chg--down {
+  color: var(--color-danger);
+  background: rgba(225, 29, 72, 0.15);
+}
 
 /* Before the 24h ticker resolves (change is still undefined), a wave
    sweeps across the pill instead of it just sitting flat and neutral —
    reads as "still figuring out bullish/bearish" rather than "no data". */
 .mch-coin-btn--pending {
-  background: linear-gradient(90deg, var(--color-input-bg) 25%, rgba(2, 132, 199, 0.14) 50%, var(--color-input-bg) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-input-bg) 25%,
+    rgba(2, 132, 199, 0.14) 50%,
+    var(--color-input-bg) 75%
+  );
   background-size: 200% 100%;
   animation: mch-coin-wave 1.6s ease-in-out infinite;
 }
 @keyframes mch-coin-wave {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .price-source-badge {
@@ -2609,15 +2764,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   margin-left: 8px;
 }
 
-/* Price stat visible only on mobile */
-.mch-stat--price-mobile {
-  display: none;
-}
-@media (max-width: 640px) {
-  .mch-stat--price-mobile {
-    display: flex;
-  }
-}
 .mch-stat-label {
   font-size: 0.65rem;
   color: var(--color-text-muted);
@@ -2682,24 +2828,27 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: var(--color-surface-alt);
+  background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: color 0.15s;
   flex-shrink: 0;
 }
 .mch-search-btn:hover {
-  border-color: rgba(56,189,248,0.4);
   color: var(--color-text);
 }
-.mch-search-label { font-weight: 500; }
+.mch-search-label {
+  font-weight: 500;
+}
 
 /* ── Notifications feed button — distinct from the toggle below (which
    reuses .mch-search-btn's plain icon look); this one needs a relative
    anchor for its unread-count badge. */
-.mch-notif-feed-btn { position: relative; }
+.mch-notif-feed-btn {
+  position: relative;
+}
 .mch-notif-feed-count {
   position: absolute;
   top: -5px;
@@ -2731,7 +2880,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   font-family: inherit;
   font-size: 0.6rem;
   padding: 1px 5px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--color-border);
   border-radius: 4px;
   color: var(--color-text-secondary);
@@ -2773,9 +2922,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   border-radius: 8px;
   border: none;
   background: var(--color-surface-alt);
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 .mch-portfolio:hover {
   border-color: var(--color-primary);
@@ -2800,7 +2947,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .mch-portfolio-value.down {
   color: var(--color-danger);
 }
-.mch-portfolio-icon { display: none; }
+.mch-portfolio-icon {
+  display: none;
+}
 
 /* ── Section content area ───────────────────────────────────────────────── */
 .main-content {
@@ -2857,7 +3006,11 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   position: absolute;
   inset: -7px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.4) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(79, 70, 229, 0.4) 0%,
+    transparent 70%
+  );
   animation: boot-glow-pulse 2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -2865,7 +3018,14 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, #4f46e5, #818cf8, #4ade80, #2563eb, #4f46e5);
+  background: conic-gradient(
+    from 0deg,
+    #4f46e5,
+    #818cf8,
+    #4ade80,
+    #2563eb,
+    #4f46e5
+  );
   animation: logo-spin 1.4s linear infinite;
   pointer-events: none;
   mask: radial-gradient(circle at center, transparent 78%, white 80%);
@@ -2944,23 +3104,58 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 /* ── Compact viewport (e.g. 125 % browser zoom on a 900 px monitor) ────────
    Shrink icon-strip buttons so more items fit before the scroll kicks in.   */
 @media (max-height: 780px) {
-  .icon-strip { padding: 10px 0 14px; }
-  .icon-strip-nav { gap: 0; padding: 4px 0; }
-  .icon-strip-btn { padding: 5px 12px 5px 14px; gap: 8px; }
-  .icon-strip-label { font-size: 0.68rem; }
-  .icon-strip-logo { margin-bottom: 8px; }
-  .icon-strip-logo .st-logo-icon { width: 34px; height: 34px; }
-  .icon-strip-bottom { gap: 0; padding-top: 8px; }
+  .icon-strip {
+    padding: 10px 0 14px;
+  }
+  .icon-strip-nav {
+    gap: 0;
+    padding: 4px 0;
+  }
+  .icon-strip-btn {
+    padding: 5px 12px 5px 14px;
+    gap: 8px;
+  }
+  .icon-strip-label {
+    font-size: 0.68rem;
+  }
+  .icon-strip-logo {
+    margin-bottom: 8px;
+  }
+  .icon-strip-logo .st-logo-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .icon-strip-bottom {
+    gap: 0;
+    padding-top: 8px;
+  }
 }
 
 @media (max-height: 640px) {
-  .icon-strip { padding: 6px 0 10px; }
-  .icon-strip-nav { gap: 0; }
-  .icon-strip-btn { padding: 4px 12px 4px 14px; gap: 8px; }
-  .icon-strip-label { font-size: 0.65rem; }
-  .icon-strip-logo { margin-bottom: 4px; }
-  .icon-strip-logo .st-logo-icon { width: 30px; height: 30px; }
-  .icon-strip-bottom { gap: 0; padding-top: 6px; }
+  .icon-strip {
+    padding: 6px 0 10px;
+  }
+  .icon-strip-nav {
+    gap: 0;
+  }
+  .icon-strip-btn {
+    padding: 4px 12px 4px 14px;
+    gap: 8px;
+  }
+  .icon-strip-label {
+    font-size: 0.65rem;
+  }
+  .icon-strip-logo {
+    margin-bottom: 4px;
+  }
+  .icon-strip-logo .st-logo-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .icon-strip-bottom {
+    gap: 0;
+    padding-top: 6px;
+  }
 }
 
 /* ── Mobile swipe nav ───────────────────────────────────────────────────── */
@@ -3034,7 +3229,8 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     gap: 10px;
     /* .icon-strip is position:fixed;top:0 here and this is its first
        child — reserve the notch/Dynamic Island inset directly on it. */
-    padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top))) 20px 12px 20px;
+    padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)))
+      20px 12px 20px;
     flex-shrink: 0;
     margin-bottom: 4px;
     cursor: pointer;
@@ -3192,7 +3388,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   }
   .icon-strip .icon-strip-cat-head:hover,
   .icon-strip .icon-strip-cat-head:active,
-  .icon-strip .icon-strip-cat-head:focus { background: none; }
+  .icon-strip .icon-strip-cat-head:focus {
+    background: none;
+  }
   .icon-strip .icon-strip-cat-head .icon-strip-cat-label {
     display: block;
     /* The base rule sets flex:1, stretching this to fill the row and
@@ -3205,11 +3403,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     text-transform: none;
     letter-spacing: normal;
   }
-  .icon-strip .icon-strip-cat-chev { width: 13px; height: 13px; }
+  .icon-strip .icon-strip-cat-chev {
+    width: 13px;
+    height: 13px;
+  }
 
   /* Hide floating left E bubble; show inline elite badge after label */
-  .icon-strip .nav-badge--mobile { display: none !important; }
-  .icon-strip .icon-strip-lock.nav-badge--desktop { display: none !important; }
+  .icon-strip .nav-badge--mobile {
+    display: none !important;
+  }
+  .icon-strip .icon-strip-lock.nav-badge--desktop {
+    display: none !important;
+  }
   .icon-strip .icon-strip-elite-badge.nav-badge--desktop {
     display: inline-flex !important;
     position: static;
@@ -3233,7 +3438,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     gap: 2px;
     margin: auto 8px 0;
     padding: 8px 0 4px;
-    margin-bottom: calc(var(--native-safe-area-bottom, env(safe-area-inset-bottom)) + 40px);
+    margin-bottom: calc(
+      var(--native-safe-area-bottom, env(safe-area-inset-bottom)) + 40px
+    );
     border-radius: 0;
     background: none;
     box-shadow: none;
@@ -3320,9 +3527,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   .icon-strip .theme-pill-knob {
     top: 1px;
     left: 1px;
-    transition:
-      left 0.2s,
-      background 0.2s;
+    transition: left 0.2s, background 0.2s;
   }
   .icon-strip .icon-strip-theme-pill.light .theme-pill-knob {
     left: calc(100% - 21px);
@@ -3381,20 +3586,64 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     overflow: visible;
     flex-wrap: wrap;
     align-items: center;
-    /* Left trimmed from 12px to 7px to match .price-chart-container's own
-       mobile left inset (PriceChart.css) — this is the topmost bar on
-       the page, so its content should set the left edge every section
-       below lines up with. */
-    padding: 8px 12px 6px 7px;
+    justify-content: flex-start;
+    padding: 16px;
     gap: 4px;
   }
 
   .mch-left {
     flex-shrink: 0;
     order: 1;
+    gap: 0;
+  }
+  .mch-logo {
+    font-size: 18px;
+    margin-left: -10px;
+    line-height: 1;
+    align-self: center;
+  }
+  /* Shimmer sweep on mount (app launch) — a diagonal light band sweeps
+     once across the wordmark via a ::after overlay (doesn't touch the
+     text's own two-tone color). overflow:hidden on the logo itself
+     clips the band to the text's bounding box; "both" leaves the band
+     parked off-screen after, so it only plays once per mount, not on
+     every re-render. */
+  .mch-logo-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .mch-logo-shimmer::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.75) 50%,
+      transparent 80%
+    );
+    animation: mch-logo-shimmer-sweep 1.3s ease-in-out 0.3s both;
+  }
+  @keyframes mch-logo-shimmer-sweep {
+    0% {
+      left: -60%;
+    }
+    100% {
+      left: 130%;
+    }
   }
   .mch-menu-btn {
     display: flex;
+    justify-content: flex-start;
+    width: 42px;
+    height: 42px;
+  }
+  .mch-menu-btn svg {
+    width: 24px;
+    height: 24px;
   }
   /* Coin pair/price/change pill — redundant now that the big price readout
      lives right above the chart (.chart-mobile-price-header, PriceChart.css),
@@ -3449,11 +3698,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   .mch-search-kbd,
   .mch-alerts-label,
   .mch-portfolio-label,
-  .mch-portfolio-value { display: none; }
+  .mch-portfolio-value {
+    display: none;
+  }
 
-  .mch-portfolio-icon { display: block; }
+  .mch-portfolio-icon {
+    display: block;
+  }
 
-  .price-source-badge { display: none; }
+  .price-source-badge {
+    display: none;
+  }
 
   .mch-stats {
     order: 4;
@@ -3500,7 +3755,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     line-height: 1.4;
     display: block;
   }
-
 }
 
 /* ── Chart / Order Book segmented tabs — small phones (<=640px) AND full
@@ -3523,9 +3777,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
      technically present, just invisible). */
   .chart-mobile-tabs {
     display: flex;
-    gap: 2px;
+    gap: 6px;
     margin: 8px 6px 6px 4px;
-    padding: 3px;
+    padding: 3px 5px;
     background: var(--color-surface-alt);
     border-radius: 999px;
   }
@@ -3533,12 +3787,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
     /* Zeroes out index.css's global `button { padding: 0.6em 1.2em }` —
-       left in place, that padding alone was enough to push/clip the 14px
-       icon out of view inside a fixed 28px box. */
+       left in place, that padding alone was enough to push/clip the icon
+       out of view inside a fixed box. */
     padding: 0;
     box-sizing: border-box;
     background: none;
@@ -3554,6 +3808,48 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     color: #0f172a;
     background: #fff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  .chart-mobile-tab svg {
+    width: 16px;
+    height: 16px;
+  }
+  /* Scoped to this toggle only — flat black circle, white "C" arcs
+     (recolored from the gradient/green/white default), matched by the
+     exact fill/stroke attribute each element ships with so only the
+     right pieces are targeted. Other LogoIcon usages elsewhere keep
+     their real colors. CSS overrides the SVG's own presentation
+     attributes since those sit below the cascade. */
+  .chart-mobile-tab .st-logo-icon circle[fill="url(#ch-grad)"] {
+    fill: #000;
+  }
+  .chart-mobile-tab .st-logo-icon circle[stroke="#818cf8"] {
+    stroke: #000;
+  }
+  .chart-mobile-tab .st-logo-icon path {
+    stroke: #fff;
+  }
+  /* Re-keyed on each tap so React remounts this span and the spin
+     replays, rather than only firing once on initial mount. */
+  .chart-tab-logo-spin {
+    display: inline-flex;
+    animation: chart-tab-logo-spin 0.5s ease;
+  }
+  @keyframes chart-tab-logo-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .mch-search-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .mch-search-btn svg {
+    width: 18px;
+    height: 18px;
   }
 
   .chart-section-wrap {
@@ -3585,23 +3881,25 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   position: fixed;
   inset: 0;
   z-index: 100000;
-  background: radial-gradient(ellipse at center,
+  background: radial-gradient(
+    ellipse at center,
     color-mix(in srgb, var(--pticker-color) 28%, #0a0a0f) 0%,
-    #050508 70%);
+    #050508 70%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   padding: 0;
   --pticker-text: #fff;
-  --pticker-muted: rgba(255,255,255,0.35);
-  --pticker-card-bg: rgba(255,255,255,0.04);
-  --pticker-card-border: rgba(255,255,255,0.1);
-  --pticker-insight-text: rgba(255,255,255,0.75);
-  --pticker-close-bg: rgba(255,255,255,0.06);
-  --pticker-close-border: rgba(255,255,255,0.12);
-  --pticker-close-text: rgba(255,255,255,0.4);
-  --pticker-close-bg-hover: rgba(255,255,255,0.12);
+  --pticker-muted: rgba(255, 255, 255, 0.35);
+  --pticker-card-bg: rgba(255, 255, 255, 0.04);
+  --pticker-card-border: rgba(255, 255, 255, 0.1);
+  --pticker-insight-text: rgba(255, 255, 255, 0.75);
+  --pticker-close-bg: rgba(255, 255, 255, 0.06);
+  --pticker-close-border: rgba(255, 255, 255, 0.12);
+  --pticker-close-text: rgba(255, 255, 255, 0.4);
+  --pticker-close-bg-hover: rgba(255, 255, 255, 0.12);
 }
 .pticker-bg-symbol {
   position: absolute;
@@ -3615,14 +3913,30 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   transform: rotate(-10deg);
 }
 @keyframes pticker-fly-up {
-  0%   { transform: translateY(0)     rotate(-45deg); opacity: 1;   }
-  80%  { opacity: 1; }
-  100% { transform: translateY(-70vh) rotate(-45deg); opacity: 0;   }
+  0% {
+    transform: translateY(0) rotate(-45deg);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-70vh) rotate(-45deg);
+    opacity: 0;
+  }
 }
 @keyframes pticker-fly-down {
-  0%   { transform: translateY(0)    rotate(135deg); opacity: 1;   }
-  80%  { opacity: 1; }
-  100% { transform: translateY(70vh) rotate(135deg); opacity: 0;   }
+  0% {
+    transform: translateY(0) rotate(135deg);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(70vh) rotate(135deg);
+    opacity: 0;
+  }
 }
 .pticker-rocket {
   position: absolute;
@@ -3631,8 +3945,14 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   z-index: 2;
   line-height: 1;
 }
-.pticker-rocket--up   { bottom: 38%; animation: pticker-fly-up   1.3s ease-out forwards; }
-.pticker-rocket--down { top:    38%; animation: pticker-fly-down 1.3s ease-in  forwards; }
+.pticker-rocket--up {
+  bottom: 38%;
+  animation: pticker-fly-up 1.3s ease-out forwards;
+}
+.pticker-rocket--down {
+  top: 38%;
+  animation: pticker-fly-down 1.3s ease-in forwards;
+}
 
 .pticker-inner {
   position: relative;
@@ -3662,7 +3982,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .pticker-coin-quote {
   font-size: 0.5em;
   font-weight: 500;
-  color: var(--pticker-muted, rgba(255,255,255,0.35));
+  color: var(--pticker-muted, rgba(255, 255, 255, 0.35));
   margin-left: 2px;
 }
 .pticker-price {
@@ -3672,11 +3992,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   color: var(--pticker-text, #fff);
   font-variant-numeric: tabular-nums;
   transition: color 0.25s;
-  text-shadow: 0 0 80px color-mix(in srgb, var(--pticker-color) 45%, transparent);
+  text-shadow: 0 0 80px
+    color-mix(in srgb, var(--pticker-color) 45%, transparent);
   line-height: 1;
 }
-.pticker-flash-up   { color: #22c55e !important; text-shadow: 0 0 60px #22c55e88 !important; }
-.pticker-flash-down { color: #ef4444 !important; text-shadow: 0 0 60px #ef444488 !important; }
+.pticker-flash-up {
+  color: #22c55e !important;
+  text-shadow: 0 0 60px #22c55e88 !important;
+}
+.pticker-flash-down {
+  color: #ef4444 !important;
+  text-shadow: 0 0 60px #ef444488 !important;
+}
 .pticker-price-source {
   position: fixed;
   top: max(20px, var(--native-safe-area-top, env(safe-area-inset-top)));
@@ -3709,16 +4036,29 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   color: #22c55e;
 }
 @keyframes pticker-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 10px #22c55e; }
-  50%       { opacity: 0.5; transform: scale(0.7); box-shadow: 0 0 3px #22c55e; }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px #22c55e;
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.7);
+    box-shadow: 0 0 3px #22c55e;
+  }
 }
 .pticker-delta {
   font-size: clamp(1.1rem, 2.5vw, 1.6rem);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
-.pticker-delta--up   { color: #22c55e; }
-.pticker-delta--down { color: #ef4444; }
+.pticker-delta--up {
+  color: #22c55e;
+}
+.pticker-delta--down {
+  color: #ef4444;
+}
 
 .pticker-chart-wrap {
   width: min(760px, 94vw);
@@ -3747,9 +4087,15 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   opacity: 0.07;
   pointer-events: none;
 }
-.pticker-insight-wrap--up  { color: #22c55e; }
-.pticker-insight-wrap--down { color: #ef4444; }
-.pticker-insight-wrap--neutral { color: rgba(255,255,255,0.5); }
+.pticker-insight-wrap--up {
+  color: #22c55e;
+}
+.pticker-insight-wrap--down {
+  color: #ef4444;
+}
+.pticker-insight-wrap--neutral {
+  color: rgba(255, 255, 255, 0.5);
+}
 
 .pticker-insight-icon {
   flex-shrink: 0;
@@ -3796,9 +4142,15 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   opacity: 1;
   transform: translateY(0);
 }
-html[data-theme="light"] .pticker-insight-wrap--up   { color: #16a34a; }
-html[data-theme="light"] .pticker-insight-wrap--down { color: #dc2626; }
-html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0.4); }
+html[data-theme="light"] .pticker-insight-wrap--up {
+  color: #16a34a;
+}
+html[data-theme="light"] .pticker-insight-wrap--down {
+  color: #dc2626;
+}
+html[data-theme="light"] .pticker-insight-wrap--neutral {
+  color: rgba(15, 23, 42, 0.4);
+}
 
 .pticker-top-actions {
   position: fixed;
@@ -3826,33 +4178,50 @@ html[data-theme="light"] .pticker-insight-wrap--neutral { color: rgba(15,23,42,0
   transition: color 0.15s, background 0.15s;
 }
 .pticker-sound-btn svg,
-.pticker-close svg { width: 26px; height: 26px; }
+.pticker-close svg {
+  width: 26px;
+  height: 26px;
+}
 .pticker-sound-btn:hover,
-.pticker-close:hover { color: var(--pticker-text); background: var(--pticker-card-bg); }
-.pticker-sound-btn--on { color: var(--pticker-text); }
+.pticker-close:hover {
+  color: var(--pticker-text);
+  background: var(--pticker-card-bg);
+}
+.pticker-sound-btn--on {
+  color: var(--pticker-text);
+}
 
-.pticker-close-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; line-height: 1; color: inherit; }
+.pticker-close-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  color: inherit;
+}
 
 /* ── Light theme overrides ── */
 html[data-theme="light"] .pticker-overlay {
-  background: radial-gradient(ellipse at center,
+  background: radial-gradient(
+    ellipse at center,
     color-mix(in srgb, var(--pticker-color) 18%, #f8fafc) 0%,
-    #f1f5f9 70%);
+    #f1f5f9 70%
+  );
   --pticker-text: #0f172a;
-  --pticker-muted: rgba(15,23,42,0.4);
-  --pticker-card-bg: rgba(15,23,42,0.05);
-  --pticker-card-border: rgba(15,23,42,0.12);
-  --pticker-insight-text: rgba(15,23,42,0.7);
-  --pticker-close-bg: rgba(15,23,42,0.06);
-  --pticker-close-border: rgba(15,23,42,0.15);
-  --pticker-close-text: rgba(15,23,42,0.45);
-  --pticker-close-bg-hover: rgba(15,23,42,0.12);
+  --pticker-muted: rgba(15, 23, 42, 0.4);
+  --pticker-card-bg: rgba(15, 23, 42, 0.05);
+  --pticker-card-border: rgba(15, 23, 42, 0.12);
+  --pticker-insight-text: rgba(15, 23, 42, 0.7);
+  --pticker-close-bg: rgba(15, 23, 42, 0.06);
+  --pticker-close-border: rgba(15, 23, 42, 0.15);
+  --pticker-close-text: rgba(15, 23, 42, 0.45);
+  --pticker-close-bg-hover: rgba(15, 23, 42, 0.12);
 }
 html[data-theme="light"] .pticker-bg-symbol {
   opacity: 0.07;
 }
 html[data-theme="light"] .pticker-price {
-  text-shadow: 0 0 40px color-mix(in srgb, var(--pticker-color) 30%, transparent);
+  text-shadow: 0 0 40px
+    color-mix(in srgb, var(--pticker-color) 30%, transparent);
 }
 
 /* ── Price ticker mobile ── */
@@ -3873,8 +4242,13 @@ html[data-theme="light"] .pticker-price {
   .pticker-delta {
     font-size: 1rem;
   }
-  .pticker-live-label { font-size: 0.75rem; }
-  .pticker-live-dot span:first-child { width: 10px; height: 10px; }
+  .pticker-live-label {
+    font-size: 0.75rem;
+  }
+  .pticker-live-dot span:first-child {
+    width: 10px;
+    height: 10px;
+  }
   .pticker-insight-wrap {
     max-width: 92vw;
     padding: 12px 14px;
@@ -3884,16 +4258,28 @@ html[data-theme="light"] .pticker-price {
     width: 32px;
     height: 32px;
   }
-  .pticker-insight-icon svg { width: 15px; height: 15px; }
-  .pticker-insight { font-size: 0.82rem; }
-  .pticker-insight-label { font-size: 0.6rem; }
+  .pticker-insight-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .pticker-insight {
+    font-size: 0.82rem;
+  }
+  .pticker-insight-label {
+    font-size: 0.6rem;
+  }
   .pticker-close {
     top: 12px;
     right: 12px;
     padding: 8px 10px;
   }
-  .pticker-close svg { width: 18px; height: 18px; }
-  .pticker-bg-symbol { font-size: 85vw; }
+  .pticker-close svg {
+    width: 18px;
+    height: 18px;
+  }
+  .pticker-bg-symbol {
+    font-size: 85vw;
+  }
 }
 
 /* ── Tier badges (P / E) — used across components ─────────────────────────── */
@@ -3914,12 +4300,14 @@ html[data-theme="light"] .pticker-price {
 
 .tier-badge--pro {
   background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .tier-badge--elite {
   background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
-  box-shadow: 0 0 6px rgba(167, 139, 250, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 /* Suspense fallback shown briefly the first time a section's own chunk is
@@ -3942,7 +4330,9 @@ html[data-theme="light"] .pticker-price {
 }
 
 @keyframes section-loading-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tier badges ("P" / "E") in the nav are hidden everywhere — purely

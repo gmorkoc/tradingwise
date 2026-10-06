@@ -383,6 +383,17 @@ html:not([data-theme="light"]) .wl-add-btn {
   color: var(--pc-text-muted);
 }
 
+/* Above the 768px mobile cutoff, .price-chart-container's own left inset
+   is margin-left:10px + padding-left:3px = 13px (PriceChart.css's
+   unconditional rule) — this row's own content (.wl-strip-label) has no
+   left padding of its own, so matching that here lines "Watchlist" up
+   with the chart below it. */
+@media (min-width: 769px) {
+  .wl-strip {
+    padding-left: 13px;
+  }
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   /* Left trimmed from 12px to 7px to match .price-chart-container's own

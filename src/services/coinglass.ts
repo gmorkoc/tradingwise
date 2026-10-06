@@ -237,7 +237,7 @@ export const COINS = [
 export type CoinSymbol = typeof COINS[number]['symbol'];
 
 // HOBBYIST plan supports: 4h, 6h, 8h, 12h, 1d, 1w — 1min/1h use CryptoCompare, 1sec uses OKX public API
-type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week' | 'all';
+type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week' | '1month' | 'all';
 
 export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m' | '3m';
 
@@ -673,6 +673,7 @@ export const coinglass = {
     if (interval === '6h')    return fetchBinanceKlines(coin, '6h',  60);
     if (interval === '1day')  return fetchBinanceKlines(coin, '1d',  90);
     if (interval === '1week') return fetchBinanceKlines(coin, '1w',  52);
+    if (interval === '1month') return fetchBinanceKlines(coin, '1M', 24);
     if (interval === 'all')   return fetchAllTimeCandles(coin);
     return fetchBinanceKlines(coin, '4h', 168);
   },
@@ -737,7 +738,7 @@ export const coinglass = {
       return last.close >= last.open ? 'bullish' : 'bearish';
     };
 
-    const [m1, m5, m15, m1h, m4, m6, m1d, m1w] = await Promise.all([
+    const [m1, m5, m15, m1h, m4, m6, m1d, m1w, m1M] = await Promise.all([
       fetchBinanceKlines(coin, '1m',  2),
       fetchBinanceKlines(coin, '5m',  2),
       fetchBinanceKlines(coin, '15m', 2),
@@ -746,6 +747,7 @@ export const coinglass = {
       fetchBinanceKlines(coin, '6h',  2),
       fetchBinanceKlines(coin, '1d',  2),
       fetchBinanceKlines(coin, '1w',  2),
+      fetchBinanceKlines(coin, '1M',  2),
     ]);
 
     return {
@@ -757,6 +759,7 @@ export const coinglass = {
       '6h':    trend(m6),
       '1day':  trend(m1d),
       '1week': trend(m1w),
+      '1month': trend(m1M),
     } as Record<TimeInterval, 'bullish' | 'bearish' | null>;
   },
 
@@ -1501,7 +1504,7 @@ export async function fetchCoinChanges24h(): Promise<Map<string, CoinSnapshot>> 
 
 // ── 24h High/Low from Binance ticker ─────────────────────────────────────────
 
-export interface Ticker24h { high: number; low: number; change: number; price: number; }
+export interface Ticker24h { high: number; low: number; change: number; price: number; quoteVolume?: number; }
 
 let ticker24hCache: Map<string, Ticker24h> | null = null;
 let ticker24hFetchedAt = 0;
@@ -1533,10 +1536,12 @@ export async function fetchCoin24hTickers(
       const high = parseFloat(row.highPrice ?? '0');
       const low  = parseFloat(row.lowPrice  ?? '0');
       if (!high && !low) continue;
-      // Binance's 24hr ticker already returns lastPrice in this same
-      // response — no extra request needed to show it alongside % change.
+      // Binance's 24hr ticker already returns lastPrice and quoteVolume (USDT
+      // notional, not base-asset units) in this same response — no extra
+      // request needed to show either alongside % change.
       const price = parseFloat(row.lastPrice ?? '0');
-      map.set(sym, { high, low, change: parseFloat(row.priceChangePercent ?? '0'), price });
+      const quoteVolume = parseFloat(row.quoteVolume ?? '0');
+      map.set(sym, { high, low, change: parseFloat(row.priceChangePercent ?? '0'), price, quoteVolume });
     }
   } catch {
     if (ticker24hCache) return ticker24hCache;
@@ -1544,6 +1549,32 @@ export async function fetchCoin24hTickers(
   ticker24hCache = map;
   ticker24hFetchedAt = Date.now();
   return map;
+}
+
+export interface TickerSnapshot {
+  bid: number;
+  ask: number;
+  volume: number; // base asset (e.g. BTC)
+  quoteVolume: number; // quote asset / USD notional
+}
+
+// Bid/ask + base-asset volume for one coin's fullscreen chart header —
+// Binance's /24hr ticker already carries both alongside the high/low/price
+// fields fetchCoin24hTickers reads, so this is the same endpoint scoped to
+// a single symbol rather than a second data source.
+export async function getTickerSnapshot(coin: string): Promise<TickerSnapshot | null> {
+  try {
+    const res = await bnApi.get('/api/v3/ticker/24hr', { params: { symbol: `${coin}USDT` } });
+    const row = res.data as Record<string, string>;
+    return {
+      bid: parseFloat(row.bidPrice ?? '0'),
+      ask: parseFloat(row.askPrice ?? '0'),
+      volume: parseFloat(row.volume ?? '0'),
+      quoteVolume: parseFloat(row.quoteVolume ?? '0'),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Uncached single-symbol spot price — deliberately bypasses the shared

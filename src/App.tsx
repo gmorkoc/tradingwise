@@ -806,18 +806,6 @@ function AppDashboard({
     })).filter(h => h.symbol),
     [positions],
   );
-  const hasAnyPosition = positions.some(p => (Number(p.amount) || 0) > 0);
-
-  // Track tick-to-tick direction so the header badge can flash green/red on change
-  const [portfolioDirection, setPortfolioDirection] = useState<"up" | "down" | null>(null);
-  const prevPortfolioValueRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevPortfolioValueRef.current;
-    if (prev !== null && totalAssetValue !== prev) {
-      setPortfolioDirection(totalAssetValue > prev ? "up" : "down");
-    }
-    prevPortfolioValueRef.current = totalAssetValue;
-  }, [totalAssetValue]);
 
   const updatePosition = useCallback((id: string, patch: Partial<Position>) => {
     setPositions(prev => prev.map(p => (p.id === id ? { ...p, ...patch } : p)));
@@ -940,6 +928,10 @@ function AppDashboard({
   // desktop (>=961px, see App.css); the in-between tablet range ignores
   // this entirely and keeps showing both side by side, resizable.
   const [mobileChartTab, setMobileChartTab] = useState<"chart" | "orderbook">("chart");
+  // Bumped on every tap of the chart tab's logo icon — used as a `key` so
+  // the spin keyframe (.chart-tab-logo-spin) remounts and replays each
+  // time, instead of only firing once on mount.
+  const [chartTabSpinKey, setChartTabSpinKey] = useState(0);
   // Simple two-icon segmented switch, mounted once in the top bar
   // (.mch-right) at every width.
   const chartModeToggle = (
@@ -948,12 +940,14 @@ function AppDashboard({
         type="button"
         className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
         title={t("chart.tabLabel", "Chart")}
-        onClick={() => setMobileChartTab("chart")}
+        onClick={() => {
+          setMobileChartTab("chart");
+          setChartTabSpinKey((k) => k + 1);
+        }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17l5-5 4 4 8-9" />
-          <path d="M14 7h6v6" />
-        </svg>
+        <span key={chartTabSpinKey} className="chart-tab-logo-spin">
+          <LogoIcon size={18} />
+        </span>
       </button>
       <button
         type="button"
@@ -1061,9 +1055,10 @@ function AppDashboard({
     return () => { cancelled = true; cancelAnimationFrame(raf); };
   }, [activeSection]);
 
-  const openCoinPicker = () => {
-    if (coinPickerBtnRef.current) {
-      const rect = coinPickerBtnRef.current.getBoundingClientRect();
+  const openCoinPicker = (anchor?: HTMLElement | null) => {
+    const anchorEl = anchor ?? coinPickerBtnRef.current;
+    if (anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
       setCoinPickerPos({ top: rect.bottom + 8, left: rect.left });
     }
     setCoinPickerOpen((v) => {
@@ -1715,6 +1710,15 @@ function AppDashboard({
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
+              {/* .top-nav-bar (its own wordmark) never renders on native
+                  iOS, and is itself hidden below isDesktopWidth — this is
+                  the exact gap where "coinhintz" branding was otherwise
+                  missing entirely. */}
+              {(Capacitor.isNativePlatform() || !isDesktopWidth) && (
+                <div className="top-nav-logo mch-logo mch-logo-shimmer">
+                  coinhint<span className="top-nav-logo-accent">z</span>
+                </div>
+              )}
               <button
                 className={`mch-coin-btn${
                   coinTickers.get(coin)?.change !== undefined
@@ -1802,24 +1806,6 @@ function AppDashboard({
                   const lsSignal = ls >= 1 ? "bull" : "bear";
                   return (
                     <>
-                      {Number.isFinite(livePrice ?? btcData.price) && (
-                        <div className="mch-stat mch-stat--price-mobile">
-                          <span className="mch-stat-label">{coin}/USD</span>
-                          <span className="mch-stat-value">
-                            $
-                            {(livePrice ?? btcData.price!).toLocaleString(
-                              "en-US",
-                              {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 1,
-                              },
-                            )}
-                          </span>
-                          <span className="mch-stat-signal mch-stat-signal--neutral">
-                            Binance
-                          </span>
-                        </div>
-                      )}
                       <HoverTip className="mch-stat" text={t("stats.liqAboveDesc")}>
                         <span className="mch-stat-label">
                           {t("stats.liqAbove")}
@@ -1992,57 +1978,35 @@ function AppDashboard({
                   row is otherwise exactly what was on desktop before any
                   of that mobile work. */}
               {activeSection === "chart" && chartModeToggle}
-              {isWideDesktop && (
-                <button
-                  className="mch-search-btn"
-                  onClick={() => setGlobalSearch(true)}
-                  title="Search (⌘K)"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </button>
-              )}
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
               <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
               {/* The notifications FEED (this button) vs the notifications
-                  TOGGLE (the next one, on/off permission switch) — same
-                  distinction FloatingNavBar's two bell icons already make
-                  on mobile, mirrored here since desktop had no path to the
-                  feed at all otherwise. */}
-              {isWideDesktop && (
-                <button
-                  className="mch-search-btn mch-notif-feed-btn"
-                  onClick={() => setNotificationsCenterOpen(true)}
-                  title="Notifications"
+                  TOGGLE (the next one, on/off permission switch, desktop-
+                  only). Now the only way to reach the feed on mobile too —
+                  FloatingNavBar's own Notifications icon was removed since
+                  it'd otherwise be a duplicate entry point. */}
+              <button
+                className="mch-search-btn mch-notif-feed-btn"
+                onClick={() => setNotificationsCenterOpen(true)}
+                title="Notifications"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  {unreadNotifCount > 0 && (
-                    <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
-                  )}
-                </button>
-              )}
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadNotifCount > 0 && (
+                  <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
+                )}
+              </button>
               {isWideDesktop && (
                 <button
                   className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
@@ -2067,35 +2031,6 @@ function AppDashboard({
                     {!notificationsEnabled && <line x1="3" y1="3" x2="21" y2="21" />}
                   </svg>
                 </button>
-              )}
-              {isWideDesktop && (
-                <div
-                  className="mch-portfolio"
-                  onClick={() => setAssetPanelOpen((v) => !v)}
-                  title={t("header.openCalculator")}
-                >
-                  <svg
-                    className="mch-portfolio-icon"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                  <span className="mch-portfolio-label">{t("header.portfolioValue")}</span>
-                  <span
-                    className={`mch-portfolio-value${hasAnyPosition && portfolioDirection ? ` ${portfolioDirection}` : ""}`}
-                  >
-                    {hasAnyPosition ? formatCurrency(totalAssetValue) : "—"}
-                  </span>
-                </div>
               )}
             </div>
           </div>
@@ -2175,12 +2110,14 @@ function AppDashboard({
                         refreshTrigger={refreshTrigger}
                         theme={theme}
                         coin={coin}
+                        quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
                         onZoneChange={(zone, price) => {
                           setChartZone(zone);
                           setChartPrice(price);
                         }}
                         onOpenAuth={onOpenAuth}
                         onOpenUpgrade={onOpenUpgrade}
+                        onOpenCoinPicker={openCoinPicker}
                         onFullscreenChange={setChartFullscreen}
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
@@ -2777,15 +2714,14 @@ function AppDashboard({
           desktop at all. */}
       {!isWideDesktop && !distractionFree && !chartFullscreen && (
         <FloatingNavBar
-          onOpenNotifications={() => setNotificationsCenterOpen(true)}
-          notificationsOpen={notificationsCenterOpen}
-          unreadNotificationCount={unreadNotifCount}
           signalsOpen={signalsOpen}
           onSearch={() => setGlobalSearch(true)}
           searchOpen={globalSearch}
           dailyBriefOpen={dailyBriefOpen}
           onToggleDailyBrief={() => setDailyBriefOpen((v) => !v)}
           agentUnread={agentUnread}
+          onOpenCalculator={() => setAssetPanelOpen((v) => !v)}
+          calculatorOpen={assetPanelOpen}
         />
       )}
 

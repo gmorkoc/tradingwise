@@ -94,20 +94,24 @@ html[data-theme="light"] .chart-active {
 .chart-active
   .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
   /* Right margin trimmed — this sits right next to .ob-card, and their
-     combined margins (10px + 10px) left an oversized gap between them. */
-  margin: 10px 4px 10px 10px;
-  padding: 18px 20px;
+     combined margins (10px + 10px) left an oversized gap between them.
+     No top margin/padding — this card sits flush against whatever's
+     above it instead of adding its own gap. Left: margin-left:10 +
+     padding-left:3 (13px total) — was 10+20=30px here unconditionally,
+     only corrected to 13px at >=961px below, leaving a 769-960px gap
+     where this card (and everything meant to line up with it) sat 17px
+     further right than everywhere else. Setting it here closes that gap
+     instead of only patching it at one specific width. */
+  margin: 0 4px 10px 10px;
+  padding: 0 20px 18px 3px;
   border-radius: 0;
   border: none;
 }
 @media (max-width: 768px) {
   .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    /* Left/right trimmed further (was 6px margin + 10px padding = 16px
-       inset on the left alone) — read as noticeably too much side space
-       on real iOS devices, where every horizontal pixel matters more. */
-    margin: 6px 2px 3px 3px;
-    padding: 12px 4px;
+    margin: 0 0 3px 0;
+    padding: 0 16px 12px;
     border-radius: 0;
   }
 }
@@ -116,18 +120,11 @@ html[data-theme="light"] .chart-active {
    .ob-card is ever visible at this width, in the same single-panel
    layout the tabs switch between — so this card's title should start at
    the same x position as the tab labels directly above it. App.css's own
-   >=961px override for .chart-mobile-tabs sets margin-left:10px + its
-   unchanged padding:3px = 13px before the tab label text; matched here
-   with margin-left:10px + padding-left:3px. Longhand (not `margin`/
-   `padding` shorthand) so top/bottom and the right side stay whatever the
-   unconditional rules above already set per theme. */
-@media (min-width: 961px) {
-  .chart-active
-    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
-    margin-left: 10px;
-    padding-left: 3px;
-  }
-}
+   >=961px .chart-mobile-tabs is margin-left:10px + padding:3px = 13px
+   before the tab label text — now the unconditional rule above already
+   matches that (margin-left:10, padding-left:3), so this used to be a
+   separate >=961px-only override but is redundant now that the base rule
+   covers every width above the 768px mobile cutoff. */
 
 /* Native fullscreen (desktop) — matches CSS overlay look */
 .price-chart-container:fullscreen {
@@ -149,6 +146,16 @@ html[data-theme="light"] .price-chart-container--fs {
   display: flex;
   align-items: stretch;
   gap: 8px;
+}
+
+/* Interval row's own standalone wrapper, below the chart canvas (normal/
+   non-fullscreen, mobile and desktop) — full width, content left-aligned
+   inside it. */
+.chart-interval-row-standalone {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 16px;
 }
 
 .chart-fs-close-btn {
@@ -228,6 +235,14 @@ html[data-theme="light"]
   background: var(--pc-bg);
 }
 
+@media (min-width: 769px) {
+  .price-chart-container--fs,
+  .price-chart-container:fullscreen {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}
+
 /* WebKit quirk (confirmed by direct device measurement): a `position:fixed`
    element's effective top is pushed down by the safe-area-inset-top amount
    even with `inset: 0` / `top: 0`, and that push can't be cancelled from
@@ -255,16 +270,12 @@ html[data-theme="light"]
   display: none;
 }
 
-/* Sticky header group in fullscreen (desktop) */
+/* No longer sticky — scrolls away with the rest of the fullscreen page
+   instead of pinning to the top, so the whole page (header included) is
+   one continuous scroll area. */
 .price-chart-container--fs .chart-fs-header-group,
 .price-chart-container:fullscreen .chart-fs-header-group {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: rgba(var(--pc-scrim-rgb), 0.75);
-  backdrop-filter: blur(12px);
-  padding-top: 12px;
-  margin-top: -12px;
+  position: static;
 }
 
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
@@ -327,10 +338,23 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  /* flex-start, not center — chart-header-left got taller once High/Low
+     moved below the title, so centering pushed chart-header-right's
+     avatar/vol block down below the title instead of level with it. */
+  align-items: flex-start;
+  margin-bottom: 0;
   flex-wrap: wrap;
   gap: 20px;
+  padding: 8px;
+}
+
+/* Above the mobile cutoff, .price-chart-container's own padding-left:3px
+   is the whole inset — this 8px on top of it would leave "Bitcoin" 8px
+   further right than everything else now matched to that 3px. */
+@media (min-width: 769px) {
+  .chart-header {
+    padding-left: 0;
+  }
 }
 
 .chart-header-left {
@@ -350,26 +374,8 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-title-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   flex-wrap: wrap;
-}
-
-.live-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #4ade80;
-  letter-spacing: 0.05em;
-  animation: pulse-live 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse-live {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
 }
 
 .chart-header h3,
@@ -378,6 +384,29 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* Coin name on iOS/mobile — tappable, opens the same coin-switcher
+   dropdown+search the desktop BTC/USD pill button already opens
+   (App.tsx's openCoinPicker, now anchor-aware instead of hardcoded to
+   that one button's ref). Small caret hints it's a trigger, not just a
+   label. */
+.chart-title-tappable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chart-title-tappable:focus,
+.chart-title-tappable:focus-visible {
+  outline: none;
+}
+.chart-title-caret {
+  flex-shrink: 0;
+  display: block;
+  align-self: center;
+  color: var(--color-text-muted);
 }
 
 /* Always-visible current price in the fullscreen header — kept independent
@@ -404,29 +433,406 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: #fb7185;
 }
 
-/* Big price readout above the chart canvas, Robinhood/Coinbase-style —
-   mobile/iOS only (hidden by default; shown below). Desktop keeps the
-   compact .chart-current-price-group in the fullscreen header instead,
-   so this never doubles up there. */
-.chart-mobile-price-header {
+/* 24h volume — the right column of .chart-header on mobile (right next to
+   the coin icon area), paired with .chart-mobile-price-row (price/change,
+   left column under the coin name) below. Desktop keeps the compact
+   .chart-current-price-group in the fullscreen header instead, so neither
+   ever doubles up there. */
+/* Avatar + 24hr vol — now shown on desktop too (in .chart-header-right,
+   since interval pills moved below the chart there), not just mobile. */
+.chart-mobile-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.chart-mobile-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #fff;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.chart-mobile-vol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-size: 0.68rem;
+}
+
+.chart-mobile-vol-label {
+  position: relative;
+  color: var(--pc-text-muted);
+  font-weight: 600;
+  padding-bottom: 8px;
+}
+
+/* Dotted divider between the "24hr vol" label and its value, not the
+   avatar above — its own line rather than a border, which would just
+   round off into a circle's curve instead of reading as a line. */
+.chart-mobile-vol-label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  transform: translateX(-50%);
+  width: 20px;
+  border-bottom: 2px dotted var(--pc-border);
+}
+
+.chart-mobile-vol-value {
+  color: var(--pc-text-secondary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-mobile-price-row {
   display: none;
 }
 
+/* Fullscreen mobile/iOS header (see the !isDesktopWidth branch in
+   PriceChart.tsx): exchange-style High/Low · Bid/Ask · Vol stats grid,
+   then the price + change line below it — picked over the badge-based
+   directions above. */
+.chart-fs-header-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 0 0 16px;
+}
+
+.chart-fs-coin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-fs-coin-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Wraps the stats grid + both meters — stacked on mobile (unchanged),
+   but on desktop (see the min-width:769px block below) becomes a single
+   row so Signal/Div sit next to High/Low/Bid/Ask/Vol instead of below
+   them, using the spare desktop width instead of stacking rows. */
+.chart-fs-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.chart-fs-stats-grid {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.chart-fs-stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chart-fs-stat-col--center {
+  align-items: center;
+}
+
+.chart-fs-stat-col--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* High/Low side by side instead of stacked (normal/non-fullscreen mobile
+   and desktop title rows) — the fullscreen stats-grid's own High/Low
+   column keeps the stacked layout, unaffected since it doesn't get this
+   modifier class. */
+.chart-fs-stat-col--row {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.chart-fs-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.chart-fs-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--pc-text-muted);
+}
+
+.chart-fs-stat-value {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-fs-stat-value--up {
+  color: var(--pc-success);
+}
+
+.chart-fs-stat-value--down {
+  color: var(--pc-danger);
+}
+
+.chart-fs-price-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chart-fs-price-change {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-fs-price-change--up {
+  color: var(--pc-success);
+}
+
+.chart-fs-price-change--down {
+  color: var(--pc-danger);
+}
+
+/* Signal + Divergence each get their own block: label on its own line,
+   then the gradient meter track (glowing dot sliding to the current
+   position) + current-state text below it — picked over the segmented
+   pill-group above. */
+.chart-fs-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+
+.chart-fs-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.chart-fs-meter-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pc-text-muted);
+}
+
+.chart-fs-meter-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4ade80, #64748b, #fb7185);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.chart-fs-meter-track--rev {
+  background: linear-gradient(90deg, #fb7185, #64748b, #4ade80);
+}
+
+.chart-fs-meter-dot {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--pc-bg);
+  transform: translate(-50%, -50%);
+  transition: left 0.3s ease;
+}
+
+.chart-fs-meter-dot--oversold {
+  background: #4ade80;
+  box-shadow: 0 0 6px 1px rgba(74, 222, 128, 0.7);
+}
+
+.chart-fs-meter-dot--overbought {
+  background: #fb7185;
+  box-shadow: 0 0 6px 1px rgba(251, 113, 133, 0.7);
+}
+
+.chart-fs-meter-dot--neutral {
+  background: #94a3b8;
+  box-shadow: 0 0 6px 1px rgba(148, 163, 184, 0.6);
+}
+
+.chart-fs-meter-value {
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 58px;
+  text-align: right;
+}
+
+.chart-fs-meter-value--oversold {
+  color: var(--pc-success);
+}
+
+.chart-fs-meter-value--overbought {
+  color: var(--pc-danger);
+}
+
+.chart-fs-meter-value--neutral {
+  color: var(--pc-text-secondary);
+}
+
+/* Desktop fullscreen reuses the exact same stats-grid header as mobile
+   (content parity), but at mobile's font sizes it reads as a thin strip
+   lost in a much wider card — scaled up here instead of leaving it
+   cramped against all the spare desktop width. */
+@media (min-width: 769px) {
+  .chart-fs-header-block {
+    gap: 16px;
+  }
+
+  .chart-fs-coin-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
+  }
+
+  .chart-fs-header-block .chart-fs-coin-name {
+    font-size: 1.5rem;
+  }
+
+  /* Stats grid + both meters sit in one row instead of stacking — there's
+     room next to High/Low/Bid/Ask/Vol for Signal/Div too. */
+  .chart-fs-info-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 48px;
+  }
+
+  /* Mobile's justify-content:space-between spreads these to fill a
+     narrow card, which is fine there — on a wide desktop screen it
+     stretched the 3 columns edge-to-edge with huge dead gaps between
+     them. Desktop groups them close together instead, just with a
+     comfortable gap. */
+  .chart-fs-stats-grid {
+    justify-content: flex-start;
+    gap: 72px;
+    width: auto;
+  }
+
+  .chart-fs-stat-label {
+    font-size: 0.85rem;
+  }
+
+  .chart-fs-stat-value {
+    font-size: 0.95rem;
+  }
+
+  .chart-fs-price-line {
+    gap: 14px;
+  }
+
+  .chart-fs-price-line .chart-current-price {
+    font-size: 2rem;
+  }
+
+  .chart-fs-price-change {
+    font-size: 1.15rem;
+  }
+
+  /* Narrower than the 420px it had as its own full-width row — it now
+     sits beside the stats grid in .chart-fs-info-row, not stretched
+     across the whole card. */
+  .chart-fs-meter {
+    width: 300px;
+    flex-shrink: 0;
+    gap: 7px;
+  }
+
+  .chart-fs-meter-label {
+    font-size: 0.88rem;
+  }
+
+  .chart-fs-meter-row {
+    gap: 14px;
+  }
+
+  .chart-fs-meter-track {
+    height: 9px;
+  }
+
+  .chart-fs-meter-dot {
+    width: 18px;
+    height: 18px;
+  }
+
+  .chart-fs-meter-value {
+    font-size: 0.95rem;
+    min-width: 84px;
+  }
+}
+
 @media (max-width: 768px) {
-  .chart-mobile-price-header {
+  .chart-mobile-price-row {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     gap: 2px;
-    padding: 2px 6px 12px;
+  }
+
+  /* Smaller than the default badge (desktop's title-row size), now its
+     own row below the price-change line, and plain text — no chip
+     background/border now that it's not sitting inline next to anything
+     that needs visual separation. */
+  .chart-mobile-price-row .day-hl-badge {
+    align-self: flex-start;
+    font-size: 0.62rem;
+    padding: 0;
+    gap: 3px;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    backdrop-filter: none;
   }
 
   .chart-mobile-price {
-    font-size: 1.7rem;
+    font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums;
     color: var(--pc-text);
     transition: color 0.25s ease;
+    white-space: nowrap;
   }
 
   .chart-mobile-price--up {
@@ -439,9 +845,11 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 
   .chart-mobile-price-change {
     display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     align-items: center;
     gap: 4px;
-    font-size: 0.86rem;
+    font-size: 0.8rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
@@ -467,6 +875,23 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
     font-weight: 700;
     font-size: 0.74rem;
   }
+}
+
+/* The chart canvas itself (.chart-canvas-wrap) is a plain static-position
+   element with no z-index of its own — as the fullscreen scroll area
+   (.price-chart-fs-scroll) scrolls content under the sticky header
+   (.chart-fs-header-group, z-index:10), that static canvas has no
+   protection and paints BEHIND the header per normal stacking rules,
+   even though it's later in paint order. Raising the whole wrap (canvas +
+   PredictionOverlay + ChartDrawingTools + Reset/Save/Expand) above the
+   header as one stacking context fixes it for all of them at once,
+   instead of patching each child's z-index individually. Still well
+   under the full-screen sheet overlays (200020+).
+   NOTE: .chart-dblclick-wrap itself gets position:relative inline
+   (PriceChart.tsx) — this just adds the z-index on top of that. */
+.price-chart-container--fs .chart-dblclick-wrap,
+.price-chart-container:fullscreen .chart-dblclick-wrap {
+  z-index: 20;
 }
 
 .chart-dblclick-wrap::after {
@@ -532,37 +957,29 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: #fb7185;
 }
 
-.zone-signal {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 20px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: none;
-  border: none;
-}
-
+/* Compact pill — background/border tinted from the pill's own text color
+   via currentColor, so every zone-signal state and div-badge direction
+   gets a matching soft pill automatically. Previously this size only
+   applied on mobile (max-width:768px); desktop kept a bigger, borderless
+   look that read as a different, inconsistent style next to it. */
+.zone-signal,
 .div-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 9px;
-  border-radius: 4px;
-  font-size: 0.72rem;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
 }
 .div-badge--bullish {
   color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.35);
-  background: rgba(74, 222, 128, 0.08);
 }
 .div-badge--bearish {
   color: #fb7185;
-  border-color: rgba(251, 113, 133, 0.35);
-  background: rgba(251, 113, 133, 0.08);
 }
 .div-badge--locked {
   color: var(--color-text-muted);
@@ -691,7 +1108,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: #f59e0b;
 }
 .zone-signal--neutral {
-  color: var(--color-text-secondary);
+  color: #94a3b8;
 }
 .zone-signal--sell {
   color: #fb7185;
@@ -744,15 +1161,22 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-reset-view-btn {
   position: absolute;
   top: 8px;
-  right: 8px;
-  z-index: 4;
+  left: 8px;
+  /* Above ChartDrawingTools' canvas (z-index 1001) and toolbar (1002) —
+     at the old z-index:4 either one would fully cover this button
+     whenever drawing tools were active. Still well under the full-screen
+     sheets (200020+), which should cover it when they're open. */
+  z-index: 1150;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 5px 11px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: var(--color-card-bg);
+  /* --color-card-bg is intentionally translucent elsewhere in the app
+     (rgba, ~0.9 alpha) — here it let chart content show through and
+     wash the button out. --color-surface is the same token opaque. */
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   font-size: 0.72rem;
   font-weight: 700;
@@ -765,8 +1189,27 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   line-height: 1;
 }
 .chart-reset-view-btn:hover {
-  background: var(--color-input-bg);
+  background: var(--color-surface-alt);
   color: var(--color-text);
+}
+
+/* Save/Reset/Expand always stack in this order (Save above Reset above
+   Expand), in both normal and fullscreen view — Save shares the base
+   .chart-reset-view-btn class and its top:8px slot; the other two are
+   bumped down one slot each so all three never overlap. */
+.chart-save-view-btn::before {
+  content: "📷";
+  font-size: 0.72rem;
+}
+
+.chart-reset-view-btn:not(.chart-save-view-btn):not(.chart-expand-view-btn) {
+  top: 38px;
+}
+.chart-expand-view-btn {
+  top: 68px;
+}
+.chart-expand-view-btn::before {
+  content: "⛶";
 }
 
 /* HUD-style trigger: a glowing circular icon badge with a text label beside
@@ -1011,31 +1454,40 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   color: var(--color-text);
 }
 
+/* No container border/bg — just a bare row. Only the active interval
+   itself reads as a pill (full border-radius + fill), not the whole
+   group. */
 .interval-pills {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   align-content: center;
-  gap: 2px;
+  gap: 8px;
   padding: 3px;
-  background: var(--pc-panel-2);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 6px;
-  backdrop-filter: blur(4px);
+  background: none;
+  border: none;
 }
 
 .interval-pill {
+  /* Global `button` reset (App.css) never sets appearance:none — on iOS
+     Safari/WKWebView a <button> keeps native system chrome by default,
+     which renders its own corner treatment on top of/instead of a custom
+     border-radius here. Without this, the radius looked wrong only on
+     device, never in a desktop browser (desktop WebKit doesn't apply the
+     same native button skin). */
+  appearance: none;
+  -webkit-appearance: none;
   position: relative;
   display: inline-flex;
   align-items: center;
   line-height: 1;
   gap: 3px;
-  padding: 5px 9px;
+  padding: 7px 13px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: #9490c0;
-  font-size: 0.73rem;
+  font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -1043,6 +1495,18 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   transition: background 0.14s, border-color 0.14s, color 0.14s,
     box-shadow 0.14s;
   user-select: none;
+}
+
+/* index.css's app-wide `button:focus-visible { outline: 4px auto
+   -webkit-focus-ring-color }` is a genuine keyboard-accessibility feature
+   elsewhere, but iOS WKWebView has shown it firing on a plain tap too —
+   invisible on desktop/web, where :focus-visible correctly stays
+   keyboard-only. Scoped off here rather than removed globally, so
+   keyboard nav on other buttons keeps its focus ring. */
+.interval-pill:focus,
+.interval-pill:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .interval-pill:hover {
@@ -1054,6 +1518,7 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 .interval-pill--active {
   background: #4f46e5;
   border-color: transparent;
+  border-radius: 999px;
   color: #fff;
 }
 
@@ -1106,11 +1571,6 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 }
 
 /* light theme */
-html[data-theme="light"] .interval-pills {
-  background: rgba(0, 0, 0, 0.025);
-  border-color: rgba(0, 0, 0, 0.07);
-}
-
 html[data-theme="light"] .interval-pill {
   color: #94a3b8;
 }
@@ -1494,32 +1954,65 @@ html[data-theme="light"] .cap-overlay-feature {
 
 @media (max-width: 768px) {
   .price-chart-container {
-    padding: 8px 4px;
+    padding: 8px 16px;
   }
 
+  .zone-signal,
+  .div-badge {
+    font-size: 0.58rem;
+    padding: 1px 5px;
+  }
+
+  .chart-fs-header-group {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Two columns — left: name/status/H-L/divergence, right: 24h vol/price/
+     change% (.chart-mobile-stats, mobileStatsBlock in PriceChart.tsx).
+     Interval pills move to their own full-width row below instead of
+     sharing chart-header-right with the stats (see
+     chart-header-controls/.interval-pills, rendered as a sibling after
+     .chart-header closes on mobile — chartControlsPanel in
+     PriceChart.tsx). */
   .chart-header {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 10px;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .chart-header-left {
     gap: 3px;
+    min-width: 0;
   }
 
   .chart-header h3 {
-    font-size: 1rem;
+    font-size: 1.4rem;
+    font-weight: 800;
   }
 
-  /* Controls row: indicators + interval full width */
-  .chart-header-right {
-    width: 100%;
+  /* Tighter than the 14px desktop gap — on mobile this row is just
+     name/status/div-badge stacked close together, not spread across a
+     wide header. */
+  .chart-title-row {
     gap: 6px;
   }
 
+  .chart-header-right {
+    width: auto;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  /* flex:1 and margin-top removed — .chart-interval-row-standalone (its
+     new parent, below the chart) now owns the spacing above it and
+     centers it; flex:1 here would stretch it to fill that row and
+     override the centering. */
   .chart-header-controls {
-    flex: 1;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -1547,52 +2040,107 @@ html[data-theme="light"] .cap-overlay-feature {
     display: flex;
     flex-wrap: nowrap;
     flex: 1 1 100%;
-    width: 100%;
+    width: auto;
     min-width: 0;
+    /* Tightened from 36px/18px — that left too little room for 6 columns
+       plus the "more" button on a 375pt-wide phone once each label's own
+       12px horizontal padding is accounted for; risked visibly cramped
+       or clipped text on smaller devices. */
+    margin: 0 16px;
     background: none;
     border: none;
     backdrop-filter: none;
     padding: 0;
-    gap: 2px;
+    gap: 6px;
   }
+  /* .interval-pill itself is an equal-width flex column (flex:1, for a
+     consistent tap target per interval) — the colored active "pill" shape
+     lives on .interval-pill-label instead, which only sizes to its own
+     text. Putting the background directly on .interval-pill made it
+     stretch to the full column width, and since that width was roughly
+     equal to the row's height, border-radius rounded it into a circle/
+     blob instead of a capsule. The inner label has real horizontal
+     padding and hugs its content, so it reads as a proper pill regardless
+     of how wide its column is. */
   .interval-pill {
     flex: 1;
+    /* Flex items default to min-width:auto, which floors shrinking at the
+       label's own natural text width — with 7 items in a nowrap row that
+       was enough to push "ALL" and the gear button off the right edge of
+       the screen entirely. This is what actually lets flex:1 shrink
+       below content width when the row is tight. */
+    min-width: 0;
     justify-content: center;
-    padding: 7px 4px;
-    border-radius: 999px;
+    padding: 8px 0px;
     font-size: 0.78rem;
+    background: none;
+  }
+  .interval-pill-label {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  /* The desktop bull/bear rules target the outer button directly with two
+     classes combined (higher specificity than .interval-pill alone), so
+     they'd still win here and bleed a second background through behind
+     the label's own. Reset them explicitly at this width. */
+  .interval-pill--active.interval-pill--active-bull,
+  .interval-pill--active.interval-pill--active-bear {
+    background: none;
+  }
+  /* The desktop light-theme rules (html[data-theme="light"] .interval-
+     pill--active, and its own .interval-pill--active-bull/-bear variants
+     — all unconditional across every width) each set their own border-
+     color/box-shadow/gradient on the outer button. Every one of them has
+     higher specificity than a plain .interval-pill reset (the `html`
+     element selector, then two classes for the bull/bear variants), so
+     each previously-fixed version still left a bordered box behind the
+     label for whichever one actually matched. Matched selector shape for
+     all three so none of them can win here. */
+  .interval-pill--active,
+  html[data-theme="light"] .interval-pill--active,
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bull,
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
   }
   .interval-pill--secondary {
     display: none;
   }
-  .interval-pill--active {
+  .interval-pill--active .interval-pill-label {
     background: var(--pc-accent);
   }
-  html[data-theme="light"] .interval-pill--active {
+  html[data-theme="light"] .interval-pill--active .interval-pill-label {
     background: var(--pc-accent);
     border-color: transparent;
     color: #fff;
     box-shadow: none;
   }
-  /* Dark theme's pastel --pc-success/--pc-danger need dark text for
-     contrast (same reasoning as the desktop variant above); light theme's
-     versions are solid/dark enough that the white text already inherited
-     from .interval-pill--active stays legible, so it's left alone. */
-  .interval-pill--active.interval-pill--active-bull {
-    background: var(--pc-success);
-    color: #052e16;
+  /* Soft tinted fill + colored text — matches the rest of this card's
+     pastel badge language (Sell Zone/Fib/EMA labels, the Neutral status
+     pill), instead of a flat saturated block that read as out of place
+     next to them. Same color-mix technique as the desktop light-theme
+     dropdown variant above. */
+  .interval-pill--active.interval-pill--active-bull .interval-pill-label {
+    background: color-mix(in srgb, var(--pc-success) 22%, transparent);
+    color: var(--pc-success);
   }
-  .interval-pill--active.interval-pill--active-bear {
-    background: var(--pc-danger);
-    color: #450a0a;
+  .interval-pill--active.interval-pill--active-bear .interval-pill-label {
+    background: color-mix(in srgb, var(--pc-danger) 18%, transparent);
+    color: var(--pc-danger);
   }
-  html[data-theme="light"] .interval-pill--active.interval-pill--active-bull {
-    background: var(--pc-success);
-    color: #fff;
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bull .interval-pill-label {
+    background: color-mix(in srgb, var(--pc-success) 16%, transparent);
+    color: var(--pc-success);
   }
-  html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
-    background: var(--pc-danger);
-    color: #fff;
+  html[data-theme="light"] .interval-pill--active.interval-pill--active-bear .interval-pill-label {
+    background: color-mix(in srgb, var(--pc-danger) 14%, transparent);
+    color: var(--pc-danger);
   }
   /* index.css's global `button { padding: 0.6em 1.2em }` was only being
      overridden on the left (padding-left below) — the inherited ~9.6px
@@ -1612,6 +2160,17 @@ html[data-theme="light"] .cap-overlay-feature {
     color: var(--pc-text-muted);
     cursor: pointer;
   }
+  /* Visual order only — the underlying INTERVALS.map() order (unchanged,
+     PriceChart.tsx) still drives desktop's full 10-pill row and the
+     "more" bottom sheet, so reordering is done here via `order` rather
+     than touching that array, which would've reordered those too. */
+  .interval-pill[data-interval="1h"] { order: 1; }
+  .interval-pill[data-interval="4h"] { order: 2; }
+  .interval-pill[data-interval="1day"] { order: 3; }
+  .interval-pill[data-interval="1week"] { order: 4; }
+  .interval-pill[data-interval="1month"] { order: 5; }
+  .interval-pill[data-interval="all"] { order: 6; }
+  .interval-pill-more { order: 7; }
   html[data-theme="light"] .interval-pills {
     background: none;
     border-color: transparent;
@@ -1644,7 +2203,10 @@ html[data-theme="light"] .cap-overlay-feature {
     height: 92px;
     box-sizing: border-box;
     padding: 10px 12px;
-    margin-bottom: 10px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    margin-left: 0;
+    margin-right: 0;
     border-radius: 12px;
     overflow: hidden;
   }
@@ -1672,7 +2234,7 @@ html[data-theme="light"] .cap-overlay-feature {
   }
 
   .chart-legend {
-    margin-bottom: 6px;
+    margin-bottom: 10px;
     min-height: 24px;
   }
 }
@@ -1774,16 +2336,11 @@ html[data-theme="light"] .cap-overlay-feature {
 
 @media (max-width: 480px) {
   .chart-header h3 {
-    font-size: 0.9rem;
+    font-size: 1.25rem;
   }
 
   .day-hl-badge {
     font-size: 0.65rem;
-  }
-
-  .zone-signal {
-    font-size: 0.72rem;
-    padding: 3px 6px;
   }
 
   .zone-signal-gate {
@@ -1875,27 +2432,20 @@ html[data-theme="light"] .cap-overlay-feature {
   align-self: stretch;
 }
 
-.price-chart-container--fs .chart-depth-btn,
-.price-chart-container:fullscreen .chart-depth-btn {
+/* Order Depth has no place in fullscreen — but this shares the
+   .chart-depth-btn class with the Indicators toggle, which DOES belong
+   there, so :not() keeps that one visible instead of hiding both. */
+.price-chart-container--fs .chart-depth-btn:not(.chart-indicators-btn),
+.price-chart-container:fullscreen .chart-depth-btn:not(.chart-indicators-btn) {
   display: none;
 }
 
-/* Save/Exit stay pinned in the top row in fullscreen; Indicators/Intervals
-   relocate down into chart-legend-actions instead, so the legend row's own
-   Save/Exit copies would just be duplicates. */
-.chart-title-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Direct-child selector only — the legend row's OWN native Save/Exit
-   buttons sit right in .chart-legend-actions, but the new Save button
-   (next to Indicators) lives nested inside chart-header-controls and must
-   stay visible. */
-.price-chart-container--fs .chart-legend-actions > .chart-screenshot-btn,
+/* Direct-child selector only — the legend row's OWN native Exit button
+   sits right in .chart-legend-actions, hidden in fullscreen since the
+   floating Reset-stack's Expand/Exit button already handles that there.
+   (Save used to be here too — it's now always the floating button above
+   Reset, so there's no legend-row copy left to hide.) */
 .price-chart-container--fs .chart-legend-actions > .chart-fullscreen-btn,
-.price-chart-container:fullscreen .chart-legend-actions > .chart-screenshot-btn,
 .price-chart-container:fullscreen
   .chart-legend-actions
   > .chart-fullscreen-btn {
@@ -1906,6 +2456,19 @@ html[data-theme="light"] .cap-overlay-feature {
 .price-chart-container--fs .chart-livechat-pill,
 .price-chart-container:fullscreen .chart-livechat-pill {
   display: none;
+}
+
+/* .chart-header-left is a flex item that otherwise only hugs its own
+   content width — with chart-header-right removed in fullscreen (mobile
+   AND desktop widths, both now show the stats-grid header) it's the sole
+   child, so .chart-fs-header-block's width:100% has no real container
+   width to fill without this. This was previously stuck inside the
+   max-width:768px block below, so desktop fullscreen never got it and
+   the whole header shrink-wrapped to content width instead of using the
+   card's full, much wider, desktop real estate. */
+.price-chart-container--fs .chart-header-left,
+.price-chart-container:fullscreen .chart-header-left {
+  width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -1921,32 +2484,19 @@ html[data-theme="light"] .cap-overlay-feature {
     margin-bottom: 6px;
   }
 
+  /* Desktop's 20px .chart-header margin-bottom left a big dead gap above
+     the Save row on mobile fullscreen — the two-column sketch keeps this
+     tight (12px) since nothing else sits between the header and the
+     chart. */
+  .price-chart-container--fs .chart-header,
+  .price-chart-container:fullscreen .chart-header {
+    margin-bottom: 10px;
+  }
+
   .price-chart-container--fs .chart-legend,
   .price-chart-container:fullscreen .chart-legend {
     margin-bottom: 0;
     min-height: 0;
-  }
-
-  /* Anchored to the header's true top-right corner (row 1, next to the
-     price/title line) instead of sitting in normal flow below everything
-     in chart-header-left — chart-header is column-direction on mobile
-     (base rule further down), so as a plain flex sibling Exit would land
-     below the whole title/status/H-L stack instead of beside its top. */
-  .price-chart-container--fs .chart-header,
-  .price-chart-container:fullscreen .chart-header {
-    position: relative;
-  }
-  .price-chart-container--fs .chart-header-right,
-  .price-chart-container:fullscreen .chart-header-right {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: auto;
-    margin-left: 0;
-  }
-  .price-chart-container--fs .chart-header-left,
-  .price-chart-container:fullscreen .chart-header-left {
-    padding-right: 48px;
   }
 
   /* Status (the Overbought/Oversold zone badge) reads as its own row,
@@ -1960,12 +2510,7 @@ html[data-theme="light"] .cap-overlay-feature {
   .price-chart-container:fullscreen .chart-title-row {
     row-gap: 6px;
   }
-  .price-chart-container--fs .chart-title-row .zone-signal,
-  .price-chart-container--fs .chart-title-row .zone-signal-gate,
-  .price-chart-container:fullscreen .chart-title-row .zone-signal,
-  .price-chart-container:fullscreen .chart-title-row .zone-signal-gate {
-    flex-basis: 100%;
-  }
+
 
   /* Save + Indicators + interval row (chartControlsPanel, docked here in
      fullscreen — see PriceChart.tsx) spans the full row instead of hugging
@@ -1976,6 +2521,12 @@ html[data-theme="light"] .cap-overlay-feature {
     width: 100%;
     margin-left: 0;
     margin-top: 6px;
+    /* Base rule has no flex-wrap — with Indicators, the fullscreen-only
+       Save button, Order Depth, and Compact View all in this one row,
+       content overflowed the screen width and anything past the first
+       button or two was clipped off-screen instead of visible. */
+    flex-wrap: wrap;
+    row-gap: 6px;
   }
   .price-chart-container--fs .chart-legend-actions .chart-header-controls,
   .price-chart-container:fullscreen
@@ -2023,33 +2574,83 @@ html[data-theme="light"] .cap-overlay-feature {
   background: var(--color-primary-soft);
 }
 
+/* Bordered, pill-background treatment so Indicators/Order Depth/Save/
+   Expand read as dropdown-style buttons instead of bare icons, matching
+   the sheet/dropdown presentation each of them opens (or, for Save/
+   Expand, just visual consistency with the row). Previously mobile/iOS
+   only — desktop kept the old bare vertical icon-over-label look, which
+   read as a different, lesser style next to iOS's pill buttons. Now
+   unconditional so both look identical. */
+.chart-depth-btn,
+.chart-screenshot-btn,
+.chart-fullscreen-btn {
+  flex-direction: row;
+  gap: 3px;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-alt);
+}
+html[data-theme="light"] .chart-depth-btn,
+html[data-theme="light"] .chart-screenshot-btn,
+html[data-theme="light"] .chart-fullscreen-btn {
+  background: #fff;
+  border-color: #e5e9f0;
+}
+/* Icons were hardcoded to 15x15 in JSX — shrunk here so bordered buttons
+   with their labels fit one row instead of wrapping/overflowing. */
+.chart-depth-btn svg,
+.chart-screenshot-btn svg,
+.chart-fullscreen-btn svg {
+  width: 12px;
+  height: 12px;
+}
+.chart-depth-btn:hover,
+.chart-screenshot-btn:hover,
+.chart-fullscreen-btn:hover,
+.chart-depth-btn--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+@media (max-width: 768px) {
+  /* margin-left:auto (base rule) pushes this row to the right edge of
+     .chart-legend — that's fine on desktop next to the BB legend labels,
+     but on mobile this row is alone, so it should sit at the left edge
+     instead. */
+  .chart-legend-actions {
+    margin-left: 0;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 400px) {
+  .chart-icon-label {
+    font-size: 0.56rem;
+  }
+  .chart-depth-btn,
+  .chart-screenshot-btn,
+  .chart-fullscreen-btn {
+    padding: 4px 5px;
+  }
+}
+
 /* Exit reads as the primary fullscreen control now that it's pinned alone
-   in the top row, so it gets a bigger tap target than the compact icon row
-   it came from. Scoped to .chart-title-actions only — the Save button that
-   now sits next to Indicators shares that row's stretch-aligned flex line,
-   so enlarging it there would inflate Indicators/Intervals' height too. */
-.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn,
-.price-chart-container:fullscreen .chart-title-actions .chart-fullscreen-btn {
+   at the top, so it gets a bigger tap target than the compact icon row it
+   came from. Scoped to .chart-fs-exit-btn only — the Save button that now
+   sits next to Indicators shares that row's stretch-aligned flex line, so
+   enlarging it there would inflate Indicators/Intervals' height too. */
+.chart-fs-exit-btn {
   min-width: 46px;
   padding: 6px 10px;
   gap: 4px;
 }
-.price-chart-container--fs .chart-title-actions .chart-fullscreen-btn svg,
-.price-chart-container:fullscreen
-  .chart-title-actions
-  .chart-fullscreen-btn
-  svg {
+.chart-fs-exit-btn svg {
   width: 22px;
   height: 22px;
 }
-.price-chart-container--fs
-  .chart-title-actions
-  .chart-fullscreen-btn
-  .chart-icon-label,
-.price-chart-container:fullscreen
-  .chart-title-actions
-  .chart-fullscreen-btn
-  .chart-icon-label {
+.chart-fs-exit-btn .chart-icon-label {
   font-size: 0.7rem;
 }
 
@@ -2409,25 +3010,17 @@ html[data-theme="light"] .pattern-insight {
     border-radius: 12px;
   }
 
-  /* Fixed height on mobile/iOS — a longer/shorter AI-generated summary,
-     narrative or next-move on a later refresh was changing how tall this
-     whole card was, shifting the watchlist/top-movers content below it
-     up or down every time new analysis text came in. Full text stays
-     intact (no per-field clamping) — whatever doesn't fit in the fixed
-     height scrolls inside the card instead of being cut off. */
-  .pattern-insight {
-    height: 220px;
-    display: flex;
-    flex-direction: column;
-  }
+  /* 16px (base rule's padding, here and on .pattern-insight-summary/
+     -narrative/-next below) read further right than the title/price text
+     and Indicators row above it (both effectively 8px) — 8px on all of
+     them lines everything up on the same left edge. */
   .pattern-insight-header {
-    flex-shrink: 0;
+    padding-left: 8px;
   }
-  .pattern-insight-body-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+  .pattern-insight-summary,
+  .pattern-insight-narrative,
+  .pattern-insight-next {
+    padding-left: 8px;
   }
 }
 
@@ -2467,6 +3060,14 @@ html[data-theme="light"] .pattern-insight {
   border: 1px solid rgba(167, 139, 250, 0.25);
   border-radius: 6px;
   padding: 2px 7px;
+}
+
+.pattern-insight-updated {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }
 
 /* Matches .aiqw-live-badge's exact pill shape (the LIVE badge it sits

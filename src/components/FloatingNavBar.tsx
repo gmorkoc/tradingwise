@@ -1,9 +1,6 @@
 import "../styles/FloatingNavBar.css";
 
 interface Props {
-  onOpenNotifications: () => void;
-  notificationsOpen: boolean;
-  unreadNotificationCount: number;
   signalsOpen: boolean;
   onSearch: () => void;
   searchOpen: boolean;
@@ -12,6 +9,11 @@ interface Props {
   // Mirrors TradingAgent's own trigger dot — see the "trading-agent-
   // unread-change" event App.tsx listens for.
   agentUnread: boolean;
+  // Asset/portfolio calculator — moved here from the desktop header's own
+  // trigger (.mch-portfolio, App.tsx), so it's reachable the same way on
+  // every width instead of only showing up on wide desktop.
+  onOpenCalculator: () => void;
+  calculatorOpen: boolean;
 }
 
 // Built from basic shape primitives (circle/rect/line) only, deliberately
@@ -22,25 +24,9 @@ interface Props {
 // proven to render correctly elsewhere in this codebase, not new
 // hand-derived ones.
 function useItems({
-  onOpenNotifications, notificationsOpen, signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen,
-}: Omit<Props, "unreadNotificationCount" | "agentUnread">) {
+  signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen,
+}: Omit<Props, "agentUnread">) {
   return [
-    {
-      label: "Notifications",
-      icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
-      ),
-      action: onOpenNotifications,
-      showsUnreadBadge: true,
-      // Driven by the panel's own real open state (reported back up by
-      // each component/App.tsx), not "last icon tapped" — so the pill
-      // drops the moment the panel actually closes, however it closes
-      // (✕ button, backdrop click, Escape), not just on another tap here.
-      isActive: notificationsOpen,
-    },
     {
       label: "Signals",
       icon: (
@@ -82,14 +68,26 @@ function useItems({
       action: onSearch,
       isActive: searchOpen,
     },
+    {
+      label: "Calculator",
+      icon: (
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg>
+      ),
+      action: onOpenCalculator,
+      isActive: calculatorOpen,
+    },
   ];
 }
 
 export function FloatingNavBar({
-  onOpenNotifications, notificationsOpen, unreadNotificationCount, signalsOpen, onSearch, searchOpen,
-  dailyBriefOpen, onToggleDailyBrief, agentUnread,
+  signalsOpen, onSearch, searchOpen,
+  dailyBriefOpen, onToggleDailyBrief, agentUnread, onOpenCalculator, calculatorOpen,
 }: Props) {
-  const items = useItems({ onOpenNotifications, notificationsOpen, signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen });
+  const items = useItems({ signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen });
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
 
@@ -104,9 +102,6 @@ export function FloatingNavBar({
     >
       <span className="fnb-item-icon-wrap">
         {item.icon}
-        {item.showsUnreadBadge && unreadNotificationCount > 0 && (
-          <span className="fnb-item-badge">{unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}</span>
-        )}
       </span>
       {item.isActive && <span className="fnb-item-label">{item.label}</span>}
     </button>

@@ -19,6 +19,11 @@
     box-shadow 0.15s;
 }
 
+/* Hidden on all devices for now. */
+.alerts-bell {
+  display: none;
+}
+
 .alerts-bell:hover {
   border-color: rgba(56, 189, 248, 0.45);
   color: var(--color-text);
