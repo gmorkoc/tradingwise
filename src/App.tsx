@@ -74,7 +74,7 @@ import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
 import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
-import { Tier, saveTermsAgreement } from "./services/supabase";
+import { Tier, hasAccess, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ChartAnalyzeModal } from "./components/ChartAnalyzeModal";
 import { ResolutionBanner } from "./components/ResolutionBanner";
@@ -2722,6 +2722,8 @@ function AppDashboard({
           agentUnread={agentUnread}
           onOpenCalculator={() => setAssetPanelOpen((v) => !v)}
           calculatorOpen={assetPanelOpen}
+          agentLocked={!hasAccess(tier, "pro")}
+          onOpenUpgrade={onOpenUpgrade}
         />
       )}
 

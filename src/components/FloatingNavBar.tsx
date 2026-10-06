@@ -14,6 +14,13 @@ interface Props {
   // every width instead of only showing up on wide desktop.
   onOpenCalculator: () => void;
   calculatorOpen: boolean;
+  // Trading Agent is Pro+ (TradingAgent.tsx itself renders nothing for
+  // free users) — the orb stays visible here as a teaser rather than
+  // disappearing, same pattern as BuySignals' own gated trigger, but a
+  // locked tap needs to surface the upgrade prompt instead of silently
+  // dispatching into a component that will just no-op.
+  agentLocked: boolean;
+  onOpenUpgrade: () => void;
 }
 
 // Built from basic shape primitives (circle/rect/line) only, deliberately
@@ -25,7 +32,7 @@ interface Props {
 // hand-derived ones.
 function useItems({
   signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen,
-}: Omit<Props, "agentUnread">) {
+}: Omit<Props, "agentUnread" | "agentLocked" | "onOpenUpgrade">) {
   return [
     {
       label: "Signals",
@@ -86,6 +93,7 @@ function useItems({
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
   dailyBriefOpen, onToggleDailyBrief, agentUnread, onOpenCalculator, calculatorOpen,
+  agentLocked, onOpenUpgrade,
 }: Props) {
   const items = useItems({ signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen });
   const leftItems = items.slice(0, 2);
@@ -120,7 +128,10 @@ export function FloatingNavBar({
       <button
         type="button"
         className="fnb-item fnb-agent-item"
-        onClick={() => window.dispatchEvent(new CustomEvent("toggle-trading-agent"))}
+        onClick={() => {
+          if (agentLocked) { onOpenUpgrade(); return; }
+          window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
+        }}
         aria-label="Trading Agent"
       >
         <span className="fnb-item-icon-wrap">
