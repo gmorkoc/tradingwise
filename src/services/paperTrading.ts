@@ -357,7 +357,7 @@ export async function addAgentNote(userId: string, conversationId: string, conte
 // can show genuine in-progress reasoning instead of a simulated indicator.
 export async function sendAgentMessage(
   userId: string, conversationId: string, content: string, history: HistoryTurn[], selectedCoin?: string | null,
-  onThinking?: (text: string) => void
+  onThinking?: (text: string) => void, viaVoice?: boolean
 ): Promise<AgentMessage> {
   await insertMessage(userId, conversationId, "user", content, null);
 
@@ -368,7 +368,7 @@ export async function sendAgentMessage(
   const res = await fetch(AGENT_REPLY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ message: content, history, selectedCoin }),
+    body: JSON.stringify({ message: content, history, selectedCoin, viaVoice }),
   });
   if (!res.ok || !res.body) throw new Error(`Agent didn't respond (${res.status}) — please try again`);
 

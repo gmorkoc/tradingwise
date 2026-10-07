@@ -272,7 +272,7 @@ const SAFE_LOOKBACK = 60;
 
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
-  marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[]
+  marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[], viaVoice: boolean
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -363,6 +363,20 @@ Happy to help — let me know if anything else comes up.
 ${JSON_DELIMITER}
 {"reply": "Happy to help — let me know if anything else comes up.", "action": null, "basket": null, "watch": null, "question": null, "balanceUpdate": null, "newsRefs": []}`,
           },
+          // This question came in by voice (mic, not typed) — the 5-step
+          // narration above exists purely for the TEXT UI's live-streaming
+          // display, which voice mode doesn't even show (it's a "Thinking…"
+          // orb, not narration text); generating that full walkthrough
+          // before the short spoken "reply" is ready is the dominant source
+          // of the delay before any audio starts. Override it for speed:
+          // still actually check every signal internally (don't skip real
+          // analysis), just don't write the walkthrough out — answer like a
+          // real person replying immediately after you stop talking, not a
+          // research report.
+          ...(viaVoice ? [{
+            role: "system" as const,
+            content: "VOICE MODE — override the narration instruction above: do NOT write the 5-step walkthrough. Output at most one short, natural spoken sentence of narration (or skip narration entirely and go straight to the JSON delimiter) — you still have to actually reason through trend/RSI/MACD/volume/news internally to answer well, you just don't narrate it step by step. Prioritize answering fast and conversationally, exactly like a real person replying right after you stop talking, over the detailed walkthrough. Everything else (the JSON shape, personality, substance, risk discipline) stays exactly the same.",
+          }] : []),
           ...history.map((h) => ({ role: h.role === "agent" ? "assistant" as const : "user" as const, content: h.content })),
           { role: "user" as const, content: message },
   ];
@@ -607,7 +621,7 @@ Deno.serve(async (req) => {
 
     if (!OPENAI_API_KEY) return new Response("Server not configured", { status: 500, headers: corsHeaders });
 
-    const { message, selectedCoin, history } = await req.json();
+    const { message, selectedCoin, history, viaVoice } = await req.json();
     if (typeof message !== "string" || !message.trim()) {
       return new Response("Missing message", { status: 400, headers: corsHeaders });
     }
@@ -653,7 +667,7 @@ Deno.serve(async (req) => {
     const markets = marketResults.filter((m): m is MarketContext => m !== null);
 
     const marketByCoin = new Map(markets.map((m) => [m.coin.toUpperCase(), m]));
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the

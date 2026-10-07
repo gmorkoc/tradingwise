@@ -730,15 +730,20 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       createdAt: new Date().toISOString(),
     }]);
     try {
-      await sendAgentMessage(user!.id, conversationId, content, history, selectedCoin, setLiveThinking);
+      // The resolved agent message already has everything speakLatestAgentReply
+      // needs — firing it right here (not awaited) lets speech synthesis
+      // start in parallel with the loadAll() reload below instead of
+      // waiting on a second full round trip first, closer to how quickly a
+      // real person replies after you stop talking.
+      const agentMsg = await sendAgentMessage(user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice);
+      if (viaVoice) speakLatestAgentReply([agentMsg]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong — please try again.");
     } finally {
       // Chat transcript always gets the full back-and-forth from loadAll
-      // regardless of viaVoice — speaking the reply is purely an add-on
-      // for a voice-originated question, never a substitute for it.
-      const freshMessages = await loadAll(conversationId);
-      if (viaVoice && freshMessages) speakLatestAgentReply(freshMessages);
+      // regardless of viaVoice — speaking the reply (above) is purely an
+      // add-on for a voice-originated question, never a substitute for it.
+      await loadAll(conversationId);
       setSending(false);
     }
   };
