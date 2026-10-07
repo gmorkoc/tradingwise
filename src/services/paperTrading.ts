@@ -5,6 +5,7 @@ import { fetchLivePrice } from "./coinglass";
 // resolving — no good for streaming the agent's live reasoning text, so
 // sendAgentMessage talks to the function directly over fetch instead.
 const AGENT_REPLY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trading-agent-reply`;
+const AGENT_SPEECH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-speech`;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 export interface PaperPosition {
@@ -419,6 +420,26 @@ export async function sendAgentMessage(
   // being watched, instead of this silently happening the moment a reply
   // streams in.
   return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch);
+}
+
+// Synthesizes `text` via OpenAI's neural TTS (agent-speech edge function)
+// and returns a playable object URL — genuinely natural-sounding, unlike
+// the device's own on-device synthesizer (see TradingAgent.tsx's voice
+// mode). Caller is responsible for revoking the URL (URL.revokeObjectURL)
+// once playback finishes, same as any other object URL.
+export async function synthesizeAgentSpeech(text: string): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Not signed in");
+
+  const res = await fetch(AGENT_SPEECH_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(`Speech synthesis failed (${res.status})`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 export async function cancelWatch(watchId: string): Promise<void> {

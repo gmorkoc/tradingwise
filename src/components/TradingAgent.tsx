@@ -3,14 +3,13 @@ import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
-import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { COINS } from "../services/coinglass";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsentAndOnboard,
-  fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance,
+  fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
   AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval,
 } from "../services/paperTrading";
 
@@ -545,7 +544,6 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       // it'd keep re-arming the mic in the background after the user
       // navigated away from the panel entirely.
       exitVoiceMode();
-      TextToSpeech.stop().catch(() => {});
     }
   }, [open]);
   useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
@@ -770,97 +768,84 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const [voiceMode, setVoiceMode] = useState(false);
   const voiceModeRef = useRef(false);
   const enterVoiceMode = () => { voiceModeRef.current = true; setVoiceMode(true); };
-  const exitVoiceMode = () => {
-    voiceModeRef.current = false;
-    setVoiceMode(false);
-    setSpeaking(false);
-    setSpokenReply("");
-  };
   // Drives the overlay's "speaking" sub-state below (listening/thinking/
   // speaking are the three ChatGPT-voice-mode phases shown on the one
   // screen) and the reply text shown while it's being read aloud.
   const [speaking, setSpeaking] = useState(false);
   const [spokenReply, setSpokenReply] = useState("");
-  // Set right before a manual interrupt stops speech early — stop()
-  // doesn't reject/resolve speakLatestAgentReply's own await in a way we
-  // can tell apart from a natural finish, so this flag is what keeps that
-  // code from ALSO calling startListening() a moment after this does it
-  // directly, which would otherwise start two recognition sessions at once.
+  // The one <audio> element used to play back synthesized speech — a ref
+  // so it survives across renders/calls instead of being recreated (and
+  // losing track of what's currently playing) each time.
+  const speechAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Pausing alone doesn't fire "ended" (where the object URL normally
+  // gets revoked in speakLatestAgentReply's cleanup below) — every manual
+  // stop path routes through this instead of a bare .pause() so the blob
+  // URL is never leaked.
+  const stopSpeaking = () => {
+    const el = speechAudioRef.current;
+    if (!el) return;
+    el.pause();
+    if (el.src) URL.revokeObjectURL(el.src);
+  };
+  // Every exit calls stopSpeaking() itself now (used to be a separate
+  // paired call at each of the 3 call sites — easy to forget one, which
+  // is exactly the bug where audio kept playing after backing out of
+  // voice mode back to the text chat).
+  const exitVoiceMode = () => {
+    voiceModeRef.current = false;
+    setVoiceMode(false);
+    setSpeaking(false);
+    setSpokenReply("");
+    stopSpeaking();
+  };
+  // Set right before a manual interrupt stops playback early — this is
+  // what keeps the ended/error handlers below from ALSO calling
+  // startListening() a moment after this does it directly, which would
+  // otherwise start two recognition sessions at once.
   const speechInterruptedRef = useRef(false);
   const handleInterruptSpeech = () => {
     speechInterruptedRef.current = true;
-    TextToSpeech.stop().catch(() => {});
+    stopSpeaking();
     setSpeaking(false);
     startListening();
-  };
-
-  // Caches the one voice this picks across calls — getSupportedVoices()
-  // only needs to actually run once per session, and a function picked at
-  // random each call would mean the agent's "voice" audibly changes
-  // between replies, which reads as broken rather than natural.
-  const naturalVoiceIndexRef = useRef<number | null>(null);
-  const pickNaturalVoiceIndex = async (): Promise<number | undefined> => {
-    if (naturalVoiceIndexRef.current !== null) return naturalVoiceIndexRef.current;
-    try {
-      const { voices } = await TextToSpeech.getSupportedVoices();
-      if (!voices.length) return undefined;
-      const english = voices.filter((v) => v.lang.startsWith("en"));
-      const pool = english.length ? english : voices;
-      // The native AVSpeechSynthesizer voice list (unlike the web Speech
-      // API's) exposes genuinely higher-quality voices under these same
-      // names when they're installed on-device — enhanced/premium quality
-      // tiers read as actually human rather than the flat default robotic
-      // compact voice most people mean by "sounds like iOS/Siri."
-      const picked =
-        pool.find((v) => /premium/i.test(v.name)) ??
-        pool.find((v) => /enhanced/i.test(v.name)) ??
-        pool.find((v) => /^(samantha|ava|nicky|allison)$/i.test(v.name)) ??
-        pool[0];
-      const idx = voices.indexOf(picked);
-      naturalVoiceIndexRef.current = idx;
-      return idx;
-    } catch {
-      return undefined;
-    }
   };
 
   // Speaks the newest agent message, if the latest message in the
   // freshly-reloaded array is in fact one — it won't be if the request
   // errored before the agent replied, in which case there's nothing to
-  // speak. Uses the native TextToSpeech plugin (AVSpeechSynthesizer under
-  // the hood on iOS) rather than the browser's window.speechSynthesis —
-  // WKWebView's own speech bridge renders noticeably more robotic/"voice
-  // over"-sounding than the native engine does with the exact same voice,
-  // a known WebView-vs-native quality gap, not just a matter of which
-  // voice name is selected. In voice mode, finishing this re-arms the mic
-  // automatically (startListening, defined below but already bound by the
-  // time this actually runs) so the conversation keeps going hands-free
-  // instead of waiting on another manual tap each turn.
+  // speak. Synthesizes real audio via OpenAI's neural TTS (agent-speech
+  // edge function, same class of model ChatGPT's own voice mode uses)
+  // rather than any on-device synthesizer — no local iOS voice, however
+  // "Enhanced"/"Premium" its quality tier, sounds like a real neural TTS
+  // model; it's a different generation of technology entirely. In voice
+  // mode, finishing playback re-arms the mic automatically (startListening,
+  // defined below but already bound by the time this actually runs) so the
+  // conversation keeps going hands-free instead of waiting on another
+  // manual tap each turn.
   const speakLatestAgentReply = async (msgs: AgentMessage[]) => {
     const last = msgs[msgs.length - 1];
     if (!last || last.role !== "agent" || !last.content) return;
-    await TextToSpeech.stop().catch(() => {});
-    const voice = await pickNaturalVoiceIndex();
+    stopSpeaking();
     setSpokenReply(last.content);
-    setSpeaking(true);
     try {
-      await TextToSpeech.speak({
-        text: last.content,
-        voice,
-        // Slightly under 1.0 — the default rate reads noticeably rushed/
-        // flat for conversational phrasing (as opposed to, say, reading a
-        // list), and a touch slower is one of the few knobs this API
-        // actually exposes for sounding less like a demo.
-        rate: 0.95,
-        pitch: 1.0,
-        category: "playback",
-      });
+      const url = await synthesizeAgentSpeech(last.content);
+      const audio = new Audio(url);
+      speechAudioRef.current = audio;
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+        setSpeaking(false);
+        if (speechInterruptedRef.current) { speechInterruptedRef.current = false; return; }
+        if (voiceModeRef.current) startListening();
+      };
+      audio.onended = cleanup;
+      audio.onerror = cleanup;
+      setSpeaking(true);
+      await audio.play();
     } catch {
-      /* stopped early via handleInterruptSpeech, or a genuine TTS error —
-         either way there's nothing further to do here */
-    } finally {
+      // Synthesis request failed (offline, server error) — nothing to
+      // play, but the loop still needs to continue rather than stall
+      // silently on a turn with no audio.
       setSpeaking(false);
-      if (speechInterruptedRef.current) { speechInterruptedRef.current = false; return; }
       if (voiceModeRef.current) startListening();
     }
   };
@@ -951,7 +936,6 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     }
     if (voiceModeRef.current) {
       exitVoiceMode();
-      TextToSpeech.stop().catch(() => {});
       return;
     }
     await startListening();
@@ -965,7 +949,6 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const handleMicCancel = async () => {
     speechCancelledRef.current = true;
     exitVoiceMode();
-    TextToSpeech.stop().catch(() => {});
     try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
   };
 
