@@ -1092,23 +1092,33 @@ function AppDashboard({
   };
 
   // Keyboard-aware sizing for the mobile/iOS bottom sheet variant — the
-  // search input autoFocuses, so the keyboard pops immediately and would
-  // otherwise cover it. Shrinks the same fixed `height` the CSS sets
-  // (.coin-picker-sheet) rather than adding padding-bottom, keeping the
-  // sheet's flex layout — header, search, then the scrollable list at
-  // flex:1 — proportioned correctly within whatever room is left above
-  // the keyboard instead of padding eating directly into a height that
-  // was never adjusted to account for it.
+  // search input autoFocuses, so the keyboard pops immediately. The sheet
+  // is `bottom: 0` (pinned to the screen's actual bottom edge), so
+  // shrinking `height` ALONE only moved its top edge down — the bottom
+  // portion stayed exactly where it was, still sitting underneath the
+  // keyboard the whole time. Setting `bottom` to the keyboard's height
+  // lifts the sheet's bottom edge to sit right above the keyboard instead,
+  // and shrinking `height` by that same amount keeps the top edge fixed
+  // in place rather than drifting as bottom moves.
   const coinPickerSheetRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!coinPickerOpen) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
       if (coinPickerSheetRef.current) {
-        coinPickerSheetRef.current.style.height = `calc(94vh - ${info.keyboardHeight}px)`;
+        coinPickerSheetRef.current.style.bottom = `${info.keyboardHeight}px`;
+        // max(...) floors it at 300px — on a device/situation where
+        // keyboardHeight ever comes back unexpectedly large relative to
+        // the screen (a small phone, a floating/split iPad keyboard,
+        // etc.), 96vh minus that could otherwise shrink the sheet to
+        // something unusably small instead of just a shorter list.
+        coinPickerSheetRef.current.style.height = `max(300px, calc(96vh - ${info.keyboardHeight}px))`;
       }
     });
     const hideSub = Keyboard.addListener("keyboardWillHide", () => {
-      if (coinPickerSheetRef.current) coinPickerSheetRef.current.style.height = "";
+      if (coinPickerSheetRef.current) {
+        coinPickerSheetRef.current.style.bottom = "";
+        coinPickerSheetRef.current.style.height = "";
+      }
     });
     return () => {
       showSub.then((s) => s.remove());

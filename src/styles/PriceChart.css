@@ -2949,7 +2949,7 @@ html[data-theme="light"] .chart-fullscreen-btn {
    count; .coin-picker-list (flex:1, min-height:0, below) fills whatever
    of that is left after the header/search and scrolls on its own. */
 .coin-picker-sheet {
-  height: 94vh;
+  height: 96vh;
 }
 
 .indicators-sheet-header {
