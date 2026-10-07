@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } fro
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { Keyboard } from "@capacitor/keyboard";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import {
   coinglass,
@@ -1090,6 +1091,31 @@ function AppDashboard({
     }, 300);
   };
 
+  // Keyboard-aware sizing for the mobile/iOS bottom sheet variant — the
+  // search input autoFocuses, so the keyboard pops immediately and would
+  // otherwise cover it. Shrinks the same fixed `height` the CSS sets
+  // (.coin-picker-sheet) rather than adding padding-bottom, keeping the
+  // sheet's flex layout — header, search, then the scrollable list at
+  // flex:1 — proportioned correctly within whatever room is left above
+  // the keyboard instead of padding eating directly into a height that
+  // was never adjusted to account for it.
+  const coinPickerSheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!coinPickerOpen) return;
+    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
+      if (coinPickerSheetRef.current) {
+        coinPickerSheetRef.current.style.height = `calc(94vh - ${info.keyboardHeight}px)`;
+      }
+    });
+    const hideSub = Keyboard.addListener("keyboardWillHide", () => {
+      if (coinPickerSheetRef.current) coinPickerSheetRef.current.style.height = "";
+    });
+    return () => {
+      showSub.then((s) => s.remove());
+      hideSub.then((s) => s.remove());
+    };
+  }, [coinPickerOpen]);
+
   const [leverageOpen, setLeverageOpen] = useState(false);
   const [learnOpen, setLearnOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
@@ -1304,6 +1330,128 @@ function AppDashboard({
       </span>
       <span className="icon-strip-label">{t(item.labelKey)}</span>
     </button>
+  );
+
+  // Shared between the desktop positioned-dropdown and the mobile/iOS
+  // bottom sheet (coinPickerOpen below) — same search+list content either
+  // way, just a different wrapper around it.
+  const coinPickerListContent = (
+    <>
+      <div className="coin-picker-search-wrap">
+        <svg
+          className="coin-picker-search-icon"
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          className="coin-picker-search-input"
+          placeholder="Search…"
+          autoFocus
+          value={coinSearch}
+          onChange={(e) => setCoinSearch(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        />
+        {coinSearch && (
+          <button
+            className="coin-picker-search-clear"
+            onClick={() => setCoinSearch("")}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <ul className="coin-picker-list">
+        {COINS.filter((c) => {
+          if (!coinSearch) return true;
+          const q = coinSearch.toLowerCase();
+          return (
+            c.symbol.toLowerCase().includes(q) ||
+            c.name.toLowerCase().includes(q)
+          );
+        }).sort((a, b) => {
+          // Recently-picked coins float to the top, most recent
+          // first — everything else keeps its original order
+          // (Array.sort is stable) below them.
+          const ai = recentCoins.indexOf(a.symbol);
+          const bi = recentCoins.indexOf(b.symbol);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        }).map((c) => {
+          const mc = coinMarketCaps.get(c.symbol);
+          const mcLabel =
+            mc == null
+              ? null
+              : mc >= 1e12
+                ? `$${(mc / 1e12).toFixed(2)}T`
+                : mc >= 1e9
+                  ? `$${(mc / 1e9).toFixed(1)}B`
+                  : mc >= 1e6
+                    ? `$${(mc / 1e6).toFixed(0)}M`
+                    : null;
+          const tk = coinTickers.get(c.symbol);
+          const fmtP = (n: number) =>
+            n >= 10000
+              ? `$${(n / 1000).toFixed(1)}K`
+              : n >= 1
+                ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+                : `$${n.toFixed(4)}`;
+          return (
+            <li
+              key={c.symbol}
+              className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
+              onClick={() => {
+                setCoin(c.symbol);
+                clearCandleCache();
+                setRecentCoins(addRecentCoin(c.symbol));
+                closeCoinPicker();
+              }}
+            >
+              <span className="coin-picker-item-icon">
+                {COIN_ICONS[c.symbol] ?? c.symbol[0]}
+              </span>
+              <span className="coin-picker-item-name">{c.name}</span>
+              <span className="coin-picker-item-right">
+                <span className="coin-picker-item-row1">
+                  <span className="coin-picker-item-sym">
+                    {c.symbol}
+                  </span>
+                  {mcLabel && (
+                    <span className="coin-picker-item-mc">
+                      {mcLabel}
+                    </span>
+                  )}
+                </span>
+                <span className="coin-picker-item-hl">
+                  {tk ? (
+                    <>
+                      <span className="coin-picker-hl-high">
+                        {fmtP(tk.high)}
+                      </span>
+                      <span className="coin-picker-hl-sep">/</span>
+                      <span className="coin-picker-hl-low">
+                        {fmtP(tk.low)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="coin-picker-hl-na">N/A</span>
+                  )}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 
   return (
@@ -2363,128 +2511,28 @@ function AppDashboard({
 
         {coinPickerOpen &&
           ReactDOM.createPortal(
-            <>
-              <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
-              <div
-                className="coin-picker-menu"
-                style={{ top: coinPickerPos.top, left: coinPickerPos.left }}
-              >
-                <div className="coin-picker-search-wrap">
-                  <svg
-                    className="coin-picker-search-icon"
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <input
-                    className="coin-picker-search-input"
-                    placeholder="Search…"
-                    autoFocus
-                    value={coinSearch}
-                    onChange={(e) => setCoinSearch(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  {coinSearch && (
-                    <button
-                      className="coin-picker-search-clear"
-                      onClick={() => setCoinSearch("")}
-                    >
-                      ✕
-                    </button>
-                  )}
+            isDesktopWidth ? (
+              <>
+                <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
+                <div
+                  className="coin-picker-menu"
+                  style={{ top: coinPickerPos.top, left: coinPickerPos.left }}
+                >
+                  {coinPickerListContent}
                 </div>
-                <ul className="coin-picker-list">
-                  {COINS.filter((c) => {
-                    if (!coinSearch) return true;
-                    const q = coinSearch.toLowerCase();
-                    return (
-                      c.symbol.toLowerCase().includes(q) ||
-                      c.name.toLowerCase().includes(q)
-                    );
-                  }).sort((a, b) => {
-                    // Recently-picked coins float to the top, most recent
-                    // first — everything else keeps its original order
-                    // (Array.sort is stable) below them.
-                    const ai = recentCoins.indexOf(a.symbol);
-                    const bi = recentCoins.indexOf(b.symbol);
-                    if (ai === -1 && bi === -1) return 0;
-                    if (ai === -1) return 1;
-                    if (bi === -1) return -1;
-                    return ai - bi;
-                  }).map((c) => {
-                    const mc = coinMarketCaps.get(c.symbol);
-                    const mcLabel =
-                      mc == null
-                        ? null
-                        : mc >= 1e12
-                          ? `$${(mc / 1e12).toFixed(2)}T`
-                          : mc >= 1e9
-                            ? `$${(mc / 1e9).toFixed(1)}B`
-                            : mc >= 1e6
-                              ? `$${(mc / 1e6).toFixed(0)}M`
-                              : null;
-                    const tk = coinTickers.get(c.symbol);
-                    const fmtP = (n: number) =>
-                      n >= 10000
-                        ? `$${(n / 1000).toFixed(1)}K`
-                        : n >= 1
-                          ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
-                          : `$${n.toFixed(4)}`;
-                    return (
-                      <li
-                        key={c.symbol}
-                        className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
-                        onClick={() => {
-                          setCoin(c.symbol);
-                          clearCandleCache();
-                          setRecentCoins(addRecentCoin(c.symbol));
-                          closeCoinPicker();
-                        }}
-                      >
-                        <span className="coin-picker-item-icon">
-                          {COIN_ICONS[c.symbol] ?? c.symbol[0]}
-                        </span>
-                        <span className="coin-picker-item-name">{c.name}</span>
-                        <span className="coin-picker-item-right">
-                          <span className="coin-picker-item-row1">
-                            <span className="coin-picker-item-sym">
-                              {c.symbol}
-                            </span>
-                            {mcLabel && (
-                              <span className="coin-picker-item-mc">
-                                {mcLabel}
-                              </span>
-                            )}
-                          </span>
-                          <span className="coin-picker-item-hl">
-                            {tk ? (
-                              <>
-                                <span className="coin-picker-hl-high">
-                                  {fmtP(tk.high)}
-                                </span>
-                                <span className="coin-picker-hl-sep">/</span>
-                                <span className="coin-picker-hl-low">
-                                  {fmtP(tk.low)}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="coin-picker-hl-na">N/A</span>
-                            )}
-                          </span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </>,
+              </>
+            ) : (
+              <>
+                <div className="indicators-sheet-backdrop" onClick={closeCoinPicker} />
+                <div className="indicators-sheet coin-picker-sheet" ref={coinPickerSheetRef}>
+                  <div className="indicators-sheet-header">
+                    <span className="indicators-sheet-title">Select a Crypto</span>
+                    <button type="button" className="indicators-sheet-close" onClick={closeCoinPicker}>✕</button>
+                  </div>
+                  {coinPickerListContent}
+                </div>
+              </>
+            ),
             document.body,
           )}
 

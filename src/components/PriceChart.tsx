@@ -49,6 +49,13 @@ type TimeInterval =
   | "1month"
   | "all";
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
+type ChartStyle = "candle" | "hollow" | "line" | "heikinAshi";
+const CHART_STYLE_LABELS: Record<ChartStyle, string> = {
+  candle: "Candle",
+  hollow: "Hollow Candle",
+  line: "Line",
+  heikinAshi: "Heikin Ashi",
+};
 
 interface PriceChartProps {
   refreshTrigger?: number;
@@ -419,6 +426,27 @@ function calcEMALine(
   for (let i = period - 1; i < candles.length; i++) {
     result.push({ time: candles[i].time, value: +out[i].toFixed(2) });
   }
+  return result;
+}
+
+// Heikin Ashi — each bar's open/close smoothed against the running HA
+// sequence rather than the raw candle, which is what gives it its
+// characteristic smoother, trend-following look. High/low still anchor to
+// the real wick extremes (widened to include the HA open/close) so it
+// never clips through the actual price action.
+function calcHeikinAshi(candles: CandleDataPoint[]): CandleDataPoint[] {
+  const result: CandleDataPoint[] = [];
+  let prevHaOpen = 0;
+  let prevHaClose = 0;
+  candles.forEach((c, i) => {
+    const haClose = (c.open + c.high + c.low + c.close) / 4;
+    const haOpen = i === 0 ? (c.open + c.close) / 2 : (prevHaOpen + prevHaClose) / 2;
+    const haHigh = Math.max(c.high, haOpen, haClose);
+    const haLow = Math.min(c.low, haOpen, haClose);
+    result.push({ ...c, open: haOpen, high: haHigh, low: haLow, close: haClose });
+    prevHaOpen = haOpen;
+    prevHaClose = haClose;
+  });
   return result;
 }
 
@@ -1111,21 +1139,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [patternInsightAt, setPatternInsightAt] = useState<number | null>(
     () => readPatternCache(coin, "1h")?.at ?? null,
   );
-  const [showBB, setShowBB] = useState(true);
+  const [showBB, setShowBB] = useState(false);
   const [showRSI, setShowRSI] = useState(false);
   const [showMACD, setShowMACD] = useState(false);
-  const [showEMA20, setShowEMA20] = useState(true);
-  const [showEMA50, setShowEMA50] = useState(true);
+  const [showEMA20, setShowEMA20] = useState(false);
+  const [showEMA50, setShowEMA50] = useState(false);
   const [showEMA200, setShowEMA200] = useState(false);
   const [showMA20, setShowMA20] = useState(false);
   const [showMA50, setShowMA50] = useState(false);
   const [showMA200, setShowMA200] = useState(false);
   const [showGann, setShowGann] = useState(false);
   const [showFib, setShowFib] = useState(false);
-  const fibDefaultSet = useRef(false);
+  const [showSR, setShowSR] = useState(false);
+  const [showZones, setShowZones] = useState(false);
+  const [showDayHL, setShowDayHL] = useState(false);
+  const [srLevels, setSrLevels] = useState<{ resistance: { price: number }[]; support: { price: number }[] }>({ resistance: [], support: [] });
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showCME, setShowCME] = useState(true);
+  const [styleMenuOpen, setStyleMenuOpen] = useState(false);
+  const [showCME, setShowCME] = useState(false);
   const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
@@ -1150,6 +1182,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const dayLineRefs = useRef<any[]>([]);
 
   const [showDepthProfile, setShowDepthProfile] = useState(false);
+  // Manual override for the compact (non-fullscreen) view — gridlines
+  // auto-show in fullscreen/expanded regardless of this.
+  const [showGrid, setShowGrid] = useState(false);
+  const [chartStyle, setChartStyle] = useState<ChartStyle>("candle");
+  // Mirrors chartStyle for the fetch effect to read without depending on
+  // it directly (same ref-mirror pattern as showFibRef) — switching style
+  // should redraw from already-fetched data, not re-fetch candles.
+  const chartStyleRef = useRef<ChartStyle>("candle");
   const [showAstroChart, setShowAstroChart] = useState(false);
   // Native iOS, or desktop web (not mobile web — the regular chart is
   // already compact enough there) — a full-screen, minimal price + live
@@ -1182,13 +1222,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#141230";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
-
-  // Set Fib default to true only for Pro+ users, once tier is known
-  useEffect(() => {
-    if (fibDefaultSet.current) return;
-    fibDefaultSet.current = true;
-    if (isPaid) setShowFib(true);
-  }, [isPaid]);
 
   useEffect(() => {
     const onChange = () => {
@@ -1276,11 +1309,71 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
   }, [isFullscreen, updateFsThumb]);
 
+  const dblClickWrapRef = useRef<HTMLDivElement>(null);
+
+  // Manual double-tap-to-exit (iOS fullscreen) — native dblclick synthesis
+  // from two touches can get swallowed once LWC's own pan/zoom/crosshair
+  // touch handling re-enables in fullscreen (same root cause as the
+  // scroll-capture effect above), so this tracks tap timing/position
+  // independently instead of depending on the browser to synthesize it.
+  // Passive-only (no preventDefault/stopPropagation) — it just watches,
+  // so it can't interfere with whatever LWC does with the same touches.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !isFullscreen) return;
+    const el = dblClickWrapRef.current;
+    if (!el) return;
+
+    let startX = 0;
+    let startY = 0;
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length !== 1 || e.touches.length !== 0) return;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      // Moved too far to be a tap — a pan/drag, ignore and reset.
+      if (Math.hypot(endX - startX, endY - startY) > 12) {
+        lastTapTime = 0;
+        return;
+      }
+      const now = Date.now();
+      const sincePrev = now - lastTapTime;
+      const distFromPrev = Math.hypot(endX - lastTapX, endY - lastTapY);
+      if (lastTapTime > 0 && sincePrev < 350 && distFromPrev < 30) {
+        toggleFullscreen();
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+        lastTapX = endX;
+        lastTapY = endY;
+      }
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true, capture: true });
+    el.addEventListener("touchend", onEnd, { passive: true, capture: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart, { capture: true } as EventListenerOptions);
+      el.removeEventListener("touchend", onEnd, { capture: true } as EventListenerOptions);
+    };
+  }, [isFullscreen, toggleFullscreen]);
+
   // Main chart refs
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candleRef = useRef<any>(null);
+  // Close-price line, used only when chartStyle === "line" — kept alive
+  // (hidden) the rest of the time rather than swapped in/out, so toggling
+  // styles never has to add/remove a series mid-session.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lineCloseRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const volumeRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1294,7 +1387,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bbFillLowerRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const priceLineRefs = useRef<any[]>([]);
+  const srLineRefs = useRef<any[]>([]);
+  const zoneLineRefs = useRef<any[]>([]);
   const lastCandlesRef = useRef<CandleDataPoint[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gannMarkersPluginRef = useRef<any>(null);
@@ -1459,26 +1553,36 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           },
           textColor: isLight ? "#475569" : "#9490c0",
         },
+        // Gridlines only read as useful at fullscreen/expanded size — in
+        // the compact inline card they just add visual noise, so start
+        // transparent; the theme-sync effect below turns them on once
+        // isFullscreen flips true.
         grid: {
-          vertLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
-          },
-          horzLines: {
-            color: isLight ? "rgba(0,0,0,0.05)" : "rgba(165,180,252,0.08)",
-          },
+          vertLines: { color: "transparent" },
+          horzLines: { color: "transparent" },
         },
         crosshair: { mode: 1 },
-        rightPriceScale: { borderColor: isLight ? "#e2e8f0" : "#2b2748" },
+        // Matches the gridlines — transparent until the theme-sync effect
+        // turns it on for fullscreen/expanded view or the Grid toggle.
+        rightPriceScale: { borderColor: "transparent" },
         timeScale: {
           borderColor: isLight ? "#e2e8f0" : "#2b2748",
           timeVisible: true,
           secondsVisible: false,
         },
-        handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        // Matches the theme-sync effect — starts display-only (isFullscreen
+        // is false on first mount) so the page scrolls past the chart
+        // smoothly instead of the chart eating the gesture to pan/zoom.
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: false,
+          horzTouchDrag: false,
+          vertTouchDrag: false,
+        },
         handleScale: {
-          mouseWheel: true,
-          pinch: true,
-          axisPressedMouseMove: true,
+          mouseWheel: false,
+          pinch: false,
+          axisPressedMouseMove: false,
         },
       });
 
@@ -1525,6 +1629,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         borderDownColor: "#fb7185",
         wickUpColor: "#4ade80",
         wickDownColor: "#fb7185",
+        visible: chartStyleRef.current !== "line",
+      });
+      lineCloseRef.current = chart.addSeries(LineSeries, {
+        color: "#818cf8",
+        lineWidth: 2,
+        visible: chartStyleRef.current === "line",
       });
       volumeRef.current = chart.addSeries(HistogramSeries, {
         priceScaleId: "volume",
@@ -1614,7 +1724,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       if (ro) ro.disconnect();
       if (resizeListener) window.removeEventListener("resize", resizeListener);
       chartRef.current?.remove();
-      chartRef.current = candleRef.current = volumeRef.current = null;
+      chartRef.current = candleRef.current = lineCloseRef.current = volumeRef.current = null;
       bbUpperRef.current = bbMiddleRef.current = bbLowerRef.current = null;
       bbFillUpperRef.current = bbFillLowerRef.current = null;
       ema20Ref.current = ema50Ref.current = ema200Ref.current = null;
@@ -1630,17 +1740,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const themeOpts = {
       layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
       grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
+        vertLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
+        horzLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
       },
-      rightPriceScale: { borderColor: gridColor },
+      rightPriceScale: { borderColor: isFullscreen || showGrid ? gridColor : "transparent" },
       timeScale: { borderColor: gridColor },
+      // Pan/zoom only once expanded — in the compact inline card these
+      // gestures mostly just fight with the page's own scroll/swipe
+      // instead of being useful, so the compact view is display-only and
+      // double-click (see .chart-dblclick-wrap) is the way to zoom at all.
+      handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
+      handleScale: {
+        mouseWheel: isFullscreen,
+        pinch: isFullscreen,
+        axisPressedMouseMove: isFullscreen,
+      },
     };
     chartRef.current?.applyOptions(themeOpts);
     rsiChartRef.current?.applyOptions(themeOpts);
     macdChartRef.current?.applyOptions(themeOpts);
     bbFillLowerRef.current?.applyOptions({ topColor: bgColor, bottomColor: bgColor });
-  }, [theme, isFullscreen, bgColor, textColor, gridColor]);
+  }, [theme, isFullscreen, showGrid, bgColor, textColor, gridColor]);
 
   // ── Fetch candles ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1666,7 +1786,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           if (fresh.length > 0) lastCandlesRef.current = fresh;
           await waitForSeriesReady();
           if (cancelled) return;
-          candleRef.current?.setData(data);
+          redrawCandleSeries(data);
           updateCurrentPrice(data[data.length - 1].close);
           if (showFibRef.current) redrawFibLines();
           volumeRef.current?.setData(
@@ -1686,73 +1806,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           bbFillUpperRef.current?.setData(upper);
           bbFillLowerRef.current?.setData(lower);
 
-          // S/R price lines
-          for (const pl of priceLineRefs.current) {
-            try {
-              candleRef.current?.removePriceLine(pl);
-            } catch {
-              /* already removed */
-            }
-          }
-          priceLineRefs.current = [];
+          // S/R, Buy/Sell zone, and 24H High/Low are all rendered by their
+          // own dedicated effects below (redrawn on toggle without
+          // re-fetching candles) — this just computes the raw data they
+          // read from state.
           const { resistance, support } = calcSupportResistance(data);
-          for (const { price } of resistance) {
-            const pl = candleRef.current?.createPriceLine({
-              price,
-              color: "rgba(251,113,133,0.75)",
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: "R",
-            });
-            if (pl) priceLineRefs.current.push(pl);
-          }
-          for (const { price } of support) {
-            const pl = candleRef.current?.createPriceLine({
-              price,
-              color: "rgba(74,222,128,0.75)",
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: "S",
-            });
-            if (pl) priceLineRefs.current.push(pl);
-          }
+          setSrLevels({ resistance, support });
 
           // Buy/sell zone — always calculate for signal direction; chart lines only for Pro+
           const lastPrice = data[data.length - 1].close;
           const zones = calcBuySellZones(data);
           setZone(zones);
           onZoneChange?.(isPaid ? zones : null, lastPrice);
-          if (isPaid && zones) {
-            const zoneLines: [number, string, string][] = [
-              [zones.buyZone.upper, "rgba(74,222,128,0.5)", "Buy Zone ▲"],
-              [zones.buyZone.lower, "rgba(74,222,128,0.5)", "Buy Zone ▼"],
-              [zones.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
-              [zones.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
-            ];
-            for (const [price, color, title] of zoneLines) {
-              const pl = candleRef.current?.createPriceLine({
-                price,
-                color,
-                title,
-                lineWidth: 1,
-                lineStyle: 3,
-                axisLabelVisible: true,
-              });
-              if (pl) priceLineRefs.current.push(pl);
-            }
-          }
 
-          // 24H high / low price lines
-          for (const pl of dayLineRefs.current) {
-            try {
-              candleRef.current?.removePriceLine(pl);
-            } catch {
-              /* ok */
-            }
-          }
-          dayLineRefs.current = [];
           const now24 = Date.now() / 1000;
           const cutoff24 = now24 - 86400;
           // For 1sec/1min only a few minutes of data exist — use all of it.
@@ -1780,24 +1846,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               setDayChangeAbs(null);
               setDayChangePercent(null);
             }
-            const hlHigh = candleRef.current?.createPriceLine({
-              price: dHigh,
-              color: "#facc15",
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: "24H H",
-            });
-            const hlLow = candleRef.current?.createPriceLine({
-              price: dLow,
-              color: "#818cf8",
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: "24H L",
-            });
-            if (hlHigh) dayLineRefs.current.push(hlHigh);
-            if (hlLow) dayLineRefs.current.push(hlLow);
           } else {
             setDayHigh(null);
             setDayLow(null);
@@ -2001,7 +2049,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           ? await coinglass.getLiveSecondCandle(coin)
           : await coinglass.getLiveMinuteCandle(coin);
         if (candle) {
-          candleRef.current?.update(candle);
+          // Heikin Ashi needs the running prior-bar state to update
+          // correctly tick-by-tick — skipped here and left to catch up on
+          // the next full refresh rather than injecting a raw (wrong) bar.
+          if (chartStyleRef.current === "line") {
+            lineCloseRef.current?.update({ time: candle.time, value: candle.close });
+          } else if (chartStyleRef.current === "hollow") {
+            candleRef.current?.update({
+              ...candle,
+              color: candle.close >= candle.open ? "transparent" : undefined,
+            });
+          } else if (chartStyleRef.current === "candle") {
+            candleRef.current?.update(candle);
+          }
           updateCurrentPrice(candle.close);
           if (candle.volume !== undefined) {
             volumeRef.current?.update({
@@ -2067,6 +2127,41 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   useEffect(() => {
     ma200Ref.current?.applyOptions({ visible: showMA200 });
   }, [showMA200]);
+
+  // ── Chart style (candle / hollow / line / Heikin Ashi) ───────────────────
+  // candleRef stays a CandlestickSeries at all times (every price-line
+  // feature in this file — S/R, zones, Fib, CME, day H/L — is anchored to
+  // it), so "line" mode just hides it and shows lineCloseRef instead,
+  // rather than swapping series types.
+  const redrawCandleSeries = useCallback((candles: CandleDataPoint[]) => {
+    lineCloseRef.current?.setData(
+      candles.map((c) => ({ time: c.time, value: c.close })),
+    );
+    if (!candleRef.current) return;
+    const style = chartStyleRef.current;
+    const source = style === "heikinAshi" ? calcHeikinAshi(candles) : candles;
+    if (style === "hollow") {
+      candleRef.current.setData(
+        source.map((c) => ({
+          time: c.time,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          color: c.close >= c.open ? "transparent" : undefined,
+        })),
+      );
+    } else {
+      candleRef.current.setData(source);
+    }
+  }, []);
+
+  useEffect(() => {
+    chartStyleRef.current = chartStyle;
+    candleRef.current?.applyOptions({ visible: chartStyle !== "line" });
+    lineCloseRef.current?.applyOptions({ visible: chartStyle === "line" });
+    if (lastCandlesRef.current.length > 0) redrawCandleSeries(lastCandlesRef.current);
+  }, [chartStyle, redrawCandleSeries]);
 
   // ── Fibonacci retracement lines ──────────────────────────────────────────
   const redrawFibLines = useCallback(() => {
@@ -2157,6 +2252,102 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     });
   }, [showRSI, showMACD]);
 
+  // ── Support / Resistance lines ───────────────────────────────────────────
+  useEffect(() => {
+    for (const pl of srLineRefs.current) {
+      try {
+        candleRef.current?.removePriceLine(pl);
+      } catch {
+        /* ok */
+      }
+    }
+    srLineRefs.current = [];
+    if (!showSR || !candleRef.current) return;
+    for (const { price } of srLevels.resistance) {
+      const pl = candleRef.current.createPriceLine({
+        price,
+        color: "rgba(251,113,133,0.75)",
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: "R",
+      });
+      if (pl) srLineRefs.current.push(pl);
+    }
+    for (const { price } of srLevels.support) {
+      const pl = candleRef.current.createPriceLine({
+        price,
+        color: "rgba(74,222,128,0.75)",
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: "S",
+      });
+      if (pl) srLineRefs.current.push(pl);
+    }
+  }, [showSR, srLevels]);
+
+  // ── Buy / Sell zone lines ────────────────────────────────────────────────
+  useEffect(() => {
+    for (const pl of zoneLineRefs.current) {
+      try {
+        candleRef.current?.removePriceLine(pl);
+      } catch {
+        /* ok */
+      }
+    }
+    zoneLineRefs.current = [];
+    if (!showZones || !isPaid || !zone || !candleRef.current) return;
+    const zoneLines: [number, string, string][] = [
+      [zone.buyZone.upper, "rgba(74,222,128,0.5)", "Buy Zone ▲"],
+      [zone.buyZone.lower, "rgba(74,222,128,0.5)", "Buy Zone ▼"],
+      [zone.sellZone.upper, "rgba(251,113,133,0.5)", "Sell Zone ▲"],
+      [zone.sellZone.lower, "rgba(251,113,133,0.5)", "Sell Zone ▼"],
+    ];
+    for (const [price, color, title] of zoneLines) {
+      const pl = candleRef.current.createPriceLine({
+        price,
+        color,
+        title,
+        lineWidth: 1,
+        lineStyle: 3,
+        axisLabelVisible: true,
+      });
+      if (pl) zoneLineRefs.current.push(pl);
+    }
+  }, [showZones, zone, isPaid]);
+
+  // ── 24H High/Low lines ────────────────────────────────────────────────────
+  useEffect(() => {
+    for (const pl of dayLineRefs.current) {
+      try {
+        candleRef.current?.removePriceLine(pl);
+      } catch {
+        /* ok */
+      }
+    }
+    dayLineRefs.current = [];
+    if (!showDayHL || dayHigh === null || dayLow === null || !candleRef.current) return;
+    const hlHigh = candleRef.current.createPriceLine({
+      price: dayHigh,
+      color: "#facc15",
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "24H H",
+    });
+    const hlLow = candleRef.current.createPriceLine({
+      price: dayLow,
+      color: "#818cf8",
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: "24H L",
+    });
+    if (hlHigh) dayLineRefs.current.push(hlHigh);
+    if (hlLow) dayLineRefs.current.push(hlLow);
+  }, [showDayHL, dayHigh, dayLow]);
+
   // ── CME gap lines ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -2213,19 +2404,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!rsiEl || !macdEl) return;
     const baseOpts = {
       layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
+      // Matches the main chart — transparent until the theme-sync effect
+      // turns gridlines on for fullscreen/expanded view or the manual
+      // Grid toggle.
       grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
+        vertLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
+        horzLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
       },
       rightPriceScale: {
-        borderColor: gridColor,
+        borderColor: isFullscreen || showGrid ? gridColor : "transparent",
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
       handleScale: {
-        axisPressedMouseMove: true,
-        mouseWheel: true,
-        pinch: true,
+        axisPressedMouseMove: isFullscreen,
+        mouseWheel: isFullscreen,
+        pinch: isFullscreen,
       },
     };
 
@@ -2699,6 +2893,46 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <span>Fibonacci Levels</span>
         <span className="tier-badge tier-badge--pro">P</span>
       </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showSR}
+          onChange={(e) => setShowSR(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "rgba(251,113,133,0.75)" }}
+        />
+        <span>Support / Resistance</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showDayHL}
+          onChange={(e) => setShowDayHL(e.target.checked)}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "#facc15" }}
+        />
+        <span>24H High/Low</span>
+      </label>
+      <label className="indicators-menu-item">
+        <input
+          type="checkbox"
+          checked={showZones}
+          onChange={(e) => {
+            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+            setShowZones(e.target.checked);
+          }}
+        />
+        <span
+          className="indicators-menu-dot"
+          style={{ background: "rgba(74,222,128,0.75)" }}
+        />
+        <span>Buy/Sell Zones</span>
+        <span className="tier-badge tier-badge--pro">P</span>
+      </label>
       <div className="indicators-menu-divider" />
       <div className="indicators-menu-group-label">
         {t("chart.subcharts")}
@@ -2886,6 +3120,90 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
+  // Grid toggle + chart-style picker — shown both in the compact view's
+  // own standalone row (chart-interval-row-standalone) and in fullscreen's
+  // legend-actions row, so switching into fullscreen doesn't hide them.
+  const gridStyleControls = (
+    <div className="chart-grid-style-row">
+      <button
+        type="button"
+        className={`chart-depth-btn chart-grid-toggle-btn${showGrid ? " chart-depth-btn--active" : ""}`}
+        onClick={() => setShowGrid((v) => !v)}
+        title={showGrid ? "Hide grid" : "Show grid"}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="1" />
+          <line x1="3" y1="9" x2="21" y2="9" />
+          <line x1="3" y1="15" x2="21" y2="15" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+          <line x1="15" y1="3" x2="15" y2="21" />
+        </svg>
+        <span className="chart-icon-label">Grid</span>
+      </button>
+      <div className="indicators-menu-wrapper chart-style-menu-wrapper">
+        <button
+          type="button"
+          className={`chart-depth-btn chart-style-btn${styleMenuOpen ? " chart-depth-btn--active" : ""}`}
+          onClick={() => setStyleMenuOpen((v) => !v)}
+          title="Chart style"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="7" y1="3" x2="7" y2="8" />
+            <rect x="4" y="8" width="6" height="8" />
+            <line x1="7" y1="16" x2="7" y2="21" />
+            <line x1="17" y1="5" x2="17" y2="10" />
+            <rect x="14" y="10" width="6" height="6" />
+            <line x1="17" y1="16" x2="17" y2="19" />
+          </svg>
+          <span className="chart-icon-label">{CHART_STYLE_LABELS[chartStyle]}</span>
+        </button>
+        {styleMenuOpen && (isDesktopWidth ? (
+          <div className="indicators-menu">
+            {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+              <div
+                key={s}
+                className="indicators-menu-item"
+                onClick={() => {
+                  setChartStyle(s);
+                  setStyleMenuOpen(false);
+                }}
+              >
+                {CHART_STYLE_LABELS[s]}
+                {chartStyle === s && <span className="chart-style-check">✓</span>}
+              </div>
+            ))}
+          </div>
+        ) : ReactDOM.createPortal(
+          <>
+            <div className="indicators-sheet-backdrop" onClick={() => setStyleMenuOpen(false)} />
+            <div className="indicators-sheet">
+              <div className="indicators-sheet-header">
+                <span className="indicators-sheet-title">Chart style</span>
+                <button type="button" className="indicators-sheet-close" onClick={() => setStyleMenuOpen(false)}>✕</button>
+              </div>
+              <div className="indicators-menu indicators-menu--sheet">
+                {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                  <div
+                    key={s}
+                    className="indicators-menu-item"
+                    onClick={() => {
+                      setChartStyle(s);
+                      setStyleMenuOpen(false);
+                    }}
+                  >
+                    {CHART_STYLE_LABELS[s]}
+                    {chartStyle === s && <span className="chart-style-check">✓</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>,
+          document.body,
+        ))}
+      </div>
+    </div>
+  );
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
@@ -2924,6 +3242,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </h3>
+                    <button
+                      type="button"
+                      className="chart-fs-exit-corner-btn"
+                      onClick={toggleFullscreen}
+                      title="Exit fullscreen"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" />
+                      </svg>
+                      {t("chart.exit")}
+                    </button>
                   </div>
                   {currentPrice !== null && (
                     <div className="chart-fs-price-line">
@@ -3227,7 +3556,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
             <div className="chart-legend-actions">
               {indicatorsControl}
-              {isFullscreen && chartControlsPanel}
+              {isFullscreen && gridStyleControls}
               <button
                 className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                 onClick={() => {
@@ -3337,6 +3666,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </button>
               )}
             </div>
+            {isFullscreen && (
+              <div className="chart-fs-intervals-row">{chartControlsPanel}</div>
+            )}
           </div>
         </div>
 
@@ -3352,12 +3684,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     {t("chart.lastUpdated", "Updated")} {formatClockTime(bannerAt)}
                   </span>
                 )}
-                <span className="aiqw-live-badge">
-                  <span className="aiqw-live-dot" />
-                  LIVE
-                </span>
-                <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
-                  {t("chart.aiPowered")}
+                <span style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                  <span className="aiqw-live-badge">
+                    <span className="aiqw-live-dot" />
+                    LIVE
+                  </span>
+                  <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
+                    {t("chart.aiPowered")}
+                  </span>
                 </span>
                 <button
                   className="interval-banner-close"
@@ -3419,8 +3753,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         <div
           style={{ position: "relative" }}
-          onDoubleClick={toggleFullscreen}
-          className="chart-dblclick-wrap"
+          // iOS gets an explicit Full Screen button instead of relying on
+          // double-tap to ENTER fullscreen (see the button next to Save
+          // below) — but double-tap still EXITS it once already there,
+          // same as desktop never lost either direction.
+          onDoubleClick={
+            Capacitor.isNativePlatform() && !isFullscreen ? undefined : toggleFullscreen
+          }
+          className={`chart-dblclick-wrap${
+            Capacitor.isNativePlatform() && !isFullscreen ? " chart-dblclick-wrap--no-hint" : ""
+          }`}
+          ref={dblClickWrapRef}
         >
           {loading && (
             <div className="chart-loading-overlay">
@@ -3457,23 +3800,39 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           >
             {t("chart.save")}
           </button>
-          <button
-            className="chart-reset-view-btn"
-            onClick={() => {
-              chartRef.current?.timeScale().fitContent();
-              rsiChartRef.current?.timeScale().fitContent();
-              macdChartRef.current?.timeScale().fitContent();
-            }}
-          >
-            {t("chart.reset")}
-          </button>
-          <button
-            className="chart-reset-view-btn chart-expand-view-btn"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          >
-            {isFullscreen ? t("chart.exit") : t("chart.expand")}
-          </button>
+          {/* iOS-only entry point for fullscreen, since double-tap no
+              longer does it there (see .chart-dblclick-wrap above) — lands
+              in the same slot Reset uses in fullscreen (top:38px, via the
+              shared :not(.chart-save-view-btn) selector) since the two
+              never show at the same time. */}
+          {Capacitor.isNativePlatform() && !isFullscreen && (
+            <button
+              className="chart-reset-view-btn chart-ios-fullscreen-btn"
+              onClick={toggleFullscreen}
+              title="Fullscreen"
+            >
+              Full Screen
+            </button>
+          )}
+          {/* Fullscreen only — compact view relies entirely on
+              double-click/double-tap (.chart-dblclick-wrap) to expand.
+              Exit moved into the title row itself (chart-fs-coin-row,
+              above) so it's pixel-aligned with the title instead of
+              approximated via position:fixed + safe-area-inset guesswork
+              — the header isn't sticky anymore so there was no longer any
+              reason for Exit to float independently of it either. */}
+          {isFullscreen && (
+            <button
+              className="chart-reset-view-btn"
+              onClick={() => {
+                chartRef.current?.timeScale().fitContent();
+                rsiChartRef.current?.timeScale().fitContent();
+                macdChartRef.current?.timeScale().fitContent();
+              }}
+            >
+              {t("chart.reset")}
+            </button>
+          )}
           {isFullscreen && (
             <div className="chart-zone-btn-row">
               <button
@@ -3510,7 +3869,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             mobileStatsBlock (mobile) or sitting in the header row
             (desktop, previously). */}
         {!isFullscreen && (
-          <div className="chart-interval-row-standalone">{chartControlsPanel}</div>
+          <div className="chart-interval-row-standalone">
+            {chartControlsPanel}
+            {gridStyleControls}
+          </div>
         )}
 
         {showDepthProfile && (
@@ -3665,12 +4027,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     {t("chart.lastUpdated", "Updated")} {formatClockTime(patternInsightAt)}
                   </span>
                 )}
-                <span className="aiqw-live-badge">
-                  <span className="aiqw-live-dot" />
-                  LIVE
-                </span>
-                <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
-                  {t("chart.aiPowered")}
+                <span style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                  <span className="aiqw-live-badge">
+                    <span className="aiqw-live-dot" />
+                    LIVE
+                  </span>
+                  <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
+                    {t("chart.aiPowered")}
+                  </span>
                 </span>
               </div>
             </div>
