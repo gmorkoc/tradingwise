@@ -11,6 +11,8 @@ PODS:
     - Capacitor
   - CapacitorCommunitySpeechRecognition (6.0.1):
     - Capacitor
+  - CapacitorCommunityTextToSpeech (5.1.0):
+    - Capacitor
   - CapacitorCordova (6.2.1)
   - CapacitorFilesystem (6.0.4):
     - Capacitor
@@ -90,6 +92,7 @@ DEPENDENCIES:
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
   - "CapacitorCommunityAppleSignIn (from `../../node_modules/@capacitor-community/apple-sign-in`)"
   - "CapacitorCommunitySpeechRecognition (from `../../node_modules/@capacitor-community/speech-recognition`)"
+  - "CapacitorCommunityTextToSpeech (from `../../node_modules/@capacitor-community/text-to-speech`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
@@ -124,6 +127,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor-community/apple-sign-in"
   CapacitorCommunitySpeechRecognition:
     :path: "../../node_modules/@capacitor-community/speech-recognition"
+  CapacitorCommunityTextToSpeech:
+    :path: "../../node_modules/@capacitor-community/text-to-speech"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorFilesystem:
@@ -140,18 +145,19 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@revenuecat/purchases-capacitor"
 
 SPEC CHECKSUMS:
-  Capacitor: 1e0d0e7330dea9f983b50da737d8918abcf273f8
-  CapacitorApp: 22c94146dfaae1159ab7059cbd51e76d9f2d45ec
-  CapacitorBrowser: 9e9a268445f9472b04b68320930c59bdc4d360fa
-  CapacitorCamera: 36dd808d7a49f946c1743b41d518208777e1fbd9
-  CapacitorCommunityAppleSignIn: c8bba4ca8ff6ff843367ece13ee8af24e9266eb9
-  CapacitorCommunitySpeechRecognition: ed0f9d7e56d52dadd9cfd921d430e99ddb196981
+  Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
+  CapacitorApp: a19ccb4f5f32d2534be5c6f524d5a9b614a1e8a7
+  CapacitorBrowser: 825163a1d6adce944ac7b9e3cab101146b5a9df8
+  CapacitorCamera: 5ba135b0cb55a788758139fa2404d726bf60f0f3
+  CapacitorCommunityAppleSignIn: c9c2541ee7580618055a91b3516c3f0313fe2544
+  CapacitorCommunitySpeechRecognition: 73be1a178a23856d9706886d5f40ef06a6055438
+  CapacitorCommunityTextToSpeech: ed295743e9163fd4f8370a48ab4ae144fc7127c3
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
-  CapacitorFilesystem: 45e086a4396be03456c3d53d34b17c89169dd8cd
-  CapacitorFirebaseMessaging: 3b4ff762b42ad3137c911a96ec06bf8bfd6fb122
-  CapacitorKeyboard: 460c6f9ec5e52c84f2742d5ce2e67bbc7ab0ebb0
-  CapacitorShare: 44c43f74b95500ba7399c2ac21f0d55efc1a931e
-  CapacitorStatusBar: 38665f1a18c55677098367a29f6b42126b72dc65
+  CapacitorFilesystem: 5b9aec35c0212bd0064e26d278c93e925864f212
+  CapacitorFirebaseMessaging: 05bf93285c8ae5aeaaddaa938ba1db4fda7305ad
+  CapacitorKeyboard: e89189ad398b815b6ff7e52271f0fb4f911a0a0a
+  CapacitorShare: 77ff779e3b7c6ae9fb5461e52cf7ef805d429491
+  CapacitorStatusBar: 149cde8f1328ec3aa6cbdd872a55137ae3f98b16
   FirebaseCore: efb3893e5b94f32b86e331e3bd6dadf18b66568e
   FirebaseCoreInternal: 9afa45b1159304c963da48addb78275ef701c6b4
   FirebaseInstallations: 317270fec08a5d418fdbc8429282238cab3ac843
@@ -162,8 +168,8 @@ SPEC CHECKSUMS:
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   PurchasesHybridCommon: fa166fc8b385cf80f581f923c91d8ccffe5dd7f8
   RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
-  RevenuecatPurchasesCapacitor: 05a6dc8ba13e6cc072202c2dddcb4556abf45259
+  RevenuecatPurchasesCapacitor: 6727a4dc1455bdf2374259420719ce5dfbe957fa
 
-PODFILE CHECKSUM: 63a853ff729238aabb6eb778538fdcbbb6dec72f
+PODFILE CHECKSUM: f599059ff0e1edab7f97f8cc98dccc776d479cdc
 
 COCOAPODS: 1.17.0

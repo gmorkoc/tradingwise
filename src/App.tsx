@@ -1099,19 +1099,27 @@ function AppDashboard({
   // keyboard the whole time. Setting `bottom` to the keyboard's height
   // lifts the sheet's bottom edge to sit right above the keyboard instead,
   // and shrinking `height` by that same amount keeps the top edge fixed
-  // in place rather than drifting as bottom moves.
+  // in place rather than drifting as bottom moves. KEYBOARD_OVERLAP_PX
+  // intentionally undershoots that by a bit — landing the sheet's bottom
+  // edge/rounded corner exactly flush against the keyboard showed as a
+  // visible seam; tucking it slightly behind instead hides that edge
+  // under the keyboard's own opaque surface.
+  const KEYBOARD_OVERLAP_PX = 32;
   const coinPickerSheetRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!coinPickerOpen) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
       if (coinPickerSheetRef.current) {
-        coinPickerSheetRef.current.style.bottom = `${info.keyboardHeight}px`;
+        coinPickerSheetRef.current.style.bottom = `${info.keyboardHeight - KEYBOARD_OVERLAP_PX}px`;
         // max(...) floors it at 300px — on a device/situation where
         // keyboardHeight ever comes back unexpectedly large relative to
         // the screen (a small phone, a floating/split iPad keyboard,
-        // etc.), 96vh minus that could otherwise shrink the sheet to
-        // something unusably small instead of just a shorter list.
-        coinPickerSheetRef.current.style.height = `max(300px, calc(96vh - ${info.keyboardHeight}px))`;
+        // etc.), 88vh minus that could otherwise shrink the sheet to
+        // something unusably small instead of just a shorter list. The
+        // +KEYBOARD_OVERLAP_PX here balances the -KEYBOARD_OVERLAP_PX
+        // above so the sheet's TOP edge doesn't also shift when the
+        // bottom tucks in behind the keyboard.
+        coinPickerSheetRef.current.style.height = `max(300px, calc(88vh - ${info.keyboardHeight}px + ${KEYBOARD_OVERLAP_PX}px))`;
       }
     });
     const hideSub = Keyboard.addListener("keyboardWillHide", () => {

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { COINS } from "../services/coinglass";
@@ -503,6 +504,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     setMessages(m);
     setWatches(new Map(w.map((x) => [x.id, x])));
     setPerformance(perf);
+    return m;
   }, [user]);
 
   const loadConversations = useCallback(async () => {
@@ -533,7 +535,19 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   }, [unread]);
   const openRef = useRef(open);
   const conversationIdRef = useRef(conversationId);
-  useEffect(() => { openRef.current = open; if (open) setUnread(false); }, [open]);
+  useEffect(() => {
+    openRef.current = open;
+    if (open) {
+      setUnread(false);
+    } else {
+      // Closing the panel is the other way out of a hands-free voice-mode
+      // loop, besides the explicit Cancel in handleMicCancel — otherwise
+      // it'd keep re-arming the mic in the background after the user
+      // navigated away from the panel entirely.
+      exitVoiceMode();
+      TextToSpeech.stop().catch(() => {});
+    }
+  }, [open]);
   useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
   useEffect(() => {
     if (!user) return;
@@ -683,6 +697,12 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const handleSend = async (overrideContent?: string) => {
     const content = overrideContent ?? draft.trim();
     if (!content || sending) return;
+    // Reset immediately (not after the round trip) so a typed message sent
+    // while a voice reply would otherwise still be pending doesn't also
+    // get spoken aloud — only the question that actually came in by voice
+    // does.
+    const viaVoice = lastSendWasVoiceRef.current;
+    lastSendWasVoiceRef.current = false;
     setDraft("");
     setSending(true);
     setError("");
@@ -716,7 +736,11 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong — please try again.");
     } finally {
-      await loadAll(conversationId);
+      // Chat transcript always gets the full back-and-forth from loadAll
+      // regardless of viaVoice — speaking the reply is purely an add-on
+      // for a voice-originated question, never a substitute for it.
+      const freshMessages = await loadAll(conversationId);
+      if (viaVoice && freshMessages) speakLatestAgentReply(freshMessages);
       setSending(false);
     }
   };
@@ -732,6 +756,114 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // manual stop and a cancel both end the same native session the same
   // way), and this is what tells it to discard instead of send.
   const speechCancelledRef = useRef(false);
+  // Set right before handleSend fires from a finished voice transcript
+  // (below) — read once at the top of handleSend and cleared immediately,
+  // so only a question that actually arrived by voice gets a spoken
+  // answer back, never a typed one.
+  const lastSendWasVoiceRef = useRef(false);
+  // Hands-free "on the go" mode (ChatGPT voice mode style) — entered by a
+  // fresh mic tap, exited by tapping again mid-listen, Cancel, or closing
+  // the panel. A ref (not just state) since it's read from inside
+  // speakLatestAgentReply's utterance.onend callback, which closes over
+  // whatever render created it — the state alone could be stale by the
+  // time speech actually finishes a few seconds later.
+  const [voiceMode, setVoiceMode] = useState(false);
+  const voiceModeRef = useRef(false);
+  const enterVoiceMode = () => { voiceModeRef.current = true; setVoiceMode(true); };
+  const exitVoiceMode = () => {
+    voiceModeRef.current = false;
+    setVoiceMode(false);
+    setSpeaking(false);
+    setSpokenReply("");
+  };
+  // Drives the overlay's "speaking" sub-state below (listening/thinking/
+  // speaking are the three ChatGPT-voice-mode phases shown on the one
+  // screen) and the reply text shown while it's being read aloud.
+  const [speaking, setSpeaking] = useState(false);
+  const [spokenReply, setSpokenReply] = useState("");
+  // Set right before a manual interrupt stops speech early — stop()
+  // doesn't reject/resolve speakLatestAgentReply's own await in a way we
+  // can tell apart from a natural finish, so this flag is what keeps that
+  // code from ALSO calling startListening() a moment after this does it
+  // directly, which would otherwise start two recognition sessions at once.
+  const speechInterruptedRef = useRef(false);
+  const handleInterruptSpeech = () => {
+    speechInterruptedRef.current = true;
+    TextToSpeech.stop().catch(() => {});
+    setSpeaking(false);
+    startListening();
+  };
+
+  // Caches the one voice this picks across calls — getSupportedVoices()
+  // only needs to actually run once per session, and a function picked at
+  // random each call would mean the agent's "voice" audibly changes
+  // between replies, which reads as broken rather than natural.
+  const naturalVoiceIndexRef = useRef<number | null>(null);
+  const pickNaturalVoiceIndex = async (): Promise<number | undefined> => {
+    if (naturalVoiceIndexRef.current !== null) return naturalVoiceIndexRef.current;
+    try {
+      const { voices } = await TextToSpeech.getSupportedVoices();
+      if (!voices.length) return undefined;
+      const english = voices.filter((v) => v.lang.startsWith("en"));
+      const pool = english.length ? english : voices;
+      // The native AVSpeechSynthesizer voice list (unlike the web Speech
+      // API's) exposes genuinely higher-quality voices under these same
+      // names when they're installed on-device — enhanced/premium quality
+      // tiers read as actually human rather than the flat default robotic
+      // compact voice most people mean by "sounds like iOS/Siri."
+      const picked =
+        pool.find((v) => /premium/i.test(v.name)) ??
+        pool.find((v) => /enhanced/i.test(v.name)) ??
+        pool.find((v) => /^(samantha|ava|nicky|allison)$/i.test(v.name)) ??
+        pool[0];
+      const idx = voices.indexOf(picked);
+      naturalVoiceIndexRef.current = idx;
+      return idx;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Speaks the newest agent message, if the latest message in the
+  // freshly-reloaded array is in fact one — it won't be if the request
+  // errored before the agent replied, in which case there's nothing to
+  // speak. Uses the native TextToSpeech plugin (AVSpeechSynthesizer under
+  // the hood on iOS) rather than the browser's window.speechSynthesis —
+  // WKWebView's own speech bridge renders noticeably more robotic/"voice
+  // over"-sounding than the native engine does with the exact same voice,
+  // a known WebView-vs-native quality gap, not just a matter of which
+  // voice name is selected. In voice mode, finishing this re-arms the mic
+  // automatically (startListening, defined below but already bound by the
+  // time this actually runs) so the conversation keeps going hands-free
+  // instead of waiting on another manual tap each turn.
+  const speakLatestAgentReply = async (msgs: AgentMessage[]) => {
+    const last = msgs[msgs.length - 1];
+    if (!last || last.role !== "agent" || !last.content) return;
+    await TextToSpeech.stop().catch(() => {});
+    const voice = await pickNaturalVoiceIndex();
+    setSpokenReply(last.content);
+    setSpeaking(true);
+    try {
+      await TextToSpeech.speak({
+        text: last.content,
+        voice,
+        // Slightly under 1.0 — the default rate reads noticeably rushed/
+        // flat for conversational phrasing (as opposed to, say, reading a
+        // list), and a touch slower is one of the few knobs this API
+        // actually exposes for sounding less like a demo.
+        rate: 0.95,
+        pitch: 1.0,
+        category: "playback",
+      });
+    } catch {
+      /* stopped early via handleInterruptSpeech, or a genuine TTS error —
+         either way there's nothing further to do here */
+    } finally {
+      setSpeaking(false);
+      if (speechInterruptedRef.current) { speechInterruptedRef.current = false; return; }
+      if (voiceModeRef.current) startListening();
+    }
+  };
 
   // 4s of no new partial result = treat it as the user going quiet and
   // stop on our own, rather than trusting however long (or whether at
@@ -764,7 +896,10 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       liveTranscriptRef.current = "";
       speechCancelledRef.current = false;
       setLiveTranscript("");
-      if (transcript && !cancelled) handleSendRef.current(transcript);
+      if (transcript && !cancelled) {
+        lastSendWasVoiceRef.current = true;
+        handleSendRef.current(transcript);
+      }
     });
     return () => {
       clearSilenceTimer();
@@ -772,6 +907,30 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       stateSub.then((h) => h.remove());
     };
   }, []);
+
+  // Split from handleMicTap so speakLatestAgentReply's auto-continue (once
+  // TTS finishes, in voice mode) can start the next turn's listening
+  // directly — going through handleMicTap there would hit its own
+  // voice-mode-exit branch below (meant for an actual user tap) and
+  // immediately cancel the loop it's trying to continue.
+  const startListening = async () => {
+    try {
+      const { speechRecognition } = await SpeechRecognition.checkPermissions();
+      if (speechRecognition !== "granted") {
+        const req = await SpeechRecognition.requestPermissions();
+        if (req.speechRecognition !== "granted") return;
+      }
+      liveTranscriptRef.current = "";
+      setLiveTranscript("");
+      setListening(true);
+      enterVoiceMode();
+      armSilenceTimer();
+      await SpeechRecognition.start({ language: "en-US", maxResults: 1, partialResults: true });
+    } catch (err) {
+      setListening(false);
+      console.error("Speech recognition failed:", err);
+    }
+  };
 
   // Tap to start, tap (anywhere on the listening overlay) to stop early —
   // partialResults:true streams words in live as they're recognized (see
@@ -782,33 +941,31 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // (the "listeningState" listener below reacts to both identically),
   // finalizing whatever's been captured and sending it as the message —
   // unlike handleMicCancel below, which ends it the same way but discards.
+  // A third tap, between turns while voice mode is active but not
+  // currently listening (the agent replying/speaking), exits the loop —
+  // the same "stop it" gesture Cancel is for the other state.
   const handleMicTap = async () => {
     if (listening) {
       try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
       return;
     }
-    try {
-      const { speechRecognition } = await SpeechRecognition.checkPermissions();
-      if (speechRecognition !== "granted") {
-        const req = await SpeechRecognition.requestPermissions();
-        if (req.speechRecognition !== "granted") return;
-      }
-      liveTranscriptRef.current = "";
-      setLiveTranscript("");
-      setListening(true);
-      armSilenceTimer();
-      await SpeechRecognition.start({ language: "en-US", maxResults: 1, partialResults: true });
-    } catch (err) {
-      setListening(false);
-      console.error("Speech recognition failed:", err);
+    if (voiceModeRef.current) {
+      exitVoiceMode();
+      TextToSpeech.stop().catch(() => {});
+      return;
     }
+    await startListening();
   };
 
   // Explicit "never mind" — stops the same way handleMicTap's early-stop
   // does, but flags it first so the listener above discards the transcript
-  // instead of sending it.
+  // instead of sending it. Also the one deliberate way out of hands-free
+  // voice mode — the ongoing loop otherwise has no other exit besides
+  // closing the panel entirely.
   const handleMicCancel = async () => {
     speechCancelledRef.current = true;
+    exitVoiceMode();
+    TextToSpeech.stop().catch(() => {});
     try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
   };
 
@@ -1765,11 +1922,11 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
             {SPEECH_AVAILABLE && (
               <button
                 type="button"
-                className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}`}
+                className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}${voiceMode && !listening ? " ta-composer-mic--voice-mode" : ""}`}
                 onClick={handleMicTap}
                 disabled={sending}
-                aria-label={listening ? "Stop listening" : "Speak to the agent"}
-                title={listening ? "Stop listening" : "Speak to the agent"}
+                aria-label={listening ? "Stop listening" : voiceMode ? "Voice mode active" : "Speak to the agent"}
+                title={listening ? "Stop listening" : voiceMode ? "Voice mode active — tap Cancel to stop" : "Speak to the agent"}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="9" y="2" width="6" height="11" rx="3" />
@@ -1786,15 +1943,21 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
         </>
       )}
 
-      {/* Takes over the panel while actively listening — the orb (same
-          element/animations as the trigger button's, just bigger) plus a
-          live, continuously-updating transcript is the ChatGPT-voice-mode
-          read the user asked for: see words as they're recognized, not
-          silence until you're done. Tapping anywhere ends the turn and
-          sends whatever's been captured (same as letting silence end it
-          naturally — see the "listeningState" listener above). */}
-      {listening && (
-        <div className="ta-listening-overlay" onClick={handleMicTap} role="button" aria-label="Stop listening and send">
+      {/* One continuous full-panel screen for the whole voice session —
+          literally ChatGPT voice mode's model: listen, think, speak, listen
+          again, all without ever dropping back to the text chat view in
+          between. The chat list underneath keeps recording every turn via
+          loadAll exactly as before; it's just not shown again until voice
+          mode actually exits (Cancel, re-tapping the mic between turns, or
+          closing the panel), at which point the full back-and-forth is
+          already sitting there as regular messages. */}
+      {voiceMode && (
+        <div
+          className="ta-listening-overlay"
+          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : undefined}
+          role="button"
+          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : "Voice session"}
+        >
           <button
             type="button"
             className="ta-listening-cancel"
@@ -1802,9 +1965,21 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
           >
             Cancel
           </button>
-          <span className="ta-trigger-orb ta-listening-orb" />
-          <p className="ta-listening-transcript">{liveTranscript || "Listening…"}</p>
-          <span className="ta-listening-hint">Tap anywhere to stop and send</span>
+          <span
+            className={`ta-trigger-orb ta-listening-orb${
+              sending && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
+            }`}
+          />
+          <p className="ta-listening-transcript">
+            {listening
+              ? (liveTranscript || "Listening…")
+              : speaking
+                ? spokenReply
+                : "Thinking…"}
+          </p>
+          <span className="ta-listening-hint">
+            {listening ? "Tap anywhere to stop and send" : speaking ? "Tap anywhere to interrupt" : ""}
+          </span>
         </div>
       )}
     </div>
