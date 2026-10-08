@@ -147,16 +147,47 @@ function Sparkline({ closes, width = 130, height = 36 }: { closes: number[]; wid
   const min = Math.min(...closes);
   const max = Math.max(...closes);
   const range = max - min || 1;
-  const points = closes
-    .map((c, i) => {
-      const x = (i / (closes.length - 1)) * width;
-      const y = height - ((c - min) / range) * height;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const coords = closes.map((c, i) => ({
+    x: (i / (closes.length - 1)) * width,
+    y: height - ((c - min) / range) * height,
+  }));
+  const points = coords.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const up = closes[closes.length - 1] >= closes[0];
+
+  // Halftone dot-fill under the line, like a stock-app sparkline — a grid
+  // of dots clipped to the area below the curve, fading out with depth.
+  // lineYAt interpolates the line's own y between its two nearest real
+  // data points, since the dot grid's x spacing won't generally land on
+  // one of those points exactly.
+  const lineYAt = (x: number) => {
+    for (let i = 1; i < coords.length; i++) {
+      if (x <= coords[i].x) {
+        const a = coords[i - 1];
+        const b = coords[i];
+        const t = b.x === a.x ? 0 : (x - a.x) / (b.x - a.x);
+        return a.y + (b.y - a.y) * t;
+      }
+    }
+    return coords[coords.length - 1].y;
+  };
+  const DOT_SPACING = 4;
+  const dots: { x: number; y: number; opacity: number }[] = [];
+  for (let x = 0; x <= width; x += DOT_SPACING) {
+    const lineY = lineYAt(x);
+    const firstRow = Math.ceil(lineY / DOT_SPACING) * DOT_SPACING;
+    for (let y = firstRow; y <= height; y += DOT_SPACING) {
+      const depth = (y - lineY) / (height - lineY || 1);
+      dots.push({ x, y, opacity: Math.max(0, 1 - depth) * 0.55 });
+    }
+  }
+
   return (
     <svg width={width} height={height} className={`ta-sparkline ta-sparkline--${up ? "up" : "down"}`}>
+      <g className="ta-sparkline-dots">
+        {dots.map((d, i) => (
+          <circle key={i} cx={d.x} cy={d.y} r={0.9} opacity={d.opacity} />
+        ))}
+      </g>
       <polyline points={points} fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

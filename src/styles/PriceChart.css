@@ -134,7 +134,10 @@ html[data-theme="light"] .chart-active {
   overflow: hidden;
   padding: 0 16px;
   box-sizing: border-box;
-  background: var(--pc-bg);
+  /* Same #070c18 literal as the --fs (iOS) variant below — see its
+     comment. Light's own :fullscreen override further down still uses
+     --pc-bg correctly. */
+  background: #070c18;
 }
 
 html[data-theme="light"] .price-chart-container:fullscreen,
@@ -234,8 +237,14 @@ html[data-theme="light"]
   inset: 0;
   z-index: 999;
   overflow: hidden;
-  padding: 0 16px;
-  background: var(--pc-bg);
+  padding: 0 !important;
+  /* #070c18 literal, not --pc-bg — this is the outermost fullscreen box,
+     painted behind the header group and chart canvas (both now also set
+     to this same literal, scoped locally rather than through --pc-bg/
+     --pc-scrim-rgb). --pc-bg's own dark value (--color-surface-alt,
+     #111827) is visibly grayer; the light override right below still
+     uses --pc-bg correctly, since that token is already right for light. */
+  background: #070c18;
 }
 
 @media (min-width: 769px) {
@@ -273,12 +282,40 @@ html[data-theme="light"]
   display: none;
 }
 
-/* No longer sticky — scrolls away with the rest of the fullscreen page
-   instead of pinning to the top, so the whole page (header included) is
-   one continuous scroll area. */
+/* Desktop fullscreen — scrolls away with the rest of the page instead of
+   pinning to the top, so the whole page (header included) is one
+   continuous scroll area. Mobile overrides this back to sticky further
+   below (it wants the header pinned; desktop doesn't). */
 .price-chart-container--fs .chart-fs-header-group,
 .price-chart-container:fullscreen .chart-fs-header-group {
   position: static;
+  margin: 0;
+}
+
+/* Mobile (iOS and web mobile alike) fullscreen — page scroll is back (the
+   base .price-chart-fs-scroll rule above already handles that), but the
+   header stays pinned to the top of that scroll area instead of
+   scrolling away with everything else — position:sticky, not :fixed, so
+   it still participates in the scroll container's own layout/safe-area
+   math instead of needing separate offset handling. */
+@media (max-width: 768px) {
+  .price-chart-container--fs .chart-fs-header-group,
+  .price-chart-container:fullscreen .chart-fs-header-group {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+}
+
+.price-chart-container--fs .chart-fs-header-group,
+.price-chart-container:fullscreen .chart-fs-header-group {
+  /* Literal #070c18 (not --pc-bg) — matches the chart canvas's own
+     fullscreen dark background (set directly in PriceChart.tsx, scoped
+     there rather than through the shared --pc-bg/--pc-scrim-rgb tokens),
+     without touching those tokens here either. Without this the header
+     group still used --pc-bg's own value (--color-surface-alt, #111827),
+     a visibly grayer mismatch against the canvas below it. */
+  background: #070c18;
 }
 
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
@@ -297,8 +334,8 @@ html[data-theme="light"]
 .price-chart-container--fs .chart-header,
 .price-chart-container:fullscreen .chart-header {
   position: static;
-  padding-top: 0;
-  margin-top: 0;
+  padding: 8px;
+  margin: 0;
 }
 html[data-theme="light"] .price-chart-container--fs .chart-header,
 html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
@@ -513,6 +550,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   width: 100%;
   padding: 0 0 16px;
 }
+.price-chart-container--fs .chart-fs-header-block,
+.price-chart-container:fullscreen .chart-fs-header-block {
+  padding-bottom: 0;
+}
 
 .chart-fs-coin-row {
   display: flex;
@@ -527,18 +568,29 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-fs-exit-corner-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  line-height: 1;
   margin-left: auto;
-  padding: 5px 11px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 7px;
+  border: 1px solid transparent !important;
   background: var(--color-surface);
   color: var(--color-text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
   transition: background 0.15s, color 0.15s;
+}
+.chart-fs-exit-corner-btn:focus,
+.chart-fs-exit-corner-btn:focus-visible,
+.chart-fs-exit-corner-btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
 }
 .chart-fs-exit-corner-btn:hover {
   background: var(--color-surface-alt);
@@ -557,15 +609,264 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   flex-shrink: 0;
 }
 
-/* Wraps the stats grid + both meters — stacked on mobile (unchanged),
-   but on desktop (see the min-width:769px block below) becomes a single
-   row so Signal/Div sit next to High/Low/Bid/Ask/Vol instead of below
-   them, using the spare desktop width instead of stacking rows. */
+/* "Minimal Header" layout — coin name/price/change/Exit all on one line
+   (replaces the separate .chart-fs-coin-row + .chart-fs-price-line
+   rows), and the High/Low/Vol/Signal block collapses behind
+   .chart-fs-stats-strip, a single tappable summary, instead of sitting
+   permanently expanded — see fsStatsExpanded in PriceChart.tsx. Style/
+   Indicators/Interval live in the persistent docked sheet instead
+   (.fs-dock, below) — see fsDockSheet in PriceChart.tsx. */
+.chart-fs-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chart-fs-coin-name--compact {
+  font-size: 0.95rem;
+}
+.chart-fs-compact-price {
+  font-size: 0.95rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.chart-fs-compact-change {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.chart-fs-stats-strip {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 2px 8px;
+  margin-top: 2px;
+  border-top: 1px solid var(--pc-border);
+  color: var(--pc-text-muted);
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  /* High/Low/Vol/Signal + the chevron can exceed the available width on
+     narrower iPhones — scroll horizontally instead of clipping/pushing
+     the signal badge or chevron off-screen, so everything stays reachable
+     on every screen size instead of just the widest ones. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chart-fs-stats-strip:focus,
+.chart-fs-stats-strip:focus-visible,
+.chart-fs-stats-strip:hover,
+.chart-fs-stats-strip:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: var(--pc-border) !important;
+}
+.chart-fs-stats-strip::-webkit-scrollbar {
+  display: none;
+}
+.chart-fs-strip-item {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  color: var(--pc-text-muted);
+  flex-shrink: 0;
+}
+@media (max-width: 400px) {
+  .chart-fs-stats-strip {
+    gap: 10px;
+  }
+  .chart-fs-strip-item {
+    font-size: 0.66rem;
+  }
+  .chart-fs-strip-signal {
+    font-size: 0.6rem;
+  }
+}
+.chart-fs-strip-item b {
+  color: var(--pc-text);
+  font-weight: 700;
+}
+.chart-fs-strip-up { color: var(--pc-success); }
+.chart-fs-strip-down { color: var(--pc-danger); }
+.chart-fs-strip-signal {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chart-fs-strip-signal--oversold { color: var(--pc-success); }
+.chart-fs-strip-signal--overbought { color: var(--pc-danger); }
+.chart-fs-strip-signal--neutral { color: var(--pc-text-muted); }
+.chart-fs-strip-chevron {
+  flex-shrink: 0;
+  color: var(--pc-text-muted);
+  transition: transform 0.2s ease;
+}
+
+/* Wraps the Bid/Ask/Vol-coin stats + both meters, revealed inline when
+   .chart-fs-stats-strip is tapped — stacked on mobile (unchanged), but
+   on desktop (see the min-width:769px block below) becomes a single row. */
 .chart-fs-info-row {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
+}
+
+/* Persistent docked bottom sheet (fullscreen only) — options only
+   (Style/Indicators/Interval). The peek row is ALWAYS rendered and
+   never fully hidden; only .fs-dock-body (the accordion categories)
+   mounts/unmounts on expand. Fixed to the viewport via a document.body
+   portal, independent of the header's own scroll (.price-chart-fs-scroll
+   scrolls the chart/header, this sheet stays docked regardless of that
+   scroll position). */
+.fs-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 500;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 16px var(--color-shadow);
+  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-bottom: max(6px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+}
+
+.fs-dock-peek {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 14px 8px;
+  flex-shrink: 0;
+}
+
+.fs-dock-handle {
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+.fs-dock-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.fs-dock-title-icon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.fs-dock-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+/* Current interval, always visible on the dock's own peek bar (not a
+   separate toast) — changing it in the Interval category immediately
+   reflects here, which is the confirmation. */
+.fs-dock-interval-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.fs-dock-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 14px 10px;
+}
+
+.fs-dock-category {
+  border-bottom: 1px solid var(--color-border);
+}
+.fs-dock-category:last-child {
+  border-bottom: none;
+}
+
+.fs-dock-category-header {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 2px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: background 0.15s ease;
+  border-radius: 10px;
+}
+.fs-dock-category-header:active {
+  background: var(--color-surface-alt);
+}
+
+.fs-dock-category-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+.fs-dock-category-icon--style {
+  background: rgba(129, 140, 248, 0.16);
+  color: #818cf8;
+}
+.fs-dock-category-icon--indicators {
+  background: rgba(45, 212, 191, 0.16);
+  color: #2dd4bf;
+}
+.fs-dock-category-icon--interval {
+  background: rgba(251, 191, 36, 0.16);
+  color: #f59e0b;
+}
+
+.fs-dock-category-label {
+  flex: 1;
+}
+
+.fs-dock-category-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.fs-dock-category-chevron--open {
+  transform: rotate(180deg);
+}
+
+.fs-dock-category-body {
+  padding: 0 2px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .chart-fs-stats-grid {
@@ -916,16 +1217,35 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
    library DOES with a touch, not whether the browser must first ask JS
    at all), which is what still made page-scroll stutter over the chart
    even with pan/zoom toggled off. Declaring pan-y here lets iOS scroll
-   the page past this element on its own fast path; fullscreen switches
-   back to none so the chart's own pan/pinch/crosshair fully own touches. */
+   the page past this element on its own native fast path — full
+   momentum, no JS forwarding — in BOTH compact and fullscreen now:
+   pan-y only ever claims the vertical axis, so horizontal drag-to-pan
+   and pinch-to-zoom still reach LWC exactly as before (and vertTouchDrag
+   is hardcoded false in the chart options so LWC never competes for the
+   same vertical gesture either). Used to switch to touch-action:none in
+   fullscreen specifically, forcing a hand-rolled scroll-forwarding
+   handler with no momentum — removed; see this session's notes. */
 .chart-dblclick-wrap {
   touch-action: pan-y;
+  position: relative;
 }
+/* Fullscreen overrides pan-y back to none — the browser would otherwise
+   still claim vertical touch for native scroll before LWC's JS ever saw
+   it, blocking the single-finger vertical drag (vertTouchDrag, enabled
+   in fullscreen above) from working. Compact view keeps pan-y since its
+   page still scrolls normally and vertTouchDrag stays off there. */
 .price-chart-container--fs .chart-dblclick-wrap,
 .price-chart-container:fullscreen .chart-dblclick-wrap {
   touch-action: none;
 }
-
+/* iOS only — bleeds the chart edge-to-edge past the card's own side
+   padding (16px each side). Not applied on web/desktop or Android. */
+.chart-dblclick-wrap--ios-bleed {
+  left: -16px;
+  right: 0;
+  width: calc(100% + 24px);
+  background: transparent;
+}
 /* touch-action alone wasn't enough — lightweight-charts' canvas attaches
    its own non-passive touch listeners directly to the canvas element, and
    those still raced with native scroll and with our own double-tap
@@ -937,6 +1257,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
    event just falls through to .chart-dblclick-wrap underneath, which is
    exactly what still needs to catch the double-click/double-tap. */
 .chart-canvas-wrap {
+  position: relative;
   pointer-events: none;
 }
 .price-chart-container--fs .chart-canvas-wrap,
@@ -1265,6 +1586,14 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: var(--color-text);
 }
 
+/* Save and Reset both moved into the top icon row (.chart-legend-actions,
+   PriceChart.tsx) next to Grid/Indicators/Style, on every platform and
+   width now — these floating top-left originals are fully retired. */
+.chart-save-view-btn,
+.chart-reset-view-btn:not(.chart-save-view-btn) {
+  display: none;
+}
+
 /* Save/Reset/Expand always stack in this order (Save above Reset above
    Expand), in both normal and fullscreen view — Save shares the base
    .chart-reset-view-btn class and its top:8px slot; the other two are
@@ -1564,7 +1893,7 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   line-height: 1;
   gap: 3px;
   padding: 7px 13px;
-  border: 1px solid transparent;
+  border: 1px solid transparent !important;
   border-radius: 6px;
   background: transparent;
   color: #9490c0;
@@ -1576,35 +1905,41 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   transition: background 0.14s, border-color 0.14s, color 0.14s,
     box-shadow 0.14s;
   user-select: none;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 /* index.css's app-wide `button:focus-visible { outline: 4px auto
    -webkit-focus-ring-color }` is a genuine keyboard-accessibility feature
    elsewhere, but iOS WKWebView has shown it firing on a plain tap too —
    invisible on desktop/web, where :focus-visible correctly stays
-   keyboard-only. Scoped off here rather than removed globally, so
-   keyboard nav on other buttons keeps its focus ring. */
+   keyboard-only. The base rule above now carries !important versions of
+   all three resets directly (border/outline/box-shadow/tap-highlight),
+   since this kept recurring across every pseudo-class variant tried —
+   this is the final, unconditional version: no state can ever show a
+   border/outline/glow on this element, full stop. */
 .interval-pill:focus,
-.interval-pill:focus-visible {
-  outline: none;
-  box-shadow: none;
+.interval-pill:focus-visible,
+.interval-pill:hover,
+.interval-pill:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
 }
 
-.interval-pill:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.09);
-  color: #e0e4ff;
-}
+/* No hover background/border on interval pills at all, on any device —
+   previously gated behind @media(hover:hover) to stop iOS WKWebView's
+   sticky-hover-after-tap bug (a visible background+border box left on a
+   non-selected pill until something else was tapped), but removed
+   outright now rather than just scoped, since it's not wanted even on a
+   real desktop mouse hover either. */
 
 .interval-pill--active {
   background: #4f46e5;
   border-color: transparent;
   border-radius: 999px;
   color: #fff;
-}
-
-.interval-pill--active:hover {
-  background: #5850ec;
 }
 
 /* Active pill tints bullish/bearish instead of the flat accent color when
@@ -1624,12 +1959,6 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   color: #450a0a;
 }
 
-.interval-pill--locked:hover {
-  border-color: rgba(167, 139, 250, 0.35);
-  color: #c4b5fd;
-  background: rgba(124, 58, 237, 0.07);
-}
-
 .interval-pill-trend {
   display: inline-flex;
   align-items: center;
@@ -1637,6 +1966,30 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
   font-weight: 800;
   line-height: 1;
   margin-top: 0.5px;
+}
+
+/* Desktop only — plain text buttons in a thin row instead of rounded
+   pills, matching TradingView's own bottom timeframe bar. Mobile keeps
+   the touch-friendly pill style (unchanged). */
+@media (min-width: 769px) {
+  .interval-pills {
+    gap: 2px;
+    padding: 0;
+  }
+  .interval-pill {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .interval-pill--active,
+  .interval-pill--active.interval-pill--active-bull,
+  .interval-pill--active.interval-pill--active-bear {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    border-radius: 4px;
+  }
 }
 .interval-pill-trend--up {
   color: #4ade80;
@@ -1654,12 +2007,6 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 /* light theme */
 html[data-theme="light"] .interval-pill {
   color: #94a3b8;
-}
-
-html[data-theme="light"] .interval-pill:hover {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.08);
-  color: var(--color-text);
 }
 
 html[data-theme="light"] .interval-pill--active {
@@ -1686,12 +2033,6 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--pc-danger) 15%, transparent);
 }
 
-html[data-theme="light"] .interval-pill--locked:hover {
-  background: rgba(124, 58, 237, 0.05);
-  border-color: rgba(124, 58, 237, 0.3);
-  color: #7c3aed;
-}
-
 .chart-legend {
   display: flex;
   gap: 16px;
@@ -1711,10 +2052,102 @@ html[data-theme="light"] .interval-pill--locked:hover {
   margin-left: auto;
 }
 
+/* Empty spacer between the two button groups in this row — grows to
+   claim all free space, pinning Indicators/Interval/Chart style to the
+   left and everything after it (Grid, Order Depth, Compact View, Save,
+   Reset, Fullscreen) to the right. A dedicated element rather than an
+   auto-margin on the first "right" button, since several of those
+   buttons are conditionally hidden depending on platform/fullscreen
+   state and can't reliably be "the first one" to carry that margin. */
+.chart-legend-actions-group--right {
+  flex: 1 0 auto;
+}
+
+.chart-legend-actions--ios {
+  padding: 0 16px;
+}
+.chart-legend-actions--ios .chart-fullscreen-btn {
+  margin-right: -6px;
+}
+
 @media (min-width: 769px) {
   .chart-legend-actions {
     padding-left: 4px;
     padding-right: 4px;
+  }
+}
+
+/* Floats over the chart canvas's top-right corner instead of sitting in
+   its own row above it — moved inside .chart-dblclick-wrap (which is
+   already position:relative) so it can overlay the chart directly,
+   mirroring the same floating-button treatment fullscreen already uses
+   for Save/Reset (top-left, see .chart-reset-view-btn) but on the
+   opposite corner so the two never collide. Compact (non-fullscreen)
+   only — fullscreen keeps its own separate "Chart Settings" dock sheet,
+   not these buttons. */
+.chart-dblclick-wrap > .chart-legend-actions {
+  width: 100%;
+  margin-left: 0;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.price-chart-container--fs .chart-dblclick-wrap > .chart-legend-actions,
+.price-chart-container:fullscreen .chart-dblclick-wrap > .chart-legend-actions {
+  margin-bottom: 20px;
+}
+
+/* Desktop fullscreen only — .chart-dblclick-wrap itself has no horizontal
+   padding there (the canvas is meant to run edge-to-edge), but
+   .chart-header above it does (8px) — without this, this row sat flush
+   against the viewport edge while the header text above it stayed inset,
+   reading as misaligned. iOS fullscreen keeps its own padding
+   (.chart-legend-actions--ios, 16px) — this doesn't touch that. */
+@media (min-width: 769px) {
+  .price-chart-container--fs .chart-dblclick-wrap > .chart-legend-actions,
+  .price-chart-container:fullscreen .chart-dblclick-wrap > .chart-legend-actions {
+    padding: 0 8px;
+  }
+}
+
+/* Icon-only buttons in this row lose their text label on desktop, so a
+   hover tooltip (to the side, not below — these sit right at the top
+   edge of the chart, no room underneath) replaces it instead of relying
+   on the slow/inconsistent native `title` attribute tooltip. Gated to
+   mice only — touch has no hover state, and firing this on tap would
+   leave it stuck open after the click (same sticky-hover class of bug
+   fixed elsewhere in this file for the interval pills). */
+@media (hover: hover) {
+  .chart-legend-actions [data-tooltip] {
+    position: relative;
+  }
+  .chart-legend-actions [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    margin-right: 8px;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px var(--color-shadow);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    z-index: 1160;
+  }
+  .chart-legend-actions [data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
   }
 }
 
@@ -2155,6 +2588,16 @@ html[data-theme="light"] .cap-overlay-feature {
     padding: 8px 0px;
     font-size: 0.78rem;
     background: none;
+    /* This column is tall and narrow (full row height, ~1/7 width) — the
+       shared .interval-pill--active rule further up sets border-radius:
+       999px unconditionally, which on a box this shape rounds into an
+       oval/circle rather than a capsule. Harmless while background/border
+       stay fully reset, but any native iOS pressed-state effect that
+       isn't fully suppressed traces THIS shape, showing as a stray oval
+       ring around the real (smaller, label-sized) pill. Zeroed here since
+       the outer column carries no visible fill/border of its own anyway —
+       all real styling lives on .interval-pill-label. */
+    border-radius: 0;
   }
   .interval-pill-label {
     white-space: nowrap;
@@ -2415,6 +2858,82 @@ html[data-theme="light"] .cap-overlay-feature {
   font-weight: 800;
 }
 
+/* Style category body (inside .fs-dock-category-body) — Grid toggle +
+   chart-style chips, reused from the old standalone Controls sheet. */
+.fs-controls-row-toggle {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 2px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.fs-controls-switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+.fs-controls-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.fs-controls-row-toggle--on .fs-controls-switch {
+  background: var(--color-primary);
+}
+.fs-controls-row-toggle--on .fs-controls-switch::after {
+  transform: translateX(16px);
+}
+
+.fs-controls-style-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fs-controls-chip {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 0;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+}
+.fs-controls-chip-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: inherit;
+}
+.fs-controls-chip--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
 @media (max-width: 480px) {
   .chart-header h3 {
     font-size: 1.25rem;
@@ -2519,8 +3038,8 @@ html[data-theme="light"] .cap-overlay-feature {
    hiding all four. (Grid/Chart style were silently caught by this before
    they existed as a listed exception — same symptom as other "missing in
    fullscreen" bugs in this file, just a different rule.) */
-.price-chart-container--fs .chart-depth-btn:not(.chart-indicators-btn):not(.chart-grid-toggle-btn):not(.chart-style-btn),
-.price-chart-container:fullscreen .chart-depth-btn:not(.chart-indicators-btn):not(.chart-grid-toggle-btn):not(.chart-style-btn) {
+.price-chart-container--fs .chart-depth-btn:not(.chart-indicators-btn):not(.chart-grid-toggle-btn):not(.chart-style-btn):not(.chart-fs-save-btn):not(.chart-fs-reset-btn):not(.chart-fs-interval-btn),
+.price-chart-container:fullscreen .chart-depth-btn:not(.chart-indicators-btn):not(.chart-grid-toggle-btn):not(.chart-style-btn):not(.chart-fs-save-btn):not(.chart-fs-reset-btn):not(.chart-fs-interval-btn) {
   display: none;
 }
 
@@ -2568,13 +3087,9 @@ html[data-theme="light"] .cap-overlay-feature {
     margin-bottom: 6px;
   }
 
-  /* Desktop's 20px .chart-header margin-bottom left a big dead gap above
-     the Save row on mobile fullscreen — the two-column sketch keeps this
-     tight (12px) since nothing else sits between the header and the
-     chart. */
   .price-chart-container--fs .chart-header,
   .price-chart-container:fullscreen .chart-header {
-    margin-bottom: 10px;
+    margin: 0;
   }
 
   .price-chart-container--fs .chart-legend,
@@ -2596,6 +3111,17 @@ html[data-theme="light"] .cap-overlay-feature {
   }
 }
 
+/* Every .chart-legend-actions button here (Astro/Compact View/Order
+   Depth) is intentionally hidden in fullscreen (see the :not() rule
+   above) and Indicators/Grid/Style/Interval now live in .fs-dock
+   instead — so this row is always empty in fullscreen. Collapse it
+   fully (not just the mobile min-height:0 above) instead of leaving
+   dead space between the header and the chart canvas. */
+.price-chart-container--fs .chart-legend,
+.price-chart-container:fullscreen .chart-legend {
+  display: none;
+}
+
 /* Indicators + Grid + Chart style (chartControlsPanel/intervals live in
    their own row, .chart-fs-intervals-row, below this one — see
    PriceChart.tsx) spans the full row instead of hugging the right edge at
@@ -2610,6 +3136,7 @@ html[data-theme="light"] .cap-overlay-feature {
   margin-top: 6px;
   flex-wrap: wrap;
   row-gap: 6px;
+  padding: 0 8px;
 }
 
 /* Fullscreen only — interval pills' own row under Indicators/Grid/Chart
@@ -2755,6 +3282,139 @@ html[data-theme="light"] .chart-fullscreen-btn {
   }
 }
 
+/* Compact (non-fullscreen) toolbar — Indicators/Order Depth/Compact View
+   (.chart-legend-actions) and Grid/Chart style (.chart-interval-row-
+   standalone) collapse to plain icon-only square buttons on every width
+   now, mobile included, matching a tighter reference trading-terminal
+   toolbar instead of the wider icon+label pill buttons. Fullscreen is
+   untouched — it has its own separate "Chart Settings" dock sheet, not
+   these buttons. */
+.chart-legend-actions .chart-icon-label,
+.chart-interval-row-standalone .chart-icon-label {
+  display: none;
+}
+/* ...except Indicators, Interval and Chart style — these three always
+   keep their label next to the icon (regardless of active/toggle
+   state); every other button (Grid, Order Depth, Compact View, Save,
+   Reset, Fullscreen) stays icon-only, always. */
+.chart-legend-actions .chart-indicators-btn .chart-icon-label,
+.chart-legend-actions .chart-fs-interval-btn .chart-icon-label,
+.chart-legend-actions .chart-style-btn .chart-icon-label,
+.chart-interval-row-standalone .chart-indicators-btn .chart-icon-label,
+.chart-interval-row-standalone .chart-fs-interval-btn .chart-icon-label,
+.chart-interval-row-standalone .chart-style-btn .chart-icon-label {
+  display: inline;
+}
+.chart-legend-actions .chart-depth-btn,
+.chart-legend-actions .chart-screenshot-btn,
+.chart-legend-actions .chart-fullscreen-btn,
+.chart-interval-row-standalone .chart-depth-btn,
+.chart-interval-row-standalone .chart-screenshot-btn,
+.chart-interval-row-standalone .chart-fullscreen-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+}
+/* iOS/mobile web only — desktop keeps the original bordered-pill look
+   for every button including these (same :not() exclusion throughout:
+   Indicators/Interval/Chart style, labeled, are never affected here). */
+@media (max-width: 768px) {
+  /* Shrinks further and sits with no gap between them, so they read as
+     one tight cluster instead of individually spaced buttons. */
+  .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  .chart-legend-actions .chart-screenshot-btn,
+  .chart-legend-actions .chart-fullscreen-btn {
+    width: 24px;
+    height: 24px;
+    margin-left: -3px;
+  }
+  /* Drops the shared bordered-pill look entirely. */
+  .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  .chart-legend-actions .chart-screenshot-btn,
+  .chart-legend-actions .chart-fullscreen-btn {
+    border: none;
+    background: transparent;
+  }
+  html[data-theme="light"] .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  html[data-theme="light"] .chart-legend-actions .chart-screenshot-btn,
+  html[data-theme="light"] .chart-legend-actions .chart-fullscreen-btn {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+/* Fullscreen overrides the mobile no-border treatment above — every
+   icon-only button keeps its bordered-pill look there, on every device,
+   not just desktop. (Higher specificity than the max-width:768px rules
+   above, so it wins regardless of source order.) */
+@media (max-width: 768px) {
+  .price-chart-container--fs .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  .price-chart-container:fullscreen .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  .price-chart-container--fs .chart-legend-actions .chart-screenshot-btn,
+  .price-chart-container:fullscreen .chart-legend-actions .chart-screenshot-btn,
+  .price-chart-container--fs .chart-legend-actions .chart-fullscreen-btn,
+  .price-chart-container:fullscreen .chart-legend-actions .chart-fullscreen-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-alt);
+    width: 32px;
+    height: 32px;
+    margin-left: 0;
+  }
+  html[data-theme="light"] .price-chart-container--fs .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  html[data-theme="light"] .price-chart-container:fullscreen .chart-legend-actions .chart-depth-btn:not(.chart-indicators-btn):not(.chart-fs-interval-btn):not(.chart-style-btn),
+  html[data-theme="light"] .price-chart-container--fs .chart-legend-actions .chart-screenshot-btn,
+  html[data-theme="light"] .price-chart-container:fullscreen .chart-legend-actions .chart-screenshot-btn,
+  html[data-theme="light"] .price-chart-container--fs .chart-legend-actions .chart-fullscreen-btn,
+  html[data-theme="light"] .price-chart-container:fullscreen .chart-legend-actions .chart-fullscreen-btn {
+    background: #fff;
+    border-color: #e5e9f0;
+  }
+}
+.chart-legend-actions .chart-indicators-btn,
+.chart-legend-actions .chart-fs-interval-btn,
+.chart-legend-actions .chart-style-btn,
+.chart-interval-row-standalone .chart-indicators-btn,
+.chart-interval-row-standalone .chart-fs-interval-btn,
+.chart-interval-row-standalone .chart-style-btn {
+  width: auto;
+  padding: 0 10px;
+  gap: 5px;
+}
+@media (max-width: 768px) {
+  .chart-legend-actions {
+    gap: 1px;
+  }
+}
+
+/* Save/Reset are icon-only on every platform/width (unlike the rest of
+   this row, which only loses its label on desktop) — they used to be
+   separate floating buttons with their own text label on mobile/iOS;
+   now they live here instead, so they get the same compact treatment
+   here regardless of width. */
+.chart-fs-save-btn,
+.chart-fs-reset-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+}
+.chart-fs-save-btn .chart-icon-label,
+.chart-fs-reset-btn .chart-icon-label {
+  display: none;
+}
+
+/* Mobile (iOS and mobile web alike) — pushes Save, and everything after
+   it (Reset, Fullscreen), to the right edge of the row, separating them
+   from Grid/Indicators/Style/Order Depth/Compact View on the left,
+   instead of all of them running together as one undifferentiated
+   group. Desktop doesn't need this — its own split (intervals left,
+   icons right) already does the equivalent job there. */
+.chart-fs-save-btn--ios-push-right {
+  margin-left: auto;
+}
+
 @media (max-width: 400px) {
   .chart-icon-label {
     font-size: 0.56rem;
@@ -2855,13 +3515,29 @@ html[data-theme="light"] .chart-fullscreen-btn {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 50;
+  z-index: 1100;
   min-width: 190px;
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 5px;
   box-shadow: 0 8px 28px var(--color-shadow);
+}
+
+/* Desktop's Indicators/Chart style dropdowns portal straight to
+   document.body (same as the mobile sheet already does) instead of
+   position:absolute inside the component tree — .main-content (an
+   ancestor) has overflow-x:hidden, which clipped/hid part of the
+   dropdown behind the side nav no matter how high its z-index was,
+   since overflow clipping isn't something z-index can escape. Position
+   is computed from the trigger button's own getBoundingClientRect(). */
+.indicators-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+}
+.indicators-menu--portal {
+  position: fixed;
 }
 
 .indicators-menu-item {

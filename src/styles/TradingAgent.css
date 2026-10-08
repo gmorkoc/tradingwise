@@ -1675,6 +1675,9 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 .ta-sparkline polyline { stroke: var(--ta-text-dim); }
 .ta-sparkline--up polyline { stroke: #4ade80; }
 .ta-sparkline--down polyline { stroke: #fb7185; }
+.ta-sparkline-dots circle { fill: var(--ta-text-dim); }
+.ta-sparkline--up .ta-sparkline-dots circle { fill: #4ade80; }
+.ta-sparkline--down .ta-sparkline-dots circle { fill: #fb7185; }
 .ta-sparkline-flat { stroke: var(--ta-text-dim); stroke-width: 1.5; stroke-dasharray: 3 3; }
 .ta-listening-snapshot-head {
   display: flex;

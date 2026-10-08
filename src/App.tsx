@@ -447,6 +447,25 @@ function AppDashboard({
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
+  // PriceChart's own .chart-mobile-price-row (iOS/mobile-web compact view
+  // only) broadcasts this once it scrolls out of view — .mch-stats shows
+  // a compact coin+price badge of its own in that gap, joining the Liq
+  // Above/Below row the same way sticky "mini headers" do in other apps.
+  const [chartPriceRowHidden, setChartPriceRowHidden] = useState<{
+    coin: string; price: number | null; changePercent: number | null; direction: "up" | "down" | null;
+  } | null>(null);
+  useEffect(() => {
+    const onVisibility = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        visible: boolean; coin: string; price: number | null; changePercent: number | null; direction: "up" | "down" | null;
+      };
+      setChartPriceRowHidden(detail.visible ? null : {
+        coin: detail.coin, price: detail.price, changePercent: detail.changePercent, direction: detail.direction,
+      });
+    };
+    window.addEventListener("chart-price-row-visibility", onVisibility);
+    return () => window.removeEventListener("chart-price-row-visibility", onVisibility);
+  }, []);
   // Wider than the tablet tier (641-960px, still the two-panel stacked
   // chart+order-book layout) — full desktop gets Chart/Order Book tabs
   // just like phones, freeing up the right side for an always-visible
@@ -1949,6 +1968,19 @@ function AppDashboard({
             </div>
 
             <div className="mch-stats">
+              {activeSection === "chart" && chartPriceRowHidden && (
+                <div className={`mch-stat mch-stat--sticky-price mch-stat--sticky-price-${chartPriceRowHidden.direction ?? "flat"}`}>
+                  <span className="mch-stat-label">{chartPriceRowHidden.coin}</span>
+                  <span className="mch-stat-value">
+                    {chartPriceRowHidden.price !== null ? formatLivePrice(chartPriceRowHidden.price) : "—"}
+                  </span>
+                  {chartPriceRowHidden.changePercent !== null && (
+                    <span className={`mch-stat-signal mch-stat-signal--${chartPriceRowHidden.changePercent >= 0 ? "bull" : "bear"}`}>
+                      {chartPriceRowHidden.changePercent >= 0 ? "+" : ""}{chartPriceRowHidden.changePercent.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+              )}
               {btcData &&
                 (() => {
                   // ?? only falls back on null/undefined — NaN slips through

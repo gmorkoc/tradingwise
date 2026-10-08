@@ -25,7 +25,8 @@ import {
   getZoneAnalysis,
   ZoneAnalysisResult,
 } from "../services/openai";
-import { PredictionOverlay, PredictionPath } from "./DrawingOverlay";
+import { PredictionOverlay, PredictionPath, LineDotFillOverlay } from "./DrawingOverlay";
+import { ChartEventAnnotations } from "./ChartEventAnnotations";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDrawingTools";
@@ -48,6 +49,18 @@ type TimeInterval =
   | "1week"
   | "1month"
   | "all";
+// Default visible window per interval on a fresh view — shared between the
+// initial per-coin/interval load and the fullscreen-toggle view reset
+// (see the isFullscreen effect further down), so both apply exactly the
+// same "what does a reset view look like" definition.
+const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
+  "1min": 6 * 60 * 60,
+  "5min": 2 * 24 * 60 * 60,
+  "15min": 4 * 24 * 60 * 60,
+  "1h": 14 * 24 * 60 * 60,
+  "4h": 28 * 24 * 60 * 60,
+  "6h": 56 * 24 * 60 * 60,
+};
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
 type ChartStyle = "candle" | "hollow" | "line" | "heikinAshi";
 const CHART_STYLE_LABELS: Record<ChartStyle, string> = {
@@ -55,6 +68,43 @@ const CHART_STYLE_LABELS: Record<ChartStyle, string> = {
   hollow: "Hollow Candle",
   line: "Line",
   heikinAshi: "Heikin Ashi",
+};
+const CHART_STYLE_ICONS: Record<ChartStyle, JSX.Element> = {
+  candle: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="7" y1="2" x2="7" y2="6" />
+      <rect x="4.5" y="6" width="5" height="9" fill="currentColor" stroke="none" />
+      <line x1="7" y1="15" x2="7" y2="20" />
+      <line x1="17" y1="4" x2="17" y2="9" />
+      <rect x="14.5" y="9" width="5" height="7" fill="currentColor" stroke="none" />
+      <line x1="17" y1="16" x2="17" y2="22" />
+    </svg>
+  ),
+  hollow: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <line x1="7" y1="2" x2="7" y2="6" />
+      <rect x="4.5" y="6" width="5" height="9" />
+      <line x1="7" y1="15" x2="7" y2="20" />
+      <line x1="17" y1="4" x2="17" y2="9" />
+      <rect x="14.5" y="9" width="5" height="7" />
+      <line x1="17" y1="16" x2="17" y2="22" />
+    </svg>
+  ),
+  line: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 16 9 10 13 14 21 4" />
+    </svg>
+  ),
+  heikinAshi: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="7" y1="3" x2="7" y2="7" />
+      <rect x="4.5" y="7" width="5" height="7" rx="1.5" fill="currentColor" stroke="none" />
+      <line x1="7" y1="14" x2="7" y2="19" />
+      <line x1="17" y1="5" x2="17" y2="8" />
+      <rect x="14.5" y="8" width="5" height="9" rx="1.5" fill="currentColor" stroke="none" />
+      <line x1="17" y1="17" x2="17" y2="21" />
+    </svg>
+  ),
 };
 
 interface PriceChartProps {
@@ -93,7 +143,7 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "1h": "1H  (~7 days)",
   "4h": "4H  (~4 weeks)",
   "6h": "6H  (~15 days)",
-  "1day": "1D  (90 days)",
+  "1day": "24H (90 days)",
   "1week": "1W  (52 weeks)",
   "1month": "1M  (24 months)",
   "all": "ALL (full history)",
@@ -107,7 +157,7 @@ const INTERVAL_SHORT: Record<TimeInterval, string> = {
   "1h": "1H",
   "4h": "4H",
   "6h": "6H",
-  "1day": "1D",
+  "1day": "24H",
   "1week": "1W",
   "1month": "1M",
   "all": "ALL",
@@ -115,11 +165,6 @@ const INTERVAL_SHORT: Record<TimeInterval, string> = {
 
 // Intervals that require at least Pro
 const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
-
-// Mobile only — the full interval list doesn't fit one row, so only these
-// show as pills; the rest are reachable via the trailing "more" button,
-// which opens the native select (still rendered for every interval).
-const PRIMARY_INTERVALS = new Set<TimeInterval>(["1h", "4h", "1day", "1week", "1month", "all"]);
 
 // Shared with the day-hl-badge and the mobile price header — both show a
 // change/high-low figure "as of" a window matched to the selected candle
@@ -1126,7 +1171,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const { exceeded, consume, isPaid } = useAIQuota();
   const isLight = theme === "light";
 
-  const [interval, setInterval] = useState<TimeInterval>("1h");
+  const [interval, setInterval] = useState<TimeInterval>("1day");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [trends, setTrends] = useState<IntervalTrends>({});
@@ -1157,6 +1202,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
+  // Desktop's Indicators/Chart style dropdowns portal to document.body
+  // (like the mobile sheets already do) instead of position:absolute
+  // inside the component tree — an ancestor (.main-content) has
+  // overflow-x:hidden, which was clipping/hiding part of the dropdown
+  // behind the side nav regardless of z-index, since overflow clipping
+  // isn't something z-index can escape. Position is computed from the
+  // trigger button's own rect on open.
+  const indicatorsBtnRef = useRef<HTMLButtonElement>(null);
+  const styleBtnRef = useRef<HTMLButtonElement>(null);
+  const [indicatorsMenuPos, setIndicatorsMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [styleMenuPos, setStyleMenuPos] = useState<{ top: number; left: number } | null>(null);
+  // Desktop's Interval button opens the same kind of dropdown as
+  // Indicators/Chart style instead of the mobile bottom sheet, for
+  // consistency across the three.
+  const [intervalMenuOpen, setIntervalMenuOpen] = useState(false);
+  const intervalBtnRef = useRef<HTMLButtonElement>(null);
+  const [intervalMenuPos, setIntervalMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [showCME, setShowCME] = useState(false);
   const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
@@ -1185,7 +1247,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Manual override for the compact (non-fullscreen) view — gridlines
   // auto-show in fullscreen/expanded regardless of this.
   const [showGrid, setShowGrid] = useState(false);
-  const [chartStyle, setChartStyle] = useState<ChartStyle>("candle");
+  const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
+  // Line-style color — green/red when the visible window has moved
+  // meaningfully in one direction, blue when it's basically flat. Recomputed
+  // in redrawCandleSeries alongside the line data itself, from the same
+  // candles array, so it always matches whatever's actually on screen.
+  const [lineTrendColor, setLineTrendColor] = useState("#818cf8");
+  // Bumped every time the chart instance itself is recreated (theme/grid/
+  // fullscreen change calls createChart() again) — a real, guaranteed-to-
+  // differ signal for LineDotFillOverlay to resubscribe/repaint against
+  // the new instance, independent of whether lineTrendColor happens to
+  // compute to the same value as before (a same-value setState is a no-op
+  // in React, so color alone isn't a reliable trigger here).
+  const [chartGeneration, setChartGeneration] = useState(0);
   // Mirrors chartStyle for the fetch effect to read without depending on
   // it directly (same ref-mirror pattern as showFibRef) — switching style
   // should redraw from already-fetched data, not re-fetch candles.
@@ -1209,17 +1283,114 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   useEffect(() => {
     onFullscreenChange?.(isFullscreen);
   }, [isFullscreen, onFullscreenChange]);
+  // Fullscreen "Minimal Header" layout — High/Low/Vol/Signal collapse
+  // into one tappable strip inline in the header (unchanged from the
+  // original design), expanding in place to show Bid/Ask/Vol-coin/
+  // Signal meter/Divergence meter. Starts expanded by default on desktop
+  // (room to spare) but collapsed on mobile — either way, still a toggle
+  // the user can collapse/expand themselves, not forced open.
+  const [fsStatsExpanded, setFsStatsExpanded] = useState(isDesktopWidth);
+  useEffect(() => {
+    if (!isFullscreen) setFsStatsExpanded(isDesktopWidth);
+  }, [isFullscreen, isDesktopWidth]);
+  // Fullscreen's persistent docked bottom sheet — options only (Style,
+  // Indicators, Interval). The peek bar stays visible at all times; it
+  // never fully disappears, only grows/shrinks. The sheet itself starts
+  // collapsed (peek only) as before — only once the user expands it,
+  // Style is the category that's already open, instead of none.
+  const [fsSheetExpanded, setFsSheetExpanded] = useState(false);
+  const [fsOpenCategories, setFsOpenCategories] = useState<Record<string, boolean>>({ style: true });
+  // Accordion — only one category open at a time; expanding one collapses
+  // whichever other was open instead of stacking them all open at once.
+  const toggleFsCategory = useCallback((key: string) => {
+    setFsOpenCategories((prev) => (prev[key] ? {} : { [key]: true }));
+  }, []);
+  const fsDockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isFullscreen) {
+      setFsSheetExpanded(false);
+      setFsOpenCategories({ style: true });
+    }
+  }, [isFullscreen]);
+  // Tapping anywhere outside the docked sheet collapses it back to peek,
+  // same as tapping its own peek bar would — only listens while it's
+  // actually expanded, so it never intercepts normal chart taps.
+  useEffect(() => {
+    if (!fsSheetExpanded) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (fsDockRef.current && !fsDockRef.current.contains(e.target as Node)) {
+        setFsSheetExpanded(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [fsSheetExpanded]);
+  // Lets the fullscreen-toggle effect (further down) tell a genuine
+  // isFullscreen transition apart from this same effect re-firing for an
+  // unrelated reason (grid/theme change) — only a real transition should
+  // force the chart style/reset the view, not every fire of that effect.
+  const prevIsFullscreenForToggleRef = useRef(isFullscreen);
+  // Watches .chart-mobile-price-row (the $price/change row under the coin
+  // name, compact view only) and broadcasts its visibility — App.tsx's
+  // sticky .mch-stats row listens for this to show/hide a compact coin+
+  // price badge of its own once this one scrolls out of view. A plain
+  // window CustomEvent (not a prop) since App.tsx mounts way above this
+  // component in the tree — same cross-component pattern this app already
+  // uses for "coin-chat-active" elsewhere.
+  const mobilePriceRowRef = useRef<HTMLDivElement>(null);
+  const priceRowDataRef = useRef({ coin, price: null as number | null, changePercent: null as number | null, direction: null as "up" | "down" | null });
+  useEffect(() => {
+    priceRowDataRef.current = { coin, price: currentPrice, changePercent: dayChangePercent, direction: priceDirection };
+  });
+  useEffect(() => {
+    // iOS native or any mobile-width web viewport — desktop web never
+    // shows this badge, since .mch-stats already has room for the full
+    // price there without needing to borrow space from the chart.
+    const isIosOrMobileWeb = (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || !isDesktopWidth;
+    const dispatch = (visible: boolean) => {
+      window.dispatchEvent(new CustomEvent("chart-price-row-visibility", {
+        detail: { visible, ...priceRowDataRef.current },
+      }));
+    };
+    if (!isIosOrMobileWeb || isFullscreen) {
+      // Fullscreen/desktop never hides this row in the first place —
+      // treat as always-visible so a stale "hidden" state from a previous
+      // compact-view session can't linger into either of these.
+      dispatch(true);
+      return;
+    }
+    const el = mobilePriceRowRef.current;
+    // .chart-mobile-price-row only renders once currentPrice !== null — on
+    // first mount that's still null (price loads async), so the ref isn't
+    // attached yet. currentPrice is deliberately in the deps below so this
+    // effect re-runs once it actually arrives, instead of permanently
+    // bailing out here on a ref that was never going to populate in time.
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => dispatch(entry.isIntersecting), { threshold: 0 });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      dispatch(true);
+    };
+  }, [isDesktopWidth, isFullscreen, coin, currentPrice === null]);
   const textColor = isLight
     ? isFullscreen
       ? "#0f172a"
       : "#475569"
     : "#9490c0";
-  const gridColor = isLight
-    ? isFullscreen
-      ? "#94a3b8"
-      : "#e2e8f0"
-    : "#2b2748";
-  const bgColor = isLight ? (isFullscreen ? "#f8fafc" : "#ffffff") : "#141230";
+  const gridColor = isLight ? "#eef2f7" : "#2b2748";
+  // Light is #ffffff (--color-background) in BOTH modes — compact
+  // already was; the old code had fullscreen light backwards at
+  // "#f8fafc" (--color-surface-alt), the exact same grayish mismatch
+  // dark had, just never noticed since dark was the one being tested.
+  // Dark compact matches --pc-bg's real value (--color-surface-alt,
+  // #111827), same as always. Dark FULLSCREEN uses --color-background's
+  // real value (#070c18) instead — confirmed working earlier this
+  // session. Scoped to just this chart-canvas paint color, not the
+  // shared --pc-bg/--pc-scrim-rgb tokens other components use too.
+  const bgColor = isLight
+    ? "#ffffff"
+    : (isFullscreen ? "#070c18" : "#111827");
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -1252,82 +1423,43 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     return () => clearTimeout(t);
   }, [isFullscreen, updateFsThumb]);
 
-  // Manual touch-scroll: intercept in capture phase before LWC canvas consumes events
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const outer = chartSectionRef.current;
-    const inner = fsScrollRef.current;
-    if (!outer || !inner) return;
-
-    let startY = 0;
-    let startX = 0;
-    let startScrollTop = 0;
-    let scrolling: boolean | null = null;
-
-    const onStart = (e: TouchEvent) => {
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      startScrollTop = inner.scrollTop;
-      scrolling = null;
-    };
-
-    const onMove = (e: TouchEvent) => {
-      // A 2nd finger landing mid-gesture (pinch-to-zoom) was still being
-      // tracked through touches[0] alone — if that one finger happened to
-      // drift more vertically than horizontally during the pinch (common,
-      // since pinch fingers rarely move in a perfectly mirrored line), this
-      // fired stopPropagation+preventDefault in the CAPTURE phase, killing
-      // the pinch before lightweight-charts' own canvas handler ever saw
-      // it. Bail out entirely once a 2nd finger is down, same as the other
-      // touch handler below already does.
-      if (e.touches.length >= 2) { scrolling = false; return; }
-      const dy = startY - e.touches[0].clientY;
-      const dx = startX - e.touches[0].clientX;
-      if (scrolling === null) scrolling = Math.abs(dy) > Math.abs(dx);
-      if (!scrolling) return;
-      e.stopPropagation();
-      e.preventDefault();
-      inner.scrollTop = startScrollTop + dy;
-      updateFsThumb();
-    };
-
-    outer.addEventListener("touchstart", onStart, {
-      passive: true,
-      capture: true,
-    });
-    outer.addEventListener("touchmove", onMove, {
-      passive: false,
-      capture: true,
-    });
-    return () => {
-      outer.removeEventListener("touchstart", onStart, {
-        capture: true,
-      } as EventListenerOptions);
-      outer.removeEventListener("touchmove", onMove, {
-        capture: true,
-      } as EventListenerOptions);
-    };
-  }, [isFullscreen, updateFsThumb]);
+  // REMOVED: this used to manually forward vertical touchmove deltas to
+  // fsScrollRef's scrollTop (capture-phase, stopPropagation+preventDefault)
+  // as a workaround for LWC's canvas consuming the touch before native
+  // scroll could. Same anti-pattern as the compact-view scroll handler
+  // removed earlier this session — no momentum after releasing, and now
+  // actively fights the real fix: touch-action:pan-y on .chart-dblclick-
+  // wrap (PriceChart.css) plus vertTouchDrag:false below (so LWC's own
+  // vertical-drag price-scale feature never competes for the same
+  // gesture) lets iOS scroll .price-chart-fs-scroll on its native fast
+  // path, full momentum included, while horizontal drag/pinch still goes
+  // to LWC exactly as before (pan-y only ever claims the vertical axis).
 
   const dblClickWrapRef = useRef<HTMLDivElement>(null);
+  // Portal target for ChartEventAnnotations' cards/pager — rendered as a
+  // sibling AFTER .chart-dblclick-wrap closes, so they're normal page
+  // flow and can't stretch that wrapper's absolutely-positioned overlays
+  // (dots layer, PredictionOverlay, LineDotFillOverlay) down over them.
+  const eventCardsSlotRef = useRef<HTMLDivElement>(null);
 
-  // Manual double-tap-to-exit (iOS fullscreen) — native dblclick synthesis
-  // from two touches can get swallowed once LWC's own pan/zoom/crosshair
-  // touch handling re-enables in fullscreen (same root cause as the
-  // scroll-capture effect above), so this tracks tap timing/position
-  // independently instead of depending on the browser to synthesize it.
-  // Passive-only (no preventDefault/stopPropagation) — it just watches,
-  // so it can't interfere with whatever LWC does with the same touches.
+  // Manual double-tap to enter/exit fullscreen (iOS) — native dblclick
+  // synthesis from two touches is unreliable here (gets swallowed once
+  // LWC's own pan/zoom/crosshair touch handling is active in fullscreen,
+  // same root cause as the scroll-capture effect above), so this tracks
+  // tap timing/position independently instead of depending on the browser
+  // to synthesize it. Used to be fullscreen-only (exit), now covers both
+  // directions since the same risk applies entering from the compact view
+  // too. Passive-only (no preventDefault/stopPropagation) — it just
+  // watches, so it can't interfere with whatever LWC or native scroll
+  // does with the same touches.
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !isFullscreen) return;
+    if (!Capacitor.isNativePlatform()) return;
     const el = dblClickWrapRef.current;
     if (!el) return;
 
     let startX = 0;
     let startY = 0;
     let lastTapTime = 0;
-    let lastTapX = 0;
-    let lastTapY = 0;
 
     const onStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
@@ -1339,20 +1471,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       const endX = e.changedTouches[0].clientX;
       const endY = e.changedTouches[0].clientY;
       // Moved too far to be a tap — a pan/drag, ignore and reset.
-      if (Math.hypot(endX - startX, endY - startY) > 12) {
+      if (Math.hypot(endX - startX, endY - startY) > 20) {
         lastTapTime = 0;
         return;
       }
+      // Position-matching between the two taps was the real stiffness —
+      // "anywhere on the chart" means a second tap several hundred px
+      // from the first (top of the chart, then lower down near the
+      // volume bars, say) should still count as a double-tap. Timing
+      // alone — two taps close together in time, each individually a
+      // real tap and not a drag — is what actually matters here.
       const now = Date.now();
       const sincePrev = now - lastTapTime;
-      const distFromPrev = Math.hypot(endX - lastTapX, endY - lastTapY);
-      if (lastTapTime > 0 && sincePrev < 350 && distFromPrev < 30) {
+      if (lastTapTime > 0 && sincePrev < 450) {
         toggleFullscreen();
         lastTapTime = 0;
       } else {
         lastTapTime = now;
-        lastTapX = endX;
-        lastTapY = endY;
       }
     };
 
@@ -1543,13 +1678,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return;
       }
 
+      // Fullscreen always opens on candles, compact always on line — must
+      // happen BEFORE the candle/line series are created just below,
+      // since their own `visible` option is set once at creation from
+      // this exact ref. Setting it only afterward (what this used to do)
+      // meant the new series were born with the PREVIOUS mode's
+      // visibility already baked in, and the fix only arrived a render
+      // later via the chartStyle state-sync effect — which never fired
+      // at all if chartStyle state hadn't actually changed (e.g. it was
+      // already "candle" from an earlier fullscreen session), leaving
+      // the wrong series visible with no correction ever coming.
+      const forcedStyle = isFullscreen ? "candle" : "line";
+      chartStyleRef.current = forcedStyle;
+      if (chartStyle !== forcedStyle) setChartStyle(forcedStyle);
+
       const chart = createChart(el, {
         width,
         height,
         layout: {
           background: {
             type: ColorType.Solid,
-            color: isLight ? "#ffffff" : "#141230",
+            // Matches bgColor below exactly (same #111827 reasoning) — this
+            // is the INITIAL createChart call, a separate literal from the
+            // theme-sync effect's applyOptions, so it needs the same fix or
+            // every fresh mount/recreation briefly paints the old mismatched
+            // value before the sync effect corrects it a tick later.
+            color: isLight ? "#ffffff" : "#111827",
           },
           textColor: isLight ? "#475569" : "#9490c0",
         },
@@ -1644,7 +1798,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       });
       chart
         .priceScale("volume")
-        .applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+        // Mobile fullscreen only — the "Chart Settings" dock sits fixed
+        // at the bottom of the viewport there and was covering the
+        // volume bars entirely (bottom:0 ran them right to the canvas
+        // edge); a bottom margin lifts them clear of it. Desktop
+        // fullscreen and compact (no dock overlay) keep bottom:0.
+        .applyOptions({ scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth ? 0.14 : 0 } });
 
       bbUpperRef.current = chart.addSeries(LineSeries, {
         ...bbOpts,
@@ -1695,9 +1854,35 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       });
 
       chartRef.current = chart;
+      setChartGeneration((g) => g + 1);
       if (lastCandlesRef.current.length > 0) {
-        candleRef.current?.setData(lastCandlesRef.current);
+        // redrawCandleSeries (not a narrower candleRef-only setData) —
+        // this effect recreates the whole chart (theme/grid/fullscreen
+        // change), including a brand-new lineCloseRef with no data on it
+        // yet. The old candleRef-only call left "line" style's series
+        // empty after a theme switch until some unrelated later refresh
+        // happened to repopulate it — invisible back when "candle" was
+        // the default (candleRef did get redrawn), but immediately
+        // obvious now that "line" is. This also recomputes lineTrendColor
+        // from the real data instead of leaving it stale.
+        redrawCandleSeries(lastCandlesRef.current);
         updateCurrentPrice(lastCandlesRef.current[lastCandlesRef.current.length - 1].close);
+        // Reset to the same default window every recreation (theme/grid/
+        // fullscreen toggle all land here) — most relevantly, closing
+        // fullscreen back to the compact view no longer leaves whatever
+        // zoom/pan the chart was left at; it's always a fresh, correct
+        // view instead, same INTERVAL_WINDOW definition the very first
+        // load for this coin+interval already uses.
+        const window = INTERVAL_WINDOW[interval];
+        const lastCandleTime = lastCandlesRef.current[lastCandlesRef.current.length - 1].time as number;
+        if (window) {
+          chart.timeScale().setVisibleRange({
+            from: (lastCandleTime - window) as UTCTimestamp,
+            to: lastCandleTime as UTCTimestamp,
+          });
+        } else {
+          chart.timeScale().fitContent();
+        }
       }
 
       const resizeChart = () => {
@@ -1740,15 +1925,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const themeOpts = {
       layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
       grid: {
-        vertLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
-        horzLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
+        vertLines: { color: showGrid ? gridColor : "transparent" },
+        horzLines: { color: showGrid ? gridColor : "transparent" },
       },
-      rightPriceScale: { borderColor: isFullscreen || showGrid ? gridColor : "transparent" },
+      rightPriceScale: { borderColor: showGrid ? gridColor : "transparent" },
       timeScale: { borderColor: gridColor },
       // Pan/zoom only once expanded — in the compact inline card these
       // gestures mostly just fight with the page's own scroll/swipe
       // instead of being useful, so the compact view is display-only and
       // double-click (see .chart-dblclick-wrap) is the way to zoom at all.
+      // vertTouchDrag now follows isFullscreen too — the fullscreen page
+      // itself no longer scrolls at all on mobile (a fixed header + a
+      // non-scrolling flex layout instead), so there's nothing left for
+      // this gesture to compete with there; a single-finger vertical drag
+      // now pans/zooms the price scale, same as TradingView. Compact view
+      // still needs it off, since that page does scroll normally.
       handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
       handleScale: {
         mouseWheel: isFullscreen,
@@ -1756,11 +1947,58 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         axisPressedMouseMove: isFullscreen,
       },
     };
-    chartRef.current?.applyOptions(themeOpts);
+    const chart = chartRef.current;
+    chart?.applyOptions(themeOpts);
     rsiChartRef.current?.applyOptions(themeOpts);
     macdChartRef.current?.applyOptions(themeOpts);
     bbFillLowerRef.current?.applyOptions({ topColor: bgColor, bottomColor: bgColor });
-  }, [theme, isFullscreen, showGrid, bgColor, textColor, gridColor]);
+    // Mirrors the volume scaleMargins set at chart creation (initChart,
+    // above) — that only re-runs on a theme change, not a plain
+    // fullscreen toggle, so this effect (which DOES fire on every
+    // fullscreen toggle) needs its own copy to actually keep the volume
+    // bars clear of the mobile fullscreen dock when just entering/
+    // exiting fullscreen without a theme change alongside it.
+    chart?.priceScale("volume").applyOptions({
+      scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth ? 0.14 : 0 },
+    });
+
+    // THIS is the effect that actually fires on a fullscreen toggle — the
+    // chart instance itself is NOT recreated here (that only happens on a
+    // theme change, a separate effect above), so the "force candle in
+    // fullscreen / line in compact, reset the view" logic that used to
+    // live only inside chart creation never ran for a plain fullscreen
+    // enter/exit at all. prevIsFullscreenForToggleRef scopes this to an
+    // actual isFullscreen transition specifically — this effect also
+    // fires for grid/theme changes alone, which shouldn't force a style
+    // switch or reset the zoom the user was just looking at.
+    if (chart && prevIsFullscreenForToggleRef.current !== isFullscreen) {
+      prevIsFullscreenForToggleRef.current = isFullscreen;
+      const forcedStyle = isFullscreen ? "candle" : "line";
+      if (chartStyleRef.current !== forcedStyle) {
+        chartStyleRef.current = forcedStyle;
+        setChartStyle(forcedStyle);
+        candleRef.current?.applyOptions({ visible: forcedStyle !== "line" });
+        lineCloseRef.current?.applyOptions({ visible: forcedStyle === "line" });
+        if (lastCandlesRef.current.length > 0) redrawCandleSeries(lastCandlesRef.current);
+      }
+      if (lastCandlesRef.current.length > 0) {
+        const window = INTERVAL_WINDOW[interval];
+        const lastCandleTime = lastCandlesRef.current[lastCandlesRef.current.length - 1].time as number;
+        if (window) {
+          chart.timeScale().setVisibleRange({
+            from: (lastCandleTime - window) as UTCTimestamp,
+            to: lastCandleTime as UTCTimestamp,
+          });
+        } else {
+          chart.timeScale().fitContent();
+        }
+      }
+    }
+  // redrawCandleSeries intentionally omitted — a useCallback with []
+  // deps, so its reference is provably stable across renders; including
+  // it would need a forward reference this effect can't take (it's
+  // declared further down the component).
+  }, [theme, isFullscreen, showGrid, bgColor, textColor, gridColor, interval]);
 
   // ── Fetch candles ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1963,14 +2201,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           const viewKey = `${coin}-${interval}`;
           if (viewInitializedForRef.current !== viewKey) {
             viewInitializedForRef.current = viewKey;
-            const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
-              "1min": 6 * 60 * 60,
-              "5min": 2 * 24 * 60 * 60,
-              "15min": 4 * 24 * 60 * 60,
-              "1h": 14 * 24 * 60 * 60,
-              "4h": 28 * 24 * 60 * 60,
-              "6h": 56 * 24 * 60 * 60,
-            };
             const window = INTERVAL_WINDOW[interval];
             if (window && data.length > 0) {
               const to = data[data.length - 1].time as number;
@@ -2137,6 +2367,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     lineCloseRef.current?.setData(
       candles.map((c) => ({ time: c.time, value: c.close })),
     );
+    if (candles.length > 1) {
+      const first = candles[0].close;
+      const last = candles[candles.length - 1].close;
+      const pctChange = first !== 0 ? ((last - first) / first) * 100 : 0;
+      // A small dead zone around 0 reads as "flat" (blue/neutral) rather
+      // than flipping to green/red on a barely-there move.
+      const color = pctChange > 0.15 ? "#4ade80" : pctChange < -0.15 ? "#fb7185" : "#818cf8";
+      setLineTrendColor(color);
+      lineCloseRef.current?.applyOptions({ color });
+    }
     if (!candleRef.current) return;
     const style = chartStyleRef.current;
     const source = style === "heikinAshi" ? calcHeikinAshi(candles) : candles;
@@ -2404,17 +2644,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!rsiEl || !macdEl) return;
     const baseOpts = {
       layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
-      // Matches the main chart — transparent until the theme-sync effect
-      // turns gridlines on for fullscreen/expanded view or the manual
-      // Grid toggle.
+      // Matches the main chart — transparent until the manual Grid
+      // toggle turns gridlines on (fullscreen no longer force-enables
+      // them).
       grid: {
-        vertLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
-        horzLines: { color: isFullscreen || showGrid ? gridColor : "transparent" },
+        vertLines: { color: showGrid ? gridColor : "transparent" },
+        horzLines: { color: showGrid ? gridColor : "transparent" },
       },
       rightPriceScale: {
-        borderColor: isFullscreen || showGrid ? gridColor : "transparent",
+        borderColor: showGrid ? gridColor : "transparent",
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
+      // vertTouchDrag follows isFullscreen here too — same reasoning as
+      // the main chart above.
       handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
       handleScale: {
         axisPressedMouseMove: isFullscreen,
@@ -2573,52 +2815,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
   }, []);
 
-  // iOS Safari pans the viewport on any touch-drag inside the chart.
-  // Fix: block ALL touchmove here, then manually forward vertical deltas to
-  // the real scroll container (.main-content) so scrolling still works.
-  useEffect(() => {
-    const el = chartSectionRef.current;
-    if (!el) return;
-    let lastY = 0;
-    let direction: "h" | "v" | null = null;
-    let startX = 0;
-    let startY = 0;
-
-    const onStart = (e: TouchEvent) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      lastY = startY;
-      direction = null;
-    };
-
-    const onMove = (e: TouchEvent) => {
-      // Two-finger pinch — let TradingView handle zoom natively
-      if (e.touches.length >= 2) return;
-      e.preventDefault();
-      const curX = e.touches[0].clientX;
-      const curY = e.touches[0].clientY;
-
-      if (!direction) {
-        const dx = Math.abs(curX - startX);
-        const dy = Math.abs(curY - startY);
-        if (dx > 5 || dy > 5) direction = dx > dy ? "h" : "v";
-      }
-
-      if (direction === "v") {
-        const delta = lastY - curY;
-        lastY = curY;
-        const scroller = el.closest(".main-content") as HTMLElement | null;
-        if (scroller) scroller.scrollTop += delta;
-      }
-    };
-
-    el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove", onMove, { passive: false });
-    return () => {
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove", onMove);
-    };
-  }, []);
+  // REMOVED: this used to manually forward every touchmove pixel to
+  // .main-content's scrollTop (no isFullscreen guard — ran in both modes),
+  // as a workaround for "iOS Safari pans the viewport on any touch-drag
+  // inside the chart." That workaround predates the real fix now in
+  // PriceChart.css (pointer-events:none on .chart-canvas-wrap outside
+  // fullscreen + touch-action:pan-y on .chart-dblclick-wrap), which lets
+  // iOS scroll .main-content on its own native fast path, full momentum
+  // included. With both active at once, native momentum scroll would
+  // start, then this handler's unconditional preventDefault + manual
+  // scrollTop += took back over mid-gesture and killed it — exactly the
+  // "smooth while the finger is still down, dead the instant you release"
+  // symptom. The CSS fix alone is sufficient; this was actively fighting it.
 
   // ── Screenshot ───────────────────────────────────────────────────────────
   const handleScreenshot = async () => {
@@ -2971,8 +3179,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const indicatorsControl = (
     <div className="indicators-menu-wrapper">
       <button
+        ref={indicatorsBtnRef}
         className={`chart-depth-btn chart-indicators-btn${menuOpen ? " chart-depth-btn--active" : ""}`}
-        onClick={() => setMenuOpen((v) => !v)}
+        onClick={() => {
+          if (!menuOpen && isDesktopWidth && indicatorsBtnRef.current) {
+            const r = indicatorsBtnRef.current.getBoundingClientRect();
+            setIndicatorsMenuPos({ top: r.bottom + 6, left: r.left });
+          }
+          setMenuOpen((v) => !v);
+        }}
         title={t("chart.indicators")}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2989,7 +3204,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <span className="chart-icon-label">{t("chart.indicators")}</span>
       </button>
       {menuOpen && (isDesktopWidth ? (
-        <div className="indicators-menu">{indicatorsList}</div>
+        indicatorsMenuPos && ReactDOM.createPortal(
+          <>
+            <div className="indicators-menu-backdrop" onClick={() => setMenuOpen(false)} />
+            <div className="indicators-menu indicators-menu--portal" style={{ top: indicatorsMenuPos.top, left: indicatorsMenuPos.left }}>
+              {indicatorsList}
+            </div>
+          </>,
+          document.body,
+        )
       ) : ReactDOM.createPortal(
         <>
           <div className="indicators-sheet-backdrop" onClick={() => setMenuOpen(false)} />
@@ -3008,10 +3231,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   // Mobile-only right column — just 24h volume now; price/change moved to
   // its own row under the coin name on the left (chart-mobile-price-row,
-  // in the JSX below). Still takes chartControlsPanel's normal spot in
-  // .chart-header-right on mobile, since mobile shows interval pills in
-  // their own standalone row instead (see the two render sites below,
-  // split on isDesktopWidth).
+  // in the JSX below).
   const mobileStatsBlock = (
     <div className="chart-mobile-stats">
       <span
@@ -3029,122 +3249,90 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
-  // Interval pills — rendered beside the title normally, but relocated
-  // into the legend row (with Save/Exit) in fullscreen so all chart
-  // controls live in one place instead of splitting across two rows.
-  const chartControlsPanel = (
-    <div className="chart-header-controls">
-      {/* Desktop: fancy pill buttons. Mobile only shows PRIMARY_INTERVALS
-          (see .interval-pill--secondary in PriceChart.css) plus the
-          trailing "more" button, which opens a bottom sheet listing every
-          interval instead of replacing the pills entirely. */}
-      <div className="interval-pills">
-        {INTERVALS.map((opt) => {
-          const needsPro = PRO_INTERVALS.has(opt);
-          const locked   = needsPro && !isPaid;
-          const trend    = trends[opt];
-          return (
-            <button
-              key={opt}
-              data-interval={opt}
-              className={`interval-pill${interval === opt ? ` interval-pill--active${trend === "bullish" ? " interval-pill--active-bull" : trend === "bearish" ? " interval-pill--active-bear" : ""}` : ""}${locked ? " interval-pill--locked" : ""}${PRIMARY_INTERVALS.has(opt) ? "" : " interval-pill--secondary"}`}
-              title={INTERVAL_LABELS[opt]}
-              onClick={() => {
-                if (locked) { onOpenUpgrade?.("pro"); return; }
-                setInterval(opt);
-              }}
-            >
-              <span className="interval-pill-label">
-                {INTERVAL_SHORT[opt]}
-                {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                  : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+  // The "Select Interval" bottom sheet — opened by fsIntervalButton
+  // (below), now the only interval control on every platform/width.
+  // Rendered unconditionally (not tied to any one trigger button's own
+  // mount state) further down in the main return.
+  const intervalSheetPortal = intervalSheetOpen && ReactDOM.createPortal(
+    <>
+      <div className="interval-sheet-backdrop" onClick={() => setIntervalSheetOpen(false)} />
+      <div className="interval-sheet">
+        <div className="interval-sheet-header">
+          <span className="interval-sheet-title">{t("chart.selectInterval", "Select Interval")}</span>
+          <button type="button" className="interval-sheet-close" onClick={() => setIntervalSheetOpen(false)}>✕</button>
+        </div>
+        <div className="interval-sheet-list">
+          {INTERVALS.map((opt) => {
+            const needsPro = PRO_INTERVALS.has(opt);
+            const locked   = needsPro && !isPaid;
+            const trend    = trends[opt];
+            return (
+              <button
+                type="button"
+                key={opt}
+                className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
+                onClick={() => {
+                  if (locked) { onOpenUpgrade?.("pro"); return; }
+                  setInterval(opt);
+                  setIntervalSheetOpen(false);
+                }}
+              >
+                <span className="interval-sheet-item-label">
+                  {INTERVAL_LABELS[opt]}
+                  {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                    : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                    : null}
+                </span>
+                {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                  : interval === opt ? <span className="interval-sheet-item-check">✓</span>
                   : null}
-              </span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          className="interval-pill-more"
-          title="More intervals"
-          onClick={() => setIntervalSheetOpen(true)}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-          </svg>
-        </button>
+              </button>
+            );
+          })}
+        </div>
       </div>
-
-      {intervalSheetOpen && ReactDOM.createPortal(
-        <>
-          <div className="interval-sheet-backdrop" onClick={() => setIntervalSheetOpen(false)} />
-          <div className="interval-sheet">
-            <div className="interval-sheet-header">
-              <span className="interval-sheet-title">{t("chart.selectInterval", "Select Interval")}</span>
-              <button type="button" className="interval-sheet-close" onClick={() => setIntervalSheetOpen(false)}>✕</button>
-            </div>
-            <div className="interval-sheet-list">
-              {INTERVALS.map((opt) => {
-                const needsPro = PRO_INTERVALS.has(opt);
-                const locked   = needsPro && !isPaid;
-                const trend    = trends[opt];
-                return (
-                  <button
-                    type="button"
-                    key={opt}
-                    className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
-                    onClick={() => {
-                      if (locked) { onOpenUpgrade?.("pro"); return; }
-                      setInterval(opt);
-                      setIntervalSheetOpen(false);
-                    }}
-                  >
-                    <span className="interval-sheet-item-label">
-                      {INTERVAL_LABELS[opt]}
-                      {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                        : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                        : null}
-                    </span>
-                    {locked ? <span className="interval-sheet-item-pro">PRO</span>
-                      : interval === opt ? <span className="interval-sheet-item-check">✓</span>
-                      : null}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </>,
-        document.body,
-      )}
-    </div>
+    </>,
+    document.body,
   );
 
   // Grid toggle + chart-style picker — shown both in the compact view's
   // own standalone row (chart-interval-row-standalone) and in fullscreen's
   // legend-actions row, so switching into fullscreen doesn't hide them.
+  // Grid toggle now renders next to Indicators in .chart-legend-actions
+  // instead of alongside Chart style — split out of the combined control
+  // below so it can be positioned separately while Chart style stays put.
+  const gridToggleButton = (
+    <button
+      type="button"
+      className={`chart-depth-btn chart-grid-toggle-btn${showGrid ? " chart-depth-btn--active" : ""}`}
+      onClick={() => setShowGrid((v) => !v)}
+      title={showGrid ? "Hide grid" : "Show grid"}
+      data-tooltip={showGrid ? "Hide grid" : "Show grid"}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="1" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="3" y1="15" x2="21" y2="15" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+        <line x1="15" y1="3" x2="15" y2="21" />
+      </svg>
+      <span className="chart-icon-label">Grid</span>
+    </button>
+  );
   const gridStyleControls = (
     <div className="chart-grid-style-row">
-      <button
-        type="button"
-        className={`chart-depth-btn chart-grid-toggle-btn${showGrid ? " chart-depth-btn--active" : ""}`}
-        onClick={() => setShowGrid((v) => !v)}
-        title={showGrid ? "Hide grid" : "Show grid"}
-      >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="1" />
-          <line x1="3" y1="9" x2="21" y2="9" />
-          <line x1="3" y1="15" x2="21" y2="15" />
-          <line x1="9" y1="3" x2="9" y2="21" />
-          <line x1="15" y1="3" x2="15" y2="21" />
-        </svg>
-        <span className="chart-icon-label">Grid</span>
-      </button>
       <div className="indicators-menu-wrapper chart-style-menu-wrapper">
         <button
+          ref={styleBtnRef}
           type="button"
           className={`chart-depth-btn chart-style-btn${styleMenuOpen ? " chart-depth-btn--active" : ""}`}
-          onClick={() => setStyleMenuOpen((v) => !v)}
+          onClick={() => {
+            if (!styleMenuOpen && isDesktopWidth && styleBtnRef.current) {
+              const r = styleBtnRef.current.getBoundingClientRect();
+              setStyleMenuPos({ top: r.bottom + 6, left: r.left });
+            }
+            setStyleMenuOpen((v) => !v);
+          }}
           title="Chart style"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3158,21 +3346,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <span className="chart-icon-label">{CHART_STYLE_LABELS[chartStyle]}</span>
         </button>
         {styleMenuOpen && (isDesktopWidth ? (
-          <div className="indicators-menu">
-            {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
-              <div
-                key={s}
-                className="indicators-menu-item"
-                onClick={() => {
-                  setChartStyle(s);
-                  setStyleMenuOpen(false);
-                }}
-              >
-                {CHART_STYLE_LABELS[s]}
-                {chartStyle === s && <span className="chart-style-check">✓</span>}
+          styleMenuPos && ReactDOM.createPortal(
+            <>
+              <div className="indicators-menu-backdrop" onClick={() => setStyleMenuOpen(false)} />
+              <div className="indicators-menu indicators-menu--portal" style={{ top: styleMenuPos.top, left: styleMenuPos.left }}>
+                {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                  <div
+                    key={s}
+                    className="indicators-menu-item"
+                    onClick={() => {
+                      setChartStyle(s);
+                      setStyleMenuOpen(false);
+                    }}
+                  >
+                    {CHART_STYLE_LABELS[s]}
+                    {chartStyle === s && <span className="chart-style-check">✓</span>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>,
+            document.body,
+          )
         ) : ReactDOM.createPortal(
           <>
             <div className="indicators-sheet-backdrop" onClick={() => setStyleMenuOpen(false)} />
@@ -3204,6 +3398,242 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
+  // Fullscreen only (mobile/iOS and desktop alike) — Interval sits next
+  // to Grid in the icon row, opening the SAME "Select Interval" bottom
+  // sheet chartControlsPanel's own "more" button already uses
+  // (intervalSheetOpen) rather than a second, duplicate picker.
+  const fsIntervalButton = (
+    <div className="indicators-menu-wrapper">
+      <button
+        ref={intervalBtnRef}
+        type="button"
+        className={`chart-depth-btn chart-fs-interval-btn${(isDesktopWidth ? intervalMenuOpen : intervalSheetOpen) ? " chart-depth-btn--active" : ""}`}
+        onClick={() => {
+          if (isDesktopWidth) {
+            if (!intervalMenuOpen && intervalBtnRef.current) {
+              const r = intervalBtnRef.current.getBoundingClientRect();
+              setIntervalMenuPos({ top: r.bottom + 6, left: r.left });
+            }
+            setIntervalMenuOpen((v) => !v);
+            return;
+          }
+          setIntervalSheetOpen(true);
+        }}
+        title={t("chart.interval", "Interval")}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3.5 2" />
+        </svg>
+        <span className="chart-icon-label">{INTERVAL_SHORT[interval]}</span>
+      </button>
+      {intervalMenuOpen && isDesktopWidth && intervalMenuPos && ReactDOM.createPortal(
+        <>
+          <div className="indicators-menu-backdrop" onClick={() => setIntervalMenuOpen(false)} />
+          <div className="indicators-menu indicators-menu--portal" style={{ top: intervalMenuPos.top, left: intervalMenuPos.left }}>
+            {INTERVALS.map((opt) => {
+              const needsPro = PRO_INTERVALS.has(opt);
+              const locked = needsPro && !isPaid;
+              const trend = trends[opt];
+              return (
+                <div
+                  key={opt}
+                  className="indicators-menu-item"
+                  onClick={() => {
+                    if (locked) { onOpenUpgrade?.("pro"); return; }
+                    setInterval(opt);
+                    setIntervalMenuOpen(false);
+                  }}
+                >
+                  {INTERVAL_LABELS[opt]}
+                  {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                    : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                    : null}
+                  {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                    : interval === opt ? <span className="chart-style-check">✓</span>
+                    : null}
+                </div>
+              );
+            })}
+          </div>
+        </>,
+        document.body,
+      )}
+    </div>
+  );
+
+  // Fullscreen's persistent docked bottom sheet — options only (Style/
+  // Indicators/Interval), grouped as independent accordion categories the
+  // user expands one at a time instead of scrolling one long list. High/
+  // Low/Vol/Signal/Bid/Ask/Divergence stay inline in the header instead
+  // (chart-fs-stats-strip/chart-fs-info-row above) — this sheet never
+  // duplicates live stats, only settings.
+  const fsSignalBucket = zone
+    ? (zone.signal === "oversold" || zone.signal === "buy" || zone.signal === "strong-buy"
+        ? "oversold"
+        : zone.signal === "overbought" || zone.signal === "sell" || zone.signal === "strong-sell"
+        ? "overbought"
+        : "neutral")
+    : null;
+  const fsSignalLabel = fsSignalBucket === "oversold" ? t("chart.oversold")
+    : fsSignalBucket === "overbought" ? t("chart.overbought")
+    : fsSignalBucket === "neutral" ? t("chart.neutralZone")
+    : null;
+  const fsSignalPct = fsSignalBucket === "oversold" ? 0 : fsSignalBucket === "overbought" ? 100 : 50;
+  const fsDivBucket = divergence?.type === "bearish" ? "bearish" : divergence?.type === "bullish" ? "bullish" : "none";
+  const fsDivDotBucket = fsDivBucket === "bearish" ? "overbought" : fsDivBucket === "bullish" ? "oversold" : "neutral";
+  const fsDivLabel = fsDivBucket === "bearish" ? t("chart.bearish", "Bearish")
+    : fsDivBucket === "bullish" ? t("chart.bullish", "Bullish")
+    : t("chart.none", "None");
+  const fsDivPct = fsDivBucket === "bearish" ? 0 : fsDivBucket === "bullish" ? 100 : 50;
+
+  const fsDockSheet = isFullscreen && !isDesktopWidth && ReactDOM.createPortal(
+    <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}`}>
+      <button
+        type="button"
+        className="fs-dock-peek"
+        onClick={() => setFsSheetExpanded((v) => !v)}
+      >
+        <span className="fs-dock-handle" />
+        <span className="fs-dock-title-row">
+          <svg className="fs-dock-title-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span className="fs-dock-title">{t("chart.chartSettings", "Chart Settings")}</span>
+          <span className="fs-dock-interval-badge">{INTERVAL_SHORT[interval]}</span>
+          <div style={{ flex: 1 }} />
+          {fsSheetExpanded ? (
+            <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          ) : (
+            <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          )}
+        </span>
+      </button>
+
+      {fsSheetExpanded && (
+        <div className="fs-dock-body">
+
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("style")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--style">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                  <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                  <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                  <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.style", "Style")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.style ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.style && (
+              <div className="fs-dock-category-body">
+                <button
+                  type="button"
+                  className={`fs-controls-row-toggle${showGrid ? " fs-controls-row-toggle--on" : ""}`}
+                  onClick={() => setShowGrid((v) => !v)}
+                >
+                  <span>{t("chart.grid", "Grid")}</span>
+                  <span className="fs-controls-switch" />
+                </button>
+                <div className="fs-controls-style-grid">
+                  {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                    <button
+                      type="button"
+                      key={s}
+                      className={`fs-controls-chip${chartStyle === s ? " fs-controls-chip--active" : ""}`}
+                      onClick={() => setChartStyle(s)}
+                    >
+                      <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
+                      {CHART_STYLE_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("indicators")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--indicators">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18" />
+                  <path d="M7 16l4-5 3 3 5-7" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.indicators")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.indicators ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.indicators && (
+              <div className="fs-dock-category-body">
+                <div className="indicators-menu indicators-menu--sheet">{indicatorsList}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("interval")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--interval">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3.5 2" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.interval", "Interval")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.interval ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.interval && (
+              <div className="fs-dock-category-body">
+                <div className="interval-sheet-list">
+                  {INTERVALS.map((opt) => {
+                    const needsPro = PRO_INTERVALS.has(opt);
+                    const locked = needsPro && !isPaid;
+                    const trend = trends[opt];
+                    return (
+                      <button
+                        type="button"
+                        key={opt}
+                        className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
+                        onClick={() => {
+                          if (locked) { onOpenUpgrade?.("pro"); return; }
+                          setInterval(opt);
+                        }}
+                      >
+                        <span className="interval-sheet-item-label">
+                          {INTERVAL_LABELS[opt]}
+                          {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                            : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                            : null}
+                        </span>
+                        {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                          : interval === opt ? <span className="interval-sheet-item-check">✓</span>
+                          : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
@@ -3224,9 +3654,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   entirely — picked over the badge-based header directions
                   above. Only normal (non-fullscreen) mobile/desktop keep
                   the original title row below/further down. */}
-              {isFullscreen ? (
+              {isFullscreen ? (() => {
+                // "Minimal Header" layout — single compact coin+price row,
+                // High/Low/Vol/Signal collapsed into one tappable strip
+                // instead of sitting permanently expanded. Style/
+                // Indicators/Interval live in the persistent docked sheet
+                // instead (fsDockSheet, portaled to document.body).
+                return (
                 <div className="chart-fs-header-block">
-                  <div className="chart-fs-coin-row">
+                  <div className="chart-fs-compact-row">
                     <span
                       className="chart-fs-coin-avatar"
                       style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
@@ -3234,60 +3670,62 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       {COIN_GLYPHS[coin] ?? coin[0]}
                     </span>
                     <h3
-                      className="chart-fs-coin-name chart-title-tappable"
+                      className="chart-fs-coin-name chart-fs-coin-name--compact chart-title-tappable"
                       onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
                     >
                       {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
-                      <svg className="chart-title-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="chart-title-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </h3>
+                    {currentPrice !== null && (
+                      <span
+                        className={`chart-current-price chart-fs-compact-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
+                      >
+                        {formatLivePrice(currentPrice)}
+                      </span>
+                    )}
+                    {dayChangeAbs !== null && dayChangePercent !== null && (
+                      <span
+                        className={`chart-fs-price-change chart-fs-compact-change${dayChangePercent >= 0 ? " chart-fs-price-change--up" : " chart-fs-price-change--down"}`}
+                      >
+                        {dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%
+                      </span>
+                    )}
+                    <div style={{ flex: 1 }} />
                     <button
                       type="button"
                       className="chart-fs-exit-corner-btn"
                       onClick={toggleFullscreen}
                       title="Exit fullscreen"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 3H5a2 2 0 0 0-2 2v4M15 3h4a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4M15 21h4a2 2 0 0 0 2-2v-4" />
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18M6 6l12 12" />
                       </svg>
-                      {t("chart.exit")}
                     </button>
                   </div>
-                  {currentPrice !== null && (
-                    <div className="chart-fs-price-line">
-                      <span
-                        className={`chart-current-price${priceDirection ? ` chart-current-price--${priceDirection}` : ""}`}
-                      >
-                        {formatLivePrice(currentPrice)}
-                      </span>
-                      {dayChangeAbs !== null && dayChangePercent !== null && (
-                        <span
-                          className={`chart-fs-price-change${dayChangePercent >= 0 ? " chart-fs-price-change--up" : " chart-fs-price-change--down"}`}
-                        >
-                          {dayChangeAbs >= 0 ? "+" : "-"}{formatLivePrice(Math.abs(dayChangeAbs))}
-                          {" "}({dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%)
-                        </span>
-                      )}
-                    </div>
-                  )}
+
+                  <button
+                    type="button"
+                    className="chart-fs-stats-strip"
+                    onClick={() => setFsStatsExpanded((v) => !v)}
+                  >
+                    <span className="chart-fs-strip-item">{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
+                    <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
+                    <span className="chart-fs-strip-item">{t("chart.volUsd", "Vol (USD)")} <b>{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</b></span>
+                    {isPaid && fsSignalBucket && (
+                      <span className={`chart-fs-strip-signal chart-fs-strip-signal--${fsSignalBucket}`}>{fsSignalLabel}</span>
+                    )}
+                    <div style={{ flex: 1 }} />
+                    <svg className="chart-fs-strip-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: fsStatsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+
+                  {fsStatsExpanded && (
                   <div className="chart-fs-info-row">
                   <div className="chart-fs-stats-grid">
                     <div className="chart-fs-stat-col">
-                      <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--up">
-                          {dayHigh !== null ? formatLivePrice(dayHigh) : "—"}
-                        </span>
-                      </div>
-                      <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--down">
-                          {dayLow !== null ? formatLivePrice(dayLow) : "—"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="chart-fs-stat-col chart-fs-stat-col--center">
                       <div className="chart-fs-stat-row">
                         <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--up">
@@ -3303,12 +3741,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </div>
                     <div className="chart-fs-stat-col chart-fs-stat-col--right">
                       <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
-                        <span className="chart-fs-stat-value">
-                          {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
-                        </span>
-                      </div>
-                      <div className="chart-fs-stat-row">
                         <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
                         <span className="chart-fs-stat-value">
                           {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
@@ -3316,33 +3748,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       </div>
                     </div>
                   </div>
-                  {zone && isPaid && (() => {
-                    const bucket =
-                      zone.signal === "oversold" || zone.signal === "buy" || zone.signal === "strong-buy"
-                        ? "oversold"
-                        : zone.signal === "overbought" || zone.signal === "sell" || zone.signal === "strong-sell"
-                        ? "overbought"
-                        : "neutral";
-                    const pct = bucket === "oversold" ? 0 : bucket === "overbought" ? 100 : 50;
-                    const label =
-                      bucket === "oversold" ? t("chart.oversold")
-                      : bucket === "overbought" ? t("chart.overbought")
-                      : t("chart.neutralZone");
-                    return (
-                      <div className="chart-fs-meter">
-                        <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
-                        <div className="chart-fs-meter-row">
-                          <span className="chart-fs-meter-track">
-                            <span
-                              className={`chart-fs-meter-dot chart-fs-meter-dot--${bucket}`}
-                              style={{ left: `${pct}%` }}
-                            />
-                          </span>
-                          <span className={`chart-fs-meter-value chart-fs-meter-value--${bucket}`}>{label}</span>
-                        </div>
+                  {zone && isPaid && fsSignalBucket && (
+                    <div className="chart-fs-meter">
+                      <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                      <div className="chart-fs-meter-row">
+                        <span className="chart-fs-meter-track">
+                          <span
+                            className={`chart-fs-meter-dot chart-fs-meter-dot--${fsSignalBucket}`}
+                            style={{ left: `${fsSignalPct}%` }}
+                          />
+                        </span>
+                        <span className={`chart-fs-meter-value chart-fs-meter-value--${fsSignalBucket}`}>{fsSignalLabel}</span>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
                   {!isPaid && (
                     <button
                       className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
@@ -3352,28 +3771,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       Unlock Status
                     </button>
                   )}
-                  {isPaid && (() => {
-                    const bucket = divergence?.type === "bearish" ? "bearish" : divergence?.type === "bullish" ? "bullish" : "none";
-                    const pct = bucket === "bearish" ? 0 : bucket === "bullish" ? 100 : 50;
-                    const label =
-                      bucket === "bearish" ? t("chart.bearish", "Bearish")
-                      : bucket === "bullish" ? t("chart.bullish", "Bullish")
-                      : t("chart.none", "None");
-                    return (
-                      <div className="chart-fs-meter">
-                        <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
-                        <div className="chart-fs-meter-row">
-                          <span className="chart-fs-meter-track chart-fs-meter-track--rev">
-                            <span
-                              className={`chart-fs-meter-dot chart-fs-meter-dot--${bucket === "bearish" ? "overbought" : bucket === "bullish" ? "oversold" : "neutral"}`}
-                              style={{ left: `${pct}%` }}
-                            />
-                          </span>
-                          <span className={`chart-fs-meter-value chart-fs-meter-value--${bucket === "bearish" ? "overbought" : bucket === "bullish" ? "oversold" : "neutral"}`}>{label}</span>
-                        </div>
+                  {isPaid && (
+                    <div className="chart-fs-meter">
+                      <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                      <div className="chart-fs-meter-row">
+                        <span className="chart-fs-meter-track chart-fs-meter-track--rev">
+                          <span
+                            className={`chart-fs-meter-dot chart-fs-meter-dot--${fsDivDotBucket}`}
+                            style={{ left: `${fsDivPct}%` }}
+                          />
+                        </span>
+                        <span className={`chart-fs-meter-value chart-fs-meter-value--${fsDivDotBucket}`}>{fsDivLabel}</span>
                       </div>
-                    );
-                  })()}
+                    </div>
+                  )}
                   {!isPaid && (
                     <button
                       className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
@@ -3384,8 +3795,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </button>
                   )}
                   </div>
+                  )}
                 </div>
-              ) : !isDesktopWidth ? (
+                );
+              })() : !isDesktopWidth ? (
                 <div className="chart-fs-header-block">
                   <div className="chart-title-row">
                     <h3
@@ -3511,7 +3924,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </>
               )}
               {!isFullscreen && currentPrice !== null && (
-                <div className="chart-mobile-price-row">
+                <div className="chart-mobile-price-row" ref={mobilePriceRowRef}>
                   <span
                     className={`chart-mobile-price${priceDirection ? ` chart-mobile-price--${priceDirection}` : ""}`}
                   >
@@ -3540,139 +3953,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
           </div>
 
-          <div className="chart-legend">
-            {showBB && (
-              <>
-                <span className="legend-item legend-bb-upper">
-                  {t("chart.bbUpperLegend")}
-                </span>
-                <span className="legend-item legend-bb-middle">
-                  {t("chart.bbMiddleLegend")}
-                </span>
-                <span className="legend-item legend-bb-lower">
-                  {t("chart.bbLowerLegend")}
-                </span>
-              </>
-            )}
-            <div className="chart-legend-actions">
-              {indicatorsControl}
-              {isFullscreen && gridStyleControls}
-              <button
-                className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
-                onClick={() => {
-                  if (showDepthProfile) {
-                    setShowDepthProfile(false);
-                    if (document.fullscreenElement) {
-                      document.exitFullscreen().catch(() => {});
-                    } else if (cssFsRef.current) {
-                      cssFsRef.current = false;
-                      setIsFullscreen(false);
-                    }
-                  } else {
-                    toggleFullscreen();
-                    setShowDepthProfile(true);
-                  }
-                }}
-                title={
-                  showDepthProfile ? "Hide depth profile" : "Show depth profile"
-                }
-              >
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="6" />
-                  <line x1="21" y1="10" x2="6" y2="10" />
-                  <line x1="15" y1="14" x2="6" y2="14" />
-                  <line x1="12" y1="18" x2="6" y2="18" />
-                </svg>
-                <span className="chart-icon-label">
-                  {t("chart.orderDepth")}
-                </span>
-              </button>
-              {/* Hidden for now — button removed, but showAstroChart/
-                  AstroSuggestions render logic below is untouched so this
-                  is a one-line revert (just uncomment) whenever it comes
-                  back. */}
-              {false && (
-                <button
-                  className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
-                  onClick={() => setShowAstroChart(true)}
-                  title={t("astro.title", "Astro Suggestions")}
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z" />
-                    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
-                  </svg>
-                  <span className="chart-icon-label">
-                    {t("astro.title", "Astro Suggestions")}
-                  </span>
-                </button>
-              )}
-              {((Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
-                <button
-                  className="chart-depth-btn"
-                  onClick={() => {
-                    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                    setShowCompactView(true);
-                  }}
-                  title={t("chart.compactView", "Compact View")}
-                >
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
-                    <circle cx="12" cy="12" r="4" />
-                  </svg>
-                  <span className="chart-icon-label">{t("chart.compactView", "Compact View")}</span>
-                </button>
-              )}
-              {onToggleCoinChat && Capacitor.getPlatform() !== "ios" && (
-                <button
-                  className={`chart-livechat-pill${coinChatOpen ? " chart-livechat-pill--active" : ""}`}
-                  onClick={onToggleCoinChat}
-                  title={coinChatOpen ? t("coinChat.hide", "Hide chat") : t("coinChat.triggerLabel")}
-                >
-                  {coinChatOpen ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  ) : (
-                    <span className="chart-livechat-dot" />
-                  )}
-                  {t("coinChat.triggerLabel")}
-                </button>
-              )}
-            </div>
-            {isFullscreen && (
-              <div className="chart-fs-intervals-row">{chartControlsPanel}</div>
-            )}
-          </div>
         </div>
 
-        {banner && isPaid && (
+        {banner && isPaid && !isFullscreen && (
           <div
             className={`interval-banner interval-banner--${banner.sentiment}`}
           >
@@ -3753,18 +4036,199 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         <div
           style={{ position: "relative" }}
-          // iOS gets an explicit Full Screen button instead of relying on
-          // double-tap to ENTER fullscreen (see the button next to Save
-          // below) — but double-tap still EXITS it once already there,
-          // same as desktop never lost either direction.
+          // This onDoubleClick prop only ever worked on web — native
+          // dblclick synthesis from two touches is unreliable on iOS, which
+          // is why it's left disabled here rather than firing unreliably.
+          // iOS gets the real double-tap-to-enter/exit via the manual
+          // touch-timing detector above instead (see dblClickWrapRef's
+          // effect) — plus an explicit Full Screen button as a visible
+          // affordance for anyone who doesn't discover the gesture.
           onDoubleClick={
             Capacitor.isNativePlatform() && !isFullscreen ? undefined : toggleFullscreen
           }
           className={`chart-dblclick-wrap${
             Capacitor.isNativePlatform() && !isFullscreen ? " chart-dblclick-wrap--no-hint" : ""
+          }${
+            Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" && !isFullscreen ? " chart-dblclick-wrap--ios-bleed" : ""
           }`}
           ref={dblClickWrapRef}
         >
+            <div className={`chart-legend-actions${Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? " chart-legend-actions--ios" : ""}`}>
+              {/* Chart style/Interval/Indicators — every compact view
+                  (mobile/iOS and desktop alike) plus desktop fullscreen,
+                  each opening its own dropdown there; mobile fullscreen
+                  still uses the "Chart Settings" dock instead
+                  (fsDockSheet below). */}
+              {(!isFullscreen || isDesktopWidth) && gridStyleControls}
+              {(!isFullscreen || isDesktopWidth) && fsIntervalButton}
+              {(!isFullscreen || isDesktopWidth) && indicatorsControl}
+              <span className="chart-legend-actions-group--right" />
+              {/* Grid is already inside the dock's Style category too —
+                  no separate standalone button in fullscreen. */}
+              {!isFullscreen && gridToggleButton}
+              <button
+                className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
+                onClick={() => {
+                  if (showDepthProfile) {
+                    setShowDepthProfile(false);
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen().catch(() => {});
+                    } else if (cssFsRef.current) {
+                      cssFsRef.current = false;
+                      setIsFullscreen(false);
+                    }
+                  } else {
+                    toggleFullscreen();
+                    setShowDepthProfile(true);
+                  }
+                }}
+                title={
+                  showDepthProfile ? "Hide depth profile" : "Show depth profile"
+                }
+                data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="6" />
+                  <line x1="21" y1="10" x2="6" y2="10" />
+                  <line x1="15" y1="14" x2="6" y2="14" />
+                  <line x1="12" y1="18" x2="6" y2="18" />
+                </svg>
+                <span className="chart-icon-label">
+                  {t("chart.orderDepth")}
+                </span>
+              </button>
+              {/* Hidden for now — button removed, but showAstroChart/
+                  AstroSuggestions render logic below is untouched so this
+                  is a one-line revert (just uncomment) whenever it comes
+                  back. */}
+              {false && (
+                <button
+                  className={`chart-depth-btn${showAstroChart ? " chart-depth-btn--active" : ""}`}
+                  onClick={() => setShowAstroChart(true)}
+                  title={t("astro.title", "Astro Suggestions")}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z" />
+                    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
+                  </svg>
+                  <span className="chart-icon-label">
+                    {t("astro.title", "Astro Suggestions")}
+                  </span>
+                </button>
+              )}
+              {((Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || (!Capacitor.isNativePlatform() && isDesktopWidth)) && (
+                <button
+                  className="chart-depth-btn"
+                  onClick={() => {
+                    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                    setShowCompactView(true);
+                  }}
+                  title={t("chart.compactView", "Compact View")}
+                  data-tooltip={t("chart.compactView", "Compact View")}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
+                    <circle cx="12" cy="12" r="4" />
+                  </svg>
+                  <span className="chart-icon-label">{t("chart.compactView", "Compact View")}</span>
+                </button>
+              )}
+              {onToggleCoinChat && Capacitor.getPlatform() !== "ios" && (
+                <button
+                  className={`chart-livechat-pill${coinChatOpen ? " chart-livechat-pill--active" : ""}`}
+                  onClick={onToggleCoinChat}
+                  title={coinChatOpen ? t("coinChat.hide", "Hide chat") : t("coinChat.triggerLabel")}
+                  data-tooltip={coinChatOpen ? t("coinChat.hide", "Hide chat") : t("coinChat.triggerLabel")}
+                >
+                  {coinChatOpen ? (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <span className="chart-livechat-dot" />
+                  )}
+                  {t("coinChat.triggerLabel")}
+                </button>
+              )}
+              {/* Desktop fullscreen only — compact view already has its
+                  own Grid button earlier in this row; mobile fullscreen
+                  still covers Grid via the dock's Style category. */}
+              {isFullscreen && isDesktopWidth && gridToggleButton}
+              {/* Save joins this row everywhere (compact and fullscreen,
+                  mobile/iOS and desktop alike); Reset only in fullscreen
+                  (it has no non-fullscreen equivalent). The old floating
+                  top-left buttons (.chart-reset-view-btn/.chart-save-
+                  view-btn) are hidden unconditionally now — see below —
+                  since every platform uses this icon row instead. */}
+              <button
+                type="button"
+                className={`chart-depth-btn chart-fs-save-btn${!isDesktopWidth ? " chart-fs-save-btn--ios-push-right" : ""}`}
+                onClick={handleScreenshot}
+                title={t("chart.save")}
+                data-tooltip={t("chart.save")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                <span className="chart-icon-label">{t("chart.save")}</span>
+              </button>
+              {isFullscreen && (
+                <button
+                  type="button"
+                  className="chart-depth-btn chart-fs-reset-btn"
+                  onClick={() => {
+                    chartRef.current?.timeScale().fitContent();
+                    rsiChartRef.current?.timeScale().fitContent();
+                    macdChartRef.current?.timeScale().fitContent();
+                  }}
+                  title={t("chart.reset")}
+                  data-tooltip={t("chart.reset")}
+                >
+                  <span aria-hidden="true">⤢</span>
+                  <span className="chart-icon-label">{t("chart.reset")}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="chart-depth-btn chart-fullscreen-btn"
+                onClick={toggleFullscreen}
+                title={t("chart.fullscreen", "Fullscreen")}
+                data-tooltip={t("chart.fullscreen", "Fullscreen")}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+                <span className="chart-icon-label">{t("chart.fullscreen", "Fullscreen")}</span>
+              </button>
+            </div>
           {loading && (
             <div className="chart-loading-overlay">
               <span>{t("chart.loading")}</span>
@@ -3775,13 +4239,31 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             className="chart-canvas-wrap chart-main-wrap"
             style={{
               width: "100%",
-              height: isFullscreen ? "calc(100vh - 290px)" : "400px",
+              height: isFullscreen ? "calc(100vh - 200px)" : "400px",
             }}
           />
           <PredictionOverlay
             chartRef={chartRef}
             seriesRef={candleRef}
             prediction={predictionPath}
+          />
+          <LineDotFillOverlay
+            chartRef={chartRef}
+            seriesRef={lineCloseRef}
+            candlesRef={lastCandlesRef}
+            color={lineTrendColor}
+            generation={chartGeneration}
+            visible={!isFullscreen && chartStyle === "line"}
+          />
+          <ChartEventAnnotations
+            chartRef={chartRef}
+            seriesRef={chartStyle === "line" ? lineCloseRef : candleRef}
+            candlesRef={lastCandlesRef}
+            srLevels={srLevels}
+            zone={zone}
+            coin={coin}
+            visible={!isFullscreen && !isDesktopWidth}
+            cardsSlotRef={eventCardsSlotRef}
           />
           <ChartDrawingTools
             ref={drawingToolsRef}
@@ -3862,18 +4344,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
         </div>
 
-        {/* Normal (non-fullscreen) only, mobile and desktop alike —
-            fullscreen still shows this in .chart-legend-actions instead.
-            Interval pills get their own full-width row below the chart
-            canvas rather than sharing chart-header-right with
-            mobileStatsBlock (mobile) or sitting in the header row
-            (desktop, previously). */}
-        {!isFullscreen && (
-          <div className="chart-interval-row-standalone">
-            {chartControlsPanel}
-            {gridStyleControls}
-          </div>
-        )}
+        <div ref={eventCardsSlotRef} />
+
+        {fsDockSheet}
+        {intervalSheetPortal}
 
         {showDepthProfile && (
           <OrderBookProfileModal
@@ -3965,7 +4439,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
 
-        {!isPaid ? (
+        {isFullscreen ? null : !isPaid ? (
           <div className="chart-ai-placeholder">
             <div className="chart-ai-placeholder-preview" aria-hidden="true">
               <div className="chart-ai-placeholder-header">

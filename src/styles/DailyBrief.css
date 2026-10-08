@@ -105,6 +105,44 @@
   margin: auto;
 }
 
+.db-refresh-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.db-refresh-btn:hover { background: var(--color-border); color: var(--color-text); }
+.db-refresh-btn:active { transform: scale(0.9); }
+.db-refresh-btn:disabled { cursor: default; }
+/* Accent color while actively refreshing — same blue used for the price
+   chart's line/dot-fill elsewhere, distinct from the idle muted gray so a
+   click reads as "doing something," not just spinning in place. */
+.db-refresh-btn--spinning { color: #818cf8; }
+
+.db-refresh-icon {
+  display: block;
+  width: 13px;
+  height: 13px;
+  color: currentColor;
+  margin: auto;
+}
+
+@keyframes db-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+.db-refresh-btn--spinning .db-refresh-icon {
+  animation: db-refresh-spin 0.4s linear infinite;
+}
+
 .db-drag-zone {
   flex-shrink: 0;
   display: flex;
@@ -682,6 +720,12 @@
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--pc-border);
+}
+
+.db-page-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .db-page-list {

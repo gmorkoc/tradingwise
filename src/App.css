@@ -2806,6 +2806,22 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   color: var(--color-text-muted);
 }
 
+/* Compact coin+price badge that joins .mch-stats once PriceChart's own
+   .chart-mobile-price-row has scrolled out of view (see App.tsx's
+   chart-price-row-visibility listener) — reads as "part of" the stats
+   row, same label/value/signal structure as every other .mch-stat here,
+   just always first and visually anchored with a left border instead of
+   the plain padding the others use. */
+.mch-stat--sticky-price {
+  animation: mch-sticky-price-in 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes mch-sticky-price-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.mch-stat--sticky-price-up .mch-stat-value { color: var(--color-success); }
+.mch-stat--sticky-price-down .mch-stat-value { color: var(--color-danger); }
+
 .mch-right {
   display: flex;
   align-items: center;
@@ -3726,6 +3742,16 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: flex;
     align-items: flex-start;
     -webkit-overflow-scrolling: touch;
+    /* Pinned at the top of the scroll once .mch-left (coin name/price)
+       scrolls past it — needed for the sticky coin+price badge (joins
+       this row the same way, see mch-stat--sticky-price) to actually be
+       visible once it appears; otherwise the whole header, badge
+       included, would already be scrolled off itself. Solid background
+       since content now scrolls underneath it rather than past it. */
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: var(--color-surface);
   }
 
   .mch-stat {

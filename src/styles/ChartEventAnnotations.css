@@ -1,0 +1,147 @@
+/* Dots sit on the price line itself, positioned from timeToCoordinate/
+   priceToCoordinate in ChartEventAnnotations.tsx — the layer is
+   pointer-events:none so it never blocks chart pan/zoom, with
+   pointer-events re-enabled only on the individual dot buttons. */
+.chart-event-dots-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.chart-event-dot {
+  all: unset;
+  position: absolute;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chart-event-dot::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  opacity: 0.55;
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.chart-event-dot--active::before {
+  background: var(--pc-danger, #ef4444);
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+/* Horizontal swipe carousel, one card per event — normal document flow,
+   right after the chart canvas (not part of the absolutely-positioned
+   dots layer above), so it just takes its own space below the chart,
+   clearly separated from both the canvas above (margin-top) and
+   whatever follows below it on the page (margin-bottom). Native scroll +
+   scroll-snap handles the swipe gesture itself; tapping a dot
+   (selectEvent in ChartEventAnnotations.tsx) scrolls here
+   programmatically, and swiping here updates the active dot back via
+   the onScroll handler — the two stay in sync either direction. */
+.chart-event-cards {
+  display: flex;
+  width: 100%;
+  margin-top: 24px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+.chart-event-cards::-webkit-scrollbar {
+  display: none;
+}
+/* One card fully visible at a time (no next-card peek) — each card fills
+   the container's own content width, so it sits inset by exactly the
+   container's horizontal padding on both sides, matching the rest of the
+   page's padding instead of bleeding to the edges. */
+.chart-event-card {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  margin-right: 12px;
+  box-sizing: border-box;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: var(--color-surface);
+}
+.chart-event-card:last-child {
+  margin-right: 0;
+}
+
+.chart-event-card-title {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+
+.chart-event-card-body {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.chart-event-card-time {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Small dot-pager under the cards (like a carousel/story indicator),
+   separate from the on-chart event dots above — lets the user see how
+   many cards there are and jump directly to one without swiping. The
+   bottom margin is the gap before whatever content follows on the page. */
+.chart-event-dots-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+.chart-event-pager-dot {
+  all: unset;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.chart-event-pager-dot::before {
+  content: "";
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.chart-event-pager-dot--active::before {
+  background: var(--color-primary);
+  transform: scale(1.3);
+}

@@ -1,6 +1,15 @@
 .drawing-overlay {
   position: absolute;
   inset: 0;
+  /* <canvas> is a "replaced element" in CSS, same category as <img> — for
+     a replaced element, position:absolute + inset:0 alone does NOT stretch
+     it to fill the container the way it would a <div>; auto width/height
+     resolves to the element's own intrinsic size (300×150, canvas's
+     default) instead. Explicit width/height is required to actually fill
+     the positioned parent. This was silently wrong for PredictionOverlay
+     too, just never surfaced until the dot-fill overlay made it obvious. */
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   z-index: 10;
 }
