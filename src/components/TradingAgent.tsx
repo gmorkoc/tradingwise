@@ -5,12 +5,14 @@ import { Keyboard } from "@capacitor/keyboard";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
-import { COINS } from "../services/coinglass";
+import { COINS, CoinSymbol } from "../services/coinglass";
+import { AgentChartModal } from "./AgentChartModal";
+import { OrderBookProfileModal } from "./OrderBookProfile";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsentAndOnboard,
   fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
-  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval,
+  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval, CoinSnapshot, ShowChartInterval,
 } from "../services/paperTrading";
 
 const DEFAULT_STARTING_BALANCE = 100000;
@@ -34,6 +36,16 @@ function estimateNetPnl(action: AgentAction): { profit: number; loss: number } |
   return { profit, loss };
 }
 const formatPnl = (n: number): string => `${n >= 0 ? "+" : "-"}$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+// Mirrors the edge function's own formatUsdAbbrev (trading-agent-reply) —
+// same "$1.2B" style a trader actually says out loud, for the voice
+// session's market-snapshot card.
+const formatAbbrevUsd = (n: number): string => {
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+};
 const formatMsgTime = (iso: string): string =>
   new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
@@ -58,6 +70,27 @@ import "../styles/TradingAgent.css";
 // Desktop/web keep typing only; a Web Speech API path would need its own
 // separate handling and isn't added here.
 const SPEECH_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+
+// Spoken phrases that mean "I'm finished talking to you," not a real
+// chat/trade message — an EXACT match on the whole (normalized) utterance
+// only, never a substring check, since several of these ("close", "stop",
+// "done") are completely ordinary words inside a real trading instruction
+// ("close my BTC position", "stop loss at 80k", "I'm done buying more
+// SOL") — those have extra words around them and must still reach the
+// agent normally. Matched case/punctuation-insensitively against the
+// user's full turn once speech recognition finishes it.
+const VOICE_END_PHRASES = new Set([
+  "bye", "goodbye", "good bye", "bye bye", "see you", "see ya", "goodnight", "good night",
+  "i'm done", "im done", "i am done", "we're done", "were done", "done",
+  "that's it", "thats it", "that's all", "thats all", "that'll be all", "thatll be all",
+  "close", "stop", "exit", "quit", "end", "end call", "hang up",
+  "i'm good", "im good", "all good", "nothing else", "nothing more",
+  "thanks bye", "thank you bye", "ok bye", "okay bye", "ok goodbye", "okay goodbye",
+]);
+function isVoiceEndPhrase(text: string): boolean {
+  const normalized = text.trim().toLowerCase().replace(/[.!?,]+$/g, "");
+  return VOICE_END_PHRASES.has(normalized);
+}
 
 // Self-contained global widget (own floating trigger + panel), not wired
 // into App.tsx's chart-grid layout like CoinChat's docked sidebar — this
@@ -94,6 +127,142 @@ function BellIcon({ size = 14 }: { size?: number }) {
       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
+  );
+}
+
+// Plain inline SVG polyline — no charting library, no canvas, no touch/
+// scroll handling of its own (deliberately: this just draws a static
+// shape from a fixed array of closes, nothing interactive or resizing
+// in response to gestures). Scales to fill a fixed box; a flat/empty
+// series (too few points, or a coin with literally no movement) renders
+// a flat center line instead of leaving the box blank.
+function Sparkline({ closes, width = 130, height = 36 }: { closes: number[]; width?: number; height?: number }) {
+  if (closes.length < 2) {
+    return (
+      <svg width={width} height={height} className="ta-sparkline">
+        <line x1={0} y1={height / 2} x2={width} y2={height / 2} className="ta-sparkline-flat" />
+      </svg>
+    );
+  }
+  const min = Math.min(...closes);
+  const max = Math.max(...closes);
+  const range = max - min || 1;
+  const points = closes
+    .map((c, i) => {
+      const x = (i / (closes.length - 1)) * width;
+      const y = height - ((c - min) / range) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const up = closes[closes.length - 1] >= closes[0];
+  return (
+    <svg width={width} height={height} className={`ta-sparkline ta-sparkline--${up ? "up" : "down"}`}>
+      <polyline points={points} fill="none" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Three dots that pulse in sequence (CSS-driven, staggered animation-delay
+// per dot) instead of a static "…" — used only for the "Listening"/
+// "Thinking" placeholder text, never for real recognized/spoken words,
+// where movement would just hurt readability. (The rotating/curved-text
+// effect around the orb was tried four separate ways — a ring, an
+// upright-orbiting word, SVG curved text, plain-CSS curved text — and
+// every single one made the orb itself stop rendering on-device for a
+// reason never pinned down through code review alone. Reverted for good;
+// this is the stable, confirmed-working version.)
+function AnimatedDots() {
+  return (
+    <span className="ta-anim-dots" aria-hidden="true">
+      <span className="ta-anim-dot" />
+      <span className="ta-anim-dot" />
+      <span className="ta-anim-dot" />
+    </span>
+  );
+}
+
+// Single-trade proposal card — extracted out of the text-chat message list
+// so the exact same card (and Confirm/Dismiss handlers) can also render
+// inside the voice overlay. Previously, a trade proposed during a voice
+// session had nowhere to actually show up on screen — the overlay only
+// ever had audio + a text caption, so the user heard "I've got the BTC
+// trade for you" with nothing to look at or confirm until they backed out
+// of voice mode entirely to the text view.
+function ActionProposalCard({
+  message, executingId, onConfirm, onDismiss,
+}: {
+  message: AgentMessage;
+  executingId: number | null;
+  onConfirm: (m: AgentMessage) => void;
+  onDismiss: (m: AgentMessage) => void;
+}) {
+  const action = message.action;
+  if (!action) return null;
+  const pnl = estimateNetPnl(action);
+  return (
+    <div className={`ta-proposal ta-proposal--${message.actionStatus}`}>
+      <div className="ta-proposal-row">
+        <span className={`ta-proposal-side ta-proposal-side--${action.side}`}>
+          {action.market === "futures"
+            ? (action.side === "buy" ? "▲ LONG" : "▼ SHORT")
+            : (action.side === "buy" ? "▲ BUY" : "▼ SELL")}
+        </span>
+        <span className="ta-proposal-coin">{action.coin}</span>
+        <span className="ta-proposal-market">
+          {action.market === "futures" ? `FUTURES ${action.leverage}x` : "SPOT"}
+        </span>
+      </div>
+      <div className="ta-proposal-details">
+        <div className="ta-proposal-detail">
+          <span>{action.market === "futures" ? "Margin" : "Cost"}</span>
+          <strong>${action.amountUsd.toLocaleString()}</strong>
+        </div>
+        {action.market === "futures" && (
+          <div className="ta-proposal-detail">
+            <span>Notional</span>
+            <strong>${(action.amountUsd * action.leverage).toLocaleString()}</strong>
+          </div>
+        )}
+        {action.takeProfit != null && (
+          <div className="ta-proposal-detail">
+            <span>Take Profit</span>
+            <strong className="ta-proposal-tp">
+              ${action.takeProfit.toLocaleString()}
+              {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.profit)})</span>}
+            </strong>
+          </div>
+        )}
+        {action.stopLoss != null && (
+          <div className="ta-proposal-detail">
+            <span>Stop Loss</span>
+            <strong className="ta-proposal-sl">
+              ${action.stopLoss.toLocaleString()}
+              {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.loss)})</span>}
+            </strong>
+          </div>
+        )}
+      </div>
+      {action.reason && <p className="ta-proposal-reason">{action.reason}</p>}
+      {message.actionStatus === "pending" ? (
+        <div className="ta-proposal-actions">
+          <button
+            type="button"
+            className="ta-proposal-confirm"
+            onClick={() => onConfirm(message)}
+            disabled={executingId === message.id}
+          >
+            {executingId === message.id ? "Executing…" : "Confirm"}
+          </button>
+          <button type="button" className="ta-proposal-dismiss" onClick={() => onDismiss(message)}>
+            Dismiss
+          </button>
+        </div>
+      ) : (
+        <span className="ta-proposal-status">
+          {message.actionStatus === "confirmed" ? "✓ Executed" : "Dismissed"}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -729,16 +898,30 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       thoughtProcess: null,
       createdAt: new Date().toISOString(),
     }]);
+    // Lets a tap on the "Thinking…" overlay (handleInterruptThinking below)
+    // cancel this exact in-flight request.
+    const controller = new AbortController();
+    sendAbortControllerRef.current = controller;
     try {
       // The resolved agent message already has everything speakLatestAgentReply
       // needs — firing it right here (not awaited) lets speech synthesis
       // start in parallel with the loadAll() reload below instead of
       // waiting on a second full round trip first, closer to how quickly a
       // real person replies after you stop talking.
-      const agentMsg = await sendAgentMessage(user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice);
+      const agentMsg = await sendAgentMessage(
+        user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice, setLastMarketSnapshot,
+        (req) => setChartModal({ coin: req.coin, interval: req.interval }),
+        (req) => setOrderBookModalCoin(req.coin),
+        controller.signal,
+      );
       if (viaVoice) speakLatestAgentReply([agentMsg]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong — please try again.");
+      // An interrupt (partialResults listener below) aborts this exact
+      // request on purpose — the user is already mid-way into their next
+      // turn by the time this rejects, so there's nothing to show here.
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        setError(e instanceof Error ? e.message : "Something went wrong — please try again.");
+      }
     } finally {
       // Chat transcript always gets the full back-and-forth from loadAll
       // regardless of viaVoice — speaking the reply (above) is purely an
@@ -759,6 +942,10 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // manual stop and a cancel both end the same native session the same
   // way), and this is what tells it to discard instead of send.
   const speechCancelledRef = useRef(false);
+  // Cancels the in-flight trading-agent-reply fetch for the *current*
+  // handleSend call — created fresh each call (see handleSend) so an
+  // interrupt can only ever abort the request it actually belongs to.
+  const sendAbortControllerRef = useRef<AbortController | null>(null);
   // Set right before handleSend fires from a finished voice transcript
   // (below) — read once at the top of handleSend and cleared immediately,
   // so only a question that actually arrived by voice gets a spoken
@@ -778,15 +965,35 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // screen) and the reply text shown while it's being read aloud.
   const [speaking, setSpeaking] = useState(false);
   const [spokenReply, setSpokenReply] = useState("");
+  // Live numbers (price/RSI/MACD/trend/funding/OI) for whatever coin(s) the
+  // latest turn actually resolved — shown as a compact data card during a
+  // voice session so the live interaction isn't audio/text-only. Cleared
+  // when voice mode exits so a stale card never lingers into a fresh
+  // session. Transient only, never persisted (see sendAgentMessage).
+  const [lastMarketSnapshot, setLastMarketSnapshot] = useState<CoinSnapshot[] | null>(null);
+  // Which coin's chart / order book modal is currently open, if any — at
+  // most one of these at a time, triggered from a snapshot card's own
+  // buttons (see the voice overlay JSX below).
+  const [chartModal, setChartModal] = useState<{ coin: string; interval?: ShowChartInterval } | null>(null);
+  const [orderBookModalCoin, setOrderBookModalCoin] = useState<string | null>(null);
   // The one <audio> element used to play back synthesized speech — a ref
   // so it survives across renders/calls instead of being recreated (and
   // losing track of what's currently playing) each time.
   const speechAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Bumped at the start of every speakLatestAgentReply call — lets a stale,
+  // slow-to-resolve call recognize it's been superseded (see there) instead
+  // of playing over whatever a newer turn already started.
+  const speechGenerationRef = useRef(0);
   // Pausing alone doesn't fire "ended" (where the object URL normally
   // gets revoked in speakLatestAgentReply's cleanup below) — every manual
   // stop path routes through this instead of a bare .pause() so the blob
   // URL is never leaked.
   const stopSpeaking = () => {
+    // Also invalidates any synthesis request still in flight (not just
+    // whatever's already playing) — every interrupt/exit path routes
+    // through here, so this is what stops a pending request from landing
+    // late and playing anyway after the user's already moved on.
+    speechGenerationRef.current++;
     const el = speechAudioRef.current;
     if (!el) return;
     el.pause();
@@ -801,7 +1008,25 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     setVoiceMode(false);
     setSpeaking(false);
     setSpokenReply("");
+    setLastMarketSnapshot(null);
     stopSpeaking();
+    // Closing out mid-"Thinking…" (panel close, Cancel) should cancel
+    // whatever request is still in flight rather than leave it to resolve
+    // into a voice session that's no longer there.
+    sendAbortControllerRef.current?.abort();
+  };
+  // Tap-to-interrupt during "Thinking…" — mirrors handleInterruptSpeech
+  // below (same gesture, same place in the overlay). Deliberately tap-only
+  // rather than hands-free: starting a second native mic session right
+  // before TTS playback begins is what was causing the app to crash (an
+  // AVAudioSession conflict between tearing down a recognition session and
+  // starting audio playback in quick succession) — see this session's
+  // notes. A tap has no such race since nothing else is touching the audio
+  // session at that moment.
+  const handleInterruptThinking = () => {
+    sendAbortControllerRef.current?.abort();
+    setSending(false);
+    startListening();
   };
   // Set right before a manual interrupt stops playback early — this is
   // what keeps the ended/error handlers below from ALSO calling
@@ -832,8 +1057,16 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     if (!last || last.role !== "agent" || !last.content) return;
     stopSpeaking();
     setSpokenReply(last.content);
+    // synthesizeAgentSpeech has no cancellation — if THIS call's request is
+    // slow and a newer turn's speakLatestAgentReply starts (and finishes)
+    // in the meantime, this one resolving late would otherwise still play,
+    // overlapping whatever's already speaking. Capturing a generation
+    // stamp and checking it's still current once the request lands is what
+    // lets a stale call discard itself instead of ever reaching audio.play().
+    const myGeneration = ++speechGenerationRef.current;
     try {
       const url = await synthesizeAgentSpeech(last.content);
+      if (speechGenerationRef.current !== myGeneration) { URL.revokeObjectURL(url); return; }
       const audio = new Audio(url);
       speechAudioRef.current = audio;
       const cleanup = () => {
@@ -850,6 +1083,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       // Synthesis request failed (offline, server error) — nothing to
       // play, but the loop still needs to continue rather than stall
       // silently on a turn with no audio.
+      if (speechGenerationRef.current !== myGeneration) return;
       setSpeaking(false);
       if (voiceModeRef.current) startListening();
     }
@@ -886,7 +1120,12 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       liveTranscriptRef.current = "";
       speechCancelledRef.current = false;
       setLiveTranscript("");
-      if (transcript && !cancelled) {
+      if (transcript && !cancelled && isVoiceEndPhrase(transcript)) {
+        // A closing phrase ("I'm done", "goodbye", "close"...) ends the
+        // hands-free loop the same way a manual Cancel tap does — it's
+        // not a real chat/trade message, so it never reaches the agent.
+        exitVoiceMode();
+      } else if (transcript && !cancelled) {
         lastSendWasVoiceRef.current = true;
         handleSendRef.current(transcript);
       }
@@ -1611,75 +1850,9 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
                     </div>
                   </div>
                 )}
-                {m.action && (() => {
-                  const action = m.action;
-                  const pnl = estimateNetPnl(action);
-                  return (
-                  <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
-                    <div className="ta-proposal-row">
-                      <span className={`ta-proposal-side ta-proposal-side--${action.side}`}>
-                        {action.market === "futures"
-                          ? (action.side === "buy" ? "▲ LONG" : "▼ SHORT")
-                          : (action.side === "buy" ? "▲ BUY" : "▼ SELL")}
-                      </span>
-                      <span className="ta-proposal-coin">{action.coin}</span>
-                      <span className="ta-proposal-market">
-                        {action.market === "futures" ? `FUTURES ${action.leverage}x` : "SPOT"}
-                      </span>
-                    </div>
-                    <div className="ta-proposal-details">
-                      <div className="ta-proposal-detail">
-                        <span>{action.market === "futures" ? "Margin" : "Cost"}</span>
-                        <strong>${action.amountUsd.toLocaleString()}</strong>
-                      </div>
-                      {action.market === "futures" && (
-                        <div className="ta-proposal-detail">
-                          <span>Notional</span>
-                          <strong>${(action.amountUsd * action.leverage).toLocaleString()}</strong>
-                        </div>
-                      )}
-                      {action.takeProfit != null && (
-                        <div className="ta-proposal-detail">
-                          <span>Take Profit</span>
-                          <strong className="ta-proposal-tp">
-                            ${action.takeProfit.toLocaleString()}
-                            {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.profit)})</span>}
-                          </strong>
-                        </div>
-                      )}
-                      {action.stopLoss != null && (
-                        <div className="ta-proposal-detail">
-                          <span>Stop Loss</span>
-                          <strong className="ta-proposal-sl">
-                            ${action.stopLoss.toLocaleString()}
-                            {pnl && <span className="ta-proposal-pnl"> ({formatPnl(pnl.loss)})</span>}
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-                    {action.reason && <p className="ta-proposal-reason">{action.reason}</p>}
-                    {m.actionStatus === "pending" ? (
-                      <div className="ta-proposal-actions">
-                        <button
-                          type="button"
-                          className="ta-proposal-confirm"
-                          onClick={() => handleConfirm(m)}
-                          disabled={executingId === m.id}
-                        >
-                          {executingId === m.id ? "Executing…" : "Confirm"}
-                        </button>
-                        <button type="button" className="ta-proposal-dismiss" onClick={() => handleDismiss(m)}>
-                          Dismiss
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="ta-proposal-status">
-                        {m.actionStatus === "confirmed" ? "✓ Executed" : "Dismissed"}
-                      </span>
-                    )}
-                  </div>
-                  );
-                })()}
+                {m.action && (
+                  <ActionProposalCard message={m} executingId={executingId} onConfirm={handleConfirm} onDismiss={handleDismiss} />
+                )}
                 {m.basket && (
                   <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>
                     <div className="ta-basket-legs">
@@ -1939,12 +2112,24 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
           mode actually exits (Cancel, re-tapping the mic between turns, or
           closing the panel), at which point the full back-and-forth is
           already sitting there as regular messages. */}
-      {voiceMode && (
+      {voiceMode && (() => {
+        // While there's real content to show (live numbers, a trade
+        // proposal) the orb shrinks and moves to the top-left instead of
+        // sitting centered and competing with that content for space —
+        // reverts back to centered once there's nothing to show again
+        // (e.g. plain chat, or back to a fresh listen with no proposal
+        // pending). Only CSS size/layout changes on the EXISTING elements,
+        // no new wrapper around the orb — seeF the orb-wrapper note above
+        // for why that specifically keeps breaking it.
+        const latestMsg = messages.length > 0 && messages[messages.length - 1].role === "agent" ? messages[messages.length - 1] : null;
+        const hasPendingAction = !!(latestMsg?.action && latestMsg.actionStatus === "pending");
+        const hasContent = (lastMarketSnapshot && lastMarketSnapshot.length > 0) || hasPendingAction;
+        return (
         <div
-          className="ta-listening-overlay"
-          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : undefined}
+          className={`ta-listening-overlay${hasContent ? " ta-listening-overlay--compact" : ""}`}
+          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : sending ? handleInterruptThinking : undefined}
           role="button"
-          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : "Voice session"}
+          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : sending ? "Tap to interrupt" : "Voice session"}
         >
           <button
             type="button"
@@ -1953,23 +2138,124 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
           >
             Cancel
           </button>
-          <span
-            className={`ta-trigger-orb ta-listening-orb${
-              sending && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
-            }`}
-          />
-          <p className="ta-listening-transcript">
-            {listening
-              ? (liveTranscript || "Listening…")
-              : speaking
-                ? spokenReply
-                : "Thinking…"}
-          </p>
+          {/* Orb is a direct flex child, untouched, no wrapper div — the
+              confirmed-stable version after four separate rotating/
+              curved-text attempts around it all broke its rendering on-
+              device. Static placeholder text now sits ABOVE the orb (just
+              DOM order within the flex column — orb itself still
+              completely unchanged) with three pulsing dots instead of a
+              plain "…" for a little life without touching the orb again. */}
+          <div className="ta-listening-orb-group">
+            <p className="ta-listening-transcript">
+              {listening
+                ? (liveTranscript || <>Listening<AnimatedDots /></>)
+                : speaking
+                  ? spokenReply
+                  : <>Thinking<AnimatedDots /></>}
+            </p>
+            <span
+              className={`ta-trigger-orb ta-listening-orb${
+                sending && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
+              }`}
+            />
+          </div>
+          {/* Live numbers for whatever coin(s) the conversation actually
+              resolved — the voice session was audio/text-only before this,
+              with price/RSI/MACD/funding/OI only ever used server-side to
+              write the spoken reply, never shown. Persists across turns
+              within one session (cleared on exitVoiceMode) so it's not just
+              a flash during "thinking." */}
+          {lastMarketSnapshot && lastMarketSnapshot.length > 0 && (
+            // No stopPropagation here — the card's own Chart/Order Book
+            // buttons already guard themselves individually below, so a
+            // blanket stop here only meant tapping the card's inert area
+            // (price, RSI row) silently ate the "tap anywhere to
+            // interrupt" gesture instead of covering most of the screen.
+            <div className="ta-listening-snapshot">
+              {lastMarketSnapshot.slice(0, 3).map((s) => (
+                <div key={s.coin} className="ta-listening-snapshot-card">
+                  <div className="ta-listening-snapshot-head">
+                    <span className="ta-listening-snapshot-coin">{s.coin}</span>
+                    <span className="ta-listening-snapshot-price">
+                      ${s.price.toLocaleString(undefined, { maximumFractionDigits: s.price < 1 ? 6 : 2 })}
+                    </span>
+                    {s.trend && (
+                      <span className={`ta-listening-snapshot-trend ta-listening-snapshot-trend--${s.trend}`}>
+                        {s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—"} {s.trend}
+                      </span>
+                    )}
+                  </div>
+                  {s.recentCloses && s.recentCloses.length > 1 && (
+                    <Sparkline closes={s.recentCloses} />
+                  )}
+                  <div className="ta-listening-snapshot-row">
+                    <span>RSI {s.rsi != null ? s.rsi.toFixed(1) : "n/a"}</span>
+                    <span>MACD {s.macdHist != null ? (s.macdHist >= 0 ? "▲" : "▼") : "n/a"}</span>
+                    {s.fundingRatePct != null && (
+                      <span>Funding {s.fundingRatePct >= 0 ? "+" : ""}{s.fundingRatePct.toFixed(3)}%</span>
+                    )}
+                    {s.openInterestUsd != null && (
+                      <span>OI {formatAbbrevUsd(s.openInterestUsd)}</span>
+                    )}
+                  </div>
+                  <div className="ta-listening-snapshot-actions">
+                    <button
+                      type="button"
+                      className="ta-listening-snapshot-action-btn"
+                      onClick={(e) => { e.stopPropagation(); setChartModal({ coin: s.coin }); }}
+                    >
+                      Chart
+                    </button>
+                    <button
+                      type="button"
+                      className="ta-listening-snapshot-action-btn"
+                      onClick={(e) => { e.stopPropagation(); setOrderBookModalCoin(s.coin); }}
+                    >
+                      Order Book
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* The actual trade card — previously a trade proposed during a
+              voice session had nowhere to show up on screen at all: the
+              overlay only ever had audio + a text caption, so hearing
+              "I've got the BTC trade for you" left nothing to look at or
+              confirm without backing out of voice mode entirely. Same
+              card/handlers as the text-chat list (ActionProposalCard). */}
+          {hasPendingAction && latestMsg && (
+            <div className="ta-listening-proposal" onClick={(e) => e.stopPropagation()}>
+              <ActionProposalCard message={latestMsg} executingId={executingId} onConfirm={handleConfirm} onDismiss={handleDismiss} />
+            </div>
+          )}
+          {/* Same headline sources already rendered under a text-chat agent
+              bubble (see m.newsSources below) — just also surfaced here so
+              a voice session isn't missing the one piece of context that
+              otherwise only ever showed up in the chat log after the fact. */}
+          {!listening && messages.length > 0 && messages[messages.length - 1].role === "agent" &&
+            messages[messages.length - 1].newsSources && messages[messages.length - 1].newsSources!.length > 0 && (
+            <div className="ta-listening-news" onClick={(e) => e.stopPropagation()}>
+              {messages[messages.length - 1].newsSources!.slice(0, 2).map((n, i) => (
+                <a
+                  key={i}
+                  href={n.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ta-listening-news-item"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {n.source}: {n.title}
+                </a>
+              ))}
+            </div>
+          )}
           <span className="ta-listening-hint">
-            {listening ? "Tap anywhere to stop and send" : speaking ? "Tap anywhere to interrupt" : ""}
+            {listening ? "Tap anywhere to stop and send" : speaking || sending ? "Tap anywhere to interrupt" : ""}
           </span>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 
@@ -1992,6 +2278,14 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
         </button>
       )}
       {open && (isDesktop ? panel : createPortal(panel, document.body))}
+      {chartModal && createPortal(
+        <AgentChartModal coin={chartModal.coin} initialInterval={chartModal.interval} onClose={() => setChartModal(null)} />,
+        document.body,
+      )}
+      {orderBookModalCoin && createPortal(
+        <OrderBookProfileModal coin={orderBookModalCoin as CoinSymbol} onClose={() => setOrderBookModalCoin(null)} />,
+        document.body,
+      )}
     </>
   );
 }

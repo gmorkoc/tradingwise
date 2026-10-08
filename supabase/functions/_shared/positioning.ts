@@ -18,23 +18,39 @@ const COINALYZE_API_KEY = Deno.env.get("COINALYZE_API_KEY") ?? "";
 export interface Positioning {
   fundingRate: number | null;
   longShortRatio: number | null;
+  // Raw contracts, same unit src/services/coinglass.ts's client-side
+  // open-interest fetch returns from this same Coinalyze endpoint — the
+  // caller multiplies by live price to get a USD figure, since this
+  // module has no price of its own to convert with.
+  openInterestContracts: number | null;
 }
 
 export async function fetchPositioning(coin: string): Promise<Positioning> {
   const symbol = `${coin.toUpperCase()}USDT`;
   let fundingRate: number | null = null;
+  let openInterestContracts: number | null = null;
 
   if (COINALYZE_API_KEY) {
-    try {
-      const res = await fetch(`https://api.coinalyze.net/v1/funding-rate?symbols=${symbol}_PERP.A`,
-        { headers: { api_key: COINALYZE_API_KEY, accept: "application/json" } });
-      if (res.ok) {
-        const json = await res.json();
+    const headers = { api_key: COINALYZE_API_KEY, accept: "application/json" };
+    const [frResult, oiResult] = await Promise.allSettled([
+      fetch(`https://api.coinalyze.net/v1/funding-rate?symbols=${symbol}_PERP.A`, { headers }),
+      fetch(`https://api.coinalyze.net/v1/open-interest?symbols=${symbol}_PERP.A`, { headers }),
+    ]);
+    if (frResult.status === "fulfilled" && frResult.value.ok) {
+      try {
+        const json = await frResult.value.json();
         const row = Array.isArray(json) ? json[0] : null;
         if (typeof row?.value === "number") fundingRate = row.value / 100;
-      }
-    } catch { /* leave null */ }
+      } catch { /* leave null */ }
+    }
+    if (oiResult.status === "fulfilled" && oiResult.value.ok) {
+      try {
+        const json = await oiResult.value.json();
+        const row = Array.isArray(json) ? json[0] : null;
+        if (typeof row?.value === "number") openInterestContracts = row.value;
+      } catch { /* leave null */ }
+    }
   }
 
-  return { fundingRate, longShortRatio: null };
+  return { fundingRate, longShortRatio: null, openInterestContracts };
 }

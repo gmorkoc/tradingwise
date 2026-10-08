@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
     try {
       const [candles, positioning] = await Promise.all([
         fetchKlines(coin, INTERVAL, CANDLE_LIMIT),
-        fetchPositioning(coin).catch(() => ({ fundingRate: null, longShortRatio: null })),
+        fetchPositioning(coin).catch(() => ({ fundingRate: null, longShortRatio: null, openInterestContracts: null })),
       ]);
 
       for (const direction of ["buy", "sell"] as Direction[]) {

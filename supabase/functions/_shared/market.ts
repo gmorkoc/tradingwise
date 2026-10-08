@@ -19,6 +19,11 @@ export interface MarketContext {
   volRatio: number | null;
   htfTrend: "up" | "down" | "range" | null;
   riskPct: number | null;
+  // Last ~30 closes, oldest first — free to include (candles are already
+  // fetched below regardless), just a trimmed slice for a client to draw a
+  // sparkline from. agent-watch-scan, the other consumer of this function,
+  // simply ignores the extra field — same cost as before for it.
+  recentCloses: number[];
 }
 
 // The timeframe one step up from each supported interval — used for the
@@ -67,6 +72,7 @@ export async function getMarketContext(coin: string, interval: MarketInterval = 
       volRatio: calcVolRatio(candles),
       htfTrend,
       riskPct: atr != null && price > 0 ? (atr / price) * 100 : null,
+      recentCloses: candles.slice(-30).map((c) => c.close),
     };
   } catch {
     return null;

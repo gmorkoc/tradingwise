@@ -1544,6 +1544,71 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* Active whenever there's real content to show (live numbers, a trade
+   proposal) — the orb smoothly shrinks and slides toward the top-right
+   instead of sitting centered and competing with that content for space,
+   reverting back the instant there's nothing left to show (hasContent
+   goes false again — plain chat, or no pending proposal). Deliberately
+   transform-only (never position:absolute, never align-self) — both of
+   those either risk misaligning every OTHER child's centering (which
+   must stay exactly as-is — see align-items:center, unchanged below) or
+   simply don't animate smoothly (align-self interpolates as an instant
+   flip, not a slide, per the CSS animatable-properties spec). transform
+   + width/height are genuinely smooth AND keep the orb in the exact same
+   flex relationship it's always had — see the orb-wrapper memory note on
+   why that specific DOM relationship is the one thing that must never
+   change again. */
+.ta-listening-overlay--compact {
+  justify-content: flex-start;
+  /* Left-aligned, full-width layout once there's real content to show —
+     replaces the earlier centered/right-corner design entirely. */
+  align-items: stretch;
+  overflow-y: auto;
+  gap: 14px;
+  /* The default centered layout clears the status bar/Dynamic Island for
+     free (content sits in the middle of the screen); flex-start here
+     pulls everything up to the very top of the overlay's own box, which
+     is NOT the same as the top of the safe area — without this, the orb
+     group renders underneath/behind the status bar on notched devices. */
+  padding-top: calc(32px + var(--native-safe-area-top, env(safe-area-inset-top)));
+}
+.ta-listening-orb-group {
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ta-listening-overlay--compact .ta-listening-orb-group {
+  /* row-reverse flips the visual order only (orb left, text right) — the
+     DOM order itself (text, then orb) stays untouched, since the orb
+     span must never be wrapped or reparented (see the orb-wrapper memory
+     note above the markup). */
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
+  /* Anchored to the left now (matches the rest of the content below it
+     going full-width/left-aligned) — also sidesteps the old right-edge
+     clipping risk entirely, since there's no "how wide can this get
+     before it runs off the right edge" math on this side. */
+  align-self: flex-start;
+}
+.ta-listening-orb {
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ta-listening-overlay--compact .ta-listening-orb {
+  width: 40px;
+  height: 40px;
+}
+.ta-listening-overlay--compact .ta-listening-transcript {
+  /* Full width now that the group sits flush left — no more right-edge
+     neighbor to leave room for. */
+  max-width: none;
+  width: 100%;
+  text-align: left;
+  min-height: 0;
+  font-size: 0.92rem;
+}
+.ta-listening-proposal {
+  width: 100%;
+  max-width: none;
+}
 /* Bigger + a faster, stronger pulse than the idle trigger orb — reads as
    "actively capturing" rather than just idling. .ta-trigger-orb::before's
    own gradient-rotate keeps running unchanged (animation isn't inherited,
@@ -1586,6 +1651,128 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   50% {
     box-shadow: 0 0 32px 12px rgba(255, 200, 130, 0.85), 0 0 64px 24px rgba(255, 160, 90, 0.55);
   }
+}
+.ta-listening-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: none;
+  cursor: default;
+}
+.ta-listening-snapshot-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+.ta-sparkline { display: block; }
+.ta-sparkline polyline { stroke: var(--ta-text-dim); }
+.ta-sparkline--up polyline { stroke: #4ade80; }
+.ta-sparkline--down polyline { stroke: #fb7185; }
+.ta-sparkline-flat { stroke: var(--ta-text-dim); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.ta-listening-snapshot-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ta-listening-snapshot-coin {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ta-text);
+}
+.ta-listening-snapshot-price {
+  font-size: 0.95rem;
+  color: var(--ta-text);
+  font-variant-numeric: tabular-nums;
+}
+.ta-listening-snapshot-trend {
+  margin-left: auto;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ta-text-dim);
+}
+.ta-listening-snapshot-trend--up { color: #4ade80; }
+.ta-listening-snapshot-trend--down { color: #fb7185; }
+.ta-listening-snapshot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--ta-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ta-listening-snapshot-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+.ta-listening-snapshot-action-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ta-text);
+  cursor: pointer;
+}
+.ta-listening-snapshot-action-btn:active { opacity: 0.7; }
+.ta-listening-news {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: none;
+  cursor: default;
+}
+.ta-listening-news-item {
+  font-size: 0.82rem;
+  color: var(--ta-text-dim);
+  text-decoration: none;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ta-listening-news-item:hover { color: var(--ta-text); text-decoration: underline; }
+.ta-listening-orb-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Caption now sits above the orb (DOM order) with a bit more breathing
+     room than the original tight 4px. */
+  gap: 12px;
+}
+.ta-anim-dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 2px;
+  vertical-align: baseline;
+}
+.ta-anim-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: ta-dot-pulse 1.4s ease-in-out infinite;
+}
+.ta-anim-dot:nth-child(2) { animation-delay: 0.2s; }
+.ta-anim-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ta-dot-pulse {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-anim-dot { animation: none; opacity: 0.6; }
 }
 .ta-listening-transcript {
   max-width: 420px;

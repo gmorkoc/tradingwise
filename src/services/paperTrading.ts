@@ -85,6 +85,31 @@ export interface NewsSource {
   pubDate: number;
 }
 
+// Transient, this-turn-only — never persisted to agent_messages (see
+// insertMessage below, which has no parameter for it). Live numbers tied
+// to the moment of the reply, same reasoning as the edge function's own
+// CoinSnapshot comment.
+export interface CoinSnapshot {
+  coin: string;
+  price: number;
+  rsi: number | null;
+  macdHist: number | null;
+  trend: "up" | "down" | "range" | null;
+  fundingRatePct: number | null;
+  openInterestUsd: number | null;
+  recentCloses: number[];
+}
+
+// Matches AgentChartModal.tsx's own ChartInterval set.
+export type ShowChartInterval = "1min" | "5min" | "15min" | "1h" | "4h" | "6h" | "1day" | "1week" | "1month";
+export interface ShowChartRequest {
+  coin: string;
+  interval: ShowChartInterval;
+}
+export interface ShowOrderBookRequest {
+  coin: string;
+}
+
 export interface AgentMessage {
   id: number;
   conversationId: string;
@@ -357,7 +382,9 @@ export async function addAgentNote(userId: string, conversationId: string, conte
 // can show genuine in-progress reasoning instead of a simulated indicator.
 export async function sendAgentMessage(
   userId: string, conversationId: string, content: string, history: HistoryTurn[], selectedCoin?: string | null,
-  onThinking?: (text: string) => void, viaVoice?: boolean
+  onThinking?: (text: string) => void, viaVoice?: boolean, onMarketSnapshot?: (snapshot: CoinSnapshot[] | null) => void,
+  onShowChart?: (req: ShowChartRequest) => void, onShowOrderBook?: (req: ShowOrderBookRequest) => void,
+  signal?: AbortSignal
 ): Promise<AgentMessage> {
   await insertMessage(userId, conversationId, "user", content, null);
 
@@ -369,6 +396,7 @@ export async function sendAgentMessage(
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
     body: JSON.stringify({ message: content, history, selectedCoin, viaVoice }),
+    signal,
   });
   if (!res.ok || !res.body) throw new Error(`Agent didn't respond (${res.status}) — please try again`);
 
@@ -405,6 +433,8 @@ export async function sendAgentMessage(
     reply: string; action: AgentAction | null; basket: AgentAction[] | null;
     watch: { coin: string; condition: string; interval: MarketInterval } | null; question: AgentQuestion | null;
     balanceUpdate: BalanceUpdate | null; newsSources: NewsSource[] | null;
+    marketSnapshot: CoinSnapshot[] | null;
+    showChart: ShowChartRequest | null; showOrderBook: ShowOrderBookRequest | null;
     thoughtProcess: string | null;
   };
   try {
@@ -412,7 +442,10 @@ export async function sendAgentMessage(
   } catch {
     throw new Error("The agent's response was cut off — please try again.");
   }
-  const { reply, action, basket, watch, question, balanceUpdate, newsSources, thoughtProcess } = parsedResult;
+  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess } = parsedResult;
+  onMarketSnapshot?.(marketSnapshot ?? null);
+  if (showChart) onShowChart?.(showChart);
+  if (showOrderBook) onShowOrderBook?.(showOrderBook);
 
   // Proposed, not created yet — same pending/confirmed/dismissed gate as
   // action/basket/balanceUpdate (see confirmWatch above). The user confirms
