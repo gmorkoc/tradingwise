@@ -117,6 +117,9 @@ function SectionLoading() {
 
 type SectionId =
   | "chart"
+  // Standalone fullscreen chart page — reached only via the chart's own
+  // Full Screen button/double-tap, not a NAV_ITEMS entry (no nav icon).
+  | "advance-chart"
   | "heatmap"
   | "onchain"
   | "htf"
@@ -380,7 +383,9 @@ function AppDashboard({
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
     const hash = window.location.hash.slice(1) as SectionId;
-    return NAV_ITEMS.some((n) => n.id === hash) ? hash : "chart";
+    // "advance-chart" has no NAV_ITEMS entry (no nav icon) but is still a
+    // valid section reachable via hash — accept it explicitly.
+    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
   });
   // Hidden by default — used to render unconditionally whenever on the
   // chart tab (mobile), which collided visually with FloatingNavBar.
@@ -1159,6 +1164,12 @@ function AppDashboard({
   const [chartZone, setChartZone] = useState<ZoneResult | null>(null);
   const [chartPrice, setChartPrice] = useState(0);
   const [chartFullscreen, setChartFullscreen] = useState(false);
+  // true once we've pushed a history entry for the Advance Price Chart
+  // page this session — guards onNavigateBack below from calling
+  // history.back() into whatever was open before the app loaded if the
+  // user somehow lands directly on #advance-chart without having
+  // navigated there via the chart's own Full Screen button.
+  const advanceChartPushedRef = useRef(false);
 
   // Value intentionally unread — the bullish/bearish banner render is
   // disabled below, but the computation stays wired up so it's a one-line
@@ -1192,7 +1203,10 @@ function AppDashboard({
   useEffect(() => {
     const onHashChange = () => {
       const hash = window.location.hash.slice(1) as SectionId;
-      if (NAV_ITEMS.some((n) => n.id === hash)) setActiveSection(hash);
+      // Same "advance-chart" allowance as the initial-state reader above —
+      // without it, pressing Forward back into the page after Back would
+      // silently fail (hash changes but activeSection doesn't follow).
+      if (NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart") setActiveSection(hash);
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -2235,7 +2249,7 @@ function AppDashboard({
 
           <div
             ref={mainContentRef}
-            className={`main-content${activeSection === "chart" ? " chart-active" : ""}`}
+            className={`main-content${activeSection === "chart" || activeSection === "advance-chart" ? " chart-active" : ""}`}
           >
             <div
               className={`ptr-indicator${!ptrDragging ? " ptr-indicator--settling" : ""}`}
@@ -2319,6 +2333,11 @@ function AppDashboard({
                         onFullscreenChange={setChartFullscreen}
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
+                        onNavigateToPage={() => {
+                          advanceChartPushedRef.current = true;
+                          window.history.pushState(null, "", `${window.location.search}#advance-chart`);
+                          setActiveSection("advance-chart");
+                        }}
                       />
                       <div
                         className="chart-resize-handle"
@@ -2377,7 +2396,32 @@ function AppDashboard({
                 )}
               </>
             )}
-            {activeSection !== "chart" && (
+            {activeSection === "advance-chart" && (
+              <PriceChart
+                refreshTrigger={refreshTrigger}
+                theme={theme}
+                coin={coin}
+                quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
+                onZoneChange={(zone, price) => {
+                  setChartZone(zone);
+                  setChartPrice(price);
+                }}
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+                onOpenCoinPicker={openCoinPicker}
+                onFullscreenChange={setChartFullscreen}
+                pageMode
+                onNavigateBack={() => {
+                  if (advanceChartPushedRef.current) {
+                    advanceChartPushedRef.current = false;
+                    window.history.back();
+                  } else {
+                    setActiveSection("chart");
+                  }
+                }}
+              />
+            )}
+            {activeSection !== "chart" && activeSection !== "advance-chart" && (
               <SectionBanner section={activeSection} />
             )}
             <Suspense fallback={<SectionLoading />}>

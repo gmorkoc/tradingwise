@@ -119,6 +119,13 @@ interface PriceChartProps {
   onFullscreenChange?: (isFullscreen: boolean) => void;
   coinChatOpen?: boolean;
   onToggleCoinChat?: () => void;
+  // Standalone "Advance Price Chart" page instance — permanently
+  // fullscreen-rendered, independent mount from the compact chart card.
+  // See toggleFullscreen below for how these replace the old local-overlay
+  // enter/exit behavior.
+  pageMode?: boolean;
+  onNavigateToPage?: () => void;
+  onNavigateBack?: () => void;
 }
 
 const INTERVALS: TimeInterval[] = [
@@ -1166,6 +1173,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   onFullscreenChange,
   coinChatOpen,
   onToggleCoinChat,
+  pageMode,
+  onNavigateToPage,
+  onNavigateBack,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
@@ -1279,7 +1289,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     return () => mql.removeEventListener("change", handler);
   }, []);
   const chartSectionRef = useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(() => !!pageMode);
   useEffect(() => {
     onFullscreenChange?.(isFullscreen);
   }, [isFullscreen, onFullscreenChange]);
@@ -1403,15 +1413,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, []);
 
   const toggleFullscreen = useCallback(() => {
+    // Standalone page instance — permanently fullscreen-rendered, never
+    // has a local overlay state to toggle. Every exit affordance (Exit
+    // button, double-tap, double-click) already calls this one function,
+    // so routing it to onNavigateBack here covers all of them for free.
+    if (pageMode) {
+      onNavigateBack?.();
+      return;
+    }
     if (isFullscreen) {
       cssFsRef.current = false;
       setIsFullscreen(false);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       return;
     }
+    // Compact instance — "entering fullscreen" now navigates to the
+    // standalone Advance Price Chart page instead of toggling a local
+    // CSS overlay. The local-overlay fallback below only fires if no
+    // navigation callback was wired (shouldn't happen once App.tsx always
+    // passes onNavigateToPage).
+    if (onNavigateToPage) {
+      onNavigateToPage();
+      return;
+    }
     cssFsRef.current = true;
     setIsFullscreen(true);
-  }, [isFullscreen]);
+  }, [pageMode, isFullscreen, onNavigateToPage, onNavigateBack]);
 
   const fsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -4071,14 +4098,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 onClick={() => {
                   if (showDepthProfile) {
                     setShowDepthProfile(false);
-                    if (document.fullscreenElement) {
-                      document.exitFullscreen().catch(() => {});
-                    } else if (cssFsRef.current) {
-                      cssFsRef.current = false;
-                      setIsFullscreen(false);
+                    // Page instance is permanently fullscreen — closing the
+                    // depth profile panel there should just close the panel,
+                    // not navigate away from the whole page.
+                    if (!pageMode) {
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(() => {});
+                      } else if (cssFsRef.current) {
+                        cssFsRef.current = false;
+                        setIsFullscreen(false);
+                      }
                     }
                   } else {
-                    toggleFullscreen();
+                    if (!isFullscreen) toggleFullscreen();
                     setShowDepthProfile(true);
                   }
                 }}
