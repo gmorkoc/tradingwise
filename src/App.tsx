@@ -1914,8 +1914,11 @@ function AppDashboard({
                   the exact gap where "coinhintz" branding was otherwise
                   missing entirely. */}
               {(Capacitor.isNativePlatform() || !isDesktopWidth) && (
-                <div className="top-nav-logo mch-logo mch-logo-shimmer">
-                  coinhint<span className="top-nav-logo-accent">z</span>
+                <div className="top-nav-logo">
+                  <span className="mch-logo mch-logo-shimmer">
+                    coinhint<span className="top-nav-logo-accent">z</span>
+                  </span>
+                  <sup className="top-nav-logo-tm">™</sup>
                 </div>
               )}
               <button

@@ -2400,10 +2400,9 @@ html[data-theme="light"] .top-nav-bar {
 
 /* Wordmark before the search bar, Yahoo-style — text only, no icon mark
    (unlike CoinHintzLogo's "nav" variant used elsewhere), same weight/
-   color/tracking as that variant's own text span. Colors matched to the
-   Trading Agent orb's own blue palette (.ta-trigger-orb, TradingAgent.css)
-   — deep blue body, bright sky-blue accent, same family as the orb's
-   terminator gradient. */
+   tracking as that variant's own text span, and now the same standard
+   brand colors used everywhere else (.st-logo-simply/.st-logo-ai) rather
+   than the Trading Agent orb's blue palette this used to borrow. */
 .top-nav-logo {
   display: flex;
   align-items: center;
@@ -2411,10 +2410,34 @@ html[data-theme="light"] .top-nav-bar {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  color: #2a52a0;
+  color: #4f46e5;
+  position: relative;
 }
 .top-nav-logo-accent {
-  color: #6fa3e8;
+  color: #4ade80;
+}
+/* Positioned off the whole wordmark's own top-right corner — not nested
+   inside the "z" span, so it can never affect that letter's own layout.
+   Starts invisible, fades in once the shimmer sweep finishes (0.3s
+   delay + 2.2s duration = 2.5s in, matching .mch-logo-shimmer::after). */
+.top-nav-logo-tm {
+  position: absolute;
+  top: 0.1em;
+  right: -0.85em;
+  font-size: 0.6em;
+  font-weight: 700;
+  line-height: 1;
+  color: #4ade80;
+  opacity: 0;
+  animation: top-nav-logo-tm-in 0.5s ease-out 2.5s forwards;
+}
+@keyframes top-nav-logo-tm-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Search pill — a plain light-gray field with no border, and a solid
@@ -3626,9 +3649,14 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
      text's own two-tone color). overflow:hidden on the logo itself
      clips the band to the text's bounding box; "both" leaves the band
      parked off-screen after, so it only plays once per mount, not on
-     every re-render. */
+     every re-render. inline-block (not the default inline) so that
+     overflow:hidden reliably clips the band — this now wraps only the
+     text, not .top-nav-logo-tm (the ™ mark, a sibling outside this),
+     which would otherwise get clipped too since it's positioned partly
+     outside this box. */
   .mch-logo-shimmer {
     position: relative;
+    display: inline-block;
     overflow: hidden;
   }
   .mch-logo-shimmer::after {
@@ -3644,14 +3672,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
       rgba(255, 255, 255, 0.75) 50%,
       transparent 80%
     );
-    animation: mch-logo-shimmer-sweep 1.3s ease-in-out 0.3s both;
+    animation: mch-logo-shimmer-sweep 2.2s ease-in-out 0.3s both;
   }
   @keyframes mch-logo-shimmer-sweep {
     0% {
       left: -60%;
     }
-    100% {
+    50% {
       left: 130%;
+    }
+    100% {
+      left: -60%;
     }
   }
   .mch-menu-btn {
