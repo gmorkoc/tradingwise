@@ -197,6 +197,78 @@
   font-size: 0.7rem;
 }
 
+/* ── iOS-native bottom sheet (PillSelect, IS_IOS_NATIVE) — precision and
+   exchange dropdowns open as a full-width sheet instead of a small
+   floating popover there, same exact structure/colors as PriceChart's own
+   .interval-sheet (the chart's "more intervals" sheet) — the app's one
+   established bottom-sheet convention, not a one-off design.
+   --color-* tokens, not --pc-*: this is portaled to document.body (same
+   reasoning as .interval-sheet-backdrop and .fs-dock-segmented above —
+   --pc-* is only defined inside .chart-active's own scoped wrapper and
+   silently resolves to nothing out here, which is exactly why this sheet
+   rendered fully transparent before this fix). */
+.ob-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400100;
+  background: rgba(0, 0, 0, 0.45);
+}
+.ob-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 400101;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+}
+.ob-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.ob-sheet-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.ob-sheet-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.ob-sheet-options {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 8px;
+}
+.ob-sheet-options .ob-pill-option {
+  padding: 13px 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 10px;
+  color: var(--color-text);
+}
+.ob-sheet-options .ob-pill-option--selected {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.ob-sheet-options .ob-pill-check {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
 .ob-loading {
   flex: 1;
   display: flex;

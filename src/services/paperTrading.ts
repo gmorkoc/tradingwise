@@ -109,6 +109,15 @@ export interface ShowChartRequest {
 export interface ShowOrderBookRequest {
   coin: string;
 }
+// A direct "take me there" button to a relevant in-app page/section (see
+// NAV_SECTIONS in the edge function) — set instead of recommending an
+// external platform for something this app already covers. Persisted
+// (not transient like marketSnapshot) since the button needs to stay
+// tappable after a reload, same as action/watch/question.
+export interface NavigateToRequest {
+  section: string;
+  label: string;
+}
 
 export interface AgentMessage {
   id: number;
@@ -132,6 +141,7 @@ export interface AgentMessage {
   // persisted so it's still there on reload, not just shown transiently
   // while streaming.
   thoughtProcess: string | null;
+  navigateTo: NavigateToRequest | null;
   createdAt: string;
 }
 
@@ -233,7 +243,7 @@ export async function updatePreferences(userId: string, partial: PreferencesUpda
   if (error) throw new Error(error.message);
 }
 
-const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, created_at";
+const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, navigate_to, created_at";
 
 function rowToMessage(m: {
   id: number; conversation_id: string; role: "user" | "agent"; content: string;
@@ -241,7 +251,7 @@ function rowToMessage(m: {
   balance_update: BalanceUpdate | null;
   news_sources: NewsSource[] | null; action_status: AgentMessage["actionStatus"];
   watch: { coin: string; condition: string; interval: MarketInterval } | null; watch_id: string | null;
-  thought_process: string | null; created_at: string;
+  thought_process: string | null; navigate_to: NavigateToRequest | null; created_at: string;
 }): AgentMessage {
   return {
     id: m.id,
@@ -256,6 +266,7 @@ function rowToMessage(m: {
     balanceUpdate: m.balance_update,
     newsSources: m.news_sources,
     thoughtProcess: m.thought_process,
+    navigateTo: m.navigate_to,
     actionStatus: m.action_status,
     createdAt: m.created_at,
   };
@@ -318,7 +329,8 @@ async function insertMessage(
   action: AgentAction | null, watchId: string | null = null,
   basket: AgentAction[] | null = null, question: AgentQuestion | null = null,
   newsSources: NewsSource[] | null = null, balanceUpdate: BalanceUpdate | null = null,
-  thoughtProcess: string | null = null, watch: { coin: string; condition: string; interval: MarketInterval } | null = null
+  thoughtProcess: string | null = null, watch: { coin: string; condition: string; interval: MarketInterval } | null = null,
+  navigateTo: NavigateToRequest | null = null
 ): Promise<AgentMessage> {
   const { data, error } = await supabase
     .from("agent_messages")
@@ -336,6 +348,7 @@ async function insertMessage(
       watch,
       watch_id: watchId,
       thought_process: thoughtProcess,
+      navigate_to: navigateTo,
     })
     .select(MESSAGE_COLUMNS)
     .single();
@@ -447,13 +460,14 @@ export async function sendAgentMessage(
     showChart: ShowChartRequest | null; showOrderBook: ShowOrderBookRequest | null;
     thoughtProcess: string | null;
     preferencesUpdate: PreferencesUpdate | null;
+    navigateTo: NavigateToRequest | null;
   };
   try {
     parsedResult = JSON.parse(jsonLine.slice(2));
   } catch {
     throw new Error("The agent's response was cut off — please try again.");
   }
-  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess, preferencesUpdate } = parsedResult;
+  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess, preferencesUpdate, navigateTo } = parsedResult;
   onMarketSnapshot?.(marketSnapshot ?? null);
   if (showChart) onShowChart?.(showChart);
   if (showOrderBook) onShowOrderBook?.(showOrderBook);
@@ -464,7 +478,7 @@ export async function sendAgentMessage(
   // the exact condition (and its timeframe) before anything real starts
   // being watched, instead of this silently happening the moment a reply
   // streams in.
-  return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch);
+  return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch, navigateTo ?? null);
 }
 
 // Synthesizes `text` via OpenAI's neural TTS (agent-speech edge function)

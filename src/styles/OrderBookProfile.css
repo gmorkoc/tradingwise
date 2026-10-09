@@ -2,7 +2,13 @@
 .obp-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  /* Was 1100 — invisible-but-"open" behind TradingAgent's own panel
+     (z-index: 300100 on iOS native), since both this and .ta-panel are
+     portaled straight to document.body as siblings. Tapping "Order Book"
+     from the voice-session snapshot card silently mounted this modal
+     UNDER the panel instead of over it — looked like the button did
+     nothing. */
+  z-index: 400000;
   background: #0b1222;
   display: flex;
   align-items: stretch;

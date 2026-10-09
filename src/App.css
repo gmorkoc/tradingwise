@@ -1509,7 +1509,11 @@ select {
 }
 
 .chart-section-wrap > .ob-card {
-  width: 320px;
+  /* Only actually resolves at desktop (>=961px) — the 641-960px tablet
+     band below overrides this to width:100%, and mobile uses a fully
+     separate portaled layout, so bumping this value is desktop-only in
+     practice without needing its own media query. */
+  width: 420px;
   flex-shrink: 0;
   margin: 0 4px 10px 10px;
   padding: 0 20px 18px 3px;

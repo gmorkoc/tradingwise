@@ -283,6 +283,11 @@ interface Props {
   // in the bar's center) — desktop keeps this component's own floating
   // "Agent Ready" button exactly as before, untouched by that mobile work.
   hideTrigger?: boolean;
+  // Jumps the main dashboard to one of NAV_SECTIONS (edge function) —
+  // powers the "Open <page> →" button a message's navigateTo renders.
+  // Same shape as App.tsx's own setActiveSection, just typed loosely here
+  // since this component doesn't import SectionId.
+  onNavigateToSection?: (section: string) => void;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -464,7 +469,7 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
@@ -1023,6 +1028,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       watch: null,
       watchId: null,
       thoughtProcess: null,
+      navigateTo: null,
       createdAt: new Date().toISOString(),
     }]);
     // Lets a tap on the "Thinking…" overlay (handleInterruptThinking below)
@@ -1098,6 +1104,16 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // speaking are the three ChatGPT-voice-mode phases shown on the one
   // screen) and the reply text shown while it's being read aloud.
   const [speaking, setSpeaking] = useState(false);
+  // True only while synthesizeAgentSpeech itself is in flight — the real
+  // gap this was missing: handleSend's `sending` turns false the moment
+  // the TEXT reply lands (speakLatestAgentReply below is fired without
+  // awaiting it), but speech synthesis is a separate network call that can
+  // itself take a while. The overlay's "Thinking…" display covers this
+  // gap too (see its fallback branch below), so this needs its own flag —
+  // without it, that stretch had no sending/speaking/listening true at
+  // all, and the whole "tap anywhere to interrupt" affordance silently
+  // went dead for however long synthesis took.
+  const [synthesizing, setSynthesizing] = useState(false);
   const [spokenReply, setSpokenReply] = useState("");
   // Live numbers (price/RSI/MACD/trend/funding/OI) for whatever coin(s) the
   // latest turn actually resolved — shown as a compact data card during a
@@ -1110,6 +1126,18 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // buttons (see the voice overlay JSX below).
   const [chartModal, setChartModal] = useState<{ coin: string; interval?: ShowChartInterval } | null>(null);
   const [orderBookModalCoin, setOrderBookModalCoin] = useState<string | null>(null);
+  // Brief "Opening Chart…"/"Opening Order Book…" acknowledgment for the
+  // voice-session snapshot card's two buttons below — on a real device
+  // there's a visible beat between the tap and the modal actually painting
+  // (data fetch, chart library init), and with no feedback at all in that
+  // gap it read as if the button had silently done nothing.
+  const [openingNote, setOpeningNote] = useState<string | null>(null);
+  const openingNoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showOpeningNote = (label: string) => {
+    if (openingNoteTimerRef.current) clearTimeout(openingNoteTimerRef.current);
+    setOpeningNote(label);
+    openingNoteTimerRef.current = setTimeout(() => setOpeningNote(null), 1800);
+  };
   // The one <audio> element used to play back synthesized speech — a ref
   // so it survives across renders/calls instead of being recreated (and
   // losing track of what's currently playing) each time.
@@ -1156,11 +1184,29 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   // AVAudioSession conflict between tearing down a recognition session and
   // starting audio playback in quick succession) — see this session's
   // notes. A tap has no such race since nothing else is touching the audio
-  // session at that moment.
+  // session at that moment. Covers BOTH "Thinking…" sub-phases the overlay
+  // can show — waiting on the text reply (sending) and waiting on TTS
+  // synthesis of that reply (synthesizing, see speakLatestAgentReply) —
+  // stopSpeaking() bumps the generation stamp so a synthesis request still
+  // in flight gets silently discarded the moment it lands instead of
+  // playing audio for a turn the user already backed out of.
   const handleInterruptThinking = () => {
     sendAbortControllerRef.current?.abort();
+    stopSpeaking();
     setSending(false);
+    setSynthesizing(false);
     startListening();
+  };
+  // Same idea as handleInterruptThinking above, minus the startListening()
+  // call — that one resumes the mic because it's only ever reachable from
+  // inside an active voice session; this is the plain typed-chat "Thinking…"
+  // bubble, where restarting the mic would be wrong (the user is typing,
+  // not talking). Exists because a slow/hung backend reply previously left
+  // no way out of "Thinking…" at all outside of a voice session — closing
+  // the panel was the only escape.
+  const handleInterruptTyping = () => {
+    sendAbortControllerRef.current?.abort();
+    setSending(false);
   };
   // Set right before a manual interrupt stops playback early — this is
   // what keeps the ended/error handlers below from ALSO calling
@@ -1198,9 +1244,11 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     // stamp and checking it's still current once the request lands is what
     // lets a stale call discard itself instead of ever reaching audio.play().
     const myGeneration = ++speechGenerationRef.current;
+    setSynthesizing(true);
     try {
       const url = await synthesizeAgentSpeech(last.content);
       if (speechGenerationRef.current !== myGeneration) { URL.revokeObjectURL(url); return; }
+      setSynthesizing(false);
       const audio = new Audio(url);
       speechAudioRef.current = audio;
       const cleanup = () => {
@@ -1218,6 +1266,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       // play, but the loop still needs to continue rather than stall
       // silently on a turn with no audio.
       if (speechGenerationRef.current !== myGeneration) return;
+      setSynthesizing(false);
       setSpeaking(false);
       if (voiceModeRef.current) startListening();
     }
@@ -1948,18 +1997,33 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
                     </div>
                   );
                 })()}
+                {m.navigateTo && (
+                  <button
+                    type="button"
+                    className="ta-navigate-btn"
+                    onClick={() => { onNavigateToSection?.(m.navigateTo!.section); setOpen(false); }}
+                  >
+                    Open {m.navigateTo.label} →
+                  </button>
+                )}
               </div>
             ))}
             {sending && (
               <div className="ta-msg ta-msg--agent">
-                <div className="ta-msg-text ta-typing">
+                <button
+                  type="button"
+                  className="ta-msg-text ta-typing ta-typing--interruptible"
+                  onClick={handleInterruptTyping}
+                  aria-label="Tap to interrupt"
+                >
                   <span className="ta-thinking-orb" />
                   <span className="ta-thinking-copy">
                     <span className="ta-thinking-label">
                       {liveThinking || "Thinking…"}
                     </span>
+                    <span className="ta-thinking-interrupt-hint">Tap to interrupt</span>
                   </span>
-                </div>
+                </button>
               </div>
             )}
           </div>
@@ -2019,12 +2083,16 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
         const latestMsg = messages.length > 0 && messages[messages.length - 1].role === "agent" ? messages[messages.length - 1] : null;
         const hasPendingAction = !!(latestMsg?.action && latestMsg.actionStatus === "pending");
         const hasContent = (lastMarketSnapshot && lastMarketSnapshot.length > 0) || hasPendingAction;
+        // Covers both "Thinking…" sub-phases (waiting on the text reply,
+        // then waiting on TTS synthesis of it) — see synthesizing's own
+        // comment above for why this needs to be two flags, not one.
+        const thinking = sending || synthesizing;
         return (
         <div
           className={`ta-listening-overlay${hasContent ? " ta-listening-overlay--compact" : ""}`}
-          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : sending ? handleInterruptThinking : undefined}
+          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : thinking ? handleInterruptThinking : undefined}
           role="button"
-          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : sending ? "Tap to interrupt" : "Voice session"}
+          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : thinking ? "Tap to interrupt" : "Voice session"}
         >
           <button
             type="button"
@@ -2033,6 +2101,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
           >
             Cancel
           </button>
+          {openingNote && <div className="ta-listening-opening-note">{openingNote}</div>}
           {/* Orb is a direct flex child, untouched, no wrapper div — the
               confirmed-stable version after four separate rotating/
               curved-text attempts around it all broke its rendering on-
@@ -2050,7 +2119,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
             </p>
             <span
               className={`ta-trigger-orb ta-listening-orb${
-                sending && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
+                thinking && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
               }`}
             />
           </div>
@@ -2097,14 +2166,14 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
                     <button
                       type="button"
                       className="ta-listening-snapshot-action-btn"
-                      onClick={(e) => { e.stopPropagation(); setChartModal({ coin: s.coin }); }}
+                      onClick={(e) => { e.stopPropagation(); showOpeningNote(`Opening ${s.coin} Chart…`); setChartModal({ coin: s.coin }); }}
                     >
                       Chart
                     </button>
                     <button
                       type="button"
                       className="ta-listening-snapshot-action-btn"
-                      onClick={(e) => { e.stopPropagation(); setOrderBookModalCoin(s.coin); }}
+                      onClick={(e) => { e.stopPropagation(); showOpeningNote(`Opening ${s.coin} Order Book…`); setOrderBookModalCoin(s.coin); }}
                     >
                       Order Book
                     </button>
@@ -2146,7 +2215,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
             </div>
           )}
           <span className="ta-listening-hint">
-            {listening ? "Tap anywhere to stop and send" : speaking || sending ? "Tap anywhere to interrupt" : ""}
+            {listening ? "Tap anywhere to stop and send" : speaking || thinking ? "Tap anywhere to interrupt" : ""}
           </span>
         </div>
         );

@@ -2848,7 +2848,11 @@ function AppDashboard({
         <DailyBrief coinTickers={coinTickers} onDismiss={() => setDailyBriefOpen(false)} />
       )}
       <PushToast />
-      <TradingAgent selectedCoin={coin} hideTrigger={!isWideDesktop} />
+      <TradingAgent
+        selectedCoin={coin}
+        hideTrigger={!isWideDesktop}
+        onNavigateToSection={(section) => setActiveSection(section as SectionId)}
+      />
       <NotificationsCenter
         open={notificationsCenterOpen}
         onClose={() => setNotificationsCenterOpen(false)}

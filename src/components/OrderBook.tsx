@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
 import { CoinSymbol, fetchBn } from "../services/coinglass";
 import "../styles/OrderBook.css";
+
+// Gates the two dropdowns below (precision, exchange) to a native bottom
+// sheet instead of a small desktop-style popover — a floating menu that
+// size is awkward to tap precisely on a phone, where a full-width sheet
+// with large rows is the platform's own convention (same reasoning as
+// TradingAgent.tsx's IS_IOS_NATIVE for its swipe-to-delete).
+const IS_IOS_NATIVE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
 interface OrderBookProps {
   coin: CoinSymbol;
@@ -24,8 +33,41 @@ const EXCHANGES: Exchange[] = ["Binance", "Kraken", "OKX", "Coinbase"];
 // Price-bucket grouping increments — same concept as a real exchange's
 // own order book "aggregation" dropdown (Binance/Coinbase/etc. all have
 // one): coarser values merge nearby price levels into one row so a thin,
-// noisy book reads as a cleaner ladder.
-const PRECISIONS = [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 100];
+// noisy book reads as a cleaner ladder. A flat list tuned for BTC
+// (0.01-100) is nonsense for a ~$2-3 coin like NEAR — a $0.01 bucket
+// there is ~0.5% of the price, so it was merging dozens of real levels
+// into a handful of rows and looked like the book was nearly empty, even
+// at the "finest" setting. Scale the whole ladder to the coin's own
+// current price instead, keeping the same 1/5/10/50/100-style ratios so
+// each option still means "roughly this much coarser than the last."
+const PRECISION_RATIOS = [1, 5, 10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+// The finest tick a coin's price magnitude gets, in decimal PLACES, not a
+// continuous price-ratio formula — an earlier version derived this from
+// floor(log10(price)) directly, which was anchored to reproduce BTC's
+// 0.01 exactly but compounds into absurd values for anything under $1
+// (DOGE at $0.08 produced a "finest" tick of 0.00000001 — eight decimal
+// places, far beyond the exchange's own real tick size and useless as a
+// grouping option). A bounded lookup table instead, same idea as
+// fmtPrice's own magnitude bucketing further down this file, caps it at
+// a sane 6 decimal places for even the cheapest coins.
+function finestDecimalPlaces(price: number): number {
+  if (price >= 10000) return 2;
+  if (price >= 100)   return 3;
+  if (price >= 1)     return 4;
+  if (price >= 0.01)  return 5;
+  return 6;
+}
+function precisionLadder(price: number): number[] {
+  const decimals = price && isFinite(price) && price > 0 ? finestDecimalPlaces(price) : 2;
+  const base = Math.pow(10, -decimals);
+  return PRECISION_RATIOS.map((r) => Number((r * base).toFixed(decimals)));
+}
+// toFixed never uses scientific notation (unlike plain String(), which
+// renders anything below 1e-6 as "1e-8" — unreadable in a dropdown) —
+// just trims the trailing zeros toFixed(8) otherwise always pads in.
+function fmtPrecisionLabel(v: number): string {
+  return v.toFixed(8).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
 
 const BINANCE_SYM: Record<string, string> = {
   BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
@@ -152,8 +194,9 @@ function fmtTime(ms: number): string {
 // show a checkmark next to the current value and match the rest of this
 // redesigned header, same as the reference UI's own size/exchange pickers.
 function PillSelect<T extends string | number>({
-  value, options, labelFor, onChange,
+  title, value, options, labelFor, onChange,
 }: {
+  title: string;
   value: T;
   options: readonly T[];
   labelFor: (v: T) => string;
@@ -162,13 +205,30 @@ function PillSelect<T extends string | number>({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
+    // The native bottom sheet below closes via its own backdrop tap, not
+    // this — a document-level mousedown listener would also fire for the
+    // synthetic click a real touch produces, closing the sheet the instant
+    // it opens.
+    if (!open || IS_IOS_NATIVE) return;
     const onDocDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
   }, [open]);
+
+  const optionList = (onPick: (v: T) => void) => options.map((opt) => (
+    <button
+      key={String(opt)}
+      type="button"
+      className={`ob-pill-option${opt === value ? " ob-pill-option--selected" : ""}`}
+      onClick={() => onPick(opt)}
+    >
+      {labelFor(opt)}
+      {opt === value && <span className="ob-pill-check">✓</span>}
+    </button>
+  ));
+
   return (
     <div className="ob-pill" ref={ref}>
       <button type="button" className={`ob-pill-btn${open ? " ob-pill-btn--open" : ""}`} onClick={() => setOpen((v) => !v)}>
@@ -177,20 +237,24 @@ function PillSelect<T extends string | number>({
           <path d="M0 0l5 6 5-6z" fill="currentColor" />
         </svg>
       </button>
-      {open && (
+      {open && !IS_IOS_NATIVE && (
         <div className="ob-pill-menu">
-          {options.map((opt) => (
-            <button
-              key={String(opt)}
-              type="button"
-              className={`ob-pill-option${opt === value ? " ob-pill-option--selected" : ""}`}
-              onClick={() => { onChange(opt); setOpen(false); }}
-            >
-              {labelFor(opt)}
-              {opt === value && <span className="ob-pill-check">✓</span>}
-            </button>
-          ))}
+          {optionList((opt) => { onChange(opt); setOpen(false); })}
         </div>
+      )}
+      {open && IS_IOS_NATIVE && createPortal(
+        <div className="ob-sheet-backdrop" onClick={() => setOpen(false)}>
+          <div className="ob-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="ob-sheet-header">
+              <span className="ob-sheet-title">{title}</span>
+              <button type="button" className="ob-sheet-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
+            </div>
+            <div className="ob-sheet-options">
+              {optionList((opt) => { onChange(opt); setOpen(false); })}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -208,7 +272,7 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
   const [exchange, setExchange] = useState<Exchange>("Binance");
-  const [precision, setPrecision] = useState(0.01);
+  const [precision, setPrecision] = useState<number | null>(null);
   const [bids, setBids] = useState<Level[]>([]);
   const [asks, setAsks] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,19 +342,32 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
     return () => { cancelled = true; clearInterval(id); };
   }, [activeTab, coin]);
 
-  const displayBids = groupLevels(bids, precision, "bid");
-  const displayAsks = groupLevels(asks, precision, "ask");
-
-  const maxTotal = Math.max(
-    displayBids[displayBids.length - 1]?.total ?? 1,
-    displayAsks[displayAsks.length - 1]?.total ?? 1,
-  );
-
   const bestBid  = bids[0]?.price ?? 0;
   const bestAsk  = asks[0]?.price ?? 0;
   const midPrice = bestBid && bestAsk ? (bestBid + bestAsk) / 2 : 0;
   const spread   = bestAsk && bestBid ? bestAsk - bestBid : 0;
   const spreadBps = spread && midPrice ? (spread / midPrice) * 10000 : 0;
+
+  const ladder = precisionLadder(midPrice || bestBid || bestAsk);
+  // Defaults to (and resets to) the new coin's own finest option whenever
+  // the coin changes — without this, switching from BTC to a cheap coin
+  // like NEAR kept whatever absolute number (e.g. 0.01) was selected
+  // before, which is now the COARSEST entry on the new ladder instead of
+  // the finest, reproducing the exact "book looks nearly empty" bug this
+  // whole rescale was meant to fix.
+  useEffect(() => {
+    setPrecision(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coin]);
+  const activePrecision = precision ?? ladder[0];
+
+  const displayBids = groupLevels(bids, activePrecision, "bid");
+  const displayAsks = groupLevels(asks, activePrecision, "ask");
+
+  const maxTotal = Math.max(
+    displayBids[displayBids.length - 1]?.total ?? 1,
+    displayAsks[displayAsks.length - 1]?.total ?? 1,
+  );
 
   return (
     <div className="ob-card">
@@ -332,8 +409,8 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
       {activeTab === "orderbook" ? (
         <>
           <div className="ob-dropdown-row">
-            <PillSelect value={precision} options={PRECISIONS} labelFor={(v) => String(v)} onChange={setPrecision} />
-            <PillSelect value={exchange} options={EXCHANGES} labelFor={(v) => v} onChange={setExchange} />
+            <PillSelect title="Precision" value={activePrecision} options={ladder} labelFor={fmtPrecisionLabel} onChange={setPrecision} />
+            <PillSelect title="Exchange" value={exchange} options={EXCHANGES} labelFor={(v) => v} onChange={setExchange} />
           </div>
 
           {loading && <div className="ob-loading">{t("orderBook.loading")}</div>}
