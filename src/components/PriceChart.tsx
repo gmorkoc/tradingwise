@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import {
@@ -241,6 +242,20 @@ export function formatLivePrice(p: number): string {
   if (p >= 1000) return `$${p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (p >= 1) return `$${p.toFixed(4)}`;
   return `$${p.toFixed(6)}`;
+}
+
+// Advance Price Chart page, mobile — tap feedback on the dock's toggles
+// (sheet expand/collapse, Toolbox), Close, indicator checkboxes, and
+// candle taps. No-op on web/desktop, where this plugin isn't meaningful
+// (and may not be present). Medium rather than Light — Light was hard to
+// feel reliably on-device.
+function hapticTap() {
+  if (Capacitor.isNativePlatform()) {
+    Haptics.impact({ style: ImpactStyle.Medium }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("[hapticTap] Haptics.impact failed:", e);
+    });
+  }
 }
 
 function formatCompactVolume(v: number): string {
@@ -1254,9 +1269,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const dayLineRefs = useRef<any[]>([]);
 
   const [showDepthProfile, setShowDepthProfile] = useState(false);
-  // Manual override for the compact (non-fullscreen) view — gridlines
-  // auto-show in fullscreen/expanded regardless of this.
-  const [showGrid, setShowGrid] = useState(false);
+  // Manual toggle — defaults on for the Advance Price Chart page
+  // (pageMode), off everywhere else (compact view, desktop fullscreen).
+  const [showGrid, setShowGrid] = useState(() => !!pageMode);
   const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
   // Line-style color — green/red when the visible window has moved
   // meaningfully in one direction, blue when it's basically flat. Recomputed
@@ -1309,6 +1324,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // collapsed (peek only) as before — only once the user expands it,
   // Style is the category that's already open, instead of none.
   const [fsSheetExpanded, setFsSheetExpanded] = useState(false);
+  // Advance Price Chart page, mobile only — the floating drawing toolbox.
+  // Enabled by default (this is only ever read when pageMode, so the
+  // default is harmless elsewhere); the "Toolbox" segment in the dock
+  // just toggles it back off if the user wants the full chart width.
+  const [fsDrawPanelOpen, setFsDrawPanelOpen] = useState(true);
   const [fsOpenCategories, setFsOpenCategories] = useState<Record<string, boolean>>({ style: true });
   // Accordion — only one category open at a time; expanding one collapses
   // whichever other was open instead of stacking them all open at once.
@@ -1316,6 +1336,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setFsOpenCategories((prev) => (prev[key] ? {} : { [key]: true }));
   }, []);
   const fsDockRef = useRef<HTMLDivElement>(null);
+  // Advance Price Chart page, mobile — how much bottom clearance the
+  // scroll container needs to reserve so the chart's own time-axis date
+  // labels clear the docked bottom sheet. Measured from the actual
+  // rendered dock (peek state only — see the fsSheetExpanded guard
+  // below), not a guessed pixel constant, so it's correct on every
+  // device (notch/no-notch, Dynamic Island, etc.) and stays correct if
+  // the peek row's own content ever changes again later.
+  const [fsDockClearance, setFsDockClearance] = useState(104);
+  useEffect(() => {
+    if (!(pageMode && !isDesktopWidth && isFullscreen)) return;
+    const el = fsDockRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      // Only commit while collapsed — expanded, the sheet grows up to
+      // 80vh and that's not clearance we want the chart to give up.
+      if (!fsSheetExpanded) setFsDockClearance(el.offsetHeight);
+    });
+    ro.observe(el);
+    if (!fsSheetExpanded) setFsDockClearance(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [pageMode, isDesktopWidth, isFullscreen, fsSheetExpanded]);
   useEffect(() => {
     if (!isFullscreen) {
       setFsSheetExpanded(false);
@@ -1927,6 +1968,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
       resizeListener = () => resizeChart();
       window.addEventListener("resize", resizeListener);
+
+      // Advance Price Chart page, mobile — light tap feedback when
+      // tapping a candle (chart.remove() in this effect's cleanup tears
+      // this subscription down with it, no separate unsubscribe needed).
+      if (pageMode && !isDesktopWidth) {
+        chart.subscribeClick(() => hapticTap());
+      }
     };
 
     initChart();
@@ -3516,31 +3564,93 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   const fsDockSheet = isFullscreen && !isDesktopWidth && ReactDOM.createPortal(
     <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}`}>
-      <button
-        type="button"
-        className="fs-dock-peek"
-        onClick={() => setFsSheetExpanded((v) => !v)}
-      >
-        <span className="fs-dock-handle" />
-        <span className="fs-dock-title-row">
-          <svg className="fs-dock-title-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span className="fs-dock-title">{t("chart.chartSettings", "Chart Settings")}</span>
-          <span className="fs-dock-interval-badge">{INTERVAL_SHORT[interval]}</span>
-          <div style={{ flex: 1 }} />
-          {fsSheetExpanded ? (
-            <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          ) : (
-            <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          )}
-        </span>
-      </button>
+      <div className="fs-dock-peek">
+        <button
+          type="button"
+          className="fs-dock-peek-toggle"
+          onClick={() => {
+            if (pageMode) hapticTap();
+            setFsSheetExpanded((v) => !v);
+          }}
+        >
+          <span className="fs-dock-handle" />
+          <span className="fs-dock-title-row">
+            {pageMode && !isDesktopWidth ? (
+              <>
+                <span
+                  className="fs-dock-coin-avatar"
+                  style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                >
+                  {COIN_GLYPHS[coin] ?? coin[0]}
+                </span>
+                <span className="fs-dock-title">{COIN_FULL_NAME[coin] ?? coin}</span>
+                {currentPrice !== null && (
+                  <span className={`fs-dock-coin-price${priceDirection ? ` fs-dock-coin-price--${priceDirection}` : ""}`}>
+                    {formatLivePrice(currentPrice)}
+                  </span>
+                )}
+                {dayChangePercent !== null && (
+                  <span className={`fs-dock-coin-change${dayChangePercent >= 0 ? " fs-dock-coin-change--up" : " fs-dock-coin-change--down"}`}>
+                    {dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <svg className="fs-dock-title-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                <span className="fs-dock-title">{t("chart.chartSettings", "Chart Settings")}</span>
+              </>
+            )}
+            <span className="fs-dock-interval-badge">{INTERVAL_SHORT[interval]}</span>
+            <div style={{ flex: 1 }} />
+            {fsSheetExpanded ? (
+              <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+            ) : (
+              <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            )}
+          </span>
+        </button>
+        {/* Advance Price Chart page, mobile only — Save/Reset/Draw/Close
+            used to float over the chart in the header's icon row (Close
+            was its own corner button); they live here instead now as one
+            labeled segmented control, so the chart gets the full screen.
+            A sibling of fs-dock-peek-toggle above (not nested inside it)
+            so tapping a segment doesn't also expand/collapse the sheet. */}
+        {pageMode && !isDesktopWidth && (
+          <div className="fs-dock-segmented">
+            <button
+              type="button"
+              className={`fs-dock-segment${fsDrawPanelOpen ? " fs-dock-segment--active" : ""}`}
+              onClick={() => { hapticTap(); setFsDrawPanelOpen((v) => !v); }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
+              <span>{t("chart.toolbox", "Toolbox")}</span>
+            </button>
+            <button
+              type="button"
+              className="fs-dock-segment fs-dock-segment--danger"
+              onClick={() => { hapticTap(); toggleFullscreen(); }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              <span>{t("chart.close", "Close")}</span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {fsSheetExpanded && (
         <div className="fs-dock-body">
@@ -3603,7 +3713,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </button>
             {fsOpenCategories.indicators && (
               <div className="fs-dock-category-body">
-                <div className="indicators-menu indicators-menu--sheet">{indicatorsList}</div>
+                {/* onChangeCapture delegates one haptic call to every
+                    indicator checkbox inside indicatorsList (15+ of them)
+                    without touching each one's own onChange — this is the
+                    Advance Price Chart page's dock only, so it doesn't
+                    affect the same indicatorsList embedded elsewhere
+                    (compact view / desktop fullscreen dropdowns). */}
+                <div
+                  className="indicators-menu indicators-menu--sheet"
+                  onChangeCapture={() => { if (pageMode) hapticTap(); }}
+                >
+                  {indicatorsList}
+                </div>
               </div>
             )}
           </div>
@@ -3655,6 +3776,109 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
           </div>
 
+          {/* Advance Price Chart page only — High/Low/Vol/Bid/Ask/Vol-coin/
+              Signal/Divergence, the same content the header's expandable
+              stats strip shows elsewhere, just relocated here since the
+              header on this page is trimmed down to coin/price/change. */}
+          {pageMode && (
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("stats")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--stats">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18" />
+                  <path d="M7 16l4-5 3 3 5-7" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.stats", "Stats")}</span>
+              <span className="chart-fs-strip-item" style={{ marginLeft: 6 }}>{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
+              <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.stats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.stats && (
+              <div className="fs-dock-category-body">
+                <div className="chart-fs-stats-grid">
+                  <div className="chart-fs-stat-col">
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
+                      <span className="chart-fs-stat-value">
+                        {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
+                      </span>
+                    </div>
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--up">
+                        {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
+                      </span>
+                    </div>
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--down">
+                        {askPrice !== null ? formatLivePrice(askPrice) : "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="chart-fs-stat-col chart-fs-stat-col--right">
+                    <div className="chart-fs-stat-row">
+                      <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
+                      <span className="chart-fs-stat-value">
+                        {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {zone && isPaid && fsSignalBucket && (
+                  <div className="chart-fs-meter">
+                    <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                    <div className="chart-fs-meter-row">
+                      <span className="chart-fs-meter-track">
+                        <span
+                          className={`chart-fs-meter-dot chart-fs-meter-dot--${fsSignalBucket}`}
+                          style={{ left: `${fsSignalPct}%` }}
+                        />
+                      </span>
+                      <span className={`chart-fs-meter-value chart-fs-meter-value--${fsSignalBucket}`}>{fsSignalLabel}</span>
+                    </div>
+                  </div>
+                )}
+                {!isPaid && (
+                  <button
+                    className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                    onClick={() => onOpenUpgrade?.("pro")}
+                  >
+                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                    Unlock Status
+                  </button>
+                )}
+                {isPaid && (
+                  <div className="chart-fs-meter">
+                    <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                    <div className="chart-fs-meter-row">
+                      <span className="chart-fs-meter-track chart-fs-meter-track--rev">
+                        <span
+                          className={`chart-fs-meter-dot chart-fs-meter-dot--${fsDivDotBucket}`}
+                          style={{ left: `${fsDivPct}%` }}
+                        />
+                      </span>
+                      <span className={`chart-fs-meter-value chart-fs-meter-value--${fsDivDotBucket}`}>{fsDivLabel}</span>
+                    </div>
+                  </div>
+                )}
+                {!isPaid && (
+                  <button
+                    className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                    onClick={() => onOpenUpgrade?.("pro")}
+                  >
+                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                    Unlock Divergence
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          )}
+
         </div>
       )}
     </div>,
@@ -3670,9 +3894,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
         className={isFullscreen ? "price-chart-fs-scroll" : undefined}
+        style={
+          pageMode && !isDesktopWidth
+            ? ({ "--fs-dock-clearance": `${fsDockClearance}px` } as React.CSSProperties)
+            : undefined
+        }
         onScroll={isFullscreen ? updateFsThumb : undefined}
       >
-        <div className="chart-fs-header-group">
+        <div className={`chart-fs-header-group${pageMode && !isDesktopWidth ? " chart-fs-header-group--empty" : ""}`}>
           <div className="chart-header">
             <div className="chart-header-left">
               {/* Fullscreen (mobile/iOS and desktop alike): exchange-style
@@ -3682,6 +3911,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   above. Only normal (non-fullscreen) mobile/desktop keep
                   the original title row below/further down. */}
               {isFullscreen ? (() => {
+                // Advance Price Chart page, mobile — no header at all now;
+                // coin/price/change moved into the dock's peek row itself
+                // (fsDockSheet below), so the chart canvas starts right at
+                // the very top of the screen.
+                if (pageMode && !isDesktopWidth) return null;
                 // "Minimal Header" layout — single compact coin+price row,
                 // High/Low/Vol/Signal collapsed into one tappable strip
                 // instead of sitting permanently expanded. Style/
@@ -3732,6 +3966,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </button>
                   </div>
 
+                  {/* Advance Price Chart page, mobile — stats move into
+                      the dock's new Stats category instead (fsDockSheet
+                      below), so the header stays just the compact coin/
+                      price/change row and the chart gets the rest of the
+                      screen. Desktop fullscreen (and any fallback) keeps
+                      the tappable strip + expandable panel as before. */}
+                  {!(pageMode && !isDesktopWidth) && (
+                  <>
                   <button
                     type="button"
                     className="chart-fs-stats-strip"
@@ -3822,6 +4064,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </button>
                   )}
                   </div>
+                  )}
+                  </>
                   )}
                 </div>
                 );
@@ -4062,7 +4306,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
 
         <div
-          style={{ position: "relative" }}
+          style={
+            pageMode && !isDesktopWidth
+              ? // Direct child of .price-chart-fs-scroll (the actual flex
+                // container) — this is the element that needs flex:1, not
+                // .chart-canvas-wrap below, which is nested one level
+                // deeper inside here and isn't a flex item of anything.
+                { position: "relative", flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column" }
+              : { position: "relative" }
+          }
           // This onDoubleClick prop only ever worked on web — native
           // dblclick synthesis from two touches is unreliable on iOS, which
           // is why it's left disabled here rather than firing unreliably.
@@ -4080,6 +4332,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }`}
           ref={dblClickWrapRef}
         >
+            {/* Advance Price Chart page, mobile — this whole icon row
+                (Save/Reset/depth/Exit-fullscreen etc.) moves into the
+                dock's peek row instead (fsDockSheet below), so the chart
+                gets the space back. Desktop fullscreen keeps it. */}
+            {!(pageMode && !isDesktopWidth) && (
             <div className={`chart-legend-actions${Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? " chart-legend-actions--ios" : ""}`}>
               {/* Chart style/Interval/Indicators — every compact view
                   (mobile/iOS and desktop alike) plus desktop fullscreen,
@@ -4096,23 +4353,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <button
                 className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                 onClick={() => {
-                  if (showDepthProfile) {
-                    setShowDepthProfile(false);
-                    // Page instance is permanently fullscreen — closing the
-                    // depth profile panel there should just close the panel,
-                    // not navigate away from the whole page.
-                    if (!pageMode) {
-                      if (document.fullscreenElement) {
-                        document.exitFullscreen().catch(() => {});
-                      } else if (cssFsRef.current) {
-                        cssFsRef.current = false;
-                        setIsFullscreen(false);
-                      }
-                    }
-                  } else {
-                    if (!isFullscreen) toggleFullscreen();
-                    setShowDepthProfile(true);
-                  }
+                  // OrderBookProfileModal (below) is a self-contained
+                  // full-screen modal of its own — it never actually
+                  // needed the CHART to also be fullscreen. That old
+                  // coupling meant tapping this on the compact chart now
+                  // navigated to the Advance Price Chart page instead of
+                  // just opening the depth panel, since entering
+                  // fullscreen there means a real page navigation.
+                  setShowDepthProfile((v) => !v);
                 }}
                 title={
                   showDepthProfile ? "Hide depth profile" : "Show depth profile"
@@ -4261,6 +4509,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="chart-icon-label">{t("chart.fullscreen", "Fullscreen")}</span>
               </button>
             </div>
+            )}
           {loading && (
             <div className="chart-loading-overlay">
               <span>{t("chart.loading")}</span>
@@ -4269,10 +4518,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div
             ref={containerRef}
             className="chart-canvas-wrap chart-main-wrap"
-            style={{
-              width: "100%",
-              height: isFullscreen ? "calc(100vh - 200px)" : "400px",
-            }}
+            style={
+              pageMode && !isDesktopWidth
+                ? // Advance Price Chart page, mobile — flex-fill instead of
+                  // a fixed viewport-relative height (.price-chart-fs-scroll
+                  // is a flex column for this case, see PriceChart.css).
+                  // The chart gets exactly whatever's left after the
+                  // header, with the scroll container's own bottom padding
+                  // reserving space for the docked bottom sheet — so the
+                  // date-axis strip fits on screen without scrolling,
+                  // instead of a guessed pixel height that goes stale every
+                  // time the header's own content changes.
+                  { width: "100%", flex: "1 1 auto", minHeight: 0 }
+                : {
+                    width: "100%",
+                    height: isFullscreen
+                      ? (isDesktopWidth ? "calc(100vh - 200px)" : "calc(100vh - 260px)")
+                      : "400px",
+                  }
+            }
           />
           <PredictionOverlay
             chartRef={chartRef}
@@ -4303,9 +4567,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             seriesRef={candleRef}
             containerRef={containerRef}
             candlesRef={lastCandlesRef}
-            visible={isFullscreen}
+            visible={pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen}
             persistRef={drawingsPersistRef}
             onZoneComplete={handleZoneComplete}
+            onSave={pageMode && !isDesktopWidth ? handleScreenshot : undefined}
+            onReset={pageMode && !isDesktopWidth ? () => {
+              chartRef.current?.timeScale().fitContent();
+              rsiChartRef.current?.timeScale().fitContent();
+              macdChartRef.current?.timeScale().fitContent();
+            } : undefined}
           />
           <button
             className="chart-reset-view-btn chart-save-view-btn"
@@ -4384,15 +4654,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {showDepthProfile && (
           <OrderBookProfileModal
             coin={coin}
-            onClose={() => {
-              setShowDepthProfile(false);
-              if (document.fullscreenElement) {
-                document.exitFullscreen().catch(() => {});
-              } else if (cssFsRef.current) {
-                cssFsRef.current = false;
-                setIsFullscreen(false);
-              }
-            }}
+            onClose={() => setShowDepthProfile(false)}
           />
         )}
 

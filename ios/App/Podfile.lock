@@ -19,6 +19,8 @@ PODS:
   - CapacitorFirebaseMessaging (6.3.1):
     - Capacitor
     - FirebaseMessaging (~> 11.0)
+  - CapacitorHaptics (6.0.3):
+    - Capacitor
   - CapacitorKeyboard (6.0.3):
     - Capacitor
   - CapacitorShare (6.0.4):
@@ -96,6 +98,7 @@ DEPENDENCIES:
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
@@ -135,6 +138,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/filesystem"
   CapacitorFirebaseMessaging:
     :path: "../../node_modules/@capacitor-firebase/messaging"
+  CapacitorHaptics:
+    :path: "../../node_modules/@capacitor/haptics"
   CapacitorKeyboard:
     :path: "../../node_modules/@capacitor/keyboard"
   CapacitorShare:
@@ -155,6 +160,7 @@ SPEC CHECKSUMS:
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
   CapacitorFilesystem: 5b9aec35c0212bd0064e26d278c93e925864f212
   CapacitorFirebaseMessaging: 05bf93285c8ae5aeaaddaa938ba1db4fda7305ad
+  CapacitorHaptics: 40f83026feeee9cfe36e89e9c98a3baaaf20c450
   CapacitorKeyboard: e89189ad398b815b6ff7e52271f0fb4f911a0a0a
   CapacitorShare: 77ff779e3b7c6ae9fb5461e52cf7ef805d429491
   CapacitorStatusBar: 149cde8f1328ec3aa6cbdd872a55137ae3f98b16
@@ -170,6 +176,6 @@ SPEC CHECKSUMS:
   RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
   RevenuecatPurchasesCapacitor: 6727a4dc1455bdf2374259420719ce5dfbe957fa
 
-PODFILE CHECKSUM: f599059ff0e1edab7f97f8cc98dccc776d479cdc
+PODFILE CHECKSUM: 7bf6cd3ed8a0fffe513d24d2fe967f01c880b80e
 
 COCOAPODS: 1.17.0

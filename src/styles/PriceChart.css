@@ -274,9 +274,29 @@ html[data-theme="light"]
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  padding: 12px 0 24px 0;
+  /* Bottom padding has to clear the docked bottom sheet (.fs-dock,
+     mobile-only — see fsDockSheet in PriceChart.tsx), which is
+     position:fixed at the viewport bottom regardless of scroll position
+     — overridden back down for desktop below, which has no docked sheet
+     to clear. --fs-dock-clearance is set inline from PriceChart.tsx,
+     measured live off the actual rendered dock (not a guessed pixel
+     constant), so it's correct on every device/safe-area and stays
+     correct if the dock's own content ever changes again. 104px is only
+     a pre-measurement fallback for the first paint. */
+  padding: 12px 0 var(--fs-dock-clearance, 104px) 0;
   box-sizing: border-box;
   scrollbar-width: none;
+  /* Mobile Advance Price Chart page — flex column instead of a fixed
+     viewport-relative chart height, so the chart (flex:1 on
+     .chart-canvas-wrap, set in PriceChart.tsx for pageMode) fills
+     exactly whatever's left after the header, with this padding-bottom
+     reserving the dock's clearance. That's how the date-axis strip
+     fits on screen without needing to scroll, instead of guessing a
+     fixed pixel height that drifts stale every time header content
+     changes. Reset to block for desktop below, which keeps its
+     original scroll-the-whole-page behavior. */
+  display: flex;
+  flex-direction: column;
 }
 .price-chart-fs-scroll::-webkit-scrollbar {
   display: none;
@@ -290,6 +310,16 @@ html[data-theme="light"]
 .price-chart-container:fullscreen .chart-fs-header-group {
   position: static;
   margin: 0;
+}
+
+/* Advance Price Chart page, mobile — the header IIFE returns null here
+   (coin/price/change moved into the dock peek row instead), but the
+   wrapping .chart-fs-header-group/.chart-header/.chart-header-left divs
+   still render around that null child and would otherwise keep their own
+   padding/min-height, leaving an empty gap at the very top of the chart.
+   Collapsing the whole stack removes that gap entirely. */
+.chart-fs-header-group--empty {
+  display: none;
 }
 
 /* Mobile (iOS and web mobile alike) fullscreen — page scroll is back (the
@@ -345,6 +375,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 @media (min-width: 769px) {
   .price-chart-fs-scroll {
     padding: 0;
+    display: block;
   }
 
   .price-chart-container--fs .interval-banner,
@@ -739,12 +770,26 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
   border-bottom: none;
   border-radius: 18px 18px 0 0;
-  box-shadow: 0 -4px 16px var(--color-shadow);
+  box-shadow: 0 -8px 28px var(--color-shadow), 0 -2px 8px var(--color-shadow);
   transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   padding-bottom: max(6px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
 }
 
+/* Wraps the tap-to-expand toggle (title row) plus, on the Advance Price
+   Chart page's mobile layout, a row of quick-action buttons (Save/Reset/
+   Draw) — split into two elements (instead of the old single <button>)
+   so those can be their own real <button>s without nesting interactive
+   elements inside the toggle. */
 .fs-dock-peek {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 14px 8px;
+  flex-shrink: 0;
+}
+.fs-dock-peek-toggle {
   all: unset;
   box-sizing: border-box;
   cursor: pointer;
@@ -753,9 +798,83 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   align-items: center;
   gap: 4px;
   width: 100%;
-  padding: 6px 14px 8px;
+}
+/* Save / Reset / Draw / Close as one labeled segmented control, replacing
+   the old icon-only row — each segment is icon + text side by side,
+   equal width, sharing one rounded track. Close is visually distinct
+   (danger color) since it's destructive-ish (leaves the page) compared
+   to the other three; Draw gets the active/pressed treatment while its
+   floating toolbox is open, same convention as elsewhere in this dock. */
+/* --color-* tokens (not --pc-*) — this dock is portaled to document.body
+   (fsDockSheet in PriceChart.tsx), outside .chart-active's DOM subtree
+   where --pc-* is defined, so those just silently fell back to this
+   rule's hardcoded light-mode fallback values regardless of theme —
+   the exact "track reads white in dark theme" bug. Same reason the
+   interval bottom sheet and indicators sheet already use --color-*
+   instead (see the comment above .interval-sheet-backdrop). */
+.fs-dock-segmented {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--color-surface-strong);
+}
+.fs-dock-segment {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 4px;
+  border-radius: 16px;
+  border: 1.5px solid transparent;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fs-dock-segment--active {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.fs-dock-segment--danger {
+  color: var(--color-danger);
+}
+
+/* Advance Price Chart page, mobile — the peek row's title-row shows the
+   coin ticker (avatar/name/price/change) instead of "Chart Settings",
+   since the header above the chart is gone entirely on this page. */
+.fs-dock-coin-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
   flex-shrink: 0;
 }
+.fs-dock-coin-price {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.fs-dock-coin-change {
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fs-dock-coin-change--up { color: var(--color-success); }
+.fs-dock-coin-change--down { color: var(--color-danger); }
 
 .fs-dock-handle {
   width: 32px;
@@ -847,6 +966,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .fs-dock-category-icon--interval {
   background: rgba(251, 191, 36, 0.16);
   color: #f59e0b;
+}
+.fs-dock-category-icon--stats {
+  background: rgba(244, 114, 182, 0.16);
+  color: #f472b6;
 }
 
 .fs-dock-category-label {

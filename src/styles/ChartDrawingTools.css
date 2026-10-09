@@ -28,7 +28,7 @@
   width: 30px;
   height: 30px;
   border: none !important;
-  border-radius: 5px;
+  border-radius: 999px;
   background: transparent !important;
   color: var(--color-text-secondary) !important;
   cursor: pointer;

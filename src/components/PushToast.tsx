@@ -40,12 +40,7 @@ interface PushToastDetail {
   data?: PushToastData;
 }
 
-// 3 minutes instead of the old 6s — this now covers a genuinely
-// action-worth-noticing alert (a buy/sell signal), not just an FYI, so it
-// stays up long enough to actually notice without demanding an instant
-// reaction. The close button (already there) covers "I saw it, dismiss it
-// now."
-const DURATION = 180_000;
+const DURATION = 3_000;
 
 function initials(name: string): string {
   return name.slice(0, 2).toUpperCase();

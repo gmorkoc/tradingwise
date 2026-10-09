@@ -33,6 +33,13 @@ interface Props {
   persistRef?: React.MutableRefObject<Drawing[]>;
   /** Fired when a freeform "zone" is drawn, with the candles that fall inside it */
   onZoneComplete?: (drawing: Drawing, candles: CandleDataPoint[]) => void;
+  /** Advance Price Chart page, mobile — Save/Reset moved here (top of
+   * the toolbox) from the dock's segmented control, so they're reachable
+   * right where the user is already drawing/working instead of a
+   * separate control elsewhere. Omitted everywhere else, where Save/
+   * Reset still live in their original spots. */
+  onSave?: () => void;
+  onReset?: () => void;
 }
 
 export interface ChartDrawingToolsHandle {
@@ -184,7 +191,7 @@ const TRASH_ICON = <IconMulti>
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
-  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete }: Props,
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset }: Props,
   ref,
 ) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
@@ -737,6 +744,32 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
         className="cdt-toolbar"
         style={{ top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }}
       >
+        {(onSave || onReset) && (
+          <>
+            {onSave && (
+              <button
+                className="cdt-btn"
+                onClick={onSave}
+                title="Save Chart"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </button>
+            )}
+            {onReset && (
+              <button
+                className="cdt-btn"
+                onClick={onReset}
+                title="Reset View"
+              >
+                <span aria-hidden="true" style={{ fontSize: 15 }}>⤢</span>
+              </button>
+            )}
+            <div className="cdt-separator" />
+          </>
+        )}
         {TOOL_LIST.map(t => (
           <button
             key={t.id}
