@@ -838,9 +838,6 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "auto" });
   }, [messages, sending, liveThinking]);
 
-  // Pro+ feature — free users don't get the trigger/panel at all.
-  if (!user || !hasAccess(tier, "pro")) return null;
-
   const handleNewConversation = () => {
     setConversationId(newConversationId());
     setMessages([]);
@@ -1167,6 +1164,17 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       stateSub.then((h) => h.remove());
     };
   }, []);
+
+  // Pro+ feature — free users don't get the trigger/panel at all. This has
+  // to come after every hook above (not as an early return further up) —
+  // React requires the exact same hooks, in the exact same order, on
+  // every render. A guard placed before some of them meant a user whose
+  // tier resolved to pro/elite *after* sign-in changed the hook count
+  // between renders, which is a silent dev-mode warning but a fatal,
+  // unrecoverable crash in a production/minified build — exactly what
+  // happened here (and the same bug class previously fixed in
+  // ProfilePage.tsx, commit 6cb3507).
+  if (!user || !hasAccess(tier, "pro")) return null;
 
   // Split from handleMicTap so speakLatestAgentReply's auto-continue (once
   // TTS finishes, in voice mode) can start the next turn's listening
