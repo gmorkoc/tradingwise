@@ -1835,6 +1835,7 @@ function AppDashboard({
             <div className="top-nav-bar">
               <div className="top-nav-logo">
                 coinhint<span className="top-nav-logo-accent">z</span>
+                <sup className="top-nav-logo-tm">™</sup>
               </div>
               <button
                 className="top-nav-search"

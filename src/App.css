@@ -1509,7 +1509,7 @@ select {
 }
 
 .chart-section-wrap > .ob-card {
-  width: 264px;
+  width: 320px;
   flex-shrink: 0;
   margin: 0 4px 10px 10px;
   padding: 0 20px 18px 3px;
@@ -3826,8 +3826,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
    width each, switch with a tap/click. The in-between tablet range
    (641-960px) is untouched — still the two-panel stacked+resizable
    layout in the max-width:960px block above. */
-@media (max-width: 640px), (min-width: 961px) {
-  /* Simple iOS-style icon toggle — dark pill, two circular icon buttons,
+@media (max-width: 640px) {
+  /* Was (max-width: 640px), (min-width: 961px) — the exclusive chart/
+     order-book toggle (and the "only one panel visible" rule below it)
+     used to also apply at full desktop width, hiding whichever panel
+     wasn't the active tab even though there's plenty of room to show
+     both. Scoped to real phones only now; desktop (>=961px) falls back
+     to the base .chart-section-wrap rules further up this file, which
+     already lay both out side by side with a fixed 264px order-book
+     column — the same side-by-side treatment the 641-960px tablet band
+     has always had, just extended up to desktop too.
+
+     Simple iOS-style icon toggle — dark pill, two circular icon buttons,
      active one filled solid. Mounted in the always-present top bar
      (.mch-right), NOT inside .chart-active, so this uses the app's global
      --color-* tokens rather than --pc-* (those only exist inside the

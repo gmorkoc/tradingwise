@@ -174,13 +174,16 @@ html[data-theme="light"] .ta-trigger-dot {
 
   display: flex;
   flex-direction: column;
+  position: relative;
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 30%),
+    radial-gradient(120% 60% at 15% 0%, rgba(110, 168, 255, 0.12), transparent 60%),
     linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   color: var(--ta-text);
   border: 1px solid var(--ta-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 60px rgba(255, 255, 255, 0.05);
   overflow: hidden;
   /* TradingAgent.tsx sets padding-bottom directly (inline style) to dodge
      the iOS keyboard — without this transition, that change is an instant
@@ -247,7 +250,7 @@ html[data-theme="light"] .ta-panel {
     width: 820px;
     height: min(880px, calc(100vh - 40px));
     border-radius: 20px;
-    box-shadow: 0 40px 110px rgba(0, 0, 0, 0.48), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
+    box-shadow: 0 40px 110px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 50px rgba(255, 255, 255, 0.04);
     z-index: 260;
     /* Two-stage entrance, anchored bottom-right (where the trigger sits):
        height first (scaleY, growing upward — "bottom to top"), then width
@@ -262,6 +265,29 @@ html[data-theme="light"] .ta-panel {
   0%   { transform: scaleY(0.08) scaleX(0.9); opacity: 0; }
   55%  { transform: scaleY(1) scaleX(0.9); opacity: 1; }
   100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+
+/* Desktop-only dimmer behind the floating panel — portaled to <body>
+   (TradingAgent.tsx), only ever mounted when isDesktop, so this never
+   needs its own media query to stay off mobile (the full-screen sheet
+   there has nothing left showing behind it to dim anyway). A LIGHT touch
+   on purpose, per spec ("a bit") — just enough to pull focus onto the
+   panel, not a hard modal scrim. */
+.ta-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 259;
+  background: rgba(8, 10, 20, 0.22);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: ta-backdrop-in 0.2s ease both;
+}
+@keyframes ta-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-backdrop { animation: none; }
 }
 
 /* Mobile: full-screen sheet (portaled to <body>) */
@@ -292,6 +318,10 @@ html[data-theme="light"] .ta-panel {
   padding: 8px 18px;
   border-bottom: 1px solid var(--ta-border);
   flex-shrink: 0;
+  position: relative;
+  background:
+    linear-gradient(100deg, rgba(110, 168, 255, 0.14), rgba(167, 139, 250, 0.08) 55%, transparent 90%),
+    linear-gradient(rgba(255, 255, 255, 0.05), transparent 60%);
 }
 /* Wraps the orb + title text — only .ta-head-title itself (the text) gets
    overflow:hidden for truncation; the orb lives OUTSIDE that clipped box
@@ -307,9 +337,13 @@ html[data-theme="light"] .ta-panel {
 }
 .ta-head-title {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--ta-text);
+  background: linear-gradient(90deg, var(--ta-accent), var(--ta-accent-2) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   /* A 4th header icon button (watchlist) pushed .ta-head-actions wide
      enough that this wrapped to two lines on narrower screens, stretching
      the whole header taller and throwing off vertical centering. Truncate
@@ -441,6 +475,63 @@ html[data-theme="light"] .ta-panel {
   flex-shrink: 0;
 }
 .ta-history-item-delete:hover { color: #fb7185; }
+
+/* ── iOS-native swipe-to-delete (ConversationRow in TradingAgent.tsx) ────
+   Delete sits as a fixed-position red layer UNDER the row; the row itself
+   (.ta-history-item here, reused as the sliding "front") translates left
+   via inline style to reveal it — overflow:hidden on this wrapper clips
+   that translation to the row's own rounded-rect bounds. Web/desktop don't
+   use this at all (IS_IOS_NATIVE-gated), so no media query needed. */
+.ta-history-item-swipe {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ta-history-item-swipe .ta-history-item {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* var(--ta-overlay) alone (the base rule's background) is only ~4%
+     opaque — nowhere near enough to hide the solid red delete layer
+     sitting directly behind this at rest, which bled through as a
+     permanently-visible red strip. An opaque solid backing first,
+     with the normal translucent overlay tint layered on top of THAT,
+     actually hides it while keeping the same visual tint as before. */
+  background-color: var(--ta-bg-1);
+  background-image: linear-gradient(var(--ta-overlay), var(--ta-overlay));
+}
+/* Floating rounded pill, not a full-bleed rectangle — matches the
+   Material-style reference (icon + label, its own color/shadow, sitting
+   in the gap the row's own translateX opens up) rather than looking like
+   a solid panel the row slides off of. */
+.ta-history-item-swipe-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+}
+.ta-history-item-swipe-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 9px 16px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  transform-origin: center;
+  /* Opacity/transform are driven by inline style (tied to live drag
+     progress) — this transition only smooths the snap once the drag
+     itself ends (dragX back to null), same reasoning as the row's own. */
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
 .ta-history-back {
   border: 1px solid var(--ta-border);
   background: transparent;
@@ -517,6 +608,48 @@ html[data-theme="light"] .ta-panel {
   font-size: 0.72rem;
   color: #ef4444;
   flex-shrink: 0;
+}
+
+/* ── "Continue last conversation" suggestion ─────────────────────────────
+   Shown instead of silently dropping the user into a blank new chat when
+   a prior conversation (with real messages) exists — a tappable nudge
+   back to it, not a gate; ignoring it and just typing works exactly the
+   same as if it weren't there. */
+.ta-continue-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 14px 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(110, 168, 255, 0.14), rgba(167, 139, 250, 0.08));
+  border: 1px solid rgba(110, 168, 255, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+.ta-continue-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ta-text);
+}
+.ta-continue-banner-text em {
+  font-style: normal;
+  color: var(--ta-text-dim);
+}
+.ta-continue-banner-btn {
+  flex-shrink: 0;
+  border: none;
+  background: linear-gradient(165deg, var(--ta-accent), var(--ta-accent-2));
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(110, 168, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 /* ── Portfolio summary strip ─────────────────────────────────────────────── */
@@ -742,9 +875,13 @@ html[data-theme="light"] .ta-panel {
    in both themes (real iMessage doesn't recolor it for dark mode either);
    only the gray "received" bubble swaps per theme below. */
 .ta-msg--user .ta-msg-text {
-  background: #0b93f6;
+  background: linear-gradient(165deg, rgba(109, 184, 255, 0.55), rgba(11, 147, 246, 0.42) 60%, rgba(6, 112, 214, 0.5) 100%);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 14px rgba(11, 147, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 /* Color AND font-size/weight/line-height intentionally match
    .ta-thinking-label exactly — this bubble's content IS what was just
@@ -752,16 +889,21 @@ html[data-theme="light"] .ta-panel {
    exact same look through that handoff avoids the text visibly
    reflowing/recoloring the instant the real message replaces it. */
 .ta-msg--agent .ta-msg-text {
-  background: #3b3b3d;
-  border: none;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 60%);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--ta-agent-text);
   font-size: 0.82rem;
   font-weight: 500;
   line-height: 1.5;
   border-bottom-left-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 html[data-theme="light"] .ta-msg--agent .ta-msg-text {
-  background: #e9e9eb;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.65), rgba(20, 30, 60, 0.04) 60%);
+  border: 1px solid rgba(20, 30, 60, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 /* Permanent, not collapsible — the whole point is this stays visible after
    the response lands and on reload, not just while streaming. */
@@ -800,12 +942,17 @@ html[data-theme="light"] .ta-msg--agent .ta-msg-text {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 14px;
-  background: #3b3b3d;
-  border: none;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 60%);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom-left-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 html[data-theme="light"] .ta-msg-text.ta-typing {
-  background: #e9e9eb;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.65), rgba(20, 30, 60, 0.04) 60%);
+  border: 1px solid rgba(20, 30, 60, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 .ta-msg-text.ta-typing .ta-thinking-orb { margin-top: 2px; }
 .ta-thinking-copy {
@@ -1470,13 +1617,13 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 .ta-composer-send {
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
+  background: linear-gradient(165deg, var(--ta-accent), var(--ta-accent-2));
   color: #fff;
   font-weight: 700;
   font-size: 0.82rem;
   padding: 0 20px;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .ta-composer-send:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
 

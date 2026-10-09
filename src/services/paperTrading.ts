@@ -30,11 +30,11 @@ export interface PaperPortfolio {
   focusCoins: string[];
 }
 
-export interface OnboardingAnswers {
-  startingBalance: number;
-  typicalTradeUsd: number;
-  allowLeverage: boolean;
-  focusCoins: string[];
+export interface PreferencesUpdate {
+  startingBalance?: number;
+  typicalTradeUsd?: number;
+  allowLeverage?: boolean;
+  focusCoins?: string[];
 }
 
 export interface AgentAction {
@@ -205,21 +205,31 @@ export async function fetchPortfolio(userId: string): Promise<PaperPortfolio> {
   };
 }
 
-// Records the disclaimer acceptance + the onboarding answers in one write,
-// and sets the starting cash balance from the user's own answer instead of
-// the fixed default — only meaningful pre-trading, which this gate ensures
-// (the chat/composer stay hidden until this resolves).
-export async function acceptConsentAndOnboard(userId: string, answers: OnboardingAnswers): Promise<void> {
+// Records the one-time-per-account risk disclaimer acceptance only — the
+// starting balance/trade size/leverage/focus-coin preferences used to be
+// bundled into this same write (a required form step), but are now captured
+// conversationally over time via updatePreferences below instead.
+export async function acceptConsent(userId: string): Promise<void> {
   const { error } = await supabase
     .from("paper_portfolios")
-    .update({
-      consent_accepted_at: new Date().toISOString(),
-      cash_balance: answers.startingBalance,
-      typical_trade_usd: answers.typicalTradeUsd,
-      allow_leverage: answers.allowLeverage,
-      focus_coins: answers.focusCoins,
-    })
+    .update({ consent_accepted_at: new Date().toISOString() })
     .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
+// Partial update for whatever preference the agent extracted from a user's
+// own words mid-conversation (e.g. "I've got about $500 to play with") —
+// only the fields actually present are written, and consent_accepted_at is
+// deliberately never touched here since stating a budget isn't the same as
+// accepting the risk disclaimer.
+export async function updatePreferences(userId: string, partial: PreferencesUpdate): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (partial.startingBalance !== undefined) patch.cash_balance = partial.startingBalance;
+  if (partial.typicalTradeUsd !== undefined) patch.typical_trade_usd = partial.typicalTradeUsd;
+  if (partial.allowLeverage !== undefined) patch.allow_leverage = partial.allowLeverage;
+  if (partial.focusCoins !== undefined) patch.focus_coins = partial.focusCoins;
+  if (Object.keys(patch).length === 0) return;
+  const { error } = await supabase.from("paper_portfolios").update(patch).eq("user_id", userId);
   if (error) throw new Error(error.message);
 }
 
@@ -384,7 +394,7 @@ export async function sendAgentMessage(
   userId: string, conversationId: string, content: string, history: HistoryTurn[], selectedCoin?: string | null,
   onThinking?: (text: string) => void, viaVoice?: boolean, onMarketSnapshot?: (snapshot: CoinSnapshot[] | null) => void,
   onShowChart?: (req: ShowChartRequest) => void, onShowOrderBook?: (req: ShowOrderBookRequest) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal, onPreferencesUpdate?: (update: PreferencesUpdate) => void
 ): Promise<AgentMessage> {
   await insertMessage(userId, conversationId, "user", content, null);
 
@@ -436,16 +446,18 @@ export async function sendAgentMessage(
     marketSnapshot: CoinSnapshot[] | null;
     showChart: ShowChartRequest | null; showOrderBook: ShowOrderBookRequest | null;
     thoughtProcess: string | null;
+    preferencesUpdate: PreferencesUpdate | null;
   };
   try {
     parsedResult = JSON.parse(jsonLine.slice(2));
   } catch {
     throw new Error("The agent's response was cut off — please try again.");
   }
-  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess } = parsedResult;
+  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess, preferencesUpdate } = parsedResult;
   onMarketSnapshot?.(marketSnapshot ?? null);
   if (showChart) onShowChart?.(showChart);
   if (showOrderBook) onShowOrderBook?.(showOrderBook);
+  if (preferencesUpdate) onPreferencesUpdate?.(preferencesUpdate);
 
   // Proposed, not created yet — same pending/confirmed/dismissed gate as
   // action/basket/balanceUpdate (see confirmWatch above). The user confirms

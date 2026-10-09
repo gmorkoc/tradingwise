@@ -17,126 +17,184 @@
   padding: 0 20px 18px 3px;
 }
 
-/* Exact same margin/padding/layout as .chart-header (PriceChart.css),
-   base rule and both breakpoints, so "Order Book" lines up with "BTC
-   Price Chart" at every width on both desktop and iOS/mobile. */
-.ob-header {
+/* Fixed, not stretched/measured to match the price chart's own (content-
+   driven, so genuinely indeterminate) height — a flat constant is a
+   deliberate choice here, not a fallback, so tune this one number if the
+   two cards drift out of visual alignment rather than reintroducing a
+   height dependency on the chart's layout. */
+@media (min-width: 961px) {
+  .chart-active .ob-card {
+    height: 780px;
+  }
+}
+
+/* ── Tab bar — "Order book ✕ | Recent trades | +" ─────────────────────────
+   Visual parity with the reference exchange UI: the active tab shows a
+   ✕ (cosmetic only — this app has no generic panel system behind it to
+   actually close/re-add), "+" is likewise a non-functional visual stub. */
+.ob-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0;
-  flex-wrap: wrap;
-  gap: 20px;
-  padding: 8px;
-}
-
-@media (min-width: 769px) {
-  .ob-header {
-    padding-left: 0;
-  }
-}
-
-@media (max-width: 768px) {
-  .ob-header {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-
-.ob-title {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--pc-text);
-}
-
-@media (max-width: 768px) {
-  .ob-title {
-    font-size: 1.4rem;
-    font-weight: 800;
-  }
-}
-
-@media (max-width: 480px) {
-  .ob-title {
-    font-size: 1.25rem;
-  }
-}
-
-/* ── Exchange row ────────────────────────────────────────────────────────── */
-
-.ob-exchange-row {
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 8px 0;
   flex-shrink: 0;
 }
 
-.ob-ex-select {
-  width: 100%;
-  padding: 5px 24px 5px 8px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  border: 1px solid var(--pc-border);
-  border-radius: 6px;
-  background: var(--pc-panel);
-  color: var(--pc-text);
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 7px center;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.ob-ex-select:focus {
-  border-color: var(--pc-accent);
-}
-
-/* ── Size filter pills ───────────────────────────────────────────────────── */
-
-.ob-filter-row {
-  display: flex;
-  gap: 0;
-  margin-bottom: 10px;
-  flex-shrink: 0;
-  flex-wrap: nowrap;
-  overflow: hidden;
-}
-
-.ob-filter-btn {
+.ob-tab {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 5px;
-  font-size: 0.61rem;
-  font-weight: 600;
+  gap: 6px;
   border: none;
-  border-radius: 4px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pc-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ob-tab:hover {
+  color: var(--pc-text);
+}
+
+.ob-tab--active {
+  background: var(--pc-panel);
+  color: var(--pc-text);
+}
+
+.ob-tab-close {
+  font-size: 0.68rem;
+  opacity: 0.6;
+}
+
+.ob-tab-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pc-text-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ob-tab-add:hover {
+  color: var(--pc-text);
+  background: var(--pc-panel);
+}
+
+.ob-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
   background: transparent;
   color: var(--pc-text-muted);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  white-space: nowrap;
+  margin-left: auto;
   flex-shrink: 0;
 }
 
-.ob-filter-btn:hover {
+.ob-expand-btn:hover {
   color: var(--pc-text);
 }
 
-.ob-filter-btn.active {
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--pc-accent);
+/* ── Precision / exchange pill dropdowns ───────────────────────────────── */
+
+.ob-dropdown-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
-.ob-filter-btn--locked {
-  opacity: 0.7;
+.ob-pill {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border: 1px solid var(--pc-border);
+  border-radius: 8px;
+  background: var(--pc-panel);
+  color: var(--pc-text);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.ob-pill-btn--open {
+  border-color: var(--pc-accent);
+}
+
+.ob-pill-caret {
+  color: var(--pc-text-muted);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.ob-pill-caret--open {
+  transform: rotate(180deg);
+}
+
+.ob-pill-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--pc-panel);
+  border: 1px solid var(--pc-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  padding: 4px;
+}
+
+.ob-pill-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--pc-text);
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ob-pill-option:hover {
+  background: var(--pc-overlay, rgba(127, 127, 127, 0.1));
+}
+
+.ob-pill-option--selected {
+  color: var(--pc-accent);
+  font-weight: 700;
+}
+
+.ob-pill-check {
+  font-size: 0.7rem;
 }
 
 .ob-loading {
@@ -255,10 +313,12 @@
   color: var(--pc-text-muted);
   text-align: right;
 }
-.ob-usd {
-  color: var(--pc-text-muted);
-  text-align: right;
-  font-size: 0.68rem;
+
+.ob-row--trade {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.ob-trade-time {
+  font-size: 0.7rem;
 }
 
 /* ── Pinned mid / spread row ─────────────────────────────────────────────── */

@@ -107,6 +107,15 @@ html[data-theme="light"] .chart-active {
   border-radius: 0;
   border: none;
 }
+/* Desktop only (per the base rule above, this same 20px right padding
+   also applies down through the 641-960px tablet band) — just trims the
+   gap between the chart and the now-wider .ob-card beside it. */
+@media (min-width: 961px) {
+  .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+    padding-right: 10px;
+  }
+}
 @media (max-width: 768px) {
   .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {

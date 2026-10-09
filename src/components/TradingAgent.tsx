@@ -2,20 +2,20 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
-import { COINS, CoinSymbol } from "../services/coinglass";
+import { CoinSymbol } from "../services/coinglass";
 import { AgentChartModal } from "./AgentChartModal";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
-  fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsentAndOnboard,
+  fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsent, updatePreferences,
   fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
-  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval, CoinSnapshot, ShowChartInterval,
+  AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval, CoinSnapshot, ShowChartInterval, PreferencesUpdate,
 } from "../services/paperTrading";
 
-const DEFAULT_STARTING_BALANCE = 100000;
 // Plain text input (no native number spinner), but still only lets the
 // user type digits and a single decimal point — keeps "accepts a number"
 // without type="number"'s stepper UI.
@@ -70,6 +70,21 @@ import "../styles/TradingAgent.css";
 // Desktop/web keep typing only; a Web Speech API path would need its own
 // separate handling and isn't added here.
 const SPEECH_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+// Gates the History list's swipe-to-delete gesture — a native iOS table-view
+// convention, not something web/desktop users expect from a click-driven
+// UI (they keep the always-visible trash-icon button instead).
+const IS_IOS_NATIVE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+
+// No-op on web/desktop. Medium rather than Light — Light was hard to feel
+// reliably on-device (same tuning already used in PriceChart.tsx).
+function hapticTap() {
+  if (Capacitor.isNativePlatform()) {
+    Haptics.impact({ style: ImpactStyle.Medium }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("[hapticTap] Haptics.impact failed:", e);
+    });
+  }
+}
 
 // Spoken phrases that mean "I'm finished talking to you," not a real
 // chat/trade message — an EXACT match on the whole (normalized) utterance
@@ -108,6 +123,158 @@ function useIsDesktop(): boolean {
     return () => mql.removeEventListener("change", handler);
   }, []);
   return isDesktop;
+}
+
+// Crisp outline glyph (SF Symbols "trash" shape) instead of the 🗑 emoji —
+// emoji rendering varies enough across devices/fonts that it read as fuzzy
+// and off-brand next to the rest of this app's flat vector icons.
+function TrashIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6m4-6v6"
+        stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// History row swipe-to-delete (iOS native only) — a rounded, floating
+// "Delete" pill revealed behind the row as it slides left, Material-style
+// per the reference design, rather than a full-bleed colored rectangle.
+// Swiping past SWIPE_REVEAL_WIDTH and releasing reveals the pill (tap it
+// to actually delete); swiping all the way past SWIPE_AUTO_DELETE_WIDTH
+// and releasing deletes immediately with no second tap, for a fast
+// Mail.app-style full swipe too. Tapping the row while a swipe is open
+// (this one's or another's) just closes it, same as tapping elsewhere in
+// a real swiped-open table view — it never also navigates on that same
+// tap. Only one row stays revealed at a time (`revealed`/`onReveal` are
+// lifted to the parent so opening one row closes any other already open).
+//
+// Deliberately NOT using React's onTouchStart/onTouchMove/onTouchEnd props
+// here — React attaches its root touch listeners as passive by default, so
+// e.preventDefault() inside a synthetic touchmove handler silently does
+// nothing, and the page's own vertical scroll ends up fighting the drag on
+// a real device even though the JS state updates look correct in review.
+// Native addEventListener with {passive:false} is the only way to actually
+// suppress that scroll once a horizontal drag is detected.
+const SWIPE_REVEAL_WIDTH = 76;
+const SWIPE_AUTO_DELETE_WIDTH = 180;
+function ConversationRow({
+  conversation, active, revealed, onReveal, onOpen, onDelete,
+}: {
+  conversation: ConversationSummary;
+  active: boolean;
+  revealed: boolean;
+  onReveal: (open: boolean) => void;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  // null while not actively dragging — rendered offset then falls back to
+  // the committed `revealed` state instead, which is what makes the row
+  // snap-animate back into place with a CSS transition rather than jumping.
+  const [dragX, setDragX] = useState<number | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  // Mutable mirrors of revealed/dragX/onReveal/onDelete for the native
+  // listeners below — they're attached once (empty effect deps) so they
+  // always need the CURRENT values, not whatever was current when the
+  // listener was first attached.
+  const stateRef = useRef({ revealed, dragX, onReveal, onDelete });
+  stateRef.current = { revealed, dragX, onReveal, onDelete };
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    let start: { x: number; y: number; locked: "h" | "v" | null } | null = null;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, locked: null };
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!start) return;
+      const t = e.touches[0];
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      if (start.locked === null) {
+        // Not enough movement yet to tell a horizontal swipe from the
+        // list's own vertical scroll apart — deciding too early misreads
+        // an almost-vertical scroll as a swipe attempt. Kept small (not
+        // the earlier 8px) so the row actually starts tracking the finger
+        // almost immediately instead of feeling like it has a dead zone.
+        if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        start.locked = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      }
+      if (start.locked !== "h") return; // let the list scroll normally
+      e.preventDefault();
+      const base = stateRef.current.revealed ? -SWIPE_REVEAL_WIDTH : 0;
+      setDragX(Math.min(0, Math.max(-SWIPE_AUTO_DELETE_WIDTH - 40, base + dx)));
+    };
+    const onTouchEnd = () => {
+      start = null;
+      const x = stateRef.current.dragX;
+      if (x == null) return;
+      if (x <= -SWIPE_AUTO_DELETE_WIDTH) {
+        hapticTap();
+        stateRef.current.onDelete();
+      } else {
+        const nowRevealed = x < -SWIPE_REVEAL_WIDTH / 2;
+        if (nowRevealed !== stateRef.current.revealed) hapticTap();
+        stateRef.current.onReveal(nowRevealed);
+      }
+      setDragX(null);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
+  const x = dragX ?? (revealed ? -SWIPE_REVEAL_WIDTH : 0);
+  // Fades/scales in over the first 36px of drag instead of popping in at
+  // full size the instant the row starts moving — reads as the pill
+  // genuinely "appearing" as you swipe, matching the Material-style
+  // reference, rather than being an already-fully-formed shape that was
+  // simply uncovered. A plain opacity/transform tween (not an animated
+  // `width`, which forces layout on every single touchmove frame) is also
+  // what actually fixes the jank — this is compositor-only.
+  const revealProgress = Math.min(1, -x / 36);
+
+  return (
+    <div className="ta-history-item-swipe">
+      <div className="ta-history-item-swipe-actions">
+        <button
+          type="button"
+          className="ta-history-item-swipe-delete"
+          style={{ opacity: revealProgress, transform: `scale(${0.7 + 0.3 * revealProgress})` }}
+          onClick={() => { hapticTap(); onDelete(); }}
+          aria-label="Delete conversation"
+        >
+          <TrashIcon size={15} />
+          Delete
+        </button>
+      </div>
+      <div
+        ref={rowRef}
+        className={`ta-history-item${active ? " ta-history-item--active" : ""}`}
+        style={{ transform: `translateX(${x}px)`, transition: dragX == null ? "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)" : "none", touchAction: "pan-y" }}
+      >
+        <button
+          type="button"
+          className="ta-history-item-main"
+          onClick={() => { if (revealed) { onReveal(false); return; } onOpen(); }}
+        >
+          <span className="ta-history-item-preview">{conversation.preview || "(empty)"}</span>
+          <span className="ta-history-item-meta">{conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"}</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 interface Props {
@@ -298,7 +465,7 @@ function ActionProposalCard({
 }
 
 export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
-  const { user, tier } = useAuth();
+  const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
   // Deliberately NOT persisted to localStorage (unlike portfolioCollapsed
@@ -507,182 +674,16 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const [savingCash, setSavingCash] = useState(false);
   const [error, setError] = useState("");
   const feedRef = useRef<HTMLDivElement>(null);
-  const focusInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Consent and onboarding questions are two separate gates, not one:
-  // - Consent (the risk disclaimer) is asked once per account, ever — gated
-  //   by the portfolio row's persistent consent_accepted_at.
-  // - The onboarding questions (experience/balance/trade size/focus coins/
-  //   leverage) are asked at the start of every NEW conversation, win or
-  //   lose consent state, so the agent always opens with a current read on
-  //   intent/risk appetite rather than trusting answers from weeks ago.
+  // Consent (the risk disclaimer) is the only remaining gate — asked once
+  // per account, ever, by the portfolio row's persistent
+  // consent_accepted_at. Starting balance/typical trade size/leverage/focus
+  // coins used to be a required 4-step form asked at the start of every
+  // new conversation; they're now picked up naturally from conversation
+  // instead (see the opener effect and handleSend's preferencesUpdate
+  // handling below) — safe defaults already apply if never mentioned at all.
   const needsConsent = !portfolio?.consentAcceptedAt;
-  // Free-typed strings, not numbers — a controlled number input that
-  // clamps on every keystroke fights the user while typing (can't clear
-  // the field, can't type a fresh multi-digit value). Clamping/validation
-  // only happens on submit, against the parsed number.
-  const [onboardBalance, setOnboardBalance] = useState(String(DEFAULT_STARTING_BALANCE));
-  const [onboardTradeSize, setOnboardTradeSize] = useState("500");
-  const [onboardAllowLeverage, setOnboardAllowLeverage] = useState(false);
-  const [onboardFocusCoins, setOnboardFocusCoins] = useState<string[]>([]);
-  const [focusSearch, setFocusSearch] = useState("");
-  const [onboarding, setOnboarding] = useState(false);
-  // One question at a time, like a guided chat flow, instead of a single
-  // static form — each answered step collapses to a dimmed summary line
-  // and the next question animates in. 0 = disclaimer, 1 = balance,
-  // 2 = trade size, 3 = focus coins, 4 = leverage (final step, submits).
-  const [onboardStep, setOnboardStep] = useState(0);
-  // Once consent is already on file, a fresh conversation should jump
-  // straight past the disclaimer step into the actual questions — but only
-  // once portfolio has loaded and only while still sitting on step 0, so
-  // this doesn't clobber a flow already in progress.
-  useEffect(() => {
-    if (portfolio?.consentAcceptedAt && messages.length === 0 && onboardStep === 0) {
-      setOnboardStep(1);
-    }
-  }, [portfolio?.consentAcceptedAt, messages.length, onboardStep]);
-  // Brief "typing" beat before each new onboarding question reveals itself
-  // — same thinking/typing feeling as the chat composer's typing-dots
-  // indicator, so the guided questions read as the agent asking them live
-  // rather than a static form just swapping fields.
-  const [stepTyping, setStepTyping] = useState(false);
-  useEffect(() => {
-    if (onboardStep === 0) return;
-    setStepTyping(true);
-    const t = setTimeout(() => setStepTyping(false), 550);
-    return () => clearTimeout(t);
-  }, [onboardStep]);
-  const [leverageHelpOpen, setLeverageHelpOpen] = useState(false);
-  // Asked up front (right after consent) so the balance/trade-size steps
-  // that follow can open pre-filled with sensible defaults for that level
-  // — but each of those steps still offers its own "not sure?" fallback
-  // too, since a pre-filled number isn't the same as being confident in it.
-  type ExperienceLevel = "new" | "some" | "experienced";
-  const EXPERIENCE_DEFAULTS: Record<ExperienceLevel, { balance: number; riskPct: number }> = {
-    new: { balance: 1000, riskPct: 0.01 },
-    some: { balance: 10000, riskPct: 0.03 },
-    experienced: { balance: 100000, riskPct: 0.05 },
-  };
-  const [onboardExperience, setOnboardExperience] = useState<ExperienceLevel | null>(null);
-  // The other onboarding questions (balance/trade size/focus coins/
-  // leverage) deliberately re-ask every new conversation — intent/risk
-  // appetite can change chat to chat. Experience level is different: it's
-  // just a label picking sensible starting defaults, not something that
-  // meaningfully changes day to day, so it's the one step worth letting
-  // the user skip for good once they've answered it the first time.
-  const REMEMBERED_EXPERIENCE_KEY = "tradingAgentRememberedExperience";
-  const [rememberedExperience, setRememberedExperience] = useState<ExperienceLevel | null>(() => {
-    const v = localStorage.getItem(REMEMBERED_EXPERIENCE_KEY);
-    return v === "new" || v === "some" || v === "experienced" ? v : null;
-  });
-  const [rememberExperienceChoice, setRememberExperienceChoice] = useState(true);
-  const selectExperience = (level: ExperienceLevel, remember: boolean) => {
-    const { balance, riskPct } = EXPERIENCE_DEFAULTS[level];
-    setOnboardExperience(level);
-    setOnboardBalance(String(balance));
-    setOnboardTradeSize(String(Math.round(balance * riskPct)));
-    setOnboardStep(2);
-    if (remember) {
-      localStorage.setItem(REMEMBERED_EXPERIENCE_KEY, level);
-      setRememberedExperience(level);
-    }
-  };
-  // Bypasses the question entirely once a prior answer is remembered — the
-  // user never sees step 1 at all, it just resolves straight through to
-  // step 2 with the remembered defaults already applied.
-  useEffect(() => {
-    if (onboardStep === 1 && rememberedExperience) selectExperience(rememberedExperience, false);
-  }, [onboardStep, rememberedExperience]);
-  const forgetExperience = () => {
-    localStorage.removeItem(REMEMBERED_EXPERIENCE_KEY);
-    setRememberedExperience(null);
-    setOnboardExperience(null);
-    setOnboardStep(1);
-  };
-  const [balanceHelpOpen, setBalanceHelpOpen] = useState(false);
-  const [tradeSizeHelpOpen, setTradeSizeHelpOpen] = useState(false);
-  const applyBalanceSuggestion = (amount: number) => {
-    setOnboardBalance(String(amount));
-    setBalanceHelpOpen(false);
-  };
-  const applyTradeSizeSuggestion = (pct: number) => {
-    const base = Number(onboardBalance) || DEFAULT_STARTING_BALANCE;
-    setOnboardTradeSize(String(Math.max(1, Math.round(base * pct))));
-    setTradeSizeHelpOpen(false);
-  };
-  const balanceValid = Number.isFinite(Number(onboardBalance)) && Number(onboardBalance) >= 1;
-  const tradeSizeValid = Number.isFinite(Number(onboardTradeSize)) && Number(onboardTradeSize) >= 1;
-  // Dropdown + search at once: focusing the input shows a default list
-  // (not just once text is typed), and typing narrows that same list —
-  // one combobox, not two separate interaction modes.
-  const [focusInputOpen, setFocusInputOpen] = useState(false);
-  const query = focusSearch.trim().toLowerCase();
-  const focusSuggestions = COINS
-    .filter((c) =>
-      !onboardFocusCoins.includes(c.symbol) &&
-      (!query || c.symbol.toLowerCase().startsWith(query) || c.name.toLowerCase().includes(query))
-    )
-    .slice(0, 4);
-  const addFocusCoin = (symbol: string) => {
-    setOnboardFocusCoins((prev) => prev.includes(symbol) ? prev : [...prev, symbol]);
-    setFocusSearch("");
-  };
-  const removeFocusCoin = (symbol: string) => {
-    setOnboardFocusCoins((prev) => prev.filter((c) => c !== symbol));
-  };
-  // Takes the leverage choice as a direct argument rather than reading
-  // onboardAllowLeverage from state — the leverage step's chip buttons call
-  // this immediately on tap (no separate "Start Trading" button), and
-  // setState from that same click wouldn't be visible yet in this closure.
-  const handleOnboard = async (allowLeverage: boolean) => {
-    if (!user || onboarding) return;
-    const startingBalance = Number(onboardBalance);
-    const typicalTradeUsd = Number(onboardTradeSize);
-    if (!Number.isFinite(startingBalance) || startingBalance < 1) {
-      setError("Starting paper balance must be at least $1.");
-      return;
-    }
-    if (!Number.isFinite(typicalTradeUsd) || typicalTradeUsd < 1) {
-      setError("Typical trade size must be at least $1.");
-      return;
-    }
-    setOnboardAllowLeverage(allowLeverage);
-    setOnboarding(true);
-    setError("");
-    try {
-      await acceptConsentAndOnboard(user.id, {
-        startingBalance,
-        typicalTradeUsd,
-        allowLeverage,
-        focusCoins: onboardFocusCoins,
-      });
-      const focusNote = onboardFocusCoins.length ? ` Focused on: ${onboardFocusCoins.join(", ")}.` : "";
-      const leverageNote = allowLeverage ? " Leveraged futures trades enabled." : " Spot trading only.";
-      const noteContent = `✓ Noted — paper balance $${startingBalance.toLocaleString()}, typical trade size $${typicalTradeUsd.toLocaleString()}.${focusNote}${leverageNote} Simulated only, not financial advice.`;
-      await addAgentNote(user.id, conversationId, noteContent);
-      // Proactively take the first move instead of sitting idle waiting for
-      // a prompt — kicks off the same screening/clarifying-question flow a
-      // manual "find me good crypto plays" would, now that it has the
-      // focus coins/leverage preference just set to work with.
-      setSending(true);
-      setLiveThinking("");
-      try {
-        await sendAgentMessage(
-          user.id, conversationId, "What's a good move for me right now?",
-          [{ role: "agent", content: noteContent }], selectedCoin,
-          setLiveThinking
-        );
-      } finally {
-        setSending(false);
-      }
-      await loadAll(conversationId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save your answers — please try again.");
-    } finally {
-      setOnboarding(false);
-    }
-  };
 
   // Conversations — ChatGPT-style: a history list (newest first), "+ New"
   // starts a fresh conversation_id, each past one can be reopened or
@@ -692,6 +693,42 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   const [conversationId, setConversationId] = useState<string>(newConversationId);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  // Which conversation's row currently has its swipe-to-delete revealed
+  // (iOS native only — see ConversationRow) — lifted up here rather than
+  // kept local to each row so opening one row's swipe closes any other
+  // that was already open, same as a real table view only ever reveals one.
+  const [revealedRowId, setRevealedRowId] = useState<string | null>(null);
+  // "Here's how you delete one" demo — auto-reveal the top row's swipe
+  // (reusing the exact same revealedRowId mechanism/animation a real swipe
+  // would, not a separate fake animation) and then auto-hide it again a
+  // moment later, teaching the gesture exists without a tutorial screen.
+  // With a short list (<=2 conversations) there's little else to look at
+  // and not much risk of it feeling repetitive, so it plays EVERY time
+  // History is opened in that case. Once the list grows past that, it
+  // drops back to a genuine one-time-ever hint (localStorage-gated, plus a
+  // ref so re-opening History quickly while it's still mid-flight can't
+  // restart it) rather than nagging on every open indefinitely.
+  const SWIPE_HINT_KEY = "tradingAgentSwipeHintShown";
+  const swipeHintPlayedRef = useRef(false);
+  useEffect(() => {
+    if (!showHistory || !IS_IOS_NATIVE || conversations.length === 0) return;
+    const alwaysShow = conversations.length <= 2;
+    if (!alwaysShow) {
+      if (swipeHintPlayedRef.current || localStorage.getItem(SWIPE_HINT_KEY)) return;
+      swipeHintPlayedRef.current = true;
+      localStorage.setItem(SWIPE_HINT_KEY, "true");
+    }
+    const firstId = conversations[0].id;
+    const openTimer = setTimeout(() => {
+      setRevealedRowId(firstId);
+      hapticTap();
+    }, 600);
+    const closeTimer = setTimeout(() => {
+      setRevealedRowId((cur) => (cur === firstId ? null : cur));
+    }, 2000);
+    return () => { clearTimeout(openTimer); clearTimeout(closeTimer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHistory, conversations.length]);
 
   const loadAll = useCallback(async (convId: string) => {
     if (!user) return;
@@ -714,6 +751,68 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
   useEffect(() => {
     if (open && user) loadAll(conversationId).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [open, user, conversationId, loadAll]);
+
+  // Loaded eagerly on open (not just when the History tab is tapped) so
+  // the "continue last conversation" suggestion below has something to
+  // check against right away, on a brand-new empty conversation, instead
+  // of only becoming available after the user has already gone digging
+  // through History once.
+  useEffect(() => {
+    if (open && user) loadConversations().catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [open, user, loadConversations]);
+  // Newest conversation that isn't the one currently open and actually has
+  // messages in it (a conversation with 0 messages is just this same empty
+  // one re-fetched before its own first message landed — nothing to
+  // "continue" there).
+  const lastConversation = conversations.find((c) => c.id !== conversationId && c.messageCount > 0) ?? null;
+
+  const [acceptingConsent, setAcceptingConsent] = useState(false);
+  const handleAcceptConsent = async () => {
+    if (!user || acceptingConsent) return;
+    setAcceptingConsent(true);
+    setError("");
+    try {
+      await acceptConsent(user.id);
+      await loadAll(conversationId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save that — please try again.");
+    } finally {
+      setAcceptingConsent(false);
+    }
+  };
+  // Casual, friendly variants — picked at random each time so a user
+  // starting several fresh conversations doesn't see the exact same canned
+  // line over and over (reads as a script rather than a buddy saying hi).
+  // Each takes the user's nickname/username (nullable — a profile row can
+  // still have no username set) and folds it in naturally where it fits
+  // that specific greeting's shape, rather than always tacking it on in
+  // the same spot. Still carries the same substance every time (coin/
+  // budget ask, fully optional, can defer), just a different wrapper.
+  const OPENER_GREETINGS: Array<(name: string | null) => string> = [
+    (name) => `Hey${name ? ` ${name}` : ""}, how's it going? Got a coin in mind, or a budget/typical trade size you want me working with? Totally optional — otherwise just hit me with whatever's on your mind.`,
+    (name) => `Yo${name ? ` ${name}` : ""}, good to see you again! Coin you're eyeing, or a budget you want me to keep in mind? No pressure — ask away whenever.`,
+    (name) => `Hey hey${name ? `, ${name}` : ""} — welcome back! If there's a coin on your radar or a budget you want me working with, let me know. Or don't — we can figure it out as we go.`,
+    (name) => `What's up${name ? ` ${name}` : ""}! Got a coin you're thinking about, or a budget/trade size in mind? Happy to work with whatever you've got, or we can just dive straight in.`,
+    (name) => `Hey${name ? ` ${name}` : ""}, how ya doing? Throw a coin or budget at me if you've got one in mind — if not, no worries, just ask me anything.`,
+    (name) => `Great to have you back${name ? `, ${name}` : ""}! Coin on your mind, or a budget you want me working with? All optional — otherwise just fire away.`,
+    (name) => `Hey${name ? ` ${name}` : ""}! Ready when you are — got a coin you're watching, or a budget in mind? Or just jump straight into it, totally up to you.`,
+    (name) => `Yo${name ? ` ${name}` : ""}, what's good? Mention a coin or budget if you've got one, or just ask me anything — we'll sort the details as we go.`,
+  ];
+  // Fires once per brand-new, zero-message conversation (after consent is
+  // already on file) — a warm, plain-spoken opener instead of the old
+  // gated form, inviting a coin/budget but never blocking the composer on
+  // it. Guarded by a ref (not state) so it can't double-fire from a
+  // re-render while the one-time insert is in flight.
+  const openerSentRef = useRef(false);
+  useEffect(() => {
+    if (!user || needsConsent || messages.length > 0 || openerSentRef.current) return;
+    openerSentRef.current = true;
+    const nickname = profile?.username?.trim() || null;
+    const greeting = OPENER_GREETINGS[Math.floor(Math.random() * OPENER_GREETINGS.length)](nickname);
+    addAgentNote(user.id, conversationId, greeting)
+      .then(() => loadAll(conversationId)).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, needsConsent, messages.length, conversationId, profile?.username]);
 
   // Agent-authored messages can land at any time, not just while the panel
   // is open and a reply is actively streaming — agent-watch-scan posts a
@@ -843,7 +942,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
     setMessages([]);
     setShowHistory(false);
     setShowWatches(false);
-    setOnboardStep(0);
+    openerSentRef.current = false;
   };
 
   const handleOpenHistory = async () => {
@@ -936,12 +1035,19 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
       // start in parallel with the loadAll() reload below instead of
       // waiting on a second full round trip first, closer to how quickly a
       // real person replies after you stop talking.
+      let preferencesUpdate: PreferencesUpdate | null = null;
       const agentMsg = await sendAgentMessage(
         user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice, setLastMarketSnapshot,
         (req) => setChartModal({ coin: req.coin, interval: req.interval }),
         (req) => setOrderBookModalCoin(req.coin),
         controller.signal,
+        (update) => { preferencesUpdate = update; },
       );
+      // Applied before loadAll() below refreshes `portfolio`, so that
+      // reload already reflects it instead of showing stale data for one
+      // extra render — the model's own "reply" text is the user-facing
+      // confirmation, this write just needs to actually land.
+      if (preferencesUpdate) await updatePreferences(user!.id, preferencesUpdate);
       if (viaVoice) speakLatestAgentReply([agentMsg]);
     } catch (e) {
       // An interrupt (partialResults listener below) aborts this exact
@@ -1391,21 +1497,33 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
               <p className="ta-empty">No past conversations yet.</p>
             )}
             {conversations.map((c) => (
-              <div key={c.id} className={`ta-history-item${c.id === conversationId ? " ta-history-item--active" : ""}`}>
-                <button type="button" className="ta-history-item-main" onClick={() => handleOpenConversation(c.id)}>
-                  <span className="ta-history-item-preview">{c.preview || "(empty)"}</span>
-                  <span className="ta-history-item-meta">{c.messageCount} message{c.messageCount === 1 ? "" : "s"}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ta-history-item-delete"
-                  onClick={() => handleDeleteConversation(c.id)}
-                  aria-label="Delete conversation"
-                  title="Delete"
-                >
-                  🗑
-                </button>
-              </div>
+              IS_IOS_NATIVE ? (
+                <ConversationRow
+                  key={c.id}
+                  conversation={c}
+                  active={c.id === conversationId}
+                  revealed={revealedRowId === c.id}
+                  onReveal={(open) => setRevealedRowId(open ? c.id : null)}
+                  onOpen={() => handleOpenConversation(c.id)}
+                  onDelete={() => { setRevealedRowId(null); handleDeleteConversation(c.id); }}
+                />
+              ) : (
+                <div key={c.id} className={`ta-history-item${c.id === conversationId ? " ta-history-item--active" : ""}`}>
+                  <button type="button" className="ta-history-item-main" onClick={() => handleOpenConversation(c.id)}>
+                    <span className="ta-history-item-preview">{c.preview || "(empty)"}</span>
+                    <span className="ta-history-item-meta">{c.messageCount} message{c.messageCount === 1 ? "" : "s"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ta-history-item-delete"
+                    onClick={() => handleDeleteConversation(c.id)}
+                    aria-label="Delete conversation"
+                    title="Delete"
+                  >
+                    🗑
+                  </button>
+                </div>
+              )
             ))}
           </div>
           <button type="button" className="ta-history-back" onClick={() => setShowHistory(false)}>
@@ -1460,304 +1578,42 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
             </button>
           </div>
         );
-      })() : messages.length === 0 ? (
+      })() : needsConsent ? (
         <div className="ta-onboard">
-          {needsConsent && (
-            <>
-              <p className="ta-onboard-disclaimer">
-                <strong>Paper trading only — simulated money, simulated trades.</strong> This agent is not a registered
-                financial or investment advisor, and nothing it says is financial advice. coinhintz is not responsible for
-                any losses, simulated or otherwise, from using this feature. We'll only ask you to accept this once —
-                you won't see this disclaimer again after today.
-              </p>
-              {onboardStep === 0 ? (
-                <button type="button" className="ta-onboard-continue" onClick={() => setOnboardStep(1)}>
-                  I understood and agreed!
-                </button>
-              ) : (
-                <div className="ta-onboard-step ta-onboard-step--done">
-                  <span className="ta-onboard-step-check">✓</span> Risk disclaimer accepted
-                </div>
-              )}
-            </>
-          )}
-
-          {onboardStep === 1 && (
-            <div className="ta-onboard-step ta-onboard-step--active">
-              {stepTyping ? (
-                <div className="ta-onboard-typing">
-                  <span className="ta-thinking-orb" />
-                  <span className="ta-onboard-typing-label">Agent typing</span>
-                </div>
-              ) : (
-                <>
-                  <p className="ta-onboard-step-question">How would you describe your trading experience?</p>
-                  <p className="ta-onboard-field-hint">This just sets sensible starting defaults below — you can change anything afterward.</p>
-                  <div className="ta-onboard-chips ta-onboard-chips--wrap">
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("new", rememberExperienceChoice)}>
-                      New to trading
-                    </button>
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("some", rememberExperienceChoice)}>
-                      Some experience
-                    </button>
-                    <button type="button" className="ta-onboard-chip" onClick={() => selectExperience("experienced", rememberExperienceChoice)}>
-                      Very experienced
-                    </button>
-                  </div>
-                  <label className="ta-onboard-remember">
-                    <input
-                      type="checkbox"
-                      checked={rememberExperienceChoice}
-                      onChange={(e) => setRememberExperienceChoice(e.target.checked)}
-                    />
-                    Remember this and skip asking next time
-                  </label>
-                </>
-              )}
-            </div>
-          )}
-          {onboardStep > 1 && (
-            <div className="ta-onboard-step ta-onboard-step--done">
-              <span className="ta-onboard-step-check">✓</span> Experience: {onboardExperience === "new" ? "New to trading" : onboardExperience === "some" ? "Some experience" : "Very experienced"}
-              {rememberedExperience && (
-                <button type="button" className="ta-onboard-step-forget" onClick={forgetExperience}>
-                  Change
-                </button>
-              )}
-            </div>
-          )}
-
-          {onboardStep === 2 && (
-            <div className="ta-onboard-step ta-onboard-step--active">
-              {stepTyping ? (
-                <div className="ta-onboard-typing">
-                  <span className="ta-thinking-orb" />
-                  <span className="ta-onboard-typing-label">Agent typing</span>
-                </div>
-              ) : (
-                <>
-                  <p className="ta-onboard-step-question">How much paper balance do you want to start with, and how much do you typically put into a single trade?</p>
-
-                  <label className="ta-onboard-sublabel" htmlFor="ta-onboard-balance">Starting balance</label>
-                  {/* No autoFocus — this step used to only ever be reached
-                      via a manual tap on an experience chip, which counted
-                      as a real user gesture that justified it. With a
-                      remembered experience level, step 1 now auto-advances
-                      straight here with zero taps at all (see
-                      rememberedExperience's effect), so autofocusing would
-                      pop the keyboard the instant the panel opens. */}
-                  <div className={`ta-onboard-custom${onboardBalance && !balanceValid ? " ta-onboard-custom--invalid" : ""}`}>
-                    <span className="ta-onboard-custom-prefix">$</span>
-                    <input
-                      id="ta-onboard-balance"
-                      type="text"
-                      inputMode="decimal"
-                      className="ta-onboard-input ta-onboard-input--inline"
-                      value={onboardBalance}
-                      onChange={(e) => setOnboardBalance(sanitizeAmountInput(e.target.value))}
-                      placeholder="Enter an amount"
-                    />
-                  </div>
-                  {onboardBalance && !balanceValid ? (
-                    <p className="ta-onboard-field-error">Minimum $1</p>
-                  ) : (
-                    <p className="ta-onboard-field-hint">Virtual cash, not real money — pre-filled from your experience level, edit freely.</p>
-                  )}
-                  {balanceHelpOpen ? (
-                    <div className="ta-onboard-help">
-                      <p className="ta-onboard-help-question">Pick whichever feels right — you can still type any amount afterward.</p>
-                      <div className="ta-onboard-chips ta-onboard-chips--wrap">
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyBalanceSuggestion(1000)}>
-                          New to trading
-                        </button>
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyBalanceSuggestion(10000)}>
-                          Some experience
-                        </button>
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyBalanceSuggestion(100000)}>
-                          Very experienced
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" className="ta-onboard-help-link" onClick={() => setBalanceHelpOpen(true)}>
-                      Still not sure? Get a suggestion
-                    </button>
-                  )}
-
-                  <label className="ta-onboard-sublabel" htmlFor="ta-onboard-trade-size">Typical trade size</label>
-                  <div className={`ta-onboard-custom${onboardTradeSize && !tradeSizeValid ? " ta-onboard-custom--invalid" : ""}`}>
-                    <span className="ta-onboard-custom-prefix">$</span>
-                    <input
-                      id="ta-onboard-trade-size"
-                      type="text"
-                      inputMode="decimal"
-                      className="ta-onboard-input ta-onboard-input--inline"
-                      value={onboardTradeSize}
-                      onChange={(e) => setOnboardTradeSize(sanitizeAmountInput(e.target.value))}
-                      placeholder="Enter an amount"
-                    />
-                  </div>
-                  {onboardTradeSize && !tradeSizeValid ? (
-                    <p className="ta-onboard-field-error">Minimum $1</p>
-                  ) : (
-                    <p className="ta-onboard-field-hint">Used when you ask the agent to act without giving a specific size.</p>
-                  )}
-                  {tradeSizeHelpOpen ? (
-                    <div className="ta-onboard-help">
-                      <p className="ta-onboard-help-question">How much of your balance do you want to risk per trade?</p>
-                      <div className="ta-onboard-chips ta-onboard-chips--wrap">
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyTradeSizeSuggestion(0.01)}>
-                          Conservative (~1%)
-                        </button>
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyTradeSizeSuggestion(0.03)}>
-                          Moderate (~3%)
-                        </button>
-                        <button type="button" className="ta-onboard-chip" onClick={() => applyTradeSizeSuggestion(0.05)}>
-                          Aggressive (~5%)
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" className="ta-onboard-help-link" onClick={() => setTradeSizeHelpOpen(true)}>
-                      Still not sure? Get a suggestion
-                    </button>
-                  )}
-
-                  <button type="button" className="ta-onboard-continue" onClick={() => setOnboardStep(3)} disabled={!balanceValid || !tradeSizeValid}>
-                    Continue
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-          {onboardStep > 2 && (
-            <div className="ta-onboard-step ta-onboard-step--done">
-              <span className="ta-onboard-step-check">✓</span> Starting balance: ${Number(onboardBalance).toLocaleString()}, typical trade: ${Number(onboardTradeSize).toLocaleString()}
-            </div>
-          )}
-
-          {onboardStep === 3 && (
-            <div className="ta-onboard-step ta-onboard-step--active">
-              {stepTyping ? (
-                <div className="ta-onboard-typing">
-                  <span className="ta-thinking-orb" />
-                  <span className="ta-onboard-typing-label">Agent typing</span>
-                </div>
-              ) : (
-                <>
-                  <p className="ta-onboard-step-question">Any specific coins you want the agent to focus on?</p>
-                  <div
-                    className="ta-onboard-custom ta-onboard-custom--tags"
-                    onClick={() => focusInputRef.current?.focus()}
-                  >
-                    {onboardFocusCoins.map((c) => (
-                      <span key={c} className="ta-focus-pill">
-                        {c}
-                        <button
-                          type="button"
-                          className="ta-focus-pill-x"
-                          aria-label={`Remove ${c}`}
-                          onClick={(e) => { e.stopPropagation(); removeFocusCoin(c); }}
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      ref={focusInputRef}
-                      type="text"
-                      className="ta-onboard-input ta-onboard-input--inline"
-                      value={focusSearch}
-                      onChange={(e) => setFocusSearch(e.target.value)}
-                      onFocus={() => setFocusInputOpen(true)}
-                      onBlur={() => setTimeout(() => setFocusInputOpen(false), 150)}
-                      placeholder={onboardFocusCoins.length > 0 ? "Add another…" : "Search or pick a coin…"}
-                    />
-                  </div>
-                  {focusInputOpen && focusSuggestions.length > 0 && (
-                    <div className="ta-onboard-suggestions">
-                      {focusSuggestions.map((c) => (
-                        <button
-                          key={c.symbol}
-                          type="button"
-                          className="ta-onboard-suggestion"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => addFocusCoin(c.symbol)}
-                        >
-                          <strong>{c.symbol}</strong> {c.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <p className="ta-onboard-field-hint">
-                    Lets the agent default to these coins when you don't name one — optional, leave empty and it'll ask or use context instead.
-                  </p>
-                  <button type="button" className="ta-onboard-continue" onClick={() => setOnboardStep(4)}>
-                    {onboardFocusCoins.length > 0 ? "Continue" : "Skip"}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-          {onboardStep > 3 && (
-            <div className="ta-onboard-step ta-onboard-step--done">
-              <span className="ta-onboard-step-check">✓</span> Focus coins: {onboardFocusCoins.length > 0 ? onboardFocusCoins.join(", ") : "none set"}
-            </div>
-          )}
-
-          {onboardStep === 4 && (
-            <div className="ta-onboard-step ta-onboard-step--active">
-              {stepTyping ? (
-                <div className="ta-onboard-typing">
-                  <span className="ta-thinking-orb" />
-                  <span className="ta-onboard-typing-label">Agent typing</span>
-                </div>
-              ) : (
-                <>
-                  <p className="ta-onboard-step-question">Last one — want the agent to also propose leveraged long/short futures trades?</p>
-                  <p className="ta-onboard-field-hint">
-                    Tap one to finish: Spot owns the coin outright, no leverage, no liquidation risk. Leverage adds margin-based long/short trades — bigger moves, but simulated losses can wipe a position faster.
-                  </p>
-                  {leverageHelpOpen ? (
-                    <div className="ta-onboard-help">
-                      <p className="ta-onboard-help-question">
-                        <strong>Spot</strong> — you simply own the coin. If it goes up you profit, if it drops you lose exactly what you put in, nothing more.
-                      </p>
-                      <p className="ta-onboard-help-question">
-                        <strong>Leverage / futures</strong> — you borrow buying power to control a bigger position with less money, so gains (and losses) are amplified. A "long" profits if price rises, a "short" profits if it falls. If price moves against you far enough, the position can be automatically closed ("liquidated") and your margin is lost. Still simulated money either way — but if you're new, Spot only is the safer way to learn.
-                      </p>
-                    </div>
-                  ) : (
-                    <button type="button" className="ta-onboard-help-link" onClick={() => setLeverageHelpOpen(true)}>
-                      Not sure what this means?
-                    </button>
-                  )}
-                  {error && <p className="ta-error">{error}</p>}
-                  <div className="ta-onboard-toggle-row">
-                    <button
-                      type="button"
-                      className="ta-onboard-chip"
-                      onClick={() => handleOnboard(false)}
-                      disabled={onboarding}
-                    >
-                      {onboarding && !onboardAllowLeverage ? "Starting…" : "Spot only"}
-                    </button>
-                    <button
-                      type="button"
-                      className="ta-onboard-chip"
-                      onClick={() => handleOnboard(true)}
-                      disabled={onboarding}
-                    >
-                      {onboarding && onboardAllowLeverage ? "Starting…" : "Spot + Leverage"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          <p className="ta-onboard-disclaimer">
+            <strong>Paper trading only — simulated money, simulated trades.</strong> This agent is not a registered
+            financial or investment advisor, and nothing it says is financial advice. coinhintz is not responsible for
+            any losses, simulated or otherwise, from using this feature. We'll only ask you to accept this once —
+            you won't see this disclaimer again after today.
+          </p>
+          {error && <p className="ta-error">{error}</p>}
+          <button type="button" className="ta-onboard-continue" onClick={handleAcceptConsent} disabled={acceptingConsent}>
+            {acceptingConsent ? "One sec…" : "I understood and agreed!"}
+          </button>
         </div>
       ) : (
         <>
+          {/* Not messages.length === 0 — the opener greeting itself lands as
+              an agent message a moment after this conversation opens, which
+              would otherwise make this banner flash and vanish right as the
+              greeting arrives. Keyed on "no user message yet" instead, so it
+              stays up alongside the greeting until the user actually starts
+              typing here (the real point they've committed to this new
+              conversation over the old one). */}
+          {!messages.some((m) => m.role === "user") && lastConversation && (
+            <div className="ta-continue-banner">
+              <span className="ta-continue-banner-text">
+                Pick up where you left off: <em>"{lastConversation.preview.length > 60 ? `${lastConversation.preview.slice(0, 60)}…` : lastConversation.preview}"</em>
+              </span>
+              <button
+                type="button"
+                className="ta-continue-banner-btn"
+                onClick={() => handleOpenConversation(lastConversation.id)}
+              >
+                Continue →
+              </button>
+            </div>
+          )}
           {isWebPushAvailable() && !webPushSubscribed && (
             <div className="ta-webpush-banner">
               <span className="ta-webpush-banner-text">Get a browser alert when a watch or position triggers, even with this closed.</span>
@@ -2316,6 +2172,7 @@ export function TradingAgent({ selectedCoin, hideTrigger }: Props) {
           )}
         </button>
       )}
+      {open && isDesktop && createPortal(<div className="ta-backdrop" onClick={() => setOpen(false)} />, document.body)}
       {open && (isDesktop ? panel : createPortal(panel, document.body))}
       {chartModal && createPortal(
         <AgentChartModal coin={chartModal.coin} initialInterval={chartModal.interval} onClose={() => setChartModal(null)} />,
