@@ -16,18 +16,57 @@ const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
 // Deno edge functions can't import src/services/coinglass.ts's COINS list
 // (never import from src/ — see _shared/chartable-coins.ts) and this
-// function only needs tickers, not names, so it's its own small copy —
-// same "keep in sync by hand" convention as chartable-coins.ts.
+// function only needs tickers, not names, so it's its own copy — same
+// "keep in sync by hand" convention as chartable-coins.ts. Generated from
+// the same CoinGecko-top-market-cap ∩ Binance-live-USDT-pairs process as
+// COINS in coinglass.ts (see that file's own comment) — 257 real,
+// data-fetchable coins, not an arbitrary shortlist, so "check coin X" can
+// actually resolve for any real altcoin the user names, not just majors.
 const KNOWN_TICKERS = [
-  "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "AVAX", "DOT", "ATOM", "TRX",
-  "ETC", "LTC", "BCH", "NEAR", "ICP", "FIL", "AR", "TIA", "EGLD", "APT",
-  "SUI", "STX", "CFX", "DASH", "ZEC", "XLM", "LINK", "UNI", "AAVE", "CRV",
-  "INJ", "ENS", "COMP", "LDO", "DYDX", "SNX", "YFI", "UMA", "TRB", "LPT",
-  "NMR", "AUCTION", "KSM", "ZEN", "SSV", "OP", "ARB", "TAO", "WLD", "ORDI",
-  "BERA", "ENA", "JTO", "VIRTUAL", "RENDER", "ONDO", "DOGE", "SHIB", "PEPE",
-  "FLOKI", "BONK", "WIF", "TRUMP", "MEME", "BOME", "NOT", "GALA", "CHZ",
-  "APE", "AXS", "SAND", "MANA", "ENJ",
+  "BTC", "ETH", "BNB", "XRP", "SOL", "TRX", "ZEC", "HYPE", "DOGE", "LINK",
+  "ADA", "XLM", "NEAR", "BCH", "LTC", "UNI", "AVAX", "SUI", "GRAM", "HBAR",
+  "QNT", "SHIB", "TAO", "ENA", "AAVE", "PUMP", "ONDO", "DOT", "WLD", "ASTER",
+  "WLFI", "SKY", "ICP", "MORPHO", "PEPE", "ETC", "JUP", "ARB", "JST", "ATOM",
+  "POL", "ALGO", "RENDER", "FIL", "NEXO", "AERO", "CAKE", "ZRO", "NIGHT", "APT",
+  "STX", "INJ", "VET", "DASH", "ETHFI", "PYTH", "RAY", "CRV", "TRUMP", "STRK",
+  "PENGU", "FET", "VIRTUAL", "TIA", "SEI", "XPL", "PENDLE", "FF", "KAIA", "LDO",
+  "SUN", "XTZ", "DCR", "GNO", "GRT", "BONK", "OP", "KITE", "LUNC", "JTO",
+  "AR", "SYRUP", "CFX", "ENS", "FLOKI", "JASMY", "COMP", "IOTA", "MET", "RUNE",
+  "THETA", "TWT", "EIGEN", "WIF", "AXS", "BAT", "SAND", "KMNO", "ZAMA", "CVX",
+  "2Z", "MANA", "IMX", "NEO", "CHZ", "ZK", "SENT", "APE", "XEC", "SUPER",
+  "SFP", "ORCA", "SNX", "1INCH", "GLM", "AWE", "EGLD", "PLUME", "DYDX", "ZEN",
+  "GENIUS", "GALA", "OPEN", "ZRX", "FORM", "MINA", "CHIP", "QTUM", "RSR", "NMR",
+  "KSM", "PROM", "MARSCOIN", "AI", "RLC", "WAL", "ARKM", "GMX", "LPT", "ORDI",
+  "GAS", "YFI", "COW", "RIF", "RED", "ESP", "MUBARAK", "KAITO", "BERA", "HOT",
+  "KAVA", "TFUEL", "BOME", "SPK", "RE", "ONE", "VTHO", "LINEA", "ZIL", "BANANAS31",
+  "NXPC", "TURBO", "BABY", "SUSHI", "AXL", "DEXE", "ROSE", "DGB", "CKB", "ALLO",
+  "ENJ", "GPS", "IO", "ONT", "BIO", "ASTR", "AMP", "CELO", "EDU", "ALT",
+  "ID", "HUMA", "BLUR", "0G", "TRB", "CFG", "POLYX", "FLOW", "XVS", "WIN",
+  "PHA", "LSK", "PNUT", "ANKR", "AVNT", "DUSK", "SC", "HOLO", "API3", "MEGA",
+  "MASK", "XNO", "XVG", "NOT", "BARD", "ME", "REQ", "ARK", "SXT", "NIL",
+  "BAND", "CATI", "ONG", "SSV", "MAGIC", "RPL", "MOVE", "SYN", "PEOPLE", "UMA",
+  "PROVE", "COTI", "MMT", "RVN", "MEME", "SIGN", "SAHARA", "GIGGLE", "POWR", "REZ",
+  "NEIRO", "LISTA", "IOTX", "FLUX", "STEEM", "LUNA", "OPG", "EUL", "ILV", "AT",
+  "SOMI", "CTSI", "VANA", "BNT", "SKL", "MANTA", "HIVE", "USTC", "IOST", "MTL",
+  "OGN", "PUNDIX", "GMT", "MANTRA", "KNC", "AUCTION", "OSMO",
 ];
+// Real tickers that are ALSO ordinary English words (or grammar-critical
+// short words like "at"/"me"/"not") — scanning plain chat text for these
+// produces constant false positives ("I'm not sure" would otherwise
+// "detect" the NOT/Notcoin ticker on every single uncertain sentence).
+// Excluded from the auto-scan below entirely rather than risk silently
+// mis-resolving the coin on an ordinary sentence; still real entries in
+// KNOWN_TICKERS/COINS for anywhere else a ticker is used deliberately
+// (typed into a specific "coin" field, etc.), just not auto-detected from
+// free text. Picked from the full list above by inspection — the rest are
+// either not real English words or distinctive enough (tickers like BTC,
+// XRP, DOGE) that this risk doesn't apply.
+const AMBIGUOUS_WORD_TICKERS = new Set([
+  "AI", "ONE", "ME", "AT", "RE", "GAS", "SUN", "NOT", "SKY", "FORM", "MOVE",
+  "OPEN", "BAND", "ARK", "WIN", "SUPER", "MASK", "FLOW", "RAY", "BAT", "ID",
+  "IO", "ALT", "NEO", "COW", "AWE", "RED", "GENIUS", "KITE", "NIGHT", "CHIP",
+  "PEOPLE", "SYN",
+]);
 // A handful of common full names traders actually type instead of the
 // ticker — not exhaustive, just the obvious high-frequency ones.
 const NAME_ALIASES: Record<string, string> = {
@@ -44,6 +83,7 @@ interface HistoryTurn {
 function scanForTicker(text: string): string | null {
   const words = text.toUpperCase().match(/[A-Z]+/g) ?? [];
   for (const w of words) {
+    if (AMBIGUOUS_WORD_TICKERS.has(w)) continue;
     if (KNOWN_TICKERS.includes(w)) return w;
     if (NAME_ALIASES[w]) return NAME_ALIASES[w];
   }
@@ -58,6 +98,7 @@ function scanAllTickers(text: string): string[] {
   const words = text.toUpperCase().match(/[A-Z]+/g) ?? [];
   const found: string[] = [];
   for (const w of words) {
+    if (AMBIGUOUS_WORD_TICKERS.has(w)) continue;
     const ticker = KNOWN_TICKERS.includes(w) ? w : NAME_ALIASES[w];
     if (ticker && !found.includes(ticker)) found.push(ticker);
   }
@@ -85,12 +126,28 @@ const DEFAULT_SCREEN_UNIVERSE = ["BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "ADA
 // BTC discussion resolves to BTC), then the user's stated focus coin
 // (outranks the generic `selectedCoin` hint, which is just whatever chart
 // happens to be open), and only then `selectedCoin` as the last resort.
-function resolveCoins(message: string, history: HistoryTurn[], focusCoins: string[], selectedCoin?: string | null): string[] {
+// `fromCurrentMessage` is what makes the "vague nickname" bug fixable:
+// true only when THIS message itself (a direct ticker, a basket ask, or a
+// screening ask) is what drove the resolution — false when it came from
+// history/focus-coin/selectedCoin carryover, meaning the current message
+// didn't actually name anything real. Without this distinction, "check
+// the useless coin for me" silently resolved to whatever coin was last
+// discussed (BTC) with no signal that the message itself named nothing —
+// the model then had only BTC's data in front of it and had no way to
+// know that was a guess, not confirmation, so it stated "BTC is the only
+// coin we've got data for" as if that were a real system limitation
+// instead of asking what coin was actually meant.
+function resolveCoins(
+  message: string, history: HistoryTurn[], focusCoins: string[], selectedCoin?: string | null
+): { coins: string[]; fromCurrentMessage: boolean } {
   const direct = scanAllTickers(message);
-  if (direct.length > 0) return direct;
-  if (BASKET_PHRASING.test(message) && focusCoins.length > 1) return focusCoins.map((c) => c.toUpperCase());
+  if (direct.length > 0) return { coins: direct, fromCurrentMessage: true };
+  if (BASKET_PHRASING.test(message) && focusCoins.length > 1) {
+    return { coins: focusCoins.map((c) => c.toUpperCase()), fromCurrentMessage: true };
+  }
   if (SCREENING_PHRASING.test(message)) {
-    return focusCoins.length > 0 ? focusCoins.map((c) => c.toUpperCase()) : DEFAULT_SCREEN_UNIVERSE;
+    const coins = focusCoins.length > 0 ? focusCoins.map((c) => c.toUpperCase()) : DEFAULT_SCREEN_UNIVERSE;
+    return { coins, fromCurrentMessage: true };
   }
   for (let i = history.length - 1; i >= 0; i--) {
     // All tickers from the most recent matching turn, not just one — a
@@ -98,10 +155,10 @@ function resolveCoins(message: string, history: HistoryTurn[], focusCoins: strin
     // set to carry forward when the user answers a follow-up like "$1,000"
     // with no ticker of its own.
     const found = scanAllTickers(history[i].content);
-    if (found.length > 0) return found;
+    if (found.length > 0) return { coins: found, fromCurrentMessage: false };
   }
-  if (focusCoins.length > 0) return [focusCoins[0].toUpperCase()];
-  return selectedCoin ? [selectedCoin.toUpperCase()] : [];
+  if (focusCoins.length > 0) return { coins: [focusCoins[0].toUpperCase()], fromCurrentMessage: false };
+  return { coins: selectedCoin ? [selectedCoin.toUpperCase()] : [], fromCurrentMessage: false };
 }
 
 interface PortfolioSnapshot {
@@ -383,7 +440,7 @@ const SAFE_LOOKBACK = 60;
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
   marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[], viaVoice: boolean,
-  positioningByCoin: Map<string, Positioning>
+  positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -426,11 +483,24 @@ async function streamReply(
   // all," which is actively wrong and misleading when a focus coin WAS
   // known the whole time — just its price/indicators couldn't be fetched
   // this run. Those are different situations and must not read the same.
-  const marketLine = markets.length
+  let marketLine = markets.length
     ? markets.map((m) => formatMarketLine(m, positioningByCoin.get(m.coin.toUpperCase()))).join("\n")
     : resolvedCoins.length > 0
       ? `Live market data fetch FAILED this run for ${resolvedCoins.join(", ")} (a real, known coin — from the message, conversation, or the user's own focus-coin preference, not a guess) — do not claim no coin was named or that you need more context about which coin; say plainly that you know they're asking about ${resolvedCoins[0]} but the live price/indicator fetch failed, and suggest trying again shortly. Never propose a trade without a real current price.`
       : "No coin could be resolved from the message, the conversation so far, or the user's focus-coin preference — this genuinely is the situation to ask which coin they mean.";
+  // markets.length > 0 but NOT from this message — e.g. "check the useless
+  // coin for me" after a BTC conversation resolves to BTC purely by
+  // carrying the prior coin forward, not because the user said BTC (or
+  // anything real) this turn. This used to read to the model as "BTC is
+  // literally the only coin I have access to," which is a false, damaging
+  // claim about this app's own capability — it supports dozens of real
+  // coins by ticker or name, same as any of the ones already resolved
+  // above. The actual fix for a vague/unclear reference is to ask what
+  // coin is meant, never to silently keep running with a guess OR imply a
+  // hard limitation that doesn't exist.
+  if (markets.length > 0 && !coinsFromCurrentMessage) {
+    marketLine += `\n\nNote: the coin(s) above (${resolvedCoins.join(", ")}) came from earlier context (prior conversation / the user's saved focus coins), NOT from anything the user actually named in THIS message — "${message}" doesn't clearly name a real coin itself. If that phrase is a vague/unclear reference (a nickname, a typo, "that coin", or anything you're not confident means ${resolvedCoins[0]}), say so and ask which coin they mean — do NOT silently answer about ${resolvedCoins[0]} as if it were confirmed, and NEVER say something like "${resolvedCoins[0]} is the only coin I have data for" — that's false; this app can pull real live data for dozens of coins by ticker or common name, you just need to know which one they mean. If the message is actually a reasonable, unambiguous follow-up about ${resolvedCoins[0]} (e.g. "what about the funding rate" right after discussing it), it's fine to proceed normally.`;
+  }
   const newsLine = news.length
     ? news.map((n, i) => `[${i}] ${n.source}: "${n.title}"`).join("\n")
     : "No recent crypto headlines were available this run.";
@@ -869,7 +939,9 @@ Deno.serve(async (req) => {
     // turn into dozens of parallel candle fetches. News fetch runs in
     // parallel with the market-data fetch, not after it — they're
     // independent, no reason to pay for them sequentially.
-    const coins = resolveCoins(message, safeHistory, portfolio.focusCoins, selectedCoin).slice(0, 6);
+    const { coins: resolvedCoinsRaw, fromCurrentMessage: coinsFromCurrentMessage } =
+      resolveCoins(message, safeHistory, portfolio.focusCoins, selectedCoin);
+    const coins = resolvedCoinsRaw.slice(0, 6);
     // Funding rate + open interest (fetchPositioning) run in the same
     // parallel batch as price/indicators and news — independent data,
     // no reason to pay for any of it sequentially. A positioning fetch
@@ -895,7 +967,7 @@ Deno.serve(async (req) => {
         .map((c, i) => [c.toUpperCase(), positioningResults[i]] as const)
         .filter((entry): entry is [string, Positioning] => entry[1] !== null),
     );
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the

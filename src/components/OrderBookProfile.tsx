@@ -330,10 +330,10 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
             ))}
           </div>
           <button className="obp-exit" onClick={onClose}>
+            <span className="obp-exit-label">Exit</span>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/>
             </svg>
-            <span className="obp-exit-label">Exit</span>
           </button>
         </div>
 

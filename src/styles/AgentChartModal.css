@@ -49,19 +49,35 @@ html[data-theme="light"] .acm-panel {
 .acm-coin {
   font-weight: 700;
   font-size: 1rem;
-  color: var(--ta-text, #e8eaf0);
+  /* Was var(--ta-text, #e8eaf0) with no light-theme override — --ta-text
+     is scoped to .ta-panel and undefined here (this modal is portaled to
+     document.body, outside that subtree), so it always fell through to
+     the near-white fallback regardless of theme: fine on this modal's own
+     dark background, but near-invisible on its light one (#f8fafc). */
+  color: #e8eaf0;
+}
+html[data-theme="light"] .acm-coin {
+  color: #0f172a;
 }
 .acm-exit {
   background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 999px;
-  width: 32px;
-  height: 32px;
+  padding: 7px 14px 7px 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--ta-text, #e8eaf0);
+  gap: 6px;
+  /* Same var(--ta-text) fallback issue as .acm-coin above — happened to
+     still read fine here since the fallback (#e8eaf0) and this modal's
+     dark background both already paired correctly, but made that
+     correctness accidental rather than guaranteed. Explicit now. */
+  color: #e8eaf0;
   cursor: pointer;
+}
+.acm-exit-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: inherit;
 }
 html[data-theme="light"] .acm-exit {
   background: rgba(0, 0, 0, 0.06);
@@ -76,7 +92,7 @@ html[data-theme="light"] .acm-exit {
 .acm-interval-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--ta-text-dim, #9aa3b5);
+  color: #9aa3b5;
   border-radius: 999px;
   padding: 5px 12px;
   font-size: 0.75rem;
@@ -124,7 +140,7 @@ html[data-theme="light"] .acm-chart-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ta-text-dim, #9aa3b5);
+  color: #9aa3b5;
   font-size: 0.85rem;
   background: rgba(11, 18, 34, 0.6);
   pointer-events: none;

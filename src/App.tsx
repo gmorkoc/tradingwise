@@ -10,7 +10,6 @@ import {
   CoinSymbol,
   clearCandleCache,
   COINS,
-  fetchCoinMarketCaps,
   fetchCoin24hTickers,
   Ticker24h,
   fetchBn,
@@ -346,6 +345,27 @@ const COIN_ICONS: Record<string, string> = {
   ZEC: "ⓩ",
 };
 
+// Real brand colors for the coins most people would actually recognize by
+// color (BTC's orange, ETH's slate-blue, etc.) — curating all 257 COINS by
+// hand isn't practical, so everything else falls through to a deterministic
+// hash-to-hue color below instead of the flat single-color circle every
+// coin previously shared. Same color every render for a given symbol
+// either way, just not necessarily brand-accurate for the long tail.
+const COIN_BRAND_COLORS: Record<string, string> = {
+  BTC: "#f7931a", ETH: "#627eea", BNB: "#f3ba2f", XRP: "#23292f", SOL: "#14f195",
+  ADA: "#0033ad", DOGE: "#c2a633", TRX: "#ff0013", LTC: "#345d9d", BCH: "#8dc351",
+  LINK: "#2a5ada", AVAX: "#e84142", DOT: "#e6007a", ATOM: "#2e3148", UNI: "#ff007a",
+  XLM: "#000000", SUI: "#4da2ff", NEAR: "#00ec97", SHIB: "#ffa409", PEPE: "#3fa03f",
+  AAVE: "#b6509e", ETC: "#328332", TON: "#0098ea", HBAR: "#000000", ICP: "#f15a24",
+};
+function coinAvatarColor(symbol: string): string {
+  if (COIN_BRAND_COLORS[symbol]) return COIN_BRAND_COLORS[symbol];
+  let hash = 0;
+  for (let i = 0; i < symbol.length; i++) hash = (hash * 31 + symbol.charCodeAt(i)) | 0;
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 62%, 45%)`;
+}
+
 const RECENT_COINS_KEY = "recentCoinSearches";
 const MAX_RECENT_COINS = 6;
 
@@ -363,6 +383,31 @@ function addRecentCoin(symbol: string): string[] {
     return next;
   } catch {
     return loadRecentCoins();
+  }
+}
+
+// Desktop coin-picker's star column (coinPickerTableContent below) — no
+// cap on count, unlike recentCoins' MAX_RECENT_COINS, since this is a
+// deliberate user choice to pin a coin, not an auto-tracked history.
+const STARRED_COINS_KEY = "starredCoinPicks";
+
+function loadStarredCoins(): string[] {
+  try {
+    const raw = localStorage.getItem(STARRED_COINS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function toggleStarredCoin(symbol: string): string[] {
+  try {
+    const cur = loadStarredCoins();
+    const next = cur.includes(symbol) ? cur.filter((s) => s !== symbol) : [symbol, ...cur];
+    localStorage.setItem(STARRED_COINS_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return loadStarredCoins();
   }
 }
 
@@ -443,6 +488,19 @@ function AppDashboard({
   const [openNavCategory, setOpenNavCategory] = useState<NavCategoryId | null>(
     () => NAV_ITEMS.find((n) => n.id === activeSection)?.category ?? null,
   );
+  // That initializer only ever ran once, on mount — a LATER activeSection
+  // change (e.g. the trading agent's navigateTo jumping straight to
+  // "heatmap") left whichever category was open at mount untouched, so
+  // the newly-active item's highlight landed inside a still-collapsed
+  // accordion panel the user couldn't see at all. Re-applies the same
+  // "open the category this section lives in" rule on every real section
+  // change instead of just the first one; a manual category toggle click
+  // doesn't go through this (it sets openNavCategory directly, not
+  // activeSection), so it isn't fought by this effect.
+  useEffect(() => {
+    const category = NAV_ITEMS.find((n) => n.id === activeSection)?.category;
+    if (category) setOpenNavCategory(category);
+  }, [activeSection]);
   // Same convention as CoinChat.tsx's own useIsDesktop — desktop web
   // relocates the account menu into .top-nav-bar instead of the nav drawer.
   const [isDesktopWidth, setIsDesktopWidth] = useState(() => window.matchMedia("(min-width: 641px)").matches);
@@ -933,17 +991,18 @@ function AppDashboard({
   const [coinPickerOpen, setCoinPickerOpen] = useState(false);
   const [coinSearch, setCoinSearch] = useState("");
   const [recentCoins, setRecentCoins] = useState<string[]>(loadRecentCoins);
-  const [globalSearch, setGlobalSearch] = useState(false);
-  const [coinMarketCaps, setCoinMarketCaps] = useState<Map<string, number>>(
-    new Map(),
+  const [starredCoins, setStarredCoins] = useState<string[]>(loadStarredCoins);
+  // Desktop coin-picker table's column sort (coinPickerTableContent below)
+  // — defaults to Volume desc, the same "most-liquid-first" ordering a
+  // real exchange's own market list defaults to.
+  const [coinSort, setCoinSort] = useState<{ key: "market" | "price" | "change" | "volume"; dir: "asc" | "desc" }>(
+    { key: "volume", dir: "desc" },
   );
+  const [globalSearch, setGlobalSearch] = useState(false);
   const [coinTickers, setCoinTickers] = useState<Map<string, Ticker24h>>(
     new Map(),
   );
   useEffect(() => {
-    fetchCoinMarketCaps()
-      .then(setCoinMarketCaps)
-      .catch(() => {});
     fetchCoin24hTickers(COINS)
       .then(setCoinTickers)
       .catch(() => {});
@@ -1090,9 +1149,6 @@ function AppDashboard({
       if (v) setCoinSearch("");
       return !v;
     });
-    fetchCoinMarketCaps()
-      .then(setCoinMarketCaps)
-      .catch(() => {});
     fetchCoin24hTickers(COINS)
       .then(setCoinTickers)
       .catch(() => {});
@@ -1383,10 +1439,24 @@ function AppDashboard({
     </button>
   );
 
-  // Shared between the desktop positioned-dropdown and the mobile/iOS
-  // bottom sheet (coinPickerOpen below) — same search+list content either
-  // way, just a different wrapper around it.
-  const coinPickerListContent = (
+  // Market-table layout for the coin picker — sortable Market/Last price/
+  // 24h %/Volume columns plus a star-to-pin column, matching a real
+  // exchange's own market-selector table. Shared between the desktop
+  // positioned-dropdown and the mobile/iOS bottom sheet (coinPickerOpen
+  // below) — same content either way, just a different wrapper around it
+  // (the old card-list-style version this replaced, coinPickerListContent,
+  // is gone — both platforms get the same table now).
+  const toggleCoinSort = (key: typeof coinSort.key) => {
+    setCoinSort((prev) => prev.key === key ? { key, dir: prev.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" });
+  };
+  const coinSortIndicator = (key: typeof coinSort.key) =>
+    coinSort.key !== key ? "⇅" : coinSort.dir === "desc" ? "▾" : "▴";
+  const fmtTablePrice = (n: number) =>
+    n >= 1 ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : `$${n.toFixed(6)}`;
+  const fmtTableVolume = (n: number) =>
+    n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `$${(n / 1e3).toFixed(1)}K` : `$${n.toFixed(0)}`;
+
+  const coinPickerTableContent = (
     <>
       <div className="coin-picker-search-wrap">
         <svg
@@ -1405,103 +1475,110 @@ function AppDashboard({
         <input
           className="coin-picker-search-input"
           placeholder="Search…"
-          autoFocus
+          // Not on iOS native — autoFocus pops the keyboard the instant
+          // the sheet opens, before the user's even looked at the list,
+          // which ate screen space and felt like it hijacked the sheet on
+          // first load. Desktop/web keep it (no on-screen keyboard to pop,
+          // so it's just a normal "ready to type" convenience there).
+          autoFocus={!Capacitor.isNativePlatform()}
           value={coinSearch}
           onChange={(e) => setCoinSearch(e.target.value)}
           onClick={(e) => e.stopPropagation()}
         />
         {coinSearch && (
-          <button
-            className="coin-picker-search-clear"
-            onClick={() => setCoinSearch("")}
-          >
-            ✕
-          </button>
+          <button className="coin-picker-search-clear" onClick={() => setCoinSearch("")}>✕</button>
         )}
       </div>
-      <ul className="coin-picker-list">
-        {COINS.filter((c) => {
-          if (!coinSearch) return true;
-          const q = coinSearch.toLowerCase();
-          return (
-            c.symbol.toLowerCase().includes(q) ||
-            c.name.toLowerCase().includes(q)
-          );
-        }).sort((a, b) => {
-          // Recently-picked coins float to the top, most recent
-          // first — everything else keeps its original order
-          // (Array.sort is stable) below them.
-          const ai = recentCoins.indexOf(a.symbol);
-          const bi = recentCoins.indexOf(b.symbol);
-          if (ai === -1 && bi === -1) return 0;
-          if (ai === -1) return 1;
-          if (bi === -1) return -1;
-          return ai - bi;
-        }).map((c) => {
-          const mc = coinMarketCaps.get(c.symbol);
-          const mcLabel =
-            mc == null
-              ? null
-              : mc >= 1e12
-                ? `$${(mc / 1e12).toFixed(2)}T`
-                : mc >= 1e9
-                  ? `$${(mc / 1e9).toFixed(1)}B`
-                  : mc >= 1e6
-                    ? `$${(mc / 1e6).toFixed(0)}M`
-                    : null;
-          const tk = coinTickers.get(c.symbol);
-          const fmtP = (n: number) =>
-            n >= 10000
-              ? `$${(n / 1000).toFixed(1)}K`
-              : n >= 1
-                ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
-                : `$${n.toFixed(4)}`;
-          return (
-            <li
-              key={c.symbol}
-              className={`coin-picker-item${c.symbol === coin ? " active" : ""}`}
-              onClick={() => {
-                setCoin(c.symbol);
-                clearCandleCache();
-                setRecentCoins(addRecentCoin(c.symbol));
-                closeCoinPicker();
-              }}
-            >
-              <span className="coin-picker-item-icon">
-                {COIN_ICONS[c.symbol] ?? c.symbol[0]}
-              </span>
-              <span className="coin-picker-item-name">{c.name}</span>
-              <span className="coin-picker-item-right">
-                <span className="coin-picker-item-row1">
-                  <span className="coin-picker-item-sym">
-                    {c.symbol}
+      <div className="coin-picker-table">
+        <div className="coin-picker-table-row coin-picker-table-header">
+          <span className="coin-picker-table-star" aria-hidden="true" />
+          <button type="button" className="coin-picker-table-th coin-picker-table-th--market" onClick={() => toggleCoinSort("market")}>
+            Market <span className="coin-picker-table-sort">{coinSortIndicator("market")}</span>
+          </button>
+          <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("price")}>
+            Last price <span className="coin-picker-table-sort">{coinSortIndicator("price")}</span>
+          </button>
+          <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("change")}>
+            24h % <span className="coin-picker-table-sort">{coinSortIndicator("change")}</span>
+          </button>
+          <button type="button" className="coin-picker-table-th" onClick={() => toggleCoinSort("volume")}>
+            Volume <span className="coin-picker-table-sort">{coinSortIndicator("volume")}</span>
+          </button>
+        </div>
+        <div className="coin-picker-table-body">
+          {COINS.filter((c) => {
+            if (!coinSearch) return true;
+            const q = coinSearch.toLowerCase();
+            return c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q);
+          }).sort((a, b) => {
+            // Three tiers, in this exact order: starred, then recently
+            // searched/picked (not starred), then everything else — but
+            // the ACTIVE COLUMN SORT applies consistently within every
+            // tier (including starred/recent), not just the third one.
+            // An earlier version sorted the recent tier by raw recency
+            // instead, which made clicking "Volume" look broken for any
+            // coin that happened to also be recent — the tier boundary is
+            // the only thing that's fixed; "which sort order" is still a
+            // single answer for the whole table.
+            const tierOf = (symbol: string): 0 | 1 | 2 =>
+              starredCoins.includes(symbol) ? 0 : recentCoins.includes(symbol) ? 1 : 2;
+            const aTier = tierOf(a.symbol);
+            const bTier = tierOf(b.symbol);
+            if (aTier !== bTier) return aTier - bTier;
+            const ta = coinTickers.get(a.symbol);
+            const tb = coinTickers.get(b.symbol);
+            const dir = coinSort.dir === "desc" ? -1 : 1;
+            if (coinSort.key === "market") return dir * a.symbol.localeCompare(b.symbol);
+            // A FINITE sentinel, not -Infinity — when both coins are
+            // missing ticker data (common before the async fetch resolves,
+            // or for any coin a chunk failed to return), -Infinity - -Infinity
+            // is NaN, and Array.sort's behavior on a NaN comparator result
+            // is implementation-defined. V8 (desktop Chrome) tends to leave
+            // things in a still-reasonable order despite this; JavaScriptCore
+            // (Safari/iOS WKWebView) visibly does not, which is exactly why
+            // this read as "ordering doesn't work" specifically on Frans.
+            const MISSING = -1e18;
+            const av = coinSort.key === "price" ? ta?.price ?? MISSING : coinSort.key === "change" ? ta?.change ?? MISSING : ta?.quoteVolume ?? MISSING;
+            const bv = coinSort.key === "price" ? tb?.price ?? MISSING : coinSort.key === "change" ? tb?.change ?? MISSING : tb?.quoteVolume ?? MISSING;
+            return dir * (av - bv);
+          }).map((c) => {
+            const tk = coinTickers.get(c.symbol);
+            const starred = starredCoins.includes(c.symbol);
+            return (
+              <div
+                key={c.symbol}
+                className={`coin-picker-table-row coin-picker-table-data${c.symbol === coin ? " active" : ""}`}
+                onClick={() => {
+                  setCoin(c.symbol);
+                  clearCandleCache();
+                  setRecentCoins(addRecentCoin(c.symbol));
+                  closeCoinPicker();
+                }}
+              >
+                <button
+                  type="button"
+                  className={`coin-picker-table-star${starred ? " coin-picker-table-star--active" : ""}`}
+                  onClick={(e) => { e.stopPropagation(); setStarredCoins(toggleStarredCoin(c.symbol)); }}
+                  aria-label={starred ? `Unstar ${c.symbol}` : `Star ${c.symbol}`}
+                >
+                  {starred ? "★" : "☆"}
+                </button>
+                <span className="coin-picker-table-market">
+                  <span className="coin-picker-table-icon" style={{ background: coinAvatarColor(c.symbol) }}>
+                    {COIN_ICONS[c.symbol] ?? c.symbol[0]}
                   </span>
-                  {mcLabel && (
-                    <span className="coin-picker-item-mc">
-                      {mcLabel}
-                    </span>
-                  )}
+                  {c.symbol}-USD
                 </span>
-                <span className="coin-picker-item-hl">
-                  {tk ? (
-                    <>
-                      <span className="coin-picker-hl-high">
-                        {fmtP(tk.high)}
-                      </span>
-                      <span className="coin-picker-hl-sep">/</span>
-                      <span className="coin-picker-hl-low">
-                        {fmtP(tk.low)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="coin-picker-hl-na">N/A</span>
-                  )}
+                <span className="coin-picker-table-price">{tk ? fmtTablePrice(tk.price) : "—"}</span>
+                <span className={`coin-picker-table-change${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>
+                  {tk ? `${tk.change >= 0 ? "+" : ""}${tk.change.toFixed(2)}%` : "—"}
                 </span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+                <span className="coin-picker-table-volume">{tk?.quoteVolume != null ? fmtTableVolume(tk.quoteVolume) : "—"}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 
@@ -1835,7 +1912,7 @@ function AppDashboard({
             <div className="top-nav-bar">
               <div className="top-nav-logo">
                 coinhint<span className="top-nav-logo-accent">z</span>
-                <sup className="top-nav-logo-tm">™</sup>
+                <sup className="top-nav-logo-tm">©</sup>
               </div>
               <button
                 className="top-nav-search"
@@ -1919,7 +1996,7 @@ function AppDashboard({
                   <span className="mch-logo mch-logo-shimmer">
                     coinhint<span className="top-nav-logo-accent">z</span>
                   </span>
-                  <sup className="top-nav-logo-tm">™</sup>
+                  <sup className="top-nav-logo-tm">©</sup>
                 </div>
               )}
               <button
@@ -2613,10 +2690,10 @@ function AppDashboard({
               <>
                 <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
                 <div
-                  className="coin-picker-menu"
+                  className="coin-picker-menu coin-picker-menu--table"
                   style={{ top: coinPickerPos.top, left: coinPickerPos.left }}
                 >
-                  {coinPickerListContent}
+                  {coinPickerTableContent}
                 </div>
               </>
             ) : (
@@ -2627,7 +2704,7 @@ function AppDashboard({
                     <span className="indicators-sheet-title">Select a Crypto</span>
                     <button type="button" className="indicators-sheet-close" onClick={closeCoinPicker}>✕</button>
                   </div>
-                  {coinPickerListContent}
+                  {coinPickerTableContent}
                 </div>
               </>
             ),

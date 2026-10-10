@@ -122,9 +122,15 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
       <div className="acm-panel" onClick={(e) => e.stopPropagation()}>
         <div className="acm-header">
           <span className="acm-coin">{coin}/USDT</span>
-          <button className="acm-exit" onClick={onClose}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 3v3a2 2 0 01-2 2H3M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3" />
+          {/* Was a bare "shrink corners" glyph with no label at all —
+              read as decoration, not an obvious close affordance (unlike
+              OrderBookProfileModal's own exit button, which pairs its
+              icon with an explicit "Exit" label). A plain, unambiguous ✕
+              plus text removes any doubt it's tappable and what it does. */}
+          <button className="acm-exit" onClick={onClose} aria-label="Close">
+            <span className="acm-exit-label">Close</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>

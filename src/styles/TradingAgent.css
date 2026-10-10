@@ -18,9 +18,18 @@
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-  transition: padding 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: padding 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .ta-trigger--open { display: none; }
+/* (hover: hover) and (pointer: fine), not a min-width check — this is
+   about INPUT capability (a real mouse), not screen size, and avoids iOS
+   Safari's "sticky hover" (a tap can otherwise leave :hover stuck applied
+   until the next unrelated tap elsewhere). */
+@media (hover: hover) and (pointer: fine) {
+  .ta-trigger:hover {
+    transform: scale(1.08);
+  }
+}
 /* Light theme — light fill, dark text. The glowing orb itself stays the
    same blue in both themes. */
 html[data-theme="light"] .ta-trigger {

@@ -327,6 +327,145 @@ select {
   flex-direction: column;
   gap: 4px;
 }
+/* Desktop-only market table (coinPickerTableContent) needs real room for
+   4 sortable columns + a star column — this menu itself is already
+   desktop-exclusive (mobile/iOS use a totally separate bottom-sheet
+   wrapper further down, with coinPickerListContent's card layout, both
+   untouched by this). */
+.coin-picker-menu--table {
+  min-width: 480px;
+  /* var(--color-card-bg) alone reads as too see-through for a dense data
+     table (vs. the plain card-list, where it read fine) — a near-solid
+     background specific to this table variant, not the shared token
+     (which other components still rely on staying translucent). */
+  background: var(--color-background);
+}
+html[data-theme="light"] .coin-picker-menu--table {
+  background: #ffffff;
+}
+
+/* ── Desktop coin-picker market table ────────────────────────────────────── */
+.coin-picker-table {
+  display: flex;
+  flex-direction: column;
+}
+.coin-picker-table-row {
+  display: grid;
+  grid-template-columns: 26px 1.3fr 1fr 0.8fr 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+.coin-picker-table-header {
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+.coin-picker-table-th {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  justify-self: end;
+  text-align: right;
+}
+.coin-picker-table-th--market {
+  justify-self: start;
+  text-align: left;
+}
+.coin-picker-table-sort {
+  font-size: 0.6rem;
+  opacity: 0.6;
+}
+.coin-picker-table-th:hover { color: var(--color-text); }
+.coin-picker-table-th:hover .coin-picker-table-sort { opacity: 1; }
+
+.coin-picker-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.coin-picker-table-body::-webkit-scrollbar { width: 4px; }
+.coin-picker-table-body::-webkit-scrollbar-track { background: transparent; }
+.coin-picker-table-body::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.coin-picker-table-data {
+  border-radius: 8px;
+  cursor: pointer;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  transition: background 0.12s ease;
+}
+.coin-picker-table-data:hover { background: var(--color-input-bg); }
+.coin-picker-table-data.active { background: var(--color-primary-soft); }
+
+.coin-picker-table-star {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  justify-self: start;
+}
+.coin-picker-table-star--active { color: #f5b014; }
+.coin-picker-table-star:hover { color: #f5b014; }
+
+.coin-picker-table-market {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.coin-picker-table-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  /* background comes from coinAvatarColor(c.symbol) inline — a real brand
+     color for recognizable majors, a deterministic hash-to-hue color for
+     everything else, instead of every coin sharing one flat gray circle. */
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.coin-picker-table-price,
+.coin-picker-table-change,
+.coin-picker-table-volume {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-text);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.coin-picker-table-change.up { color: #22c55e; }
+.coin-picker-table-change.down { color: #ef4444; }
 
 .coin-picker-search-wrap {
   display: flex;

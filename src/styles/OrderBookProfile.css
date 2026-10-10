@@ -161,7 +161,11 @@ html[data-theme="light"] .obp-level-btn--active:hover { color: #04222f; }
   background: none;
   border: none;
   cursor: pointer;
-  color: #475569;
+  /* Was #475569 — a medium-dark slate that reads fine on a light
+     background but has weak contrast at rest against this modal's own
+     dark #0b1222 panel (only became clearly visible on :hover, which
+     touch devices never trigger). #94a3b8 reads clearly against both. */
+  color: #94a3b8;
   display: flex;
   align-items: center;
   padding: 10px;
@@ -174,7 +178,7 @@ html[data-theme="light"] .obp-level-btn--active:hover { color: #04222f; }
   background: rgba(255, 255, 255, 0.08);
 }
 
-html[data-theme="light"] .obp-close { color: #94a3b8; }
+html[data-theme="light"] .obp-close { color: #64748b; }
 html[data-theme="light"] .obp-close:hover { color: #1e293b; background: rgba(0,0,0,0.06); }
 
 .obp-exit {
@@ -185,14 +189,16 @@ html[data-theme="light"] .obp-close:hover { color: #1e293b; background: rgba(0,0
   background: none;
   border: none;
   cursor: pointer;
-  color: #475569;
+  /* Was #475569 — same weak-at-rest-contrast issue as .obp-close above
+     against this modal's dark #0b1222 background. */
+  color: #94a3b8;
   padding: 4px 8px;
   border-radius: 7px;
   transition: color 0.15s, background 0.15s;
 }
 .obp-exit:hover { color: #e2e8f0; background: rgba(255, 255, 255, 0.08); }
 .obp-exit-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.03em; color: inherit; }
-html[data-theme="light"] .obp-exit { color: #94a3b8; }
+html[data-theme="light"] .obp-exit { color: #64748b; }
 html[data-theme="light"] .obp-exit:hover { color: #1e293b; background: rgba(0,0,0,0.06); }
 
 /* ── Stats strip ───────────────────────────────────────────────────────────── */

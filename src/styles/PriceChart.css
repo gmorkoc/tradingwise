@@ -3832,6 +3832,43 @@ html[data-theme="light"] .chart-fullscreen-btn {
   font-size: 0.92rem;
   border-radius: 0;
 }
+/* The same market-table layout desktop's dropdown uses (coinPickerTableContent
+   in App.tsx) now also renders inside this mobile/iOS sheet — same
+   flex-shrink reasoning as .coin-picker-list above applies to .coin-picker-table
+   itself (the wrapper) and its own .coin-picker-table-body (the part that
+   actually scrolls), since neither is a single element here like the old
+   list was. */
+.coin-picker-sheet .coin-picker-table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 4px 8px;
+}
+.coin-picker-sheet .coin-picker-table-header {
+  padding: 8px 12px 10px;
+}
+.coin-picker-sheet .coin-picker-table-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.coin-picker-sheet .coin-picker-table-data {
+  padding: 12px;
+  border-radius: 0;
+}
+@media (max-width: 420px) {
+  /* A narrow phone needs the Market column to keep most of the width —
+     Last price/24h %/Volume still need to stay legible, just tighter. */
+  .coin-picker-sheet .coin-picker-table-row {
+    grid-template-columns: 22px 1.5fr 0.85fr 0.65fr 0.85fr;
+    gap: 4px;
+  }
+  .coin-picker-sheet .coin-picker-table-market { font-size: 0.8rem; }
+  .coin-picker-sheet .coin-picker-table-price,
+  .coin-picker-sheet .coin-picker-table-change,
+  .coin-picker-sheet .coin-picker-table-volume { font-size: 0.72rem; }
+}
 
 /* ── Sub-chart panels (RSI / MACD) ───────────────────────────────────── */
 .sub-charts {

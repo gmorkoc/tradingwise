@@ -343,12 +343,13 @@
   opacity: 0.2;
 }
 
-/* Depth fill bar */
+/* Depth fill bar — anchored to the RIGHT edge (where Total sits), growing
+   leftward as cumulative depth increases, not the other way around. */
 .ob-fill {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 0;
+  right: 0;
   opacity: 0.1;
   pointer-events: none;
   transition: width 0.35s ease;
