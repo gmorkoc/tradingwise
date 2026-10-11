@@ -1,24 +1,20 @@
-/* ── Overlay ─────────────────────────────────────────────────────────────── */
-.gs-overlay {
+/* ── Anchored (desktop) — a dropdown attached directly under
+   .top-nav-search (positioned via anchorRect, App.tsx), NOT a centered/
+   backdrop-dimmed modal. The catcher is genuinely transparent (no dark
+   fill at all, unlike .gs-docked-catcher further down) so the rest of the
+   page stays fully visible, same as YouTube's own search suggestions. */
+.gs-anchored-catcher {
   position: fixed;
   inset: 0;
   z-index: 300000;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 10vh;
 }
-
-/* ── Modal ───────────────────────────────────────────────────────────────── */
-.gs-modal {
-  width: 100%;
-  max-width: 560px;
+.gs-anchored {
+  position: fixed;
+  z-index: 300001;
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -26,17 +22,26 @@
 }
 
 @keyframes gs-slide-in {
-  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0)     scale(1);    }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Input ───────────────────────────────────────────────────────────────── */
+/* ── Input — YouTube's own search bar: a fully rounded pill, its own
+   visible border, sitting with real space around it rather than reading
+   as just the modal's header strip (the old bottom-border-only version). */
 .gs-input-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--color-border);
+  margin: 12px 14px 8px;
+  padding: 11px 8px 11px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background);
+  transition: border-color 0.15s ease;
+}
+.gs-input-wrap:focus-within {
+  border-color: var(--color-primary);
 }
 
 .gs-input-icon {
@@ -57,34 +62,61 @@
 .gs-input::placeholder { color: var(--color-text-secondary); }
 
 .gs-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   background: none;
   border: none;
   cursor: pointer;
   color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  padding: 2px 4px;
-  border-radius: 4px;
+  font-size: 0.8rem;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 .gs-clear:hover { color: var(--color-text); background: var(--color-input-bg); }
 
-.gs-esc-hint {
-  font-size: 0.65rem;
-  font-family: inherit;
-  padding: 2px 6px;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  color: var(--color-text-secondary);
+/* "Agent ready" pill — a faithful clone of TradingAgent.css's own
+   floating trigger button (.ta-trigger: same dark capsule background,
+   padding, text color/size/weight, box-shadow, both themes), not a
+   separate visual treatment — same idea/placement as YouTube's own "Ask
+   YouTube" button living directly in the search bar, just styled to look
+   exactly like the real Agent Ready button rather than a new design. */
+.gs-agent-pill {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  background: #0a0d1c;
+  color: #d8dbe4;
+  padding: 8px 20px 8px 8px;
   cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+html[data-theme="light"] .gs-agent-pill {
+  background: #ffffff;
+  color: #1c1a3a;
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+}
+/* .ta-trigger-orb's own base rule is 30px (the floating button's size)
+   with no margin of its own (.ta-trigger-label carries that instead) —
+   both overridden here to the smaller pill size and that same 12px gap. */
+.gs-agent-pill-orb {
+  width: 16px;
+  height: 16px;
+  margin-right: 12px;
 }
 
 /* ── Results list ────────────────────────────────────────────────────────── */
 .gs-list {
   list-style: none;
   margin: 0;
-  padding: 6px;
+  padding: 4px 0 8px;
   max-height: 380px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -100,40 +132,43 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
-  padding: 8px 10px 4px;
+  padding: 10px 14px 4px;
   opacity: 0.6;
 }
 
+/* Rows match YouTube's own suggestion list: icon/avatar in a fixed-width
+   gutter, bold primary line with a smaller muted line stacked directly
+   under it (same structure for every row now, coins included — no more
+   inline ticker-plus-arrow layout only sections used to get), a plain
+   full-width hover highlight, no trailing affordance/arrow at all. */
 .gs-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 9px;
+  gap: 14px;
+  padding: 8px 14px;
+  margin: 0 4px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background 0.1s;
 }
 .gs-item:hover, .gs-item--active {
   background: var(--color-input-bg);
 }
-.gs-item--active .gs-item-arrow { opacity: 1; }
 
 .gs-item-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--color-border);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
 .gs-item-icon--coin {
-  background: rgba(56,189,248,0.08);
-  border-color: rgba(56,189,248,0.2);
+  background: rgba(56,189,248,0.1);
 }
 
 .gs-item-body {
@@ -145,36 +180,20 @@
 }
 
 .gs-item-primary {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text);
-  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .gs-item-secondary {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.gs-item-sym {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary);
-}
-
-.gs-item-arrow {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  opacity: 0;
-  transition: opacity 0.1s;
-  flex-shrink: 0;
 }
 
 .gs-empty {
@@ -184,9 +203,11 @@
   font-size: 0.85rem;
 }
 
-/* ── Footer ──────────────────────────────────────────────────────────────── */
+/* ── Footer — right-aligned, same bottom-right placement as YouTube's own
+   "Report search predictions" line under its suggestion list. */
 .gs-footer {
   display: flex;
+  justify-content: flex-end;
   gap: 16px;
   padding: 8px 14px;
   border-top: 1px solid var(--color-border);
@@ -249,5 +270,4 @@ html[data-theme="light"] .gs-docked {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }
-.gs-docked .gs-input-wrap { border-bottom: 1px solid var(--color-border); }
 .gs-docked .gs-list { max-height: 38vh; }

@@ -288,6 +288,10 @@ interface Props {
   // Same shape as App.tsx's own setActiveSection, just typed loosely here
   // since this component doesn't import SectionId.
   onNavigateToSection?: (section: string) => void;
+  // Called instead of opening the panel when a free-tier user tries to —
+  // see the trigger/open gating below. Same prop FloatingNavBar already
+  // takes for its own mobile Agent button (agentLocked/onOpenUpgrade).
+  onOpenUpgrade?: () => void;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -469,9 +473,18 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, onOpenUpgrade }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
+
+  // Free users see the trigger and can open the panel's shell, but any
+  // actual use gates to the upgrade flow instead — same tier check
+  // FloatingNavBar already applies to its own mobile Agent button
+  // (agentLocked={!hasAccess(tier, "pro")}), just enforced here too so
+  // every entry point (this component's own trigger, "open-trading-agent"/
+  // "toggle-trading-agent" dispatches from notifications/GlobalSearch/
+  // FloatingNavBar) is covered centrally rather than trusting each caller.
+  const canUseAgent = !!user && hasAccess(tier, "pro");
 
   // Deliberately NOT persisted to localStorage (unlike portfolioCollapsed
   // below) — localStorage survives a full close+relaunch (a fresh WebView/
@@ -489,10 +502,13 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }:
   // opens instead of the tap just focusing/launching the app with nothing
   // else happening.
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = () => {
+      if (!canUseAgent) { onOpenUpgrade?.(); return; }
+      setOpen(true);
+    };
     window.addEventListener("open-trading-agent", onOpen);
     return () => window.removeEventListener("open-trading-agent", onOpen);
-  }, []);
+  }, [canUseAgent, onOpenUpgrade]);
 
   // FloatingNavBar's own raised Agent button (mobile, see hideTrigger
   // above) dispatches this on tap instead of calling setOpen directly —
@@ -500,10 +516,13 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }:
   // (notification taps should always open, never accidentally close an
   // already-open panel).
   useEffect(() => {
-    const onToggle = () => setOpen((v) => !v);
+    const onToggle = () => {
+      if (!canUseAgent) { onOpenUpgrade?.(); return; }
+      setOpen((v) => !v);
+    };
     window.addEventListener("toggle-trading-agent", onToggle);
     return () => window.removeEventListener("toggle-trading-agent", onToggle);
-  }, []);
+  }, [canUseAgent, onOpenUpgrade]);
 
   // Browser notifications require an explicit user action to request
   // (see webPush.ts) — agent-watch-scan already sends a web push the
@@ -1320,16 +1339,17 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }:
     };
   }, []);
 
-  // Pro+ feature — free users don't get the trigger/panel at all. This has
-  // to come after every hook above (not as an early return further up) —
-  // React requires the exact same hooks, in the exact same order, on
-  // every render. A guard placed before some of them meant a user whose
-  // tier resolved to pro/elite *after* sign-in changed the hook count
-  // between renders, which is a silent dev-mode warning but a fatal,
-  // unrecoverable crash in a production/minified build — exactly what
-  // happened here (and the same bug class previously fixed in
+  // Logged-out only — free-tier users still get the trigger (and can open
+  // the panel's shell), gated to the upgrade flow on actual use instead
+  // (canUseAgent above). This has to come after every hook above (not as
+  // an early return further up) — React requires the exact same hooks, in
+  // the exact same order, on every render. A guard placed before some of
+  // them meant a user whose auth state resolved *after* sign-in changed
+  // the hook count between renders, which is a silent dev-mode warning but
+  // a fatal, unrecoverable crash in a production/minified build — exactly
+  // what happened here (and the same bug class previously fixed in
   // ProfilePage.tsx, commit 6cb3507).
-  if (!user || !hasAccess(tier, "pro")) return null;
+  if (!user) return null;
 
   // Split from handleMicTap so speakLatestAgentReply's auto-continue (once
   // TTS finishes, in voice mode) can start the next turn's listening
@@ -2229,7 +2249,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection }:
         <button
           type="button"
           className={`ta-trigger${open ? " ta-trigger--open" : ""}${phase === "pop" ? " ta-trigger--collapsed" : ""}`}
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            if (!canUseAgent) { onOpenUpgrade?.(); return; }
+            setOpen((v) => !v);
+          }}
         >
           <span className={`ta-trigger-orb${phase === "pop" ? " ta-trigger-orb--pop" : ""}`} />
           {unread && !open && <span className="ta-trigger-dot" />}

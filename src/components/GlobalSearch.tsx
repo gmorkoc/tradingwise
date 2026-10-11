@@ -70,21 +70,43 @@ const SECTIONS: { id: SectionId; label: string; desc: string; icon: string; keyw
     keywords: ["custom alerts", "rules engine", "strategy builder", "price condition alerts", "if this then alert"] },
 ];
 
+// Not a NAV_ITEMS page/SectionId — the Agent Ready panel is a floating
+// overlay (TradingAgent.tsx), opened the same way push-notification
+// routing already does (see notificationRouting.ts), via a plain
+// "open-trading-agent" window CustomEvent TradingAgent listens for
+// itself. Matched/rendered the same as a SECTIONS entry below (same
+// label/desc/icon shape, same "every query word somewhere in the
+// haystack" matching) so it shows up in results identically; only its
+// action differs — no onSectionSelect, just dispatch-and-close.
+const AGENT_READY = {
+  label: "Agent Ready", desc: "Chat with the AI trading agent — ask about any coin, get trade ideas", icon: "🤖",
+  keywords: ["ai agent", "trading agent", "trading assistant", "ai assistant", "ai chat", "paper trading", "trade ideas", "ask ai", "chatbot", "assistant"],
+};
+
 /* ── Props ─────────────────────────────────────────────────────────────────── */
 interface Props {
   open: boolean;
   onClose: () => void;
   onCoinSelect: (coin: CoinSymbol) => void;
   onSectionSelect: (section: SectionId) => void;
-  // "modal" (default): the existing centered, backdrop-dimmed ⌘K-style
-  // overlay. "docked": renders as a card directly above FloatingNavBar
-  // instead — no dark backdrop, positioned to read as physically attached
-  // to the nav bar rather than a separate floating layer.
-  variant?: "modal" | "docked";
+  // "docked": renders as a card directly above FloatingNavBar — no dark
+  // backdrop, positioned to read as physically attached to the nav bar.
+  // "anchored": desktop's own dropdown-under-the-search-bar layout
+  // (YouTube's own search pattern), positioned via anchorRect below —
+  // same "no page-dimming backdrop" idea as docked, just anchored to a
+  // different element. There used to also be a "modal" variant (a
+  // centered, backdrop-dimmed ⌘K-style overlay) desktop used before this;
+  // removed outright, not kept as dead code, once anchored replaced it
+  // everywhere it was used.
+  variant?: "docked" | "anchored";
+  // Required for "anchored" — .top-nav-search's own measured position/
+  // width (App.tsx), so the dropdown lines up under it exactly instead of
+  // floating at some guessed position.
+  anchorRect?: { top: number; left: number; width: number } | null;
 }
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
-export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "modal" }: Props) {
+export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, variant = "docked", anchorRect }: Props) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef  = useRef<HTMLInputElement>(null);
@@ -158,13 +180,30 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
         });
       }
     });
+
+    const agentHaystack = `${AGENT_READY.label} ${AGENT_READY.desc} ${AGENT_READY.keywords.join(" ")}`.toLowerCase();
+    if (qWords.every(w => agentHaystack.includes(w))) {
+      results.push({
+        id:        "agent-ready",
+        type:      "section",
+        primary:   AGENT_READY.label,
+        secondary: AGENT_READY.desc,
+        icon:      AGENT_READY.icon,
+        action:    () => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); },
+      });
+    }
   } else {
-    /* No query — show all sections */
+    /* No query — show all sections, Agent Ready included */
     SECTIONS.forEach(s => results.push({
       id: `section-${s.id}`, type: "section",
       primary: s.label, secondary: s.desc, icon: s.icon,
       action: () => { onSectionSelect(s.id); onClose(); },
     }));
+    results.push({
+      id: "agent-ready", type: "section",
+      primary: AGENT_READY.label, secondary: AGENT_READY.desc, icon: AGENT_READY.icon,
+      action: () => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); },
+    });
   }
 
   const clampedIdx = Math.min(activeIdx, Math.max(0, results.length - 1));
@@ -219,9 +258,26 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
         {query && (
           <button className="gs-clear" onClick={() => setQuery("")}>✕</button>
         )}
-        {/* "esc" is a desktop-keyboard concept — meaningless (and nothing
-            to tap) on the docked mobile variant, so it's modal-only. */}
-        {!docked && <kbd className="gs-esc-hint">esc</kbd>}
+        {/* Direct one-tap access to the agent, same spot/idea as YouTube's
+            own "Ask YouTube" pill living right in its search bar — not
+            something you have to type a query to discover as a result
+            further down. Always visible (not conditional on `query`), and
+            jumping straight to the agent is the whole point, so this also
+            closes search instead of leaving a now-irrelevant dropdown open
+            behind it. */}
+        <button
+          type="button"
+          className="gs-agent-pill"
+          onClick={() => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); }}
+          title="Ask Agent ready"
+        >
+          {/* The identical floating-trigger orb (TradingAgent.css's
+              .ta-trigger-orb — global class, not scoped to .ta-trigger, so
+              it renders pixel-identical here: same gradient sphere,
+              rotation, and pulsing glow), just shrunk down to pill size. */}
+          <span className="ta-trigger-orb gs-agent-pill-orb" aria-hidden="true" />
+          Ask Agent ready
+        </button>
       </div>
 
       {/* Results */}
@@ -242,9 +298,10 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
                   onClick={r.action}
                 >
                   <span className="gs-item-icon gs-item-icon--coin">{r.icon}</span>
-                  <span className="gs-item-primary">{r.primary}</span>
-                  <span className="gs-item-sym">{r.secondary}</span>
-                  <span className="gs-item-arrow">→</span>
+                  <span className="gs-item-body">
+                    <span className="gs-item-primary">{r.primary}</span>
+                    <span className="gs-item-secondary">{r.secondary}</span>
+                  </span>
                 </li>
               );
             })}
@@ -267,7 +324,6 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
                     <span className="gs-item-primary">{r.primary}</span>
                     <span className="gs-item-secondary">{r.secondary}</span>
                   </span>
-                  <span className="gs-item-arrow">→</span>
                 </li>
               );
             })}
@@ -288,9 +344,6 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
   if (docked) {
     return ReactDOM.createPortal(
       <>
-        {/* Invisible click-outside catcher — unlike the modal variant,
-            there's no dimmed backdrop (the chart stays fully visible), but
-            tapping anywhere outside the docked card still closes it. */}
         <div className="gs-docked-catcher" onMouseDown={onClose} />
         <div className="gs-docked" ref={dockedRef}>{content}</div>
       </>,
@@ -298,10 +351,21 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     );
   }
 
+  // "anchored" — desktop's dropdown-under-the-search-bar layout, not a
+  // centered/backdrop-dimmed modal. The catcher here is genuinely
+  // transparent (no dark fill, unlike .gs-docked-catcher above) — the rest
+  // of the page stays fully visible and interactive-looking, exactly like
+  // YouTube's own suggestions dropdown never dims the page behind it.
   return ReactDOM.createPortal(
-    <div className="gs-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="gs-modal">{content}</div>
-    </div>,
+    <>
+      <div className="gs-anchored-catcher" onMouseDown={onClose} />
+      <div
+        className="gs-anchored"
+        style={anchorRect ? { top: anchorRect.top, left: anchorRect.left, width: Math.max(anchorRect.width, 360) } : undefined}
+      >
+        {content}
+      </div>
+    </>,
     document.body
   );
 }

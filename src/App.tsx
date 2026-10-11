@@ -999,6 +999,17 @@ function AppDashboard({
     { key: "volume", dir: "desc" },
   );
   const [globalSearch, setGlobalSearch] = useState(false);
+  // Desktop's search opens as a dropdown attached directly under
+  // .top-nav-search (YouTube's own search-bar-with-suggestions pattern),
+  // not a centered modal — this is that button's measured position/width,
+  // fed to GlobalSearch's "anchored" variant below.
+  const topNavSearchRef = useRef<HTMLButtonElement>(null);
+  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+  const openGlobalSearch = () => {
+    const rect = topNavSearchRef.current?.getBoundingClientRect();
+    if (rect) setSearchAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    setGlobalSearch(true);
+  };
   const [coinTickers, setCoinTickers] = useState<Map<string, Ticker24h>>(
     new Map(),
   );
@@ -1268,17 +1279,25 @@ function AppDashboard({
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  // Global search keyboard shortcut (Cmd+K / Ctrl+K)
+  // Global search keyboard shortcut (Cmd+K / Ctrl+K) — routed through the
+  // same openGlobalSearch() the nav button uses (not a bare setGlobalSearch
+  // toggle) so the anchored dropdown still knows where .top-nav-search
+  // actually sits even when opened from the keyboard, not a click on it.
+  // globalSearch is a real dependency here (not read via a functional
+  // updater) specifically so openGlobalSearch — itself a plain top-level
+  // call, not nested inside setState — only ever runs once per real
+  // keypress, not twice under StrictMode's dev double-invoke of updaters.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setGlobalSearch((v) => !v);
+        if (globalSearch) setGlobalSearch(false);
+        else openGlobalSearch();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [globalSearch]);
 
   // Close mobile nav when section changes
   useEffect(() => {
@@ -1915,8 +1934,9 @@ function AppDashboard({
                 <sup className="top-nav-logo-tm">©</sup>
               </div>
               <button
+                ref={topNavSearchRef}
                 className="top-nav-search"
-                onClick={() => setGlobalSearch(true)}
+                onClick={openGlobalSearch}
                 title="Search (⌘K)"
               >
                 <span className="top-nav-search-text">
@@ -2722,9 +2742,12 @@ function AppDashboard({
           onSectionSelect={(s) => setActiveSection(s as SectionId)}
           // Mobile's only remaining path to this is FloatingNavBar's
           // Search icon (the old mobile header search button was moved
-          // there) — "docked" attaches it directly above the nav bar
-          // instead of the centered ⌘K-style modal desktop still uses.
-          variant={isWideDesktop ? "modal" : "docked"}
+          // there) — "docked" attaches it directly above the nav bar.
+          // Desktop used to be a centered ⌘K-style modal; now "anchored"
+          // drops it directly under .top-nav-search instead (YouTube's own
+          // search-bar-with-suggestions layout, not a page-dimming modal).
+          variant={isWideDesktop ? "anchored" : "docked"}
+          anchorRect={searchAnchor}
         />
 
         {assetPanelOpen && (
@@ -2929,6 +2952,7 @@ function AppDashboard({
         selectedCoin={coin}
         hideTrigger={!isWideDesktop}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
+        onOpenUpgrade={onOpenUpgrade}
       />
       <NotificationsCenter
         open={notificationsCenterOpen}

@@ -1,53 +1,49 @@
-/* ── Panel — centered modal by default (desktop, opened from the new
-   .mch-notif-feed-btn), same pattern as BuySignals.css's .buysig-backdrop/
-   .buysig-panel. Overridden to full-screen-slide-from-top below at the
-   mobile breakpoint — a full-screen takeover would look broken on a wide
-   desktop window, same reasoning BuySignals keeps its own desktop modal
-   centered instead of full-screen. */
+/* ── Panel — desktop: full-height drawer docked to the right edge,
+   sliding down from the top (not the old centered/scale-in modal).
+   Mobile breakpoint below still goes edge-to-edge (full width too, not
+   just height), reusing the same slide-down animation. */
+/* No visible dimming — stays in the DOM (click-outside-to-close still
+   works via its onClick in NotificationsCenter.tsx), just invisible. */
+/* 600000+ — above every other overlay in the app (PushToast's 500000 was
+   previously the highest; Drawer/AccountMenu/TradingAgent/etc. all sit
+   well below that too), so notifications always win regardless of what
+   else is open. */
 .notif-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
-  z-index: 200000;
+  z-index: 600000;
 }
 .notif-panel {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 200001;
+  top: 0;
+  right: 0;
+  z-index: 600001;
   width: 100%;
-  max-width: 460px;
-  max-height: 85vh;
+  max-width: 420px;
+  /* Not full-height anymore — sized to comfortably fit ~10 items (header
+     + 10 × ~64px rows), capped against short windows too; .notif-list
+     below already has its own overflow-y:auto for anything past that. */
+  max-height: min(720px, 90vh);
   box-sizing: border-box;
   background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  border: none;
+  border-left: 1px solid var(--color-border);
+  border-radius: 16px 0 0 16px;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: notif-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@keyframes notif-in {
-  from { opacity: 0; transform: translate(-50%, -46%); }
-  to   { opacity: 1; transform: translate(-50%, -50%); }
+  animation: notif-slide-down 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (max-width: 640px) {
   .notif-backdrop { display: none; }
   .notif-panel {
-    inset: 0;
-    top: 0;
-    left: 0;
-    transform: none;
-    width: 100%;
     max-width: none;
     height: 100%;
     max-height: none;
-    border: none;
+    border-left: none;
     border-radius: 0;
-    animation: notif-slide-down 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: none;
   }
 }
 @keyframes notif-slide-down {
