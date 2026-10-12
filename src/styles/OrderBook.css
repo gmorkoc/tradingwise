@@ -278,6 +278,16 @@
   font-size: 0.82rem;
 }
 
+.ob-fallback-note {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  color: var(--pc-text-muted);
+  background: var(--color-input-bg);
+  border-bottom: 1px solid var(--pc-border);
+}
+
 /* ── Body fills remaining height ─────────────────────────────────────────── */
 
 .ob-body {

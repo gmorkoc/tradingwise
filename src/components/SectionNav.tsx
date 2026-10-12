@@ -17,7 +17,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: "heatmap",   tKey: "nav.heatmap",   icon: "⬡" },
   { id: "alerts",    tKey: "nav.alerts",    icon: "⚡" },
   { id: "watchlist", tKey: "nav.watchlist", icon: "★" },
-  { id: "gann",      tKey: "nav.gann",      icon: "⊿" },
+  // "gann" temporarily removed (user request) — GannAnalysis.tsx/locale
+  // content left in place, just not linked from here.
 ];
 
 interface SectionNavProps {

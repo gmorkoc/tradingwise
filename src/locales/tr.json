@@ -37,7 +37,6 @@
     "unlimited": "Sınırsız",
     "cancelAnytime": "İstediğin zaman iptal et",
     "swipeToOpen": "Menüyü açmak için kaydır",
-    "viaBinance": "Binance üzerinden",
     "strong": "Güçlü",
     "medium": "Orta",
     "weak": "Zayıf",
@@ -132,7 +131,7 @@
   "chart": {
     "title": "{{coin}}",
     "live": "● CANLI",
-    "loading": "Grafik verileri yükleniyor...",
+    "loading": "Grafik verileri yükleniyor",
     "noData": "Grafik verisi yok",
     "failed": "Grafik verileri alınamadı",
     "indicators": "Göstergeler",
@@ -651,54 +650,34 @@
       "perMonth": "/ay",
       "features": [
         {
-          "icon": "🕯️",
-          "title": "Inside the Candle",
-          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
-        },
-        {
-          "icon": "〰️",
-          "title": "Elliott Wave",
-          "desc": "5-wave detection · Fibonacci targets"
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9 · angles · cycle forecasts"
-        },
-        {
-          "icon": "🏦",
-          "title": "Coinbase Premium AI",
-          "desc": "Institutional vs retail flow"
+          "icon": "agentOrb",
+          "title": "Agent Ready",
+          "desc": "Canlı YZ trading sohbeti, kota sınırı yok"
         },
         {
           "icon": "⚡",
-          "title": "Unlimited AI",
-          "desc": "No weekly cap on any feature"
+          "title": "Sınırsız YZ",
+          "desc": "Hiçbir YZ özelliğinde haftalık limit yok"
         },
         {
-          "icon": "📊",
-          "title": "Alt Coin Analysis",
-          "desc": "100+ altcoins · deep AI analysis"
+          "icon": "✨",
+          "title": "Erken Erişim",
+          "desc": "Yeni özelliklere herkesten önce eriş"
         },
         {
-          "icon": "📈",
-          "title": "HTF Multi-Timeframe",
-          "desc": "Daily · weekly · monthly alignment"
-        },
-        {
-          "icon": "🔥",
-          "title": "Liquidation Heatmap",
-          "desc": "Full heatmap · AI commentary"
+          "icon": "✓",
+          "title": "Pro'daki Her Şey",
+          "desc": "Tüm Pro araçları dahil"
         }
       ],
       "signInBtn": "Yükseltmek için giriş yap",
       "upgradeBtn": "Elite'i Aç — $59.99/ay",
       "redirecting": "Yönlendiriliyor…",
       "trust": "Anında erişim · Pro'daki her şeyi içerir",
-      "free_headline": "Tam Kurumsal Araç Seti",
-      "free_sub": "Her YZ özelliği, sınırsız erişim, haftalık limit yok.",
-      "pro_headline": "Elite'e Bir Adım",
-      "pro_sub": "Pro'dasın. Ayda $29 daha fazla ile 8 özel aracın kilidini aç.",
+      "free_headline": "Agent Ready'nin Kilidini Aç",
+      "free_sub": "Elite sana canlı YZ trading ajanını ve her özellikte sınırsız YZ isteğini verir.",
+      "pro_headline": "Agent Ready'ye Bir Adım",
+      "pro_sub": "Pro'dasın. Agent Ready ve sınırsız YZ bir yükseltme uzağında — ayda $29 daha.",
       "pro_upgradeBtn": "Pro'dan Yükselt — $59.99/ay",
       "pro_trust": "+$29/ay · Pro özelliklerini koru"
     }
@@ -723,20 +702,21 @@
         "label": "Pro",
         "features": [
           "Ücretsiz'deki her şey",
+          "Al/Sat Sinyalleri",
           "HTF Çok Zaman Dilimli YZ",
           "YZ Piyasa İstihbaratı",
           "Zincir Üzeri YZ Analizi",
           "Fiyat Tahmin Grafiği",
           "Tasfiye Isı Haritası YZ",
-          "Haftada 35 YZ isteği"
+          "Mum İçi Analiz",
+          "Coinbase Premium YZ",
+          "Haftada 100 YZ isteği"
         ]
       },
       "elite": {
         "label": "Elite",
         "features": [
-          "Pro'daki her şey — sınırsız",
-          "Gann Analizi YZ",
-          "Coinbase Premium YZ",
+          "Pro'daki her şey — sınırsız YZ isteği",
           "Yeni özelliklere erken erişim"
         ]
       }
@@ -777,6 +757,10 @@
       "mostPopular": "En Popüler",
       "yourPlan": "Planınız"
     },
+    "eliteCallout": {
+      "title": "Agent Ready — Sınırsız YZ Trading Sohbeti",
+      "desc": "YZ trading ajanıyla canlı sohbet et — herhangi bir coin hakkında sor, trade fikirleri al, kota sınırı yok."
+    },
     "footer": {
       "proratedNote": "Plan değişiklikleri orantılıdır · ",
       "manageBilling": "Faturalamayı yönet",
@@ -801,15 +785,17 @@
     "error": "Bir şeyler yanlış gitti",
     "perMonth": "/ay",
     "lf": {
-      "elitePro": "Pro'daki her şey — sınırsız",
-      "gann": "Gann Analizi YZ",
+      "elitePro": "Sınırsız YZ isteği",
+      "agentReady": "Agent Ready — YZ Trading Sohbeti",
+      "candleai": "Mum İçi Analiz",
       "coinbase": "Coinbase Premium YZ",
       "earlyAccess": "Yeni özelliklere erken erişim",
       "aiMkt": "YZ Piyasa İstihbaratı",
       "onchain": "Zincir Üzeri YZ Analizi",
       "predChart": "Fiyat Tahmin Grafiği",
       "liqHeatmap": "Tasfiye Isı Haritası YZ",
-      "aiReqs": "Haftada 35 YZ isteği"
+      "aiReqs": "Haftada 100 YZ isteği",
+      "buySignals": "Al/Sat Sinyalleri"
     }
   },
   "landing": {
@@ -924,13 +910,16 @@
           "cta": "Pro'ya Başla",
           "features": [
             "Ücretsiz'deki her şey",
+            "Al/Sat Sinyalleri",
             "HTF Çok Zaman Dilimli YZ",
             "YZ Piyasa İstihbaratı",
             "Zincir Üzeri YZ Analizi",
             "Senaryolu fiyat tahmini",
             "Tasfiye ısı haritası YZ",
             "Özel Strateji Uyarıları",
-            "35 YZ isteği / hafta"
+            "Mum İçi Analiz",
+            "Coinbase Premium YZ",
+            "Haftada 100 YZ isteği"
           ]
         },
         {
@@ -940,8 +929,7 @@
           "per": "/ay",
           "cta": "Elite'e Geç",
           "features": [
-            "Pro'daki her şey — sınırsız",
-            "Coinbase Premium YZ",
+            "Pro'daki her şey — sınırsız YZ isteği",
             "Yeni özelliklere erken erişim"
           ]
         }
@@ -1568,6 +1556,7 @@
     "title": "Emir Defteri",
     "loading": "Yükleniyor…",
     "unavailable": "{{exchange}} üzerinde {{coin}} için kullanılamıyor",
+    "fallbackNote": "{{exchange}} kullanılamıyor — Coinbase gösteriliyor",
     "colPrice": "Fiyat",
     "colSize": "Miktar",
     "colValue": "Değer"
@@ -2147,7 +2136,8 @@
     }
   },
   "dailyBrief": {
-    "title": "Günlük Özetiniz",
+    "title": "Günlük özetiniz",
+    "lastUpdated": "Güncellendi",
     "loading": "Günlük özetiniz yükleniyor…",
     "categoryCrypto": "Kripto",
     "categoryMarkets": "Piyasalar",

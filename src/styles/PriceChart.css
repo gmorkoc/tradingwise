@@ -474,9 +474,22 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-title-tappable {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 2px var(--color-shadow), 0 4px 10px var(--color-shadow);
+  transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
+}
+.chart-title-tappable:hover {
+  border-color: var(--pc-accent, var(--color-text-muted));
+}
+.chart-title-tappable:active {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--color-text) 6%, var(--color-surface));
 }
 .chart-title-tappable:focus,
 .chart-title-tappable:focus-visible {
@@ -487,6 +500,50 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   display: block;
   align-self: center;
   color: var(--color-text-muted);
+}
+
+/* Mobile (non-fullscreen) coin title — a single pill whose glow/ring
+   tint is driven by the selected coin's own brand color (--coin-tint,
+   set inline from COIN_COLORS), instead of a flat neutral shadow. Tight
+   padding/gap throughout — this replaced an earlier segmented
+   quick-switch-strip experiment that needed much more room. */
+.chart-title-glow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--coin-tint) 14%, var(--color-surface)),
+    var(--color-surface)
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--coin-tint) 25%, var(--color-border)),
+    0 2px 8px color-mix(in srgb, var(--coin-tint) 20%, transparent);
+  color: var(--color-text);
+  font-size: 0.98rem;
+  font-weight: 700;
+  transition: box-shadow 0.15s, transform 0.1s;
+}
+.chart-title-glow-btn:active {
+  transform: scale(0.96);
+}
+.chart-title-glow-dot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--coin-tint);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
 }
 
 /* Always-visible current price in the fullscreen header — kept independent
@@ -2299,22 +2356,79 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   color: rgba(74, 222, 128, 0.9);
 }
 
+/* Loading no longer hides the whole card behind a scrim+placeholder, or
+   nulls out the banner/pattern-insight state — it blurs the actual
+   last-rendered header stats, banner, chart canvas and pattern-insight
+   panel IN PLACE (stale but real content) while a fresh fetch is in
+   flight, then they sharpen back up the instant real data lands. Toolbar
+   buttons (.chart-legend-actions — Style/Interval/Indicators) are
+   deliberately excluded so they stay clickable mid-fetch. */
+.price-chart-container--loading .chart-header,
+.price-chart-container--loading .interval-banner,
+.price-chart-container--loading .chart-canvas-wrap,
+.price-chart-container--loading .pattern-insight {
+  filter: blur(6px);
+  transition: filter 0.2s ease;
+  pointer-events: none;
+}
+
 .chart-loading-overlay {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: 12px;
-  z-index: 2;
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  backdrop-filter: blur(2px);
 }
 
-html[data-theme="light"] .chart-loading-overlay {
-  background: rgba(255, 255, 255, 0.6);
+.chart-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+html[data-theme="light"] .chart-loading-label {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--color-text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-loading-line {
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.chart-loading-line path {
+  stroke: #4ade80;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chart-loading-line-draw 1.6s ease-in-out infinite;
+}
+
+@keyframes chart-loading-line-draw {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0.3;
+  }
+  50% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -1;
+    opacity: 0.3;
+  }
 }
 
 @keyframes banner-slide-in {
@@ -2581,7 +2695,6 @@ html[data-theme="light"] .cap-overlay-feature {
 }
 
 /* ─────────────────────────────────────────────────────────────────────── */
-.chart-error,
 .chart-empty {
   display: flex;
   justify-content: center;
@@ -2593,9 +2706,20 @@ html[data-theme="light"] .cap-overlay-feature {
   border-radius: 18px;
 }
 
+/* An overlay ON the chart canvas (same pattern as .chart-loading-overlay),
+   not a separate full-height block above it — it used to render as its
+   own 400px box stacked in front of the (now empty) canvas, doubling the
+   chart's total height with a big blank gap underneath. */
 .chart-error {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   color: var(--color-danger);
   background: rgba(254, 226, 226, 0.14);
+  border-radius: 12px;
 }
 
 @media (max-width: 768px) {
@@ -3240,6 +3364,21 @@ html[data-theme="light"] .cap-overlay-feature {
   .price-chart-container--fs .chart-title-row,
   .price-chart-container:fullscreen .chart-title-row {
     row-gap: 6px;
+  }
+}
+
+/* Mobile only — the grid toggle's compact-view button (PriceChart.tsx's
+   gridToggleButton, !isFullscreen usage) is hidden here; its other usage
+   is already desktop+fullscreen-only (isDesktopWidth), so this alone
+   removes it everywhere it could show up on mobile. !important because
+   the plain .chart-depth-btn base rule further down (unconditional,
+   display:flex) has the same (0,1,0) specificity as a bare
+   .chart-grid-toggle-btn selector and comes later in the file — without
+   it, that rule won the cascade on source order alone and this never
+   actually took effect. */
+@media (max-width: 768px) {
+  .chart-grid-toggle-btn {
+    display: none !important;
   }
 }
 

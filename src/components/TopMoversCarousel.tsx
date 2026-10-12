@@ -167,10 +167,12 @@ export function TopMoversCarousel({ onSelectCoin }: Props) {
                 ) : (
                   <span className="tmc-card-icon tmc-card-icon--fallback">{m.symbol[0]}</span>
                 )}
-                <span className="tmc-card-sym">{m.symbol}</span>
+                <span className="tmc-card-sym">{m.name}</span>
+              </div>
+              <div className="tmc-card-bottom">
+                <span className="tmc-card-price">${fmtPrice(m.price)}</span>
                 <span className={`tmc-card-pct${up ? " up" : " down"}`}>{up ? "+" : ""}{m.pct.toFixed(2)}%</span>
               </div>
-              <span className="tmc-card-price">${fmtPrice(m.price)}</span>
             </button>
           );
         })}

@@ -32,7 +32,7 @@ const CONFIDENCE_RANK: Record<string, number> = { low: 0, medium: 1, high: 2 };
 // to match what the user actually asked to be notified about.
 export function useBuySignalRealtime(tier: Tier, profile: Profile | null): void {
   useEffect(() => {
-    if (!hasAccess(tier, "elite")) return; // matches BuySignals.tsx's own gate — no point alerting for a panel they can't open
+    if (!hasAccess(tier, "pro")) return; // matches BuySignals.tsx's own gate — no point alerting for a panel they can't open
 
     const channel = supabase
       .channel("buy-signal-fires-toast")

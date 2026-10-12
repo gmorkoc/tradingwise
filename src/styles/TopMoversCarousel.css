@@ -93,10 +93,18 @@
 
 .tmc-card {
   flex-shrink: 0;
-  width: 132px;
+  /* Sized to its own content (icon + full name on the top row, usually
+     the widest part) instead of one fixed width for every card — "BTC"
+     stays compact, "Internet Computer" gets the room it needs. Bounded
+     by min/max so a 3-letter symbol doesn't look cramped and a genuine
+     outlier name (e.g. "cat in a dogs world") wraps instead of making
+     one card dominate the whole scroll strip. */
+  width: max-content;
+  min-width: 112px;
+  max-width: 200px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   padding: 8px 10px;
   border-radius: 9px;
   border: 1px solid var(--pc-border);
@@ -104,8 +112,9 @@
   cursor: pointer;
   text-align: left;
   font: inherit;
-  /* Safety net so nothing inside (long symbol, wide % text) can ever
-     visually spill past the card's own rounded border. */
+  /* Safety net for the price/% row only now — the name wraps instead of
+     overflowing, and the card has no fixed height, so this only clips
+     any stray horizontal spillover without limiting vertical growth. */
   overflow: hidden;
   transition: transform 0.15s, border-color 0.15s;
 }
@@ -113,16 +122,8 @@
 
 .tmc-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  /* A flex row's children don't shrink below their own content size by
-     default — with a fixed-width card, that pushed the % text (which
-     must never truncate) past the border whenever icon+symbol+% didn't
-     all fit, most visible on iOS with its slightly wider system-font
-     metrics. min-width:0 on the symbol below (the one item allowed to
-     shrink/truncate) is what actually fixes it; this row just needs to
-     not fight that. */
-  min-width: 0;
 }
 .tmc-card-icon {
   width: 16px;
@@ -130,6 +131,10 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  /* Name below can wrap to 2+ lines (long names are never truncated,
+     see .tmc-card-sym) — nudge the icon down to align with the first
+     line of text instead of the whole wrapped block's vertical center. */
+  margin-top: 1px;
 }
 .tmc-card-icon--fallback {
   display: flex;
@@ -145,12 +150,19 @@
   font-weight: 700;
   color: var(--pc-text);
   flex-grow: 1;
-  /* The one thing allowed to truncate — % change (flex-shrink:0 below)
-     and the icon must always stay fully visible and intact. */
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Full coin name, never cut off — wraps across lines instead of
+     truncating; the card (flex column, no fixed height) grows to fit. */
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.25;
+}
+
+.tmc-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .tmc-card-price {
@@ -179,7 +191,7 @@
      mobile left inset (PriceChart.css), so this row lines up with
      Watchlist above and the chart below. */
   .tmc-strip { padding: 8px 12px 8px 7px; }
-  .tmc-card { width: 112px; padding: 7px 9px; }
+  .tmc-card { min-width: 100px; padding: 7px 9px; }
 }
 
 /* ── Mobile/iOS vertical list variant — see TopMoversCarousel.tsx's

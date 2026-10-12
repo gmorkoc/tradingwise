@@ -900,7 +900,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                   </button>
                 </div>
 
-                {hasAccess(tier, "elite") && (
+                {hasAccess(tier, "pro") && (
                   <>
                     <div className="pp-notif-row">
                       <div>

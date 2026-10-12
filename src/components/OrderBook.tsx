@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { useTranslation } from "react-i18next";
-import { CoinSymbol, fetchBn } from "../services/coinglass";
+import { CoinSymbol, fetchBn, isBinanceBanned } from "../services/coinglass";
 import "../styles/OrderBook.css";
 
 // Gates the two dropdowns below (precision, exchange) to a native bottom
@@ -277,20 +277,54 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
   const [asks, setAsks] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
+  // True when the selected exchange's own fetch failed and this poll is
+  // instead showing Coinbase's book — surfaced in the UI (below) so the
+  // displayed levels never silently disagree with what the Exchange
+  // dropdown says is selected.
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     setUnavailable(false);
+    setUsingFallback(false);
     setLoading(true);
     setBids([]);
     setAsks([]);
 
     async function poll() {
+      // fetchBn's own circuit breaker (coinglass.ts) already throws
+      // synchronously without a real network call once Binance has 418'd
+      // this IP — this skip is just avoiding that pointless call-through
+      // each 2.5s poll, not a meaningful load reduction on its own.
+      const bannedOnBinance = exchange === "Binance" && isBinanceBanned();
       try {
+        if (bannedOnBinance) throw new Error("Binance banned");
         const book = await fetchBook(exchange, coin);
         setBids(book.bids);
         setAsks(book.asks);
+        setUsingFallback(false);
         setLoading(false);
-      } catch {
+      } catch (err) {
+        if (exchange !== "Coinbase") {
+          try {
+            const book = await fetchCoinbase(coin);
+            setBids(book.bids);
+            setAsks(book.asks);
+            setUsingFallback(true);
+            setUnavailable(false);
+            setLoading(false);
+            return;
+          } catch (fallbackErr) {
+            // Kept even though the UI just shows "unavailable" — without
+            // this, a Coinbase-side failure (vs. a genuine no-data 404)
+            // left zero trace to debug from, same blind spot this exact
+            // case (NEAR showing unavailable despite both exchanges
+            // having real data when checked directly) ran into.
+            // eslint-disable-next-line no-console
+            console.error("[OrderBook] primary + Coinbase fallback both failed", {
+              coin, exchange, primaryErr: err, fallbackErr,
+            });
+          }
+        }
         setUnavailable(true);
         setLoading(false);
       }
@@ -416,6 +450,11 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
           {loading && <div className="ob-loading">{t("orderBook.loading")}</div>}
           {!loading && unavailable && (
             <div className="ob-loading">{t("orderBook.unavailable", { coin, exchange })}</div>
+          )}
+          {!loading && !unavailable && usingFallback && (
+            <div className="ob-fallback-note">
+              {t("orderBook.fallbackNote", { exchange, coin })}
+            </div>
           )}
 
           {!loading && !unavailable && (

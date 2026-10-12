@@ -1897,7 +1897,7 @@ function IndicatorPill({
 
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true }) => {
   const { tier } = useAuth();
-  const isElite = hasAccess(tier, "elite");
+  const isPaid = hasAccess(tier, "pro");
   const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const candlesRef = useRef<CandleDataPoint[]>([]);
@@ -2763,16 +2763,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => { cancelled = true; };
   }, [coin, intervalIdx, retryKey]);
 
-  // Auto-refresh — elite only. Paused while this section isn't the active
+  // Auto-refresh — pro+ only. Paused while this section isn't the active
   // one (component stays mounted-but-hidden rather than unmounting, to
   // preserve chart state across nav — see the "visible" prop) so a
   // background tab doesn't keep firing network fetches for a chart no
   // one's looking at.
   useEffect(() => {
-    if (!isElite || !visible) return;
+    if (!isPaid || !visible) return;
     const id = setInterval(() => fetchCandles(false), interval.refresh);
     return () => clearInterval(id);
-  }, [fetchCandles, interval.refresh, isElite, visible]);
+  }, [fetchCandles, interval.refresh, isPaid, visible]);
 
   // Suppress AI auto-trigger when page returns from background (idle/lock screen)
   useEffect(() => {
@@ -2832,10 +2832,10 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [visible]);
 
-  // Daily close banner — elite only. Paused while hidden — this one does a
+  // Daily close banner — pro+ only. Paused while hidden — this one does a
   // real network fetch every 60s, not just a cheap countdown tick.
   useEffect(() => {
-    if (!isElite || !visible) return;
+    if (!isPaid || !visible) return;
     const BINANCE_SYM: Record<string, string> = {
       BTC: "BTCUSDT", ETH: "ETHUSDT", XRP: "XRPUSDT", SOL: "SOLUSDT",
       DOGE: "DOGEUSDT", ADA: "ADAUSDT", SUI: "SUIUSDT", BNB: "BNBUSDT",
@@ -2871,47 +2871,47 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     return () => clearInterval(id);
   }, [coin, visible]);
 
-  // MTF biases — elite only
+  // MTF biases — pro+ only
   useEffect(() => {
-    if (!isElite) return;
+    if (!isPaid) return;
     fetchMTFBiases(coin as string).then(setMtfBiases).catch(() => {});
     setWizardIntent(null);
     setPredData(null);
-  }, [coin, isElite]);
+  }, [coin, isPaid]);
 
   // Weekly TEMA cycle data — fetched once per coin, cached by Binance layer
   useEffect(() => {
-    if (!isElite || !coin) return;
+    if (!isPaid || !coin) return;
     coinglass.getCandles(coin as string, "1w", 500).then(cs => {
       if (cs.length < 60) return;
       const closes = cs.map(c => c.close);
       setWeeklyCycle({ candles: cs, tema14: calcTEMA(closes, 14), tema21: calcTEMA(closes, 21) });
     }).catch(() => {});
-  }, [coin, isElite]);
+  }, [coin, isPaid]);
 
   // Volume Profile — fixed 2-week lookback at 1h resolution, independent
   // of whatever interval is active on the main chart (matches how a real
   // "2W" volume profile reference is meant to work).
   useEffect(() => {
-    if (!isElite || !coin) return;
+    if (!isPaid || !coin) return;
     coinglass.getCandles(coin as string, "1h", 336).then(cs => {
       const vp = detectVolumeProfile(cs);
       volumeProfileRef.current = vp;
       setVolumeProfile(vp);
       if (candlesRef.current.length > 0) feedChart(candlesRef.current);
     }).catch(() => {});
-  }, [coin, isElite, feedChart]);
+  }, [coin, isPaid, feedChart]);
 
   // Session reference levels — daily candles, independent of active interval
   useEffect(() => {
-    if (!isElite || !coin) return;
+    if (!isPaid || !coin) return;
     coinglass.getCandles(coin as string, "1d", 10).then(cs => {
       const sl = computeSessionLevels(cs);
       sessionLevelsRef.current = sl;
       setSessionLevels(sl);
       if (candlesRef.current.length > 0) feedChart(candlesRef.current);
     }).catch(() => {});
-  }, [coin, isElite, feedChart]);
+  }, [coin, isPaid, feedChart]);
 
   // Historical fractal/pattern-analog search — always on DAILY candles
   // regardless of what interval is on screen, since this is specifically
@@ -2925,7 +2925,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // have moved on since). `cancelled` guards against a slower in-flight
   // fetch for a since-abandoned coin/tab state clobbering a newer one.
   useEffect(() => {
-    if (!isElite || !coin || rightTab !== "fractal") return;
+    if (!isPaid || !coin || rightTab !== "fractal") return;
     let cancelled = false;
     setFractalLoading(true);
     // 6000 daily candles (~16y) comfortably exceeds any coin's actual
@@ -2947,11 +2947,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       setFractalAnalogs(null);
     }).finally(() => { if (!cancelled) setFractalLoading(false); });
     return () => { cancelled = true; };
-  }, [coin, isElite, rightTab]);
+  }, [coin, isPaid, rightTab]);
 
-  // Run AI + macro fetch when flagged — elite only
+  // Run AI + macro fetch when flagged — pro+ only
   useEffect(() => {
-    if (!isElite || !triggerAI.current || candles.length < 20) return;
+    if (!isPaid || !triggerAI.current || candles.length < 20) return;
     triggerAI.current = false;
 
     const ind     = buildIndicators(candles);
@@ -3111,7 +3111,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const secondsAgo = refreshedAt ? Math.floor((Date.now() - refreshedAt.getTime()) / 1000) : null;
 
   return (
-    <BlurGate requiredTier="elite" featureName="Inside the Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
+    <BlurGate requiredTier="pro" featureName="Inside the Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
       <div className="cw-page">
 
         {/* ── AI Scan Overlay ── */}

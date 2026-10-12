@@ -444,11 +444,13 @@
 }
 
 /* Mobile (narrow viewport, same breakpoint the rest of the floating-nav
-   mobile work uses) — full-screen, slides down from the top, same
-   treatment as NotificationsCenter.css's .notif-panel/@keyframes
-   notif-slide-down, not a centered backdrop modal. Desktop (the bell in
-   .mch-right, isWideDesktop) is untouched — still the original centered
-   modal, this only ever applies below 640px. */
+   mobile work uses) — full-screen, not a centered backdrop modal. Entrance
+   is the same subtle fade + rise + scale GlobalSearch's own full-screen
+   sheet uses (.gs-docked-in, GlobalSearch.css) rather than a full-height
+   slide down from off-screen — that read as a banner dropping in, not a
+   sheet appearing in place. Desktop (the bell in .mch-right,
+   isWideDesktop) is untouched — still the original centered modal, this
+   only ever applies below 640px. */
 @media (max-width: 640px) {
   .buysig-backdrop {
     display: none;
@@ -464,7 +466,7 @@
     max-height: none;
     border: none;
     border-radius: 0;
-    animation: buysig-slide-down 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: buysig-sheet-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
   }
   .buysig-panel-header {
     padding-top: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)));
@@ -473,7 +475,7 @@
     padding-bottom: max(12px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
   }
 }
-@keyframes buysig-slide-down {
-  from { transform: translateY(-100%); }
-  to   { transform: translateY(0); }
+@keyframes buysig-sheet-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }

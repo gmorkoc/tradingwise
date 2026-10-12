@@ -235,6 +235,67 @@ html[data-theme="light"] .mg-feature-card {
   background: rgba(0, 0, 0, 0.02);
 }
 
+/* ── EliteUpsellModal: standalone popup version of .bg-elite-card ───────────
+   Agent Ready is a floating trigger, not a page section with content to
+   blur behind it (what BlurGate below assumes), so this gets its own
+   full-screen backdrop instead of BlurGate's inline .bg-overlay. */
+.bg-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: bg-modal-fade 0.2s ease;
+}
+
+@keyframes bg-modal-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.bg-elite-card--modal {
+  animation: bg-modal-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bg-modal-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bg-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 1rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  z-index: 1;
+}
+.bg-modal-close:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+html[data-theme="light"] .bg-modal-close {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #64748b;
+}
+html[data-theme="light"] .bg-modal-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+}
+
 /* ── BlurGate ────────────────────────────────────────────────────────────── */
 .bg-root {
   position: relative;
@@ -506,6 +567,14 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   justify-content: space-between;
 }
 
+/* EliteUpsellModal's close button (.bg-modal-close) is position:absolute
+   at the card's own top-right corner — same corner the price sits in via
+   justify-content:space-between above, so without this the two overlap.
+   BlurGate's card has no close button, so it doesn't need the reserve. */
+.bg-elite-card--modal .bg-elite-top {
+  padding-right: 42px;
+}
+
 .bg-elite-badge {
   display: inline-flex;
   align-items: center;
@@ -617,6 +686,10 @@ html[data-theme="light"] .bg-card-features li { color: var(--color-text-secondar
   line-height: 1;
   flex-shrink: 0;
   margin-top: 1px;
+  /* inline-flex so a nested .ta-trigger-orb (Agent Ready's feature tile)
+     blockifies correctly — plain text icons render the same either way. */
+  display: inline-flex;
+  align-items: center;
 }
 
 .bg-elite-feat-title {
@@ -847,11 +920,52 @@ html[data-theme="light"] .bg-proration-back { color: #94a3b8; }
 html[data-theme="light"] .bg-proration-success p { color: #334155; }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+
+/* Full-screen takeover on mobile (iOS + mobile web) for every promo
+   surface built on .bg-elite-card — BlurGate's inline overlay and
+   EliteUpsellModal's standalone popup alike — same bottom-sheet pattern
+   UpgradeModal.css's .upgrade-card already uses, so they read consistently
+   instead of floating as a small card over the page. .bg-overlay normally
+   sits position:absolute within whatever section BlurGate wraps (sized to
+   that section, not the viewport); fixed+inset:0 here breaks it out to a
+   true full-screen takeover the same way a modal would. */
+@media (max-width: 680px) {
+  .bg-overlay,
+  .bg-root--top .bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    align-items: flex-end;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .bg-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .bg-elite-card,
+  .bg-elite-card--pro,
+  .bg-elite-card--modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    overflow-y: auto;
+    padding: max(20px, var(--native-safe-area-top, env(safe-area-inset-top))) 18px 36px;
+  }
+
+  .bg-modal-close {
+    top: max(14px, var(--native-safe-area-top, env(safe-area-inset-top)));
+  }
+}
+
 @media (max-width: 540px) {
   .mg-feature-grid  { grid-template-columns: 1fr; }
   .mg-free-perks    { grid-template-columns: 1fr; }
   .mg-title         { font-size: 1.4rem; }
   .mg-wall          { padding: 48px 20px; }
   .bg-elite-features { grid-template-columns: 1fr; }
-  .bg-elite-card    { padding: 20px 18px 18px; }
 }

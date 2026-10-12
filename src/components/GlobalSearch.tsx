@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
-import { Capacitor } from "@capacitor/core";
-import { Keyboard } from "@capacitor/keyboard";
 import { COINS, CoinSymbol } from "../services/coinglass";
 import "../styles/GlobalSearch.css";
 
@@ -122,27 +120,6 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     }
   }, [open]);
 
-  // capacitor.config.ts sets Keyboard resize:'none', so .gs-docked (a
-  // position:fixed card already anchored just above FloatingNavBar) never
-  // shrinks away from the keyboard on its own — the keyboard just covers
-  // it. Same fix CoinChat.tsx/TradingAgent.tsx already use for their own
-  // fixed-position panels: push it up by the keyboard height on show, put
-  // it back on hide. The base offset is .gs-docked's own CSS `bottom`
-  // (nav-bar height + gaps), so this adds on top of it rather than
-  // replacing it.
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform() || variant !== "docked") return;
-    const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
-      if (dockedRef.current) {
-        dockedRef.current.style.bottom = `calc(18px + env(safe-area-inset-bottom) + 62px + 8px + ${info.keyboardHeight}px)`;
-      }
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      if (dockedRef.current) dockedRef.current.style.bottom = "";
-    });
-    return () => { showSub.then(s => s.remove()); hideSub.then(s => s.remove()); };
-  }, [variant]);
-
   /* Build results */
   const results: SearchResult[] = [];
   if (query.trim()) {
@@ -239,9 +216,32 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
   const sectionResults = results.filter(r => r.type === "section");
   const docked = variant === "docked";
 
+  // Direct one-tap access to the agent, same spot/idea as YouTube's own
+  // "Ask YouTube" pill living right in its search bar — not something you
+  // have to type a query to discover as a result further down. Short
+  // "Ask" label (not "Ask Agent ready") specifically so this fits inline
+  // in the input row on mobile too, not just desktop — the full label
+  // was what forced it onto its own row below in the first place.
+  const agentPillBtn = (
+    <button
+      type="button"
+      className="gs-agent-pill"
+      onClick={() => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); }}
+      title="Ask Agent ready"
+    >
+      {/* The identical floating-trigger orb (TradingAgent.css's
+          .ta-trigger-orb — global class, not scoped to .ta-trigger, so it
+          renders pixel-identical here: same gradient sphere, rotation,
+          and pulsing glow), just shrunk down to pill size. */}
+      <span className="ta-trigger-orb gs-agent-pill-orb" aria-hidden="true" />
+      Ask
+    </button>
+  );
+
   const content = (
     <>
       {/* Search input */}
+      <div className="gs-input-row">
       <div className="gs-input-wrap">
         <svg className="gs-input-icon" width="16" height="16" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -258,26 +258,15 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
         {query && (
           <button className="gs-clear" onClick={() => setQuery("")}>✕</button>
         )}
-        {/* Direct one-tap access to the agent, same spot/idea as YouTube's
-            own "Ask YouTube" pill living right in its search bar — not
-            something you have to type a query to discover as a result
-            further down. Always visible (not conditional on `query`), and
-            jumping straight to the agent is the whole point, so this also
-            closes search instead of leaving a now-irrelevant dropdown open
-            behind it. */}
-        <button
-          type="button"
-          className="gs-agent-pill"
-          onClick={() => { window.dispatchEvent(new CustomEvent("open-trading-agent")); onClose(); }}
-          title="Ask Agent ready"
-        >
-          {/* The identical floating-trigger orb (TradingAgent.css's
-              .ta-trigger-orb — global class, not scoped to .ta-trigger, so
-              it renders pixel-identical here: same gradient sphere,
-              rotation, and pulsing glow), just shrunk down to pill size. */}
-          <span className="ta-trigger-orb gs-agent-pill-orb" aria-hidden="true" />
-          Ask Agent ready
-        </button>
+        {agentPillBtn}
+      </div>
+      {/* Full-screen (mobile, web + native) has no "outside" left to
+          tap-dismiss (the catcher behind it is fully covered) — this is
+          its only close affordance, a native app's own standard "search
+          field + Cancel" layout. */}
+      {docked && (
+        <button type="button" className="gs-cancel-btn" onClick={onClose}>Cancel</button>
+      )}
       </div>
 
       {/* Results */}
@@ -345,7 +334,7 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     return ReactDOM.createPortal(
       <>
         <div className="gs-docked-catcher" onMouseDown={onClose} />
-        <div className="gs-docked" ref={dockedRef}>{content}</div>
+        <div className="gs-docked gs-docked--fullscreen" ref={dockedRef}>{content}</div>
       </>,
       document.body
     );

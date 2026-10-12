@@ -693,7 +693,33 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
 
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media (max-width: 580px) {
-  .pp-modal { border-radius: 16px; height: min(94vh, 660px); }
+  /* Full-screen takeover on mobile (iOS + mobile web) — same bottom-sheet
+     pattern as UpgradeModal/EliteUpsellModal, instead of a small floating
+     card. */
+  .pp-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .pp-modal {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+    animation: pp-sheet 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes pp-sheet {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  /* .pp-close sits in normal flow inside .pp-header (not absolutely
+     positioned), so the header itself needs the safe-area clearance now
+     that .pp-overlay's own padding (which used to provide it) is 0. */
+  .pp-header {
+    padding-top: max(20px, var(--native-safe-area-top, env(safe-area-inset-top)));
+  }
 
   .pp-body { flex-direction: column; }
 

@@ -36,6 +36,15 @@ function addRetry(instance: AxiosInstance, retries = 2) {
 // each one independently discovering + potentially extending the same ban.
 let bnBannedUntil = 0;
 
+// Lets a call site skip straight to a non-Binance fallback instead of
+// paying for a guaranteed-to-throw attempt first (OrderBook.tsx's
+// Coinbase fallback, in particular — without this it re-triggered the
+// circuit breaker's synchronous throw every single poll for the whole
+// ban duration, needlessly doubling load onto the fallback exchange).
+export function isBinanceBanned(): boolean {
+  return Date.now() < bnBannedUntil;
+}
+
 function parseBanTimestamp(msg: unknown): number {
   const match = typeof msg === 'string' ? msg.match(/banned until (\d+)/) : null;
   return match ? parseInt(match[1], 10) : 0;
@@ -501,6 +510,43 @@ async function fetchPriceCandles(
 }
 
 
+// Granularities (in seconds) Coinbase's own candles endpoint actually
+// supports — everything else (1s, 4h, weekly, monthly) has no clean
+// equivalent there, so those intervals just keep Binance's existing
+// stale-cache-or-throw behavior with no second-exchange fallback.
+const COINBASE_GRANULARITY: Partial<Record<string, number>> = {
+  '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '6h': 21600, '1d': 86400,
+};
+
+// Used only as a fallback when Binance itself is unreachable (rate-limit
+// ban, outage, proxy hiccup) — called directly (no /bn-api-style proxy),
+// same as OrderBook.tsx's own Coinbase fetch, since Coinbase's public API
+// allows direct browser CORS requests, unlike Binance.
+async function fetchCoinbaseKlines(
+  coin: CoinSymbol | string,
+  interval: string,
+  limit: number,
+): Promise<CandleDataPoint[]> {
+  const granularity = COINBASE_GRANULARITY[interval];
+  if (!granularity) return [];
+  const productId = `${coin}-USD`;
+  const res = await fetch(
+    `https://api.exchange.coinbase.com/products/${productId}/candles?granularity=${granularity}`,
+  );
+  if (!res.ok) return [];
+  const raw = (await res.json()) as [number, number, number, number, number, number][];
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  // Coinbase returns [time, low, high, open, close, volume], newest-first
+  // — flip to the ascending order the rest of the app expects and cap to
+  // the same candle count Binance would have been asked for.
+  return raw
+    .slice(0, limit)
+    .reverse()
+    .map(([time, low, high, open, close, volume]) => ({ time, open, high, low, close, volume }))
+    .filter(c => Number.isFinite(c.time) && Number.isFinite(c.open) &&
+      Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close));
+}
+
 async function fetchBinanceKlines(
   coin: CoinSymbol | string,
   interval: string,
@@ -557,6 +603,16 @@ async function fetchBinanceKlines(
   const promise = (async (): Promise<CandleDataPoint[]> => {
     try { return await doFetch(); }
     catch (err) {
+      // Binance down/rate-limited — try live Coinbase data before falling
+      // back to a stale cache, so a real outage still shows a fresh (if
+      // from a different exchange) chart rather than old numbers.
+      try {
+        const fallback = await fetchCoinbaseKlines(coin, interval, limit);
+        if (fallback.length > 0) {
+          candleCache.set(key, { data: fallback, fetchedAt: Date.now() });
+          return fallback;
+        }
+      } catch { /* Coinbase fallback also failed — fall through below */ }
       if (cached?.data.length) return cached.data;  // serve stale rather than failing
       throw err;                                      // no cache — let caller handle it
     }
@@ -1757,6 +1813,28 @@ export interface TickerSnapshot {
   quoteVolume: number; // quote asset / USD notional
 }
 
+// Single-product spot ticker, used only as a Binance fallback below —
+// called directly (no /bn-api-style proxy) since Coinbase's public API
+// allows direct browser CORS requests, same as OrderBook.tsx's own
+// Coinbase fetch and fetchCoinbaseKlines above.
+async function fetchCoinbaseSpotTicker(
+  coin: string,
+): Promise<{ bid: number; ask: number; volume: number; price: number } | null> {
+  try {
+    const res = await fetch(`https://api.exchange.coinbase.com/products/${coin}-USD/ticker`);
+    if (!res.ok) return null;
+    const row = (await res.json()) as Record<string, string>;
+    const bid = parseFloat(row.bid ?? '0');
+    const ask = parseFloat(row.ask ?? '0');
+    const volume = parseFloat(row.volume ?? '0');
+    const price = parseFloat(row.price ?? '0');
+    if (!bid && !ask && !price) return null;
+    return { bid, ask, volume, price };
+  } catch {
+    return null;
+  }
+}
+
 // Bid/ask + base-asset volume for one coin's fullscreen chart header —
 // Binance's /24hr ticker already carries both alongside the high/low/price
 // fields fetchCoin24hTickers reads, so this is the same endpoint scoped to
@@ -1772,7 +1850,16 @@ export async function getTickerSnapshot(coin: string): Promise<TickerSnapshot | 
       quoteVolume: parseFloat(row.quoteVolume ?? '0'),
     };
   } catch {
-    return null;
+    // Binance down/rate-limited — Coinbase has no quoteVolume field, so
+    // it's approximated from price × base volume rather than left at 0.
+    const fallback = await fetchCoinbaseSpotTicker(coin);
+    if (!fallback) return null;
+    return {
+      bid: fallback.bid,
+      ask: fallback.ask,
+      volume: fallback.volume,
+      quoteVolume: fallback.price * fallback.volume,
+    };
   }
 }
 
@@ -1787,10 +1874,10 @@ export async function fetchLivePrice(coin: string): Promise<number | null> {
   try {
     const res = await bnApi.get('/api/v3/ticker/price', { params: { symbol: `${coin}USDT` } });
     const price = parseFloat(res.data?.price ?? '0');
-    return price > 0 ? price : null;
-  } catch {
-    return null;
-  }
+    if (price > 0) return price;
+  } catch { /* fall through to Coinbase below */ }
+  const fallback = await fetchCoinbaseSpotTicker(coin);
+  return fallback && fallback.price > 0 ? fallback.price : null;
 }
 
 export async function fetchFundingRate(coin: string): Promise<number | null> {

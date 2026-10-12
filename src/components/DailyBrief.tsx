@@ -272,7 +272,14 @@ const ThumbPlaceholder: React.FC<{ category: Category; className: string }> = ({
   />
 );
 
-type SheetState = "minimized" | "collapsed" | "expanded";
+// "collapsed" = the small persistent dock (title + handle only). "expanded"
+// = the compact teaser card (title + one featured story) that now auto-
+// opens on page load. "full" = the big reading view (title + featured
+// story + the rest of the list), reached by tapping/dragging up from
+// "expanded" — what "expanded" itself used to mean before this became a
+// 4-size sheet instead of 3. "minimized" = almost fully closed; reaching
+// it is what actually dismisses the whole thing (see the effect below).
+type SheetState = "minimized" | "collapsed" | "expanded" | "full";
 
 interface Props {
   // Same 24h ticker map App.tsx already fetches for the coin picker —
@@ -283,23 +290,32 @@ interface Props {
   // rendered in-flow next to the chart on desktop — see its render branch
   // below and .db-page in DailyBrief.css.
   variant?: "sheet" | "page";
-  // Fires when the user taps this sheet's own close (X) button — lets a
-  // parent that conditionally mounts this component (e.g. FloatingNavBar's
-  // morph toggle) know to unmount it too, instead of the parent still
-  // thinking it's open while this has quietly gone dormant via its own
-  // internal `dismissed` state.
+  // Fires when sheetState reaches "minimized" (dragged down past
+  // "collapsed" — there's no close (X) button anymore) — lets a parent
+  // that conditionally mounts this component (e.g. FloatingNavBar's morph
+  // toggle) know to unmount it too, instead of the parent still thinking
+  // it's open while this has quietly gone dormant.
   onDismiss?: () => void;
 }
 
 export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", onDismiss }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
-  // "expanded" (not the old teaser-first "collapsed") — this is now only
-  // ever mounted by an explicit tap on FloatingNavBar's Daily Brief icon
-  // (see App.tsx's dailyBriefOpen), a deliberate "I want to read this"
-  // action, not an always-present ambient teaser anymore.
-  const [sheetState, setSheetState] = useState<SheetState>("expanded");
-  const [dismissed, setDismissed] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  // Forces a re-render every 30s purely so the "Updated Xm ago" label
+  // next to the title keeps advancing between actual data refreshes —
+  // timeAgo() itself has no way to re-trigger a render on its own.
+  const [, setFreshnessTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setFreshnessTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  // Starts "collapsed" — the docked pill, not the teaser — since this now
+  // auto-mounts on page load (App.tsx's dailyBriefOpen starts true); a
+  // fresh page load landing straight on the bigger teaser card every time
+  // read as too intrusive, docked is the quiet default and tapping/
+  // dragging it up is how you actually get to the teaser/full views.
+  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
@@ -308,6 +324,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   const [video, setVideo] = useState<FeaturedVideo | null>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [videoEmbedFailed, setVideoEmbedFailed] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const knownUrlsRef = useRef<Set<string> | null>(null);
   const listRowsRef = useRef<HTMLDivElement>(null);
@@ -333,6 +350,13 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     const lastScrollTop = new WeakMap<EventTarget, number>();
     const onScroll = (e: Event) => {
       const target = e.target as HTMLElement | Document;
+      // Scrolling the brief's OWN article list (.db-card's internal
+      // overflow, reachable while "expanded" or "full") must never affect
+      // its own visibility — someone actively reading through that list
+      // needs to be able to scroll it freely without the whole thing
+      // collapsing/hiding out from under them mid-read. Only scrolling
+      // something OUTSIDE the sheet — the page behind it — should.
+      if (target instanceof Node && sheetRef.current?.contains(target)) return;
       const scrollTop = target instanceof Document
         ? (target.scrollingElement?.scrollTop ?? 0)
         : target.scrollTop;
@@ -340,6 +364,10 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
       lastScrollTop.set(target, scrollTop);
       const delta = scrollTop - prev;
       if (Math.abs(delta) < SCROLL_HIDE_THRESHOLD) return;
+      // Drops either open size ("expanded," the teaser that auto-opens on
+      // page load, or "full") straight to "collapsed," which the logic
+      // right below then immediately slides off-screen on a scroll-down.
+      setSheetState((s) => (s === "expanded" || s === "full" ? "collapsed" : s));
       if (delta > 0 && scrollTop > 40) setScrollHidden(true);
       else if (delta < 0) setScrollHidden(false);
     };
@@ -367,6 +395,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     }
     knownUrlsRef.current = freshUrls;
     setItems(brief);
+    setUpdatedAt(Date.now());
   }, []);
 
   useEffect(() => {
@@ -473,7 +502,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     // go either way (up to expand, down to minimize), the other two states
     // can only be dragged back toward collapsed.
     let clamped = delta;
-    if (sheetState === "expanded") clamped = Math.max(0, delta);
+    if (sheetState === "full") clamped = Math.max(0, delta);
     if (sheetState === "minimized") clamped = Math.min(0, delta);
     setDragY(clamped);
   };
@@ -499,14 +528,25 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
       // both "tap event, then hide" and "hide, then tap event" orderings.
       setTimeout(() => {
         if (document.visibilityState === "hidden") return;
-        setSheetState((s) => (s === "collapsed" ? "expanded" : "collapsed"));
+        // Steps up one size at a time: dock → teaser → full reading view,
+        // then back down to dock (tapping while "full" doesn't close it
+        // outright — same "never a surprise dismissal from a tap" idea as
+        // the rest of this gesture set).
+        setSheetState((s) => {
+          if (s === "collapsed") return "expanded";
+          if (s === "expanded") return "full";
+          return "collapsed";
+        });
       }, TAP_CONFIRM_DELAY_MS);
     } else if (delta < -DRAG_THRESHOLD) {
-      // dragged up
-      setSheetState((s) => (s === "minimized" ? "collapsed" : "expanded"));
+      // dragged up — straight to "full" from either resting state below it
+      setSheetState((s) => (s === "minimized" ? "collapsed" : "full"));
     } else if (delta > DRAG_THRESHOLD) {
-      // dragged down
-      setSheetState((s) => (s === "expanded" ? "collapsed" : "minimized"));
+      // dragged down — straight to "collapsed" (the dock) from either state
+      // above it, never straight to "minimized"/dismissed from a drag on
+      // "full" or "expanded" — only dragging down FROM "collapsed" itself
+      // (the else branch below) goes all the way to "minimized."
+      setSheetState((s) => (s === "full" || s === "expanded" ? "collapsed" : "minimized"));
     }
   };
 
@@ -524,16 +564,13 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     setDragY(0);
   };
 
-  // "expanded" is the only real resting state from this entry point now —
-  // dragging (or tapping the handle) away from it used to land on
-  // "collapsed" as its own docked teaser state, with "minimized" a further
-  // drag beyond that. Neither is wanted here: any move off "expanded"
-  // should act exactly like hitting the close (X) button, immediately,
-  // not animate down into a docked sliver first. Catching both states
-  // (not just "minimized") means the very first drag-down already closes
-  // it — no second drag needed to actually make it go away.
+  // "collapsed" (the dock) is a legitimate persistent resting state now —
+  // reached by scrolling the page, by a tap, or by a drag, none of which
+  // should close the brief outright (it should still be sitting there,
+  // docked, next time you look). Only "minimized" — dragged further still,
+  // past the dock — actually closes it.
   useEffect(() => {
-    if (sheetState === "collapsed" || sheetState === "minimized") onDismiss?.();
+    if (sheetState === "minimized") onDismiss?.();
   }, [sheetState, onDismiss]);
 
   // The "blog" card — a single, always-crypto lead story with its own
@@ -765,8 +802,21 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
             {refreshButton}
           </span>
           <span className="db-live">
-            <span className="db-live-dot" />
+            <span className="db-live-bars">
+              <span />
+              <span />
+              <span />
+              <span />
+            </span>
             {t("nav.live")}
+            {updatedAt !== null && (
+              <>
+                <span className="db-live-sep" />
+                <span className="db-live-updated">
+                  {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
+                </span>
+              </>
+            )}
           </span>
         </div>
         <div className="db-page-list">
@@ -780,34 +830,46 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     );
   }
 
-  if (items.length === 0 || dismissed || chatActive) return null;
-
-  // Collapsed teaser shows the same lead story the featured blog card
-  // below expands into, not just whatever's newest overall (which could
-  // be a non-crypto item).
-  const current = featured ?? items[0];
+  if (items.length === 0 || chatActive) return null;
 
   return (
     <>
+      {sheetState === "full" && (
+        <div className="db-backdrop" onClick={() => setSheetState("expanded")} />
+      )}
       {sheetState === "expanded" && (
-        <div className="db-backdrop" onClick={() => setSheetState("collapsed")} />
+        <div className="db-backdrop db-backdrop--soft" onClick={() => setSheetState("collapsed")} />
       )}
       <div
-        className={`db-sheet${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${(sheetState === "collapsed" || (IS_IOS && sheetState === "minimized")) && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
+        ref={sheetRef}
+        className={`db-sheet${sheetState === "collapsed" ? " db-sheet--collapsed" : ""}${sheetState === "expanded" ? " db-sheet--expanded" : ""}${sheetState === "full" ? " db-sheet--full" : ""}${sheetState === "minimized" ? " db-sheet--minimized" : ""}${(sheetState === "collapsed" || (IS_IOS && sheetState === "minimized")) && scrollHidden ? " db-sheet--scroll-hidden" : ""}`}
         style={{ "--db-drag-y": `${dragY}px` } as React.CSSProperties}
       >
+        {/* No close (X) button anymore — dismissing is drag-only now
+            (drag down past "collapsed" into "minimized," which the effect
+            above already treats as a real close). The LIVE badge took
+            over this same top-right corner spot instead, shown at every
+            size including docked — not just inline next to the title in
+            the head row anymore. */}
         {sheetState !== "minimized" && (
           <div className="db-traffic-lights">
-            <button
-              className="db-tl-btn db-tl-btn--close"
-              onClick={(e) => { e.stopPropagation(); setDismissed(true); onDismiss?.(); }}
-              aria-label={t("dailyBrief.close")}
-              title={t("dailyBrief.close")}
-            >
-              <svg className="db-tl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+            <span className="db-live">
+              <span className="db-live-bars">
+                <span />
+                <span />
+                <span />
+                <span />
+              </span>
+              {t("nav.live")}
+              {updatedAt !== null && (
+                <>
+                  <span className="db-live-sep" />
+                  <span className="db-live-updated">
+                    {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
+                  </span>
+                </>
+              )}
+            </span>
           </div>
         )}
         <div
@@ -822,27 +884,35 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
           <div className="db-head">
             <span className="db-head-title-row">
               <span className="db-head-title">{t("dailyBrief.title")}</span>
-              {sheetState === "expanded" && refreshButton}
-              <span className="db-live">
-                <span className="db-live-dot" />
-                {t("nav.live")}
-              </span>
+              {sheetState === "full" && refreshButton}
             </span>
-            {sheetState !== "expanded" && (
-              <span className="db-head-teaser">{current.title}</span>
-            )}
+            {/* Collapsed (the dock) shows just the plain title now — no
+                headline/news preview text at all, not even the one-line
+                truncated version this used to show. "expanded"/"full"
+                never showed it either (they already show the real
+                featured card in full below), so nothing renders this
+                anymore — kept as dead code isn't worth it here, just
+                removed. */}
           </div>
         </div>
 
-        <div className="db-card">
-          <div className="db-card-list">
-            {featuredCard}
-            {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
-            <div ref={listRowsRef} className="db-list-rows">
-              {latestRows}
+        {/* Collapsed (the dock) shows the plain title only — this used to
+            stay mounted and just get visually clipped by the sheet's
+            76px max-height/overflow:hidden, but a sliver of it (its own
+            glossy background, a cut-off word of the featured badge text)
+            still peeked out past that clip. Unmounting it outright for
+            "collapsed"/"minimized" is the actual fix, not a tighter clip. */}
+        {sheetState !== "collapsed" && sheetState !== "minimized" && (
+          <div className="db-card">
+            <div className="db-card-list">
+              {featuredCard}
+              {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
+              <div ref={listRowsRef} className="db-list-rows">
+                {latestRows}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

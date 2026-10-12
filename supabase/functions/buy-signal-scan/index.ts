@@ -148,13 +148,16 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  // Every elite profile opted into *something* here — per-fire eligibility
+  // Every pro+ profile opted into *something* here — per-fire eligibility
   // (direction toggle, muted coin, min confidence) is resolved per event
-  // below, since it varies per coin/direction, not just per user.
+  // below, since it varies per coin/direction, not just per user. Was
+  // elite-only; BuySignals.tsx's own client-side gate (and the realtime
+  // hook that alerts it) now admit pro too, so this must match or pro
+  // users would see the panel/badge but never actually get pushed to.
   const { data: eliteProfiles } = await supabaseAdmin
     .from("profiles")
     .select("id, alert_sound, notify_buy_signals, notify_sell_signals, signal_muted_coins, signal_watchlist_coins, signal_min_confidence")
-    .eq("tier", "elite")
+    .in("tier", ["pro", "elite"])
     .or("notify_buy_signals.eq.true,notify_sell_signals.eq.true");
   const allProfiles = eliteProfiles ?? [];
   const soundByUser = allProfiles.length

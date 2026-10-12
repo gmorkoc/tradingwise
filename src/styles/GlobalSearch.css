@@ -77,39 +77,45 @@
 }
 .gs-clear:hover { color: var(--color-text); background: var(--color-input-bg); }
 
-/* "Agent ready" pill — a faithful clone of TradingAgent.css's own
-   floating trigger button (.ta-trigger: same dark capsule background,
-   padding, text color/size/weight, box-shadow, both themes), not a
-   separate visual treatment — same idea/placement as YouTube's own "Ask
-   YouTube" button living directly in the search bar, just styled to look
-   exactly like the real Agent Ready button rather than a new design. */
+/* "Agent ready" pill — started as a literal clone of TradingAgent.css's
+   own floating trigger button, but that dark/white capsule sitting right
+   underneath an already-bordered white search input read as two of the
+   same element stacked (no visual hierarchy, plus the floating orb's
+   glow — tuned for a 30px standalone button — turned into a blurry blob
+   at pill size). Now a tinted accent chip instead: a soft colored fill +
+   colored text clearly marks it as a distinct, tappable suggestion rather
+   than another input-shaped box. */
 .gs-agent-pill {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   flex-shrink: 0;
   border: none;
   border-radius: 999px;
-  background: #0a0d1c;
-  color: #d8dbe4;
-  padding: 8px 20px 8px 8px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  padding: 9px 18px 9px 12px;
   cursor: pointer;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease;
 }
-html[data-theme="light"] .gs-agent-pill {
-  background: #ffffff;
-  color: #1c1a3a;
-  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+.gs-agent-pill:hover,
+.gs-agent-pill:active {
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-primary-soft));
 }
-/* .ta-trigger-orb's own base rule is 30px (the floating button's size)
-   with no margin of its own (.ta-trigger-label carries that instead) —
-   both overridden here to the smaller pill size and that same 12px gap. */
+/* .ta-trigger-orb's own base rule is 30px with a glow (box-shadow) sized
+   to match — unscaled, that same glow radius swallows a 14px orb whole.
+   Scaled down proportionally here so it still reads as "the orb," just a
+   crisp small one instead of a haze. */
 .gs-agent-pill-orb {
-  width: 16px;
-  height: 16px;
-  margin-right: 12px;
+  width: 14px;
+  height: 14px;
+  margin-right: 0;
+  box-shadow:
+    0 0 5px 1px rgba(130, 180, 255, 0.5),
+    0 0 9px 3px rgba(80, 140, 255, 0.3);
 }
 
 /* ── Results list ────────────────────────────────────────────────────────── */
@@ -235,7 +241,11 @@ html[data-theme="light"] .gs-agent-pill {
 .gs-docked-catcher {
   position: fixed;
   inset: 0;
-  z-index: 69;
+  /* Above every DailyBrief state (.db-sheet's docked/teaser card at 400,
+     its "full" reading modal up to 100002) — search needs to come out on
+     top whenever both can be on screen at once, not just sit under
+     DailyBrief's floating dock. */
+  z-index: 100003;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
   animation: gs-docked-catcher-in 0.18s ease;
@@ -252,7 +262,7 @@ html[data-theme="light"] .gs-agent-pill {
      plus its height (~62px: 50px item + 6px top/bottom padding) plus a
      small 8px gap. */
   bottom: calc(18px + env(safe-area-inset-bottom) + 62px + 8px);
-  z-index: 70;
+  z-index: 100004;
   max-height: 50vh;
   display: flex;
   flex-direction: column;
@@ -271,3 +281,49 @@ html[data-theme="light"] .gs-docked {
   to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }
 .gs-docked .gs-list { max-height: 38vh; }
+
+/* Full screen for the whole docked variant now — mobile web and native
+   (iOS/Android) alike, covering the whole viewport instead of floating as
+   a card above FloatingNavBar, same as a native app's own full-screen
+   search convention. The .gs-docked-catcher behind it is still mounted
+   but fully covered, so there's nothing left to tap-dismiss —
+   .gs-cancel-btn below is the only way out. */
+.gs-docked--fullscreen {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  max-height: none;
+  border-radius: 0;
+  padding-top: env(safe-area-inset-top);
+}
+.gs-docked--fullscreen .gs-list {
+  max-height: none;
+  flex: 1;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+/* Row holding the search field + (docked/mobile only) Cancel button —
+   a plain pass-through wrapper everywhere else: .gs-input-wrap keeps its
+   own margin/sizing, this only adds horizontal layout once Cancel is
+   actually rendered. */
+.gs-input-row {
+  display: flex;
+  align-items: center;
+}
+.gs-input-row .gs-input-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.gs-cancel-btn {
+  flex-shrink: 0;
+  margin: 0 14px 0 2px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+

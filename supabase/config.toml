@@ -411,6 +411,12 @@ verify_jwt = false
 [functions.agent-watch-scan]
 verify_jwt = false
 
+# Admin-only repair tool, invoked by hand (not a client, not a cron job) —
+# checks its own x-admin-secret header instead of a user JWT. See the
+# comment at the top of its index.ts for what it's repairing.
+[functions.reconcile-stripe-subscriptions]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

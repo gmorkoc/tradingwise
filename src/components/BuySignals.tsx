@@ -105,7 +105,7 @@ interface Props {
 export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   const { t } = useTranslation();
   const { tier, user, profile, refreshProfile } = useAuth();
-  const isElite = hasAccess(tier, "elite");
+  const isPaid = hasAccess(tier, "pro");
   const [open, setOpen] = useState(false);
   // Lets FloatingNavBar's Signals icon drop its active/selected state the
   // moment this panel actually closes (however it closes — the ✕ button,
@@ -154,19 +154,19 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   // Fetch once on mount (so the trigger button's count badge is right even
   // before anyone opens it) and again every time it's opened, since the
   // scan itself only refreshes every 4h — no need to poll while closed.
-  // Elite-only: buy_signals rows are readable by any authenticated user
-  // (RLS), so without this gate a free/pro user would still see the bell's
+  // Pro+ only: buy_signals rows are readable by any authenticated user
+  // (RLS), so without this gate a free user would still see the bell's
   // count badge (a "there are N signals" teaser) despite the panel itself
-  // being upgrade-walled — this keeps the feature invisible below elite.
-  useEffect(() => { if (isElite) fetchSignals(); }, [isElite]);
-  useEffect(() => { if (open && isElite) fetchSignals(); }, [open, isElite]);
+  // being upgrade-walled — this keeps the feature invisible below pro.
+  useEffect(() => { if (isPaid) fetchSignals(); }, [isPaid]);
+  useEffect(() => { if (open && isPaid) fetchSignals(); }, [open, isPaid]);
   useEffect(() => {
-    if (open && isElite) fetchWatchlistSignals(watchlistCoins);
+    if (open && isPaid) fetchWatchlistSignals(watchlistCoins);
     // watchlistCoins is a derived array (new reference every render), so
     // this depends on its actual contents (joined) rather than the array
     // itself, or it'd refire on every render regardless of real changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isElite, watchlistCoins.join(",")]);
+  }, [open, isPaid, watchlistCoins.join(",")]);
 
   useEffect(() => {
     if (!open) return;
@@ -182,13 +182,20 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   // highlights that card instead of just landing on the top of the list.
   useEffect(() => {
     const onOpen = (e: Event) => {
+      // Same gate handleClick already applies to the desktop bell button —
+      // this event-driven path (FloatingNavBar's mobile Signals icon,
+      // push-toast taps) skipped it entirely, so a free/non-pro user on
+      // mobile could still open the full panel (watchlist, add-coin
+      // picker, etc.), just with no signal rows in it instead of being
+      // redirected to the upgrade flow like every other entry point.
+      if (!isPaid) { onOpenUpgrade(); return; }
       const detail = (e as CustomEvent<{ coin?: string }>).detail;
       setHighlightCoin(detail?.coin ?? null);
       setOpen(true);
     };
     window.addEventListener("open-buy-signals", onOpen);
     return () => window.removeEventListener("open-buy-signals", onOpen);
-  }, []);
+  }, [isPaid, onOpenUpgrade]);
 
   // Scroll to + highlight the coin the toast was about, once its card has
   // actually rendered (rows load async after the panel opens). Clears
@@ -203,7 +210,7 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   }, [open, rows, highlightCoin]);
 
   const handleClick = () => {
-    if (!isElite) { onOpenUpgrade(); return; }
+    if (!isPaid) { onOpenUpgrade(); return; }
     setHighlightCoin(null); // opening via the bell, not a specific toast — no stale target from last time
     setOpen((v) => !v);
   };

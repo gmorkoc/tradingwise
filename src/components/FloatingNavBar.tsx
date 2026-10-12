@@ -4,8 +4,8 @@ interface Props {
   signalsOpen: boolean;
   onSearch: () => void;
   searchOpen: boolean;
-  dailyBriefOpen: boolean;
-  onToggleDailyBrief: () => void;
+  onOpenProfile: () => void;
+  profileOpen: boolean;
   // Mirrors TradingAgent's own trigger dot — see the "trading-agent-
   // unread-change" event App.tsx listens for.
   agentUnread: boolean;
@@ -14,25 +14,34 @@ interface Props {
   // every width instead of only showing up on wide desktop.
   onOpenCalculator: () => void;
   calculatorOpen: boolean;
-  // Trading Agent is Pro+ (TradingAgent.tsx itself renders nothing for
-  // free users) — the orb stays visible here as a teaser rather than
-  // disappearing, same pattern as BuySignals' own gated trigger, but a
+  // Trading Agent is Elite-only (a live chat agent burns AI quota too fast
+  // for Pro's weekly limit) — the orb stays visible here as a teaser rather
+  // than disappearing, same pattern as BuySignals' own gated trigger, but a
   // locked tap needs to surface the upgrade prompt instead of silently
   // dispatching into a component that will just no-op.
   agentLocked: boolean;
-  onOpenUpgrade: () => void;
+  // Opens the dedicated Elite upsell card (EliteUpsellModal), not the
+  // generic multi-tier UpgradeModal — Agent Ready is the one reason shown.
+  onAgentLocked: () => void;
 }
 
 // Built from basic shape primitives (circle/rect/line) only, deliberately
 // — a hand-authored multi-point fill "d" path is easy to get subtly wrong
 // with no way to catch it without actually rendering it. Primitives can't
-// have that failure mode: a circle is a circle. The two exceptions
-// (Notifications' bell, Signals' trend line) reuse exact path data already
-// proven to render correctly elsewhere in this codebase, not new
-// hand-derived ones.
+// have that failure mode: a circle is a circle. The exceptions (Profile's
+// person glyph, Search's magnifying glass line+circle aside, Signals'
+// trend line) reuse exact path data already proven to render correctly
+// elsewhere in this codebase (AccountMenu.tsx/AuthModal.tsx for Profile),
+// not new hand-derived ones.
+//
+// Order: Signals, Calculator | Agent (raised, see the return below) |
+// Search, Profile — Calculator moved up to 2nd, Profile replaces Daily
+// Brief as the last icon (Daily Brief no longer has a nav trigger at all;
+// it auto-docks on page load now and floats above this bar on its own,
+// see DailyBrief.tsx/.css).
 function useItems({
-  signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen,
-}: Omit<Props, "agentUnread" | "agentLocked" | "onOpenUpgrade">) {
+  signalsOpen, onOpenCalculator, calculatorOpen, onSearch, searchOpen, onOpenProfile, profileOpen,
+}: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked">) {
   return [
     {
       label: "Signals",
@@ -49,20 +58,16 @@ function useItems({
       isActive: signalsOpen,
     },
     {
-      label: "Daily Brief",
+      label: "Calculator",
       icon: (
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="4" width="16" height="16" rx="2" />
-          <line x1="8" y1="9" x2="16" y2="9" />
-          <line x1="8" y1="13" x2="16" y2="13" />
-          <line x1="8" y1="17" x2="13" y2="17" />
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
         </svg>
       ),
-      // The bar itself animates away as the brief comes in — see
-      // .fnb-bar--brief-open — so this reads as the icon "becoming" the
-      // brief rather than a second panel stacking on top of the nav.
-      action: onToggleDailyBrief,
-      isActive: dailyBriefOpen,
+      action: onOpenCalculator,
+      isActive: calculatorOpen,
     },
     {
       label: "Search",
@@ -76,26 +81,26 @@ function useItems({
       isActive: searchOpen,
     },
     {
-      label: "Calculator",
+      label: "Profile",
+      // Same person glyph AccountMenu.tsx/AuthModal.tsx already use.
       icon: (
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10" />
-          <line x1="12" y1="20" x2="12" y2="4" />
-          <line x1="6" y1="20" x2="6" y2="14" />
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
         </svg>
       ),
-      action: onOpenCalculator,
-      isActive: calculatorOpen,
+      action: onOpenProfile,
+      isActive: profileOpen,
     },
   ];
 }
 
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
-  dailyBriefOpen, onToggleDailyBrief, agentUnread, onOpenCalculator, calculatorOpen,
-  agentLocked, onOpenUpgrade,
+  onOpenProfile, profileOpen, agentUnread, onOpenCalculator, calculatorOpen,
+  agentLocked, onAgentLocked,
 }: Props) {
-  const items = useItems({ signalsOpen, onSearch, searchOpen, onToggleDailyBrief, dailyBriefOpen, onOpenCalculator, calculatorOpen });
+  const items = useItems({ signalsOpen, onSearch, searchOpen, onOpenProfile, profileOpen, onOpenCalculator, calculatorOpen });
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
 
@@ -111,7 +116,7 @@ export function FloatingNavBar({
       <span className="fnb-item-icon-wrap">
         {item.icon}
       </span>
-      {item.isActive && <span className="fnb-item-label">{item.label}</span>}
+      <span className="fnb-item-label">{item.label}</span>
     </button>
   );
 
@@ -120,16 +125,15 @@ export function FloatingNavBar({
   // Swap target if this reads better than the raised-notch version.
   return (
     <nav
-      className={`fnb-bar${dailyBriefOpen ? " fnb-bar--brief-open" : ""}`}
+      className="fnb-bar"
       aria-label="Quick navigation"
-      aria-hidden={dailyBriefOpen}
     >
       {leftItems.map(renderItem)}
       <button
         type="button"
         className="fnb-item fnb-agent-item"
         onClick={() => {
-          if (agentLocked) { onOpenUpgrade(); return; }
+          if (agentLocked) { onAgentLocked(); return; }
           window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
         }}
         aria-label="Trading Agent"

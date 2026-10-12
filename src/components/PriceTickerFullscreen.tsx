@@ -175,7 +175,6 @@ export function PriceTickerFullscreen({
         </button>
       </div>
       <div className="pticker-inner">
-        <span className="pticker-price-source">via Binance</span>
         <div className="pticker-coin-name">
           <span className="pticker-coin-sym">{COIN_ICONS[coin] ?? coin[0]}</span>
           {coin}

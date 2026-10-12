@@ -1,7 +1,10 @@
 /* ── Floating trigger ──────────────────────────────────────────────────────
-   Dark capsule + a small glowing sphere, idle-status read ("Agent ready") —
-   a generic status-pill pattern, built fresh here (own markup/timing/
-   values), not copied from any reference. */
+   Flat capsule + a small glowing sphere, idle-status read ("Agent
+   ready"). The "Liquid Glass" treatment (backdrop blur/saturate,
+   specular highlight, fresnel edge glints) stays only on .fnb-bar
+   (FloatingNavBar.css) and .db-sheet (DailyBrief.css) now — this one
+   and .main-coin-header (App.css) were pulled back to the app's normal
+   flat-surface look. */
 .ta-trigger {
   position: fixed;
   right: 12px;
@@ -10,14 +13,14 @@
   display: inline-flex;
   align-items: center;
   padding: 8px 20px 8px 8px;
-  border: none;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  background: #0a0d1c;
-  color: #d8dbe4;
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
   transition: padding 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .ta-trigger--open { display: none; }
@@ -29,13 +32,6 @@
   .ta-trigger:hover {
     transform: scale(1.08);
   }
-}
-/* Light theme — light fill, dark text. The glowing orb itself stays the
-   same blue in both themes. */
-html[data-theme="light"] .ta-trigger {
-  background: #ffffff;
-  color: #1c1a3a;
-  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
 }
 /* Resting state — settles down to just the circle after a few idle
    seconds (see the component's collapse timeout), the orb's own padding

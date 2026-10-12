@@ -312,7 +312,9 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               <div className="bg-elite-features">
                 {features.map(f => (
                   <div key={f.title} className="bg-elite-feature">
-                    <span className="bg-elite-feat-icon">{f.icon}</span>
+                    <span className="bg-elite-feat-icon">
+                      {f.icon === "agentOrb" ? <span className="ta-trigger-orb" /> : f.icon}
+                    </span>
                     <div>
                       <p className="bg-elite-feat-title">{f.title}</p>
                       <p className="bg-elite-feat-desc">{f.desc}</p>

@@ -1,3 +1,6 @@
+/* Only rendered for "full" — the big reading view; the teaser ("expanded",
+   auto-opened on page load) and the dock ("collapsed") both sit un-dimmed
+   above the page/floating nav, never blocking them. */
 .db-backdrop {
   position: fixed;
   inset: 0;
@@ -5,27 +8,54 @@
   z-index: 100001;
   animation: db-fade-in 0.25s ease;
 }
+/* "expanded" (the teaser) gets a much lighter dim than "full" — just
+   enough to lift the card off the page a bit, not a real modal block.
+   z-index sits just under .db-sheet's own base 400 (not the base
+   .db-backdrop's 100001, which is tuned for sitting above .db-sheet--full
+   at 100002 — using that here would cover the teaser card itself). */
+.db-backdrop--soft {
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 399;
+}
 
 @keyframes db-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
+/* Floats above FloatingNavBar now (not flush to the screen's bottom edge)
+   — the base/resting position for "collapsed" (the dock) and "expanded"
+   (the teaser); "full" (the big reading view, .db-sheet--full below)
+   overrides back to bottom:0/flush, since that one's a real full-screen
+   modal takeover, not a floating card. Without this base override, the
+   collapsed dock used to render UNDER our own floating nav bar (both
+   position:fixed near the bottom, this sheet's z-index higher), covering
+   it instead of sitting cleanly above it the way the reference shows.
+   left/right/max-width match .fnb-bar's own exactly (FloatingNavBar.css)
+   — same 16px insets, no max-width cap — so the two read as the same
+   width stacked on top of each other instead of the sheet running
+   slightly wider (it used to use its own 10px-safe-area inset formula).
+   `bottom` is .fnb-bar's own bottom (16px) + its actual height (62px:
+   50px item + 6px top/bottom padding) + a clean 8px gap on top — no
+   env(safe-area-inset-bottom) added here, since .fnb-bar's own bottom
+   doesn't add it either; adding it only on this side was inflating the
+   gap by the full safe-area height (~34px on an iPhone's home indicator)
+   on iOS specifically, reading as a huge, unintentional-looking space
+   above the nav bar instead of a deliberate small one. */
 .db-sheet {
   position: fixed;
-  left: max(10px, var(--native-safe-area-left, env(safe-area-inset-left)));
-  right: max(10px, var(--native-safe-area-right, env(safe-area-inset-right)));
-  bottom: 0;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + 62px + 8px);
   z-index: 400;
-  max-width: 660px;
   margin: 0 auto;
+  /* Dark theme: flat surface, no glass (light theme below keeps its own
+     "Liquid Glass" translucency/specular treatment — only dark was
+     asked to be pulled back to the app's normal flat-surface look). */
   background: var(--color-surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
-  border-bottom: none;
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -4px 16px var(--color-shadow);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   max-height: 76px;
   display: flex;
@@ -39,15 +69,101 @@
     border-color 0.28s ease,
     box-shadow 0.28s ease;
 }
+html[data-theme="light"] .db-sheet {
+  /* Base alpha raised from 0.4 to 0.82 — at 0.4 this read as "barely
+     there" on a light page instead of frosted glass (page content
+     showed through far more than the blur/gradients alone intended). */
+  background:
+    radial-gradient(120% 55% at 25% -10%, rgba(255, 255, 255, 0.95), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5) 60%),
+    rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.5),
+    inset -1px 0 0 rgba(255, 255, 255, 0.3);
+}
 
+/* Docked (collapsed) only — a full pill, matching .fnb-bar's own
+   border-radius:999px (FloatingNavBar.css) exactly, since the two sit
+   stacked directly on top of each other at this size. Not applied to
+   "expanded"/"full" — 999px on something that tall would just read as an
+   oddly-rounded rectangle, not a pill, so those keep the smaller 18px
+   (base .db-sheet rule above) instead. */
+.db-sheet--collapsed {
+  border-radius: 999px;
+  /* .db-card is unmounted for this state now (DailyBrief.tsx) — .db-drag-
+     zone (handle + title row) is the only child left. The base 76px
+     max-height was sized to comfortably fit .db-card peeking in too; with
+     that gone, 76px left a visibly tall pill with empty space below the
+     title instead of a snug one — tightened directly to this content's
+     own natural height (padding + handle + title row) rather than
+     relying on justify-content to fill space that shouldn't be there in
+     the first place. */
+  max-height: 56px;
+  justify-content: center;
+}
+/* .db-head's own padding (16px 0, general rule further down) pushed this
+   state's content past the 56px cap above — overflow:hidden (.db-sheet)
+   plus centering then clipped equally off both ends, and since the
+   handle is the topmost child, it silently lost most/all of its height.
+   Docked only gets a tighter padding instead of growing the cap, so the
+   pill itself never gets any bigger. */
+.db-sheet--collapsed .db-head {
+  padding: 4px 0;
+}
+
+/* Auto-opens on page load now (App.tsx's dailyBriefOpen starts true) as a
+   floating teaser card, not a near-fullscreen reading modal — just the
+   title + one featured story, sized to fit that (not 78vh, which is what
+   .db-sheet--full below is for). Position/rounding/border already match
+   the base .db-sheet rule above (both float above FloatingNavBar now) —
+   only what's actually different from the base (taller max-height, a
+   stronger blur/shadow to read as "the active one") is overridden here. */
 .db-sheet--expanded {
-  max-height: 78vh;
+  max-height: 46vh;
+  /* A bit more lift than the base/docked shadow — this is the "active"
+     size, sitting further off the page than the flat dock. No inset
+     highlight glint here — that's a glass touch, and dark theme's
+     background (base .db-sheet rule above) is a flat opaque surface. */
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65);
+}
+html[data-theme="light"] .db-sheet--expanded {
+  /* Light theme's base background (html[data-theme="light"] .db-sheet)
+     is still translucent, so the blur here is doing real work — dark
+     theme's is opaque now and dropped it above. */
+  backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
+  box-shadow: 0 14px 32px rgba(30, 27, 75, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* The big reading view — what "expanded" used to mean before the teaser
+   ("expanded" above) took over the auto-opened-on-load role. Unlike every
+   other state (which floats above FloatingNavBar, never touching
+   bottom:0), "full" stretches all the way down to the real screen bottom
+   — it's a true full-screen modal takeover at this size (backdrop-
+   covered, above the nav bar in z-index, not floating beside it), not a
+   floating card anymore. Full width too (left/right:0, no side insets,
+   no max-width/margin) — the base .db-sheet rule's 16px insets exist to
+   match .fnb-bar's own width for the floating states, but at this size
+   it's a real full-screen sheet, not something sized to line up with the
+   nav bar underneath it anymore. */
+.db-sheet--full {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: none;
+  margin: 0;
+  max-height: 92vh;
+  border-radius: 18px 18px 0 0;
   z-index: 100002;
-  background: var(--color-surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: var(--color-border);
-  box-shadow: 0 -10px 30px var(--color-shadow);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+}
+html[data-theme="light"] .db-sheet--full {
+  backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
+  -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
+  box-shadow: 0 -10px 24px rgba(30, 27, 75, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* Slid almost entirely off-screen — just the handle peeks above the edge */
@@ -60,49 +176,47 @@
    also "minimized" on iOS only, since that's the default resting state
    there (see DailyBrief.tsx); web/desktop defaults to "collapsed" and
    never auto-hides from "minimized". Declared after
-   .db-sheet--minimized so it wins the transform when both are present. */
+   .db-sheet--minimized so it wins the transform when both are present.
+   100% (not more) clears the sheet's own height; the rest of this value
+   is the same floating gap .db-sheet's own `bottom` holds it above
+   FloatingNavBar by — without adding that back in, sliding down by just
+   the sheet's own height left most of it still inside the viewport,
+   since it now rests ~90px above the true bottom edge instead of at
+   bottom:0 like it did when this was first written as a flat 120%. */
 .db-sheet--scroll-hidden {
-  transform: translateY(120%);
+  transform: translateY(calc(100% + 16px + 62px + 8px + 20px));
 }
 
-/* macOS-style traffic lights: red/yellow/green dots, top-left corner */
+/* Used to hold the close (X) button (removed — dismissing is drag-only
+   now) — this corner spot is the LIVE badge's now instead, shown at every
+   size including docked (DailyBrief.tsx). top:10px lines up reasonably
+   with the title row for "expanded"/"full" (both top-align their content
+   inside a much taller card), but "collapsed" centers its own content
+   vertically (.db-sheet--collapsed's justify-content:center, now a much
+   shorter pill) — a fixed top offset there sat noticeably above the
+   title instead of level with it, so that state centers this too. */
 .db-traffic-lights {
   position: absolute;
   top: 10px;
-  right: 10px;
+  right: 16px;
   z-index: 1;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
-.db-tl-btn {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  margin: 0;
-  line-height: 0;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
-}
-
-.db-tl-btn:active {
-  transform: scale(0.9);
-}
-
-.db-tl-btn--close { background: transparent; color: var(--color-text-muted); }
-.db-tl-btn--close:hover { background: var(--color-border); color: var(--color-text); }
-
-.db-tl-icon {
-  display: block;
-  width: 14px;
-  height: 14px;
-  color: currentColor;
-  margin: auto;
+.db-sheet--collapsed .db-traffic-lights {
+  top: 50%;
+  transform: translateY(-50%);
+  /* Docked only — this badge sits on top of .db-drag-zone (z-index:1,
+     absolutely positioned over it), which otherwise silently ate taps
+     meant for the drag/tap-to-expand handlers on the zone beneath it.
+     Letting taps pass through here is exactly equivalent to tapping the
+     title/handle instead, so "tap anywhere on the docked pill" actually
+     holds everywhere, not just the parts .db-traffic-lights doesn't
+     cover. Not done for expanded/full — there the badge sits above
+     other interactive content (refresh button, etc.), not a tap target
+     that's supposed to be transparent to what's under it. */
+  pointer-events: none;
 }
 
 .db-refresh-btn {
@@ -148,8 +262,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px 6px;
+  gap: 0;
+  padding: 12px 16px;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -173,6 +287,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  padding: 16px 0;
 }
 
 .db-head-title-row {
@@ -182,36 +297,37 @@
 }
 
 .db-head-title {
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
   text-shadow: 0 1px 8px var(--color-shadow);
 }
 
-.db-head-teaser {
-  width: 100%;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 8px var(--color-shadow);
-}
-
 .db-sheet--expanded .db-head-title,
-.db-sheet--expanded .db-head-teaser {
+.db-sheet--full .db-head-title {
   text-shadow: none;
 }
 
+
+/* Same glossy identity as the outer .db-sheet/.ta-trigger — flat fill +
+   deep drop-shadow, no gradient, no border — but --color-surface-alt (a
+   step lighter than the sheet's own #0a0d1c in dark mode, a step dimmer
+   than its #ffffff in light mode) instead of the exact same color, so
+   this genuinely reads as its own glossy card floating inside the sheet
+   rather than blending flat into it. */
 .db-card {
   margin: 2px 14px 0;
   border-radius: 14px;
-  background: var(--color-surface);
+  background: var(--color-surface-alt);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+html[data-theme="light"] .db-card {
+  box-shadow: 0 4px 14px rgba(30, 27, 75, 0.1);
 }
 
 .db-card-list {
@@ -243,25 +359,63 @@
   gap: 4px;
   font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #fff;
+  letter-spacing: 0.04em;
+  color: #15803d;
   text-transform: uppercase;
-  background: #e11d48;
-  padding: 2px 7px 2px 6px;
-  border-radius: 4px;
+  background: #f0fdf4;
+  padding: 3px 7px 3px 5px;
+  border-radius: 999px;
+}
+/* Mobile only (.db-sheet — the floating sheet variant; .db-page is the
+   desktop sidebar one) and dark theme only — the light green pill read
+   as an odd bright patch against the sheet's dark card. Desktop and
+   light theme keep the background from the base rule above. */
+.db-sheet .db-live {
+  background: transparent;
+}
+html[data-theme="light"] .db-sheet .db-live {
+  background: #f0fdf4;
 }
 
-.db-live-dot {
-  width: 6px;
-  height: 6px;
+.db-live-sep {
+  width: 2px;
+  height: 2px;
   border-radius: 50%;
-  background: #fff;
-  animation: db-pulse 1.4s ease-in-out infinite;
+  background: currentColor;
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
-@keyframes db-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.7); }
+.db-live-updated {
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+.db-live-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 9px;
+  margin-right: 1px;
+}
+
+.db-live-bars span {
+  width: 2px;
+  border-radius: 1px;
+  background: #16a34a;
+  animation: db-bar-bounce 1s ease-in-out infinite;
+}
+
+.db-live-bars span:nth-child(1) { animation-delay: 0s; }
+.db-live-bars span:nth-child(2) { animation-delay: 0.18s; }
+.db-live-bars span:nth-child(3) { animation-delay: 0.36s; }
+.db-live-bars span:nth-child(4) { animation-delay: 0.54s; }
+
+@keyframes db-bar-bounce {
+  0%, 100% { height: 30%; }
+  50%      { height: 100%; }
 }
 
 /* Now a real <img> (see ThumbPlaceholder) sharing .db-list-thumb's own
@@ -296,10 +450,23 @@
   font-weight: 800;
 }
 
+/* Horizontal now (text left, a small square thumbnail right), not a big
+   full-width banner image stacked above the headline — matches the
+   reference's compact teaser-card layout, and keeps this fitting
+   comfortably inside .db-sheet--expanded's new, much shorter max-height
+   (DailyBrief.css's db-sheet--expanded) instead of needing room for a
+   150px-tall banner. row-reverse (not row) so the thumb/video button,
+   which comes FIRST in the JSX, visually lands on the right while the
+   text (.db-featured-title-link, second in the JSX) reads first on the
+   left. */
+/* Thumbnail sits BELOW the title now, not beside it — column-reverse
+   (not column) because the thumb/video block is still first in the JSX
+   and the title-link second; reversing flips which one reads as "on top"
+   visually without touching the markup order. */
 .db-featured-main {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: column-reverse;
+  gap: 10px;
   padding: 0 14px 10px;
 }
 
@@ -307,16 +474,26 @@
   display: block;
 }
 
+/* The thumb/video-button wrapper specifically — NOT .db-video-frame-wrap,
+   the actively-playing-video state, which still wants real room rather
+   than being squeezed down. Full width now (stacked under the title, not
+   beside it) — height alone (.db-featured-thumb/.db-video-thumb's own
+   84px) is what keeps it compact, not a fixed small square anymore. */
+.db-featured-main > *:first-child:not(.db-video-frame-wrap) {
+  width: 100%;
+}
+
 .db-featured-title-link {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
   text-decoration: none;
 }
 
 .db-featured-thumb {
   width: 100%;
-  height: 150px;
+  height: 130px;
   border-radius: 10px;
   object-fit: cover;
   background: var(--color-input-bg);
@@ -410,6 +587,12 @@
   text-align: left;
 }
 
+/* height matches .db-featured-thumb's own 84px (both sit in the same
+   84x84 slot — .db-featured-main > *:first-child above) — this was still
+   the old 150px (the pre-redesign full-width banner height) until now,
+   which let the image overflow its 84px-wide flex slot vertically instead
+   of actually fitting it, with the play button/caption below sized for
+   that much bigger banner too. */
 .db-video-thumb {
   width: 100%;
   height: 150px;
@@ -423,15 +606,15 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   padding-left: 3px;
   backdrop-filter: blur(2px);
   transition: background 0.15s, transform 0.15s;
@@ -442,20 +625,12 @@
   transform: translate(-50%, -50%) scale(1.08);
 }
 
+/* The "can't embed, watch on YouTube" caption (channel name + gradient)
+   doesn't fit this 84px thumbnail at all — not enough room to show it
+   legibly, so it's dropped here entirely; the play button alone is
+   enough of a "this is a video" affordance at this size. */
 .db-video-info {
-  position: absolute;
-  inset: auto 0 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 20px 10px 8px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
-}
-
-.db-video-channel {
-  font-size: 0.66rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.75);
+  display: none;
 }
 
 .db-video-frame-wrap {
@@ -639,16 +814,10 @@
     transform: translateY(calc(100% - 28px + var(--db-drag-y)));
   }
 
-  /* Fluid, edge-to-edge on iOS/mobile web — no side gutter, no 660px cap
-     (moot at these widths anyway, but explicit beats relying on the
-     viewport happening to be narrower than it). */
-  .db-sheet {
-    left: var(--native-safe-area-left, env(safe-area-inset-left));
-    right: var(--native-safe-area-right, env(safe-area-inset-right));
-    max-width: none;
-  }
-
-  /* The sheet itself goes edge-to-edge above, but the card and its content
+  /* The sheet keeps its base 16px insets at every width now (matching
+     .fnb-bar — see .db-sheet's own comment above); it used to go fully
+     edge-to-edge here instead, which read visibly wider than the floating
+     nav bar sitting right below it. The card and its content
      still carried the same 14px side gutter used at every width — on a
      narrow phone screen that reads as a lot of wasted margin either side
      of the headline/thumbnail. Tightened here, not removed outright, so
@@ -665,10 +834,6 @@
      (.db-timeline-marker), not a side gutter, so it isn't part of this. */
   .db-timeline { padding-right: 8px; }
   .db-section-label::before { left: 8px; right: 8px; }
-}
-
-@media (max-width: 480px) {
-  .db-sheet { border-radius: 16px 16px 0 0; }
 }
 
 /* ── "page" variant — always-visible sidebar rendered next to the chart

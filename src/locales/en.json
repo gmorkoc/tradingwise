@@ -37,7 +37,6 @@
     "unlimited": "Unlimited",
     "cancelAnytime": "Cancel anytime",
     "swipeToOpen": "Swipe to open menu",
-    "viaBinance": "via Binance",
     "strong": "Strong",
     "medium": "Medium",
     "weak": "Weak",
@@ -154,8 +153,8 @@
   "chart": {
     "title": "{{coin}}",
     "tabLabel": "Chart",
-    "live": "● LIVE",
-    "loading": "Loading chart data...",
+    "live": "LIVE",
+    "loading": "Loading chart data",
     "noData": "No chart data available",
     "failed": "Failed to fetch chart data",
     "indicators": "Indicators",
@@ -190,7 +189,6 @@
     "save": "Save",
     "orderDepth": "Order Depth",
     "compactView": "Compact View",
-    "live": "LIVE",
     "compactSubtitle": "Real-time price, updates every second",
     "expand": "Expand",
     "exit": "Exit",
@@ -703,54 +701,34 @@
       "perMonth": "/mo",
       "features": [
         {
-          "icon": "🕯️",
-          "title": "Inside the Candle",
-          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
-        },
-        {
-          "icon": "🎯",
-          "title": "Buy & Sell Signals",
-          "desc": "4h technical confluence scan, every coin"
-        },
-        {
-          "icon": "〰️",
-          "title": "Elliott Wave",
-          "desc": "5-wave detection · Fibonacci targets"
-        },
-        {
-          "icon": "🏦",
-          "title": "Coinbase Premium AI",
-          "desc": "Institutional vs retail flow"
+          "icon": "agentOrb",
+          "title": "Agent Ready",
+          "desc": "Live AI trading chat, no quota limits"
         },
         {
           "icon": "⚡",
           "title": "Unlimited AI",
-          "desc": "No weekly cap on any feature"
+          "desc": "No weekly cap on any AI feature"
         },
         {
-          "icon": "📊",
-          "title": "Alt Coin Analysis",
-          "desc": "100+ altcoins · deep AI analysis"
+          "icon": "✨",
+          "title": "Early Access",
+          "desc": "New features before anyone else"
         },
         {
-          "icon": "📈",
-          "title": "HTF Multi-Timeframe",
-          "desc": "Daily · weekly · monthly alignment"
-        },
-        {
-          "icon": "🔥",
-          "title": "Liquidation Heatmap",
-          "desc": "Full heatmap · AI commentary"
+          "icon": "✓",
+          "title": "Everything in Pro",
+          "desc": "Every Pro tool, included"
         }
       ],
       "signInBtn": "Sign in to upgrade",
       "upgradeBtn": "Upgrade to Elite",
       "redirecting": "Redirecting…",
       "trust": "Instant access · Includes everything in Pro",
-      "free_headline": "The Full Institutional Toolkit",
-      "free_sub": "Every AI feature, unlimited access, no weekly caps.",
-      "pro_headline": "One Step From Elite",
-      "pro_sub": "You're on Pro. Unlock 8 exclusive tools with one upgrade — $29 more per month.",
+      "free_headline": "Unlock Agent Ready",
+      "free_sub": "Elite gives you the live AI trading agent, plus unlimited AI requests across every feature.",
+      "pro_headline": "One Step From Agent Ready",
+      "pro_sub": "You're on Pro. Agent Ready and unlimited AI are one upgrade away — $29 more per month.",
       "pro_upgradeBtn": "Upgrade from Pro — $59.99/mo",
       "pro_trust": "+$29/mo · Keep all Pro features"
     }
@@ -781,21 +759,21 @@
         "label": "Pro",
         "features": [
           "Everything in Free",
+          "Buy & Sell Signals",
           "HTF Multi-Timeframe AI",
           "AI Market Intelligence",
           "On-Chain AI Analysis",
           "Price Prediction Chart",
           "Liquidation Heatmap AI",
+          "Inside the Candle",
+          "Coinbase Premium AI",
           "100 AI requests / week"
         ]
       },
       "elite": {
         "label": "Elite",
         "features": [
-          "Everything in Pro — unlimited",
-          "Buy & Sell Signals",
-          "Inside the Candle",
-          "Coinbase Premium AI",
+          "Everything in Pro — unlimited AI requests",
           "Early access to features"
         ]
       }
@@ -838,6 +816,10 @@
       "mostPopular": "Most Popular",
       "yourPlan": "Your Plan"
     },
+    "eliteCallout": {
+      "title": "Agent Ready — Unlimited AI Trading Chat",
+      "desc": "Chat live with the AI trading agent — ask about any coin, get trade ideas, no quota limits."
+    },
     "footer": {
       "proratedNote": "Plan switches are prorated · ",
       "manageBilling": "Manage billing",
@@ -870,7 +852,8 @@
     "error": "Something went wrong",
     "perMonth": "/mo",
     "lf": {
-      "elitePro": "Everything in Pro — unlimited",
+      "elitePro": "Unlimited AI requests",
+      "agentReady": "Agent Ready — AI Trading Chat",
       "candleai": "Inside the Candle",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Early access to new features",
@@ -878,7 +861,8 @@
       "onchain": "On-Chain AI Analysis",
       "predChart": "Price Prediction Chart",
       "liqHeatmap": "Liquidation Heatmap AI",
-      "aiReqs": "100 AI requests / week"
+      "aiReqs": "100 AI requests / week",
+      "buySignals": "Buy & Sell Signals"
     }
   },
   "landing": {
@@ -1054,12 +1038,15 @@
           "cta": "Start Pro",
           "features": [
             "Everything in Free",
+            "Buy & Sell Signals",
             "HTF Multi-Timeframe AI",
             "AI Market Intelligence",
             "On-Chain AI Analysis",
             "Price Prediction with scenarios",
             "Liquidation Heatmap AI",
             "Custom Strategy Alerts",
+            "Inside the Candle",
+            "Coinbase Premium AI",
             "100 AI requests / week"
           ]
         },
@@ -1070,10 +1057,7 @@
           "per": "/mo",
           "cta": "Go Elite",
           "features": [
-            "Everything in Pro — unlimited",
-            "Buy & Sell Signals",
-            "Inside the Candle",
-            "Coinbase Premium AI",
+            "Everything in Pro — unlimited AI requests",
             "Early access to features"
           ]
         }
@@ -1749,6 +1733,7 @@
     "title": "Order Book",
     "loading": "Loading…",
     "unavailable": "Not available for {{coin}} on {{exchange}}",
+    "fallbackNote": "{{exchange}} unavailable — showing Coinbase",
     "colPrice": "Price",
     "colSize": "Size",
     "colValue": "Value"
@@ -2358,7 +2343,8 @@
     }
   },
   "dailyBrief": {
-    "title": "Your Daily Brief",
+    "title": "Your daily brief",
+    "lastUpdated": "Updated",
     "loading": "Loading your daily brief…",
     "categoryCrypto": "Crypto",
     "categoryMarkets": "Markets",

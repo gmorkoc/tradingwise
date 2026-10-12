@@ -288,10 +288,12 @@ interface Props {
   // Same shape as App.tsx's own setActiveSection, just typed loosely here
   // since this component doesn't import SectionId.
   onNavigateToSection?: (section: string) => void;
-  // Called instead of opening the panel when a free-tier user tries to —
+  // Called instead of opening the panel when a non-elite user tries to —
   // see the trigger/open gating below. Same prop FloatingNavBar already
-  // takes for its own mobile Agent button (agentLocked/onOpenUpgrade).
-  onOpenUpgrade?: () => void;
+  // takes for its own mobile Agent button (agentLocked/onAgentLocked).
+  // Opens the dedicated Elite upsell card (EliteUpsellModal), not the
+  // generic multi-tier UpgradeModal — Agent Ready is the one reason shown.
+  onAgentLocked?: () => void;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -473,18 +475,21 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, onOpenUpgrade }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, onAgentLocked }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
-  // Free users see the trigger and can open the panel's shell, but any
-  // actual use gates to the upgrade flow instead — same tier check
-  // FloatingNavBar already applies to its own mobile Agent button
-  // (agentLocked={!hasAccess(tier, "pro")}), just enforced here too so
-  // every entry point (this component's own trigger, "open-trading-agent"/
-  // "toggle-trading-agent" dispatches from notifications/GlobalSearch/
-  // FloatingNavBar) is covered centrally rather than trusting each caller.
-  const canUseAgent = !!user && hasAccess(tier, "pro");
+  // Elite-only (not Pro) — a live chat agent burns through the AI quota far
+  // faster than any other AI feature, so gating it at Pro would make Pro's
+  // 100/week limit disappear in a handful of messages. Free/Pro users see
+  // the trigger and can open the panel's shell, but any actual use gates to
+  // the upgrade flow instead — same tier check FloatingNavBar already
+  // applies to its own mobile Agent button (agentLocked={!hasAccess(tier,
+  // "elite")}), just enforced here too so every entry point (this
+  // component's own trigger, "open-trading-agent"/"toggle-trading-agent"
+  // dispatches from notifications/GlobalSearch/FloatingNavBar) is covered
+  // centrally rather than trusting each caller.
+  const canUseAgent = !!user && hasAccess(tier, "elite");
 
   // Deliberately NOT persisted to localStorage (unlike portfolioCollapsed
   // below) — localStorage survives a full close+relaunch (a fresh WebView/
@@ -503,12 +508,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
   // else happening.
   useEffect(() => {
     const onOpen = () => {
-      if (!canUseAgent) { onOpenUpgrade?.(); return; }
+      if (!canUseAgent) { onAgentLocked?.(); return; }
       setOpen(true);
     };
     window.addEventListener("open-trading-agent", onOpen);
     return () => window.removeEventListener("open-trading-agent", onOpen);
-  }, [canUseAgent, onOpenUpgrade]);
+  }, [canUseAgent, onAgentLocked]);
 
   // FloatingNavBar's own raised Agent button (mobile, see hideTrigger
   // above) dispatches this on tap instead of calling setOpen directly —
@@ -517,12 +522,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
   // already-open panel).
   useEffect(() => {
     const onToggle = () => {
-      if (!canUseAgent) { onOpenUpgrade?.(); return; }
+      if (!canUseAgent) { onAgentLocked?.(); return; }
       setOpen((v) => !v);
     };
     window.addEventListener("toggle-trading-agent", onToggle);
     return () => window.removeEventListener("toggle-trading-agent", onToggle);
-  }, [canUseAgent, onOpenUpgrade]);
+  }, [canUseAgent, onAgentLocked]);
 
   // Browser notifications require an explicit user action to request
   // (see webPush.ts) — agent-watch-scan already sends a web push the
@@ -2250,7 +2255,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
           type="button"
           className={`ta-trigger${open ? " ta-trigger--open" : ""}${phase === "pop" ? " ta-trigger--collapsed" : ""}`}
           onClick={() => {
-            if (!canUseAgent) { onOpenUpgrade?.(); return; }
+            if (!canUseAgent) { onAgentLocked?.(); return; }
             setOpen((v) => !v);
           }}
         >

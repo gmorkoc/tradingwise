@@ -77,10 +77,16 @@ const PLANS = [
   },
 ];
 
-// Feature locale keys exclusive to each tier (used for "you'll lose" confirmation list)
+// Feature locale keys exclusive to each tier (used for "you'll lose" confirmation
+// list). Elite no longer has its own feature set — pro now includes everything
+// elite used to exclusively offer (Buy & Sell Signals, Inside the Candle,
+// Coinbase Premium AI), so the only things left to lose by dropping from elite
+// are the uncapped AI quota, early access, and Agent Ready (the live chat
+// agent — kept elite-only since it burns through the AI quota far faster
+// than any other feature, so it'd blow through pro's weekly cap in minutes).
 const EXCLUSIVE_FEATURE_KEYS: Record<string, string[]> = {
-  elite: ["upgradeModal.lf.elitePro", "upgradeModal.lf.candleai", "upgradeModal.lf.coinbase", "upgradeModal.lf.earlyAccess"],
-  pro:   ["upgradeModal.lf.aiMkt", "upgradeModal.lf.onchain", "upgradeModal.lf.predChart", "upgradeModal.lf.liqHeatmap", "upgradeModal.lf.aiReqs"],
+  elite: ["upgradeModal.lf.elitePro", "upgradeModal.lf.agentReady", "upgradeModal.lf.earlyAccess"],
+  pro:   ["upgradeModal.lf.buySignals", "upgradeModal.lf.candleai", "upgradeModal.lf.coinbase", "upgradeModal.lf.aiMkt", "upgradeModal.lf.onchain", "upgradeModal.lf.predChart", "upgradeModal.lf.liqHeatmap", "upgradeModal.lf.aiReqs"],
 };
 
 function lostFeaturesFor(currentTier: string, targetTier: string): string[] {
@@ -502,6 +508,17 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                       </span>
                       {plan.per && <span className="upgrade-plan-per">{t("upgradeModal.perMonth")}</span>}
                     </div>
+                    {plan.id === "elite" && (
+                      <div className="upgrade-agent-callout">
+                        <span className="upgrade-agent-callout-icon">
+                          <span className="ta-trigger-orb" />
+                        </span>
+                        <div className="upgrade-agent-callout-text">
+                          <p className="upgrade-agent-callout-title">{t("upgradeModal.eliteCallout.title")}</p>
+                          <p className="upgrade-agent-callout-desc">{t("upgradeModal.eliteCallout.desc")}</p>
+                        </div>
+                      </div>
+                    )}
                     <ul className="upgrade-plan-features">
                       {planFeatures.map(f => (
                         <li key={f}>
@@ -515,7 +532,7 @@ export const UpgradeModal: React.FC<Props> = ({ onClose, onOpenAuth }) => {
                     ) : ctaLabel ? (
                       <button
                         className={`upgrade-plan-cta${isLower ? " upgrade-plan-cta--down" : ""}`}
-                        style={{ background: isLower && plan.id === "free" ? "#ef4444" : isLower ? "#f59e0b" : plan.color }}
+                        style={isLower ? { background: plan.id === "free" ? "#ef4444" : "#f59e0b" } : undefined}
                         disabled={loading === plan.id}
                         onClick={() => handlePlanClick(plan)}
                       >

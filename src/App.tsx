@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import {
   coinglass,
@@ -43,19 +44,34 @@ import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
 import { TopMoversCarousel } from "./components/TopMoversCarousel";
 import { OnboardingWizard } from "./components/OnboardingWizard";
-import { WhatsNewModal } from "./components/WhatsNewModal";
+// import { WhatsNewModal } from "./components/WhatsNewModal"; — paused, see its commented render block below
 import { DailyBrief } from "./components/DailyBrief";
 import { PushToast } from "./components/PushToast";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { FloatingNavBar } from "./components/FloatingNavBar";
 import { NotificationsCenter } from "./components/NotificationsCenter";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
 import { UpgradeModal } from "./components/UpgradeModal";
+import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
+
+// No-op on web/desktop, where this plugin isn't meaningful (and may not
+// be present) — same convention as PriceChart.tsx/TradingAgent.tsx's own
+// hapticTap(). Medium rather than Light — Light was hard to feel
+// reliably on-device.
+function hapticTap() {
+  if (Capacitor.isNativePlatform()) {
+    Haptics.impact({ style: ImpactStyle.Medium }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("[hapticTap] Haptics.impact failed:", e);
+    });
+  }
+}
 
 // Mobile header pill only — drops the decimal portion for prices >= $1000
 // (e.g. "$83,646" instead of "$83,646.00") to keep the pill on one row.
@@ -432,15 +448,22 @@ function AppDashboard({
     // valid section reachable via hash — accept it explicitly.
     return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
   });
-  // Hidden by default — used to render unconditionally whenever on the
-  // chart tab (mobile), which collided visually with FloatingNavBar.
-  // Toggled from FloatingNavBar's "Daily Brief" item instead, which
-  // animates itself out as this comes in (see .fnb-bar--brief-open) so
-  // the nav bar reads as "becoming" the brief rather than the two
-  // stacking. DailyBrief's own close (X) button calls onDismiss below to
-  // keep this in sync — without that, closing it from inside would leave
-  // this stuck true with the nav bar still hidden and no way back.
-  const [dailyBriefOpen, setDailyBriefOpen] = useState(false);
+  // Starts true (not false) — the brief now auto-mounts docked on page
+  // load, same idea as Yahoo Finance's own home-screen brief, instead of
+  // waiting for an explicit tap on its floating-nav icon (DailyBrief.tsx's
+  // own sheetState starts "collapsed," the docked pill, not the bigger
+  // teaser — see its comment); the mobile-only render gate below
+  // (isWideDesktop/chartFullscreen/activeSection) still applies, so this
+  // is a no-op on desktop or any non-chart tab. The brief floats above
+  // FloatingNavBar (not a modal replacing it), so that bar stays fully
+  // visible/usable the whole time — see FloatingNavBar's own comment on
+  // its Daily Brief item. Dragging it down past the dock into "minimized"
+  // calls onDismiss below to keep this in sync (there's no close (X)
+  // button anymore).
+  const [dailyBriefOpen, setDailyBriefOpen] = useState(true);
+  // Tapping Agent Ready while locked (non-elite) opens this instead of the
+  // generic onOpenUpgrade — see the render block below, near TradingAgent.
+  const [showEliteUpsell, setShowEliteUpsell] = useState(false);
   // Badge count shown on FloatingNavBar's Notifications icon — kept in
   // sync by NotificationsCenter itself (mount-time fetch, and again
   // whenever something there changes it) via onUnreadCountChange, rather
@@ -543,7 +566,9 @@ function AppDashboard({
   }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  // showWhatsNew (the read) dropped — only its setter is still called below
+  // (the 3s-delay trigger), since the card itself is commented out/paused.
+  const [, setShowWhatsNew] = useState(false);
   const onboardingCheckedRef = useRef(false);
   // Defaults closed — a brand-new visitor with no stored preference yet
   // was getting the chat panel open on their very first load, since this
@@ -1610,7 +1635,10 @@ function AppDashboard({
           onSkip={() => setShowOnboarding(false)}
         />
       )}
-      {showWhatsNew && isWideDesktop && !Capacitor.isNativePlatform() && activeSection === "chart" && (
+      {/* What's New card paused/hidden for now (user request) — component
+          and its trigger logic (showWhatsNew etc.) left intact below,
+          just not rendered. Re-enable by uncommenting this block. */}
+      {/* {showWhatsNew && isWideDesktop && !Capacitor.isNativePlatform() && activeSection === "chart" && (
         <WhatsNewModal
           onClose={() => setShowWhatsNew(false)}
           onNavigate={(section) => {
@@ -1618,7 +1646,7 @@ function AppDashboard({
             else setActiveSection(section as SectionId);
           }}
         />
-      )}
+      )} */}
       <ProfilePage
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
@@ -1801,20 +1829,6 @@ function AppDashboard({
               <button
                 className="icon-strip-btn"
                 onClick={() => {
-                  setAssetPanelOpen((v) => !v);
-                  setMobileNavOpen(false);
-                }}
-                title={t("header.openCalculator")}
-              >
-                <span className="nav-icon-wrap">
-                  <NavIcon d={["M18 20V10", "M12 20V4", "M6 20V14"]} />
-                </span>
-                <span className="icon-strip-label">{t("header.openCalculator")}</span>
-              </button>
-
-              <button
-                className="icon-strip-btn"
-                onClick={() => {
                   setDrawerOpen(true);
                   setMobileNavOpen(false);
                 }}
@@ -1990,7 +2004,10 @@ function AppDashboard({
             <div className="mch-left">
               <button
                 className="mch-menu-btn"
-                onClick={() => setMobileNavOpen((v) => !v)}
+                onClick={() => {
+                  if (!mobileNavOpen) hapticTap();
+                  setMobileNavOpen((v) => !v);
+                }}
                 aria-label="Open menu"
               >
                 <svg
@@ -2064,7 +2081,6 @@ function AppDashboard({
                     </>
                   )}
                   <span className="price-source">
-                    via Binance{" "}
                     <span className="price-source-fs-hint">
                       ⛶ Double-click chart for fullscreen
                     </span>
@@ -2581,20 +2597,10 @@ function AppDashboard({
                 </BlurGate>
               )}
               {activeSection === "markets" && <GlobalMarkets />}
-              {activeSection === "marketheatmap" && (
-                <BlurGate
-                  requiredTier="pro"
-                  featureName="Market Heatmap"
-                  onOpenAuth={onOpenAuth}
-                  onOpenUpgrade={onOpenUpgrade}
-                  className="bg-root--top"
-                >
-                  <MarketHeatmap />
-                </BlurGate>
-              )}
+              {activeSection === "marketheatmap" && <MarketHeatmap />}
               {activeSection === "altanalysis" && (
                 <BlurGate
-                  requiredTier="elite"
+                  requiredTier="pro"
                   featureName="Alt Analysis"
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
@@ -2952,7 +2958,7 @@ function AppDashboard({
         selectedCoin={coin}
         hideTrigger={!isWideDesktop}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
-        onOpenUpgrade={onOpenUpgrade}
+        onAgentLocked={() => setShowEliteUpsell(true)}
       />
       <NotificationsCenter
         open={notificationsCenterOpen}
@@ -2968,13 +2974,23 @@ function AppDashboard({
           signalsOpen={signalsOpen}
           onSearch={() => setGlobalSearch(true)}
           searchOpen={globalSearch}
-          dailyBriefOpen={dailyBriefOpen}
-          onToggleDailyBrief={() => setDailyBriefOpen((v) => !v)}
+          onOpenProfile={() => setProfileOpen(true)}
+          profileOpen={profileOpen}
           agentUnread={agentUnread}
           onOpenCalculator={() => setAssetPanelOpen((v) => !v)}
           calculatorOpen={assetPanelOpen}
-          agentLocked={!hasAccess(tier, "pro")}
-          onOpenUpgrade={onOpenUpgrade}
+          agentLocked={!hasAccess(tier, "elite")}
+          onAgentLocked={() => setShowEliteUpsell(true)}
+        />
+      )}
+      {/* Agent Ready is elite-only (see hasAccess(tier, "elite") above) —
+          tapping it while locked shows this dedicated single-plan Elite
+          card instead of the generic 3-tier UpgradeModal, so the promo
+          stays scoped to the one tier that's actually relevant. */}
+      {showEliteUpsell && (
+        <EliteUpsellModal
+          onClose={() => setShowEliteUpsell(false)}
+          onOpenAuth={onOpenAuth}
         />
       )}
 
@@ -3196,9 +3212,20 @@ function AppGate() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppGate />
-    </AuthProvider>
+    <>
+      {/* Outside AuthProvider/AppGate entirely, deliberately — AppGate has
+          several early returns (boot screen, auth gate, terms gate) before
+          it ever reaches the dashboard; mounting this inside any one of
+          those branches would miss the others. This way it's guaranteed
+          to show regardless of auth/loading state — a connectivity notice
+          is exactly the kind of thing you still need to see while stuck
+          on, say, the boot screen because the network request behind it
+          never came back. */}
+      <OfflineBanner />
+      <AuthProvider>
+        <AppGate />
+      </AuthProvider>
+    </>
   );
 }
 

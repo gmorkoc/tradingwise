@@ -741,6 +741,46 @@ function writePatternCache(
   } catch {}
 }
 
+// ── Chart candle cache ──────────────────────────────────────────────────────
+// Last real candle set fetched for a coin/interval, persisted across page
+// loads/refreshes. On the very first load there's no in-memory stale data
+// to blur the way a coin switch has (see hasLoadedOnce) — this gives the
+// first-load placeholder the user's own actual last-seen chart (real
+// price scale and shape) instead of an arbitrary hardcoded sawtooth, so
+// it reads as "the chart, blurred" rather than visibly fake numbers.
+// Capped to the most recent 150 candles — plenty for a placeholder shape,
+// far smaller than a full history for localStorage's quota.
+function chartCandleCacheKey(coin: string, interval: string) {
+  return `chart_candles_${coin}_${interval}`;
+}
+function readChartCandleCache(
+  coin: string,
+  interval: string,
+): CandleDataPoint[] | null {
+  try {
+    const r = localStorage.getItem(chartCandleCacheKey(coin, interval));
+    if (!r) return null;
+    const parsed = JSON.parse(r);
+    return Array.isArray(parsed) && parsed.length > 0
+      ? (parsed as CandleDataPoint[])
+      : null;
+  } catch {
+    return null;
+  }
+}
+function writeChartCandleCache(
+  coin: string,
+  interval: string,
+  data: CandleDataPoint[],
+) {
+  try {
+    localStorage.setItem(
+      chartCandleCacheKey(coin, interval),
+      JSON.stringify(data.slice(-150)),
+    );
+  } catch {}
+}
+
 // ── Gann Pivot Detection ────────────────────────────────────────────────────
 
 interface GannPivot {
@@ -1142,6 +1182,47 @@ function detectCandlePattern(
   return null;
 }
 
+// Most candle sequences don't match any of detectCandlePattern's named
+// three-candle setups — that's normal, not a failure. Previously this just
+// meant `null` all the way through, which read as "pattern-insight is
+// broken" whenever the AI call on top of it was also unavailable (quota
+// exhausted on a lower tier, or the call failed/is still pending): a paid
+// user who'd already cleared the isPaid paywall gate got a blank gap
+// instead of any analysis at all. This gives them the same trend read the
+// interval banner already computed, in pattern-insight's own voice,
+// instead of nothing — AI still overwrites it when it succeeds (see the
+// getCandlePatternAnalysis call site), this is just what's always there
+// underneath that.
+function fallbackPatternInsight(
+  bannerSentiment: "bullish" | "bearish" | "neutral" | null,
+): PatternInsight {
+  if (bannerSentiment === "bullish") {
+    return {
+      name: "No Named Pattern — Trend Intact",
+      type: "bullish",
+      summary: "No classic candlestick formation in the last few candles, but the broader trend remains bullish.",
+      narrative: "There's no textbook three-candle setup right now, but price structure still favors buyers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
+      nextMove: "Stay aligned with the trend rather than waiting for a specific pattern to appear. A pullback to support is a reasonable area to watch for continuation.",
+    };
+  }
+  if (bannerSentiment === "bearish") {
+    return {
+      name: "No Named Pattern — Trend Intact",
+      type: "bearish",
+      summary: "No classic candlestick formation in the last few candles, but the broader trend remains bearish.",
+      narrative: "There's no textbook three-candle setup right now, but price structure still favors sellers overall. No named pattern doesn't mean no direction — the underlying trend is doing the talking here.",
+      nextMove: "Stay aligned with the trend rather than waiting for a specific pattern to appear. A bounce into resistance is a reasonable area to watch for continuation lower.",
+    };
+  }
+  return {
+    name: "No Clear Pattern",
+    type: "neutral",
+    summary: "No classic candlestick formation detected, and the broader trend is flat right now.",
+    narrative: "Price action lacks both a textbook pattern and a clear directional bias at the moment — this usually means the market is consolidating before its next real move.",
+    nextMove: "Wait for either a recognizable pattern or a decisive break from this range before leaning into a direction.",
+  };
+}
+
 // Applies overall-trend context so the pattern and banner never contradict.
 // If the detected pattern is bullish but the interval is in a downtrend
 // (or vice versa), the type is softened to "neutral" and the nextMove note
@@ -1149,10 +1230,10 @@ function detectCandlePattern(
 function trendAwarePattern(
   candles: CandleDataPoint[],
   bannerSentiment: "bullish" | "bearish" | "neutral" | null,
-): PatternInsight | null {
+): PatternInsight {
   const result = detectCandlePattern(candles);
-  if (!result || !bannerSentiment || bannerSentiment === "neutral")
-    return result;
+  if (!result) return fallbackPatternInsight(bannerSentiment);
+  if (!bannerSentiment || bannerSentiment === "neutral") return result;
 
   if (result.type === "bullish" && bannerSentiment === "bearish")
     return {
@@ -1173,6 +1254,35 @@ function trendAwarePattern(
         " Treat this as a caution flag rather than a primary short signal.",
     };
   return result;
+}
+
+// A hardcoded placeholder chart drawn into the real candle/line/volume
+// series on first page load/refresh only (see hasLoadedOnce) — there's no
+// real stale data yet to blur the way a later coin/interval switch has,
+// so this fills the canvas with a plausible-looking shape purely so
+// there's something present to blur instead of an empty box. Gets
+// overwritten by redrawCandleSeries(data) the instant the real fetch
+// resolves.
+function makeFakeFirstLoadCandles(): CandleDataPoint[] {
+  const closes = [
+    100, 102, 101, 104, 103, 106, 105, 108, 107, 110, 109, 112, 111, 114, 113,
+    116, 115, 118, 117, 120, 119, 122, 121, 124, 123, 126, 125, 128, 127, 130,
+  ];
+  const now = Math.floor(Date.now() / 1000);
+  const step = 3600;
+  return closes.map((close, i) => {
+    const open = i === 0 ? close - 1 : closes[i - 1];
+    const high = Math.max(open, close) + 1;
+    const low = Math.min(open, close) - 1;
+    return {
+      time: now - (closes.length - i) * step,
+      open,
+      high,
+      low,
+      close,
+      volume: 50 + ((i * 37) % 60),
+    };
+  });
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -1198,6 +1308,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   const [interval, setInterval] = useState<TimeInterval>("1day");
   const [loading, setLoading] = useState(true);
+  // True once the very first fetch has completed — distinguishes "first
+  // page load/refresh" (nothing real to blur yet, so placeholder content
+  // fills in below) from a later coin/interval switch (real stale content
+  // already exists and blurs in place instead).
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [error, setError] = useState("");
   const [trends, setTrends] = useState<IntervalTrends>({});
   const [banner, setBanner] = useState<IntervalAnalysis | null>(null);
@@ -1218,7 +1333,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showMA20, setShowMA20] = useState(false);
   const [showMA50, setShowMA50] = useState(false);
   const [showMA200, setShowMA200] = useState(false);
-  const [showGann, setShowGann] = useState(false);
+  // setShowGann dropped — nothing can turn this on while the Gann Pivots
+  // checkbox is commented out of the indicators menu above (user request);
+  // restoring that checkbox should also restore the setter here.
+  const [showGann] = useState(false);
   const [showFib, setShowFib] = useState(false);
   const [showSR, setShowSR] = useState(false);
   const [showZones, setShowZones] = useState(false);
@@ -2089,14 +2207,58 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const fetch = async () => {
       setLoading(true);
       setError("");
+      if (!hasLoadedOnce) {
+        await waitForSeriesReady();
+        if (!cancelled) {
+          // Prefer the user's own real last-seen candles for this coin/
+          // interval (persisted across page loads) over the generic
+          // hardcoded shape — real price scale, real history, actually
+          // theirs, just stale for a moment. Only genuinely new
+          // coin/interval combos ever fall back to the synthetic one.
+          const fake =
+            readChartCandleCache(coin, interval) ?? makeFakeFirstLoadCandles();
+          // Force the Line series specifically, regardless of whatever
+          // chartStyleRef/candle series visibility happens to be at this
+          // exact point in the mount sequence — this placeholder only
+          // ever draws once, on the very first load, before fullscreen or
+          // any style toggle is reachable, so always-line is correct here.
+          lineCloseRef.current?.setData(
+            fake.map((c) => ({ time: c.time, value: c.close })),
+          );
+          lineCloseRef.current?.applyOptions({ visible: true, color: "#818cf8" });
+          candleRef.current?.applyOptions({ visible: false });
+          volumeRef.current?.setData(
+            fake.map((c) => ({
+              time: c.time,
+              value: c.volume ?? 0,
+              color:
+                c.close >= c.open
+                  ? "rgba(74,222,128,0.45)"
+                  : "rgba(251,113,133,0.45)",
+            })),
+          );
+          chartRef.current?.timeScale().fitContent();
+        }
+      }
       try {
         const fresh = await coinglass.getHistoricalCandles(interval, coin);
         if (cancelled) return;
         const data = fresh.length > 0 ? fresh : lastCandlesRef.current;
         if (data.length === 0) {
           setError("No chart data available");
+          // Nothing real ever came in for this coin/interval, so whatever
+          // is on the canvas right now is only the fake/cached first-load
+          // placeholder (see makeFakeFirstLoadCandles/readChartCandleCache
+          // above) — showing it next to an error message reads as real
+          // (if stale) data, which it never was.
+          lineCloseRef.current?.setData([]);
+          candleRef.current?.setData([]);
+          volumeRef.current?.setData([]);
         } else {
-          if (fresh.length > 0) lastCandlesRef.current = fresh;
+          if (fresh.length > 0) {
+            lastCandlesRef.current = fresh;
+            writeChartCandleCache(coin, interval, fresh);
+          }
           await waitForSeriesReady();
           if (cancelled) return;
           redrawCandleSeries(data);
@@ -2289,9 +2451,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }
         }
       } catch {
-        if (!cancelled) setError("Failed to fetch chart data");
+        if (!cancelled) {
+          setError("Failed to fetch chart data");
+          // Same reasoning as the "No chart data available" branch above —
+          // only clear when there's no real data to fall back on, so a
+          // failed refetch on an already-loaded coin still shows its last
+          // real (stale) chart rather than wiping a working view.
+          if (lastCandlesRef.current.length === 0) {
+            lineCloseRef.current?.setData([]);
+            candleRef.current?.setData([]);
+            volumeRef.current?.setData([]);
+          }
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setHasLoadedOnce(true);
+        }
       }
     };
     fetch();
@@ -2388,13 +2564,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
   }, [interval, coin]);
 
-  // ── Clear stale state on coin/refresh change ─────────────────────────────
+  // ── Refetch interval trends on coin/refresh change ───────────────────────
+  // banner/zone/patternInsight are intentionally left alone here — they
+  // used to get nulled out immediately, which meant those panels just
+  // vanished the instant a coin/interval switch started instead of
+  // staying on screen (blurred, see .price-chart-container--loading) until
+  // the fresh fetch actually replaces them.
   useEffect(() => {
-    setBanner(null);
-    setBannerAt(null);
-    setZone(null);
-    setPatternInsight(null);
-    setPatternInsightAt(null);
     setTrends({});
     coinglass
       .getIntervalTrends(coin)
@@ -3144,22 +3320,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         />
         <span>{t("chart.cmeGaps")}</span>
       </label>
-      <label className="indicators-menu-item">
-        <input
-          type="checkbox"
-          checked={showGann}
-          onChange={(e) => {
-            if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-            setShowGann(e.target.checked);
-          }}
-        />
-        <span
-          className="indicators-menu-dot"
-          style={{ background: "#f97316" }}
-        />
-        <span>Gann Pivots</span>
-        <span className="tier-badge tier-badge--pro">P</span>
-      </label>
+      {/* Gann Pivots indicator temporarily hidden from the menu (user
+          request) — underlying detection/toggle state left intact below,
+          just not reachable from the UI, so re-enabling is a one-line
+          revert of this comment-out rather than rebuilding the feature. */}
       <label className="indicators-menu-item">
         <input
           type="checkbox"
@@ -3885,11 +4049,41 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     document.body,
   );
 
+  // First page load/refresh has no real data yet to show blurred, unlike
+  // a later coin/interval switch — these placeholders fill the same spots
+  // with plausible-looking content purely so there's something present to
+  // blur (via .price-chart-container--loading) instead of empty gaps.
+  // They're display-only derived values, never written back into the
+  // real dayHigh/banner/patternInsight state those features rely on.
+  const isFirstLoad = loading && !hasLoadedOnce;
+  const displayDayHigh = dayHigh ?? (isFirstLoad ? 100 : null);
+  const displayDayLow = dayLow ?? (isFirstLoad ? 95 : null);
+  const displayBanner: IntervalAnalysis | null =
+    banner ??
+    (isFirstLoad
+      ? {
+          sentiment: "neutral",
+          title: "Analyzing price action…",
+          body: "Crunching recent candles to size up momentum and trend strength.",
+        }
+      : null);
+  const displayPatternInsight: PatternInsight | null =
+    patternInsight ??
+    (isFirstLoad
+      ? {
+          name: "Scanning for patterns…",
+          type: "neutral",
+          summary: "Looking at recent candles for a recognizable setup.",
+          narrative: "Running the same pattern checks we always do — give it a moment.",
+          nextMove: "Hang tight, real analysis is on its way.",
+        }
+      : null);
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}`}
+      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
@@ -4072,15 +4266,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               })() : !isDesktopWidth ? (
                 <div className="chart-fs-header-block">
                   <div className="chart-title-row">
-                    <h3
-                      className="chart-title-tappable"
+                    <button
+                      type="button"
+                      className="chart-title-glow-btn"
+                      style={{ "--coin-tint": COIN_COLORS[coin] ?? "var(--pc-accent)" } as React.CSSProperties}
                       onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
                     >
+                      <span className="chart-title-glow-dot">
+                        {COIN_GLYPHS[coin] ?? coin[0]}
+                      </span>
                       {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
-                      <svg className="chart-title-caret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="chart-title-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
-                    </h3>
+                    </button>
                     {zone && isPaid && (
                       <span className={`zone-signal zone-signal--${zone.signal}`}>
                         <span className="zone-signal-live" />
@@ -4117,15 +4316,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       </button>
                     )}
                   </div>
-                  {dayHigh !== null && dayLow !== null && (
+                  {displayDayHigh !== null && displayDayLow !== null && (
                     <div className="chart-fs-stat-col chart-fs-stat-col--row">
                       <div className="chart-fs-stat-row">
                         <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(dayHigh)}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
                       </div>
                       <div className="chart-fs-stat-row">
                         <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(dayLow)}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
                       </div>
                     </div>
                   )}
@@ -4180,15 +4379,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </button>
                   )}
                 </div>
-                {dayHigh !== null && dayLow !== null && (
+                {displayDayHigh !== null && displayDayLow !== null && (
                   <div className="chart-fs-stat-col chart-fs-stat-col--row">
                     <div className="chart-fs-stat-row">
                       <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(dayHigh)}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
                     </div>
                     <div className="chart-fs-stat-row">
                       <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(dayLow)}</span>
+                      <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
                     </div>
                   </div>
                 )}
@@ -4226,12 +4425,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         </div>
 
-        {banner && isPaid && !isFullscreen && (
+        {displayBanner && isPaid && !isFullscreen && (
           <div
-            className={`interval-banner interval-banner--${banner.sentiment}`}
+            className={`interval-banner interval-banner--${displayBanner.sentiment}`}
           >
             <div className="interval-banner-header">
-              <span className="interval-banner-title pi-fade-in">{banner.title}</span>
+              <span className="interval-banner-title pi-fade-in">{displayBanner.title}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {bannerAt !== null && (
                   <span className="pattern-insight-updated">
@@ -4255,7 +4454,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </button>
               </div>
             </div>
-            <p className="interval-banner-body pi-fade-in pi-fade-in--d1">{banner.body}</p>
+            <p className="interval-banner-body pi-fade-in pi-fade-in--d1">{displayBanner.body}</p>
           </div>
         )}
 
@@ -4299,10 +4498,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             </div>
           </div>
-        )}
-
-        {error && lastCandlesRef.current.length === 0 && (
-          <div className="chart-error">⚠️ {error}</div>
         )}
 
         <div
@@ -4512,8 +4707,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
           {loading && (
             <div className="chart-loading-overlay">
-              <span>{t("chart.loading")}</span>
+              <span className="chart-loading-label">
+                {t("chart.loading")}
+                <svg
+                  className="chart-loading-line"
+                  viewBox="0 0 28 14"
+                  width="28"
+                  height="14"
+                  fill="none"
+                >
+                  <path
+                    pathLength={1}
+                    d="M1,11 L6,8 L10,10 L14,4 L18,7 L22,3 L27,6"
+                  />
+                </svg>
+              </span>
             </div>
+          )}
+          {!loading && error && lastCandlesRef.current.length === 0 && (
+            <div className="chart-error">⚠️ {error}</div>
           )}
           <div
             ref={containerRef}
@@ -4774,20 +4986,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             </div>
           </div>
-        ) : !loading && patternInsight ? (
+        ) : displayPatternInsight ? (
           <div
-            className={`pattern-insight pattern-insight--${patternInsight.type}`}
+            className={`pattern-insight pattern-insight--${displayPatternInsight.type}`}
           >
             <div className="pattern-insight-header">
               <span
-                className={`pattern-insight-badge pattern-insight-badge--${patternInsight.type}`}
+                className={`pattern-insight-badge pattern-insight-badge--${displayPatternInsight.type}`}
               >
-                {patternInsight.type === "bullish"
+                {displayPatternInsight.type === "bullish"
                   ? "🟢"
-                  : patternInsight.type === "bearish"
+                  : displayPatternInsight.type === "bearish"
                     ? "🔴"
                     : "⚪"}{" "}
-                {patternInsight.name}
+                {displayPatternInsight.name}
               </span>
               <div className="pattern-insight-header-right">
                 {patternInsightAt !== null && (
@@ -4808,26 +5020,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
             <div className="pattern-insight-body-scroll">
               <p
-                key={`summary-${patternInsight.name}`}
+                key={`summary-${displayPatternInsight.name}`}
                 className="pattern-insight-summary pi-fade-in"
               >
-                {patternInsight.summary}
+                {displayPatternInsight.summary}
               </p>
               <p
-                key={`narrative-${patternInsight.name}`}
+                key={`narrative-${displayPatternInsight.name}`}
                 className="pattern-insight-narrative pi-fade-in pi-fade-in--d1"
               >
-                {patternInsight.narrative}
+                {displayPatternInsight.narrative}
               </p>
               <div className="pattern-insight-next">
                 <span className="pattern-insight-next-label">
                   {t("chart.nextMove")}
                 </span>
                 <p
-                  key={`nextmove-${patternInsight.name}`}
+                  key={`nextmove-${displayPatternInsight.name}`}
                   className="pattern-insight-next-text pi-fade-in pi-fade-in--d2"
                 >
-                  {patternInsight.nextMove}
+                  {displayPatternInsight.nextMove}
                 </p>
               </div>
             </div>

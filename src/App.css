@@ -1119,6 +1119,11 @@ html[data-theme="light"] .coin-picker-menu--table {
   border-radius: 24px;
   box-shadow: 0 28px 80px var(--color-shadow);
   overflow: hidden;
+  animation: asset-panel-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes asset-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
 }
 
 .asset-panel-header {
@@ -1153,7 +1158,7 @@ html[data-theme="light"] .coin-picker-menu--table {
   background: none;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  color: #000;
+  color: var(--color-text);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -1475,11 +1480,38 @@ html[data-theme="light"] .coin-picker-menu--table {
   .asset-value-card {
     width: 100%;
     max-width: none;
+    /* flex-grow:1 (the desktop rule, flex: 1 1 100%) was harmless in the
+       old centered card with a capped max-height — on the new full-height
+       mobile panel it stretches this card to fill all the leftover
+       vertical space on a short position list, shoving the positions list
+       and "+ Add Position" down toward the bottom instead of sitting
+       right under it. */
+    flex: 0 1 auto;
+  }
+
+  /* Full-screen on mobile, same treatment as Search/Signals (GlobalSearch's
+     .gs-docked--fullscreen, BuySignals' mobile .buysig-panel) instead of a
+     centered floating card — no backdrop needed once the panel itself
+     covers the whole viewport. */
+  .asset-modal-overlay {
+    padding: 0;
+    background: none;
+  }
+  .asset-modal-panel {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
   }
 
   .asset-panel-header {
-    padding: 14px 16px 12px;
+    padding: max(14px, env(safe-area-inset-top)) 16px 12px;
     gap: 8px;
+  }
+
+  .asset-modal-content {
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 
   .asset-panel-header h2 {
@@ -2695,6 +2727,18 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   color: var(--color-text);
 }
 /* ── Coin header bar ────────────────────────────────────────────────────── */
+/* iOS 26 "Liquid Glass" — same real-translucency material as .fnb-bar
+   (FloatingNavBar.css)/.db-sheet (DailyBrief.css)/.ta-trigger
+   (TradingAgent.css), adapted for an edge-to-edge top bar instead of a
+   floating pill: no rounding, a directional specular highlight
+   concentrated toward one spot (not a flat gradient smeared evenly
+   across it) plus a brighter fresnel-style glint along the bottom edge.
+   Uses color-mix() against this bar's own existing --color-surface/
+   --color-border tokens (not hardcoded navy/white like the other three)
+   so it still follows the app's normal theme system here, same as this
+   bar always has — those three intentionally match TradingAgent's own
+   branding instead since they float together on screen; this one doesn't
+   share that context. */
 .main-coin-header {
   flex-shrink: 0;
   display: flex;
@@ -2706,9 +2750,6 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   border-bottom: 1px solid var(--color-border);
   overflow: visible;
 }
-html[data-theme="light"] .main-coin-header {
-  border-bottom-color: rgba(15, 23, 42, 0.06);
-}
 
 /* Same margin-left:10px + padding-left:3px pattern as
    .price-chart-container's own unconditional rule (PriceChart.css). */
@@ -2716,6 +2757,13 @@ html[data-theme="light"] .main-coin-header {
   .main-coin-header {
     margin-left: 10px;
     padding-left: 3px;
+  }
+}
+
+@media (min-width: 769px) {
+  .main-coin-header {
+    margin-left: revert-layer;
+    padding-left: 12px;
   }
 }
 
@@ -2739,9 +2787,7 @@ html[data-theme="light"] .main-coin-header {
   border-radius: 8px;
   flex-shrink: 0;
   padding: 0;
-}
-.mch-menu-btn:hover {
-  background: var(--color-surface-2, rgba(255, 255, 255, 0.06));
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mch-coin-btn {
@@ -3388,9 +3434,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   }
   .icon-strip.mobile-open {
     z-index: 300001;
-    background: rgba(15, 23, 42, 0.82) !important;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--color-surface) !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   html[data-theme="light"] .icon-strip.mobile-open {
     background: #fff !important;
@@ -4216,17 +4262,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .pticker-flash-down {
   color: #ef4444 !important;
   text-shadow: 0 0 60px #ef444488 !important;
-}
-.pticker-price-source {
-  position: fixed;
-  top: max(20px, var(--native-safe-area-top, env(safe-area-inset-top)));
-  left: 16px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--pticker-muted);
-  text-shadow: none;
 }
 .pticker-live-dot {
   display: flex;

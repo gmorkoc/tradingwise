@@ -22,14 +22,30 @@
 
 .upgrade-card {
   position: relative;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(160deg, rgba(18, 12, 36, 0.97) 0%, rgba(12, 12, 30, 0.97) 50%, rgba(10, 18, 34, 0.97) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.18);
   border-radius: 24px;
   padding: 48px 48px 36px;
   width: 100%;
   max-width: 1020px;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 80px rgba(124, 58, 237, 0.1);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
   animation: ug-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* subtle top-glow streak, matches the MembershipGate glass-card language */
+.upgrade-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.6), transparent);
 }
 
 @keyframes ug-up {
@@ -41,9 +57,9 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 240, 0.7);
   font-size: 1.1rem;
   cursor: pointer;
   width: 38px;
@@ -53,10 +69,12 @@
   align-items: center;
   justify-content: center;
   transition: background 0.15s, color 0.15s;
+  z-index: 1;
 }
-.upgrade-close:hover { background: var(--color-border); color: var(--color-text); }
+.upgrade-close:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
 
 .upgrade-header {
+  position: relative;
   text-align: center;
   margin-bottom: 36px;
 }
@@ -64,18 +82,20 @@
 .upgrade-title {
   font-size: 1.9rem;
   font-weight: 800;
-  color: var(--color-text);
+  color: #fff;
+  letter-spacing: -0.02em;
   margin: 0 0 8px;
 }
 
 .upgrade-sub {
   font-size: 0.95rem;
-  color: var(--color-text-muted);
+  color: rgba(203, 213, 225, 0.7);
   margin: 0;
 }
 
 /* Plans grid */
 .upgrade-plans {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
@@ -85,19 +105,33 @@
 
 .upgrade-plan {
   position: relative;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   padding: 24px 22px 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.2s;
+}
+.upgrade-plan:hover {
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .upgrade-plan--popular {
-  border-color: var(--plan-color, #38bdf8);
-  box-shadow: 0 0 0 1px var(--plan-color, #38bdf8), 0 8px 32px rgba(0,0,0,0.2);
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--plan-color, #38bdf8) 14%, transparent) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  border-color: color-mix(in srgb, var(--plan-color, #38bdf8) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--plan-color, #38bdf8) 35%, transparent),
+    0 16px 44px color-mix(in srgb, var(--plan-color, #38bdf8) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.upgrade-plan--popular:hover {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--plan-color, #38bdf8) 20%, transparent) 0%,
+    rgba(255, 255, 255, 0.03) 100%);
 }
 
 .upgrade-popular-badge {
@@ -111,7 +145,8 @@
   letter-spacing: 0.08em;
   padding: 4px 14px;
   border-radius: 999px;
-  background: var(--plan-color, #38bdf8);
+  background: linear-gradient(135deg, var(--plan-color, #38bdf8), color-mix(in srgb, var(--plan-color, #38bdf8) 70%, #0f172a));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--plan-color, #38bdf8) 55%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   color: #000;
   white-space: nowrap;
   z-index: 1;
@@ -133,14 +168,66 @@
 .upgrade-plan-amount {
   font-size: 2.2rem;
   font-weight: 800;
-  color: var(--color-text);
+  color: #fff;
+  letter-spacing: -0.02em;
   line-height: 1;
 }
 
 .upgrade-plan-per {
   font-size: 0.88rem;
-  color: var(--color-text-muted);
+  color: rgba(148, 163, 184, 0.65);
   font-weight: 500;
+}
+
+/* Fancy single-feature promo — Elite card only, sits above the plain
+   checkmark list to call out Agent Ready as the flagship elite-exclusive
+   feature rather than blending into the bullets. */
+.upgrade-agent-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--plan-color, #a78bfa) 22%, transparent),
+    color-mix(in srgb, var(--plan-color, #a78bfa) 7%, transparent));
+  border: 1px solid color-mix(in srgb, var(--plan-color, #a78bfa) 38%, transparent);
+  border-radius: 12px;
+  padding: 11px 13px;
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--plan-color, #a78bfa) 18%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* No background/glow of its own — the orb (.ta-trigger-orb, TradingAgent.css)
+   is fully self-decorating (its own circular gradient + glow animation), so
+   this is purely a flex layout box sized to match it. Must stay a plain
+   flex container directly wrapping the orb span with nothing else nested
+   between them — same shape as FloatingNavBar's .fnb-item-icon-wrap, the
+   only other place this orb is reused outside TradingAgent itself. */
+.upgrade-agent-callout-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upgrade-agent-callout-text { min-width: 0; }
+
+.upgrade-agent-callout-title {
+  margin: 0 0 2px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.upgrade-agent-callout-desc {
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(226, 232, 240, 0.72);
+  line-height: 1.45;
 }
 
 .upgrade-plan-features {
@@ -158,7 +245,7 @@
   align-items: flex-start;
   gap: 8px;
   font-size: 0.86rem;
-  color: var(--color-text-secondary);
+  color: rgba(226, 232, 240, 0.78);
   line-height: 1.4;
 }
 
@@ -169,14 +256,15 @@
 }
 
 .upgrade-plan--current {
-  border-color: var(--plan-color);
-  box-shadow: 0 0 0 1px var(--plan-color), 0 8px 32px rgba(0,0,0,0.15);
+  border-color: color-mix(in srgb, var(--plan-color) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--plan-color) 35%, transparent), 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
 .upgrade-current-badge {
-  background: var(--color-card-bg) !important;
+  background: rgba(18, 12, 36, 0.9) !important;
   color: var(--plan-color) !important;
   border: 1.5px solid var(--plan-color) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
 }
 
 .upgrade-plan-cta {
@@ -184,14 +272,26 @@
   padding: 13px;
   border-radius: 12px;
   border: none;
-  color: #000;
+  color: #fff;
   font-size: 0.92rem;
   font-weight: 800;
   cursor: pointer;
   margin-top: auto;
-  transition: opacity 0.15s, transform 0.1s;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--plan-color, #38bdf8) 85%, #4f46e5),
+    color-mix(in srgb, var(--plan-color, #38bdf8) 55%, #0284c7));
+  box-shadow:
+    0 4px 20px color-mix(in srgb, var(--plan-color, #38bdf8) 32%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: opacity 0.15s, transform 0.12s, box-shadow 0.2s;
 }
-.upgrade-plan-cta:hover    { opacity: 0.88; }
+.upgrade-plan-cta:hover {
+  opacity: 0.92;
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 32px color-mix(in srgb, var(--plan-color, #38bdf8) 42%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
 .upgrade-plan-cta:active   { transform: scale(0.97); }
 .upgrade-plan-cta:disabled { opacity: 0.5; cursor: default; transform: none; }
 .upgrade-plan-cta--down    { color: #000; }
@@ -227,7 +327,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: rgba(226, 232, 240, 0.78);
 }
 .upgrade-lost-x {
   color: #fb7185;
@@ -240,8 +340,8 @@
   width: 100%;
   padding: 13px;
   border-radius: 12px;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(148, 163, 184, 0.7);
   font-size: 0.84rem;
   font-weight: 600;
   text-align: center;
@@ -259,14 +359,14 @@
   margin: 24px 0 0;
   text-align: center;
   font-size: 0.78rem;
-  color: var(--color-text-muted);
-  opacity: 0.6;
+  color: rgba(148, 163, 184, 0.65);
+  opacity: 0.85;
 }
 
 .upgrade-manage-link {
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: rgba(148, 163, 184, 0.75);
   font-size: 0.78rem;
   cursor: pointer;
   text-decoration: underline;
@@ -340,7 +440,7 @@
 }
 
 .upgrade-confirm .upgrade-sub strong {
-  color: var(--color-text);
+  color: #fff;
   font-weight: 700;
 }
 
@@ -382,15 +482,22 @@
     to   { transform: translateY(0); }
   }
 
-  /* drag handle hint */
+  /* drag handle hint — overrides the desktop top-glow-streak ::before, which
+     is absolutely positioned; reset to static so this sits in normal flow
+     and its margin actually pushes the header down as intended. */
   .upgrade-card::before {
     content: "";
+    position: static;
     display: block;
     width: 40px;
     height: 4px;
     border-radius: 2px;
-    background: var(--color-border);
+    background: rgba(255, 255, 255, 0.15);
+    transform: none;
     margin: 0 auto 20px;
+  }
+  html[data-theme="light"] .upgrade-card::before {
+    background: rgba(0, 0, 0, 0.12);
   }
 
   .upgrade-close {
@@ -405,3 +512,73 @@
 
   .upgrade-plans { grid-template-columns: 1fr; }
 }
+
+/* ── Light theme ─────────────────────────────────────────────────────────── */
+html[data-theme="light"] .upgrade-card {
+  background: linear-gradient(160deg, #faf5ff 0%, #f5f3ff 45%, #eff6ff 100%);
+  border-color: rgba(124, 58, 237, 0.16);
+  box-shadow:
+    0 32px 80px rgba(124, 58, 237, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(167, 139, 250, 0.12) inset;
+}
+html[data-theme="light"] .upgrade-card::before {
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.3), transparent);
+}
+html[data-theme="light"] .upgrade-close {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #64748b;
+}
+html[data-theme="light"] .upgrade-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+}
+html[data-theme="light"] .upgrade-title { color: #1e1b4b; }
+html[data-theme="light"] .upgrade-sub   { color: #475569; }
+
+html[data-theme="light"] .upgrade-plan {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(124, 58, 237, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+html[data-theme="light"] .upgrade-plan:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+html[data-theme="light"] .upgrade-plan--popular {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--plan-color, #38bdf8) 10%, white) 0%,
+    rgba(255, 255, 255, 0.85) 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--plan-color, #38bdf8) 35%, transparent),
+    0 12px 36px color-mix(in srgb, var(--plan-color, #38bdf8) 16%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+html[data-theme="light"] .upgrade-plan--popular:hover {
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--plan-color, #38bdf8) 16%, white) 0%,
+    rgba(255, 255, 255, 0.95) 100%);
+}
+html[data-theme="light"] .upgrade-plan-amount   { color: #1e293b; }
+html[data-theme="light"] .upgrade-plan-per      { color: #64748b; }
+html[data-theme="light"] .upgrade-plan-features li { color: #475569; }
+
+html[data-theme="light"] .upgrade-current-badge {
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+html[data-theme="light"] .upgrade-plan-current {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #64748b;
+}
+
+html[data-theme="light"] .upgrade-lost-list li { color: #475569; }
+
+html[data-theme="light"] .upgrade-footer       { color: #64748b; }
+html[data-theme="light"] .upgrade-manage-link  { color: #64748b; }
+
+html[data-theme="light"] .upgrade-confirm .upgrade-sub strong { color: #1e293b; }
+
+html[data-theme="light"] .upgrade-agent-callout-title { color: #1e1b4b; }
+html[data-theme="light"] .upgrade-agent-callout-desc  { color: #475569; }

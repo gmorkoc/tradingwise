@@ -37,7 +37,6 @@
     "unlimited": "Illimitato",
     "cancelAnytime": "Annulla quando vuoi",
     "swipeToOpen": "Scorri per aprire il menu",
-    "viaBinance": "tramite Binance",
     "strong": "Forte",
     "medium": "Medio",
     "weak": "Debole",
@@ -132,7 +131,7 @@
   "chart": {
     "title": "{{coin}}",
     "live": "● LIVE",
-    "loading": "Caricamento dati grafico...",
+    "loading": "Caricamento dati grafico",
     "noData": "Nessun dato grafico disponibile",
     "failed": "Impossibile recuperare i dati del grafico",
     "indicators": "Indicatori",
@@ -651,54 +650,34 @@
       "perMonth": "/mese",
       "features": [
         {
-          "icon": "🕯️",
-          "title": "Inside the Candle",
-          "desc": "Elliott Wave · ICT/SMC · Wyckoff"
-        },
-        {
-          "icon": "〰️",
-          "title": "Elliott Wave",
-          "desc": "5-wave detection · Fibonacci targets"
-        },
-        {
-          "icon": "📐",
-          "title": "Gann Analysis AI",
-          "desc": "Square of 9 · angles · cycle forecasts"
-        },
-        {
-          "icon": "🏦",
-          "title": "Coinbase Premium AI",
-          "desc": "Institutional vs retail flow"
+          "icon": "agentOrb",
+          "title": "Agent Ready",
+          "desc": "Chat IA di trading in diretta, senza limiti di quota"
         },
         {
           "icon": "⚡",
-          "title": "Unlimited AI",
-          "desc": "No weekly cap on any feature"
+          "title": "IA illimitata",
+          "desc": "Nessun limite settimanale su qualsiasi funzione IA"
         },
         {
-          "icon": "📊",
-          "title": "Alt Coin Analysis",
-          "desc": "100+ altcoins · deep AI analysis"
+          "icon": "✨",
+          "title": "Accesso anticipato",
+          "desc": "Nuove funzionalità prima di tutti"
         },
         {
-          "icon": "📈",
-          "title": "HTF Multi-Timeframe",
-          "desc": "Daily · weekly · monthly alignment"
-        },
-        {
-          "icon": "🔥",
-          "title": "Liquidation Heatmap",
-          "desc": "Full heatmap · AI commentary"
+          "icon": "✓",
+          "title": "Tutto in Pro",
+          "desc": "Tutti gli strumenti Pro inclusi"
         }
       ],
       "signInBtn": "Accedi per aggiornare",
       "upgradeBtn": "Sblocca Elite — $59.99/mese",
       "redirecting": "Reindirizzamento…",
       "trust": "Accesso immediato · Include tutto di Pro",
-      "free_headline": "Il Kit Istituzionale Completo",
-      "free_sub": "Tutte le funzionalità IA, accesso illimitato, nessun limite settimanale.",
-      "pro_headline": "Un Passo da Elite",
-      "pro_sub": "Sei su Pro. Sblocca 8 strumenti esclusivi con un aggiornamento — $29 in più al mese.",
+      "free_headline": "Sblocca Agent Ready",
+      "free_sub": "Elite ti dà l'agente di trading IA in diretta, più richieste IA illimitate su ogni funzione.",
+      "pro_headline": "A un Passo da Agent Ready",
+      "pro_sub": "Sei su Pro. Agent Ready e l'IA illimitata sono a un aggiornamento di distanza — $29 in più al mese.",
       "pro_upgradeBtn": "Aggiorna da Pro — $59.99/mese",
       "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     }
@@ -723,20 +702,21 @@
         "label": "Pro",
         "features": [
           "Tutto in Gratuito",
+          "Segnali di Acquisto e Vendita",
           "HTF Multi-Timeframe IA",
           "Intelligence di Mercato IA",
           "Analisi IA On-Chain",
           "Grafico Previsione Prezzo",
           "Mappa di Calore Liquidazioni IA",
-          "35 richieste IA / settimana"
+          "Dentro la Candela",
+          "Coinbase Premium IA",
+          "100 richieste IA / settimana"
         ]
       },
       "elite": {
         "label": "Elite",
         "features": [
-          "Tutto in Pro — illimitato",
-          "Analisi Gann IA",
-          "Coinbase Premium IA",
+          "Tutto in Pro — richieste IA illimitate",
           "Accesso anticipato a nuove funzionalità"
         ]
       }
@@ -777,6 +757,10 @@
       "mostPopular": "Più Popolare",
       "yourPlan": "Il tuo Piano"
     },
+    "eliteCallout": {
+      "title": "Agent Ready — Chat AI di Trading Illimitata",
+      "desc": "Chatta in diretta con l'agente di trading AI — chiedi di qualsiasi coin, ricevi idee di trading, senza limiti di quota."
+    },
     "footer": {
       "proratedNote": "I cambi di piano sono in prorata · ",
       "manageBilling": "Gestisci fatturazione",
@@ -801,15 +785,17 @@
     "error": "Qualcosa è andato storto",
     "perMonth": "/mese",
     "lf": {
-      "elitePro": "Tutto in Pro — illimitato",
-      "gann": "Analisi Gann AI",
+      "elitePro": "Richieste IA illimitate",
+      "agentReady": "Agent Ready — Chat AI di Trading",
+      "candleai": "Dentro la Candela",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Accesso anticipato alle nuove funzionalità",
       "aiMkt": "Intelligenza di Mercato AI",
       "onchain": "Analisi On-Chain AI",
       "predChart": "Grafico Predizione Prezzi",
       "liqHeatmap": "Heatmap Liquidazioni AI",
-      "aiReqs": "35 richieste AI / settimana"
+      "aiReqs": "100 richieste AI / settimana",
+      "buySignals": "Segnali di Acquisto e Vendita"
     }
   },
   "landing": {
@@ -924,13 +910,16 @@
           "cta": "Inizia Pro",
           "features": [
             "Tutto di Free",
+            "Segnali di Acquisto e Vendita",
             "HTF Multi-Timeframe IA",
             "Intelligence di Mercato IA",
             "Analisi On-Chain IA",
             "Previsione prezzo con scenari",
             "Mappa calore liquidazioni IA",
             "Alert di Strategia Personalizzati",
-            "35 richieste IA / settimana"
+            "Dentro la Candela",
+            "Coinbase Premium IA",
+            "100 richieste IA / settimana"
           ]
         },
         {
@@ -940,8 +929,7 @@
           "per": "/mese",
           "cta": "Vai ad Elite",
           "features": [
-            "Tutto di Pro — illimitato",
-            "Coinbase Premium IA",
+            "Tutto di Pro — richieste IA illimitate",
             "Accesso anticipato alle novità"
           ]
         }
@@ -1568,6 +1556,7 @@
     "title": "Libro Ordini",
     "loading": "Caricamento…",
     "unavailable": "Non disponibile per {{coin}} su {{exchange}}",
+    "fallbackNote": "{{exchange}} non disponibile — mostra Coinbase",
     "colPrice": "Prezzo",
     "colSize": "Quantità",
     "colValue": "Valore"
@@ -2147,7 +2136,8 @@
     }
   },
   "dailyBrief": {
-    "title": "Il Tuo Riepilogo Giornaliero",
+    "title": "Il tuo riepilogo giornaliero",
+    "lastUpdated": "Aggiornato",
     "loading": "Caricamento del riepilogo giornaliero…",
     "categoryCrypto": "Crypto",
     "categoryMarkets": "Mercati",
