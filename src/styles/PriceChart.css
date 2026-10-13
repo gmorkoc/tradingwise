@@ -1262,7 +1262,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
    cramped against all the spare desktop width. */
 @media (min-width: 769px) {
   .chart-fs-header-block {
-    gap: 16px;
+    gap: 4px;
   }
 
   .chart-fs-coin-avatar {
@@ -1272,7 +1272,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   }
 
   .chart-fs-header-block .chart-fs-coin-name {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
 
   /* Stats grid + both meters sit in one row instead of stacking — there's
