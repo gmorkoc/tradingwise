@@ -1849,8 +1849,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   // ── Create main chart ────────────────────────────────────────────────────
   useEffect(() => {
-    let ro: ResizeObserver | null = null;
-    let resizeListener: (() => void) | null = null;
     let isMounted = true;
 
     const initChart = () => {
@@ -1881,6 +1879,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       const chart = createChart(el, {
         width,
         height,
+        // Same built-in responsive sizing the RSI/MACD sub-charts already
+        // use (their own createChart calls below) — the library's own
+        // ResizeObserver keeps width/height in sync with the container on
+        // every layout change (window resize, orientation change, sidebar
+        // toggle, etc.), replacing the manual ResizeObserver/window
+        // "resize" listener this used to hand-roll further down (removed —
+        // autoSize and manual chart.resize() calls aren't meant to be used
+        // together).
+        autoSize: true,
         layout: {
           background: {
             type: ColorType.Solid,
@@ -1909,6 +1916,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           borderColor: isLight ? "#e2e8f0" : "#2b2748",
           timeVisible: true,
           secondsVisible: false,
+          // Without this, autoSize's resize() keeps bar spacing constant
+          // and reveals more (unloaded) history instead of rescaling the
+          // currently-visible range to fill the new width — if there isn't
+          // enough history loaded yet, growing the window just exposes
+          // blank canvas on one side instead of stretching the existing
+          // candles to fill it.
+          lockVisibleTimeRangeOnResize: true,
         },
         // Matches the theme-sync effect — starts display-only (isFullscreen
         // is false on first mount) so the page scrolls past the chart
@@ -2071,22 +2085,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         }
       }
 
-      const resizeChart = () => {
-        const currentEl = containerRef.current;
-        if (!currentEl || !chart) return;
-        const nextWidth = currentEl.clientWidth || currentEl.offsetWidth;
-        const nextHeight = currentEl.clientHeight || 400;
-        if (nextWidth > 0 && nextHeight > 0) {
-          chart.resize(nextWidth, nextHeight);
-        }
-      };
-
-      ro = new ResizeObserver(resizeChart);
-      ro.observe(el);
-
-      resizeListener = () => resizeChart();
-      window.addEventListener("resize", resizeListener);
-
       // Advance Price Chart page, mobile — light tap feedback when
       // tapping a candle (chart.remove() in this effect's cleanup tears
       // this subscription down with it, no separate unsubscribe needed).
@@ -2099,8 +2097,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
     return () => {
       isMounted = false;
-      if (ro) ro.disconnect();
-      if (resizeListener) window.removeEventListener("resize", resizeListener);
       chartRef.current?.remove();
       chartRef.current = candleRef.current = lineCloseRef.current = volumeRef.current = null;
       bbUpperRef.current = bbMiddleRef.current = bbLowerRef.current = null;
