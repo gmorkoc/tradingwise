@@ -2332,34 +2332,34 @@ function AppDashboard({
                   <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
                   <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
+                {/* Desktop-only — hidden at the same 640px breakpoint that
+                    squares this button off to icon-only on mobile (App.css). */}
+                <span className="mch-btn-label">Notifications</span>
                 {unreadNotifCount > 0 && (
                   <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
                 )}
               </button>
               {isWideDesktop && (
-                <button
-                  className={`mch-search-btn${notificationsEnabled ? "" : " mch-notif-btn--off"}`}
-                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                  role="switch"
-                  aria-checked={notificationsEnabled}
-                  aria-label="Notifications"
-                  title={notificationsEnabled ? "Notifications on — click to disable all alerts" : "Notifications off — click to enable"}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                // Real on/off switch (track + sliding knob), not an icon
+                // button — this is a binary global mute toggle (role=
+                // "switch"), not an action like the icon buttons around it,
+                // and looked like a duplicate of the feed-bell button next
+                // to it when it was just another bell glyph. Labeled now too
+                // (was icon-only) so it doesn't read as an unexplained
+                // floating switch.
+                <div className="mch-notif-toggle-group">
+                  <span className="mch-notif-toggle-label" id="mch-notif-toggle-label">Alerts</span>
+                  <button
+                    className={`mch-notif-toggle${notificationsEnabled ? " mch-notif-toggle--on" : ""}`}
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                    aria-labelledby="mch-notif-toggle-label"
+                    title={notificationsEnabled ? "Alerts on — click to disable all alerts" : "Alerts off — click to enable"}
                   >
-                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    {!notificationsEnabled && <line x1="3" y1="3" x2="21" y2="21" />}
-                  </svg>
-                </button>
+                    <span className="mch-notif-toggle-knob" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

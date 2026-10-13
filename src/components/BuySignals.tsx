@@ -341,6 +341,9 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
             <path d="M3 17l6-6 4 4 8-8" />
             <path d="M15 7h6v6" />
           </svg>
+          {/* Desktop-only — hidden at the same 640px breakpoint that
+              squares this button off to icon-only on mobile (App.css). */}
+          <span className="mch-btn-label">Signals</span>
           {rows.length > 0 && <span className="buysig-bell-count">{rows.length}</span>}
         </button>
       )}
