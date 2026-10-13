@@ -1266,9 +1266,12 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   }
 
   .chart-fs-coin-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 1.4rem;
+    width: 32px;
+    height: 32px;
+    /* Scaled to the same ~0.51 font-size/box ratio the mobile default
+       (34px box, 1.1rem) and the old 44px/1.4rem desktop size both used,
+       rounded to a clean step. */
+    font-size: 1rem;
   }
 
   .chart-fs-header-block .chart-fs-coin-name {
