@@ -194,7 +194,15 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
       setOpen(true);
     };
     window.addEventListener("open-buy-signals", onOpen);
-    return () => window.removeEventListener("open-buy-signals", onOpen);
+    // Mirrors "open-buy-signals" the other way — App.tsx dispatches this
+    // when one of the other mutually-exclusive panels (Calculator, Search,
+    // Profile) opens, so only one of the four is ever open at a time.
+    const onClose = () => setOpen(false);
+    window.addEventListener("close-buy-signals", onClose);
+    return () => {
+      window.removeEventListener("open-buy-signals", onOpen);
+      window.removeEventListener("close-buy-signals", onClose);
+    };
   }, [isPaid, onOpenUpgrade]);
 
   // Scroll to + highlight the coin the toast was about, once its card has

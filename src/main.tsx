@@ -25,6 +25,22 @@ if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
 }
 
+// Sets data-theme BEFORE React ever renders, not inside a useEffect (App.tsx
+// still has one, for when the user actually switches theme later) — a
+// plain useEffect only runs AFTER paint, well after any useLayoutEffect
+// deeper in the tree, so components that read this attribute synchronously
+// on mount (FloatingNavBar's active-pill color, at least) could see it
+// still unset on a genuine first load and silently apply the wrong
+// theme's colors. Same stored/matchMedia logic App.tsx's own theme state
+// initializer uses — keep both in sync if that one ever changes.
+{
+  const storedTheme = localStorage.getItem('theme');
+  const theme = storedTheme === 'dark' || storedTheme === 'light'
+    ? storedTheme
+    : (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+}
+
 // Android: keep the WebView clear of the status bar / notch. (No-op on iOS —
 // that platform's safe-area handling is done natively in
 // MainViewController.swift instead, since setOverlaysWebView is unimplemented

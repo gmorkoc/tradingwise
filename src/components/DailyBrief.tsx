@@ -133,12 +133,31 @@ function extractImgFromHtml(html?: string): string {
   return match ? match[1] : "";
 }
 
+// Unauthenticated rss2json requests share one global free-tier quota
+// across every site using it, not just this app — easy to exhaust after
+// enough reloads in a single day (confirmed directly: "Daily rate limit
+// exceeded"). A registered key gets its own dedicated quota instead; a
+// second, different account's key as backup means one account running
+// out doesn't take the whole Daily Brief down until the next reset.
+// Both optional — with neither set, this falls back to exactly today's
+// unauthenticated behavior.
+const RSS2JSON_API_KEY = import.meta.env.VITE_RSS2JSON_API_KEY as string | undefined;
+const RSS2JSON_API_KEY_BACKUP = import.meta.env.VITE_RSS2JSON_API_KEY_BACKUP as string | undefined;
+
+async function fetchRss2Json(rssUrl: string, apiKey?: string): Promise<{ data: any; rateLimited: boolean }> {
+  const keyParam = apiKey ? `&api_key=${encodeURIComponent(apiKey)}` : "";
+  const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}${keyParam}`);
+  const data = await res.json();
+  const rateLimited = data.status !== "ok" && typeof data.message === "string" && /rate limit/i.test(data.message);
+  return { data, rateLimited };
+}
+
 async function fetchFeed(feed: FeedDef): Promise<BriefItem[]> {
   try {
-    const res = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`
-    );
-    const data = await res.json();
+    let { data, rateLimited } = await fetchRss2Json(feed.url, RSS2JSON_API_KEY);
+    if (rateLimited && RSS2JSON_API_KEY_BACKUP && RSS2JSON_API_KEY_BACKUP !== RSS2JSON_API_KEY) {
+      ({ data } = await fetchRss2Json(feed.url, RSS2JSON_API_KEY_BACKUP));
+    }
     if (data.status !== "ok") return [];
     const items: BriefItem[] = data.items.map(
       (item: {

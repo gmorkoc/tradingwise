@@ -1,10 +1,14 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import "../styles/FloatingNavBar.css";
 
 interface Props {
   signalsOpen: boolean;
   onSearch: () => void;
   searchOpen: boolean;
-  onOpenProfile: () => void;
+  // No trigger button here anymore (replaced by Home) — Profile is still
+  // reachable via AccountMenu elsewhere, so this bar still needs to know
+  // when it's open to raise its own z-index above it (see `raised`
+  // below), just without rendering its own button for it.
   profileOpen: boolean;
   // Mirrors TradingAgent's own trigger dot — see the "trading-agent-
   // unread-change" event App.tsx listens for.
@@ -23,26 +27,43 @@ interface Props {
   // Opens the dedicated Elite upsell card (EliteUpsellModal), not the
   // generic multi-tier UpgradeModal — Agent Ready is the one reason shown.
   onAgentLocked: () => void;
+  // Closes whichever panel is open and returns to the chart page.
+  onGoHome: () => void;
+  // True only when genuinely at rest on the chart page with nothing else
+  // open — not a panel of its own, so it needs its own computed flag
+  // rather than mirroring a single piece of open/closed state.
+  homeActive: boolean;
 }
 
 // Built from basic shape primitives (circle/rect/line) only, deliberately
 // — a hand-authored multi-point fill "d" path is easy to get subtly wrong
 // with no way to catch it without actually rendering it. Primitives can't
-// have that failure mode: a circle is a circle. The exceptions (Profile's
-// person glyph, Search's magnifying glass line+circle aside, Signals'
+// have that failure mode: a circle is a circle. The exceptions (Home's
+// roof+walls shape, Search's magnifying glass line+circle aside, Signals'
 // trend line) reuse exact path data already proven to render correctly
-// elsewhere in this codebase (AccountMenu.tsx/AuthModal.tsx for Profile),
-// not new hand-derived ones.
+// elsewhere (Feather Icons' "home"/standard glyphs), not new hand-derived
+// ones.
 //
-// Order: Signals, Calculator | Agent (raised, see the return below) |
-// Search, Profile — Calculator moved up to 2nd, Profile replaces Daily
-// Brief as the last icon (Daily Brief no longer has a nav trigger at all;
-// it auto-docks on page load now and floats above this bar on its own,
-// see DailyBrief.tsx/.css).
+// Order: Home, Signals | Agent (raised, see the return below) | Search,
+// Calculator — Profile dropped (still reachable via AccountMenu
+// elsewhere; see profileOpen's own comment in Props), Home takes its
+// slot as the "return to the chart, close whatever's open" action.
 function useItems({
-  signalsOpen, onOpenCalculator, calculatorOpen, onSearch, searchOpen, onOpenProfile, profileOpen,
-}: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked">) {
+  signalsOpen, onOpenCalculator, calculatorOpen, onSearch, searchOpen, onGoHome, homeActive,
+}: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked" | "profileOpen">) {
   return [
+    {
+      label: "Home",
+      // Feather Icons' "home".
+      icon: (
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <path d="M9 22V12h6v10" />
+        </svg>
+      ),
+      action: onGoHome,
+      isActive: homeActive,
+    },
     {
       label: "Signals",
       icon: (
@@ -58,18 +79,6 @@ function useItems({
       isActive: signalsOpen,
     },
     {
-      label: "Calculator",
-      icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10" />
-          <line x1="12" y1="20" x2="12" y2="4" />
-          <line x1="6" y1="20" x2="6" y2="14" />
-        </svg>
-      ),
-      action: onOpenCalculator,
-      isActive: calculatorOpen,
-    },
-    {
       label: "Search",
       icon: (
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -81,32 +90,84 @@ function useItems({
       isActive: searchOpen,
     },
     {
-      label: "Profile",
-      // Same person glyph AccountMenu.tsx/AuthModal.tsx already use.
+      label: "Calculator",
       icon: (
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
         </svg>
       ),
-      action: onOpenProfile,
-      isActive: profileOpen,
+      action: onOpenCalculator,
+      isActive: calculatorOpen,
     },
   ];
 }
 
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
-  onOpenProfile, profileOpen, agentUnread, onOpenCalculator, calculatorOpen,
-  agentLocked, onAgentLocked,
+  profileOpen, agentUnread, onOpenCalculator, calculatorOpen,
+  agentLocked, onAgentLocked, onGoHome, homeActive,
 }: Props) {
-  const items = useItems({ signalsOpen, onSearch, searchOpen, onOpenProfile, profileOpen, onOpenCalculator, calculatorOpen });
+  const items = useItems({ signalsOpen, onSearch, searchOpen, onGoHome, homeActive, onOpenCalculator, calculatorOpen });
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
+
+  // These four panels' own backdrops sit at a much higher z-index than
+  // this bar's normal resting value (60) — tall enough to dim the whole
+  // screen, including this bar, even though each one is specifically
+  // positioned to float just above it (see .gs-docked's own comment).
+  // Bumping only while one of them is actually open (rather than raising
+  // the bar's z-index globally) keeps it below every OTHER overlay in the
+  // app that was never asked to show it underneath — AuthModal, the
+  // upgrade/paywall modals, etc.
+  const raised = signalsOpen || searchOpen || profileOpen || calculatorOpen;
+
+  // Sliding highlight (a single shared pill, not a per-button background)
+  // that animates from the previously active item to the newly active one
+  // — measured in actual pixels off the DOM rather than computed from
+  // flex-basis math, since the Agent button sitting between the two
+  // halves makes the items' widths not simply "100% / 4".
+  const barRef = useRef<HTMLElement>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  const activeLabel = items.find((i) => i.isActive)?.label ?? null;
+
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const el = activeLabel ? itemRefs.current[activeLabel] : null;
+    if (!bar || !el) { setIndicator(null); return; }
+
+    // Position/size only — color/background/backdrop-filter live in CSS
+    // (html[data-theme="light"] .fnb-active-indicator below), not here.
+    // JS-reading data-theme to pick colors was tried and made things
+    // worse: that attribute is set by a plain useEffect in App.tsx, which
+    // runs AFTER paint — well after this layout effect — so on a genuine
+    // first load this could read data-theme before it was ever set and
+    // silently apply the wrong theme's colors (confirmed: light theme
+    // rendering as dark theme's white gradient on native). A CSS selector
+    // has no such race; the browser always has the current attribute.
+    const measure = () => {
+      const barRect = bar.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      setIndicator({ left: elRect.left - barRect.left - bar.clientLeft, width: elRect.width });
+    };
+    measure();
+
+    // ResizeObserver (not a timed/polled guess) so this stays correct for
+    // as long as either element's box actually changes, regardless of
+    // when the app's own boot sequence finishes settling layout.
+    const ro = new ResizeObserver(measure);
+    ro.observe(bar);
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [activeLabel]);
 
   const renderItem = (item: (typeof items)[number]) => (
     <button
       key={item.label}
+      ref={(el) => { itemRefs.current[item.label] = el; }}
       type="button"
       className={`fnb-item${item.isActive ? " fnb-item--active" : ""}`}
       onClick={item.action}
@@ -125,9 +186,19 @@ export function FloatingNavBar({
   // Swap target if this reads better than the raised-notch version.
   return (
     <nav
-      className="fnb-bar"
+      ref={barRef}
+      className={`fnb-bar${raised ? " fnb-bar--raised" : ""}`}
       aria-label="Quick navigation"
     >
+      <span
+        className="fnb-active-indicator"
+        aria-hidden="true"
+        style={
+          indicator
+            ? { transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px`, opacity: 1 }
+            : { opacity: 0 }
+        }
+      />
       {leftItems.map(renderItem)}
       <button
         type="button"
@@ -140,7 +211,7 @@ export function FloatingNavBar({
       >
         <span className="fnb-item-icon-wrap">
           <span className="ta-trigger-orb fnb-agent-orb-inline" />
-          {agentUnread && <span className="fnb-agent-dot fnb-agent-dot--inline" />}
+          {agentUnread && <span className="fnb-agent-dot" />}
         </span>
       </button>
       {rightItems.map(renderItem)}

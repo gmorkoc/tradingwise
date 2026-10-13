@@ -1024,6 +1024,44 @@ function AppDashboard({
     { key: "volume", dir: "desc" },
   );
   const [globalSearch, setGlobalSearch] = useState(false);
+
+  // Buy/Sell Signals, the Asset Calculator, Search, and Profile are all
+  // independent floating panels (FloatingNavBar's raised-z-index fix made
+  // all four visible above the nav bar at once) — mutually exclusive, so
+  // opening one closes whichever of the other three happened to be open,
+  // instead of letting them stack. One effect per panel (reacting to ITS
+  // OWN flag turning true) rather than a single combined effect, so this
+  // works no matter which entry point opened it (FloatingNavBar, the
+  // desktop header, a push notification, etc.) — not just taps routed
+  // through one shared handler. signalsOpen itself is only ever SET by
+  // BuySignals' own broadcast (see the listener below it), so closing it
+  // from here has to go back through the same event channel rather than
+  // a setter.
+  useEffect(() => {
+    if (!signalsOpen) return;
+    if (assetPanelOpen) setAssetPanelOpen(false);
+    if (profileOpen) setProfileOpen(false);
+    if (globalSearch) setGlobalSearch(false);
+  }, [signalsOpen]);
+  useEffect(() => {
+    if (!assetPanelOpen) return;
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    if (profileOpen) setProfileOpen(false);
+    if (globalSearch) setGlobalSearch(false);
+  }, [assetPanelOpen]);
+  useEffect(() => {
+    if (!profileOpen) return;
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    if (assetPanelOpen) setAssetPanelOpen(false);
+    if (globalSearch) setGlobalSearch(false);
+  }, [profileOpen]);
+  useEffect(() => {
+    if (!globalSearch) return;
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    if (assetPanelOpen) setAssetPanelOpen(false);
+    if (profileOpen) setProfileOpen(false);
+  }, [globalSearch]);
+
   // Desktop's search opens as a dropdown attached directly under
   // .top-nav-search (YouTube's own search-bar-with-suggestions pattern),
   // not a centered modal — this is that button's measured position/width,
@@ -2974,13 +3012,24 @@ function AppDashboard({
           signalsOpen={signalsOpen}
           onSearch={() => setGlobalSearch(true)}
           searchOpen={globalSearch}
-          onOpenProfile={() => setProfileOpen(true)}
           profileOpen={profileOpen}
           agentUnread={agentUnread}
           onOpenCalculator={() => setAssetPanelOpen((v) => !v)}
           calculatorOpen={assetPanelOpen}
           agentLocked={!hasAccess(tier, "elite")}
           onAgentLocked={() => setShowEliteUpsell(true)}
+          onGoHome={() => {
+            // Closes whichever of the four mutually-exclusive panels is
+            // currently open (each a no-op if it's already closed) and
+            // drops back to the chart page — Home's own "you're at rest"
+            // state, not a fifth panel of its own.
+            if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+            setAssetPanelOpen(false);
+            setProfileOpen(false);
+            setGlobalSearch(false);
+            setActiveSection("chart");
+          }}
+          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen}
         />
       )}
       {/* Agent Ready is elite-only (see hasAccess(tier, "elite") above) —

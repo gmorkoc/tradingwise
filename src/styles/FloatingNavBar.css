@@ -1,13 +1,16 @@
 /* Floating bottom nav — visual only for now, see FloatingNavBar.tsx.
    Shape: near-full-width floating pill (margins on both sides, not edge-
    to-edge). Every item shows icon + title stacked (title under the icon),
-   not just the active one — active state is just a color/background
-   change now, same uniform width for all items. The Agent item is the one
-   exception: icon only, no label (see .fnb-agent-item below). Colors are
-   copied directly from TradingAgent.css's .ta-trigger (the "Agent Ready"
-   floating button) — not this app's global --color-* tokens — so these
-   two floating buttons that sit on screen together actually match each
-   other, not just each independently matching the rest of the app.
+   not just the active one — same uniform width for all items, icon/label
+   color never changes between active/inactive. "Active" is communicated
+   entirely by .fnb-active-indicator, a single glass pill that slides
+   behind whichever item is selected, not a per-item background/color
+   change. The Agent item is the one exception: icon only, no label (see
+   .fnb-agent-item below). Colors are copied directly from TradingAgent
+   .css's .ta-trigger (the "Agent Ready" floating button) — not this
+   app's global --color-* tokens — so these two floating buttons that sit
+   on screen together actually match each other, not just each
+   independently matching the rest of the app.
 
    Comparison variant: Agent sits flush in the row as a plain 5th icon
    (.fnb-agent-item), not raised above the bar in a cut notch — see
@@ -33,6 +36,65 @@
   transform-origin: bottom center;
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
 }
+/* While Buy/Sell Signals, the Asset Calculator, Search, or Profile is
+   open — their own backdrops (BuySignals.css 200000/200001, GlobalSearch
+   .css 100003/100004, ProfilePage.css 10000, App.css's .asset-modal-
+   overlay 500) sit well above this bar's resting z-index of 60, so
+   without this they visually bury it even though each is positioned to
+   float just above it. Scoped to only these four (FloatingNavBar.tsx's
+   `raised`) rather than a blanket z-index bump, so it stays below every
+   other overlay that was never asked to show it underneath. */
+.fnb-bar--raised {
+  z-index: 200010;
+}
+
+/* Shared sliding highlight — one pill that animates between items instead
+   of each button fading its own background in/out independently. Sits
+   behind the buttons (.fnb-item gets z-index below); position/width are
+   set inline from FloatingNavBar.tsx's own DOM measurement. .fnb-bar's
+   position:fixed already establishes the containing block this needs. */
+.fnb-active-indicator {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  border-radius: 32px;
+  overflow: hidden;
+  /* Dark theme's own look (default/unprefixed) — a neutral frosted-glass
+     chip, no color tint. Light theme overrides this below; CSS attribute
+     selectors have no timing dependency (unlike reading data-theme from
+     JS, which raced against when that attribute actually gets set and
+     briefly picked this branch even in light theme — see main.tsx). */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.14) 60%);
+  box-shadow: none;
+  /* Position (transform) and width are deliberately NOT in sync — width
+     lags behind and takes longer, so mid-slide the pill's leading edge
+     has already arrived at the new item while its trailing edge is still
+     catching up, stretching it slightly like a blob of liquid being
+     pulled before it settles back to the item's actual width. Pure CSS,
+     no JS/keyframes needed — just two transitions timed against each
+     other on the properties already being animated. */
+  transition: transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+html[data-theme="light"] .fnb-active-indicator {
+  /* Gray, not white — .fnb-bar itself is already a near-white/light-glass
+     surface in light theme, so a whiter pill on top barely registered
+     (confirmed visually: it rendered as little more than a thin shadow
+     edge). A gray tint actually reads as a distinct "selected" pill.
+     No backdrop-filter — dark theme's own rule above never used one and
+     has been reliable; this one did and wasn't, on a genuine first paint
+     (a known WebKit quirk: backdrop-filter can fail to composite on an
+     element's very first paint until something else forces a repaint).
+     Structurally matching the branch that's actually been working,
+     rather than keeping the blur and hoping a workaround holds up. */
+  background: rgba(15, 23, 42, 0.06);
+  /* Explicitly none, not just omitted — removing a property from this
+     override doesn't stop the base (dark) rule's own box-shadow above
+     from still applying here, since nothing else cancels it. */
+  box-shadow: none;
+}
 html[data-theme="light"] .fnb-bar {
   /* Neutral gray, not navy-tinted — a hairline border plus a soft, tight
      shadow is what actually separates a white pill from a white page
@@ -52,6 +114,8 @@ html[data-theme="light"] .fnb-bar {
     inset -1px 0 0 rgba(255, 255, 255, 0.3);
 }
 .fnb-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -65,7 +129,7 @@ html[data-theme="light"] .fnb-bar {
      — lighter + thinner than the original full --color-text/strokeWidth
      2.5 combo, which read as too dark/heavy against the bar. */
   color: #d8dbe4;
-  border-radius: 16px;
+  border-radius: 32px;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease;
 }
@@ -73,22 +137,19 @@ html[data-theme="light"] .fnb-bar {
    light-mode bottom nav icon color. */
 html[data-theme="light"] .fnb-item { color: #3c3c43; }
 .fnb-item svg { stroke-width: 1.8; }
-.fnb-item:hover { background: rgba(127, 127, 127, 0.12); }
+/* Background/glow now lives on the shared .fnb-active-indicator pill
+   (above) instead of here, so it can slide between items — this just
+   keeps the text/icon color change. */
 .fnb-item--active {
-  /* Same top-lit sheen as the bar itself (.fnb-bar above), so the active
-     pill reads as glossy too, not a flat color patch inside a glossy bar. */
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%), var(--color-primary);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
   color: #fff;
 }
 /* The light-theme override above (html[data-theme="light"] .fnb-item) has
-   higher specificity than plain .fnb-item--active, so without this it was
-   winning even on the active pill — darkening white text down to navy on
-   top of the still-blue background in light theme. The active pill's
-   background is the same --color-primary blue in both themes, so its text
-   should always stay white regardless of theme, same specificity level as
-   the rule it needs to beat. */
-html[data-theme="light"] .fnb-item--active { color: #fff; }
+   higher specificity than plain .fnb-item--active, so without this it
+   wouldn't reliably win on the active pill. Dark, not white, now that the
+   pill itself is a neutral white/frosted chip in light theme (white text
+   would vanish against it) — same specificity level as the rule it needs
+   to beat. */
+html[data-theme="light"] .fnb-item--active { color: #1e1b2e; }
 .fnb-item-label {
   font-size: 0.6rem;
   font-weight: 600;
@@ -101,35 +162,12 @@ html[data-theme="light"] .fnb-item--active { color: #fff; }
   align-items: center;
   justify-content: center;
 }
-/* Unread notification count — same small-circle-badge shape as
-   .buysig-bell-count, just repositioned for this bar's bigger icon. */
-.fnb-item-badge {
-  position: absolute;
-  top: -7px;
-  right: -9px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 999px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  border: 2px solid #0a0d1c;
-}
-html[data-theme="light"] .fnb-item-badge { border-color: #ffffff; }
-
 /* ── Agent item — same .fnb-item row shape/sizing as the other four, with
    the orb (TradingAgent.css's .ta-trigger-orb, reused verbatim — same
    infinite glow/rotate/scale animations) standing in for an svg icon,
    sized to match their 22x22 viewBox exactly. */
-/* Extra breathing room from its two immediate neighbors (Signals, Daily
-   Brief) specifically — margin on this one item only, so it doesn't
-   touch the Notifications↔Signals or Daily Brief↔Search gaps at all. */
+/* Extra breathing room from its two immediate neighbors (Signals, Search)
+   specifically — margin on this one item only. */
 .fnb-agent-item { padding: 0; margin: 0 10px; }
 .fnb-agent-orb-inline {
   /* A <button>'s <span> child is inline by default — width/height on an
