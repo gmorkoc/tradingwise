@@ -4121,7 +4121,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       {COIN_GLYPHS[coin] ?? coin[0]}
                     </span>
                     <h3
-                      className="chart-fs-coin-name chart-fs-coin-name--compact chart-title-tappable"
+                      className={`chart-fs-coin-name chart-fs-coin-name--compact chart-title-tappable${pageMode ? " chart-title-tappable--plain" : ""}`}
                       onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
                     >
                       {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
