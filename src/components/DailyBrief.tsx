@@ -402,8 +402,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   // stories (not just the same feed re-sorted) get an entrance animation —
   // skipped on the very first load (knownUrlsRef starts null) so the whole
   // initial 25-item list doesn't animate in at once.
-  const [refreshing, setRefreshing] = useState(false);
-
   const load = useCallback(async (cancelledRef?: { current: boolean }) => {
     const brief = await fetchBrief();
     if (cancelledRef?.current || brief.length === 0) return;
@@ -430,43 +428,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
       window.clearInterval(interval);
     };
   }, [load]);
-
-  // Manual "check for new news now" — same fetchBrief/dedup/new-item-diff
-  // path the 10-minute background poll already uses, just user-triggered.
-  // Enforces a minimum visible spin even when the fetch itself resolves
-  // almost instantly (cached/fast network) — without this, a quick fetch
-  // barely rotates the icon once before the spinning class comes off,
-  // reading as a glitch rather than a deliberate refresh. Never cuts a
-  // SLOWER fetch short — it only ever adds a floor, never a ceiling.
-  const MIN_SPIN_MS = 1200;
-  const handleRefresh = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    const started = Date.now();
-    try {
-      await load();
-    } finally {
-      const remaining = MIN_SPIN_MS - (Date.now() - started);
-      if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-      setRefreshing(false);
-    }
-  }, [refreshing, load]);
-
-  const refreshButton = (
-    <button
-      type="button"
-      className={`db-refresh-btn${refreshing ? " db-refresh-btn--spinning" : ""}`}
-      onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
-      disabled={refreshing}
-      aria-label={t("dailyBrief.refresh", "Refresh")}
-      title={t("dailyBrief.refresh", "Refresh")}
-    >
-      <svg className="db-refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12a9 9 0 11-3-6.7" />
-        <path d="M21 3v6h-6" />
-      </svg>
-    </button>
-  );
 
   // FLIP: animate the flat list settling into its new order whenever a
   // fresh story pushes everything else down a slot — measures each row's
@@ -672,14 +633,22 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
 
   const latestRows = latestItems.map((item) => renderRow(item));
 
+  // Reused in two places: inline atop the featured card (desktop's
+  // variant="page" has no separate header slot for it) and standalone in
+  // the mobile sheet's header row, where it now stands in for the old
+  // plain "Daily Brief" title.
+  const featuredBadge = featured && (
+    <div className="db-featured-badge">
+      <div className="top-nav-logo">
+        coinhint<span className="top-nav-logo-accent">z</span>
+      </div>
+      <span className="db-featured-brand-sub">{t("dailyBrief.blogBrandSub", "crypto market blog")}</span>
+    </div>
+  );
+
   const featuredCard = featured && (
     <div className={`db-featured${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
-      <div className="db-featured-badge">
-        <div className="top-nav-logo">
-          coinhint<span className="top-nav-logo-accent">z</span>
-        </div>
-        <span className="db-featured-brand-sub">{t("dailyBrief.blogBrandSub", "crypto market blog")}</span>
-      </div>
+      {featuredBadge}
       <div className="db-featured-main">
         {/* A video actually about this headline (see fetchVideoForTitle)
             replaces the static photo entirely — click-to-play, so no
@@ -823,7 +792,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         <div className="db-page-head">
           <span className="db-page-head-left">
             <span className="db-head-title">{t("dailyBrief.title")}</span>
-            {refreshButton}
           </span>
           <span className="db-live">
             <span className="db-live-bars">
@@ -882,9 +850,17 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         >
           <span className="db-handle" />
           <div className="db-head">
+            {/* Two-zone layout (sketch "E"): .db-featured-badge stands in
+                for the old plain "Daily Brief" title and stays alone on
+                the left — only once there's a featured story to badge
+                (nothing to brand before the first load resolves) — while
+                LIVE + "Updated X ago" stack together in the top-right
+                corner instead of competing with it on the same line. */}
             <span className="db-head-title-row">
-              <span className="db-head-title">{t("dailyBrief.title")}</span>
-              {sheetState !== "minimized" && (
+              {featuredBadge}
+            </span>
+            {sheetState !== "minimized" && (
+              <span className="db-head-status">
                 <span className="db-live">
                   <span className="db-live-bars">
                     <span />
@@ -893,18 +869,14 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                     <span />
                   </span>
                   {t("nav.live")}
-                  {updatedAt !== null && (
-                    <>
-                      <span className="db-live-sep" />
-                      <span className="db-live-updated">
-                        {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
-                      </span>
-                    </>
-                  )}
                 </span>
-              )}
-              {sheetState === "full" && refreshButton}
-            </span>
+                {updatedAt !== null && (
+                  <span className="db-head-updated">
+                    {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
+                  </span>
+                )}
+              </span>
+            )}
             {/* Collapsed (the dock) shows just the plain title now — no
                 headline/news preview text at all, not even the one-line
                 truncated version this used to show. "expanded"/"full"

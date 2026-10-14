@@ -7,13 +7,16 @@ import { SpeechRecognition } from "@capacitor-community/speech-recognition";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { CoinSymbol } from "../services/coinglass";
+import type { Ticker24h } from "../services/coinglass";
 import { AgentChartModal } from "./AgentChartModal";
+import { formatLivePrice } from "./PriceChart";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsent, updatePreferences,
   fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
   AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval, CoinSnapshot, ShowChartInterval, PreferencesUpdate,
+  PositionsListResponse, PositionsListItem, fetchClosedPositions,
 } from "../services/paperTrading";
 
 // Plain text input (no native number spinner), but still only lets the
@@ -288,6 +291,11 @@ interface Props {
   // Same shape as App.tsx's own setActiveSection, just typed loosely here
   // since this component doesn't import SectionId.
   onNavigateToSection?: (section: string) => void;
+  // Same live-price map App.tsx already feeds DailyBrief's ticker chips —
+  // lets the open-positions card show real unrealized P&L instead of just
+  // entry price. Optional: a position still renders fine (just without a
+  // P&L figure) before the first ticker fetch resolves.
+  coinTickers?: Map<string, Ticker24h>;
   // Called instead of opening the panel when a non-elite user tries to —
   // see the trigger/open gating below. Same prop FloatingNavBar already
   // takes for its own mobile Agent button (agentLocked/onAgentLocked).
@@ -304,6 +312,19 @@ function BellIcon({ size = 14 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "-2px", flexShrink: 0 }}>
       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+// Plain monochrome stacked-bars glyph for the header's "Positions" button —
+// same reasoning as BellIcon above, just a trade-ledger shape instead of a
+// bell.
+function PositionsIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "-2px", flexShrink: 0 }}>
+      <rect x="3" y="12" width="5" height="9" />
+      <rect x="10" y="7" width="5" height="14" />
+      <rect x="17" y="3" width="4" height="18" />
     </svg>
   );
 }
@@ -387,6 +408,117 @@ function AnimatedDots() {
       <span className="ta-anim-dot" />
       <span className="ta-anim-dot" />
     </span>
+  );
+}
+
+// Renders a real, tappable list of the user's open or closed positions —
+// set server-side (positionsList, see trading-agent-reply/index.ts) when
+// the user asks to actually SEE their positions rather than ask a prose
+// question about them. Tapping a row expands it in place (local state, no
+// round-trip) into the full detail: entry/current-or-exit price, size,
+// leverage, P&L, and open/close dates. Live P&L for an "open" item comes
+// from the same coinTickers map the positions card above already uses;
+// "closed" items show the already-known realized P&L directly.
+function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
+  list: PositionsListResponse;
+  coinTickers?: Map<string, Ticker24h>;
+  // Only ever passed from the dedicated Positions view (TradingAgent's
+  // header-triggered full-screen view, not the chat-triggered card) —
+  // lets "open" rows actually be closed from here too, same action as the
+  // portfolio header's own Close button.
+  onClosePosition?: (item: PositionsListItem) => void;
+  closingKey?: string | null;
+}) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const { status, items } = list;
+
+  if (items.length === 0) {
+    return (
+      <div className="ta-positions-list">
+        <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
+        <p className="ta-positions-list-empty">{status === "open" ? "No open positions right now." : "No closed positions yet."}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ta-positions-list">
+      <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
+      {items.map((item, i) => {
+        const isOpenRow = expanded === i;
+        const livePrice = status === "open" ? coinTickers?.get(item.coin)?.price : undefined;
+        const pnl = status === "open"
+          ? (livePrice && livePrice > 0 ? (livePrice - item.avgEntryPrice) * item.qty * (item.side === "short" ? -1 : 1) : null)
+          : (item.realizedPnl ?? null);
+        return (
+          <div key={`${item.coin}:${item.market}:${i}`} className="ta-positions-list-item">
+            <button type="button" className="ta-positions-list-row" onClick={() => setExpanded(isOpenRow ? null : i)}>
+              <span className="ta-positions-list-coin">{item.coin}</span>
+              <span className="ta-positions-list-qty">{item.qty} @ ${item.avgEntryPrice.toLocaleString()}</span>
+              {pnl != null && (
+                <span className={`ta-position-pnl${pnl >= 0 ? " positive" : " negative"}`}>
+                  {pnl >= 0 ? "+" : "-"}${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              )}
+              {status === "closed" && item.closeReason && (
+                <span className="ta-positions-list-tag">{item.closeReason.replace("_", " ")}</span>
+              )}
+              <span className={`ta-positions-list-chevron${isOpenRow ? " ta-positions-list-chevron--open" : ""}`}>▾</span>
+            </button>
+            {isOpenRow && (
+              <div className="ta-positions-list-detail">
+                <div className="ta-proposal-detail">
+                  <span>Side</span>
+                  <strong>{item.market === "futures" ? `${item.side === "long" ? "LONG" : "SHORT"} ${item.leverage}x` : "SPOT"}</strong>
+                </div>
+                <div className="ta-proposal-detail">
+                  <span>Size</span>
+                  <strong>{item.qty} {item.coin}</strong>
+                </div>
+                <div className="ta-proposal-detail">
+                  <span>Entry</span>
+                  <strong>${item.avgEntryPrice.toLocaleString()}</strong>
+                </div>
+                <div className="ta-proposal-detail">
+                  <span>{status === "open" ? "Current" : "Exit"}</span>
+                  <strong>
+                    {status === "open"
+                      ? (livePrice ? formatLivePrice(livePrice) : "—")
+                      : (item.exitPrice != null ? `$${item.exitPrice.toLocaleString()}` : "—")}
+                  </strong>
+                </div>
+                <div className="ta-proposal-detail">
+                  <span>P&L</span>
+                  <strong className={pnl != null ? (pnl >= 0 ? "ta-proposal-tp" : "ta-proposal-sl") : undefined}>
+                    {pnl != null ? `${pnl >= 0 ? "+" : "-"}$${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
+                  </strong>
+                </div>
+                <div className="ta-proposal-detail">
+                  <span>Opened</span>
+                  <strong>{item.openedAt ? new Date(item.openedAt).toLocaleString() : "—"}</strong>
+                </div>
+                {status === "closed" && (
+                  <div className="ta-proposal-detail">
+                    <span>Closed</span>
+                    <strong>{item.closedAt ? new Date(item.closedAt).toLocaleString() : "—"}</strong>
+                  </div>
+                )}
+                {status === "open" && onClosePosition && (
+                  <button
+                    type="button"
+                    className="ta-position-close ta-positions-list-close"
+                    onClick={(e) => { e.stopPropagation(); onClosePosition(item); }}
+                    disabled={closingKey === `${item.coin}:${item.market}`}
+                  >
+                    {closingKey === `${item.coin}:${item.market}` ? "Closing…" : "Close Position"}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -475,7 +607,7 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, onAgentLocked }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigateToSection, onAgentLocked }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
@@ -671,6 +803,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
   // conversation's (used for inline chips in the feed).
   const [allWatches, setAllWatches] = useState<AgentWatch[]>([]);
   const [showWatches, setShowWatches] = useState(false);
+  // Dedicated Positions view — same "header icon opens a full alternate
+  // view" pattern as History/Watchlist above, so open/closed positions are
+  // browsable directly without having to ask the agent for them in chat.
+  // Open items come straight from `portfolio` (already kept live); closed
+  // ones are fetched lazily, once, the first time this view opens.
+  const [showPositions, setShowPositions] = useState(false);
+  const [positionsTab, setPositionsTab] = useState<"open" | "closed">("open");
+  const [closedPositions, setClosedPositions] = useState<PositionsListItem[] | null>(null);
+  const [loadingClosedPositions, setLoadingClosedPositions] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
@@ -818,14 +959,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
   // the same spot. Still carries the same substance every time (coin/
   // budget ask, fully optional, can defer), just a different wrapper.
   const OPENER_GREETINGS: Array<(name: string | null) => string> = [
-    (name) => `Hey${name ? ` ${name}` : ""}, how's it going? Got a coin in mind, or a budget/typical trade size you want me working with? Totally optional — otherwise just hit me with whatever's on your mind.`,
-    (name) => `Yo${name ? ` ${name}` : ""}, good to see you again! Coin you're eyeing, or a budget you want me to keep in mind? No pressure — ask away whenever.`,
-    (name) => `Hey hey${name ? `, ${name}` : ""} — welcome back! If there's a coin on your radar or a budget you want me working with, let me know. Or don't — we can figure it out as we go.`,
-    (name) => `What's up${name ? ` ${name}` : ""}! Got a coin you're thinking about, or a budget/trade size in mind? Happy to work with whatever you've got, or we can just dive straight in.`,
-    (name) => `Hey${name ? ` ${name}` : ""}, how ya doing? Throw a coin or budget at me if you've got one in mind — if not, no worries, just ask me anything.`,
-    (name) => `Great to have you back${name ? `, ${name}` : ""}! Coin on your mind, or a budget you want me working with? All optional — otherwise just fire away.`,
-    (name) => `Hey${name ? ` ${name}` : ""}! Ready when you are — got a coin you're watching, or a budget in mind? Or just jump straight into it, totally up to you.`,
-    (name) => `Yo${name ? ` ${name}` : ""}, what's good? Mention a coin or budget if you've got one, or just ask me anything — we'll sort the details as we go.`,
+    (name) => `Hello${name ? `, ${name}` : ""}! How are you doing? Got a coin in mind, or a budget/typical trade size you want me working with? Totally optional — otherwise just hit me with whatever's on your mind.`,
+    (name) => `Hi${name ? ` ${name}` : ""}, how are you doing? Coin you're eyeing, or a budget you want me to keep in mind? No pressure — ask away whenever.`,
+    (name) => `Hello${name ? `, ${name}` : ""}! How's it going? If there's a coin on your radar or a budget you want me working with, let me know. Or don't — we can figure it out as we go.`,
+    (name) => `Hi${name ? ` ${name}` : ""}, how are you doing today? Got a coin you're thinking about, or a budget/trade size in mind? Happy to work with whatever you've got, or we can just dive straight in.`,
   ];
   // Fires once per brand-new, zero-message conversation (after consent is
   // already on file) — a warm, plain-spoken opener instead of the old
@@ -971,16 +1108,18 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
     setMessages([]);
     setShowHistory(false);
     setShowWatches(false);
+    setShowPositions(false);
     openerSentRef.current = false;
   };
 
   const handleOpenHistory = async () => {
-    // showHistory/showWatches are two independent flags gating alternate
-    // views in the same spot — without clearing the other one here, going
-    // Watches -> History -> (tap a conversation) left showWatches stuck
-    // true, so opening a conversation dropped the user back on
+    // showHistory/showWatches/showPositions are independent flags gating
+    // alternate views in the same spot — without clearing the others here,
+    // going Watches -> History -> (tap a conversation) left showWatches
+    // stuck true, so opening a conversation dropped the user back on
     // Notifications instead of the chat they just tapped.
     setShowWatches(false);
+    setShowPositions(false);
     setShowHistory(true);
     try { await loadConversations(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
@@ -992,14 +1131,52 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
 
   const handleOpenWatches = async () => {
     setShowHistory(false);
+    setShowPositions(false);
     setShowWatches(true);
     try { await loadAllWatches(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+
+  // Lazily fetched once per panel session, not re-fetched every time this
+  // view reopens — a position closing (via this view's own Close button)
+  // refreshes it explicitly instead (see handleClosePositionFromList).
+  const loadClosedPositions = useCallback(async () => {
+    if (!user) return;
+    setLoadingClosedPositions(true);
+    try {
+      setClosedPositions(await fetchClosedPositions(user.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load your closed positions — please try again.");
+    } finally {
+      setLoadingClosedPositions(false);
+    }
+  }, [user]);
+
+  const handleOpenPositions = async () => {
+    setShowHistory(false);
+    setShowWatches(false);
+    setShowPositions(true);
+    if (closedPositions === null) await loadClosedPositions();
+  };
+
+  // Mirrors handleClosePosition, just resolves the real PaperPosition (with
+  // marginUsd/liquidationPrice/etc. closePosition itself doesn't strictly
+  // need, but the type does) from `portfolio` by coin+market, since the
+  // generic PositionsListItem a card row hands back doesn't carry those.
+  const handleClosePositionFromList = async (item: PositionsListItem) => {
+    const match = portfolio?.positions.find((p) => p.coin === item.coin && p.market === item.market);
+    if (!match) return;
+    await handleClosePosition(match);
+    // The close just appended a new row to the closed-trades log — refresh
+    // the cached list so switching to the Closed tab shows it right away
+    // instead of the stale pre-close snapshot.
+    if (closedPositions !== null) await loadClosedPositions();
   };
 
   const handleOpenConversation = async (id: string) => {
     setConversationId(id);
     setShowHistory(false);
     setShowWatches(false);
+    setShowPositions(false);
   };
 
   const handleDeleteConversation = async (id: string) => {
@@ -1059,6 +1236,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
     // cancel this exact in-flight request.
     const controller = new AbortController();
     sendAbortControllerRef.current = controller;
+    // Hoisted out of the try block — needed again in `finally` below to
+    // re-attach positionsList (see there for why).
+    let agentMsg: AgentMessage | null = null;
     try {
       // The resolved agent message already has everything speakLatestAgentReply
       // needs — firing it right here (not awaited) lets speech synthesis
@@ -1066,7 +1246,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
       // waiting on a second full round trip first, closer to how quickly a
       // real person replies after you stop talking.
       let preferencesUpdate: PreferencesUpdate | null = null;
-      const agentMsg = await sendAgentMessage(
+      agentMsg = await sendAgentMessage(
         user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice, setLastMarketSnapshot,
         (req) => setChartModal({ coin: req.coin, interval: req.interval }),
         (req) => setOrderBookModalCoin(req.coin),
@@ -1091,6 +1271,18 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
       // regardless of viaVoice — speaking the reply (above) is purely an
       // add-on for a voice-originated question, never a substitute for it.
       await loadAll(conversationId);
+      // loadAll just replaced `messages` wholesale with a fresh DB read —
+      // positionsList has no DB column (deliberately transient, see
+      // PositionsListResponse in paperTrading.ts) so the freshly-loaded row
+      // for this exact message never carries it, and the card would
+      // silently never render even though the model/backend produced real
+      // data for it. Patch it back onto that one message by id now that
+      // the DB row exists to match against.
+      if (agentMsg?.positionsList) {
+        const pl = agentMsg.positionsList;
+        const id = agentMsg.id;
+        setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, positionsList: pl } : m)));
+      }
       setSending(false);
     }
   };
@@ -1560,6 +1752,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
           <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title="Watchlist" aria-label="Watchlist">
             <BellIcon size={16} />
           </button>
+          <button type="button" className="ta-head-icon-btn" onClick={handleOpenPositions} title="Positions" aria-label="Positions">
+            <PositionsIcon size={16} />
+          </button>
           <button type="button" className="ta-head-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
         </div>
       </div>
@@ -1652,7 +1847,49 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
             </button>
           </div>
         );
-      })() : needsConsent ? (
+      })() : showPositions ? (
+        <div className="ta-history">
+          <div className="ta-positions-view-tabs">
+            <button
+              type="button"
+              className={`ta-positions-view-tab${positionsTab === "open" ? " ta-positions-view-tab--active" : ""}`}
+              onClick={() => setPositionsTab("open")}
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              className={`ta-positions-view-tab${positionsTab === "closed" ? " ta-positions-view-tab--active" : ""}`}
+              onClick={() => setPositionsTab("closed")}
+            >
+              Closed
+            </button>
+          </div>
+          <div className="ta-history-list">
+            {positionsTab === "open" ? (
+              <PositionsListCard
+                list={{
+                  status: "open",
+                  items: (portfolio?.positions ?? []).map((p) => ({
+                    coin: p.coin, market: p.market, side: p.side, qty: p.qty, leverage: p.leverage,
+                    avgEntryPrice: p.avgEntryPrice, openedAt: p.updatedAt,
+                  })),
+                }}
+                coinTickers={coinTickers}
+                onClosePosition={handleClosePositionFromList}
+                closingKey={closingPosition}
+              />
+            ) : loadingClosedPositions ? (
+              <p className="ta-empty">Loading your closed positions…</p>
+            ) : (
+              <PositionsListCard list={{ status: "closed", items: closedPositions ?? [] }} />
+            )}
+          </div>
+          <button type="button" className="ta-history-back" onClick={() => setShowPositions(false)}>
+            Back to chat
+          </button>
+        </div>
+      ) : needsConsent ? (
         <div className="ta-onboard">
           <p className="ta-onboard-disclaimer">
             <strong>Paper trading only — simulated money, simulated trades.</strong> This agent is not a registered
@@ -1758,10 +1995,19 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
                   <span className="ta-portfolio-positions-label">Current Positions</span>
                   {portfolio.positions.map((p) => {
                     const key = `${p.coin}:${p.market}`;
+                    const livePrice = coinTickers?.get(p.coin)?.price;
+                    const pnl = livePrice && livePrice > 0
+                      ? (livePrice - p.avgEntryPrice) * p.qty * (p.side === "short" ? -1 : 1)
+                      : null;
                     return (
                       <div key={key} className="ta-position">
                         <span className="ta-position-coin">{p.coin}</span>
                         <span className="ta-position-qty">{p.qty} @ ${p.avgEntryPrice.toLocaleString()}</span>
+                        {pnl != null && (
+                          <span className={`ta-position-pnl${pnl >= 0 ? " positive" : " negative"}`}>
+                            {pnl >= 0 ? "+" : "-"}${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </span>
+                        )}
                         <button
                           type="button"
                           className="ta-position-close"
@@ -1893,6 +2139,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, onNavigateToSection, o
                       </span>
                     )}
                   </div>
+                )}
+                {m.positionsList && (
+                  <PositionsListCard list={m.positionsList} coinTickers={coinTickers} />
                 )}
                 {m.balanceUpdate && (
                   <div className={`ta-proposal ta-proposal--${m.actionStatus}`}>

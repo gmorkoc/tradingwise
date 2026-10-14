@@ -14,16 +14,25 @@ self.addEventListener("push", (event) => {
     console.error("[sw] payload.json() failed:", e, "raw text:", event.data && event.data.text());
   }
   const title = payload.title || "coinhintz";
-  const options = {
-    body: payload.body || "",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    data: payload.data || {},
-  };
+  const body = payload.body || "";
+  const data = payload.data || {};
+  const options = { body, icon: "/icon-192.png", badge: "/icon-192.png", data };
+
+  // Mirrors the native path (src/services/pushNotifications.ts): if a tab
+  // is open and focused, skip the OS banner and hand the payload to the
+  // page instead so PushToast.tsx can show an in-app toast — only an
+  // unfocused/closed tab gets the regular system push notification.
   event.waitUntil(
-    self.registration.showNotification(title, options)
-      .then(() => console.log("[sw] showNotification resolved OK"))
-      .catch((e) => console.error("[sw] showNotification FAILED:", e)),
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      const focused = clientList.find((c) => c.focused);
+      if (focused) {
+        focused.postMessage({ source: "web-push-toast", title, body, data });
+        return;
+      }
+      return self.registration.showNotification(title, options)
+        .then(() => console.log("[sw] showNotification resolved OK"))
+        .catch((e) => console.error("[sw] showNotification FAILED:", e));
+    }),
   );
 });
 

@@ -49,13 +49,14 @@
   bottom: calc(16px + 62px + 8px);
   z-index: 400;
   margin: 0 auto;
-  /* Dark theme: flat surface, no glass (light theme below keeps its own
-     "Liquid Glass" translucency/specular treatment — only dark was
-     asked to be pulled back to the app's normal flat-surface look). */
-  background: var(--color-surface);
+  /* Matches .db-card's own background/box-shadow exactly, not its own
+     separate flat-surface treatment — the sheet and the card it wraps
+     should read as one continuous surface instead of two different
+     elevations. */
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: 18px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   max-height: 76px;
   display: flex;
@@ -70,19 +71,10 @@
     box-shadow 0.28s ease;
 }
 html[data-theme="light"] .db-sheet {
-  /* Base alpha raised from 0.4 to 0.82 — at 0.4 this read as "barely
-     there" on a light page instead of frosted glass (page content
-     showed through far more than the blur/gradients alone intended). */
-  background:
-    radial-gradient(120% 55% at 25% -10%, rgba(255, 255, 255, 0.95), transparent 60%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5) 60%),
-    rgba(255, 255, 255, 0.82);
-  border-color: rgba(255, 255, 255, 0.7);
-  box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 1px 0 0 rgba(255, 255, 255, 0.5),
-    inset -1px 0 0 rgba(255, 255, 255, 0.3);
+  /* Matches .db-card's own light-theme box-shadow exactly (its background
+     carries over unchanged from the base rule above, same as .db-card's
+     own light override only touching its shadow too). */
+  box-shadow: 0 4px 14px rgba(30, 27, 75, 0.1);
 }
 
 /* Docked (collapsed) only — a full pill, matching .fnb-bar's own
@@ -119,24 +111,12 @@ html[data-theme="light"] .db-sheet {
    title + one featured story, sized to fit that (not 78vh, which is what
    .db-sheet--full below is for). Position/rounding/border already match
    the base .db-sheet rule above (both float above FloatingNavBar now) —
-   only what's actually different from the base (taller max-height, a
-   stronger blur/shadow to read as "the active one") is overridden here. */
+   only what's actually different from the base (taller max-height) is
+   overridden here; background/box-shadow inherit straight through,
+   matching .db-card in both themes with no separate "active state"
+   elevation anymore. */
 .db-sheet--expanded {
   max-height: 46vh;
-  background: var(--color-surface-alt);
-  /* A bit more lift than the base/docked shadow — this is the "active"
-     size, sitting further off the page than the flat dock. No inset
-     highlight glint here — that's a glass touch, and dark theme's
-     background (base .db-sheet rule above) is a flat opaque surface. */
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65);
-}
-html[data-theme="light"] .db-sheet--expanded {
-  /* Light theme's base background (html[data-theme="light"] .db-sheet)
-     is still translucent, so the blur here is doing real work — dark
-     theme's is opaque now and dropped it above. */
-  backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
-  -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.04);
-  box-shadow: 0 14px 32px rgba(30, 27, 75, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* The big reading view — what "expanded" used to mean before the teaser
@@ -189,51 +169,13 @@ html[data-theme="light"] .db-sheet--full {
 }
 
 
-.db-refresh-btn {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  margin: 0;
-  line-height: 0;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
-}
-.db-refresh-btn:hover { background: var(--color-border); color: var(--color-text); }
-.db-refresh-btn:active { transform: scale(0.9); }
-.db-refresh-btn:disabled { cursor: default; }
-/* Accent color while actively refreshing — same blue used for the price
-   chart's line/dot-fill elsewhere, distinct from the idle muted gray so a
-   click reads as "doing something," not just spinning in place. */
-.db-refresh-btn--spinning { color: #818cf8; }
-
-.db-refresh-icon {
-  display: block;
-  width: 13px;
-  height: 13px;
-  color: currentColor;
-  margin: auto;
-}
-
-@keyframes db-refresh-spin {
-  to { transform: rotate(360deg); }
-}
-.db-refresh-btn--spinning .db-refresh-icon {
-  animation: db-refresh-spin 0.4s linear infinite;
-}
-
 .db-drag-zone {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  padding: 12px 16px 0;
+  padding: 12px 16px 0 0;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -254,16 +196,34 @@ html[data-theme="light"] .db-sheet--full {
 .db-head {
   width: 100%;
   display: flex;
-  flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 16px 0;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 0 8px;
 }
 
 .db-head-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+/* Right-hand corner stack — LIVE above, "Updated X ago" below it, both
+   right-aligned, kept apart from .db-head-title-row's brand on the left. */
+.db-head-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.db-head-updated {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .db-head-title {
@@ -290,14 +250,14 @@ html[data-theme="light"] .db-sheet--full {
   margin: 2px 14px 0;
   border-radius: 14px;
   background: var(--color-surface-alt);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 html[data-theme="light"] .db-card {
-  box-shadow: 0 4px 14px rgba(30, 27, 75, 0.1);
+  box-shadow: none;
 }
 
 .db-card-list {
@@ -345,6 +305,16 @@ html[data-theme="light"] .db-card {
 }
 html[data-theme="light"] .db-sheet .db-live {
   background: #f0fdf4;
+}
+
+/* Red variant — next to .db-featured-badge in the sheet's header row,
+   distinct from the green "fresh data" badge used elsewhere (desktop's
+   .db-page-head keeps the green one). */
+.db-live--red {
+  color: #ef4444;
+}
+html[data-theme="light"] .db-sheet .db-live--red {
+  background: #fef2f2;
 }
 
 .db-live-sep {
@@ -403,7 +373,23 @@ html[data-theme="light"] .db-sheet .db-live {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  padding: 12px 14px 8px;
+  padding: 12px 14px 8px 0;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+/* Desktop (.db-page sidebar) only — mobile's .db-sheet keeps the base
+   padding/margin-left above. */
+.db-page .db-featured-badge {
+  padding: 14px 14px 10px;
+  margin-left: 0;
+}
+/* The sheet variant now shows .db-featured-badge once already, promoted
+   to the header row as its title (DailyBrief.tsx) — this hides the
+   second copy that'd otherwise still render inline atop the featured
+   card's own content below. Scoped to .db-card specifically so desktop's
+   .db-page (no header slot for it) keeps its own inline badge untouched. */
+.db-sheet .db-card .db-featured-badge {
+  display: none;
 }
 /* .top-nav-logo is sized for the real top nav bar (18px, and itself
    display:flex/align-items:center internally) — scaled down here to sit
@@ -416,8 +402,10 @@ html[data-theme="light"] .db-sheet .db-live {
 }
 
 .db-featured-brand-sub {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-left: -3px;
 }
 
 /* Horizontal now (text left, a small square thumbnail right), not a big

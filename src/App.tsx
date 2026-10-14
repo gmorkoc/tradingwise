@@ -3012,6 +3012,7 @@ function AppDashboard({
       <TradingAgent
         selectedCoin={coin}
         hideTrigger={!isWideDesktop}
+        coinTickers={coinTickers}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
         onAgentLocked={() => setShowEliteUpsell(true)}
       />
@@ -3027,8 +3028,13 @@ function AppDashboard({
           "full"/"expanded" states already render their own .db-backdrop
           (DailyBrief.tsx), and dragging down to "minimized" fires
           onDismiss, which unmounts this the same way the old auto-open
-          instance did. */}
-      {dailyBriefPanelOpen && (
+          instance did. Explicit !isWideDesktop guard here too, not just
+          reliance on dailyBriefPanelOpen never being set true on desktop
+          (its only trigger, FloatingNavBar's News icon, is itself
+          desktop-gated) — belt and suspenders against any future code
+          path, or a stale true value surviving a mobile→desktop resize,
+          ever showing this bottom-sheet UI on desktop. */}
+      {dailyBriefPanelOpen && !isWideDesktop && (
         <DailyBrief
           coinTickers={coinTickers}
           initialState="expanded"

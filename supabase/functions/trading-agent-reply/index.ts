@@ -165,7 +165,7 @@ interface PortfolioSnapshot {
   cashBalance: number;
   positions: {
     coin: string; market: "spot" | "futures"; side: "long" | "short"; qty: number;
-    avgEntryPrice: number; leverage: number;
+    avgEntryPrice: number; leverage: number; updatedAt: string;
   }[];
   typicalTradeUsd: number | null;
   allowLeverage: boolean;
@@ -250,6 +250,45 @@ interface ShowOrderBookRequest {
   coin: string;
 }
 
+// One row from the paper_trades audit log — opens (realized_pnl null) AND
+// closes (realized_pnl set), shared by the system-prompt history line and
+// the "closed positions" list below so both read off the exact same fetch.
+interface TradeHistoryRow {
+  coin: string;
+  side: "buy" | "sell";
+  position_side: "long" | "short";
+  qty: number;
+  price: number;
+  market: "spot" | "futures";
+  leverage: number;
+  close_reason: "manual" | "take_profit" | "stop_loss" | "liquidation" | null;
+  realized_pnl: number | null;
+  created_at: string;
+}
+
+// One item in a positionsList response — "open" items come straight from
+// the live paper_positions snapshot, "closed" ones are built by pairing a
+// close leg in TradeHistoryRow with the most recent prior open leg for the
+// same coin+market (see buildClosedPositionsList) since a close row's own
+// "price" is only ever the exit price, never the original entry.
+interface PositionsListItem {
+  coin: string;
+  market: "spot" | "futures";
+  side: "long" | "short";
+  qty: number;
+  leverage: number;
+  avgEntryPrice: number;
+  openedAt: string | null;
+  exitPrice?: number;
+  closedAt?: string;
+  closeReason?: "manual" | "take_profit" | "stop_loss" | "liquidation" | null;
+  realizedPnl?: number;
+}
+interface PositionsListResponse {
+  status: "open" | "closed";
+  items: PositionsListItem[];
+}
+
 interface AgentResponse {
   reply: string;
   action: AgentAction | null;
@@ -293,14 +332,22 @@ interface AgentResponse {
   // the button needs to stay tappable in the chat history after a reload,
   // same as action/watch/question.
   navigateTo: { section: string; label: string } | null;
+  // Set by the model directly (same convention as showChart/showOrderBook)
+  // when the user asks to SEE their current or closed positions as a list,
+  // rather than just asking a prose question about them. The server fills
+  // in "positionsList" from real data right after parsing — the model only
+  // ever signals which list is wanted, never the data itself.
+  positionsRequest: "open" | "closed" | null;
+  positionsList: PositionsListResponse | null;
 }
 
 // Raw shape the model actually returns — "newsRefs" are indices into the
 // headlines list we gave it, not real NewsItem objects, so they can't be
 // trusted/shown directly (the model could invent a title/URL). The server
 // maps them back to the real fetched headlines before anything reaches the
-// client — see resolveNewsSources below.
-interface RawAgentResponse extends Omit<AgentResponse, "newsSources" | "thoughtProcess" | "marketSnapshot"> {
+// client — see resolveNewsSources below. "positionsList" is server-computed
+// the same way, from "positionsRequest" — never trust a model-provided one.
+interface RawAgentResponse extends Omit<AgentResponse, "newsSources" | "thoughtProcess" | "marketSnapshot" | "positionsList"> {
   newsRefs?: number[] | null;
 }
 
@@ -414,6 +461,56 @@ function sanitizeShowOrderBook(sb: ShowOrderBookRequest | null | undefined): Sho
   return { coin: sb.coin.toUpperCase() };
 }
 
+// Pairs each CLOSE leg (realized_pnl set) in the trade log with the most
+// recent prior OPEN leg (realized_pnl null) for the same coin+market, so a
+// closed position's detail can show its real entry price/date — a close
+// row's own "price"/"created_at" are only ever the exit side. Safe to do by
+// simple chronological adjacency: paper_positions is unique per
+// user+coin+market, so trades for one coin+market strictly alternate
+// open/close, never two opens or two closes in a row. Falls back to the
+// exit price/no open date on the rare row where the matching open fell
+// outside the fetched window (the 150-row safety cap).
+function buildClosedPositionsList(tradeHistory: TradeHistoryRow[]): PositionsListItem[] {
+  const ascending = [...tradeHistory].reverse();
+  const pendingOpenByKey = new Map<string, TradeHistoryRow>();
+  const closed: PositionsListItem[] = [];
+  for (const t of ascending) {
+    const key = `${t.coin}:${t.market}`;
+    if (t.realized_pnl == null) {
+      pendingOpenByKey.set(key, t);
+      continue;
+    }
+    const openLeg = pendingOpenByKey.get(key) ?? null;
+    closed.push({
+      coin: t.coin, market: t.market, side: t.position_side, qty: t.qty, leverage: t.leverage,
+      avgEntryPrice: openLeg?.price ?? t.price, openedAt: openLeg?.created_at ?? null,
+      exitPrice: t.price, closedAt: t.created_at, closeReason: t.close_reason, realizedPnl: t.realized_pnl,
+    });
+    pendingOpenByKey.delete(key);
+  }
+  return closed.reverse();
+}
+
+function buildPositionsList(
+  request: "open" | "closed" | null | undefined,
+  positions: PortfolioSnapshot["positions"],
+  tradeHistory: TradeHistoryRow[],
+): PositionsListResponse | null {
+  if (request === "open") {
+    return {
+      status: "open",
+      items: positions.map((p) => ({
+        coin: p.coin, market: p.market, side: p.side, qty: p.qty, leverage: p.leverage,
+        avgEntryPrice: p.avgEntryPrice, openedAt: p.updatedAt,
+      })),
+    };
+  }
+  if (request === "closed") {
+    return { status: "closed", items: buildClosedPositionsList(tradeHistory) };
+  }
+  return null;
+}
+
 // The model is instructed to write free-text "thinking out loud" narration
 // first, then the structured JSON payload — lets one completion serve both
 // the live "what the agent is noticing" stream the UI shows while waiting,
@@ -440,7 +537,7 @@ const SAFE_LOOKBACK = 60;
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
   marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[], viaVoice: boolean,
-  positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean
+  positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean, tradeHistory: TradeHistoryRow[]
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -521,6 +618,23 @@ async function streamReply(
   const sessionLine = portfolio.todayClosedCount === 0
     ? "no closed trades yet today"
     : `today: ${portfolio.todayClosedCount} closed trade${portfolio.todayClosedCount === 1 ? "" : "s"}, realized P&L ${portfolio.todayRealizedPnl >= 0 ? "+" : ""}$${portfolio.todayRealizedPnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}${portfolio.currentLossStreak >= 2 ? `, currently on a ${portfolio.currentLossStreak}-trade losing streak` : ""}`;
+  // Every open/close leg (not just today's, not just closes) — lets the
+  // agent actually answer "what trades have I made" / "show my history"
+  // from real data instead of only ever seeing today's aggregate count.
+  // One line per event (not semicolon-joined like the short lines above)
+  // since this can legitimately run to dozens of entries.
+  const historyLine = (tradeHistory ?? []).length
+    ? (tradeHistory ?? []).map((t) => {
+        const when = new Date(t.created_at).toLocaleString();
+        const leg = t.market === "spot"
+          ? `${t.coin} spot ${t.side} ${t.qty} @ $${t.price.toLocaleString()}`
+          : `${t.coin} futures ${t.side} ${t.leverage}x ${t.qty} @ $${t.price.toLocaleString()}`;
+        const pnl = t.realized_pnl != null
+          ? ` — closed${t.close_reason ? ` (${t.close_reason})` : ""}, realized ${t.realized_pnl >= 0 ? "+" : ""}$${t.realized_pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+          : " — opened";
+        return `${when}: ${leg}${pnl}`;
+      }).join("\n")
+    : "no trade history yet";
 
   const baseMessages = [
           {
@@ -532,6 +646,8 @@ Crypto trading is your one and only focus — check this before anything else, o
 Personality — this is not optional flavor, it's a real, required part of "reply" and the narration on EVERY turn, not just the rare "obviously bad setup" case: you're a sharp, dry-witted trader friend, not a compliance document. Default to a little sarcasm/edge as your normal voice — genuinely funny and a bit cocky when a setup is clean, openly unimpressed or teasing when someone asks for something dumb, deadpan when a setup is just mid. Reach for it on totally ordinary turns too, not only dramatic ones. Some real examples of the voice you're going for (don't reuse these verbatim, write fresh ones in the moment, but match this energy): "Oh, we're doing 20x on a memecoin with no volume? Bold strategy." / "Gotcha — BTC's actually looking clean here, RSI's cooling off from overbought. Not gonna lie, kind of like this one." / "Hmm, range-bound on the daily and you want to go all-in? I mean, I'll do it if you insist, but I wouldn't." / "Yeah that's... not a great setup, chief. Volume's dead, MACD's rolling over. Hard pass from me." Drop in small verbal habits mid-thought — "hmm," "gotcha," "right," "yeah," "honestly," "not gonna lie" — exactly where a real person would toss them in, not stapled to the front of every reply. Contractions and plain talk always ("I'd", "that's", "you're"), never stiff report-speak ("Additionally," "It is recommended that," "One should consider") — this app also speaks "reply" aloud, so flat, formal phrasing reads as obviously robotic there. The one place this backs off: a genuine risk warning or a hard number stays plainly, seriously stated — the personality wraps AROUND the substance, it never buries or undercuts it. Keep "reply" to its short-verdict length below regardless — personality is about HOW it's said, not making it longer.
 
 Portfolio: cash $${portfolio.cashBalance.toLocaleString()}, open positions: ${positionsLine}. User preferences: ${prefsLine}. Session so far: ${sessionLine}. Leveraged futures trading is ${portfolio.allowLeverage ? "ENABLED" : "DISABLED"} for this user${portfolio.allowLeverage ? "" : " — you may ONLY propose spot trades (\"market\": \"spot\", \"leverage\": 1); if they ask for leverage/margin/long/short/futures, tell them plainly it's off and that they just need to say so (e.g. \"turn on leverage\") to enable it, and do not propose a futures action until they do"}. This portfolio/preferences/session line is ALWAYS real, already-known information about this specific user (confirmed from a prior conversation or their actual trade log, not a guess) — for an open-ended ask like "what's a good move for me" with no coin named in the message itself, this is exactly where the coin and sizing come from. Never claim "no coin was mentioned" or "I need more context on your strategy" when focus coins or a typical trade size are listed here — that claim would be factually wrong, since you already have them right above; use them instead of asking for what you already know.
+
+Trade history (every position opened and closed, most recent first, real data from this user's actual trade log — up to the last 150 events): ${historyLine}. Whenever the user asks about past trades, performance, a specific coin they've traded before, or their trading history in general, answer from this real data — never say you don't have access to their history or can only see the current session; if the list above says "no trade history yet," that itself is the real, true answer (a brand-new account), not a limitation to apologize for.
 
 Preferences update — there's no onboarding form anymore; starting balance, typical trade size, leverage preference, and focus coins are all picked up naturally from conversation instead. Any time the user states one of these in plain language (e.g. "I've got about $500 to play with," "let's focus on SOL and ETH," "turn on leverage," "keep my trades around $50 a pop"), set "preferencesUpdate" to an object containing ONLY the field(s) they actually just stated this turn ("startingBalance", "typicalTradeUsd", "allowLeverage", "focusCoins" — a full replacement list of focus coins, not a diff) and acknowledge it warmly and plainly in "reply" (this is one of the moments the personality dials back toward plain and genuine rather than sarcastic — a real "got it, noted" beat, not a bit). Never invent or infer a number they didn't actually say. Leave "preferencesUpdate" null on every other turn, including ones where you're just using the already-known preferences above, not being given new ones.
 
@@ -557,7 +673,7 @@ You know this material cold and should explain it correctly and plainly whenever
 Selectivity is the actual job here, not a formality — this agent is explicitly judged on its realized win rate, not on how often it finds a reason to act, so passing on a mediocre setup is a GOOD outcome, not a failure to be helpful. Before proposing any "action" or basket leg (even when the user gives an explicit instruction like "buy $200 of BTC" — an explicit instruction is permission to act IF the setup supports it, not an order to override your own judgment), count how many of these five are genuinely true for that coin right now: (1) direction agrees with the daily trend bias (not "range" — a "range" bias means this condition is NOT met for either direction), (2) RSI actually confirms the direction (oversold/turning up for a buy/long, overbought/turning down for a sell/short — not just "not extreme"), (3) MACD histogram's sign AND recent direction both support the move, (4) volume ratio is elevated (meaningfully above 1.0x) confirming real participation behind the move, (5) no genuinely conflicting headline among the news given above. Fewer than 3 of 5 true means the setup is mediocre — in that case do NOT propose the action/leg: set it to null and tell the user plainly which conditions are missing and what you'd want to see change before you'd take it (e.g. "I'd pass here — only RSI confirms (28, oversold); the daily trend is still range-bound and volume is flat at 0.7x, so there's no real catalyst yet. I'd want to see the daily trend turn or volume pick up above 1.2x first."). The one exception: if the user explicitly insists after you've told them it's weak (e.g. they repeat the instruction or say "do it anyway"), comply, but keep stating the real conviction level in "reason" rather than retroactively talking yourself into the setup. This same 3-of-5 bar applies per-leg when screening/building a basket — drop or never offer a candidate that doesn't clear it, even if the user named that coin.
 
 Respond ONLY as JSON matching exactly this shape, nothing else:
-{"reply": string, "action": {"side": "buy"|"sell", "coin": string, "market": "spot"|"futures", "amountUsd": number, "leverage": number, "takeProfit": number|null, "stopLoss": number|null, "reason": string} | null, "basket": [{same shape as action}] | null, "watch": {"coin": string, "condition": string, "interval": "1h"|"4h"|"1d"} | null, "question": {"prompt": string, "options": [{"label": string, "description": string}]} | null, "balanceUpdate": {"newBalance": number, "reason": string} | null, "showChart": {"coin": string, "interval": "1min"|"5min"|"15min"|"1h"|"4h"|"6h"|"1day"|"1week"|"1month"} | null, "showOrderBook": {"coin": string} | null, "preferencesUpdate": {"startingBalance": number, "typicalTradeUsd": number, "allowLeverage": boolean, "focusCoins": string[]} | null, "navigateTo": {"section": string, "label": string} | null, "newsRefs": number[]}
+{"reply": string, "action": {"side": "buy"|"sell", "coin": string, "market": "spot"|"futures", "amountUsd": number, "leverage": number, "takeProfit": number|null, "stopLoss": number|null, "reason": string} | null, "basket": [{same shape as action}] | null, "watch": {"coin": string, "condition": string, "interval": "1h"|"4h"|"1d"} | null, "question": {"prompt": string, "options": [{"label": string, "description": string}]} | null, "balanceUpdate": {"newBalance": number, "reason": string} | null, "showChart": {"coin": string, "interval": "1min"|"5min"|"15min"|"1h"|"4h"|"6h"|"1day"|"1week"|"1month"} | null, "showOrderBook": {"coin": string} | null, "preferencesUpdate": {"startingBalance": number, "typicalTradeUsd": number, "allowLeverage": boolean, "focusCoins": string[]} | null, "navigateTo": {"section": string, "label": string} | null, "positionsRequest": "open"|"closed"|null, "newsRefs": number[]}
 
 Exactly ONE of "action", "basket", "watch", "question", "balanceUpdate" may be non-null at a time (all five null is also valid — plain chat). Never set two of them together. "showChart" and "showOrderBook" are INDEPENDENT of that rule — a pure UI-navigation request, not a trade — and may be set alongside any of the above, or alongside a plain chat "reply" with everything else null.
 
@@ -603,6 +719,8 @@ Beyond those two, this app has a full set of OTHER dedicated pages reachable fro
 
 Recommend "Price Chart" freely, for anyone, when a deeper look would genuinely help (set navigateTo: {"section":"chart","label":"Price Chart"}). Recommend "Candle AI" ONLY if the user's tier is actually "elite" for setting it as the primary suggestion — for "free" or "pro", if Candle AI would genuinely be the right next step, still set navigateTo for it but frame it honestly as something that needs an Elite upgrade (e.g. "Candle AI's Elliott Wave read would nail this down further, but that's an Elite feature — tap below if you want to check it out") rather than pretending it doesn't exist or silently omitting it.
 
+Set "positionsRequest" to "open" when the user asks to actually SEE/list their current/open positions as a list ("show my positions", "what positions do I have open", "list my open trades") — this is INDEPENDENT of the one-of-five group above and of showChart/showOrderBook, and can be set alongside a plain chat reply with everything else null. Set it to "closed" for the same ask about past/closed positions ("show my closed positions", "list my trade history", "what trades have I closed"). The client renders a real, tappable list from actual data when this is set — you never write out the positions/history yourself in "reply" in that case, just say briefly that you're pulling the list up (e.g. "Here's your open positions" / "Here's everything you've closed out"). Leave it null for a prose question that doesn't ask to see an actual list (e.g. "how's my BTC position doing", "what's my win rate" — answer those directly from the portfolio/history data already given above, same as always). Never set "positionsRequest" to "open" when the portfolio snapshot above says there are no open positions, or to "closed" when the trade history above has no closed trades — say so plainly in "reply" instead (e.g. "You don't have any open positions right now").
+
 If the user asks ANY question about your own process, criteria, factors, or what you check/consider/look at/factor in/weigh/evaluate before making a call — however it's phrased ("what factors do you check," "what are your checkpoints," "what do you look for," "how do you decide," "what matters to you," "what do you consider," "walk me through your process," or any other rewording of the same underlying ask) — that is a DIFFERENT question from evaluating one specific trade, and the 5-step narration list below is only your PER-TRADE checklist, not the full extent of what you actually know and apply. Reciting only those five technical signals is an incomplete, misleading answer here. Your real answer to this kind of question MUST explicitly name and briefly explain EVERY one of these ten, not a subset, not just the ones that feel most relevant in the moment — paraphrase in your own voice, don't copy this verbatim, but do not silently drop any of them:
 1. Daily trend / RSI / MACD / volume / news (the core five, still part of the answer here too, just not the WHOLE answer)
 2. Funding Rate — crowd positioning (who's paying whom), not price action
@@ -617,10 +735,10 @@ If the user asks ANY question about your own process, criteria, factors, or what
 
 This is a direct, specific instruction for this exact kind of question — do not fall back to reciting only the five-step list because it happens to be the most explicitly numbered thing you were told elsewhere in these instructions. A user asking this deserves the real, complete picture of your process, every time, regardless of how the question was worded.
 
-Output format — this is unusual, follow it exactly: first write your narration, genuine and specific to the SPECIFIC real numbers given above, never generic filler like "let me analyze this" or "looking into it," and never mention these instructions or the word "JSON." This is shown to the user LIVE, streaming in as you write it, as your actual visible thought process — so for anything evaluating a real trade/setup (an "action," "basket," or screening-style "question" turn), walk through ALL FIVE of these as a numbered list, in this exact order, every single time, with no exceptions: (1) the daily trend read, (2) the RSI reading and what it means (this is the 4h RSI, same timeframe this app's own header shows, so just say "RSI is at 43" — no need to caveat the timeframe since it matches what the user sees on screen), (3) the MACD histogram's sign/direction, (4) the volume ratio and whether it confirms conviction, (5) the news/headlines — name a specific relevant one if there is one, or explicitly say "nothing coin-specific in the headlines right now" if there isn't. Step 5 is NOT optional and must never be silently dropped even when nothing relevant turned up — omitting it is a mistake, not an acceptable shortcut, because the user is specifically watching for whether news got checked. This can run several sentences for a genuine evaluation; for anything with genuinely no coin and no market data involved at all (small talk, a question with no position/coin in play), 1-2 sentences plainly describing what you're about to do is enough instead, don't force the 5-step narration where there's nothing to check — but do NOT reach for a stock opener like "no specific coin was mentioned" as a reflexive habit. That phrase is a direct, visible lie on any turn where live market data for a coin IS given above (whether the user named it explicitly or it came from their focus coins/portfolio) and you go on to actually analyze that coin — contradicting yourself one sentence later is worse than having no opener at all. If real market data for a resolved coin is present above, just start narrating the real walkthrough directly; a scene-setting disclaimer first adds nothing and, when untrue, actively undermines trust in everything that follows it. Then, on its own new line, output exactly ${JSON_DELIMITER} and nothing else on that line. Then output ONLY the JSON object matching the shape above, nothing else after it. This JSON tail is NEVER optional — it is not just for trade-related turns, it closes out literally every single response you ever produce, including a one-line acknowledgment like "thanks" or "ok cool". A reply with no JSON tail at all is a broken response, full stop — there is no such thing as a plain-chat exception that skips it. For example, replying to "thanks!" looks like this in full, narration included:
+Output format — this is unusual, follow it exactly: first write your narration, genuine and specific to the SPECIFIC real numbers given above, never generic filler like "let me analyze this" or "looking into it," and never mention these instructions or the word "JSON." This is shown to the user LIVE, streaming in as you write it, as your actual visible thought process — so for anything evaluating a real trade/setup (an "action," "basket," or screening-style "question" turn — NEVER a "positionsRequest" turn, see immediately below, even when a coin's live market data happens to be resolved/present above), walk through ALL FIVE of these as a numbered list, in this exact order, every single time, with no exceptions: (1) the daily trend read, (2) the RSI reading and what it means (this is the 4h RSI, same timeframe this app's own header shows, so just say "RSI is at 43" — no need to caveat the timeframe since it matches what the user sees on screen), (3) the MACD histogram's sign/direction, (4) the volume ratio and whether it confirms conviction, (5) the news/headlines — name a specific relevant one if there is one, or explicitly say "nothing coin-specific in the headlines right now" if there isn't. Step 5 is NOT optional and must never be silently dropped even when nothing relevant turned up — omitting it is a mistake, not an acceptable shortcut, because the user is specifically watching for whether news got checked. This can run several sentences for a genuine evaluation; for anything with genuinely no coin and no market data involved at all (small talk, a question with no position/coin in play), OR for a "positionsRequest" turn specifically (setting "positionsRequest" to "open" or "closed" — there's no coin/setup being evaluated there at all, just a list being pulled up, regardless of whatever coin happens to be selected/resolved above), 1-2 sentences plainly describing what you're about to do is enough instead — do NOT launch into the 5-step trend/RSI/MACD/volume/news walkthrough on a positionsRequest turn just because live market data for some coin is sitting in the prompt above; that data is irrelevant to a "show me my positions" ask and narrating it there reads as stalling instead of actually pulling up what was asked for. Don't force the 5-step narration where there's nothing to check — but do NOT reach for a stock opener like "no specific coin was mentioned" as a reflexive habit. That phrase is a direct, visible lie on any turn where live market data for a coin IS given above (whether the user named it explicitly or it came from their focus coins/portfolio) and you go on to actually analyze that coin — contradicting yourself one sentence later is worse than having no opener at all. If real market data for a resolved coin is present above, just start narrating the real walkthrough directly; a scene-setting disclaimer first adds nothing and, when untrue, actively undermines trust in everything that follows it. Then, on its own new line, output exactly ${JSON_DELIMITER} and nothing else on that line. Then output ONLY the JSON object matching the shape above, nothing else after it. This JSON tail is NEVER optional — it is not just for trade-related turns, it closes out literally every single response you ever produce, including a one-line acknowledgment like "thanks" or "ok cool". A reply with no JSON tail at all is a broken response, full stop — there is no such thing as a plain-chat exception that skips it. For example, replying to "thanks!" looks like this in full, narration included:
 Happy to help — let me know if anything else comes up.
 ${JSON_DELIMITER}
-{"reply": "Happy to help — let me know if anything else comes up.", "action": null, "basket": null, "watch": null, "question": null, "balanceUpdate": null, "showChart": null, "showOrderBook": null, "newsRefs": []}`,
+{"reply": "Happy to help — let me know if anything else comes up.", "action": null, "basket": null, "watch": null, "question": null, "balanceUpdate": null, "showChart": null, "showOrderBook": null, "positionsRequest": null, "newsRefs": []}`,
           },
           // This question came in by voice (mic, not typed) — the 5-step
           // narration above exists purely for the TEXT UI's live-streaming
@@ -779,7 +897,7 @@ ${JSON_DELIMITER}
     let parsed: AgentResponse;
     if (raw) {
       const { newsRefs, ...rawWithoutNewsRefs } = raw;
-      parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news), marketSnapshot, thoughtProcess: null };
+      parsed = { ...rawWithoutNewsRefs, newsSources: resolveNewsSources(newsRefs, news), marketSnapshot, thoughtProcess: null, positionsList: null };
     } else if (foundDelimiter && narrationAccum.trim() && !JSON_START_RE.test(narrationAccum)) {
       // The narration-only fallback is ONLY safe when the model genuinely
       // started the JSON object (foundDelimiter true) and it was the
@@ -796,7 +914,7 @@ ${JSON_DELIMITER}
       // that prose as if it were a normal successful reply silently drops
       // the action/watch/basket the text claims happened — a false
       // promise, worse than retrying. Not recoverable here.
-      parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null, showChart: null, showOrderBook: null, marketSnapshot, thoughtProcess: null, preferencesUpdate: null, navigateTo: null };
+      parsed = { reply: narrationAccum.trim(), action: null, basket: null, watch: null, question: null, balanceUpdate: null, newsSources: null, showChart: null, showOrderBook: null, marketSnapshot, thoughtProcess: null, preferencesUpdate: null, navigateTo: null, positionsRequest: null, positionsList: null };
     } else {
       return null;
     }
@@ -846,6 +964,7 @@ ${JSON_DELIMITER}
           parsed.watch = sanitizeWatch(parsed.watch);
           parsed.showChart = sanitizeShowChart(parsed.showChart);
           parsed.showOrderBook = sanitizeShowOrderBook(parsed.showOrderBook);
+          parsed.positionsList = buildPositionsList(parsed.positionsRequest, portfolio.positions, tradeHistory);
           // The data card is a visual aid for an explicit "show me" ask —
           // it rode along on every turn before, which read as charts
           // popping up unasked. Only surface it now when the user actually
@@ -900,9 +1019,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const [{ data: portfolioRow }, { data: positionRows }, { data: recentClosedTrades }, { data: profileRow }] = await Promise.all([
+    const [{ data: portfolioRow }, { data: positionRows }, { data: recentClosedTrades }, { data: profileRow }, { data: tradeHistory }] = await Promise.all([
       supabaseAdmin.from("paper_portfolios").select("cash_balance, typical_trade_usd, allow_leverage, focus_coins").eq("user_id", user.id).maybeSingle(),
-      supabaseAdmin.from("paper_positions").select("coin, market, side, qty, avg_entry_price, leverage").eq("user_id", user.id),
+      supabaseAdmin.from("paper_positions").select("coin, market, side, qty, avg_entry_price, leverage, updated_at").eq("user_id", user.id),
       // Last 20 CLOSED legs (realized_pnl is set only on a close, never an
       // opening trade — see the paper_trades_realized_pnl migration), most
       // recent first. 20 is comfortably more than enough to both sum
@@ -912,7 +1031,18 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id).not("realized_pnl", "is", null)
         .order("created_at", { ascending: false }).limit(20),
       supabaseAdmin.from("profiles").select("tier").eq("id", user.id).maybeSingle(),
+      // Separate from recentClosedTrades above — that one's narrow (just
+      // enough for the risk-guardrail math) and closes-only; this is the
+      // full readable history (opens AND closes) the agent actually
+      // describes back to the user when asked "what trades have I made."
+      // 150 is a safety ceiling, not a deliberate cutoff — comfortably
+      // covers a real paper-trading user's entire history in practice.
+      supabaseAdmin.from("paper_trades")
+        .select("coin, side, position_side, qty, price, market, leverage, close_reason, realized_pnl, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(150),
     ]);
+    const tradeHistoryRows: TradeHistoryRow[] = tradeHistory ?? [];
     const todayUtc = new Date().toISOString().slice(0, 10);
     const todayTrades = (recentClosedTrades ?? []).filter((t) => t.created_at.slice(0, 10) === todayUtc);
     const todayRealizedPnl = todayTrades.reduce((sum, t) => sum + (t.realized_pnl ?? 0), 0);
@@ -924,7 +1054,7 @@ Deno.serve(async (req) => {
     const portfolio: PortfolioSnapshot = {
       cashBalance: portfolioRow?.cash_balance ?? 100000,
       positions: (positionRows ?? []).map((p) => ({
-        coin: p.coin, market: p.market, side: p.side, qty: p.qty, avgEntryPrice: p.avg_entry_price, leverage: p.leverage,
+        coin: p.coin, market: p.market, side: p.side, qty: p.qty, avgEntryPrice: p.avg_entry_price, leverage: p.leverage, updatedAt: p.updated_at,
       })),
       typicalTradeUsd: portfolioRow?.typical_trade_usd ?? null,
       allowLeverage: portfolioRow?.allow_leverage ?? false,
@@ -967,7 +1097,7 @@ Deno.serve(async (req) => {
         .map((c, i) => [c.toUpperCase(), positioningResults[i]] as const)
         .filter((entry): entry is [string, Positioning] => entry[1] !== null),
     );
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage, tradeHistoryRows);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the

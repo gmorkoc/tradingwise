@@ -19,6 +19,10 @@ export interface PaperPosition {
   liquidationPrice: number | null;
   takeProfitPrice: number | null;
   stopLossPrice: number | null;
+  // When this position was opened/last changed — lets the dedicated
+  // Positions view show an "Opened" date the same way a chat-triggered
+  // positionsList detail does.
+  updatedAt: string;
 }
 
 export interface PaperPortfolio {
@@ -119,6 +123,32 @@ export interface NavigateToRequest {
   label: string;
 }
 
+// Mirrors the edge function's PositionsListItem/PositionsListResponse by
+// hand (same cross-boundary convention as every other type here) — set
+// when the user asks to SEE their open/closed positions as a real list
+// (see TradingAgent.tsx's PositionsListCard). Transient, NOT persisted to
+// agent_messages like action/basket/navigateTo are (there's no DB column
+// for it, deliberately — see sendAgentMessage) — same reasoning as
+// marketSnapshot: live-at-the-moment data, not something that should look
+// current after a reload much later.
+export interface PositionsListItem {
+  coin: string;
+  market: "spot" | "futures";
+  side: "long" | "short";
+  qty: number;
+  leverage: number;
+  avgEntryPrice: number;
+  openedAt: string | null;
+  exitPrice?: number;
+  closedAt?: string;
+  closeReason?: "manual" | "take_profit" | "stop_loss" | "liquidation" | null;
+  realizedPnl?: number;
+}
+export interface PositionsListResponse {
+  status: "open" | "closed";
+  items: PositionsListItem[];
+}
+
 export interface AgentMessage {
   id: number;
   conversationId: string;
@@ -142,6 +172,11 @@ export interface AgentMessage {
   // while streaming.
   thoughtProcess: string | null;
   navigateTo: NavigateToRequest | null;
+  // Not from rowToMessage/MESSAGE_COLUMNS (no DB column — see
+  // PositionsListResponse above) — only ever set on the freshly-returned
+  // object from sendAgentMessage for this turn, absent (undefined) on
+  // anything loaded via fetchAgentMessages.
+  positionsList?: PositionsListResponse | null;
   createdAt: string;
 }
 
@@ -159,17 +194,17 @@ const STARTING_CASH = 100000;
 // username-collision complexity (no unique constraint here besides the
 // primary key, so a races-to-insert loser can simply re-select).
 const PORTFOLIO_COLUMNS = "cash_balance, consent_accepted_at, typical_trade_usd, allow_leverage, focus_coins";
-const POSITION_COLUMNS = "coin, market, side, qty, avg_entry_price, leverage, margin_usd, liquidation_price, take_profit_price, stop_loss_price";
+const POSITION_COLUMNS = "coin, market, side, qty, avg_entry_price, leverage, margin_usd, liquidation_price, take_profit_price, stop_loss_price, updated_at";
 
 function rowToPosition(p: {
   coin: string; market: "spot" | "futures"; side: "long" | "short"; qty: number; avg_entry_price: number;
   leverage: number; margin_usd: number; liquidation_price: number | null;
-  take_profit_price: number | null; stop_loss_price: number | null;
+  take_profit_price: number | null; stop_loss_price: number | null; updated_at: string;
 }): PaperPosition {
   return {
     coin: p.coin, market: p.market, side: p.side, qty: p.qty, avgEntryPrice: p.avg_entry_price,
     leverage: p.leverage, marginUsd: p.margin_usd, liquidationPrice: p.liquidation_price,
-    takeProfitPrice: p.take_profit_price, stopLossPrice: p.stop_loss_price,
+    takeProfitPrice: p.take_profit_price, stopLossPrice: p.stop_loss_price, updatedAt: p.updated_at,
   };
 }
 
@@ -461,13 +496,14 @@ export async function sendAgentMessage(
     thoughtProcess: string | null;
     preferencesUpdate: PreferencesUpdate | null;
     navigateTo: NavigateToRequest | null;
+    positionsList: PositionsListResponse | null;
   };
   try {
     parsedResult = JSON.parse(jsonLine.slice(2));
   } catch {
     throw new Error("The agent's response was cut off — please try again.");
   }
-  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess, preferencesUpdate, navigateTo } = parsedResult;
+  const { reply, action, basket, watch, question, balanceUpdate, newsSources, marketSnapshot, showChart, showOrderBook, thoughtProcess, preferencesUpdate, navigateTo, positionsList } = parsedResult;
   onMarketSnapshot?.(marketSnapshot ?? null);
   if (showChart) onShowChart?.(showChart);
   if (showOrderBook) onShowOrderBook?.(showOrderBook);
@@ -478,7 +514,8 @@ export async function sendAgentMessage(
   // the exact condition (and its timeframe) before anything real starts
   // being watched, instead of this silently happening the moment a reply
   // streams in.
-  return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch, navigateTo ?? null);
+  const agentMsg = await insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch, navigateTo ?? null);
+  return { ...agentMsg, positionsList: positionsList ?? null };
 }
 
 // Synthesizes `text` via OpenAI's neural TTS (agent-speech edge function)
@@ -781,6 +818,57 @@ export async function fetchAgentPerformance(userId: string): Promise<AgentPerfor
     winRate: totalClosed > 0 ? wins / totalClosed : null,
     totalPnl: rows.reduce((sum, r) => sum + r.realized_pnl, 0),
   };
+}
+
+// Pairs each CLOSE leg (realized_pnl set) with the most recent prior OPEN
+// leg (realized_pnl null) for the same coin+market, so a closed position's
+// card can show its real entry price/date — a close row's own "price"/
+// "created_at" are only ever the exit side. Mirrors
+// trading-agent-reply/index.ts's buildClosedPositionsList by hand (same
+// cross-boundary convention as every other shared shape here); safe by
+// simple chronological adjacency since paper_positions is unique per
+// user_id+coin+market, so trades for one coin+market strictly alternate
+// open/close, never two opens or two closes in a row.
+function buildClosedPositionsList(rows: {
+  coin: string; position_side: "long" | "short"; qty: number; price: number; market: "spot" | "futures";
+  leverage: number; close_reason: "manual" | "take_profit" | "stop_loss" | "liquidation" | null;
+  realized_pnl: number | null; created_at: string;
+}[]): PositionsListItem[] {
+  const pendingOpenByKey = new Map<string, typeof rows[number]>();
+  const closed: PositionsListItem[] = [];
+  for (const t of rows) {
+    const key = `${t.coin}:${t.market}`;
+    if (t.realized_pnl == null) {
+      pendingOpenByKey.set(key, t);
+      continue;
+    }
+    const openLeg = pendingOpenByKey.get(key) ?? null;
+    closed.push({
+      coin: t.coin, market: t.market, side: t.position_side, qty: t.qty, leverage: t.leverage,
+      avgEntryPrice: openLeg?.price ?? t.price, openedAt: openLeg?.created_at ?? null,
+      exitPrice: t.price, closedAt: t.created_at, closeReason: t.close_reason, realizedPnl: t.realized_pnl,
+    });
+    pendingOpenByKey.delete(key);
+  }
+  return closed.reverse();
+}
+
+// Direct UI access to trade history (Agent Ready's dedicated Positions
+// view) — same underlying data the chat-triggered "show my closed
+// positions" positionsList uses, just fetched and paired client-side
+// instead of going through the agent. 300 is a generous safety ceiling,
+// not a deliberate cutoff, same reasoning as the edge function's 150 (this
+// view has no other data competing for context window, so it can afford
+// to look further back).
+export async function fetchClosedPositions(userId: string): Promise<PositionsListItem[]> {
+  const { data, error } = await supabase
+    .from("paper_trades")
+    .select("coin, side, position_side, qty, price, market, leverage, close_reason, realized_pnl, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(300);
+  if (error) throw new Error(error.message);
+  return buildClosedPositionsList(data ?? []);
 }
 
 // Closes a position outright at the current live price, bypassing the

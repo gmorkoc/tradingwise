@@ -99,6 +99,12 @@ export function initWebPushMessageRouting(): void {
   if (messageListenerInit || !("serviceWorker" in navigator)) return;
   messageListenerInit = true;
   navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.source === "web-push-toast") {
+      window.dispatchEvent(new CustomEvent("push-toast", {
+        detail: { title: event.data.title ?? "", body: event.data.body ?? "", data: event.data.data },
+      }));
+      return;
+    }
     if (event.data?.source !== "web-push") return;
     routeNotificationTap(event.data.data);
   });

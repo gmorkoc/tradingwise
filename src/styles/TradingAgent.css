@@ -580,6 +580,34 @@ html[data-theme="light"] .ta-panel {
 .ta-watchlist-item-condition { font-size: 0.76rem; color: var(--ta-text-dim); }
 .ta-watchlist-item-time { font-size: 0.66rem; color: var(--ta-text-dim); }
 
+/* ── Positions view (reuses .ta-history/.ta-history-list/.ta-history-back
+   for the outer layout, same as Watchlist above) ────────────────────────── */
+.ta-positions-view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--ta-overlay);
+  flex-shrink: 0;
+}
+.ta-positions-view-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  padding: 7px 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
+  cursor: pointer;
+}
+.ta-positions-view-tab--active { background: var(--ta-accent); color: #fff; }
+.ta-positions-list-close {
+  margin-top: 4px;
+  width: 100%;
+  text-align: center;
+}
+
 /* ── Browser-notification opt-in banner ──────────────────────────────────── */
 .ta-webpush-banner {
   display: flex;
@@ -821,6 +849,9 @@ html[data-theme="light"] .ta-panel {
 }
 .ta-position-coin { font-weight: 700; color: var(--ta-text); flex-shrink: 0; }
 .ta-position-qty { flex: 1; text-align: right; font-family: var(--ta-mono); color: var(--ta-text-dim); }
+.ta-position-pnl { flex-shrink: 0; font-family: var(--ta-mono); font-weight: 700; font-size: 0.74rem; }
+.ta-position-pnl.positive { color: #22c55e; }
+.ta-position-pnl.negative { color: #fb7185; }
 .ta-position-close {
   flex-shrink: 0;
   border: 1px solid var(--ta-border);
@@ -1188,6 +1219,71 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   font-weight: 700;
   color: var(--ta-text);
 }
+
+/* ── Pickable positions list ───────────────────────────────────────────── */
+.ta-positions-list {
+  margin-top: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ta-positions-list-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+}
+.ta-positions-list-empty { margin: 0; font-size: 0.8rem; color: var(--ta-text-dim); }
+.ta-positions-list-item {
+  border-radius: 10px;
+  background: var(--ta-surface, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+}
+.ta-positions-list-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--ta-text-dim);
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.ta-positions-list-coin { font-weight: 700; color: var(--ta-text); flex-shrink: 0; }
+.ta-positions-list-qty { flex: 1; text-align: right; font-family: var(--ta-mono); color: var(--ta-text-dim); }
+.ta-positions-list-tag {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ta-text-dim);
+  background: var(--ta-overlay);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.ta-positions-list-chevron {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+.ta-positions-list-chevron--open { transform: rotate(180deg); }
+.ta-positions-list-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 10px;
+}
+.ta-positions-list-detail .ta-proposal-detail { margin: 0; }
 
 /* ── Clarifying question ───────────────────────────────────────────────── */
 .ta-question {
