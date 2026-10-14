@@ -2747,7 +2747,6 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   height: 80px;
   padding: 0 24px;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
   overflow: visible;
 }
 
@@ -2949,6 +2948,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   margin: 0 8px;
 }
 
+/* Wraps .mch-mobile-summary (mobile-only identity/signal/high-low/price
+   card, hidden here) + .mch-stats into one unit. display:contents makes
+   it invisible to layout on desktop, so .mch-stats stays a direct flex
+   child of .main-coin-header exactly as before — only the mobile media
+   query below turns this into a real box (the glass card). */
+.mch-body {
+  display: contents;
+}
+.mch-mobile-summary {
+  display: none;
+}
+
 /* Scrollable stats strip */
 .mch-stats {
   display: flex;
@@ -3017,22 +3028,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .mch-stat-signal--neutral {
   color: var(--color-text-muted);
 }
-
-/* Compact coin+price badge that joins .mch-stats once PriceChart's own
-   .chart-mobile-price-row has scrolled out of view (see App.tsx's
-   chart-price-row-visibility listener) — reads as "part of" the stats
-   row, same label/value/signal structure as every other .mch-stat here,
-   just always first and visually anchored with a left border instead of
-   the plain padding the others use. */
-.mch-stat--sticky-price {
-  animation: mch-sticky-price-in 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@keyframes mch-sticky-price-in {
-  from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-.mch-stat--sticky-price-up .mch-stat-value { color: var(--color-success); }
-.mch-stat--sticky-price-down .mch-stat-value { color: var(--color-danger); }
 
 .mch-right {
   display: flex;
@@ -3863,7 +3858,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    padding: 16px;
+    padding: 16px 16px 0;
     gap: 4px;
   }
 
@@ -3930,7 +3925,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     height: 24px;
   }
   /* Coin pair/price/change pill — redundant now that the big price readout
-     lives right above the chart (.chart-mobile-price-header, PriceChart.css),
+     lives in the unified mobile glass card (.mch-mobile-summary, below),
      so the top bar stays just menu + toggle + alerts (coin switching is
      still reachable via FloatingNavBar's Search icon). */
   .mch-coin-btn {
@@ -3996,32 +3991,236 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: none;
   }
 
-  .mch-stats {
+  /* The unified glass card — identity/signal/high-low/price/change
+     (.mch-mobile-summary) stacked above the stats strip (.mch-stats),
+     both inside one frosted card instead of .mch-stats alone. */
+  .mch-body {
+    display: flex;
+    flex-direction: column;
     order: 4;
     flex: 0 0 100%;
     width: 100%;
+    margin: 0;
+    /* Pinned a few px below the true top, not flush — reads as a floating
+       glass card rather than a bar flush against the screen edge, the
+       whole point of the glassmorphism treatment below. */
+    position: sticky;
+    top: 8px;
+    z-index: 15;
+    border-radius: 18px;
+    /* Clips the blurred blob pseudo-elements below to this card's own
+       rounded bounds — safe alongside position:sticky, which only cares
+       about an ANCESTOR's overflow, not this element's own. */
+    overflow: hidden;
+  }
+  /* Two soft color blobs behind the frosted glass — the glassmorphism
+     effect is mostly THIS, the translucency on .mch-body above just lets
+     them show through. A radial-gradient that fades to transparent (not
+     a solid circle + filter:blur) — WebKit on-device doesn't reliably
+     apply border-radius to a filter:blur'd pseudo-element (the blur's
+     backing layer ignores the radius clip, rendering a soft square
+     instead of a circle), so the gradient does the "soft round blob"
+     job by itself instead, with no radius/filter interaction to go
+     wrong. z-index/stacking is handled by paint order alone (these are
+     the only positioned descendants with no z-index, so they paint
+     first/behind); the real content's own z-index:1 below is the actual
+     guarantee it stays on top regardless. */
+  .mch-body::before,
+  .mch-body::after {
+    content: "";
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .mch-body::before {
+    top: -60px;
+    left: -50px;
+  }
+  .mch-body::after {
+    bottom: -60px;
+    right: -50px;
+  }
+
+  .mch-mobile-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+    z-index: 1;
+    padding: 12px 14px 8px;
+    padding-left: 0;
+  }
+  .mch-mobile-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .mch-mobile-coin-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    /* Full coin names ("Hyperliquid", "NEAR Protocol"...) can run long —
+       min-width:0 lets the button shrink (and the name ellipsis) below
+       its intrinsic content width when the row is tight, using the
+       default flex-shrink:1. No flex-grow here on purpose — growing to
+       fill the row would shove the signal indicator out to the row's
+       far right edge, into the same corner .mch-mobile-top-right's
+       (absolutely positioned) vol chip already occupies. */
+    min-width: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--color-text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mch-mobile-coin-btn .mch-coin-icon {
+    font-size: 1.1rem;
+  }
+  .mch-mobile-coin-name {
+    font-weight: 800;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mch-mobile-chevron {
+    /* A real SVG icon, not the text glyph "▾" — a glyph's own font metrics
+       (baseline/descender space, same class of bug as SVG icons needed
+       display:block for elsewhere in this header) made it sit visibly
+       off-center next to the coin name even with align-items:center on
+       the row; an SVG with display:block has no such hidden box to fight. */
+    display: block;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+  /* Signal readout here is now <SignalIndicator> (src/components/
+     SignalIndicator.tsx + styles/SignalIndicator.css) — the old
+     .mch-mobile-signal pill is gone, replaced app-wide (PriceChart.tsx's
+     .zone-signal pill too) by the same component. */
+
+  /* Signal pill + vol chip, stacked in a right-hand column — taken out
+     of normal flow (absolute, pinned to .mch-mobile-summary's padding
+     box, which is the nearest position:relative ancestor) instead of
+     sitting inline in .mch-mobile-top. In-flow, this column's height
+     (pill + vol chip stacked) made the WHOLE row as tall as itself even
+     though the coin button beside it is one short line, leaving a big
+     gap of invisible space before High/Low could start; floating it out
+     of flow lets the row collapse to just the button's real height. */
+  .mch-mobile-top-right {
+    position: absolute;
+    /* .mch-body clips to its own 18px rounded corner (overflow:hidden, to
+       mask the blob pseudo-elements) — .mch-mobile-summary's own padding
+       (12px/14px) isn't enough inset to clear that curve on its own, so
+       the pill's sharp corner was getting sliced by it. A few extra px
+       moves it clear of the curve. */
+    top: 4px;
+    right: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .mch-mobile-vol {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    text-align: center;
+  }
+  .mch-mobile-vol-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: #fff;
+    background: linear-gradient(165deg, #f7931a, #ffb24d);
+    flex-shrink: 0;
+    margin-bottom: 4px;
+  }
+  .mch-mobile-vol-label {
+    position: relative;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 0.6rem;
+    padding-bottom: 6px;
+  }
+  .mch-mobile-vol-label::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    transform: translateX(-50%);
+    width: 16px;
+    border-bottom: 2px dotted var(--color-border);
+  }
+  .mch-mobile-vol-value {
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mch-mobile-hl {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    margin-top: 6px;
+  }
+  .mch-mobile-hl b {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+  .mch-mobile-price {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+    line-height: 1.15;
+  }
+  .mch-mobile-chg {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+  .mch-mobile-chg--up {
+    color: var(--color-success);
+  }
+  .mch-mobile-chg--down {
+    color: var(--color-danger);
+  }
+
+  .mch-stats {
+    order: unset;
+    flex: 0 0 auto;
+    width: 100%;
     height: auto;
     min-height: 40px;
-    margin-left: 0;
-    padding: 4px 0 6px;
+    margin: 0;
+    padding: 6px 14px 10px;
+    padding-left: 0;
     overflow-x: auto;
     overflow-y: visible;
     display: flex;
     align-items: flex-start;
     -webkit-overflow-scrolling: touch;
-    /* Pinned at the top of the scroll once .mch-left (coin name/price)
-       scrolls past it — needed for the sticky coin+price badge (joins
-       this row the same way, see mch-stat--sticky-price) to actually be
-       visible once it appears; otherwise the whole header, badge
-       included, would already be scrolled off itself. Solid background
-       since content now scrolls underneath it rather than past it. */
-    position: sticky;
-    top: 0;
-    z-index: 15;
-    background: var(--color-surface);
+    position: relative;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .mch-stat {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -4050,6 +4249,19 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     font-size: 0.8rem;
     line-height: 1.4;
     display: block;
+  }
+}
+
+/* Dialed-back blob opacity in light theme so they don't fight with the
+   page's own white background underneath (no frosted-glass surface on
+   .mch-body itself anymore — removed). */
+@media (max-width: 640px) {
+  html[data-theme="light"] .mch-body::before,
+  html[data-theme="light"] .mch-body::after {
+    opacity: 0.35;
+  }
+  html[data-theme="light"] .mch-stats {
+    border-top-color: rgba(15, 23, 42, 0.08);
   }
 }
 

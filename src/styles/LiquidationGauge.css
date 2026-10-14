@@ -1,0 +1,53 @@
+.liq-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+}
+.liq-gauge-track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb7185 0%, #fbbf24 50%, #22c55e 100%);
+}
+.liq-gauge-entry-tick {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  transform: translateX(-50%);
+  transition: left 0.5s ease;
+}
+.liq-gauge-marker {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -50%);
+  transition: left 0.5s ease;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.liq-gauge--danger .liq-gauge-marker {
+  animation: liq-gauge-pulse 1s ease-in-out infinite;
+}
+@keyframes liq-gauge-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.6); }
+  50%      { box-shadow: 0 0 0 7px rgba(251, 113, 133, 0.15); }
+}
+.liq-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.62rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.liq-gauge-label--danger { color: #fb7185; }
+.liq-gauge-label--profit { color: #22c55e; }
+@media (prefers-reduced-motion: reduce) {
+  .liq-gauge--danger .liq-gauge-marker { animation: none; }
+}

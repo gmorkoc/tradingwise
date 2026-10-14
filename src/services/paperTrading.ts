@@ -126,11 +126,14 @@ export interface NavigateToRequest {
 // Mirrors the edge function's PositionsListItem/PositionsListResponse by
 // hand (same cross-boundary convention as every other type here) — set
 // when the user asks to SEE their open/closed positions as a real list
-// (see TradingAgent.tsx's PositionsListCard). Transient, NOT persisted to
-// agent_messages like action/basket/navigateTo are (there's no DB column
-// for it, deliberately — see sendAgentMessage) — same reasoning as
-// marketSnapshot: live-at-the-moment data, not something that should look
-// current after a reload much later.
+// (see TradingAgent.tsx's PositionsListCard). Persisted to agent_messages
+// (positions_list jsonb column) same as action/basket/navigateTo — this
+// was originally left transient like marketSnapshot, but unlike
+// marketSnapshot it renders inline in the message feed itself, and the
+// feed gets reloaded from the DB from multiple independent places (the
+// post-send reload AND a realtime subscription both re-fetch on their own
+// schedule) — a transient-only field kept getting silently wiped out by
+// whichever of those fired next, moments after it first rendered.
 export interface PositionsListItem {
   coin: string;
   market: "spot" | "futures";
@@ -139,6 +142,10 @@ export interface PositionsListItem {
   leverage: number;
   avgEntryPrice: number;
   openedAt: string | null;
+  // Open items only — feeds LiquidationGauge's live danger/profit meter.
+  // Never set on a closed item (the position no longer exists to gauge).
+  liquidationPrice?: number | null;
+  takeProfitPrice?: number | null;
   exitPrice?: number;
   closedAt?: string;
   closeReason?: "manual" | "take_profit" | "stop_loss" | "liquidation" | null;
@@ -172,11 +179,7 @@ export interface AgentMessage {
   // while streaming.
   thoughtProcess: string | null;
   navigateTo: NavigateToRequest | null;
-  // Not from rowToMessage/MESSAGE_COLUMNS (no DB column — see
-  // PositionsListResponse above) — only ever set on the freshly-returned
-  // object from sendAgentMessage for this turn, absent (undefined) on
-  // anything loaded via fetchAgentMessages.
-  positionsList?: PositionsListResponse | null;
+  positionsList: PositionsListResponse | null;
   createdAt: string;
 }
 
@@ -278,7 +281,7 @@ export async function updatePreferences(userId: string, partial: PreferencesUpda
   if (error) throw new Error(error.message);
 }
 
-const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, navigate_to, created_at";
+const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, navigate_to, positions_list, created_at";
 
 function rowToMessage(m: {
   id: number; conversation_id: string; role: "user" | "agent"; content: string;
@@ -286,7 +289,8 @@ function rowToMessage(m: {
   balance_update: BalanceUpdate | null;
   news_sources: NewsSource[] | null; action_status: AgentMessage["actionStatus"];
   watch: { coin: string; condition: string; interval: MarketInterval } | null; watch_id: string | null;
-  thought_process: string | null; navigate_to: NavigateToRequest | null; created_at: string;
+  thought_process: string | null; navigate_to: NavigateToRequest | null;
+  positions_list: PositionsListResponse | null; created_at: string;
 }): AgentMessage {
   return {
     id: m.id,
@@ -302,6 +306,7 @@ function rowToMessage(m: {
     newsSources: m.news_sources,
     thoughtProcess: m.thought_process,
     navigateTo: m.navigate_to,
+    positionsList: m.positions_list,
     actionStatus: m.action_status,
     createdAt: m.created_at,
   };
@@ -365,7 +370,7 @@ async function insertMessage(
   basket: AgentAction[] | null = null, question: AgentQuestion | null = null,
   newsSources: NewsSource[] | null = null, balanceUpdate: BalanceUpdate | null = null,
   thoughtProcess: string | null = null, watch: { coin: string; condition: string; interval: MarketInterval } | null = null,
-  navigateTo: NavigateToRequest | null = null
+  navigateTo: NavigateToRequest | null = null, positionsList: PositionsListResponse | null = null
 ): Promise<AgentMessage> {
   const { data, error } = await supabase
     .from("agent_messages")
@@ -384,6 +389,7 @@ async function insertMessage(
       watch_id: watchId,
       thought_process: thoughtProcess,
       navigate_to: navigateTo,
+      positions_list: positionsList,
     })
     .select(MESSAGE_COLUMNS)
     .single();
@@ -514,8 +520,7 @@ export async function sendAgentMessage(
   // the exact condition (and its timeframe) before anything real starts
   // being watched, instead of this silently happening the moment a reply
   // streams in.
-  const agentMsg = await insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch, navigateTo ?? null);
-  return { ...agentMsg, positionsList: positionsList ?? null };
+  return insertMessage(userId, conversationId, "agent", reply, action, null, basket, question, newsSources, balanceUpdate, thoughtProcess, watch, navigateTo ?? null, positionsList ?? null);
 }
 
 // Synthesizes `text` via OpenAI's neural TTS (agent-speech edge function)

@@ -90,6 +90,7 @@ import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
 import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
+import SignalIndicator from "./components/SignalIndicator";
 import { Tier, hasAccess, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ChartAnalyzeModal } from "./components/ChartAnalyzeModal";
@@ -347,6 +348,14 @@ function NavIcon({ d }: { d: string | string[] }) {
   );
 }
 
+// Full coin name for the mobile coin header ("Bitcoin" rather than "BTC")
+// — COINS already carries this (services/coinglass.ts), just keyed by
+// symbol here for an O(1) lookup instead of re-scanning the array on
+// every render (same pattern PriceChart.tsx uses for its own title).
+const COIN_FULL_NAME: Record<string, string> = Object.fromEntries(
+  COINS.map((c) => [c.symbol, c.name]),
+);
+
 const COIN_ICONS: Record<string, string> = {
   BTC: "₿",
   ETH: "Ξ",
@@ -519,25 +528,6 @@ function AppDashboard({
     const handler = (e: MediaQueryListEvent) => setIsDesktopWidth(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
-  }, []);
-  // PriceChart's own .chart-mobile-price-row (iOS/mobile-web compact view
-  // only) broadcasts this once it scrolls out of view — .mch-stats shows
-  // a compact coin+price badge of its own in that gap, joining the Liq
-  // Above/Below row the same way sticky "mini headers" do in other apps.
-  const [chartPriceRowHidden, setChartPriceRowHidden] = useState<{
-    coin: string; price: number | null; changePercent: number | null; direction: "up" | "down" | null;
-  } | null>(null);
-  useEffect(() => {
-    const onVisibility = (e: Event) => {
-      const detail = (e as CustomEvent).detail as {
-        visible: boolean; coin: string; price: number | null; changePercent: number | null; direction: "up" | "down" | null;
-      };
-      setChartPriceRowHidden(detail.visible ? null : {
-        coin: detail.coin, price: detail.price, changePercent: detail.changePercent, direction: detail.direction,
-      });
-    };
-    window.addEventListener("chart-price-row-visibility", onVisibility);
-    return () => window.removeEventListener("chart-price-row-visibility", onVisibility);
   }, []);
   // Wider than the tablet tier (641-960px, still the two-panel stacked
   // chart+order-book layout) — full desktop gets Chart/Order Book tabs
@@ -1079,10 +1069,30 @@ function AppDashboard({
   const [coinTickers, setCoinTickers] = useState<Map<string, Ticker24h>>(
     new Map(),
   );
+  // Was a single fetch-on-mount only, refreshed again just incidentally
+  // whenever the coin picker happened to reopen — every consumer that
+  // reads live price off this map (Agent Ready's position P&L and its
+  // LiquidationGauge, DailyBrief's ticker chips, the mobile coin-chip
+  // change indicators) was actually showing a stale, one-time snapshot in
+  // between those reopens, not a real live feed. Polling on an interval
+  // matching the same cadence already used for position prices elsewhere
+  // in this file (see positionPrices below) makes it genuinely live.
   useEffect(() => {
-    fetchCoin24hTickers(COINS)
-      .then(setCoinTickers)
-      .catch(() => {});
+    let cancelled = false;
+    const refresh = () => {
+      fetchCoin24hTickers(COINS)
+        .then((m) => { if (!cancelled) setCoinTickers(m); })
+        .catch(() => {});
+    };
+    // fetchCoin24hTickers has its own 60s in-memory cache/TTL (see
+    // coinglass.ts), so a real network fetch only ever happens roughly
+    // once a minute regardless of how often this fires — 15s just means a
+    // freshly-expired cache gets picked up within 15s of becoming
+    // available instead of waiting on some other, unrelated trigger
+    // (reopening the coin picker) to happen to refetch it.
+    refresh();
+    const id = setInterval(refresh, 15_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   // Segmented Chart/Order Book tabs — real phones (<=640px) and full
@@ -2156,20 +2166,91 @@ function AppDashboard({
               </button>
             </div>
 
+            {/* Wraps the mobile-only summary block (coin/signal/high-low/
+                price/change — all new) together with the existing
+                .mch-stats row into ONE card. Transparent/no-op on desktop
+                (.mch-mobile-summary stays display:none there, .mch-body
+                carries no background) so .mch-stats keeps rendering
+                exactly as it always has there — only mobile gets the
+                glassmorphism card treatment, applied to this wrapper. */}
+            <div className="mch-body">
+              {btcData && (() => {
+                const ticker = coinTickers.get(coin);
+                // The REAL buy-zone signal (same one the chart's own title
+                // row/paywall gate uses, via onZoneChange→chartZone) — not
+                // a separately invented metric, so this badge can't ever
+                // disagree with the rest of the app about bullish/bearish.
+                // null for non-paid users (onZoneChange already withholds
+                // it there) or before the chart's first zone calc lands.
+                const zoneLabel = chartZone && {
+                  "strong-buy": t("chart.strongBuy"),
+                  "buy": t("chart.buy"),
+                  "oversold": t("chart.oversold"),
+                  "overbought": t("chart.overbought"),
+                  "neutral": t("chart.neutralZone"),
+                  "sell": t("chart.sell"),
+                  "strong-sell": t("chart.strongSell"),
+                }[chartZone.signal];
+                const price = livePrice ?? btcData.price ?? null;
+                return (
+                  <div className="mch-mobile-summary">
+                    <div className="mch-mobile-top">
+                      <button
+                        type="button"
+                        className="mch-mobile-coin-btn"
+                        onClick={() => {
+                          if (coinBtnClickTimer.current) {
+                            clearTimeout(coinBtnClickTimer.current);
+                            coinBtnClickTimer.current = null;
+                            prevTickerPrice.current = livePrice;
+                            tickerOpenPrice.current = livePrice;
+                            tickerLastMilestone.current =
+                              livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
+                            setPriceTicker(true);
+                          } else {
+                            coinBtnClickTimer.current = setTimeout(() => {
+                              coinBtnClickTimer.current = null;
+                              openCoinPicker();
+                            }, 250);
+                          }
+                        }}
+                      >
+                        <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
+                        <span className="mch-mobile-coin-name">{COIN_FULL_NAME[coin] ?? coin}</span>
+                        <svg className="mch-mobile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                      {chartZone && zoneLabel && (
+                        <SignalIndicator signal={chartZone.signal} label={zoneLabel} />
+                      )}
+                      <div className="mch-mobile-top-right">
+                        {ticker?.quoteVolume != null && (
+                          <div className="mch-mobile-vol">
+                            <span className="mch-mobile-vol-avatar">{COIN_ICONS[coin] ?? coin[0]}</span>
+                            <span className="mch-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
+                            <span className="mch-mobile-vol-value">{fmtTableVolume(ticker.quoteVolume)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {ticker && Number.isFinite(ticker.high) && Number.isFinite(ticker.low) && (
+                      <div className="mch-mobile-hl">
+                        High <b>{formatLivePrice(ticker.high)}</b> &nbsp; Low <b>{formatLivePrice(ticker.low)}</b>
+                      </div>
+                    )}
+                    {price !== null && Number.isFinite(price) && (
+                      <div className="mch-mobile-price">{formatHeaderPriceMobile(price)}</div>
+                    )}
+                    {ticker?.change !== undefined && (
+                      <span className={`mch-mobile-chg${ticker.change >= 0 ? " mch-mobile-chg--up" : " mch-mobile-chg--down"}`}>
+                        {ticker.change >= 0 ? "↗" : "↘"} {Math.abs(ticker.change).toFixed(2)}% · 24H
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             <div className="mch-stats">
-              {activeSection === "chart" && chartPriceRowHidden && (
-                <div className={`mch-stat mch-stat--sticky-price mch-stat--sticky-price-${chartPriceRowHidden.direction ?? "flat"}`}>
-                  <span className="mch-stat-label">{chartPriceRowHidden.coin}</span>
-                  <span className="mch-stat-value">
-                    {chartPriceRowHidden.price !== null ? formatLivePrice(chartPriceRowHidden.price) : "—"}
-                  </span>
-                  {chartPriceRowHidden.changePercent !== null && (
-                    <span className={`mch-stat-signal mch-stat-signal--${chartPriceRowHidden.changePercent >= 0 ? "bull" : "bear"}`}>
-                      {chartPriceRowHidden.changePercent >= 0 ? "+" : ""}{chartPriceRowHidden.changePercent.toFixed(2)}%
-                    </span>
-                  )}
-                </div>
-              )}
               {btcData &&
                 (() => {
                   // ?? only falls back on null/undefined — NaN slips through
@@ -2354,7 +2435,7 @@ function AppDashboard({
                   );
                 })()}
             </div>
-
+            </div>
 
             <div className="mch-right">
               {/* Search, notifications, and the portfolio ($) button are
@@ -3012,9 +3093,11 @@ function AppDashboard({
       <TradingAgent
         selectedCoin={coin}
         hideTrigger={!isWideDesktop}
+        isMobile={!isWideDesktop}
         coinTickers={coinTickers}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
         onAgentLocked={() => setShowEliteUpsell(true)}
+        onReportIssue={() => setContactOpen(true)}
       />
       <NotificationsCenter
         open={notificationsCenterOpen}

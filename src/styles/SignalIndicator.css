@@ -1,0 +1,20 @@
+.signal-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.signal-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.3);
+  flex-shrink: 0;
+}
+.signal-indicator-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  margin-left: 1px;
+}

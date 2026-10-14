@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { Keyboard } from "@capacitor/keyboard";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { SpeechRecognition } from "@capacitor-community/speech-recognition";
@@ -9,6 +10,7 @@ import { supabase, hasAccess } from "../services/supabase";
 import { CoinSymbol } from "../services/coinglass";
 import type { Ticker24h } from "../services/coinglass";
 import { AgentChartModal } from "./AgentChartModal";
+import { LiquidationGauge } from "./LiquidationGauge";
 import { formatLivePrice } from "./PriceChart";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
@@ -78,6 +80,17 @@ const SPEECH_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform()
 // UI (they keep the always-visible trash-icon button instead).
 const IS_IOS_NATIVE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 
+// Same in-app-browser treatment DailyBrief.tsx already uses for its news
+// links (see openNewsLink there) — native opens via an in-app browser
+// (SFSafariViewController on iOS) instead of handing off to the system
+// Safari app; web just lets the anchor's own target="_blank" handle it.
+const openNewsLink = (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+  if (Capacitor.isNativePlatform()) {
+    e.preventDefault();
+    Browser.open({ url });
+  }
+};
+
 // No-op on web/desktop. Medium rather than Light — Light was hard to feel
 // reliably on-device (same tuning already used in PriceChart.tsx).
 function hapticTap() {
@@ -87,27 +100,6 @@ function hapticTap() {
       console.error("[hapticTap] Haptics.impact failed:", e);
     });
   }
-}
-
-// Spoken phrases that mean "I'm finished talking to you," not a real
-// chat/trade message — an EXACT match on the whole (normalized) utterance
-// only, never a substring check, since several of these ("close", "stop",
-// "done") are completely ordinary words inside a real trading instruction
-// ("close my BTC position", "stop loss at 80k", "I'm done buying more
-// SOL") — those have extra words around them and must still reach the
-// agent normally. Matched case/punctuation-insensitively against the
-// user's full turn once speech recognition finishes it.
-const VOICE_END_PHRASES = new Set([
-  "bye", "goodbye", "good bye", "bye bye", "see you", "see ya", "goodnight", "good night",
-  "i'm done", "im done", "i am done", "we're done", "were done", "done",
-  "that's it", "thats it", "that's all", "thats all", "that'll be all", "thatll be all",
-  "close", "stop", "exit", "quit", "end", "end call", "hang up",
-  "i'm good", "im good", "all good", "nothing else", "nothing more",
-  "thanks bye", "thank you bye", "ok bye", "okay bye", "ok goodbye", "okay goodbye",
-]);
-function isVoiceEndPhrase(text: string): boolean {
-  const normalized = text.trim().toLowerCase().replace(/[.!?,]+$/g, "");
-  return VOICE_END_PHRASES.has(normalized);
 }
 
 // Self-contained global widget (own floating trigger + panel), not wired
@@ -286,6 +278,10 @@ interface Props {
   // in the bar's center) — desktop keeps this component's own floating
   // "Agent Ready" button exactly as before, untouched by that mobile work.
   hideTrigger?: boolean;
+  // Gates the header's expanding-icon-cluster layout (Concept 4 of the
+  // header redesign) — mobile only, by explicit request; desktop keeps
+  // the plain row of separate icon buttons untouched.
+  isMobile?: boolean;
   // Jumps the main dashboard to one of NAV_SECTIONS (edge function) —
   // powers the "Open <page> →" button a message's navigateTo renders.
   // Same shape as App.tsx's own setActiveSection, just typed loosely here
@@ -302,6 +298,11 @@ interface Props {
   // Opens the dedicated Elite upsell card (EliteUpsellModal), not the
   // generic multi-tier UpgradeModal — Agent Ready is the one reason shown.
   onAgentLocked?: () => void;
+  // Opens the app's existing Contact/Feedback form (App.tsx's ContactForm
+  // — same destination as the side drawer's "Contact / Feedback" row) —
+  // the Hub bottom sheet's "Report an Issue" card, mobile only, reuses it
+  // rather than building a second feedback mechanism.
+  onReportIssue?: () => void;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -392,25 +393,6 @@ function Sparkline({ closes, width = 130, height = 36 }: { closes: number[]; wid
   );
 }
 
-// Three dots that pulse in sequence (CSS-driven, staggered animation-delay
-// per dot) instead of a static "…" — used only for the "Listening"/
-// "Thinking" placeholder text, never for real recognized/spoken words,
-// where movement would just hurt readability. (The rotating/curved-text
-// effect around the orb was tried four separate ways — a ring, an
-// upright-orbiting word, SVG curved text, plain-CSS curved text — and
-// every single one made the orb itself stop rendering on-device for a
-// reason never pinned down through code review alone. Reverted for good;
-// this is the stable, confirmed-working version.)
-function AnimatedDots() {
-  return (
-    <span className="ta-anim-dots" aria-hidden="true">
-      <span className="ta-anim-dot" />
-      <span className="ta-anim-dot" />
-      <span className="ta-anim-dot" />
-    </span>
-  );
-}
-
 // Renders a real, tappable list of the user's open or closed positions —
 // set server-side (positionsList, see trading-agent-reply/index.ts) when
 // the user asks to actually SEE their positions rather than ask a prose
@@ -443,7 +425,10 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
 
   return (
     <div className="ta-positions-list">
-      <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
+      <div className="ta-positions-list-head">
+        <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
+        <span className="ta-positions-list-hint">Tap a position for full details</span>
+      </div>
       {items.map((item, i) => {
         const isOpenRow = expanded === i;
         const livePrice = status === "open" ? coinTickers?.get(item.coin)?.price : undefined;
@@ -465,6 +450,17 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
               )}
               <span className={`ta-positions-list-chevron${isOpenRow ? " ta-positions-list-chevron--open" : ""}`}>▾</span>
             </button>
+            {status === "open" && item.market === "futures" && item.liquidationPrice != null && livePrice && livePrice > 0 && (
+              <div className="ta-positions-list-gauge">
+                <LiquidationGauge
+                  side={item.side}
+                  entryPrice={item.avgEntryPrice}
+                  liquidationPrice={item.liquidationPrice}
+                  takeProfitPrice={item.takeProfitPrice ?? null}
+                  currentPrice={livePrice}
+                />
+              </div>
+            )}
             {isOpenRow && (
               <div className="ta-positions-list-detail">
                 <div className="ta-proposal-detail">
@@ -522,13 +518,10 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
   );
 }
 
-// Single-trade proposal card — extracted out of the text-chat message list
-// so the exact same card (and Confirm/Dismiss handlers) can also render
-// inside the voice overlay. Previously, a trade proposed during a voice
-// session had nowhere to actually show up on screen — the overlay only
-// ever had audio + a text caption, so the user heard "I've got the BTC
-// trade for you" with nothing to look at or confirm until they backed out
-// of voice mode entirely to the text view.
+// Single-trade proposal card, rendered in the normal message feed for any
+// turn that proposes one — voice-dictated turns land here too now (the
+// reply is a normal message bubble regardless of how it was sent), so
+// there's no separate voice-only rendering of this to keep in sync.
 function ActionProposalCard({
   message, executingId, onConfirm, onDismiss,
 }: {
@@ -607,7 +600,7 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigateToSection, onAgentLocked }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
@@ -812,16 +805,14 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   const [positionsTab, setPositionsTab] = useState<"open" | "closed">("open");
   const [closedPositions, setClosedPositions] = useState<PositionsListItem[] | null>(null);
   const [loadingClosedPositions, setLoadingClosedPositions] = useState(false);
+  // Mobile-only header redesign (isMobile prop) — the 4 action icons
+  // collapse into a single "Hub" button that slides up a bottom sheet
+  // with four big labelled cards. Desktop's header is untouched (separate
+  // render branch below, no hub-sheet logic at all).
+  const [hubOpen, setHubOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
-  // Live partial transcript shown in the listening overlay as words come
-  // in. Mirrored into a ref too — the native "listeningState: stopped"
-  // listener (registered once, see below) needs the true latest value at
-  // the moment speech ends, and reading state directly there would see
-  // whatever was current when that listener closure was created, not now.
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const liveTranscriptRef = useRef("");
   // Own silence detection, not just trusting the native plugin's own
   // endpointing (inconsistent across devices/OS versions in partialResults
   // mode) — reset on every new partial result, and firing stop()s the
@@ -844,6 +835,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   const [savingCash, setSavingCash] = useState(false);
   const [error, setError] = useState("");
   const feedRef = useRef<HTMLDivElement>(null);
+  // Scrolled to the end on every `draft` change while listening (see the
+  // effect below) so the live transcript "slides" to keep the newest words
+  // in view — an overwritten `.value` doesn't auto-follow the caret the way
+  // real typing does, so without this the visible window just stayed
+  // pinned to whatever showed first and the rest kept growing off-screen.
+  const composerInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Consent (the risk disclaimer) is the only remaining gate — asked once
@@ -1004,11 +1001,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
     if (open) {
       setUnread(false);
     } else {
-      // Closing the panel is the other way out of a hands-free voice-mode
-      // loop, besides the explicit Cancel in handleMicCancel — otherwise
-      // it'd keep re-arming the mic in the background after the user
-      // navigated away from the panel entirely.
-      exitVoiceMode();
+      // Closing the panel mid-recording or mid-speech should stop both
+      // rather than silently continuing in the background.
+      sendAbortControllerRef.current?.abort();
+      stopSpeaking();
+      SpeechRecognition.stop().catch(() => { /* wasn't listening */ });
+      setHubOpen(false);
     }
   }, [open]);
   useEffect(() => { conversationIdRef.current = conversationId; }, [conversationId]);
@@ -1102,6 +1100,17 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "auto" });
   }, [messages, sending, liveThinking]);
+
+  // Same "keep the newest content in view" idea as the feed scroll above,
+  // just horizontal — the composer input's value is overwritten wholesale
+  // on every partial result (not typed character-by-character), so the
+  // browser never gets the normal "caret moved, follow it" signal that
+  // keeps a real typed input scrolled to the right spot on its own.
+  useEffect(() => {
+    if (!listening) return;
+    const el = composerInputRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [draft, listening]);
 
   const handleNewConversation = () => {
     setConversationId(newConversationId());
@@ -1204,6 +1213,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
     const viaVoice = lastSendWasVoiceRef.current;
     lastSendWasVoiceRef.current = false;
     setDraft("");
+    // Explicit blur before disabling — on WebKit, disabling an input that
+    // still has focus can leave its blinking caret visually stuck in place
+    // (a stray rendering artifact, not a real focus) since the OS doesn't
+    // always repaint it away immediately once disabled={true} takes effect.
+    composerInputRef.current?.blur();
     setSending(true);
     setError("");
     setLiveThinking("");
@@ -1230,15 +1244,13 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
       watchId: null,
       thoughtProcess: null,
       navigateTo: null,
+      positionsList: null,
       createdAt: new Date().toISOString(),
     }]);
-    // Lets a tap on the "Thinking…" overlay (handleInterruptThinking below)
+    // Lets a tap on the "Thinking…" bubble (handleInterruptTyping below)
     // cancel this exact in-flight request.
     const controller = new AbortController();
     sendAbortControllerRef.current = controller;
-    // Hoisted out of the try block — needed again in `finally` below to
-    // re-attach positionsList (see there for why).
-    let agentMsg: AgentMessage | null = null;
     try {
       // The resolved agent message already has everything speakLatestAgentReply
       // needs — firing it right here (not awaited) lets speech synthesis
@@ -1246,7 +1258,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
       // waiting on a second full round trip first, closer to how quickly a
       // real person replies after you stop talking.
       let preferencesUpdate: PreferencesUpdate | null = null;
-      agentMsg = await sendAgentMessage(
+      const agentMsg = await sendAgentMessage(
         user!.id, conversationId, content, history, selectedCoin, setLiveThinking, viaVoice, setLastMarketSnapshot,
         (req) => setChartModal({ coin: req.coin, interval: req.interval }),
         (req) => setOrderBookModalCoin(req.coin),
@@ -1270,33 +1282,21 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
       // Chat transcript always gets the full back-and-forth from loadAll
       // regardless of viaVoice — speaking the reply (above) is purely an
       // add-on for a voice-originated question, never a substitute for it.
+      // positionsList is a real persisted column (positions_list) now, same
+      // as action/basket/navigateTo, so this plain reload is enough on its
+      // own — no extra patch-up needed (a prior transient-only version of
+      // this field kept getting silently wiped out by this very reload, or
+      // by the realtime subscription's own independent reload below,
+      // moments after it first rendered).
       await loadAll(conversationId);
-      // loadAll just replaced `messages` wholesale with a fresh DB read —
-      // positionsList has no DB column (deliberately transient, see
-      // PositionsListResponse in paperTrading.ts) so the freshly-loaded row
-      // for this exact message never carries it, and the card would
-      // silently never render even though the model/backend produced real
-      // data for it. Patch it back onto that one message by id now that
-      // the DB row exists to match against.
-      if (agentMsg?.positionsList) {
-        const pl = agentMsg.positionsList;
-        const id = agentMsg.id;
-        setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, positionsList: pl } : m)));
-      }
       setSending(false);
     }
   };
 
-  // Always-current ref to handleSend — registered once below in a
-  // mount-only effect (so the native listeners aren't torn down and
-  // re-added on every render), which would otherwise close over whichever
-  // handleSend existed at mount and send with stale conversationId/history.
-  const handleSendRef = useRef(handleSend);
-  useEffect(() => { handleSendRef.current = handleSend; });
   // Set right before stopping for an explicit Cancel (see handleMicCancel)
   // — the "listeningState: stopped" listener below fires either way (a
   // manual stop and a cancel both end the same native session the same
-  // way), and this is what tells it to discard instead of send.
+  // way), and this flag distinguishes the two.
   const speechCancelledRef = useRef(false);
   // Cancels the in-flight trading-agent-reply fetch for the *current*
   // handleSend call — created fresh each call (see handleSend) so an
@@ -1307,46 +1307,39 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   // so only a question that actually arrived by voice gets a spoken
   // answer back, never a typed one.
   const lastSendWasVoiceRef = useRef(false);
-  // Hands-free "on the go" mode (ChatGPT voice mode style) — entered by a
-  // fresh mic tap, exited by tapping again mid-listen, Cancel, or closing
-  // the panel. A ref (not just state) since it's read from inside
-  // speakLatestAgentReply's utterance.onend callback, which closes over
-  // whatever render created it — the state alone could be stale by the
-  // time speech actually finishes a few seconds later.
-  const [voiceMode, setVoiceMode] = useState(false);
-  const voiceModeRef = useRef(false);
-  const enterVoiceMode = () => { voiceModeRef.current = true; setVoiceMode(true); };
-  // Drives the overlay's "speaking" sub-state below (listening/thinking/
-  // speaking are the three ChatGPT-voice-mode phases shown on the one
-  // screen) and the reply text shown while it's being read aloud.
+  // Snapshot of `draft` the instant recording starts — restored by Cancel
+  // (handleMicCancel below) so dictating over an already-typed draft and
+  // then backing out doesn't lose what was there before.
+  const draftBeforeRecordingRef = useRef("");
+  // True while TTS audio is actually playing — drives the small "Stop
+  // speaking" control near the composer and the caption shown there.
   const [speaking, setSpeaking] = useState(false);
   // True only while synthesizeAgentSpeech itself is in flight — the real
   // gap this was missing: handleSend's `sending` turns false the moment
   // the TEXT reply lands (speakLatestAgentReply below is fired without
   // awaiting it), but speech synthesis is a separate network call that can
-  // itself take a while. The overlay's "Thinking…" display covers this
-  // gap too (see its fallback branch below), so this needs its own flag —
-  // without it, that stretch had no sending/speaking/listening true at
-  // all, and the whole "tap anywhere to interrupt" affordance silently
-  // went dead for however long synthesis took.
+  // itself take a while. Covers that gap so the "Stop speaking" control
+  // doesn't silently go dead for however long synthesis took before audio
+  // actually starts.
   const [synthesizing, setSynthesizing] = useState(false);
-  const [spokenReply, setSpokenReply] = useState("");
   // Live numbers (price/RSI/MACD/trend/funding/OI) for whatever coin(s) the
-  // latest turn actually resolved — shown as a compact data card during a
-  // voice session so the live interaction isn't audio/text-only. Cleared
-  // when voice mode exits so a stale card never lingers into a fresh
-  // session. Transient only, never persisted (see sendAgentMessage).
+  // latest turn actually resolved — shown as a compact data card under the
+  // latest agent message in the feed (see the message-map render below) so
+  // a reply isn't audio/text-only. Transient only, never persisted (see
+  // sendAgentMessage) — it's live-at-the-moment data, same reasoning as
+  // marketSnapshot elsewhere.
   const [lastMarketSnapshot, setLastMarketSnapshot] = useState<CoinSnapshot[] | null>(null);
   // Which coin's chart / order book modal is currently open, if any — at
-  // most one of these at a time, triggered from a snapshot card's own
-  // buttons (see the voice overlay JSX below).
+  // most one of these at a time, triggered either by the server's own
+  // showChart/showOrderBook fields or by the snapshot card's own buttons
+  // (see the message feed render below).
   const [chartModal, setChartModal] = useState<{ coin: string; interval?: ShowChartInterval } | null>(null);
   const [orderBookModalCoin, setOrderBookModalCoin] = useState<string | null>(null);
   // Brief "Opening Chart…"/"Opening Order Book…" acknowledgment for the
-  // voice-session snapshot card's two buttons below — on a real device
-  // there's a visible beat between the tap and the modal actually painting
-  // (data fetch, chart library init), and with no feedback at all in that
-  // gap it read as if the button had silently done nothing.
+  // snapshot card's two buttons below — on a real device there's a visible
+  // beat between the tap and the modal actually painting (data fetch, chart
+  // library init), and with no feedback at all in that gap it read as if
+  // the button had silently done nothing.
   const [openingNote, setOpeningNote] = useState<string | null>(null);
   const openingNoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showOpeningNote = (label: string) => {
@@ -1377,63 +1370,19 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
     el.pause();
     if (el.src) URL.revokeObjectURL(el.src);
   };
-  // Every exit calls stopSpeaking() itself now (used to be a separate
-  // paired call at each of the 3 call sites — easy to forget one, which
-  // is exactly the bug where audio kept playing after backing out of
-  // voice mode back to the text chat).
-  const exitVoiceMode = () => {
-    voiceModeRef.current = false;
-    setVoiceMode(false);
-    setSpeaking(false);
-    setSpokenReply("");
-    setLastMarketSnapshot(null);
-    stopSpeaking();
-    // Closing out mid-"Thinking…" (panel close, Cancel) should cancel
-    // whatever request is still in flight rather than leave it to resolve
-    // into a voice session that's no longer there.
-    sendAbortControllerRef.current?.abort();
-  };
-  // Tap-to-interrupt during "Thinking…" — mirrors handleInterruptSpeech
-  // below (same gesture, same place in the overlay). Deliberately tap-only
-  // rather than hands-free: starting a second native mic session right
-  // before TTS playback begins is what was causing the app to crash (an
-  // AVAudioSession conflict between tearing down a recognition session and
-  // starting audio playback in quick succession) — see this session's
-  // notes. A tap has no such race since nothing else is touching the audio
-  // session at that moment. Covers BOTH "Thinking…" sub-phases the overlay
-  // can show — waiting on the text reply (sending) and waiting on TTS
-  // synthesis of that reply (synthesizing, see speakLatestAgentReply) —
-  // stopSpeaking() bumps the generation stamp so a synthesis request still
-  // in flight gets silently discarded the moment it lands instead of
-  // playing audio for a turn the user already backed out of.
-  const handleInterruptThinking = () => {
-    sendAbortControllerRef.current?.abort();
-    stopSpeaking();
-    setSending(false);
-    setSynthesizing(false);
-    startListening();
-  };
-  // Same idea as handleInterruptThinking above, minus the startListening()
-  // call — that one resumes the mic because it's only ever reachable from
-  // inside an active voice session; this is the plain typed-chat "Thinking…"
-  // bubble, where restarting the mic would be wrong (the user is typing,
-  // not talking). Exists because a slow/hung backend reply previously left
-  // no way out of "Thinking…" at all outside of a voice session — closing
-  // the panel was the only escape.
+  // Tap-to-interrupt the typed-chat "Thinking…" bubble (now shared by every
+  // send, voice-dictated or typed — there's no separate voice-only
+  // "Thinking…" state anymore). Exists because a slow/hung backend reply
+  // previously left no way out of "Thinking…" at all — closing the panel
+  // was the only escape.
   const handleInterruptTyping = () => {
     sendAbortControllerRef.current?.abort();
     setSending(false);
   };
-  // Set right before a manual interrupt stops playback early — this is
-  // what keeps the ended/error handlers below from ALSO calling
-  // startListening() a moment after this does it directly, which would
-  // otherwise start two recognition sessions at once.
-  const speechInterruptedRef = useRef(false);
   const handleInterruptSpeech = () => {
-    speechInterruptedRef.current = true;
     stopSpeaking();
     setSpeaking(false);
-    startListening();
+    setSynthesizing(false);
   };
 
   // Speaks the newest agent message, if the latest message in the
@@ -1443,16 +1392,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   // edge function, same class of model ChatGPT's own voice mode uses)
   // rather than any on-device synthesizer — no local iOS voice, however
   // "Enhanced"/"Premium" its quality tier, sounds like a real neural TTS
-  // model; it's a different generation of technology entirely. In voice
-  // mode, finishing playback re-arms the mic automatically (startListening,
-  // defined below but already bound by the time this actually runs) so the
-  // conversation keeps going hands-free instead of waiting on another
-  // manual tap each turn.
+  // model; it's a different generation of technology entirely. Only ever
+  // called for a voice-dictated turn (see handleSend's viaVoice check) —
+  // the reply itself already landed in the feed as a normal message bubble
+  // via loadAll() by the time this plays, so this is purely an audio
+  // add-on, not something the UI depends on to show anything.
   const speakLatestAgentReply = async (msgs: AgentMessage[]) => {
     const last = msgs[msgs.length - 1];
     if (!last || last.role !== "agent" || !last.content) return;
     stopSpeaking();
-    setSpokenReply(last.content);
     // synthesizeAgentSpeech has no cancellation — if THIS call's request is
     // slow and a newer turn's speakLatestAgentReply starts (and finishes)
     // in the meantime, this one resolving late would otherwise still play,
@@ -1470,8 +1418,6 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
       const cleanup = () => {
         URL.revokeObjectURL(url);
         setSpeaking(false);
-        if (speechInterruptedRef.current) { speechInterruptedRef.current = false; return; }
-        if (voiceModeRef.current) startListening();
       };
       audio.onended = cleanup;
       audio.onerror = cleanup;
@@ -1479,12 +1425,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
       await audio.play();
     } catch {
       // Synthesis request failed (offline, server error) — nothing to
-      // play, but the loop still needs to continue rather than stall
-      // silently on a turn with no audio.
+      // play, just clear the in-progress flags.
       if (speechGenerationRef.current !== myGeneration) return;
       setSynthesizing(false);
       setSpeaking(false);
-      if (voiceModeRef.current) startListening();
     }
   };
 
@@ -1492,42 +1436,58 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   // stop on our own, rather than trusting however long (or whether at
   // all) the native session's own endpointing decides to wait in
   // partialResults mode.
-  const armSilenceTimer = () => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    silenceTimerRef.current = setTimeout(() => {
-      SpeechRecognition.stop().catch(() => { /* already stopped */ });
-    }, 4000);
-  };
   const clearSilenceTimer = () => {
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+  };
+  // The UI used to flip `listening` back off ONLY once the native plugin's
+  // own "listeningState: stopped" event arrived — but that event
+  // occasionally never fires at all (an audio-session hiccup, a
+  // permission edge case, the native side just getting stuck), which left
+  // the composer stuck showing the recording bar with no way out: both
+  // Cancel and the stop button only ever called SpeechRecognition.stop()
+  // and waited on that same event. This recovers the UI immediately and
+  // unconditionally the moment the user acts (or the silence timer fires)
+  // — stop() is still called so the native session tears down when it
+  // can, but nothing here depends on it actually succeeding.
+  const stopListening = (markAsVoice: boolean) => {
+    clearSilenceTimer();
+    setListening(false);
+    if (markAsVoice) lastSendWasVoiceRef.current = true;
+    SpeechRecognition.stop().catch(() => { /* already stopped, or hung — UI already recovered either way */ });
+  };
+  // 4s of no new partial result = treat it as the user going quiet and
+  // stop on our own, rather than trusting however long (or whether at
+  // all) the native session's own endpointing decides to wait in
+  // partialResults mode.
+  const armSilenceTimer = () => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => stopListening(true), 4000);
   };
 
   useEffect(() => {
     if (!SPEECH_AVAILABLE) return;
+    // Writes straight into the composer's own draft — calling a state
+    // setter is safe even from this mount-only effect's stale closure
+    // (setter identities are stable across renders, unlike a read of
+    // `draft` itself would be), so the input shows the transcript growing
+    // live as the user speaks, same text they'll review before sending.
     const partialSub = SpeechRecognition.addListener("partialResults", ({ matches }) => {
-      const text = matches?.[0] ?? "";
-      liveTranscriptRef.current = text;
-      setLiveTranscript(text);
+      setDraft(matches?.[0] ?? "");
       armSilenceTimer();
     });
     const stateSub = SpeechRecognition.addListener("listeningState", ({ status }) => {
       if (status !== "stopped") return;
       clearSilenceTimer();
       setListening(false);
-      const transcript = liveTranscriptRef.current.trim();
-      const cancelled = speechCancelledRef.current;
-      liveTranscriptRef.current = "";
+      // The live transcript is already sitting in `draft` (written by
+      // partialResults above), and a Cancel has already restored it to the
+      // pre-recording value itself (handleMicCancel) before this fires —
+      // nothing to finalize here besides tagging a successful (non-
+      // cancelled) recording as voice-originated, so handleSend knows to
+      // speak the reply once the user actually taps Send (cleared again
+      // the moment they edit the composer by hand — see its onChange).
+      if (!speechCancelledRef.current) lastSendWasVoiceRef.current = true;
       speechCancelledRef.current = false;
-      setLiveTranscript("");
-      if (transcript && !cancelled && isVoiceEndPhrase(transcript)) {
-        // A closing phrase ("I'm done", "goodbye", "close"...) ends the
-        // hands-free loop the same way a manual Cancel tap does — it's
-        // not a real chat/trade message, so it never reaches the agent.
-        exitVoiceMode();
-      } else if (transcript && !cancelled) {
-        lastSendWasVoiceRef.current = true;
-        handleSendRef.current(transcript);
-      }
     });
     return () => {
       clearSilenceTimer();
@@ -1548,11 +1508,6 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
   // ProfilePage.tsx, commit 6cb3507).
   if (!user) return null;
 
-  // Split from handleMicTap so speakLatestAgentReply's auto-continue (once
-  // TTS finishes, in voice mode) can start the next turn's listening
-  // directly — going through handleMicTap there would hit its own
-  // voice-mode-exit branch below (meant for an actual user tap) and
-  // immediately cancel the loop it's trying to continue.
   const startListening = async () => {
     try {
       const { speechRecognition } = await SpeechRecognition.checkPermissions();
@@ -1560,10 +1515,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
         const req = await SpeechRecognition.requestPermissions();
         if (req.speechRecognition !== "granted") return;
       }
-      liveTranscriptRef.current = "";
-      setLiveTranscript("");
+      // Snapshot whatever was already typed so Cancel can put it back —
+      // recording starts from a clean slate (the input shows the live
+      // transcript growing from nothing, not appended to old text).
+      draftBeforeRecordingRef.current = draft;
+      setDraft("");
       setListening(true);
-      enterVoiceMode();
       armSilenceTimer();
       await SpeechRecognition.start({ language: "en-US", maxResults: 1, partialResults: true });
     } catch (err) {
@@ -1572,39 +1529,32 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
     }
   };
 
-  // Tap to start, tap (anywhere on the listening overlay) to stop early —
-  // partialResults:true streams words in live as they're recognized (see
-  // the "partialResults" listener below, feeding liveTranscript) instead
-  // of waiting silently until the end, closer to how ChatGPT's voice mode
-  // shows your words arriving as you speak. Either this manual stop or the
-  // plugin's own silence detection ends the native session the same way
-  // (the "listeningState" listener below reacts to both identically),
-  // finalizing whatever's been captured and sending it as the message —
-  // unlike handleMicCancel below, which ends it the same way but discards.
-  // A third tap, between turns while voice mode is active but not
-  // currently listening (the agent replying/speaking), exits the loop —
-  // the same "stop it" gesture Cancel is for the other state.
+  // Tap to start, tap again (the same button, now showing a stop icon) to
+  // stop early — partialResults:true streams words in live as they're
+  // recognized (see the "partialResults" listener above) straight into the
+  // composer's own input, closer to how ChatGPT's dictation bar shows your
+  // words arriving as you speak. Either this manual stop or the plugin's
+  // own silence detection ends the native session the same way (the
+  // "listeningState" listener above reacts to both identically) — either
+  // way the recognized text is simply left sitting in the input for the
+  // user to review and send themselves, never auto-sent.
   const handleMicTap = async () => {
     if (listening) {
-      try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
-      return;
-    }
-    if (voiceModeRef.current) {
-      exitVoiceMode();
+      stopListening(true);
       return;
     }
     await startListening();
   };
 
   // Explicit "never mind" — stops the same way handleMicTap's early-stop
-  // does, but flags it first so the listener above discards the transcript
-  // instead of sending it. Also the one deliberate way out of hands-free
-  // voice mode — the ongoing loop otherwise has no other exit besides
-  // closing the panel entirely.
-  const handleMicCancel = async () => {
+  // does, but flags it first (so the transcript isn't mistaken for a real
+  // final answer by the "listeningState" listener above, if it happens to
+  // fire late) and restores whatever was in the composer before recording
+  // started.
+  const handleMicCancel = () => {
     speechCancelledRef.current = true;
-    exitVoiceMode();
-    try { await SpeechRecognition.stop(); } catch { /* already stopped */ }
+    setDraft(draftBeforeRecordingRef.current);
+    stopListening(false);
   };
 
   const handleConfirm = async (m: AgentMessage) => {
@@ -1742,21 +1692,33 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
           <span className="ta-head-online-badge" aria-hidden="true" />
           <span className="ta-head-title">Agent Ready</span>
         </span>
-        <div className="ta-head-actions">
-          <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title="New chat" aria-label="New chat">
-            +
-          </button>
-          <button type="button" className="ta-head-icon-btn" onClick={handleOpenHistory} title="History" aria-label="History">
-            ☰
-          </button>
-          <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title="Watchlist" aria-label="Watchlist">
-            <BellIcon size={16} />
-          </button>
-          <button type="button" className="ta-head-icon-btn" onClick={handleOpenPositions} title="Positions" aria-label="Positions">
-            <PositionsIcon size={16} />
-          </button>
-          <button type="button" className="ta-head-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
-        </div>
+        {isMobile ? (
+          <div className="ta-head-actions">
+            <button type="button" className="ta-head-icon-btn ta-head-icon-btn--labelled" onClick={() => setHubOpen(true)} title="Agent actions" aria-label="Agent actions">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              <span>Menu</span>
+            </button>
+            <button type="button" className="ta-head-close ta-head-icon-btn--labelled" onClick={() => setOpen(false)} title="Close" aria-label="Close">
+              <span className="ta-head-close-glyph">✕</span><span>Close</span>
+            </button>
+          </div>
+        ) : (
+          <div className="ta-head-actions">
+            <button type="button" className="ta-head-icon-btn" onClick={handleNewConversation} title="New chat" aria-label="New chat">
+              +
+            </button>
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenHistory} title="History" aria-label="History">
+              ☰
+            </button>
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenWatches} title="Watchlist" aria-label="Watchlist">
+              <BellIcon size={16} />
+            </button>
+            <button type="button" className="ta-head-icon-btn" onClick={handleOpenPositions} title="Positions" aria-label="Positions">
+              <PositionsIcon size={16} />
+            </button>
+            <button type="button" className="ta-head-close" onClick={() => setOpen(false)} title="Close" aria-label="Close">✕</button>
+          </div>
+        )}
       </div>
 
       {showHistory ? (
@@ -1873,6 +1835,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
                   items: (portfolio?.positions ?? []).map((p) => ({
                     coin: p.coin, market: p.market, side: p.side, qty: p.qty, leverage: p.leverage,
                     avgEntryPrice: p.avgEntryPrice, openedAt: p.updatedAt,
+                    liquidationPrice: p.liquidationPrice, takeProfitPrice: p.takeProfitPrice,
                   })),
                 }}
                 coinTickers={coinTickers}
@@ -2000,22 +1963,33 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
                       ? (livePrice - p.avgEntryPrice) * p.qty * (p.side === "short" ? -1 : 1)
                       : null;
                     return (
-                      <div key={key} className="ta-position">
-                        <span className="ta-position-coin">{p.coin}</span>
-                        <span className="ta-position-qty">{p.qty} @ ${p.avgEntryPrice.toLocaleString()}</span>
-                        {pnl != null && (
-                          <span className={`ta-position-pnl${pnl >= 0 ? " positive" : " negative"}`}>
-                            {pnl >= 0 ? "+" : "-"}${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                          </span>
+                      <div key={key} className="ta-position-wrap">
+                        <div className="ta-position">
+                          <span className="ta-position-coin">{p.coin}</span>
+                          <span className="ta-position-qty">{p.qty} @ ${p.avgEntryPrice.toLocaleString()}</span>
+                          {pnl != null && (
+                            <span className={`ta-position-pnl${pnl >= 0 ? " positive" : " negative"}`}>
+                              {pnl >= 0 ? "+" : "-"}${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="ta-position-close"
+                            onClick={() => handleClosePosition(p)}
+                            disabled={closingPosition === key}
+                          >
+                            {closingPosition === key ? "Closing…" : "Close"}
+                          </button>
+                        </div>
+                        {p.market === "futures" && livePrice && livePrice > 0 && (
+                          <LiquidationGauge
+                            side={p.side}
+                            entryPrice={p.avgEntryPrice}
+                            liquidationPrice={p.liquidationPrice}
+                            takeProfitPrice={p.takeProfitPrice}
+                            currentPrice={livePrice}
+                          />
                         )}
-                        <button
-                          type="button"
-                          className="ta-position-close"
-                          onClick={() => handleClosePosition(p)}
-                          disabled={closingPosition === key}
-                        >
-                          {closingPosition === key ? "Closing…" : "Close"}
-                        </button>
                       </div>
                     );
                   })}
@@ -2033,7 +2007,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
               </p>
             )}
             {messages.map((m) => (
-              <div key={m.id} className={`ta-msg ta-msg--${m.role}`}>
+              <div key={m.id} className={`ta-msg ta-msg--${m.role}${m.positionsList ? " ta-msg--wide" : ""}`}>
                 {/* The model is told to keep "reply" to a short verdict separate
                     from the narration, but for a trivial turn (small talk,
                     no real analysis) it sometimes writes the same short text
@@ -2058,7 +2032,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
                     </span>
                     <div className="ta-sources-list">
                       {m.newsSources.map((n, i) => (
-                        <a key={i} className="ta-sources-chip" href={n.url} target="_blank" rel="noopener noreferrer" title={n.title}>
+                        <a
+                          key={i}
+                          className="ta-sources-chip"
+                          href={n.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={n.title}
+                          onClick={(e) => openNewsLink(e, n.url)}
+                        >
                           {n.source}
                         </a>
                       ))}
@@ -2280,6 +2262,65 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
                     Open {m.navigateTo.label} →
                   </button>
                 )}
+                {/* Live numbers (price/RSI/MACD/funding/OI) for whatever
+                    coin(s) this reply actually resolved — previously shown
+                    only inside the now-removed full-screen voice overlay,
+                    which meant a voice-dictated turn's reply had nowhere to
+                    show this at all; now it renders right under whichever
+                    reply produced it, same as any other card. Scoped to the
+                    LAST agent message only (there's one snapshot in state,
+                    not one per message), same as the old overlay's
+                    `latestMsg` check. */}
+                {m.role === "agent" && m.id === messages[messages.length - 1]?.id &&
+                  lastMarketSnapshot && lastMarketSnapshot.length > 0 && (
+                  <div className="ta-snapshot">
+                    {lastMarketSnapshot.slice(0, 3).map((s) => (
+                      <div key={s.coin} className="ta-snapshot-card">
+                        <div className="ta-snapshot-head">
+                          <span className="ta-snapshot-coin">{s.coin}</span>
+                          <span className="ta-snapshot-price">
+                            ${s.price.toLocaleString(undefined, { maximumFractionDigits: s.price < 1 ? 6 : 2 })}
+                          </span>
+                          {s.trend && (
+                            <span className={`ta-snapshot-trend ta-snapshot-trend--${s.trend}`}>
+                              {s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—"} {s.trend}
+                            </span>
+                          )}
+                        </div>
+                        {s.recentCloses && s.recentCloses.length > 1 && (
+                          <Sparkline closes={s.recentCloses} />
+                        )}
+                        <div className="ta-snapshot-row">
+                          <span>RSI {s.rsi != null ? s.rsi.toFixed(1) : "n/a"}</span>
+                          <span>MACD {s.macdHist != null ? (s.macdHist >= 0 ? "▲" : "▼") : "n/a"}</span>
+                          {s.fundingRatePct != null && (
+                            <span>Funding {s.fundingRatePct >= 0 ? "+" : ""}{s.fundingRatePct.toFixed(3)}%</span>
+                          )}
+                          {s.openInterestUsd != null && (
+                            <span>OI {formatAbbrevUsd(s.openInterestUsd)}</span>
+                          )}
+                        </div>
+                        <div className="ta-snapshot-actions">
+                          <button
+                            type="button"
+                            className="ta-snapshot-action-btn"
+                            onClick={() => { showOpeningNote(`Opening ${s.coin} Chart…`); setChartModal({ coin: s.coin }); }}
+                          >
+                            Chart
+                          </button>
+                          <button
+                            type="button"
+                            className="ta-snapshot-action-btn"
+                            onClick={() => { showOpeningNote(`Opening ${s.coin} Order Book…`); setOrderBookModalCoin(s.coin); }}
+                          >
+                            Order Book
+                          </button>
+                        </div>
+                        {openingNote && <span className="ta-snapshot-opening-note">{openingNote}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             {sending && (
@@ -2304,11 +2345,47 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
 
           {error && <p className="ta-error">{error}</p>}
 
-          <div className="ta-composer">
+          {/* Replaces the old full-screen overlay's "tap anywhere to
+              interrupt" — the reply is already sitting in the feed above by
+              the time audio plays (loadAll() already ran), so this is purely
+              a way to cut off playback early, not something the UI depends
+              on to show anything. */}
+          {(speaking || synthesizing) && (
+            <button type="button" className="ta-speaking-pill" onClick={handleInterruptSpeech}>
+              🔊 {synthesizing && !speaking ? "Getting audio ready…" : "Speaking — tap to stop"}
+            </button>
+          )}
+
+          <div className={`ta-composer${listening ? " ta-composer--recording" : ""}`}>
+            {listening && SPEECH_AVAILABLE && (
+              <button
+                type="button"
+                className="ta-composer-cancel"
+                onClick={handleMicCancel}
+                aria-label="Cancel recording"
+                title="Cancel recording"
+              >
+                ✕
+              </button>
+            )}
+            {listening && (
+              <span className="ta-composer-waveform" aria-hidden="true">
+                {Array.from({ length: 8 }).map((_, i) => <span key={i} className="ta-composer-waveform-bar" />)}
+              </span>
+            )}
+            {/* The real input stays visible and IS the live transcript —
+                a native text input auto-scrolls to keep its caret in view
+                as you type past the visible width, which is exactly the
+                "slides to show the newest words" behavior wanted here; a
+                separate read-only element overwritten each time doesn't
+                get that for free (see the scrollLeft effect above, which
+                covers the one gap: a value set programmatically, with no
+                real caret, doesn't auto-follow on its own). */}
             <input
+              ref={composerInputRef}
               className="ta-composer-input"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => { setDraft(e.target.value); lastSendWasVoiceRef.current = false; }}
               onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
               placeholder={listening ? "Listening…" : "Tell the agent what to do…"}
               disabled={sending || listening}
@@ -2316,184 +2393,85 @@ export function TradingAgent({ selectedCoin, hideTrigger, coinTickers, onNavigat
             {SPEECH_AVAILABLE && (
               <button
                 type="button"
-                className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}${voiceMode && !listening ? " ta-composer-mic--voice-mode" : ""}`}
+                className={`ta-composer-mic${listening ? " ta-composer-mic--active" : ""}`}
                 onClick={handleMicTap}
                 disabled={sending}
-                aria-label={listening ? "Stop listening" : voiceMode ? "Voice mode active" : "Speak to the agent"}
-                title={listening ? "Stop listening" : voiceMode ? "Voice mode active — tap Cancel to stop" : "Speak to the agent"}
+                aria-label={listening ? "Stop recording" : "Speak to the agent"}
+                title={listening ? "Stop recording" : "Speak to the agent"}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="2" width="6" height="11" rx="3" />
-                  <path d="M5 10a7 7 0 0 0 14 0" />
-                  <line x1="12" y1="19" x2="12" y2="22" />
-                  <line x1="8" y1="22" x2="16" y2="22" />
-                </svg>
+                {listening ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="2" width="6" height="11" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                    <line x1="8" y1="22" x2="16" y2="22" />
+                  </svg>
+                )}
               </button>
             )}
-            <button type="button" className="ta-composer-send" onClick={() => handleSend()} disabled={sending || !draft.trim()}>
-              {sending ? "…" : "Send"}
-            </button>
+            {!listening && (
+              <button type="button" className="ta-composer-send" onClick={() => handleSend()} disabled={sending || !draft.trim()}>
+                {sending ? "…" : "Send"}
+              </button>
+            )}
           </div>
         </>
       )}
 
-      {/* One continuous full-panel screen for the whole voice session —
-          literally ChatGPT voice mode's model: listen, think, speak, listen
-          again, all without ever dropping back to the text chat view in
-          between. The chat list underneath keeps recording every turn via
-          loadAll exactly as before; it's just not shown again until voice
-          mode actually exits (Cancel, re-tapping the mic between turns, or
-          closing the panel), at which point the full back-and-forth is
-          already sitting there as regular messages. */}
-      {voiceMode && (() => {
-        // While there's real content to show (live numbers, a trade
-        // proposal) the orb shrinks and moves to the top-left instead of
-        // sitting centered and competing with that content for space —
-        // reverts back to centered once there's nothing to show again
-        // (e.g. plain chat, or back to a fresh listen with no proposal
-        // pending). Only CSS size/layout changes on the EXISTING elements,
-        // no new wrapper around the orb — seeF the orb-wrapper note above
-        // for why that specifically keeps breaking it.
-        const latestMsg = messages.length > 0 && messages[messages.length - 1].role === "agent" ? messages[messages.length - 1] : null;
-        const hasPendingAction = !!(latestMsg?.action && latestMsg.actionStatus === "pending");
-        const hasContent = (lastMarketSnapshot && lastMarketSnapshot.length > 0) || hasPendingAction;
-        // Covers both "Thinking…" sub-phases (waiting on the text reply,
-        // then waiting on TTS synthesis of it) — see synthesizing's own
-        // comment above for why this needs to be two flags, not one.
-        const thinking = sending || synthesizing;
-        return (
-        <div
-          className={`ta-listening-overlay${hasContent ? " ta-listening-overlay--compact" : ""}`}
-          onClick={listening ? handleMicTap : speaking ? handleInterruptSpeech : thinking ? handleInterruptThinking : undefined}
-          role="button"
-          aria-label={listening ? "Stop listening and send" : speaking ? "Tap to interrupt" : thinking ? "Tap to interrupt" : "Voice session"}
-        >
-          <button
-            type="button"
-            className="ta-listening-cancel"
-            onClick={(e) => { e.stopPropagation(); handleMicCancel(); }}
-          >
-            Cancel
-          </button>
-          {openingNote && <div className="ta-listening-opening-note">{openingNote}</div>}
-          {/* Orb is a direct flex child, untouched, no wrapper div — the
-              confirmed-stable version after four separate rotating/
-              curved-text attempts around it all broke its rendering on-
-              device. Static placeholder text now sits ABOVE the orb (just
-              DOM order within the flex column — orb itself still
-              completely unchanged) with three pulsing dots instead of a
-              plain "…" for a little life without touching the orb again. */}
-          <div className="ta-listening-orb-group">
-            <p className="ta-listening-transcript">
-              {listening
-                ? (liveTranscript || <>Listening<AnimatedDots /></>)
-                : speaking
-                  ? spokenReply
-                  : <>Thinking<AnimatedDots /></>}
-            </p>
-            <span
-              className={`ta-trigger-orb ta-listening-orb${
-                thinking && !speaking ? " ta-listening-orb--thinking" : speaking ? " ta-listening-orb--speaking" : ""
-              }`}
-            />
+      {/* Mobile-only Hub bottom sheet (isMobile + hubOpen) — replaces the
+          four separate header icons with one "Hub" button; tapping it
+          slides this up instead. Backdrop tap or picking a card both
+          close it; picking a card also runs the real action, same
+          handlers the desktop row's icons already use. */}
+      {isMobile && hubOpen && (
+        <>
+          <div className="ta-hub-backdrop" onClick={() => setHubOpen(false)} />
+          <div className="ta-hub-sheet">
+            <div className="ta-hub-handle" />
+            <span className="ta-hub-title">Quick Actions</span>
+            <div className="ta-hub-list">
+              {/* The one primary action (vs. the other four, which all open
+                  an existing view) — first in the list, with a tinted
+                  background instead of a chevron-less standalone shape. */}
+              <button type="button" className="ta-hub-list-row ta-hub-list-row--featured" onClick={() => { handleNewConversation(); setHubOpen(false); }}>
+                <span className="ta-hub-list-badge ta-hub-list-badge--blue">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </span>
+                <span className="ta-hub-list-label">New Chat</span>
+                <span className="ta-hub-list-chevron">›</span>
+              </button>
+              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenHistory(); setHubOpen(false); }}>
+                <span className="ta-hub-list-badge ta-hub-list-badge--purple">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                </span>
+                <span className="ta-hub-list-label">History</span>
+                <span className="ta-hub-list-chevron">›</span>
+              </button>
+              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenWatches(); setHubOpen(false); }}>
+                <span className="ta-hub-list-badge ta-hub-list-badge--pink"><BellIcon size={16} /></span>
+                <span className="ta-hub-list-label">Watchlist</span>
+                <span className="ta-hub-list-chevron">›</span>
+              </button>
+              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenPositions(); setHubOpen(false); }}>
+                <span className="ta-hub-list-badge ta-hub-list-badge--green"><PositionsIcon size={16} /></span>
+                <span className="ta-hub-list-label">Positions</span>
+                <span className="ta-hub-list-chevron">›</span>
+              </button>
+              <button type="button" className="ta-hub-list-row" onClick={() => { onReportIssue?.(); setHubOpen(false); }}>
+                <span className="ta-hub-list-badge ta-hub-list-badge--amber">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                </span>
+                <span className="ta-hub-list-label">Report an Issue</span>
+                <span className="ta-hub-list-chevron">›</span>
+              </button>
+            </div>
           </div>
-          {/* Live numbers for whatever coin(s) the conversation actually
-              resolved — the voice session was audio/text-only before this,
-              with price/RSI/MACD/funding/OI only ever used server-side to
-              write the spoken reply, never shown. Persists across turns
-              within one session (cleared on exitVoiceMode) so it's not just
-              a flash during "thinking." */}
-          {lastMarketSnapshot && lastMarketSnapshot.length > 0 && (
-            // No stopPropagation here — the card's own Chart/Order Book
-            // buttons already guard themselves individually below, so a
-            // blanket stop here only meant tapping the card's inert area
-            // (price, RSI row) silently ate the "tap anywhere to
-            // interrupt" gesture instead of covering most of the screen.
-            <div className="ta-listening-snapshot">
-              {lastMarketSnapshot.slice(0, 3).map((s) => (
-                <div key={s.coin} className="ta-listening-snapshot-card">
-                  <div className="ta-listening-snapshot-head">
-                    <span className="ta-listening-snapshot-coin">{s.coin}</span>
-                    <span className="ta-listening-snapshot-price">
-                      ${s.price.toLocaleString(undefined, { maximumFractionDigits: s.price < 1 ? 6 : 2 })}
-                    </span>
-                    {s.trend && (
-                      <span className={`ta-listening-snapshot-trend ta-listening-snapshot-trend--${s.trend}`}>
-                        {s.trend === "up" ? "▲" : s.trend === "down" ? "▼" : "—"} {s.trend}
-                      </span>
-                    )}
-                  </div>
-                  {s.recentCloses && s.recentCloses.length > 1 && (
-                    <Sparkline closes={s.recentCloses} />
-                  )}
-                  <div className="ta-listening-snapshot-row">
-                    <span>RSI {s.rsi != null ? s.rsi.toFixed(1) : "n/a"}</span>
-                    <span>MACD {s.macdHist != null ? (s.macdHist >= 0 ? "▲" : "▼") : "n/a"}</span>
-                    {s.fundingRatePct != null && (
-                      <span>Funding {s.fundingRatePct >= 0 ? "+" : ""}{s.fundingRatePct.toFixed(3)}%</span>
-                    )}
-                    {s.openInterestUsd != null && (
-                      <span>OI {formatAbbrevUsd(s.openInterestUsd)}</span>
-                    )}
-                  </div>
-                  <div className="ta-listening-snapshot-actions">
-                    <button
-                      type="button"
-                      className="ta-listening-snapshot-action-btn"
-                      onClick={(e) => { e.stopPropagation(); showOpeningNote(`Opening ${s.coin} Chart…`); setChartModal({ coin: s.coin }); }}
-                    >
-                      Chart
-                    </button>
-                    <button
-                      type="button"
-                      className="ta-listening-snapshot-action-btn"
-                      onClick={(e) => { e.stopPropagation(); showOpeningNote(`Opening ${s.coin} Order Book…`); setOrderBookModalCoin(s.coin); }}
-                    >
-                      Order Book
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {/* The actual trade card — previously a trade proposed during a
-              voice session had nowhere to show up on screen at all: the
-              overlay only ever had audio + a text caption, so hearing
-              "I've got the BTC trade for you" left nothing to look at or
-              confirm without backing out of voice mode entirely. Same
-              card/handlers as the text-chat list (ActionProposalCard). */}
-          {hasPendingAction && latestMsg && (
-            <div className="ta-listening-proposal" onClick={(e) => e.stopPropagation()}>
-              <ActionProposalCard message={latestMsg} executingId={executingId} onConfirm={handleConfirm} onDismiss={handleDismiss} />
-            </div>
-          )}
-          {/* Same headline sources already rendered under a text-chat agent
-              bubble (see m.newsSources below) — just also surfaced here so
-              a voice session isn't missing the one piece of context that
-              otherwise only ever showed up in the chat log after the fact. */}
-          {!listening && messages.length > 0 && messages[messages.length - 1].role === "agent" &&
-            messages[messages.length - 1].newsSources && messages[messages.length - 1].newsSources!.length > 0 && (
-            <div className="ta-listening-news" onClick={(e) => e.stopPropagation()}>
-              {messages[messages.length - 1].newsSources!.slice(0, 2).map((n, i) => (
-                <a
-                  key={i}
-                  href={n.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ta-listening-news-item"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {n.source}: {n.title}
-                </a>
-              ))}
-            </div>
-          )}
-          <span className="ta-listening-hint">
-            {listening ? "Tap anywhere to stop and send" : speaking || thinking ? "Tap anywhere to interrupt" : ""}
-          </span>
-        </div>
-        );
-      })()}
+        </>
+      )}
     </div>
   );
 

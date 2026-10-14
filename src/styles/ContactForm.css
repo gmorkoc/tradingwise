@@ -4,7 +4,13 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(3px);
-  z-index: 400;
+  /* Was 400 — invisible-but-"open" behind TradingAgent's own mobile panel
+     (z-index: 300100), since both this and .ta-panel portal straight to
+     document.body as siblings. Now reachable from Agent Ready's own Hub
+     sheet ("Report an Issue"), which made this the same silent-no-op bug
+     OrderBookProfile.css hit before (see its own z-index comment) —
+     tapping it mounted the form UNDER the panel instead of over it. */
+  z-index: 400200;
   display: flex;
   align-items: center;
   justify-content: center;

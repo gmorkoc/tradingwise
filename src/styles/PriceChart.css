@@ -592,71 +592,13 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   color: #fb7185;
 }
 
-/* 24h volume — the right column of .chart-header on mobile (right next to
-   the coin icon area), paired with .chart-mobile-price-row (price/change,
-   left column under the coin name) below. Desktop keeps the compact
-   .chart-current-price-group in the fullscreen header instead, so neither
-   ever doubles up there. */
-/* Avatar + 24hr vol — now shown on desktop too (in .chart-header-right,
-   since interval pills moved below the chart there), not just mobile. */
-.chart-mobile-stats {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-}
-
-.chart-mobile-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  color: #fff;
-  flex-shrink: 0;
-  margin-bottom: 8px;
-}
-
-.chart-mobile-vol {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  font-size: 0.68rem;
-}
-
-.chart-mobile-vol-label {
-  position: relative;
-  color: var(--pc-text-muted);
-  font-weight: 600;
-  padding-bottom: 8px;
-}
-
-/* Dotted divider between the "24hr vol" label and its value, not the
-   avatar above — its own line rather than a border, which would just
-   round off into a circle's curve instead of reading as a line. */
-.chart-mobile-vol-label::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 3px;
-  transform: translateX(-50%);
-  width: 20px;
-  border-bottom: 2px dotted var(--pc-border);
-}
-
-.chart-mobile-vol-value {
-  color: var(--pc-text-secondary);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.chart-mobile-price-row {
-  display: none;
-}
+/* .chart-mobile-stats/.chart-mobile-avatar/.chart-mobile-vol* (the old
+   standalone coin-avatar + "24hr vol" chip, chart-header-right) and
+   .chart-mobile-price-row/.chart-mobile-price* (the coin-title/signal/
+   High-Low/price/change block, non-fullscreen mobile) were removed —
+   that content now lives only in the unified mobile glass card
+   (.mch-mobile-vol/.mch-mobile-summary, App.css) instead of being
+   duplicated here too (PriceChart.tsx no longer renders either). */
 
 /* Fullscreen mobile/iOS header (see the !isDesktopWidth branch in
    PriceChart.tsx): exchange-style High/Low · Bid/Ask · Vol stats grid,
@@ -1349,81 +1291,6 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   }
 }
 
-@media (max-width: 768px) {
-  .chart-mobile-price-row {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-  }
-
-  /* Smaller than the default badge (desktop's title-row size), now its
-     own row below the price-change line, and plain text — no chip
-     background/border now that it's not sitting inline next to anything
-     that needs visual separation. */
-  .chart-mobile-price-row .day-hl-badge {
-    align-self: flex-start;
-    font-size: 0.62rem;
-    padding: 0;
-    gap: 3px;
-    margin-top: 6px;
-    background: none;
-    border: none;
-    backdrop-filter: none;
-  }
-
-  .chart-mobile-price {
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-    color: var(--pc-text);
-    transition: color 0.25s ease;
-    white-space: nowrap;
-  }
-
-  .chart-mobile-price--up {
-    color: var(--pc-success);
-  }
-
-  .chart-mobile-price--down {
-    color: var(--pc-danger);
-  }
-
-  .chart-mobile-price-change {
-    display: inline-flex;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .chart-mobile-price-change--up {
-    color: var(--pc-success);
-  }
-
-  .chart-mobile-price-change--down {
-    color: var(--pc-danger);
-  }
-
-  .chart-mobile-price-change-arrow {
-    font-size: 0.8rem;
-  }
-
-  .chart-mobile-price-change-period {
-    margin-left: 2px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: var(--pc-panel-2);
-    color: var(--pc-text-muted);
-    font-weight: 700;
-    font-size: 0.74rem;
-  }
-}
-
 /* touch-action is a CSS-level declaration the browser honors BEFORE any
    JS touch listener runs — lightweight-charts' canvas attaches its own
    non-passive touch handlers regardless of the handleScroll/handleScale
@@ -1565,11 +1432,12 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 }
 
 /* Compact pill — background/border tinted from the pill's own text color
-   via currentColor, so every zone-signal state and div-badge direction
-   gets a matching soft pill automatically. Previously this size only
-   applied on mobile (max-width:768px); desktop kept a bigger, borderless
-   look that read as a different, inconsistent style next to it. */
-.zone-signal,
+   via currentColor, so every div-badge direction gets a matching soft
+   pill automatically. Previously this size only applied on mobile
+   (max-width:768px); desktop kept a bigger, borderless look that read as
+   a different, inconsistent style next to it. (.zone-signal used to
+   share this rule too, before that pill was replaced by
+   <SignalIndicator>.) */
 .div-badge {
   display: inline-flex;
   align-items: center;
@@ -1702,27 +1570,6 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   background: #94a3b8;
 }
 
-.zone-signal--strong-buy {
-  color: #4ade80;
-}
-.zone-signal--buy {
-  color: #4ade80;
-}
-.zone-signal--oversold {
-  color: #f59e0b;
-}
-.zone-signal--overbought {
-  color: #f59e0b;
-}
-.zone-signal--neutral {
-  color: #94a3b8;
-}
-.zone-signal--sell {
-  color: #fb7185;
-}
-.zone-signal--strong-sell {
-  color: #f43f5e;
-}
 
 .interval-selector {
   display: flex;
@@ -2247,18 +2094,13 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--pc-danger) 15%, transparent);
 }
 
-.chart-legend {
-  display: flex;
-  gap: 16px;
-  /* flex-end, not center — the legend text and the (taller) action buttons
-     don't share a height, so center-aligning left them with uneven gaps to
-     whatever sits below this row depending on which side you looked at. */
-  align-items: flex-end;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  min-height: 28px;
-}
-
+/* .chart-legend itself is dead — no element in PriceChart.tsx carries this
+   class anymore (an earlier refactor dropped the wrapper). Its
+   margin-bottom isn't worth reviving here: the more specific
+   ".chart-dblclick-wrap > .chart-legend-actions" rule further down
+   always wins over this base rule for the one place this toolbar
+   actually renders, so that's where the real spacing/contrast fix lives
+   now. */
 .chart-legend-actions {
   display: flex;
   align-items: center;
@@ -2302,10 +2144,38 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
 .chart-dblclick-wrap > .chart-legend-actions {
   width: 100%;
   margin-left: 0;
-  margin-bottom: 6px;
+  /* This selector (direct-child + 2 classes) beats the base
+     .chart-legend-actions rule's own margin-bottom on specificity alone,
+     so bumping spacing there did nothing — this is the one that actually
+     wins. 16px, not 6px: the row's buttons share the exact same
+     background color as the chart canvas right below them
+     (--color-surface-alt/#111827, same literal value — see
+     .chart-depth-btn-contrast below for the real fix for that), so with
+     only 6px of gap the chart's own grid dots read as touching/behind
+     the buttons even though they're just closely stacked, not actually
+     overlapping. */
+  margin-bottom: 16px;
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 6px;
+}
+
+/* The buttons in this row (.chart-depth-btn's shared background,
+   --color-surface-alt) are the exact same #111827 as the chart canvas's
+   own fill color right behind/below them — so their "background" reads
+   as invisible, and the canvas's grid dots look like they're bleeding
+   into the controls instead of just sitting close to them. A frosted,
+   lighter chip (not color-matched to any one theme's canvas fill) keeps
+   this legible regardless of theme or canvas color. */
+.chart-dblclick-wrap > .chart-legend-actions .chart-depth-btn {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+html[data-theme="light"] .chart-dblclick-wrap > .chart-legend-actions .chart-depth-btn {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(15, 23, 42, 0.1);
 }
 
 .price-chart-container--fs .chart-dblclick-wrap > .chart-legend-actions,
@@ -2747,12 +2617,27 @@ html[data-theme="light"] .cap-overlay-feature {
   border-radius: 12px;
 }
 
+/* Phone widths, non-fullscreen only: the title-row/signal/High-Low content
+   that used to live in .chart-header is now gated off entirely in
+   PriceChart.tsx (isDesktopWidth check) — that content moved for real into
+   .main-coin-header's unified mobile card (.mch-body/.mch-mobile-summary,
+   App.css). .chart-header itself still mounts (as an empty box, now that
+   its children render nothing here) so it's collapsed to avoid leaving
+   behind its own padding as a blank gap. Scoped to exactly .mch-body's own
+   breakpoint (640px, not this file's 768px) so there's no gap between them
+   where neither renders. Fullscreen is untouched — .mch-body doesn't exist
+   there at all. */
+@media (max-width: 640px) {
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) .chart-header {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .price-chart-container {
     padding: 8px 16px;
   }
 
-  .zone-signal,
   .div-badge {
     font-size: 0.58rem;
     padding: 1px 5px;

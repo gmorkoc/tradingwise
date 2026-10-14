@@ -19,6 +19,7 @@ import {
 } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot } from "../services/coinglass";
 import { ZoneResult, ZoneSignal } from "./PriceChart.types";
+import SignalIndicator from "./SignalIndicator";
 import {
   getCandlePatternAnalysis,
   CandlePatternResult,
@@ -173,23 +174,6 @@ const INTERVAL_SHORT: Record<TimeInterval, string> = {
 
 // Intervals that require at least Pro
 const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
-
-// Shared with the day-hl-badge and the mobile price header — both show a
-// change/high-low figure "as of" a window matched to the selected candle
-// interval, so they need to agree on what that window is called.
-const HL_WINDOW_LABEL: Record<TimeInterval, string> = {
-  "1sec": "30M",
-  "1min": "1H",
-  "5min": "24H",
-  "15min": "48H",
-  "1h": "24H",
-  "4h": "24H",
-  "6h": "24H",
-  "1day": "24H",
-  "1week": "7D",
-  "1month": "30D",
-  "all": "ATH",
-};
 
 // Full coin name for the chart title ("Bitcoin" rather than "BTC") — COINS
 // already carries this (services/coinglass.ts), just keyed by symbol here
@@ -1499,49 +1483,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // unrelated reason (grid/theme change) — only a real transition should
   // force the chart style/reset the view, not every fire of that effect.
   const prevIsFullscreenForToggleRef = useRef(isFullscreen);
-  // Watches .chart-mobile-price-row (the $price/change row under the coin
-  // name, compact view only) and broadcasts its visibility — App.tsx's
-  // sticky .mch-stats row listens for this to show/hide a compact coin+
-  // price badge of its own once this one scrolls out of view. A plain
-  // window CustomEvent (not a prop) since App.tsx mounts way above this
-  // component in the tree — same cross-component pattern this app already
-  // uses for "coin-chat-active" elsewhere.
-  const mobilePriceRowRef = useRef<HTMLDivElement>(null);
-  const priceRowDataRef = useRef({ coin, price: null as number | null, changePercent: null as number | null, direction: null as "up" | "down" | null });
-  useEffect(() => {
-    priceRowDataRef.current = { coin, price: currentPrice, changePercent: dayChangePercent, direction: priceDirection };
-  });
-  useEffect(() => {
-    // iOS native or any mobile-width web viewport — desktop web never
-    // shows this badge, since .mch-stats already has room for the full
-    // price there without needing to borrow space from the chart.
-    const isIosOrMobileWeb = (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || !isDesktopWidth;
-    const dispatch = (visible: boolean) => {
-      window.dispatchEvent(new CustomEvent("chart-price-row-visibility", {
-        detail: { visible, ...priceRowDataRef.current },
-      }));
-    };
-    if (!isIosOrMobileWeb || isFullscreen) {
-      // Fullscreen/desktop never hides this row in the first place —
-      // treat as always-visible so a stale "hidden" state from a previous
-      // compact-view session can't linger into either of these.
-      dispatch(true);
-      return;
-    }
-    const el = mobilePriceRowRef.current;
-    // .chart-mobile-price-row only renders once currentPrice !== null — on
-    // first mount that's still null (price loads async), so the ref isn't
-    // attached yet. currentPrice is deliberately in the deps below so this
-    // effect re-runs once it actually arrives, instead of permanently
-    // bailing out here on a ref that was never going to populate in time.
-    if (!el) return;
-    const io = new IntersectionObserver(([entry]) => dispatch(entry.isIntersecting), { threshold: 0 });
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      dispatch(true);
-    };
-  }, [isDesktopWidth, isFullscreen, coin, currentPrice === null]);
   const textColor = isLight
     ? isFullscreen
       ? "#0f172a"
@@ -1889,6 +1830,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // together).
         autoSize: true,
         layout: {
+          // Library's own TradingView attribution badge, bottom-left of
+          // the pane — defaults to true on every createChart() call, so a
+          // fresh one appears each time this remounts (switching away to
+          // Order Book and back unmounts/remounts PriceChart entirely).
+          // Not app content, never wanted it.
+          attributionLogo: false,
           background: {
             type: ColorType.Solid,
             // Matches bgColor below exactly (same #111827 reasoning) — this
@@ -2890,7 +2837,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const macdEl = macdContainerRef.current;
     if (!rsiEl || !macdEl) return;
     const baseOpts = {
-      layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
+      // Same attribution-logo opt-out as the main chart above — these sub-
+      // charts (RSI/MACD panes) default it to true too.
+      layout: { attributionLogo: false, background: { type: ColorType.Solid, color: bgColor }, textColor },
       // Matches the main chart — transparent until the manual Grid
       // toggle turns gridlines on (fullscreen no longer force-enables
       // them).
@@ -3461,26 +3410,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </>,
         document.body,
       ))}
-    </div>
-  );
-
-  // Mobile-only right column — just 24h volume now; price/change moved to
-  // its own row under the coin name on the left (chart-mobile-price-row,
-  // in the JSX below).
-  const mobileStatsBlock = (
-    <div className="chart-mobile-stats">
-      <span
-        className="chart-mobile-avatar"
-        style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
-      >
-        {COIN_GLYPHS[coin] ?? coin[0]}
-      </span>
-      {quoteVolume24h !== undefined && quoteVolume24h > 0 && (
-        <span className="chart-mobile-vol">
-          <span className="chart-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
-          <span className="chart-mobile-vol-value">{formatCompactVolume(quoteVolume24h)}</span>
-        </span>
-      )}
     </div>
   );
 
@@ -4075,6 +4004,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         }
       : null);
 
+  // Shared by both title-row zone-signal spots below (fullscreen compact
+  // header + normal/desktop header) — same label, computed once.
+  const zoneLabel = zone && {
+    "strong-buy": t("chart.strongBuy"),
+    "buy": t("chart.buy"),
+    "oversold": t("chart.oversold"),
+    "overbought": t("chart.overbought"),
+    "neutral": t("chart.neutralZone"),
+    "sell": t("chart.sell"),
+    "strong-sell": t("chart.strongSell"),
+  }[zone.signal];
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
@@ -4276,17 +4217,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
-                    {zone && isPaid && (
-                      <span className={`zone-signal zone-signal--${zone.signal}`}>
-                        <span className="zone-signal-live" />
-                        {zone.signal === "strong-buy" && t("chart.strongBuy")}
-                        {zone.signal === "buy" && t("chart.buy")}
-                        {zone.signal === "oversold" && t("chart.oversold")}
-                        {zone.signal === "overbought" && t("chart.overbought")}
-                        {zone.signal === "neutral" && t("chart.neutralZone")}
-                        {zone.signal === "sell" && t("chart.sell")}
-                        {zone.signal === "strong-sell" && t("chart.strongSell")}
-                      </span>
+                    {zone && isPaid && zoneLabel && (
+                      <SignalIndicator signal={zone.signal} label={zoneLabel} />
                     )}
                     {!isPaid && (
                       <button
@@ -4325,7 +4257,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : isDesktopWidth ? (
                 <>
                 <div className="chart-title-row">
                   <h3>{t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}</h3>
@@ -4339,17 +4271,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
                     </span>
                   )}
-                  {zone && isPaid && (
-                    <span className={`zone-signal zone-signal--${zone.signal}`}>
-                      <span className="zone-signal-live" />
-                      {zone.signal === "strong-buy" && t("chart.strongBuy")}
-                      {zone.signal === "buy" && t("chart.buy")}
-                      {zone.signal === "oversold" && t("chart.oversold")}
-                      {zone.signal === "overbought" && t("chart.overbought")}
-                      {zone.signal === "neutral" && t("chart.neutralZone")}
-                      {zone.signal === "sell" && t("chart.sell")}
-                      {zone.signal === "strong-sell" && t("chart.strongSell")}
-                    </span>
+                  {zone && isPaid && zoneLabel && (
+                    <SignalIndicator signal={zone.signal} label={zoneLabel} />
                   )}
                   {!isPaid && (
                     <button
@@ -4388,35 +4311,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </div>
                 )}
                 </>
-              )}
-              {!isFullscreen && currentPrice !== null && (
-                <div className="chart-mobile-price-row" ref={mobilePriceRowRef}>
-                  <span
-                    className={`chart-mobile-price${priceDirection ? ` chart-mobile-price--${priceDirection}` : ""}`}
-                  >
-                    {formatLivePrice(currentPrice)}
-                  </span>
-                  {dayChangePercent !== null && dayChangeAbs !== null && (
-                    <span
-                      className={`chart-mobile-price-change chart-mobile-price-change--${dayChangePercent >= 0 ? "up" : "down"}`}
-                    >
-                      <span className="chart-mobile-price-change-arrow">
-                        {dayChangePercent >= 0 ? "↗" : "↘"}
-                      </span>
-                      {formatLivePrice(Math.abs(dayChangeAbs))} ({Math.abs(dayChangePercent).toFixed(2)}%)
-                      <span className="chart-mobile-price-change-period">
-                        {HL_WINDOW_LABEL[interval]}
-                      </span>
-                    </span>
-                  )}
-                </div>
-              )}
+              ) : null}
             </div>
-            {!isFullscreen && (
-              <div className="chart-header-right">
-                {mobileStatsBlock}
-              </div>
-            )}
           </div>
 
         </div>

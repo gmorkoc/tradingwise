@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, IChartApi, ISeriesApi, ColorType, CandlestickSeries, HistogramSeries } from "lightweight-charts";
 import { coinglass } from "../services/coinglass";
+import { CookingLoader } from "./CookingLoader";
 import "../styles/AgentChartModal.css";
 
 // Full interval set, matching PriceChart.tsx's own INTERVALS exactly (not
@@ -147,7 +148,7 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
         </div>
         <div className="acm-chart-wrap">
           <div ref={containerRef} className="acm-chart-container" />
-          {loading && <div className="acm-overlay">Loading…</div>}
+          {loading && <div className="acm-overlay"><CookingLoader /></div>}
           {!loading && error && <div className="acm-overlay">No data available</div>}
         </div>
       </div>

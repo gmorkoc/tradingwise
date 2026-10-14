@@ -420,6 +420,159 @@ html[data-theme="light"] .ta-panel {
   border-radius: 10px;
 }
 .ta-head-close:hover { color: var(--ta-text); background: var(--ta-overlay); }
+/* Mobile header icons (Hub + Close) get a real visible text label next to
+   the glyph — `title` alone is invisible on a touch device (no hover
+   state), so an icon with an ambiguous meaning (a bare grid glyph) needs
+   actual on-screen text, not just an attribute nothing ever shows. */
+.ta-head-icon-btn--labelled {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  width: auto;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: none;
+  border: none;
+  /* Overrides the base .ta-head-icon-btn/.ta-head-close :hover rules
+     (background+color change on hover) — on a touch device that hover
+     state gets triggered by the tap itself and then sticks, reading as a
+     stuck "selected" look with nothing to actually clear it. Also kills
+     WebKit's own default tap-highlight overlay, the other half of that
+     same stuck-highlight look. */
+  -webkit-tap-highlight-color: transparent;
+}
+.ta-head-icon-btn--labelled:hover,
+.ta-head-icon-btn--labelled:active { color: var(--ta-text-dim); background: none; }
+/* An <svg> defaults to inline rendering, which leaves room for a text
+   descender below its actual graphic — that gap is what reads as "the
+   icon sits higher than the label" even though the flex row's own
+   align-items:center is centering both boxes correctly. display:block
+   removes that phantom descender space entirely. */
+.ta-head-icon-btn--labelled svg { display: block; flex-shrink: 0; }
+.ta-head-icon-btn--labelled span { line-height: 1; }
+.ta-head-close-glyph { font-size: 0.95rem; }
+.ta-head-icon-btn--labelled span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Mobile-only Hub bottom sheet (isMobile prop) — collapses New/History/
+   Watchlist/Positions into one "Hub" header button; tapping it slides up
+   this sheet instead of a dropdown/cluster. Desktop keeps the plain
+   .ta-head-icon-btn row, untouched. ───────────────────────────────────── */
+.ta-hub-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  animation: ta-hub-backdrop-in 0.2s ease;
+}
+@keyframes ta-hub-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.ta-hub-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  background: var(--ta-bg-1);
+  border-top: 1px solid var(--ta-border);
+  border-radius: 22px 22px 0 0;
+  padding: 10px 18px calc(20px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.4);
+  animation: ta-hub-sheet-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes ta-hub-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.ta-hub-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 0 auto 14px;
+}
+.ta-hub-title {
+  display: block;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ta-text-dim);
+  margin-bottom: 18px;
+}
+/* Settings-style list — each action is a full-width row (icon, label,
+   chevron) instead of a circle/segment in a horizontal bar. Bigger touch
+   targets than anything a 5-across row can offer, and the familiar iOS
+   Settings pattern needs no explanation. */
+/* Negative side margins cancel .ta-hub-sheet's own 18px side padding —
+   rows go edge-to-edge with the sheet itself (full width), and the visual
+   gutter comes back from each row's OWN padding instead, so the row's
+   tappable/hairline area isn't artificially narrower than the sheet. */
+.ta-hub-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -18px;
+}
+.ta-hub-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: none;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--ta-border);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.ta-hub-list-row:last-child { border-bottom: none; }
+/* New Chat — the one action genuinely different in kind from the other
+   four (which all just open an existing view) — gets a tinted background
+   and sits first, instead of a raised shape or filled segment. Flush
+   full-width like every other row (no inset/rounded card) now that the
+   list itself goes edge-to-edge. */
+.ta-hub-list-row--featured {
+  background: rgba(110, 168, 255, 0.08);
+}
+.ta-hub-list-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ta-hub-list-badge--blue { background: rgba(110, 168, 255, 0.2); color: var(--ta-accent); }
+.ta-hub-list-badge--purple { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+.ta-hub-list-badge--pink { background: rgba(251, 113, 133, 0.2); color: #fb7185; }
+.ta-hub-list-badge--green { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.ta-hub-list-badge--amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.ta-hub-list-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ta-text);
+}
+.ta-hub-list-chevron {
+  flex-shrink: 0;
+  color: var(--ta-text-dim);
+  font-size: 0.9rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-hub-backdrop, .ta-hub-sheet { animation: none; }
+}
 
 /* ── Conversation history ────────────────────────────────────────────────── */
 .ta-history {
@@ -434,6 +587,9 @@ html[data-theme="light"] .ta-panel {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* See .ta-feed's own comment on this — overflow-y:auto with no
+     overflow-x set computes to auto on both axes per spec. */
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -837,15 +993,17 @@ html[data-theme="light"] .ta-panel {
   transition: transform 0.2s ease;
 }
 .ta-portfolio-positions-chevron--collapsed { transform: rotate(-90deg); }
+.ta-position-wrap {
+  background: var(--ta-overlay);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
 .ta-position {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.76rem;
   color: var(--ta-text-dim);
-  background: var(--ta-overlay);
-  border-radius: 8px;
-  padding: 6px 10px;
 }
 .ta-position-coin { font-weight: 700; color: var(--ta-text); flex-shrink: 0; }
 .ta-position-qty { flex: 1; text-align: right; font-family: var(--ta-mono); color: var(--ta-text-dim); }
@@ -871,6 +1029,13 @@ html[data-theme="light"] .ta-panel {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* Explicit, not left to default — a container with overflow-y:auto and
+     no overflow-x set computes overflow-x as auto too per spec (a
+     scrollable axis can't sit next to a "visible" one), so any content
+     inside that's even slightly too wide (a long position-list row,
+     before the fixes there) silently became horizontally scrollable
+     instead of just wrapping/clipping. */
+  overflow-x: hidden;
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
@@ -889,6 +1054,11 @@ html[data-theme="light"] .ta-panel {
 }
 
 .ta-msg { max-width: 88%; display: flex; flex-direction: column; }
+/* A message carrying a positions list gets the usual 88% cap relaxed a
+   bit — that card is one of the more information-dense ones (coin, qty,
+   price, P&L, tag, chevron all on one row) and benefits from the extra
+   width more than a plain text reply does. */
+.ta-msg--wide { max-width: 97%; }
 .ta-msg--user { align-self: flex-end; }
 .ta-msg--agent { align-self: flex-start; }
 .ta-msg-time {
@@ -1223,13 +1393,36 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 /* ── Pickable positions list ───────────────────────────────────────────── */
 .ta-positions-list {
   margin-top: 8px;
+  /* Exactly 100% of its parent, never past it — a negative-margin "bleed
+     wider than the container" trick used to live here for a bit of extra
+     breathing room, but that only works when every ancestor happens to
+     have enough of its own padding to absorb the overshoot; in at least
+     one context it didn't, and the card's edge got clipped by an
+     ancestor's overflow:hidden instead. The actual width increase this
+     card gets now comes entirely from .ta-msg--wide relaxing the message
+     bubble's own max-width — safe, since that widens the box this card
+     fills rather than letting the card spill past whatever box it's in. */
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   border-radius: 14px;
   border: 1px solid var(--ta-border);
   background: var(--ta-overlay);
-  padding: 12px 14px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.ta-positions-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ta-positions-list-hint {
+  font-size: 0.68rem;
+  color: var(--ta-text-dim);
+  opacity: 0.8;
 }
 .ta-positions-list-label {
   font-size: 0.72rem;
@@ -1246,6 +1439,8 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 }
 .ta-positions-list-row {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1257,8 +1452,18 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   cursor: pointer;
   text-align: left;
 }
+.ta-positions-list-gauge { padding: 0 10px 8px; }
 .ta-positions-list-coin { font-weight: 700; color: var(--ta-text); flex-shrink: 0; }
-.ta-positions-list-qty { flex: 1; text-align: right; font-family: var(--ta-mono); color: var(--ta-text-dim); }
+.ta-positions-list-qty {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--ta-mono);
+  color: var(--ta-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .ta-positions-list-tag {
   flex-shrink: 0;
   font-size: 0.64rem;
@@ -1282,8 +1487,23 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   flex-direction: column;
   gap: 6px;
   padding: 2px 10px 10px;
+  min-width: 0;
 }
-.ta-positions-list-detail .ta-proposal-detail { margin: 0; }
+/* Base .ta-proposal-detail has no wrap/shrink handling of its own (its
+   usual values are short dollar figures) — this card's values can be a
+   full local date/time string, long enough to force the row wider than
+   its container instead of just wrapping, which is what was pushing the
+   whole card into horizontal scroll. */
+.ta-positions-list-detail .ta-proposal-detail {
+  margin: 0;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.ta-positions-list-detail .ta-proposal-detail strong {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: break-word;
+}
 
 /* ── Clarifying question ───────────────────────────────────────────────── */
 .ta-question {
@@ -1754,6 +1974,13 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.14);
 }
 .ta-composer-send {
+  flex-shrink: 0;
+  /* The disabled "…" state has far less content than "Send" — without a
+     floor, the pill shrank down around just that narrow glyph and (with
+     its own border-radius:999px) read as a stray circle sitting next to
+     the mic button rather than a normal, if dimmed, button. */
+  min-width: 64px;
+  text-align: center;
   border: none;
   border-radius: 999px;
   background: linear-gradient(165deg, var(--ta-accent), var(--ta-accent-2));
@@ -1762,7 +1989,6 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   font-size: 0.82rem;
   padding: 0 20px;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(110, 168, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .ta-composer-send:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
 
@@ -1795,161 +2021,113 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   50%      { box-shadow: 0 0 0 7px rgba(251, 113, 133, 0); }
 }
 
-/* Hands-free voice mode, between turns (not actively listening — the
-   agent is replying/speaking) — a quieter cue than the red --active pulse
-   used while actually recording, just enough to show the loop is still
-   going and that tapping it now exits voice mode (handleMicTap) rather
-   than starting a one-off question. */
-.ta-composer-mic--voice-mode {
-  color: var(--ta-accent);
-  border-color: var(--ta-accent);
+/* ── Inline recording bar — the composer swaps into this layout while
+   `listening` is true, replacing the old full-screen voice overlay.
+   Reference: ChatGPT's own dictation bar (Cancel ✕ / waveform / Stop ■),
+   adapted to also keep the real input visible so the live transcript is
+   genuinely readable (and genuinely scrollable — see the scrollLeft
+   effect in TradingAgent.tsx) rather than hidden behind the waveform. ── */
+.ta-composer--recording {
+  align-items: center;
+  background: var(--ta-overlay);
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+}
+.ta-composer-cancel {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--ta-text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 6px;
+}
+.ta-composer-cancel:hover { color: var(--ta-text); }
+/* Small fixed-width indicator, not flex:1 — the input itself (right next
+   to it) is what shows the live transcript now, so the waveform only
+   needs enough room to read as "recording," not to fill the bar. */
+.ta-composer-waveform {
+  flex-shrink: 0;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+  overflow: hidden;
+}
+/* Decorative, not audio-reactive — the speech-recognition plugin only
+   exposes partial transcripts, not raw mic amplitude, so this is a
+   "recording is active" cue rather than a literal waveform. Each bar gets
+   a slightly different animation-delay (nth-child) so they don't all
+   pulse in lockstep. */
+.ta-composer-waveform-bar {
+  flex-shrink: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--ta-accent);
+  height: 30%;
+  animation: ta-waveform-pulse 1s ease-in-out infinite;
+}
+.ta-composer-waveform-bar:nth-child(3n+1) { animation-delay: 0s; }
+.ta-composer-waveform-bar:nth-child(3n+2) { animation-delay: 0.15s; }
+.ta-composer-waveform-bar:nth-child(3n+3) { animation-delay: 0.3s; }
+@keyframes ta-waveform-pulse {
+  0%, 100% { height: 25%; opacity: 0.5; }
+  50%      { height: 85%; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-composer-waveform-bar { animation: none; height: 50%; opacity: 0.7; }
+}
+/* Blends the input into the pill bar instead of showing its own nested
+   box/border, and overrides iOS WebKit's own washed-out rendering of
+   disabled inputs (-webkit-text-fill-color, not just color/opacity, is
+   what actually controls that there) — this text is a live, active
+   transcript, not an inert disabled field, and needs to read that way. */
+.ta-composer--recording .ta-composer-input {
+  border: none;
+  background: none;
+  padding-left: 4px;
+  padding-right: 4px;
+  opacity: 1;
+  color: var(--ta-text);
+  -webkit-text-fill-color: var(--ta-text);
 }
 
-/* ── Listening overlay — takes over the whole panel while actively
-   recording, same backdrop treatment as .ta-panel-intro. ──────────────── */
-.ta-listening-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 55;
+/* ── "Stop speaking" pill — replaces the old overlay's "tap anywhere to
+   interrupt": TTS is now just an audio add-on alongside a reply already
+   visible in the feed, so this only ever needs to stop playback, not
+   cover the screen. ──────────────────────────────────────────────────── */
+.ta-speaking-pill {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 22px;
-  /* Extra bottom clearance so the orb/transcript never sit under the
-     full-width Cancel bar docked at the bottom (see .ta-listening-cancel). */
-  padding: 32px 32px calc(90px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
-  box-sizing: border-box;
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 40%),
-    linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
+  gap: 6px;
+  margin: 0 18px 10px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ta-text-dim);
   cursor: pointer;
-  animation: ta-listening-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
-@keyframes ta-listening-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-/* Active whenever there's real content to show (live numbers, a trade
-   proposal) — the orb smoothly shrinks and slides toward the top-right
-   instead of sitting centered and competing with that content for space,
-   reverting back the instant there's nothing left to show (hasContent
-   goes false again — plain chat, or no pending proposal). Deliberately
-   transform-only (never position:absolute, never align-self) — both of
-   those either risk misaligning every OTHER child's centering (which
-   must stay exactly as-is — see align-items:center, unchanged below) or
-   simply don't animate smoothly (align-self interpolates as an instant
-   flip, not a slide, per the CSS animatable-properties spec). transform
-   + width/height are genuinely smooth AND keep the orb in the exact same
-   flex relationship it's always had — see the orb-wrapper memory note on
-   why that specific DOM relationship is the one thing that must never
-   change again. */
-.ta-listening-overlay--compact {
-  justify-content: flex-start;
-  /* Left-aligned, full-width layout once there's real content to show —
-     replaces the earlier centered/right-corner design entirely. */
-  align-items: stretch;
-  overflow-y: auto;
-  gap: 14px;
-  /* The default centered layout clears the status bar/Dynamic Island for
-     free (content sits in the middle of the screen); flex-start here
-     pulls everything up to the very top of the overlay's own box, which
-     is NOT the same as the top of the safe area — without this, the orb
-     group renders underneath/behind the status bar on notched devices. */
-  padding-top: calc(32px + var(--native-safe-area-top, env(safe-area-inset-top)));
-}
-.ta-listening-orb-group {
-  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.ta-listening-overlay--compact .ta-listening-orb-group {
-  /* row-reverse flips the visual order only (orb left, text right) — the
-     DOM order itself (text, then orb) stays untouched, since the orb
-     span must never be wrapped or reparented (see the orb-wrapper memory
-     note above the markup). */
-  flex-direction: row-reverse;
-  align-items: center;
-  gap: 8px;
-  /* Anchored to the left now (matches the rest of the content below it
-     going full-width/left-aligned) — also sidesteps the old right-edge
-     clipping risk entirely, since there's no "how wide can this get
-     before it runs off the right edge" math on this side. */
-  align-self: flex-start;
-}
-.ta-listening-orb {
-  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1), height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.ta-listening-overlay--compact .ta-listening-orb {
-  width: 40px;
-  height: 40px;
-}
-.ta-listening-overlay--compact .ta-listening-transcript {
-  /* Full width now that the group sits flush left — no more right-edge
-     neighbor to leave room for. */
-  max-width: none;
-  width: 100%;
-  text-align: left;
-  min-height: 0;
-  font-size: 0.92rem;
-}
-.ta-listening-proposal {
-  width: 100%;
-  max-width: none;
-}
-/* Bigger + a faster, stronger pulse than the idle trigger orb — reads as
-   "actively capturing" rather than just idling. .ta-trigger-orb::before's
-   own gradient-rotate keeps running unchanged (animation isn't inherited,
-   so that rule still applies on its own); this only overrides the main
-   element's glow/scale timing. */
-.ta-listening-orb {
-  width: 120px;
-  height: 120px;
-  animation: ta-listening-orb-glow 1.4s ease-in-out infinite, ta-listening-orb-scale 1.4s ease-in-out infinite;
-}
-@keyframes ta-listening-orb-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px 6px rgba(130, 180, 255, 0.55), 0 0 44px 14px rgba(80, 140, 255, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 32px 12px rgba(150, 195, 255, 0.85), 0 0 64px 24px rgba(90, 150, 255, 0.55);
-  }
-}
-@keyframes ta-listening-orb-scale {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.1); }
-}
-/* Thinking (request in flight, nothing to show yet) — slower, dimmer
-   pulse than active listening/speaking, reading as "working on it"
-   rather than "capturing" or "talking." */
-.ta-listening-orb--thinking {
-  animation: ta-listening-orb-glow 2.2s ease-in-out infinite, ta-listening-orb-scale 2.2s ease-in-out infinite;
-  opacity: 0.7;
-}
-/* Speaking — a warmer glow than listening's blue, so the three phases
-   (listen/think/speak) read as visually distinct at a glance, not just
-   via the caption text underneath. */
-.ta-listening-orb--speaking {
-  animation: ta-listening-orb-speak-glow 1.1s ease-in-out infinite, ta-listening-orb-scale 1.1s ease-in-out infinite;
-}
-@keyframes ta-listening-orb-speak-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px 6px rgba(255, 185, 110, 0.55), 0 0 44px 14px rgba(255, 150, 80, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 32px 12px rgba(255, 200, 130, 0.85), 0 0 64px 24px rgba(255, 160, 90, 0.55);
-  }
-}
-.ta-listening-snapshot {
+.ta-speaking-pill:hover { color: var(--ta-text); border-color: var(--ta-accent); }
+
+/* ── Market-snapshot card — live price/RSI/MACD/funding/OI for whatever
+   coin(s) the latest reply resolved. Relocated from the old full-screen
+   voice overlay into the normal message feed (see TradingAgent.tsx) so
+   it's visible for both typed and voice-dictated turns. ──────────────── */
+.ta-snapshot {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
   gap: 10px;
-  width: 100%;
-  max-width: none;
-  cursor: default;
+  margin-top: 8px;
 }
-.ta-listening-snapshot-card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.ta-snapshot-card {
+  background: var(--ta-overlay);
+  border: 1px solid var(--ta-border);
   border-radius: 12px;
   padding: 8px 12px;
   display: flex;
@@ -1965,31 +2143,31 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 .ta-sparkline--up .ta-sparkline-dots circle { fill: #4ade80; }
 .ta-sparkline--down .ta-sparkline-dots circle { fill: #fb7185; }
 .ta-sparkline-flat { stroke: var(--ta-text-dim); stroke-width: 1.5; stroke-dasharray: 3 3; }
-.ta-listening-snapshot-head {
+.ta-snapshot-head {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
-.ta-listening-snapshot-coin {
+.ta-snapshot-coin {
   font-weight: 700;
   font-size: 1rem;
   color: var(--ta-text);
 }
-.ta-listening-snapshot-price {
+.ta-snapshot-price {
   font-size: 0.95rem;
   color: var(--ta-text);
   font-variant-numeric: tabular-nums;
 }
-.ta-listening-snapshot-trend {
+.ta-snapshot-trend {
   margin-left: auto;
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--ta-text-dim);
 }
-.ta-listening-snapshot-trend--up { color: #4ade80; }
-.ta-listening-snapshot-trend--down { color: #fb7185; }
-.ta-listening-snapshot-row {
+.ta-snapshot-trend--up { color: #4ade80; }
+.ta-snapshot-trend--down { color: #fb7185; }
+.ta-snapshot-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1997,12 +2175,12 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   color: var(--ta-text-dim);
   font-variant-numeric: tabular-nums;
 }
-.ta-listening-snapshot-actions {
+.ta-snapshot-actions {
   display: flex;
   gap: 6px;
   margin-top: 2px;
 }
-.ta-listening-snapshot-action-btn {
+.ta-snapshot-action-btn {
   flex: 1;
   background: rgba(255, 255, 255, 0.08);
   border: none;
@@ -2013,124 +2191,8 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   color: var(--ta-text);
   cursor: pointer;
 }
-.ta-listening-snapshot-action-btn:active { opacity: 0.7; }
-.ta-listening-news {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  max-width: none;
-  cursor: default;
-}
-.ta-listening-news-item {
-  font-size: 0.82rem;
+.ta-snapshot-action-btn:active { opacity: 0.7; }
+.ta-snapshot-opening-note {
+  font-size: 0.72rem;
   color: var(--ta-text-dim);
-  text-decoration: none;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ta-listening-news-item:hover { color: var(--ta-text); text-decoration: underline; }
-.ta-listening-orb-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* Caption now sits above the orb (DOM order) with a bit more breathing
-     room than the original tight 4px. */
-  gap: 12px;
-}
-.ta-anim-dots {
-  display: inline-flex;
-  gap: 2px;
-  margin-left: 2px;
-  vertical-align: baseline;
-}
-.ta-anim-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.3;
-  animation: ta-dot-pulse 1.4s ease-in-out infinite;
-}
-.ta-anim-dot:nth-child(2) { animation-delay: 0.2s; }
-.ta-anim-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes ta-dot-pulse {
-  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-  30%           { opacity: 1;   transform: translateY(-2px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ta-anim-dot { animation: none; opacity: 0.6; }
-}
-.ta-listening-transcript {
-  max-width: 420px;
-  max-height: 40vh;
-  overflow-y: auto;
-  min-height: 2.6em;
-  margin: 0;
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--ta-text);
-}
-.ta-listening-hint {
-  font-size: 0.78rem;
-  color: var(--ta-text-dim);
-}
-/* Explicit "never mind" — discards instead of sending, see
-   handleMicCancel in TradingAgent.tsx. Own stopPropagation keeps a tap
-   here from also triggering the overlay's stop-and-send. Full-width
-   across the bottom, clear of the safe area (top-right corner collided
-   with the status bar/notch on mobile, barely tappable there) — same
-   safe-area-bottom convention as .ta-composer above. */
-.ta-listening-cancel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  border-top: 1px solid var(--ta-border);
-  border-radius: 0;
-  background: var(--ta-overlay);
-  color: var(--ta-text-dim);
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 16px 16px calc(16px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
-  cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-.ta-listening-cancel:hover { color: var(--ta-text); background: rgba(255, 255, 255, 0.06); }
-
-/* Brief "Opening X Chart…" acknowledgment (TradingAgent.tsx's openingNote)
-   for the snapshot card's Chart/Order Book buttons — pinned near the top
-   so it doesn't collide with the orb/transcript centered below it, and
-   self-dismisses (showOpeningNote's own timeout) rather than needing a
-   close affordance. */
-.ta-listening-opening-note {
-  position: absolute;
-  top: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  background: var(--ta-overlay);
-  border: 1px solid var(--ta-border);
-  border-radius: 999px;
-  padding: 7px 16px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--ta-text);
-  white-space: nowrap;
-  animation: ta-opening-note-in 0.2s ease;
-}
-@keyframes ta-opening-note-in {
-  from { opacity: 0; transform: translate(-50%, -6px); }
-  to   { opacity: 1; transform: translate(-50%, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ta-listening-orb, .ta-listening-orb::before { animation: none; }
 }

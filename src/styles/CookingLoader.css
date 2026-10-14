@@ -1,0 +1,31 @@
+.cooking-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.cooking-loader-orb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #a7c7ff, #6ea8ff 55%, #3d6fe0 100%);
+  animation: cooking-loader-glow 1.3s ease-in-out infinite, cooking-loader-scale 1.3s ease-in-out infinite;
+}
+@keyframes cooking-loader-glow {
+  0%, 100% { box-shadow: 0 0 14px 4px rgba(110, 168, 255, 0.5); }
+  50%      { box-shadow: 0 0 22px 8px rgba(110, 168, 255, 0.85); }
+}
+@keyframes cooking-loader-scale {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+.cooking-loader-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #9aa3b5;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cooking-loader-orb { animation: none; }
+}

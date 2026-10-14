@@ -288,12 +288,31 @@ html[data-theme="light"] .obp-stat-value--ask { color: #dc2626; }
 .obp-ratio-sep { font-size: 11px; color: #334155; }
 
 /* ── Canvas ────────────────────────────────────────────────────────────────── */
+.obp-canvas-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 280px;
+}
 .obp-canvas {
   flex: 1;
   width: 100%;
   display: block;
   min-height: 280px;
 }
+/* Covers the canvas (whose own internal "Fetching depth data…" fallback
+   text stays as a harmless backstop underneath) with the same animated
+   CookingLoader treatment AgentChartModal uses, instead of just static
+   canvas-drawn text with no animation at all. */
+.obp-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1222;
+}
+html[data-theme="light"] .obp-loading-overlay { background: #f8fafc; }
 
 /* ── Footer legend ─────────────────────────────────────────────────────────── */
 .obp-footer {

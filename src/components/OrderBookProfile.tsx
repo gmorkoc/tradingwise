@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { CoinSymbol, fetchBn } from "../services/coinglass";
+import { CookingLoader } from "./CookingLoader";
 import "../styles/OrderBookProfile.css";
 
 interface Level { price: number; size: number; }
@@ -366,7 +367,14 @@ export function OrderBookProfileModal({ coin, onClose }: Props) {
         )}
 
         {/* Depth canvas */}
-        <canvas ref={canvasRef} className="obp-canvas" />
+        <div className="obp-canvas-wrap">
+          <canvas ref={canvasRef} className="obp-canvas" />
+          {stats === null && (
+            <div className="obp-loading-overlay">
+              <CookingLoader label="Cooking up your order book…" />
+            </div>
+          )}
+        </div>
 
         {/* Legend */}
         <div className="obp-footer">
