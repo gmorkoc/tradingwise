@@ -315,9 +315,14 @@ interface Props {
   // toggle) know to unmount it too, instead of the parent still thinking
   // it's open while this has quietly gone dormant.
   onDismiss?: () => void;
+  // Lets a freshly-mounted instance skip straight to "expanded" instead of
+  // always starting at the small docked pill — used by App.tsx's News
+  // icon (FloatingNavBar), which mounts this fresh on each tap rather than
+  // keeping it mounted-but-collapsed the way the old auto-open sheet did.
+  initialState?: SheetState;
 }
 
-export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", onDismiss }) => {
+export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", onDismiss, initialState = "collapsed" }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -329,12 +334,11 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     const id = window.setInterval(() => setFreshnessTick((n) => n + 1), 30_000);
     return () => window.clearInterval(id);
   }, []);
-  // Starts "collapsed" — the docked pill, not the teaser — since this now
-  // auto-mounts on page load (App.tsx's dailyBriefOpen starts true); a
-  // fresh page load landing straight on the bigger teaser card every time
-  // read as too intrusive, docked is the quiet default and tapping/
-  // dragging it up is how you actually get to the teaser/full views.
-  const [sheetState, setSheetState] = useState<SheetState>("collapsed");
+  // Defaults to "collapsed" (the docked pill) for any caller that doesn't
+  // pass initialState — App.tsx's News icon passes "expanded" explicitly,
+  // since it mounts this fresh on each tap rather than keeping it mounted
+  // in the background the old auto-open sheet did.
+  const [sheetState, setSheetState] = useState<SheetState>(initialState);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
@@ -583,13 +587,14 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     setDragY(0);
   };
 
-  // "collapsed" (the dock) is a legitimate persistent resting state now —
-  // reached by scrolling the page, by a tap, or by a drag, none of which
-  // should close the brief outright (it should still be sitting there,
-  // docked, next time you look). Only "minimized" — dragged further still,
-  // past the dock — actually closes it.
+  // "collapsed" (the dock) used to be a legitimate persistent resting
+  // state, reached by scrolling, tapping, or dragging, that kept the
+  // brief sitting there docked rather than closing. News is now mounted
+  // fresh on each icon tap (not kept around in the background) — there's
+  // no docked state for it to return to, so reaching "collapsed" by any
+  // path now closes it outright, same as "minimized".
   useEffect(() => {
-    if (sheetState === "minimized") onDismiss?.();
+    if (sheetState === "minimized" || sheetState === "collapsed") onDismiss?.();
   }, [sheetState, onDismiss]);
 
   // The "blog" card — a single, always-crypto lead story with its own
@@ -866,31 +871,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
       >
         {/* No close (X) button anymore — dismissing is drag-only now
             (drag down past "collapsed" into "minimized," which the effect
-            above already treats as a real close). The LIVE badge took
-            over this same top-right corner spot instead, shown at every
-            size including docked — not just inline next to the title in
-            the head row anymore. */}
-        {sheetState !== "minimized" && (
-          <div className="db-traffic-lights">
-            <span className="db-live">
-              <span className="db-live-bars">
-                <span />
-                <span />
-                <span />
-                <span />
-              </span>
-              {t("nav.live")}
-              {updatedAt !== null && (
-                <>
-                  <span className="db-live-sep" />
-                  <span className="db-live-updated">
-                    {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
-                  </span>
-                </>
-              )}
-            </span>
-          </div>
-        )}
+            above already treats as a real close). */}
         <div
           className="db-drag-zone"
           onPointerDown={onPointerDown}
@@ -903,6 +884,25 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
           <div className="db-head">
             <span className="db-head-title-row">
               <span className="db-head-title">{t("dailyBrief.title")}</span>
+              {sheetState !== "minimized" && (
+                <span className="db-live">
+                  <span className="db-live-bars">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  {t("nav.live")}
+                  {updatedAt !== null && (
+                    <>
+                      <span className="db-live-sep" />
+                      <span className="db-live-updated">
+                        {t("dailyBrief.lastUpdated", "Updated")} {timeAgo(updatedAt, t)}
+                      </span>
+                    </>
+                  )}
+                </span>
+              )}
               {sheetState === "full" && refreshButton}
             </span>
             {/* Collapsed (the dock) shows just the plain title now — no

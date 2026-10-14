@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
+import { Capacitor } from "@capacitor/core";
 import { COINS, CoinSymbol } from "../services/coinglass";
 import "../styles/GlobalSearch.css";
 
@@ -116,7 +117,13 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
     if (open) {
       setQuery("");
       setActiveIdx(0);
-      setTimeout(() => inputRef.current?.focus(), 30);
+      // Not on native — popping the keyboard the instant the panel opens,
+      // before the user's even looked at the results, ate screen space and
+      // felt like it hijacked the panel on first open (same reasoning as
+      // App.tsx's own coin-picker search input).
+      if (!Capacitor.isNativePlatform()) {
+        setTimeout(() => inputRef.current?.focus(), 30);
+      }
     }
   }, [open]);
 

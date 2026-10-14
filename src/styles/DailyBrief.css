@@ -187,37 +187,6 @@ html[data-theme="light"] .db-sheet--full {
   transform: translateY(calc(100% + 16px + 62px + 8px + 20px));
 }
 
-/* Used to hold the close (X) button (removed — dismissing is drag-only
-   now) — this corner spot is the LIVE badge's now instead, shown at every
-   size including docked (DailyBrief.tsx). top:10px lines up reasonably
-   with the title row for "expanded"/"full" (both top-align their content
-   inside a much taller card), but "collapsed" centers its own content
-   vertically (.db-sheet--collapsed's justify-content:center, now a much
-   shorter pill) — a fixed top offset there sat noticeably above the
-   title instead of level with it, so that state centers this too. */
-.db-traffic-lights {
-  position: absolute;
-  top: 10px;
-  right: 16px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.db-sheet--collapsed .db-traffic-lights {
-  top: 50%;
-  transform: translateY(-50%);
-  /* Docked only — this badge sits on top of .db-drag-zone (z-index:1,
-     absolutely positioned over it), which otherwise silently ate taps
-     meant for the drag/tap-to-expand handlers on the zone beneath it.
-     Letting taps pass through here is exactly equivalent to tapping the
-     title/handle instead, so "tap anywhere on the docked pill" actually
-     holds everywhere, not just the parts .db-traffic-lights doesn't
-     cover. Not done for expanded/full — there the badge sits above
-     other interactive content (refresh button, etc.), not a tap target
-     that's supposed to be transparent to what's under it. */
-  pointer-events: none;
-}
 
 .db-refresh-btn {
   display: grid;

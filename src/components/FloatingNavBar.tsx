@@ -13,11 +13,14 @@ interface Props {
   // Mirrors TradingAgent's own trigger dot — see the "trading-agent-
   // unread-change" event App.tsx listens for.
   agentUnread: boolean;
-  // Asset/portfolio calculator — moved here from the desktop header's own
-  // trigger (.mch-portfolio, App.tsx), so it's reachable the same way on
-  // every width instead of only showing up on wide desktop.
-  onOpenCalculator: () => void;
-  calculatorOpen: boolean;
+  // News (Daily Brief) used to auto-open on page load with no way to
+  // reopen it once dismissed — this slot used to be the Calculator;
+  // Calculator moved into the mobile side menu (icon-strip drawer,
+  // App.tsx) instead, and News took over this icon, opening its existing
+  // bottom-sheet component (DailyBrief.tsx) straight into "expanded"
+  // rather than the small collapsed pill.
+  onOpenDailyBrief: () => void;
+  dailyBriefOpen: boolean;
   // Trading Agent is Elite-only (a live chat agent burns AI quota too fast
   // for Pro's weekly limit) — the orb stays visible here as a teaser rather
   // than disappearing, same pattern as BuySignals' own gated trigger, but a
@@ -45,11 +48,12 @@ interface Props {
 // ones.
 //
 // Order: Home, Signals | Agent (raised, see the return below) | Search,
-// Calculator — Profile dropped (still reachable via AccountMenu
-// elsewhere; see profileOpen's own comment in Props), Home takes its
-// slot as the "return to the chart, close whatever's open" action.
+// News (replacing Calculator — see onOpenDailyBrief's own comment) —
+// Profile dropped (still reachable via AccountMenu elsewhere; see
+// profileOpen's own comment in Props), Home takes its slot as the
+// "return to the chart, close whatever's open" action.
 function useItems({
-  signalsOpen, onOpenCalculator, calculatorOpen, onSearch, searchOpen, onGoHome, homeActive,
+  signalsOpen, onOpenDailyBrief, dailyBriefOpen, onSearch, searchOpen, onGoHome, homeActive,
 }: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked" | "profileOpen">) {
   return [
     {
@@ -90,26 +94,27 @@ function useItems({
       isActive: searchOpen,
     },
     {
-      label: "Calculator",
+      label: "News",
       icon: (
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10" />
-          <line x1="12" y1="20" x2="12" y2="4" />
-          <line x1="6" y1="20" x2="6" y2="14" />
+          <rect x="5" y="3" width="14" height="18" rx="2" />
+          <line x1="8" y1="8" x2="16" y2="8" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+          <line x1="8" y1="16" x2="12" y2="16" />
         </svg>
       ),
-      action: onOpenCalculator,
-      isActive: calculatorOpen,
+      action: onOpenDailyBrief,
+      isActive: dailyBriefOpen,
     },
   ];
 }
 
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
-  profileOpen, agentUnread, onOpenCalculator, calculatorOpen,
+  profileOpen, agentUnread, onOpenDailyBrief, dailyBriefOpen,
   agentLocked, onAgentLocked, onGoHome, homeActive,
 }: Props) {
-  const items = useItems({ signalsOpen, onSearch, searchOpen, onGoHome, homeActive, onOpenCalculator, calculatorOpen });
+  const items = useItems({ signalsOpen, onSearch, searchOpen, onGoHome, homeActive, onOpenDailyBrief, dailyBriefOpen });
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
 
@@ -121,7 +126,7 @@ export function FloatingNavBar({
   // the bar's z-index globally) keeps it below every OTHER overlay in the
   // app that was never asked to show it underneath — AuthModal, the
   // upgrade/paywall modals, etc.
-  const raised = signalsOpen || searchOpen || profileOpen || calculatorOpen;
+  const raised = signalsOpen || searchOpen || profileOpen || dailyBriefOpen;
 
   // Sliding highlight (a single shared pill, not a per-button background)
   // that animates from the previously active item to the newly active one

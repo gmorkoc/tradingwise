@@ -448,19 +448,6 @@ function AppDashboard({
     // valid section reachable via hash — accept it explicitly.
     return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
   });
-  // Starts true (not false) — the brief now auto-mounts docked on page
-  // load, same idea as Yahoo Finance's own home-screen brief, instead of
-  // waiting for an explicit tap on its floating-nav icon (DailyBrief.tsx's
-  // own sheetState starts "collapsed," the docked pill, not the bigger
-  // teaser — see its comment); the mobile-only render gate below
-  // (isWideDesktop/chartFullscreen/activeSection) still applies, so this
-  // is a no-op on desktop or any non-chart tab. The brief floats above
-  // FloatingNavBar (not a modal replacing it), so that bar stays fully
-  // visible/usable the whole time — see FloatingNavBar's own comment on
-  // its Daily Brief item. Dragging it down past the dock into "minimized"
-  // calls onDismiss below to keep this in sync (there's no close (X)
-  // button anymore).
-  const [dailyBriefOpen, setDailyBriefOpen] = useState(true);
   // Tapping Agent Ready while locked (non-elite) opens this instead of the
   // generic onOpenUpgrade — see the render block below, near TradingAgent.
   const [showEliteUpsell, setShowEliteUpsell] = useState(false);
@@ -1009,6 +996,11 @@ function AppDashboard({
   }, [profile]);
 
   const [assetPanelOpen, setAssetPanelOpen] = useState(false);
+  // Daily Brief's mobile floating-nav slot (replacing Calculator there,
+  // which moved into the mobile side menu instead) — icon-triggered full
+  // screen, same mutual-exclusion treatment as the other floating panels
+  // below.
+  const [dailyBriefPanelOpen, setDailyBriefPanelOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -1042,25 +1034,36 @@ function AppDashboard({
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (profileOpen) setProfileOpen(false);
     if (globalSearch) setGlobalSearch(false);
+    if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
   }, [signalsOpen]);
   useEffect(() => {
     if (!assetPanelOpen) return;
     if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
     if (profileOpen) setProfileOpen(false);
     if (globalSearch) setGlobalSearch(false);
+    if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
   }, [assetPanelOpen]);
   useEffect(() => {
     if (!profileOpen) return;
     if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (globalSearch) setGlobalSearch(false);
+    if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
   }, [profileOpen]);
   useEffect(() => {
     if (!globalSearch) return;
     if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (profileOpen) setProfileOpen(false);
+    if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
   }, [globalSearch]);
+  useEffect(() => {
+    if (!dailyBriefPanelOpen) return;
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    if (assetPanelOpen) setAssetPanelOpen(false);
+    if (profileOpen) setProfileOpen(false);
+    if (globalSearch) setGlobalSearch(false);
+  }, [dailyBriefPanelOpen]);
 
   // Desktop's search opens as a dropdown attached directly under
   // .top-nav-search (YouTube's own search-bar-with-suggestions pattern),
@@ -1863,6 +1866,23 @@ function AppDashboard({
                   onOpenProfile={() => setProfileOpen(true)}
                 />
               </div>
+
+              {/* Calculator moved here from the mobile floating nav bar —
+                  Daily Brief took over that icon-triggered full-screen
+                  slot instead (see FloatingNavBar.tsx's own comment). */}
+              <button
+                className="icon-strip-btn"
+                onClick={() => {
+                  setAssetPanelOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                title={t("assetCalc.title")}
+              >
+                <span className="nav-icon-wrap">
+                  <NavIcon d={["M18 20V10", "M12 20V4", "M6 20V14"]} />
+                </span>
+                <span className="icon-strip-label">{t("assetCalc.title")}</span>
+              </button>
 
               <button
                 className="icon-strip-btn"
@@ -2988,9 +3008,6 @@ function AppDashboard({
       </div>
       {/* end app-shell-body */}
 
-      {!isWideDesktop && !distractionFree && !chartFullscreen && activeSection === "chart" && dailyBriefOpen && (
-        <DailyBrief coinTickers={coinTickers} onDismiss={() => setDailyBriefOpen(false)} />
-      )}
       <PushToast />
       <TradingAgent
         selectedCoin={coin}
@@ -3003,6 +3020,21 @@ function AppDashboard({
         onClose={() => setNotificationsCenterOpen(false)}
         onUnreadCountChange={setUnreadNotifCount}
       />
+      {/* News (Daily Brief) — the original draggable bottom sheet, same as
+          before, but mounted fresh on each tap starting at "expanded"
+          (not the small docked pill) since there's no more auto-open
+          instance keeping it around collapsed in the background. Its own
+          "full"/"expanded" states already render their own .db-backdrop
+          (DailyBrief.tsx), and dragging down to "minimized" fires
+          onDismiss, which unmounts this the same way the old auto-open
+          instance did. */}
+      {dailyBriefPanelOpen && (
+        <DailyBrief
+          coinTickers={coinTickers}
+          initialState="expanded"
+          onDismiss={() => setDailyBriefPanelOpen(false)}
+        />
+      )}
       {/* Mobile/iOS only by design, not just CSS — FloatingNavBar.css also
           hides it at desktop widths, but gating the mount itself here too
           means none of its click handlers or active-pill state exist on
@@ -3014,8 +3046,8 @@ function AppDashboard({
           searchOpen={globalSearch}
           profileOpen={profileOpen}
           agentUnread={agentUnread}
-          onOpenCalculator={() => setAssetPanelOpen((v) => !v)}
-          calculatorOpen={assetPanelOpen}
+          onOpenDailyBrief={() => setDailyBriefPanelOpen((v) => !v)}
+          dailyBriefOpen={dailyBriefPanelOpen}
           agentLocked={!hasAccess(tier, "elite")}
           onAgentLocked={() => setShowEliteUpsell(true)}
           onGoHome={() => {
@@ -3027,9 +3059,10 @@ function AppDashboard({
             setAssetPanelOpen(false);
             setProfileOpen(false);
             setGlobalSearch(false);
+            setDailyBriefPanelOpen(false);
             setActiveSection("chart");
           }}
-          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen}
+          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
         />
       )}
       {/* Agent Ready is elite-only (see hasAccess(tier, "elite") above) —
