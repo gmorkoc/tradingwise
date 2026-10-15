@@ -14,26 +14,21 @@ const SIGNAL_COLOR: Record<ZoneSignal, string> = {
   "strong-sell": "#f43f5e",
 };
 
-// Which of the 3 dots lights up for each of the 7 real signal values —
-// overbought (price stretched up, pullback risk) buckets with the sell
-// dot, oversold (stretched down, bounce potential) buckets with the buy
-// dot, matching the "caution, not a clean verdict" lean those two get
-// everywhere else in the app. The exact word (not just the bucket) still
-// shows in the label beside it, in its own precise color.
+// Which of the 3 dots lights up for each of the 7 real signal values.
+// Oversold/overbought light the MIDDLE dot, not the buy/sell one — they're
+// a caution/"stretched" read, not a clean buy/sell verdict, so a fully-lit
+// green or red dot overstated them as equal in strength to an actual
+// buy/sell signal. The middle dot still picks up SIGNAL_COLOR's amber for
+// these two (below), so it reads as "caution", not the same flat gray as
+// a true neutral.
 const SIGNAL_BUCKET: Record<ZoneSignal, "sell" | "neutral" | "buy"> = {
   "strong-sell": "sell",
   "sell": "sell",
-  "overbought": "sell",
+  "overbought": "neutral",
   "neutral": "neutral",
-  "oversold": "buy",
+  "oversold": "neutral",
   "buy": "buy",
   "strong-buy": "buy",
-};
-
-const BUCKET_COLOR: Record<"sell" | "neutral" | "buy", string> = {
-  sell: "#fb7185",
-  neutral: "#94a3b8",
-  buy: "#4ade80",
 };
 
 export default function SignalIndicator({
@@ -44,13 +39,16 @@ export default function SignalIndicator({
   label: string;
 }) {
   const bucket = SIGNAL_BUCKET[signal];
-  const labelColor = SIGNAL_COLOR[signal];
+  // The lit dot always takes the exact signal's own color (not a shared
+  // per-bucket color) so oversold/overbought's middle dot comes out amber,
+  // matching the label, instead of a true neutral's gray.
+  const dotColor = SIGNAL_COLOR[signal];
   return (
     <div className="signal-indicator">
-      <span className="signal-indicator-dot" style={bucket === "sell" ? { background: BUCKET_COLOR.sell, boxShadow: `0 0 8px ${BUCKET_COLOR.sell}cc` } : undefined} />
-      <span className="signal-indicator-dot" style={bucket === "neutral" ? { background: BUCKET_COLOR.neutral, boxShadow: `0 0 8px ${BUCKET_COLOR.neutral}99` } : undefined} />
-      <span className="signal-indicator-dot" style={bucket === "buy" ? { background: BUCKET_COLOR.buy, boxShadow: `0 0 8px ${BUCKET_COLOR.buy}cc` } : undefined} />
-      <span className="signal-indicator-label" style={{ color: labelColor }}>{label}</span>
+      <span className="signal-indicator-dot" style={bucket === "sell" ? { background: dotColor, boxShadow: `0 0 8px ${dotColor}cc` } : undefined} />
+      <span className="signal-indicator-dot" style={bucket === "neutral" ? { background: dotColor, boxShadow: `0 0 8px ${dotColor}99` } : undefined} />
+      <span className="signal-indicator-dot" style={bucket === "buy" ? { background: dotColor, boxShadow: `0 0 8px ${dotColor}cc` } : undefined} />
+      <span className="signal-indicator-label" style={{ color: dotColor }}>{label}</span>
     </div>
   );
 }

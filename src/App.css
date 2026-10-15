@@ -2750,6 +2750,23 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   overflow: visible;
 }
 
+/* .mch-body itself is display:contents on desktop (its children render
+   inline as part of this header, see the .mch-body rule above .mch-left),
+   so a border on .mch-body would have no box to paint on — this is the
+   actual visible edge of that header region, separating it from
+   .main-content below. Scoped to desktop only: mobile's own .mch-body
+   card already has its own border via border-radius/overflow, and this
+   bar's mobile layout wraps across several rows instead of one, so a
+   bottom border here would cut across that differently. */
+@media (min-width: 641px) {
+  .main-coin-header {
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+html[data-theme="light"] .main-coin-header {
+  border-bottom-color: rgba(15, 23, 42, 0.06);
+}
+
 /* Same margin-left:10px + padding-left:3px pattern as
    .price-chart-container's own unconditional rule (PriceChart.css). */
 @media (min-width: 769px) {
@@ -4008,9 +4025,10 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
        decorations below to anchor to. */
     position: relative;
     /* Matches the 16px side gutter .main-coin-header used to provide as
-       this card's parent; 8px top mirrors the old sticky `top: 8px` gap,
-       12px bottom separates it from whatever renders next in the feed. */
-    margin: 8px 16px 12px;
+       this card's parent; 12px bottom separates it from whatever renders
+       next in the feed. No top margin — it's the first thing in
+       .main-content now, right under the ptr-indicator. */
+    margin: 0 16px 12px;
     z-index: 15;
     border-radius: 18px;
     overflow: hidden;
@@ -4051,7 +4069,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     gap: 3px;
     position: relative;
     z-index: 1;
-    padding: 12px 14px 8px;
+    padding: 4px 14px 8px;
     padding-left: 0;
   }
   .mch-mobile-top {

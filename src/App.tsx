@@ -1756,7 +1756,12 @@ function AppDashboard({
                       </div>
                     )}
                     {price !== null && Number.isFinite(price) && (
-                      <div className="mch-mobile-price">{formatHeaderPriceMobile(price)}</div>
+                      // Full precision here (formatLivePrice), not
+                      // formatHeaderPriceMobile — that one deliberately
+                      // drops decimals to fit the tight coin-pill elsewhere,
+                      // but this big readout has plenty of room and should
+                      // show the real price (e.g. "$80,570.42" for BTC).
+                      <div className="mch-mobile-price">{formatLivePrice(price)}</div>
                     )}
                     {ticker?.change !== undefined && (
                       <span className={`mch-mobile-chg${ticker.change >= 0 ? " mch-mobile-chg--up" : " mch-mobile-chg--down"}`}>
@@ -2537,7 +2542,7 @@ function AppDashboard({
                 </span>
               )}
             </div>
-            {!isDesktopWidth && mchBodyEl}
+            {!isDesktopWidth && activeSection === "chart" && mchBodyEl}
             {profile?.subscription_status === "past_due" && (
               <div className="pastdue-banner">
                 <span>⚠️ {t("billing.pastDue.message")}</span>
