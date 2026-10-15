@@ -1367,6 +1367,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setCurrentPrice(price);
   }, []);
   const [intervalSheetOpen, setIntervalSheetOpen] = useState(false);
+  const [patternInsightSheetOpen, setPatternInsightSheetOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayLineRefs = useRef<any[]>([]);
 
@@ -1831,10 +1832,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         autoSize: true,
         layout: {
           // Library's own TradingView attribution badge, bottom-left of
-          // the pane — defaults to true on every createChart() call, so a
-          // fresh one appears each time this remounts (switching away to
-          // Order Book and back unmounts/remounts PriceChart entirely).
-          // Not app content, never wanted it.
+          // the pane — defaults to true on every createChart() call. Not
+          // app content, not something we want showing.
           attributionLogo: false,
           background: {
             type: ColorType.Solid,
@@ -4319,7 +4318,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {displayBanner && isPaid && !isFullscreen && (
           <div
-            className={`interval-banner interval-banner--${displayBanner.sentiment}`}
+            className={`interval-banner interval-banner--${displayBanner.sentiment} interval-banner--tappable`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setPatternInsightSheetOpen(true)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
           >
             <div className="interval-banner-header">
               <span className="interval-banner-title pi-fade-in">{displayBanner.title}</span>
@@ -4340,14 +4343,38 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
                 <button
                   className="interval-banner-close"
-                  onClick={() => setBanner(null)}
+                  onClick={(e) => { e.stopPropagation(); setBanner(null); }}
                 >
                   ✕
                 </button>
               </div>
             </div>
-            <p className="interval-banner-body pi-fade-in pi-fade-in--d1">{displayBanner.body}</p>
+            <p className="interval-banner-body interval-banner-body--preview pi-fade-in pi-fade-in--d1">{displayBanner.body}</p>
           </div>
+        )}
+        {patternInsightSheetOpen && displayBanner && ReactDOM.createPortal(
+          <>
+            <div className="interval-sheet-backdrop" onClick={() => setPatternInsightSheetOpen(false)} />
+            <div className="interval-sheet pattern-insight-sheet">
+              <div className="interval-sheet-header">
+                <span className={`interval-sheet-title pattern-insight-sheet-title pattern-insight-sheet-title--${displayBanner.sentiment}`}>
+                  {displayBanner.title}
+                </span>
+                <button type="button" className="interval-sheet-close" onClick={() => setPatternInsightSheetOpen(false)}>✕</button>
+              </div>
+              <div className="pattern-insight-sheet-meta">
+                {bannerAt !== null && (
+                  <span className="pattern-insight-updated">
+                    {t("chart.lastUpdated", "Updated")} {formatClockTime(bannerAt)}
+                  </span>
+                )}
+                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">{t("chart.aiPowered")}</span>
+              </div>
+              <p className="pattern-insight-sheet-body">{displayBanner.body}</p>
+            </div>
+          </>,
+          document.body,
         )}
 
         {!isPaid && (

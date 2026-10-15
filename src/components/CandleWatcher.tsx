@@ -1922,6 +1922,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   } | null>(null);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartDblClickWrapRef = useRef<HTMLDivElement>(null);
+  const [isChartFullscreen, setIsChartFullscreen] = useState(false);
+  const toggleChartFullscreen = useCallback(() => setIsChartFullscreen((v) => !v), []);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef  = useRef<ISeriesApi<"Candlestick", any> | null>(null);
   const divMarkersRef    = useRef<ISeriesMarkersPluginApi<any> | null>(null);
@@ -2105,6 +2108,88 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       chartRef.current = null;
     };
   }, [isDark]);
+
+  // The ResizeObserver above only ever re-applies width on a size change
+  // (this component's own convention, same as PriceChart's main chart) —
+  // height was fixed at creation (460) and never meant to track the
+  // container, so entering/exiting fullscreen (which does change the
+  // container's actual height via CSS) needs its own explicit
+  // chart.applyOptions({height}) call instead of relying on that observer.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      height: isChartFullscreen ? window.innerHeight - 64 : 460,
+    });
+  }, [isChartFullscreen]);
+
+  // Double-click (mouse) / double-tap (touch, including Chrome's own
+  // mobile device emulation — real touch-capable contexts don't reliably
+  // synthesize a native dblclick from two taps either, same unreliability
+  // native iOS has) to enter/exit fullscreen on the candle chart. A
+  // capture-phase listener on the WRAPPER (not the chart's own canvas
+  // element) so it fires before lightweight-charts' own handlers — this
+  // chart's handleScale.axisDoubleClickReset is also wired to double-
+  // click, so onDoubleClickCapture here also stops that propagating,
+  // otherwise a double-click would both reset zoom AND toggle fullscreen
+  // at once. Passive-only for touch (no preventDefault) — it just watches
+  // tap timing, so it can't interfere with pan/zoom/scroll gestures.
+  useEffect(() => {
+    const el = chartDblClickWrapRef.current;
+    if (!el) return;
+    const isTouchCapable =
+      Capacitor.isNativePlatform() ||
+      (typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0));
+    if (!isTouchCapable) return;
+
+    let startX = 0, startY = 0, lastTapTime = 0;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.changedTouches.length !== 1 || e.touches.length !== 0) return;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      if (Math.hypot(endX - startX, endY - startY) > 20) { lastTapTime = 0; return; }
+      const now = Date.now();
+      if (lastTapTime > 0 && now - lastTapTime < 450) {
+        toggleChartFullscreen();
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+      }
+    };
+    el.addEventListener("touchstart", onStart, { passive: true, capture: true });
+    el.addEventListener("touchend", onEnd, { passive: true, capture: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart, { capture: true } as EventListenerOptions);
+      el.removeEventListener("touchend", onEnd, { capture: true } as EventListenerOptions);
+    };
+  }, [toggleChartFullscreen]);
+
+  // Exit fullscreen with Escape too — standard desktop convention once
+  // something covers the whole viewport.
+  useEffect(() => {
+    if (!isChartFullscreen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setIsChartFullscreen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isChartFullscreen]);
+
+  // FloatingNavBar (.fnb-bar) still paints above this fullscreen overlay no
+  // matter how high the overlay's own z-index goes, because .main-panel
+  // (an ancestor, not owned by this file) gets `transform: translateX(0)`
+  // on mobile widths for its slide-over-nav animation — any transform other
+  // than none makes that ancestor the containing block for position:fixed
+  // descendants, so this overlay's z-index is only ever compared against
+  // .main-panel's own (60), not against FloatingNavBar directly. Dropping
+  // the nav bar's z-index below that for the duration (CandleWatcher.css)
+  // is simpler and safer than fighting the containing-block trap itself.
+  useEffect(() => {
+    document.body.classList.toggle("cw-chart-fullscreen-active", isChartFullscreen);
+    return () => document.body.classList.remove("cw-chart-fullscreen-active");
+  }, [isChartFullscreen]);
 
   // ── Feed chart data ──────────────────────────────────────────────────────────
 
@@ -3596,6 +3681,22 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </button>
               ))}
             </div>
+            <div
+              ref={chartDblClickWrapRef}
+              className={`cw-chart-dblclick-wrap${isChartFullscreen ? " cw-chart-dblclick-wrap--fullscreen" : ""}`}
+              onDoubleClickCapture={(e) => { e.stopPropagation(); toggleChartFullscreen(); }}
+            >
+            {isChartFullscreen && (
+              <button
+                type="button"
+                className="cw-chart-fullscreen-exit"
+                onClick={() => setIsChartFullscreen(false)}
+                aria-label="Exit fullscreen"
+                title="Exit fullscreen (Esc)"
+              >
+                ✕
+              </button>
+            )}
             <div className="cw-chart-wrap" ref={chartContainerRef}>
               {loading && !loadError && <div className="cw-chart-loader">Loading candles…</div>}
               {loadError && (
@@ -3653,6 +3754,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     </div>
                   )
               )}
+            </div>
             </div>
 
             {/* Indicator pills */}

@@ -336,22 +336,33 @@ export async function fetchConversations(userId: string): Promise<ConversationSu
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
 
-  const byId = new Map<string, { preview: string; messageCount: number; updatedAt: string }>();
+  // preview favors the first USER message, not whichever message happens
+  // to be first chronologically — the agent always speaks first (its own
+  // opening greeting), so without this every conversation's preview was
+  // that same generic greeting text, making the whole history list read
+  // as a wall of near-identical entries instead of showing what each
+  // chat was actually about.
+  const byId = new Map<string, { preview: string; hasUserPreview: boolean; messageCount: number; updatedAt: string }>();
   for (const row of data ?? []) {
     const existing = byId.get(row.conversation_id);
     if (existing) {
       existing.messageCount++;
       existing.updatedAt = row.created_at;
+      if (!existing.hasUserPreview && row.role === "user") {
+        existing.preview = row.content.slice(0, 80);
+        existing.hasUserPreview = true;
+      }
     } else {
       byId.set(row.conversation_id, {
-        preview: row.role === "user" ? row.content : row.content.slice(0, 80),
+        preview: row.content.slice(0, 80),
+        hasUserPreview: row.role === "user",
         messageCount: 1,
         updatedAt: row.created_at,
       });
     }
   }
   return Array.from(byId.entries())
-    .map(([id, v]) => ({ id, ...v }))
+    .map(([id, v]) => ({ id, preview: v.preview, messageCount: v.messageCount, updatedAt: v.updatedAt }))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 

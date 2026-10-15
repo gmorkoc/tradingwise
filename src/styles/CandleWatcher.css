@@ -371,6 +371,61 @@
   touch-action: none;
 }
 
+/* Double-click/double-tap (see the CandleWatcher.tsx effects near
+   toggleChartFullscreen) to fullscreen the candle chart — plain in
+   normal flow until --fullscreen is added, which takes it out of the
+   grid entirely to cover the viewport. chart.applyOptions({height}) is
+   called imperatively on the toggle (not handled by the chart's own
+   ResizeObserver, which here only ever re-applies width), so this class
+   just needs to give the chart library's own container (.cw-chart-wrap,
+   100% of this wrapper) somewhere full-height to resize into. */
+.cw-chart-dblclick-wrap--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--color-card-bg);
+  padding: 8px;
+  box-sizing: border-box;
+}
+.cw-chart-dblclick-wrap--fullscreen .cw-chart-wrap {
+  height: 100%;
+  border-radius: 0;
+}
+.cw-chart-fullscreen-exit {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  z-index: 9001;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+/* FloatingNavBar (.fnb-bar, z-index 60 resting / 200010 raised — see
+   FloatingNavBar.css) still painted on top of the fullscreen chart above
+   no matter how high ITS z-index went, because .main-panel (an ancestor of
+   this component, not owned by this file — see App.css's @media
+   (max-width: 640px) block) gets `transform: translateX(0)` for its
+   slide-over-nav animation. Any transform other than none makes that
+   ancestor the containing block for position:fixed descendants, so the
+   fullscreen chart's z-index was only ever being compared against
+   .main-panel's own (60), never directly against .fnb-bar. Dropping the
+   nav bar below that for the duration — scoped to this body class so its
+   normal z-index (needed to clear other overlays, see FloatingNavBar.css)
+   is untouched everywhere else — fixes it without fighting the
+   containing-block trap itself. */
+body.cw-chart-fullscreen-active .fnb-bar {
+  z-index: 1;
+}
+
 .cw-chart-loader {
   position: absolute;
   inset: 0;

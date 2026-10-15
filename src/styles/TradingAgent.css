@@ -459,119 +459,63 @@ html[data-theme="light"] .ta-panel {
   white-space: nowrap;
 }
 
-/* ── Mobile-only Hub bottom sheet (isMobile prop) — collapses New/History/
-   Watchlist/Positions into one "Hub" header button; tapping it slides up
-   this sheet instead of a dropdown/cluster. Desktop keeps the plain
-   .ta-head-icon-btn row, untouched. ───────────────────────────────────── */
-.ta-hub-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 60;
-  animation: ta-hub-backdrop-in 0.2s ease;
+/* ── Mobile-only Hub row (isMobile prop) — collapses New/History/
+   Watchlist/Positions/Report into one "Menu" header button; tapping it
+   reveals this row of circular icon buttons INLINE in the header (not a
+   bottom sheet/backdrop anymore) — each one fades/scales in with its own
+   --i-tied delay so they land one after another instead of all at once.
+   Desktop keeps the plain .ta-head-icon-btn row, untouched. ──────────── */
+.ta-hub-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 14px;
+  /* Single row, always — scrolls sideways instead of wrapping to a
+     second line once 5 icons don't all fit a narrow phone width. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
-@keyframes ta-hub-backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.ta-hub-row::-webkit-scrollbar {
+  display: none;
 }
-.ta-hub-sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 61;
-  background: var(--ta-bg-1);
-  border-top: 1px solid var(--ta-border);
-  border-radius: 22px 22px 0 0;
-  padding: 10px 18px calc(20px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
-  box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.4);
-  animation: ta-hub-sheet-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@keyframes ta-hub-sheet-in {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-.ta-hub-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  margin: 0 auto 14px;
-}
-.ta-hub-title {
-  display: block;
-  text-align: center;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ta-text-dim);
-  margin-bottom: 18px;
-}
-/* Settings-style list — each action is a full-width row (icon, label,
-   chevron) instead of a circle/segment in a horizontal bar. Bigger touch
-   targets than anything a 5-across row can offer, and the familiar iOS
-   Settings pattern needs no explanation. */
-/* Negative side margins cancel .ta-hub-sheet's own 18px side padding —
-   rows go edge-to-edge with the sheet itself (full width), and the visual
-   gutter comes back from each row's OWN padding instead, so the row's
-   tappable/hairline area isn't artificially narrower than the sheet. */
-.ta-hub-list {
+.ta-hub-row-item {
   display: flex;
   flex-direction: column;
-  margin: 0 -18px;
-}
-.ta-hub-list-row {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
+  flex-shrink: 0;
+  gap: 6px;
   border: none;
   background: none;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--ta-border);
   cursor: pointer;
-  text-align: left;
   -webkit-tap-highlight-color: transparent;
+  opacity: 0;
+  animation: ta-hub-item-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
 }
-.ta-hub-list-row:last-child { border-bottom: none; }
-/* New Chat — the one action genuinely different in kind from the other
-   four (which all just open an existing view) — gets a tinted background
-   and sits first, instead of a raised shape or filled segment. Flush
-   full-width like every other row (no inset/rounded card) now that the
-   list itself goes edge-to-edge. */
-.ta-hub-list-row--featured {
-  background: rgba(110, 168, 255, 0.08);
+@keyframes ta-hub-item-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.8); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.ta-hub-list-badge {
-  width: 32px;
-  height: 32px;
+.ta-hub-circle {
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  border: 1.5px solid var(--ta-accent);
+  color: var(--ta-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ta-accent) 12%, transparent);
 }
-.ta-hub-list-badge--blue { background: rgba(110, 168, 255, 0.2); color: var(--ta-accent); }
-.ta-hub-list-badge--purple { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
-.ta-hub-list-badge--pink { background: rgba(251, 113, 133, 0.2); color: #fb7185; }
-.ta-hub-list-badge--green { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
-.ta-hub-list-badge--amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.ta-hub-list-label {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.86rem;
-  font-weight: 600;
+.ta-hub-circle-label {
+  font-size: 0.68rem;
+  font-weight: 700;
   color: var(--ta-text);
 }
-.ta-hub-list-chevron {
-  flex-shrink: 0;
-  color: var(--ta-text-dim);
-  font-size: 0.9rem;
-}
 @media (prefers-reduced-motion: reduce) {
-  .ta-hub-backdrop, .ta-hub-sheet { animation: none; }
+  .ta-hub-row-item { animation: none; opacity: 1; }
 }
 
 /* ── Conversation history ────────────────────────────────────────────────── */
@@ -592,7 +536,7 @@ html[data-theme="light"] .ta-panel {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 .ta-history-item {
   display: flex;
@@ -603,6 +547,9 @@ html[data-theme="light"] .ta-panel {
   border: 1px solid transparent;
 }
 .ta-history-item--active { border-color: var(--ta-accent); }
+@media (max-width: 640px) {
+  .ta-history-item--active { border-color: transparent; }
+}
 .ta-history-item-main {
   flex: 1;
   min-width: 0;
@@ -617,6 +564,8 @@ html[data-theme="light"] .ta-panel {
   gap: 2px;
 }
 .ta-history-item-preview {
+  flex: 1;
+  min-width: 0;
   font-size: 0.82rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -636,6 +585,28 @@ html[data-theme="light"] .ta-panel {
   flex-shrink: 0;
 }
 .ta-history-item-delete:hover { color: #fb7185; }
+.ta-history-item-pin {
+  border: none;
+  background: none;
+  color: var(--ta-text-dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 8px 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.ta-history-item-pin:hover { color: #ef4444; }
+.ta-history-item-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.ta-history-item-pin-badge {
+  flex-shrink: 0;
+  color: #ef4444;
+}
 
 /* ── iOS-native swipe-to-delete (ConversationRow in TradingAgent.tsx) ────
    Delete sits as a fixed-position red layer UNDER the row; the row itself
@@ -651,7 +622,13 @@ html[data-theme="light"] .ta-panel {
 .ta-history-item-swipe .ta-history-item {
   position: relative;
   z-index: 1;
-  width: 100%;
+  /* A permanent few-px inset on both sides (not 100%/0 margin) — so a
+     sliver of both the green pin layer (left) and red delete layer
+     (right) always peeks through at rest, hinting the row is swipeable
+     in both directions instead of looking identical to a non-swipeable
+     row until you happen to drag it. */
+  width: calc(100% - 2px);
+  margin: 0 1px;
   /* var(--ta-overlay) alone (the base rule's background) is only ~4%
      opaque — nowhere near enough to hide the solid red delete layer
      sitting directly behind this at rest, which bled through as a
@@ -661,37 +638,60 @@ html[data-theme="light"] .ta-panel {
   background-color: var(--ta-bg-1);
   background-image: linear-gradient(var(--ta-overlay), var(--ta-overlay));
 }
-/* Floating rounded pill, not a full-bleed rectangle — matches the
-   Material-style reference (icon + label, its own color/shadow, sitting
-   in the gap the row's own translateX opens up) rather than looking like
-   a solid panel the row slides off of. */
+/* Full-bleed colored surface filling the row's complete height, matching
+   native Mail.app/Messages swipe actions — not a floating pill in a gap.
+   The action layer itself IS the background; it's always fully opaque
+   (no fade-in), and simply becomes visible as the row on top of it
+   translates away, naturally "expanding" to fill whatever width that
+   reveals. Rounded only on the outer corners (matching .ta-history-item-
+   swipe's own radius) — the edge touching the row stays square so the two
+   read as one continuous shape at any reveal width. */
+/* width (not inset:0) + anchored to its own edge only — both this layer
+   and --left below used to be inset:0 (full row coverage) stacked on top
+   of each other, so whichever was later in the DOM painted over the
+   other completely regardless of swipe direction (green was NEVER
+   visible, only ever red). Each now only occupies its own side, wide
+   enough to cover the max possible drag distance
+   (SWIPE_AUTO_DELETE_WIDTH/SWIPE_AUTO_PIN_WIDTH + the 40px overdrag, both
+   well under 240px) without the two ever overlapping. */
 .ta-history-item-swipe-actions {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 240px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  background: #ef4444;
+  border-radius: 0 10px 10px 0;
+}
+/* Mirrors the delete layer, left-aligned + its own accent color instead —
+   revealed as the row slides RIGHT (swipe-to-pin) instead of left. */
+.ta-history-item-swipe-actions--left {
+  right: auto;
+  left: 0;
+  justify-content: flex-start;
+  background: #22c55e;
+  border-radius: 10px 0 0 10px;
+}
+.ta-history-item-swipe-delete,
+.ta-history-item-swipe-pin {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding: 0 10px;
-}
-.ta-history-item-swipe-delete {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 76px;
   border: none;
-  border-radius: 999px;
-  background: #ef4444;
+  background: none;
   color: #fff;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 9px 16px;
-  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
-  transform-origin: center;
-  /* Opacity/transform are driven by inline style (tied to live drag
-     progress) — this transition only smooths the snap once the drag
-     itself ends (dragX back to null), same reasoning as the row's own. */
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  flex-shrink: 0;
+}
+.ta-history-item-swipe-icon {
+  /* Scale is driven by inline style (tied to live drag progress) — this
+     transition only smooths the snap once the drag itself ends (dragX
+     back to null), same reasoning as the row's own. */
+  transition: transform 0.18s ease;
 }
 .ta-history-back {
   border: 1px solid var(--ta-border);
@@ -738,6 +738,22 @@ html[data-theme="light"] .ta-panel {
 
 /* ── Positions view (reuses .ta-history/.ta-history-list/.ta-history-back
    for the outer layout, same as Watchlist above) ────────────────────────── */
+/* Its own row in the page layout now, not squeezed into the Open/Closed
+   segmented control — that pill's flex:1 tabs were leaving this button
+   right at the edge of (or past) the container's clipped bounds. */
+.ta-positions-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 10px;
+  flex-shrink: 0;
+}
+.ta-positions-page-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ta-text);
+}
 .ta-positions-view-tabs {
   display: flex;
   gap: 4px;
@@ -748,6 +764,7 @@ html[data-theme="light"] .ta-panel {
 }
 .ta-positions-view-tab {
   flex: 1;
+  min-width: 0;
   border: none;
   background: none;
   border-radius: 999px;
@@ -758,6 +775,57 @@ html[data-theme="light"] .ta-panel {
   cursor: pointer;
 }
 .ta-positions-view-tab--active { background: var(--ta-accent); color: #fff; }
+.ta-positions-refresh-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--ta-overlay);
+  color: var(--ta-text-dim);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ta-positions-refresh-btn:hover { color: var(--ta-text); }
+.ta-positions-refresh-btn:disabled { cursor: default; opacity: 0.6; }
+/* Real CSS rule, not an SVG presentation attribute — stroke="var(...)" (or
+   even stroke="currentColor") as a bare attribute string paints nothing
+   in some engines; a stylesheet rule targeting the path goes through the
+   normal cascade instead and is the reliable way to color it. */
+.ta-positions-refresh-icon path {
+  stroke: var(--ta-text-dim);
+}
+.ta-positions-refresh-btn:hover .ta-positions-refresh-icon path {
+  stroke: var(--ta-text);
+}
+.ta-positions-refresh-btn--spinning svg { animation: ta-positions-spin 0.8s linear infinite; }
+@keyframes ta-positions-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+/* Pull-to-refresh — height (0 to POSITIONS_PULL_THRESHOLD and beyond,
+   tracked live via inline style while dragging) IS the reveal; this never
+   needs its own show/hide toggle. */
+.ta-positions-pull-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ta-positions-pull-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--ta-border);
+  border-top-color: var(--ta-accent);
+}
+.ta-positions-pull-spinner--active {
+  animation: ta-positions-spin 0.7s linear infinite;
+}
 .ta-positions-list-close {
   margin-top: 4px;
   width: 100%;

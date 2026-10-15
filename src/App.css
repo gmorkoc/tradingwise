@@ -3858,7 +3858,11 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-    padding: 16px 16px 0;
+    /* Bottom was 0 when .mch-body used to wrap onto its own line directly
+       below (App.tsx now renders .mch-body inside .main-content instead,
+       so it scrolls — nothing else sits below this row in the header
+       anymore, hence the bottom breathing room). */
+    padding: 16px 16px 12px;
     gap: 4px;
   }
 
@@ -3997,20 +4001,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   .mch-body {
     display: flex;
     flex-direction: column;
-    order: 4;
-    flex: 0 0 100%;
-    width: 100%;
-    margin: 0;
-    /* Pinned a few px below the true top, not flush — reads as a floating
-       glass card rather than a bar flush against the screen edge, the
-       whole point of the glassmorphism treatment below. */
-    position: sticky;
-    top: 8px;
+    /* Replaces the old position:sticky — this is now a normal child of
+       .main-content (App.tsx renders it there on mobile widths instead of
+       inside .main-coin-header, so it actually scrolls with the page), but
+       still needs ITS OWN positioned box for the ::before/::after blob
+       decorations below to anchor to. */
+    position: relative;
+    /* Matches the 16px side gutter .main-coin-header used to provide as
+       this card's parent; 8px top mirrors the old sticky `top: 8px` gap,
+       12px bottom separates it from whatever renders next in the feed. */
+    margin: 8px 16px 12px;
     z-index: 15;
     border-radius: 18px;
-    /* Clips the blurred blob pseudo-elements below to this card's own
-       rounded bounds — safe alongside position:sticky, which only cares
-       about an ANCESTOR's overflow, not this element's own. */
     overflow: hidden;
   }
   /* Two soft color blobs behind the frosted glass — the glassmorphism
@@ -4371,15 +4373,33 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   }
 
   .chart-section-wrap {
+    position: relative;
     flex-direction: row;
     align-items: stretch;
   }
   .chart-resize-handle {
     display: none;
   }
+  /* Was display:none — collapsed the hidden one to a 0×0 box, which
+     .price-chart-container's own autoSize ResizeObserver (lightweight-
+     charts) sees as a real resize to (0,0). Switching back has to
+     recover from that collapsed state, and the corrective resize isn't
+     guaranteed to land before the next paint (WKWebView especially) —
+     for at least one frame the chart re-renders its grid against the
+     stale 0-height state, reading as the grid filling empty space above
+     the real candles. visibility:hidden (not display:none) keeps the
+     box's real geometry intact the whole time the tab is inactive, so
+     autoSize's observer never sees a collapse to recover from at all.
+     position:absolute takes the hidden one out of flow so it doesn't
+     also reserve space next to the visible one (which stays static/
+     in-flow, per .chart-section-wrap > .price-chart-container/.ob-card
+     below). */
   .chart-section-wrap--tab-chart > .ob-card,
   .chart-section-wrap--tab-orderbook > .price-chart-container {
-    display: none;
+    visibility: hidden;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
   .chart-section-wrap > .price-chart-container {
     flex: 1;

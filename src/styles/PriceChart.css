@@ -2094,13 +2094,18 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--pc-danger) 15%, transparent);
 }
 
-/* .chart-legend itself is dead — no element in PriceChart.tsx carries this
-   class anymore (an earlier refactor dropped the wrapper). Its
-   margin-bottom isn't worth reviving here: the more specific
-   ".chart-dblclick-wrap > .chart-legend-actions" rule further down
-   always wins over this base rule for the one place this toolbar
-   actually renders, so that's where the real spacing/contrast fix lives
-   now. */
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  /* flex-end, not center — the legend text and the (taller) action buttons
+     don't share a height, so center-aligning left them with uneven gaps to
+     whatever sits below this row depending on which side you looked at. */
+  align-items: flex-end;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+
 .chart-legend-actions {
   display: flex;
   align-items: center;
@@ -2143,39 +2148,10 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
    not these buttons. */
 .chart-dblclick-wrap > .chart-legend-actions {
   width: 100%;
-  margin-left: 0;
-  /* This selector (direct-child + 2 classes) beats the base
-     .chart-legend-actions rule's own margin-bottom on specificity alone,
-     so bumping spacing there did nothing — this is the one that actually
-     wins. 16px, not 6px: the row's buttons share the exact same
-     background color as the chart canvas right below them
-     (--color-surface-alt/#111827, same literal value — see
-     .chart-depth-btn-contrast below for the real fix for that), so with
-     only 6px of gap the chart's own grid dots read as touching/behind
-     the buttons even though they're just closely stacked, not actually
-     overlapping. */
-  margin-bottom: 16px;
+  margin: 14px 0;
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 6px;
-}
-
-/* The buttons in this row (.chart-depth-btn's shared background,
-   --color-surface-alt) are the exact same #111827 as the chart canvas's
-   own fill color right behind/below them — so their "background" reads
-   as invisible, and the canvas's grid dots look like they're bleeding
-   into the controls instead of just sitting close to them. A frosted,
-   lighter chip (not color-matched to any one theme's canvas fill) keeps
-   this legible regardless of theme or canvas color. */
-.chart-dblclick-wrap > .chart-legend-actions .chart-depth-btn {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-html[data-theme="light"] .chart-dblclick-wrap > .chart-legend-actions .chart-depth-btn {
-  background: rgba(255, 255, 255, 0.75);
-  border-color: rgba(15, 23, 42, 0.1);
 }
 
 .price-chart-container--fs .chart-dblclick-wrap > .chart-legend-actions,
@@ -2380,6 +2356,13 @@ html[data-theme="light"] .chart-loading-label {
 }
 .interval-banner--neutral .interval-banner-title {
   color: var(--color-text-secondary);
+}
+
+.interval-banner--tappable {
+  cursor: pointer;
+}
+.interval-banner--tappable:active {
+  opacity: 0.85;
 }
 
 .interval-banner-close {
@@ -2888,9 +2871,11 @@ html[data-theme="light"] .cap-overlay-feature {
      longer/shorter AI-generated title or body on a later refresh never
      changes how much space this takes up (it was pushing the chart
      itself down/up every time new analysis text came in) — the title
-     truncates to one line, the body clamps to 2, instead of growing. */
+     truncates to one line, the body clamps to 1 (just a teaser — tap
+     the banner for the full text in pattern-insight-sheet below),
+     instead of growing. */
   .interval-banner {
-    height: 92px;
+    height: 64px;
     box-sizing: border-box;
     padding: 10px 12px;
     margin-top: 12px;
@@ -2909,11 +2894,11 @@ html[data-theme="light"] .cap-overlay-feature {
     white-space: nowrap;
   }
 
-  .interval-banner-body {
+  .interval-banner-body--preview {
     font-size: 0.76rem;
     line-height: 1.45;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -3022,6 +3007,38 @@ html[data-theme="light"] .cap-overlay-feature {
 .interval-sheet-item-check {
   color: var(--color-primary);
   font-weight: 800;
+}
+
+/* Full AI pattern-insight text — opened by tapping the (now truncated)
+   .interval-banner preview, reusing the same .interval-sheet backdrop/
+   sheet/header chrome the interval picker already does. */
+.pattern-insight-sheet-title {
+  white-space: normal;
+}
+.pattern-insight-sheet-title--bullish {
+  color: #4ade80;
+}
+.pattern-insight-sheet-title--bearish {
+  color: #fb7185;
+}
+.pattern-insight-sheet-title--neutral {
+  color: var(--color-text-secondary);
+}
+.pattern-insight-sheet-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 0;
+  flex-shrink: 0;
+}
+.pattern-insight-sheet-body {
+  margin: 0;
+  padding: 10px 16px 16px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Style category body (inside .fs-dock-category-body) — Grid toggle +

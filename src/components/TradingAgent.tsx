@@ -102,6 +102,20 @@ function hapticTap() {
   }
 }
 
+// Same "Nm/h/d ago, then a plain date" convention NotificationsCenter
+// already uses, for the History list's per-conversation timestamp.
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 // Self-contained global widget (own floating trigger + panel), not wired
 // into App.tsx's chart-grid layout like CoinChat's docked sidebar — this
 // is intentionally available from anywhere in the app, not just the chart
@@ -123,26 +137,54 @@ function useIsDesktop(): boolean {
 // Crisp outline glyph (SF Symbols "trash" shape) instead of the 🗑 emoji —
 // emoji rendering varies enough across devices/fonts that it read as fuzzy
 // and off-brand next to the rest of this app's flat vector icons.
-function TrashIcon({ size = 20 }: { size?: number }) {
+function TrashIcon({ size = 20, className, style }: { size?: number; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} style={style} xmlns="http://www.w3.org/2000/svg">
       <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6m4-6v6"
         stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// History row swipe-to-delete (iOS native only) — a rounded, floating
-// "Delete" pill revealed behind the row as it slides left, Material-style
-// per the reference design, rather than a full-bleed colored rectangle.
-// Swiping past SWIPE_REVEAL_WIDTH and releasing reveals the pill (tap it
-// to actually delete); swiping all the way past SWIPE_AUTO_DELETE_WIDTH
-// and releasing deletes immediately with no second tap, for a fast
-// Mail.app-style full swipe too. Tapping the row while a swipe is open
-// (this one's or another's) just closes it, same as tapping elsewhere in
-// a real swiped-open table view — it never also navigates on that same
-// tap. Only one row stays revealed at a time (`revealed`/`onReveal` are
-// lifted to the parent so opening one row closes any other already open).
+// SF Symbols "pin.fill"-ish shape — same crisp-outline convention as
+// TrashIcon above, used both as the swipe-right action glyph and as the
+// small pinned-row badge.
+// Classic thumbtack silhouette (the Slack/Telegram "pin message" glyph) —
+// a banded head tapering to a point, not the map/location-marker teardrop
+// shape. Always solid (the "filled" prop is kept only so call sites that
+// still pass it don't need updating, but it no longer changes anything —
+// a pin is either shown or it isn't, there's no outline/filled distinction
+// worth drawing at this size).
+// `slash` renders this as "Unpin" instead of "Pin" — a diagonal strike
+// through the same thumbtack glyph, used wherever the action this icon
+// sits on would UNPIN an already-pinned conversation (the swipe/tap
+// action, not the small "this one's pinned" row badge, which stays a
+// plain pin either way since it's just status, not a button).
+function PinIcon({ size = 20, className, style, slash = false }: { size?: number; filled?: boolean; className?: string; style?: React.CSSProperties; slash?: boolean }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} style={style} xmlns="http://www.w3.org/2000/svg">
+      <path d="M14.5 3a1 1 0 0 1 1 1v5.76l2.93 2.94a1 1 0 0 1-.7 1.71H13v4.1l-.86 1.98a.17.17 0 0 1-.28 0L11 18.51v-4.1H6.27a1 1 0 0 1-.7-1.71L8.5 9.76V4a1 1 0 0 1 1-1h5z" />
+      {slash && <path d="M3.5 3.5l17 17" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" fill="none" />}
+    </svg>
+  );
+}
+
+// History row swipe-to-delete/swipe-to-pin (iOS native only) — rounded,
+// floating pills revealed behind the row as it slides, Material-style per
+// the reference design, rather than full-bleed colored rectangles.
+// Swiping LEFT past SWIPE_REVEAL_WIDTH and releasing reveals the Delete
+// pill (tap it to actually delete); swiping all the way past
+// SWIPE_AUTO_DELETE_WIDTH and releasing deletes immediately with no second
+// tap, Mail.app-style. Swiping RIGHT mirrors this for Pin/Unpin: past
+// SWIPE_REVEAL_WIDTH reveals the pill (Pin or Unpin, whichever applies —
+// see PinIcon's `slash` prop), past SWIPE_AUTO_PIN_WIDTH and releasing
+// toggles immediately with no second tap, same as delete. Tapping the row
+// while a swipe is open (this
+// one's or another's) just closes it, same as tapping elsewhere in a real
+// swiped-open table view — it never also navigates on that same tap. Only
+// one row stays revealed at a time, and only one side at once
+// (`revealed`/`onReveal` are lifted to the parent so opening one row/side
+// closes any other already open).
 //
 // Deliberately NOT using React's onTouchStart/onTouchMove/onTouchEnd props
 // here — React attaches its root touch listeners as passive by default, so
@@ -153,27 +195,30 @@ function TrashIcon({ size = 20 }: { size?: number }) {
 // suppress that scroll once a horizontal drag is detected.
 const SWIPE_REVEAL_WIDTH = 76;
 const SWIPE_AUTO_DELETE_WIDTH = 180;
+const SWIPE_AUTO_PIN_WIDTH = 140;
+type RevealSide = "left" | "right" | null;
 function ConversationRow({
-  conversation, active, revealed, onReveal, onOpen, onDelete,
+  conversation, active, pinned, revealed, onReveal, onOpen, onDelete, onTogglePin,
 }: {
   conversation: ConversationSummary;
   active: boolean;
-  revealed: boolean;
-  onReveal: (open: boolean) => void;
+  pinned: boolean;
+  revealed: RevealSide;
+  onReveal: (side: RevealSide) => void;
   onOpen: () => void;
   onDelete: () => void;
+  onTogglePin: () => void;
 }) {
   // null while not actively dragging — rendered offset then falls back to
   // the committed `revealed` state instead, which is what makes the row
   // snap-animate back into place with a CSS transition rather than jumping.
   const [dragX, setDragX] = useState<number | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
-  // Mutable mirrors of revealed/dragX/onReveal/onDelete for the native
-  // listeners below — they're attached once (empty effect deps) so they
-  // always need the CURRENT values, not whatever was current when the
-  // listener was first attached.
-  const stateRef = useRef({ revealed, dragX, onReveal, onDelete });
-  stateRef.current = { revealed, dragX, onReveal, onDelete };
+  // Mutable mirrors for the native listeners below — they're attached once
+  // (empty effect deps) so they always need the CURRENT values, not
+  // whatever was current when the listener was first attached.
+  const stateRef = useRef({ revealed, dragX, pinned, onReveal, onDelete, onTogglePin });
+  stateRef.current = { revealed, dragX, pinned, onReveal, onDelete, onTogglePin };
 
   useEffect(() => {
     const el = rowRef.current;
@@ -200,8 +245,10 @@ function ConversationRow({
       }
       if (start.locked !== "h") return; // let the list scroll normally
       e.preventDefault();
-      const base = stateRef.current.revealed ? -SWIPE_REVEAL_WIDTH : 0;
-      setDragX(Math.min(0, Math.max(-SWIPE_AUTO_DELETE_WIDTH - 40, base + dx)));
+      const base = stateRef.current.revealed === "left" ? -SWIPE_REVEAL_WIDTH
+        : stateRef.current.revealed === "right" ? SWIPE_REVEAL_WIDTH
+        : 0;
+      setDragX(Math.min(SWIPE_AUTO_PIN_WIDTH + 40, Math.max(-SWIPE_AUTO_DELETE_WIDTH - 40, base + dx)));
     };
     const onTouchEnd = () => {
       start = null;
@@ -210,10 +257,26 @@ function ConversationRow({
       if (x <= -SWIPE_AUTO_DELETE_WIDTH) {
         hapticTap();
         stateRef.current.onDelete();
-      } else {
+        setDragX(null);
+        return;
+      }
+      if (x >= SWIPE_AUTO_PIN_WIDTH) {
+        hapticTap();
+        stateRef.current.onTogglePin();
+        stateRef.current.onReveal(null);
+        setDragX(null);
+        return;
+      }
+      if (x < 0) {
         const nowRevealed = x < -SWIPE_REVEAL_WIDTH / 2;
-        if (nowRevealed !== stateRef.current.revealed) hapticTap();
-        stateRef.current.onReveal(nowRevealed);
+        if (nowRevealed !== (stateRef.current.revealed === "left")) hapticTap();
+        stateRef.current.onReveal(nowRevealed ? "left" : null);
+      } else if (x > 0) {
+        const nowRevealed = x > SWIPE_REVEAL_WIDTH / 2;
+        if (nowRevealed !== (stateRef.current.revealed === "right")) hapticTap();
+        stateRef.current.onReveal(nowRevealed ? "right" : null);
+      } else {
+        stateRef.current.onReveal(null);
       }
       setDragX(null);
     };
@@ -230,7 +293,7 @@ function ConversationRow({
     };
   }, []);
 
-  const x = dragX ?? (revealed ? -SWIPE_REVEAL_WIDTH : 0);
+  const x = dragX ?? (revealed === "left" ? -SWIPE_REVEAL_WIDTH : revealed === "right" ? SWIPE_REVEAL_WIDTH : 0);
   // Fades/scales in over the first 36px of drag instead of popping in at
   // full size the instant the row starts moving — reads as the pill
   // genuinely "appearing" as you swipe, matching the Material-style
@@ -238,20 +301,29 @@ function ConversationRow({
   // simply uncovered. A plain opacity/transform tween (not an animated
   // `width`, which forces layout on every single touchmove frame) is also
   // what actually fixes the jank — this is compositor-only.
-  const revealProgress = Math.min(1, -x / 36);
+  const deleteProgress = Math.min(1, Math.max(0, -x) / 36);
+  const pinProgress = Math.min(1, Math.max(0, x) / 36);
 
   return (
     <div className="ta-history-item-swipe">
+      <div className="ta-history-item-swipe-actions ta-history-item-swipe-actions--left">
+        <button
+          type="button"
+          className="ta-history-item-swipe-pin"
+          onClick={() => { hapticTap(); onTogglePin(); onReveal(null); }}
+          aria-label={pinned ? "Unpin conversation" : "Pin conversation"}
+        >
+          <PinIcon size={22} slash={pinned} className="ta-history-item-swipe-icon" style={{ transform: `scale(${0.6 + 0.4 * pinProgress})` }} />
+        </button>
+      </div>
       <div className="ta-history-item-swipe-actions">
         <button
           type="button"
           className="ta-history-item-swipe-delete"
-          style={{ opacity: revealProgress, transform: `scale(${0.7 + 0.3 * revealProgress})` }}
           onClick={() => { hapticTap(); onDelete(); }}
           aria-label="Delete conversation"
         >
-          <TrashIcon size={15} />
-          Delete
+          <TrashIcon size={22} className="ta-history-item-swipe-icon" style={{ transform: `scale(${0.6 + 0.4 * deleteProgress})` }} />
         </button>
       </div>
       <div
@@ -262,10 +334,13 @@ function ConversationRow({
         <button
           type="button"
           className="ta-history-item-main"
-          onClick={() => { if (revealed) { onReveal(false); return; } onOpen(); }}
+          onClick={() => { if (revealed) { onReveal(null); return; } onOpen(); }}
         >
-          <span className="ta-history-item-preview">{conversation.preview || "(empty)"}</span>
-          <span className="ta-history-item-meta">{conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"}</span>
+          <span className="ta-history-item-preview-row">
+            {pinned && <PinIcon size={11} filled className="ta-history-item-pin-badge" />}
+            <span className="ta-history-item-preview">{conversation.preview || "(empty)"}</span>
+          </span>
+          <span className="ta-history-item-meta">{conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"} · {timeAgo(conversation.updatedAt)}</span>
         </button>
       </div>
     </div>
@@ -805,6 +880,15 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   const [positionsTab, setPositionsTab] = useState<"open" | "closed">("open");
   const [closedPositions, setClosedPositions] = useState<PositionsListItem[] | null>(null);
   const [loadingClosedPositions, setLoadingClosedPositions] = useState(false);
+  // Manual refresh (pull-to-refresh + a tap button) — neither open nor
+  // closed positions update live on their own (no realtime subscription
+  // the way chat messages get; a liquidation/TP/SL only ever lands here
+  // once this view is re-fetched), so this is the only way to see a
+  // position the watcher cron already closed in the background.
+  const [refreshingPositions, setRefreshingPositions] = useState(false);
+  const positionsListRef = useRef<HTMLDivElement>(null);
+  const [positionsPullY, setPositionsPullY] = useState(0);
+  const POSITIONS_PULL_THRESHOLD = 56;
   // Mobile-only header redesign (isMobile prop) — the 4 action icons
   // collapse into a single "Hub" button that slides up a bottom sheet
   // with four big labelled cards. Desktop's header is untouched (separate
@@ -860,13 +944,39 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   const [conversationId, setConversationId] = useState<string>(newConversationId);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  // Which conversation's row currently has its swipe-to-delete revealed
-  // (iOS native only — see ConversationRow) — lifted up here rather than
-  // kept local to each row so opening one row's swipe closes any other
-  // that was already open, same as a real table view only ever reveals one.
-  const [revealedRowId, setRevealedRowId] = useState<string | null>(null);
+  // Which conversation's row currently has a swipe revealed, and on which
+  // side (iOS native only — see ConversationRow) — lifted up here rather
+  // than kept local to each row so opening one row's swipe closes any
+  // other that was already open, same as a real table view only ever
+  // reveals one.
+  const [revealedRow, setRevealedRow] = useState<{ id: string; side: "left" | "right" } | null>(null);
+  // Pinned conversation ids — client-side only (localStorage), not synced
+  // to the backend. This is a per-device "keep this at the top of my own
+  // History list" preference, not conversation data itself, so it doesn't
+  // need a schema change or to follow the account across devices.
+  const PINNED_KEY = "tradingAgentPinnedConversations";
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(PINNED_KEY);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch { return new Set(); }
+  });
+  const togglePin = (id: string) => {
+    setPinnedIds((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem(PINNED_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  // Pinned conversations first (in their own recency order), then
+  // everything else in its own recency order — conversations itself is
+  // already sorted newest-first by fetchConversations, so a stable
+  // partition preserves that within each group.
+  const sortedConversations = conversations.length === 0 ? conversations
+    : [...conversations.filter((c) => pinnedIds.has(c.id)), ...conversations.filter((c) => !pinnedIds.has(c.id))];
   // "Here's how you delete one" demo — auto-reveal the top row's swipe
-  // (reusing the exact same revealedRowId mechanism/animation a real swipe
+  // (reusing the exact same revealedRow mechanism/animation a real swipe
   // would, not a separate fake animation) and then auto-hide it again a
   // moment later, teaching the gesture exists without a tutorial screen.
   // With a short list (<=2 conversations) there's little else to look at
@@ -878,20 +988,20 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   const SWIPE_HINT_KEY = "tradingAgentSwipeHintShown";
   const swipeHintPlayedRef = useRef(false);
   useEffect(() => {
-    if (!showHistory || !IS_IOS_NATIVE || conversations.length === 0) return;
-    const alwaysShow = conversations.length <= 2;
+    if (!showHistory || !IS_IOS_NATIVE || sortedConversations.length === 0) return;
+    const alwaysShow = sortedConversations.length <= 2;
     if (!alwaysShow) {
       if (swipeHintPlayedRef.current || localStorage.getItem(SWIPE_HINT_KEY)) return;
       swipeHintPlayedRef.current = true;
       localStorage.setItem(SWIPE_HINT_KEY, "true");
     }
-    const firstId = conversations[0].id;
+    const firstId = sortedConversations[0].id;
     const openTimer = setTimeout(() => {
-      setRevealedRowId(firstId);
+      setRevealedRow({ id: firstId, side: "left" });
       hapticTap();
     }, 600);
     const closeTimer = setTimeout(() => {
-      setRevealedRowId((cur) => (cur === firstId ? null : cur));
+      setRevealedRow((cur) => (cur?.id === firstId ? null : cur));
     }, 2000);
     return () => { clearTimeout(openTimer); clearTimeout(closeTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -970,10 +1080,33 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   useEffect(() => {
     if (!user || needsConsent || messages.length > 0 || openerSentRef.current) return;
     openerSentRef.current = true;
-    const nickname = profile?.username?.trim() || null;
-    const greeting = OPENER_GREETINGS[Math.floor(Math.random() * OPENER_GREETINGS.length)](nickname);
-    addAgentNote(user.id, conversationId, greeting)
-      .then(() => loadAll(conversationId)).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    (async () => {
+      try {
+        // Before minting a brand-new conversation + greeting, check for an
+        // existing unused one (greeting-only, never actually replied to —
+        // messageCount<=1) and reuse it instead. Without this, every fresh
+        // mount of this panel (cold app launch, reload, etc.) piled up yet
+        // another throwaway "Hello..." conversation that only ever had the
+        // agent's own opener in it, cluttering History with near-identical
+        // entries nobody ever continued.
+        const existing = await fetchConversations(user.id);
+        const reusable = existing.find((c) => c.messageCount <= 1 && c.id !== conversationId);
+        if (reusable) {
+          // openerSentRef stays true — this mount's opener duty is done by
+          // redirecting, not inserting. The conversationId-change effect
+          // elsewhere loads this conversation's existing single greeting
+          // on its own; nothing left for this effect to do or re-check.
+          setConversationId(reusable.id);
+          return;
+        }
+        const nickname = profile?.username?.trim() || null;
+        const greeting = OPENER_GREETINGS[Math.floor(Math.random() * OPENER_GREETINGS.length)](nickname);
+        await addAgentNote(user.id, conversationId, greeting);
+        await loadAll(conversationId);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, needsConsent, messages.length, conversationId, profile?.username]);
 
@@ -1166,6 +1299,77 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     setShowPositions(true);
     if (closedPositions === null) await loadClosedPositions();
   };
+
+  // Refreshes both tabs at once (not just whichever is currently active)
+  // so switching tabs right after a manual refresh never shows stale
+  // data either. Portfolio carries the live open positions; there's no
+  // narrower "just open positions" fetch to call instead.
+  const handleRefreshPositions = async () => {
+    if (!user || refreshingPositions) return;
+    setRefreshingPositions(true);
+    try {
+      const [p, closed] = await Promise.all([fetchPortfolio(user.id), fetchClosedPositions(user.id)]);
+      setPortfolio(p);
+      setClosedPositions(closed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't refresh your positions — please try again.");
+    } finally {
+      setRefreshingPositions(false);
+    }
+  };
+
+  // Pull-to-refresh on the Positions list — same native addEventListener/
+  // passive:false approach ConversationRow's swipe uses and for the same
+  // reason (a passive-by-default synthetic touchmove can't actually
+  // preventDefault the page's own scroll/bounce once a gesture is
+  // detected). Only tracks a pull that starts while already scrolled to
+  // the very top — anywhere else it's just a normal scroll.
+  const refreshPositionsStateRef = useRef({ refreshingPositions, handleRefreshPositions });
+  refreshPositionsStateRef.current = { refreshingPositions, handleRefreshPositions };
+  useEffect(() => {
+    if (!showPositions) return;
+    const el = positionsListRef.current;
+    if (!el) return;
+    let startY: number | null = null;
+    let tracking = false;
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY;
+      tracking = el.scrollTop <= 0;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!tracking || startY == null) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy <= 0 || el.scrollTop > 0) {
+        tracking = false;
+        setPositionsPullY(0);
+        return;
+      }
+      e.preventDefault();
+      setPositionsPullY(Math.min(dy * 0.5, 90));
+    };
+    const onTouchEnd = () => {
+      if (!tracking) return;
+      tracking = false;
+      startY = null;
+      setPositionsPullY((cur) => {
+        if (cur >= POSITIONS_PULL_THRESHOLD && !refreshPositionsStateRef.current.refreshingPositions) {
+          hapticTap();
+          refreshPositionsStateRef.current.handleRefreshPositions();
+        }
+        return 0;
+      });
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [showPositions]);
 
   // Mirrors handleClosePosition, just resolves the real PaperPosition (with
   // marginUsd/liquidationPrice/etc. closePosition itself doesn't strictly
@@ -1724,38 +1928,70 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       {showHistory ? (
         <div className="ta-history">
           <div className="ta-history-list">
-            {conversations.length === 0 && (
+            {sortedConversations.length === 0 && (
               <p className="ta-empty">No past conversations yet.</p>
             )}
-            {conversations.map((c) => (
-              IS_IOS_NATIVE ? (
-                <ConversationRow
-                  key={c.id}
-                  conversation={c}
-                  active={c.id === conversationId}
-                  revealed={revealedRowId === c.id}
-                  onReveal={(open) => setRevealedRowId(open ? c.id : null)}
-                  onOpen={() => handleOpenConversation(c.id)}
-                  onDelete={() => { setRevealedRowId(null); handleDeleteConversation(c.id); }}
-                />
-              ) : (
-                <div key={c.id} className={`ta-history-item${c.id === conversationId ? " ta-history-item--active" : ""}`}>
-                  <button type="button" className="ta-history-item-main" onClick={() => handleOpenConversation(c.id)}>
-                    <span className="ta-history-item-preview">{c.preview || "(empty)"}</span>
-                    <span className="ta-history-item-meta">{c.messageCount} message{c.messageCount === 1 ? "" : "s"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="ta-history-item-delete"
-                    onClick={() => handleDeleteConversation(c.id)}
-                    aria-label="Delete conversation"
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
-                </div>
-              )
-            ))}
+            {(() => {
+              const renderRow = (c: ConversationSummary) => (
+                IS_IOS_NATIVE ? (
+                  <ConversationRow
+                    key={c.id}
+                    conversation={c}
+                    active={c.id === conversationId}
+                    pinned={pinnedIds.has(c.id)}
+                    revealed={revealedRow?.id === c.id ? revealedRow.side : null}
+                    onReveal={(side) => setRevealedRow(side ? { id: c.id, side } : null)}
+                    onOpen={() => handleOpenConversation(c.id)}
+                    onDelete={() => { setRevealedRow(null); handleDeleteConversation(c.id); }}
+                    onTogglePin={() => togglePin(c.id)}
+                  />
+                ) : (
+                  <div key={c.id} className={`ta-history-item${c.id === conversationId ? " ta-history-item--active" : ""}`}>
+                    <button type="button" className="ta-history-item-main" onClick={() => handleOpenConversation(c.id)}>
+                      <span className="ta-history-item-preview-row">
+                        {pinnedIds.has(c.id) && <PinIcon size={11} filled className="ta-history-item-pin-badge" />}
+                        <span className="ta-history-item-preview">{c.preview || "(empty)"}</span>
+                      </span>
+                      <span className="ta-history-item-meta">{c.messageCount} message{c.messageCount === 1 ? "" : "s"} · {timeAgo(c.updatedAt)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="ta-history-item-pin"
+                      onClick={() => togglePin(c.id)}
+                      aria-label={pinnedIds.has(c.id) ? "Unpin conversation" : "Pin conversation"}
+                      title={pinnedIds.has(c.id) ? "Unpin" : "Pin"}
+                    >
+                      <PinIcon size={15} slash={pinnedIds.has(c.id)} />
+                    </button>
+                    <button
+                      type="button"
+                      className="ta-history-item-delete"
+                      onClick={() => handleDeleteConversation(c.id)}
+                      aria-label="Delete conversation"
+                      title="Delete"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                )
+              );
+              // Only split into Pinned/rest once there's actually something
+              // to split — a single chat, or a list with no pins at all,
+              // just renders flat with no "Pinned" header sitting over
+              // nothing (or over everything).
+              const showGroups = sortedConversations.length >= 2 && pinnedIds.size > 0;
+              if (!showGroups) return sortedConversations.map(renderRow);
+              const pinnedRows = sortedConversations.filter((c) => pinnedIds.has(c.id));
+              const restRows = sortedConversations.filter((c) => !pinnedIds.has(c.id));
+              return (
+                <>
+                  <p className="ta-watchlist-section-title">Pinned</p>
+                  {pinnedRows.map(renderRow)}
+                  {restRows.length > 0 && <p className="ta-watchlist-section-title">All chats</p>}
+                  {restRows.map(renderRow)}
+                </>
+              );
+            })()}
           </div>
           <button type="button" className="ta-history-back" onClick={() => setShowHistory(false)}>
             Back to chat
@@ -1811,6 +2047,23 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         );
       })() : showPositions ? (
         <div className="ta-history">
+          <div className="ta-positions-page-head">
+            <span className="ta-positions-page-title">Positions</span>
+            <button
+              type="button"
+              className={`ta-positions-refresh-btn${refreshingPositions ? " ta-positions-refresh-btn--spinning" : ""}`}
+              onClick={handleRefreshPositions}
+              disabled={refreshingPositions}
+              title="Refresh"
+              aria-label="Refresh positions"
+            >
+              <svg className="ta-positions-refresh-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
           <div className="ta-positions-view-tabs">
             <button
               type="button"
@@ -1827,7 +2080,17 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               Closed
             </button>
           </div>
-          <div className="ta-history-list">
+          <div
+            className="ta-positions-pull-indicator"
+            style={{
+              height: refreshingPositions ? 40 : positionsPullY,
+              opacity: refreshingPositions ? 1 : Math.min(1, positionsPullY / POSITIONS_PULL_THRESHOLD),
+              transition: positionsPullY === 0 && !refreshingPositions ? "height 0.2s ease" : "none",
+            }}
+          >
+            <span className={`ta-positions-pull-spinner${refreshingPositions ? " ta-positions-pull-spinner--active" : ""}`} />
+          </div>
+          <div className="ta-history-list" ref={positionsListRef}>
             {positionsTab === "open" ? (
               <PositionsListCard
                 list={{
@@ -2000,7 +2263,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             </div>
           )}
 
-          <div className="ta-feed" ref={feedRef}>
+          <div className="ta-feed" ref={feedRef} onClick={() => { if (hubOpen) setHubOpen(false); }}>
             {messages.length === 0 && (
               <p className="ta-empty">
                 Try "buy $200 of BTC", "sell half my ETH", or "what do you think about SOL?" — everything here is simulated, no real money or exchange involved.
@@ -2387,6 +2650,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               value={draft}
               onChange={(e) => { setDraft(e.target.value); lastSendWasVoiceRef.current = false; }}
               onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+              onFocus={() => { if (hubOpen) setHubOpen(false); }}
               placeholder={listening ? "Listening…" : "Tell the agent what to do…"}
               disabled={sending || listening}
             />
@@ -2422,55 +2686,43 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         </>
       )}
 
-      {/* Mobile-only Hub bottom sheet (isMobile + hubOpen) — replaces the
-          four separate header icons with one "Hub" button; tapping it
-          slides this up instead. Backdrop tap or picking a card both
-          close it; picking a card also runs the real action, same
-          handlers the desktop row's icons already use. */}
+      {/* Mobile-only Hub row (isMobile + hubOpen) — appears inline in the
+          header instead of a bottom sheet now; each circular icon fades/
+          scales in with an increasing delay (ta-hub-row-item's own
+          --i-tied animation-delay) so they visibly land one after another
+          rather than all at once. Re-rendered fresh (conditional mount)
+          every time hubOpen flips true, so the entrance replays each
+          time the row opens. Tapping an icon runs the real action, same
+          handlers the desktop row's icons already use, and closes it. */}
       {isMobile && hubOpen && (
-        <>
-          <div className="ta-hub-backdrop" onClick={() => setHubOpen(false)} />
-          <div className="ta-hub-sheet">
-            <div className="ta-hub-handle" />
-            <span className="ta-hub-title">Quick Actions</span>
-            <div className="ta-hub-list">
-              {/* The one primary action (vs. the other four, which all open
-                  an existing view) — first in the list, with a tinted
-                  background instead of a chevron-less standalone shape. */}
-              <button type="button" className="ta-hub-list-row ta-hub-list-row--featured" onClick={() => { handleNewConversation(); setHubOpen(false); }}>
-                <span className="ta-hub-list-badge ta-hub-list-badge--blue">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                </span>
-                <span className="ta-hub-list-label">New Chat</span>
-                <span className="ta-hub-list-chevron">›</span>
-              </button>
-              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenHistory(); setHubOpen(false); }}>
-                <span className="ta-hub-list-badge ta-hub-list-badge--purple">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                </span>
-                <span className="ta-hub-list-label">History</span>
-                <span className="ta-hub-list-chevron">›</span>
-              </button>
-              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenWatches(); setHubOpen(false); }}>
-                <span className="ta-hub-list-badge ta-hub-list-badge--pink"><BellIcon size={16} /></span>
-                <span className="ta-hub-list-label">Watchlist</span>
-                <span className="ta-hub-list-chevron">›</span>
-              </button>
-              <button type="button" className="ta-hub-list-row" onClick={() => { handleOpenPositions(); setHubOpen(false); }}>
-                <span className="ta-hub-list-badge ta-hub-list-badge--green"><PositionsIcon size={16} /></span>
-                <span className="ta-hub-list-label">Positions</span>
-                <span className="ta-hub-list-chevron">›</span>
-              </button>
-              <button type="button" className="ta-hub-list-row" onClick={() => { onReportIssue?.(); setHubOpen(false); }}>
-                <span className="ta-hub-list-badge ta-hub-list-badge--amber">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                </span>
-                <span className="ta-hub-list-label">Report an Issue</span>
-                <span className="ta-hub-list-chevron">›</span>
-              </button>
-            </div>
-          </div>
-        </>
+        <div className="ta-hub-row">
+          <button type="button" className="ta-hub-row-item" style={{ "--i": 0 } as React.CSSProperties} onClick={() => { handleNewConversation(); setHubOpen(false); }}>
+            <span className="ta-hub-circle">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+            <span className="ta-hub-circle-label">New</span>
+          </button>
+          <button type="button" className="ta-hub-row-item" style={{ "--i": 1 } as React.CSSProperties} onClick={() => { handleOpenHistory(); setHubOpen(false); }}>
+            <span className="ta-hub-circle">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </span>
+            <span className="ta-hub-circle-label">History</span>
+          </button>
+          <button type="button" className="ta-hub-row-item" style={{ "--i": 2 } as React.CSSProperties} onClick={() => { handleOpenWatches(); setHubOpen(false); }}>
+            <span className="ta-hub-circle"><BellIcon size={20} /></span>
+            <span className="ta-hub-circle-label">Watch</span>
+          </button>
+          <button type="button" className="ta-hub-row-item" style={{ "--i": 3 } as React.CSSProperties} onClick={() => { handleOpenPositions(); setHubOpen(false); }}>
+            <span className="ta-hub-circle"><PositionsIcon size={20} /></span>
+            <span className="ta-hub-circle-label">Positions</span>
+          </button>
+          <button type="button" className="ta-hub-row-item" style={{ "--i": 4 } as React.CSSProperties} onClick={() => { onReportIssue?.(); setHubOpen(false); }}>
+            <span className="ta-hub-circle">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </span>
+            <span className="ta-hub-circle-label">Report</span>
+          </button>
+        </div>
       )}
     </div>
   );

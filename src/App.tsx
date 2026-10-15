@@ -1408,11 +1408,22 @@ function AppDashboard({
     const THRESHOLD = 50;
     let startX = 0,
       startY = 0;
+    // Any overlay with its own horizontal swipe gesture (currently just
+    // Agent Ready's .ta-panel — its history rows swipe left/right for
+    // delete/pin) needs to opt out of this one entirely, not just win on
+    // preventDefault — this is a SEPARATE document-level listener, so it
+    // fires and opens the main nav drawer regardless of what the touch
+    // target's own handlers already did with the same gesture. A touch
+    // starting anywhere inside such an overlay is ignored for its whole
+    // start-to-end sequence.
+    let ignoreThisGesture = false;
     const onTouchStart = (e: TouchEvent) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
+      ignoreThisGesture = !!(e.target as Element)?.closest?.(".ta-panel");
     };
     const onTouchEnd = (e: TouchEvent) => {
+      if (ignoreThisGesture) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = Math.abs(e.changedTouches[0].clientY - startY);
       if (dy > 80) return; // vertical scroll, ignore
@@ -1675,6 +1686,272 @@ function AppDashboard({
         </div>
       </div>
     </>
+  );
+
+  const mchBodyEl = (
+            <div className="mch-body">
+              {btcData && (() => {
+                const ticker = coinTickers.get(coin);
+                // The REAL buy-zone signal (same one the chart's own title
+                // row/paywall gate uses, via onZoneChange→chartZone) — not
+                // a separately invented metric, so this badge can't ever
+                // disagree with the rest of the app about bullish/bearish.
+                // null for non-paid users (onZoneChange already withholds
+                // it there) or before the chart's first zone calc lands.
+                const zoneLabel = chartZone && {
+                  "strong-buy": t("chart.strongBuy"),
+                  "buy": t("chart.buy"),
+                  "oversold": t("chart.oversold"),
+                  "overbought": t("chart.overbought"),
+                  "neutral": t("chart.neutralZone"),
+                  "sell": t("chart.sell"),
+                  "strong-sell": t("chart.strongSell"),
+                }[chartZone.signal];
+                const price = livePrice ?? btcData.price ?? null;
+                return (
+                  <div className="mch-mobile-summary">
+                    <div className="mch-mobile-top">
+                      <button
+                        type="button"
+                        className="mch-mobile-coin-btn"
+                        onClick={() => {
+                          if (coinBtnClickTimer.current) {
+                            clearTimeout(coinBtnClickTimer.current);
+                            coinBtnClickTimer.current = null;
+                            prevTickerPrice.current = livePrice;
+                            tickerOpenPrice.current = livePrice;
+                            tickerLastMilestone.current =
+                              livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
+                            setPriceTicker(true);
+                          } else {
+                            coinBtnClickTimer.current = setTimeout(() => {
+                              coinBtnClickTimer.current = null;
+                              openCoinPicker();
+                            }, 250);
+                          }
+                        }}
+                      >
+                        <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
+                        <span className="mch-mobile-coin-name">{COIN_FULL_NAME[coin] ?? coin}</span>
+                        <svg className="mch-mobile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                      {chartZone && zoneLabel && (
+                        <SignalIndicator signal={chartZone.signal} label={zoneLabel} />
+                      )}
+                      <div className="mch-mobile-top-right">
+                        {ticker?.quoteVolume != null && (
+                          <div className="mch-mobile-vol">
+                            <span className="mch-mobile-vol-avatar">{COIN_ICONS[coin] ?? coin[0]}</span>
+                            <span className="mch-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
+                            <span className="mch-mobile-vol-value">{fmtTableVolume(ticker.quoteVolume)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {ticker && Number.isFinite(ticker.high) && Number.isFinite(ticker.low) && (
+                      <div className="mch-mobile-hl">
+                        High <b>{formatLivePrice(ticker.high)}</b> &nbsp; Low <b>{formatLivePrice(ticker.low)}</b>
+                      </div>
+                    )}
+                    {price !== null && Number.isFinite(price) && (
+                      <div className="mch-mobile-price">{formatHeaderPriceMobile(price)}</div>
+                    )}
+                    {ticker?.change !== undefined && (
+                      <span className={`mch-mobile-chg${ticker.change >= 0 ? " mch-mobile-chg--up" : " mch-mobile-chg--down"}`}>
+                        {ticker.change >= 0 ? "↗" : "↘"} {Math.abs(ticker.change).toFixed(2)}% · 24H
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            <div className="mch-stats">
+              {btcData &&
+                (() => {
+                  // ?? only falls back on null/undefined — NaN slips through
+                  // and, unlike other falsy values, React renders a bare NaN
+                  // as the literal text "NaN" instead of just being falsy.
+                  const fr = Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0;
+                  const rsi = Number.isFinite(btcData.rsi) ? btcData.rsi! : 50;
+                  const macd = Number.isFinite(btcData.macd) ? btcData.macd! : 0;
+                  const ls = Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1;
+                  const frSignal =
+                    fr > 0.0005 ? "bear" : fr < -0.0001 ? "bull" : "neutral";
+                  const rsiSignal =
+                    rsi > 70
+                      ? "bear"
+                      : rsi < 30
+                        ? "bull"
+                        : rsi < 50
+                          ? "bear"
+                          : "bull";
+                  const macdSignal = macd > 0 ? "bull" : "bear";
+                  const lsSignal = ls >= 1 ? "bull" : "bear";
+                  return (
+                    <>
+                      <HoverTip className="mch-stat" text={t("stats.liqAboveDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.liqAbove")}
+                        </span>
+                        <span className="mch-stat-value negative">
+                          {btcData.liquidationAbove
+                            ? `$${btcData.liquidationAbove.toLocaleString()}`
+                            : "—"}
+                        </span>
+                        <span className="mch-stat-signal mch-stat-signal--bear">
+                          {t("stats.sigRisk")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.liqBelowDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.liqBelow")}
+                        </span>
+                        <span className="mch-stat-value positive">
+                          {btcData.liquidationBelow
+                            ? `$${btcData.liquidationBelow.toLocaleString()}`
+                            : "—"}
+                        </span>
+                        <span className="mch-stat-signal mch-stat-signal--bull">
+                          {t("stats.sigSupport")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.openInterestDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.openInterest")}
+                        </span>
+                        <span className="mch-stat-value">
+                          {btcData.openInterest
+                            ? `$${(btcData.openInterest / 1e9).toFixed(2)}B`
+                            : "—"}
+                        </span>
+                        <span className="mch-stat-signal mch-stat-signal--neutral">
+                          {t("stats.sigNeutral")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.fundingRateDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.fundingRate")}
+                        </span>
+                        <span
+                          className={`mch-stat-value${fr < 0 ? " negative" : ""}`}
+                        >
+                          {`${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%`}
+                        </span>
+                        <span
+                          className={`mch-stat-signal mch-stat-signal--${frSignal}`}
+                        >
+                          {frSignal === "bull"
+                            ? t("stats.sigBullish")
+                            : frSignal === "bear"
+                              ? t("stats.sigCrowded")
+                              : t("stats.sigNeutral")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.rsi14Desc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.rsi14")}
+                        </span>
+                        <span
+                          className={`mch-stat-value${rsi > 70 ? " negative" : rsi < 30 ? " positive" : ""}`}
+                        >
+                          {rsi.toFixed(1)}
+                        </span>
+                        <span
+                          className={`mch-stat-signal mch-stat-signal--${rsiSignal}`}
+                        >
+                          {rsi > 70
+                            ? t("stats.sigOverbought")
+                            : rsi < 30
+                              ? t("stats.sigOversold")
+                              : rsi < 50
+                                ? t("stats.sigWeak")
+                                : t("stats.sigNeutral")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.macdDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.macd")}
+                        </span>
+                        <span
+                          className={`mch-stat-value${macd < 0 ? " negative" : ""}`}
+                        >
+                          {macd.toFixed(2)}
+                        </span>
+                        <span
+                          className={`mch-stat-signal mch-stat-signal--${macdSignal}`}
+                        >
+                          {macd > 0
+                            ? t("stats.sigBullish")
+                            : t("stats.sigBearish")}
+                        </span>
+                      </HoverTip>
+                      <HoverTip className="mch-stat" text={t("stats.lsRatioDesc")}>
+                        <span className="mch-stat-label">
+                          {t("stats.lsRatio")}
+                        </span>
+                        <span
+                          className={`mch-stat-value${ls >= 1 ? " positive" : " negative"}`}
+                        >
+                          {ls.toFixed(2)}
+                        </span>
+                        <span
+                          className={`mch-stat-signal mch-stat-signal--${lsSignal}`}
+                        >
+                          {ls >= 1
+                            ? t("stats.sigLongsLead")
+                            : t("stats.sigShortsLead")}
+                        </span>
+                      </HoverTip>
+                      {(() => {
+                        const g = btcData.cmeGap;
+                        const fmt = (v: number) => `$${(v / 1000).toFixed(1)}K`;
+                        return (
+                          <>
+                            <HoverTip className="mch-stat" text={t("stats.cmeAboveDesc")}>
+                              <span className="mch-stat-label">
+                                {t("stats.cmeAbove")}
+                              </span>
+                              <span
+                                className="mch-stat-value"
+                                style={{ fontSize: "0.7rem" }}
+                              >
+                                {g?.above
+                                  ? `${fmt(g.above.low)}–${fmt(g.above.high)}`
+                                  : "—"}
+                              </span>
+                              <span className="mch-stat-signal mch-stat-signal--bull">
+                                {g?.above
+                                  ? t("stats.sigAbove")
+                                  : t("stats.sigNone")}
+                              </span>
+                            </HoverTip>
+                            <HoverTip className="mch-stat" text={t("stats.cmeBelowDesc")}>
+                              <span className="mch-stat-label">
+                                {t("stats.cmeBelow")}
+                              </span>
+                              <span
+                                className="mch-stat-value"
+                                style={{ fontSize: "0.7rem" }}
+                              >
+                                {g?.below
+                                  ? `${fmt(g.below.low)}–${fmt(g.below.high)}`
+                                  : "—"}
+                              </span>
+                              <span className="mch-stat-signal mch-stat-signal--bear">
+                                {g?.below
+                                  ? t("stats.sigBelow")
+                                  : t("stats.sigNone")}
+                              </span>
+                            </HoverTip>
+                          </>
+                        );
+                      })()}
+                    </>
+                  );
+                })()}
+            </div>
+            </div>
   );
 
   return (
@@ -2173,269 +2450,7 @@ function AppDashboard({
                 carries no background) so .mch-stats keeps rendering
                 exactly as it always has there — only mobile gets the
                 glassmorphism card treatment, applied to this wrapper. */}
-            <div className="mch-body">
-              {btcData && (() => {
-                const ticker = coinTickers.get(coin);
-                // The REAL buy-zone signal (same one the chart's own title
-                // row/paywall gate uses, via onZoneChange→chartZone) — not
-                // a separately invented metric, so this badge can't ever
-                // disagree with the rest of the app about bullish/bearish.
-                // null for non-paid users (onZoneChange already withholds
-                // it there) or before the chart's first zone calc lands.
-                const zoneLabel = chartZone && {
-                  "strong-buy": t("chart.strongBuy"),
-                  "buy": t("chart.buy"),
-                  "oversold": t("chart.oversold"),
-                  "overbought": t("chart.overbought"),
-                  "neutral": t("chart.neutralZone"),
-                  "sell": t("chart.sell"),
-                  "strong-sell": t("chart.strongSell"),
-                }[chartZone.signal];
-                const price = livePrice ?? btcData.price ?? null;
-                return (
-                  <div className="mch-mobile-summary">
-                    <div className="mch-mobile-top">
-                      <button
-                        type="button"
-                        className="mch-mobile-coin-btn"
-                        onClick={() => {
-                          if (coinBtnClickTimer.current) {
-                            clearTimeout(coinBtnClickTimer.current);
-                            coinBtnClickTimer.current = null;
-                            prevTickerPrice.current = livePrice;
-                            tickerOpenPrice.current = livePrice;
-                            tickerLastMilestone.current =
-                              livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
-                            setPriceTicker(true);
-                          } else {
-                            coinBtnClickTimer.current = setTimeout(() => {
-                              coinBtnClickTimer.current = null;
-                              openCoinPicker();
-                            }, 250);
-                          }
-                        }}
-                      >
-                        <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
-                        <span className="mch-mobile-coin-name">{COIN_FULL_NAME[coin] ?? coin}</span>
-                        <svg className="mch-mobile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-                      {chartZone && zoneLabel && (
-                        <SignalIndicator signal={chartZone.signal} label={zoneLabel} />
-                      )}
-                      <div className="mch-mobile-top-right">
-                        {ticker?.quoteVolume != null && (
-                          <div className="mch-mobile-vol">
-                            <span className="mch-mobile-vol-avatar">{COIN_ICONS[coin] ?? coin[0]}</span>
-                            <span className="mch-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
-                            <span className="mch-mobile-vol-value">{fmtTableVolume(ticker.quoteVolume)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {ticker && Number.isFinite(ticker.high) && Number.isFinite(ticker.low) && (
-                      <div className="mch-mobile-hl">
-                        High <b>{formatLivePrice(ticker.high)}</b> &nbsp; Low <b>{formatLivePrice(ticker.low)}</b>
-                      </div>
-                    )}
-                    {price !== null && Number.isFinite(price) && (
-                      <div className="mch-mobile-price">{formatHeaderPriceMobile(price)}</div>
-                    )}
-                    {ticker?.change !== undefined && (
-                      <span className={`mch-mobile-chg${ticker.change >= 0 ? " mch-mobile-chg--up" : " mch-mobile-chg--down"}`}>
-                        {ticker.change >= 0 ? "↗" : "↘"} {Math.abs(ticker.change).toFixed(2)}% · 24H
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-            <div className="mch-stats">
-              {btcData &&
-                (() => {
-                  // ?? only falls back on null/undefined — NaN slips through
-                  // and, unlike other falsy values, React renders a bare NaN
-                  // as the literal text "NaN" instead of just being falsy.
-                  const fr = Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0;
-                  const rsi = Number.isFinite(btcData.rsi) ? btcData.rsi! : 50;
-                  const macd = Number.isFinite(btcData.macd) ? btcData.macd! : 0;
-                  const ls = Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1;
-                  const frSignal =
-                    fr > 0.0005 ? "bear" : fr < -0.0001 ? "bull" : "neutral";
-                  const rsiSignal =
-                    rsi > 70
-                      ? "bear"
-                      : rsi < 30
-                        ? "bull"
-                        : rsi < 50
-                          ? "bear"
-                          : "bull";
-                  const macdSignal = macd > 0 ? "bull" : "bear";
-                  const lsSignal = ls >= 1 ? "bull" : "bear";
-                  return (
-                    <>
-                      <HoverTip className="mch-stat" text={t("stats.liqAboveDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.liqAbove")}
-                        </span>
-                        <span className="mch-stat-value negative">
-                          {btcData.liquidationAbove
-                            ? `$${btcData.liquidationAbove.toLocaleString()}`
-                            : "—"}
-                        </span>
-                        <span className="mch-stat-signal mch-stat-signal--bear">
-                          {t("stats.sigRisk")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.liqBelowDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.liqBelow")}
-                        </span>
-                        <span className="mch-stat-value positive">
-                          {btcData.liquidationBelow
-                            ? `$${btcData.liquidationBelow.toLocaleString()}`
-                            : "—"}
-                        </span>
-                        <span className="mch-stat-signal mch-stat-signal--bull">
-                          {t("stats.sigSupport")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.openInterestDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.openInterest")}
-                        </span>
-                        <span className="mch-stat-value">
-                          {btcData.openInterest
-                            ? `$${(btcData.openInterest / 1e9).toFixed(2)}B`
-                            : "—"}
-                        </span>
-                        <span className="mch-stat-signal mch-stat-signal--neutral">
-                          {t("stats.sigNeutral")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.fundingRateDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.fundingRate")}
-                        </span>
-                        <span
-                          className={`mch-stat-value${fr < 0 ? " negative" : ""}`}
-                        >
-                          {`${fr >= 0 ? "+" : ""}${(fr * 100).toFixed(4)}%`}
-                        </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${frSignal}`}
-                        >
-                          {frSignal === "bull"
-                            ? t("stats.sigBullish")
-                            : frSignal === "bear"
-                              ? t("stats.sigCrowded")
-                              : t("stats.sigNeutral")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.rsi14Desc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.rsi14")}
-                        </span>
-                        <span
-                          className={`mch-stat-value${rsi > 70 ? " negative" : rsi < 30 ? " positive" : ""}`}
-                        >
-                          {rsi.toFixed(1)}
-                        </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${rsiSignal}`}
-                        >
-                          {rsi > 70
-                            ? t("stats.sigOverbought")
-                            : rsi < 30
-                              ? t("stats.sigOversold")
-                              : rsi < 50
-                                ? t("stats.sigWeak")
-                                : t("stats.sigNeutral")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.macdDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.macd")}
-                        </span>
-                        <span
-                          className={`mch-stat-value${macd < 0 ? " negative" : ""}`}
-                        >
-                          {macd.toFixed(2)}
-                        </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${macdSignal}`}
-                        >
-                          {macd > 0
-                            ? t("stats.sigBullish")
-                            : t("stats.sigBearish")}
-                        </span>
-                      </HoverTip>
-                      <HoverTip className="mch-stat" text={t("stats.lsRatioDesc")}>
-                        <span className="mch-stat-label">
-                          {t("stats.lsRatio")}
-                        </span>
-                        <span
-                          className={`mch-stat-value${ls >= 1 ? " positive" : " negative"}`}
-                        >
-                          {ls.toFixed(2)}
-                        </span>
-                        <span
-                          className={`mch-stat-signal mch-stat-signal--${lsSignal}`}
-                        >
-                          {ls >= 1
-                            ? t("stats.sigLongsLead")
-                            : t("stats.sigShortsLead")}
-                        </span>
-                      </HoverTip>
-                      {(() => {
-                        const g = btcData.cmeGap;
-                        const fmt = (v: number) => `$${(v / 1000).toFixed(1)}K`;
-                        return (
-                          <>
-                            <HoverTip className="mch-stat" text={t("stats.cmeAboveDesc")}>
-                              <span className="mch-stat-label">
-                                {t("stats.cmeAbove")}
-                              </span>
-                              <span
-                                className="mch-stat-value"
-                                style={{ fontSize: "0.7rem" }}
-                              >
-                                {g?.above
-                                  ? `${fmt(g.above.low)}–${fmt(g.above.high)}`
-                                  : "—"}
-                              </span>
-                              <span className="mch-stat-signal mch-stat-signal--bull">
-                                {g?.above
-                                  ? t("stats.sigAbove")
-                                  : t("stats.sigNone")}
-                              </span>
-                            </HoverTip>
-                            <HoverTip className="mch-stat" text={t("stats.cmeBelowDesc")}>
-                              <span className="mch-stat-label">
-                                {t("stats.cmeBelow")}
-                              </span>
-                              <span
-                                className="mch-stat-value"
-                                style={{ fontSize: "0.7rem" }}
-                              >
-                                {g?.below
-                                  ? `${fmt(g.below.low)}–${fmt(g.below.high)}`
-                                  : "—"}
-                              </span>
-                              <span className="mch-stat-signal mch-stat-signal--bear">
-                                {g?.below
-                                  ? t("stats.sigBelow")
-                                  : t("stats.sigNone")}
-                              </span>
-                            </HoverTip>
-                          </>
-                        );
-                      })()}
-                    </>
-                  );
-                })()}
-            </div>
-            </div>
+            {isDesktopWidth && mchBodyEl}
 
             <div className="mch-right">
               {/* Search, notifications, and the portfolio ($) button are
@@ -2522,6 +2537,7 @@ function AppDashboard({
                 </span>
               )}
             </div>
+            {!isDesktopWidth && mchBodyEl}
             {profile?.subscription_status === "past_due" && (
               <div className="pastdue-banner">
                 <span>⚠️ {t("billing.pastDue.message")}</span>
