@@ -378,6 +378,12 @@ interface Props {
   // the Hub bottom sheet's "Report an Issue" card, mobile only, reuses it
   // rather than building a second feedback mechanism.
   onReportIssue?: () => void;
+  // One-time flashy "try Agent Ready" showcase (App.tsx owns the
+  // localStorage flag + timing — this just plays it, anchored to the
+  // trigger below, when true). No-ops entirely when hideTrigger is set
+  // (mobile), since there's no .ta-trigger here to anchor it to there —
+  // FloatingNavBar's own .fnb-agent-item plays the mobile equivalent.
+  showIntroShowcase?: boolean;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -675,7 +681,7 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue, showIntroShowcase }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
@@ -700,6 +706,21 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // untouched, so the panel is still open if it was open right before
   // minimizing; a true close+reopen is a new process that starts closed.
   const [open, setOpen] = useState(false);
+
+  // One-time flashy showcase (App.tsx owns the localStorage flag/timing,
+  // this just plays the animation for ~5s once it flips true and stops
+  // early if the user taps the trigger — see the button's onClick below).
+  const [showcasePlaying, setShowcasePlaying] = useState(false);
+  useEffect(() => {
+    // hideTrigger (mobile) means this component never renders .ta-trigger
+    // at all — without this check the callout below would still render,
+    // floating with nothing to point at (FloatingNavBar's own
+    // .fnb-agent-item is what plays this on mobile instead).
+    if (!showIntroShowcase || hideTrigger) return;
+    setShowcasePlaying(true);
+    const id = window.setTimeout(() => setShowcasePlaying(false), 5200);
+    return () => window.clearTimeout(id);
+  }, [showIntroShowcase, hideTrigger]);
 
   // Tapping a watch-triggered/position-closed push notification (web or
   // native — see webPush.ts/pushNotifications.ts's "agent_watch"/
@@ -2732,13 +2753,24 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       {phase !== "hidden" && !hideTrigger && (
         <button
           type="button"
-          className={`ta-trigger${open ? " ta-trigger--open" : ""}${phase === "pop" ? " ta-trigger--collapsed" : ""}`}
+          className={`ta-trigger${open ? " ta-trigger--open" : ""}${phase === "pop" ? " ta-trigger--collapsed" : ""}${showcasePlaying ? " ta-trigger--showcase" : ""}`}
           onClick={() => {
             if (!canUseAgent) { onAgentLocked?.(); return; }
+            setShowcasePlaying(false);
             setOpen((v) => !v);
           }}
         >
-          <span className={`ta-trigger-orb${phase === "pop" ? " ta-trigger-orb--pop" : ""}`} />
+          {showcasePlaying && (
+            <>
+              <span className="ta-trigger-ring ta-trigger-ring--1" aria-hidden="true" />
+              <span className="ta-trigger-ring ta-trigger-ring--2" aria-hidden="true" />
+              <span className="ta-trigger-ring ta-trigger-ring--3" aria-hidden="true" />
+              <span className="ta-trigger-sparkle ta-trigger-sparkle--1" aria-hidden="true" />
+              <span className="ta-trigger-sparkle ta-trigger-sparkle--2" aria-hidden="true" />
+              <span className="ta-trigger-sparkle ta-trigger-sparkle--3" aria-hidden="true" />
+            </>
+          )}
+          <span className={`ta-trigger-orb${phase === "pop" ? " ta-trigger-orb--pop" : ""}${showcasePlaying ? " ta-trigger-orb--showcase" : ""}`} />
           {unread && !open && <span className="ta-trigger-dot" />}
           {!open && phase !== "pop" && (
             <span className="ta-trigger-label">
@@ -2747,6 +2779,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             </span>
           )}
         </button>
+      )}
+      {showcasePlaying && !open && (
+        <div className="ta-trigger-callout" role="status">
+          <span className="ta-trigger-callout-sparkle" aria-hidden="true">✨</span>
+          Meet Agent Ready — your AI trading copilot
+        </div>
       )}
       {open && isDesktop && createPortal(<div className="ta-backdrop" onClick={() => setOpen(false)} />, document.body)}
       {open && (isDesktop ? panel : createPortal(panel, document.body))}

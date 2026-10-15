@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "../styles/FloatingNavBar.css";
 
 interface Props {
@@ -36,6 +36,11 @@ interface Props {
   // open — not a panel of its own, so it needs its own computed flag
   // rather than mirroring a single piece of open/closed state.
   homeActive: boolean;
+  // One-time flashy "try Agent Ready" showcase (App.tsx owns the
+  // localStorage flag + timing, shared with TradingAgent.tsx's own
+  // desktop .ta-trigger version of this) — anchored to .fnb-agent-item
+  // below, the mobile equivalent entry point.
+  showAgentShowcase?: boolean;
 }
 
 // Built from basic shape primitives (circle/rect/line) only, deliberately
@@ -112,8 +117,17 @@ function useItems({
 export function FloatingNavBar({
   signalsOpen, onSearch, searchOpen,
   profileOpen, agentUnread, onOpenDailyBrief, dailyBriefOpen,
-  agentLocked, onAgentLocked, onGoHome, homeActive,
+  agentLocked, onAgentLocked, onGoHome, homeActive, showAgentShowcase,
 }: Props) {
+  // Same ~5s one-shot as TradingAgent.tsx's own showcasePlaying — stops
+  // early on tap too (see the Agent button's onClick below).
+  const [showcasePlaying, setShowcasePlaying] = useState(false);
+  useEffect(() => {
+    if (!showAgentShowcase) return;
+    setShowcasePlaying(true);
+    const id = window.setTimeout(() => setShowcasePlaying(false), 5200);
+    return () => window.clearTimeout(id);
+  }, [showAgentShowcase]);
   const items = useItems({ signalsOpen, onSearch, searchOpen, onGoHome, homeActive, onOpenDailyBrief, dailyBriefOpen });
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
@@ -207,19 +221,33 @@ export function FloatingNavBar({
       {leftItems.map(renderItem)}
       <button
         type="button"
-        className="fnb-item fnb-agent-item"
+        className={`fnb-item fnb-agent-item${showcasePlaying ? " fnb-agent-item--showcase" : ""}`}
         onClick={() => {
           if (agentLocked) { onAgentLocked(); return; }
+          setShowcasePlaying(false);
           window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
         }}
         aria-label="Trading Agent"
       >
         <span className="fnb-item-icon-wrap">
-          <span className="ta-trigger-orb fnb-agent-orb-inline" />
+          {showcasePlaying && (
+            <>
+              <span className="fnb-agent-ring fnb-agent-ring--1" aria-hidden="true" />
+              <span className="fnb-agent-ring fnb-agent-ring--2" aria-hidden="true" />
+              <span className="fnb-agent-ring fnb-agent-ring--3" aria-hidden="true" />
+            </>
+          )}
+          <span className={`ta-trigger-orb fnb-agent-orb-inline${showcasePlaying ? " fnb-agent-orb-inline--showcase" : ""}`} />
           {agentUnread && <span className="fnb-agent-dot" />}
         </span>
       </button>
       {rightItems.map(renderItem)}
+      {showcasePlaying && (
+        <div className="fnb-agent-callout" role="status">
+          <span className="fnb-agent-callout-sparkle" aria-hidden="true">✨</span>
+          Meet Agent Ready — your AI trading copilot
+        </div>
+      )}
     </nav>
   );
 }

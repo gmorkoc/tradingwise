@@ -1,0 +1,280 @@
+/* One-time full-screen "Agent Ready" reveal — AgentIntroShowcase.tsx.
+   Fixed dark/light-independent look on purpose: a brief dramatic
+   takeover moment reads fine regardless of the app's own theme, same as
+   a splash screen would. Deliberately loud/energetic (full-screen,
+   opaque, rotating light beams, a shockwave ring, oversized orb+burst,
+   punch-in title) — this is meant to be unmissable, not a subtle corner
+   hint. */
+.ais-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 950000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: ais-overlay-fade 3800ms ease both;
+}
+.ais-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(90, 150, 255, 0.5) 0%, rgba(40, 60, 140, 0.25) 42%, transparent 70%),
+    linear-gradient(165deg, #0b0f22 0%, #060812 55%, #030409 100%);
+  cursor: pointer;
+}
+@keyframes ais-overlay-fade {
+  0% { opacity: 0; }
+  6%, 78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Oversized rotating "energy field" of light beams behind everything —
+   sized well past the viewport (200vmax) so the rotation never reveals a
+   corner, however wide/tall the screen is. */
+.ais-beams {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200vmax;
+  height: 200vmax;
+  margin: -100vmax 0 0 -100vmax;
+  background: conic-gradient(
+    from 0deg,
+    rgba(120, 170, 255, 0.22) 0deg,
+    transparent 18deg,
+    transparent 40deg,
+    rgba(150, 110, 255, 0.22) 58deg,
+    transparent 76deg,
+    transparent 100deg,
+    rgba(110, 190, 255, 0.22) 118deg,
+    transparent 136deg,
+    transparent 160deg,
+    rgba(150, 110, 255, 0.22) 178deg,
+    transparent 196deg,
+    transparent 220deg,
+    rgba(120, 170, 255, 0.22) 238deg,
+    transparent 256deg,
+    transparent 280deg,
+    rgba(110, 190, 255, 0.22) 298deg,
+    transparent 316deg,
+    transparent 340deg,
+    rgba(120, 170, 255, 0.22) 360deg
+  );
+  mix-blend-mode: screen;
+  animation: ais-beams-spin 7s linear infinite, ais-beams-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ais-beams-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes ais-beams-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+.ais-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(225, 240, 255, 0.98) 0%,
+    rgba(150, 195, 255, 0.6) 32%,
+    rgba(130, 180, 255, 0) 65%
+  );
+  mix-blend-mode: screen;
+  animation: ais-flash-pop 850ms ease-out both;
+  pointer-events: none;
+}
+@keyframes ais-flash-pop {
+  0%   { opacity: 0; transform: scale(0.2); }
+  25%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+/* One big ring blasting out from the orb almost to the edges of the
+   screen — the "boom" beat, separate from the smaller orbiting rings. */
+.ais-shockwave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140px;
+  height: 140px;
+  margin: -70px 0 0 -70px;
+  border-radius: 50%;
+  border: 3px solid rgba(190, 220, 255, 0.9);
+  animation: ais-shockwave-burst 1.1s cubic-bezier(0.1, 0.6, 0.2, 1) 120ms both;
+  pointer-events: none;
+}
+@keyframes ais-shockwave-burst {
+  0%   { transform: scale(0.3); opacity: 1; border-width: 5px; }
+  70%  { opacity: 0.4; }
+  100% { transform: scale(9); opacity: 0; border-width: 1px; }
+}
+
+.ais-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 26px;
+  padding: 0 24px;
+  pointer-events: none;
+  animation: ais-content-in 800ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+}
+@keyframes ais-content-in {
+  0%   { opacity: 0; transform: scale(0.35) translateY(30px); }
+  50%  { opacity: 1; }
+  70%  { transform: scale(1.08) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ais-orb-wrap {
+  position: relative;
+  width: 168px;
+  height: 168px;
+}
+
+.ais-orb {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #05070f;
+  box-shadow:
+    0 0 60px 16px rgba(130, 180, 255, 0.7),
+    0 0 140px 46px rgba(90, 150, 255, 0.45);
+  overflow: hidden;
+  animation: ais-orb-glow 1s ease-in-out infinite, ais-orb-scale 1s ease-in-out infinite;
+}
+.ais-orb::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(210, 235, 255, 0.98),
+    rgba(100, 160, 255, 0.55) 42%,
+    rgba(10, 14, 28, 0) 70%
+  );
+  animation: ais-orb-rotate 3.2s linear infinite;
+}
+@keyframes ais-orb-glow {
+  0%, 100% {
+    box-shadow: 0 0 60px 16px rgba(130, 180, 255, 0.7), 0 0 140px 46px rgba(90, 150, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 90px 26px rgba(185, 220, 255, 0.95), 0 0 190px 64px rgba(130, 185, 255, 0.65);
+  }
+}
+@keyframes ais-orb-scale {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+@keyframes ais-orb-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.ais-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 168px;
+  height: 168px;
+  margin: -84px 0 0 -84px;
+  border-radius: 50%;
+  border: 2px solid rgba(150, 195, 255, 0.85);
+  animation: ais-ring-burst 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+.ais-ring--2 { animation-delay: 0.35s; }
+.ais-ring--3 { animation-delay: 0.7s; }
+.ais-ring--4 { animation-delay: 1.05s; }
+@keyframes ais-ring-burst {
+  0%   { transform: scale(0.5); opacity: 0.95; }
+  70%  { opacity: 0.15; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+.ais-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: #e4f1ff;
+  box-shadow: 0 0 12px 4px rgba(195, 222, 255, 0.95);
+  opacity: 0;
+  animation: ais-sparkle-burst 2s ease-out infinite;
+}
+/* 12 directions around the orb, 30° apart, radius ~150px. */
+.ais-sparkle--1  { --dx: 150px;   --dy: 0px;     animation-delay: 0s; }
+.ais-sparkle--2  { --dx: 130px;   --dy: -75px;   animation-delay: 0.1s; }
+.ais-sparkle--3  { --dx: 75px;    --dy: -130px;  animation-delay: 0.2s; }
+.ais-sparkle--4  { --dx: 0px;     --dy: -150px;  animation-delay: 0.3s; }
+.ais-sparkle--5  { --dx: -75px;   --dy: -130px;  animation-delay: 0.4s; }
+.ais-sparkle--6  { --dx: -130px;  --dy: -75px;   animation-delay: 0.5s; }
+.ais-sparkle--7  { --dx: -150px;  --dy: 0px;     animation-delay: 0.6s; }
+.ais-sparkle--8  { --dx: -130px;  --dy: 75px;    animation-delay: 0.7s; }
+.ais-sparkle--9  { --dx: -75px;   --dy: 130px;   animation-delay: 0.8s; }
+.ais-sparkle--10 { --dx: 0px;     --dy: 150px;   animation-delay: 0.9s; }
+.ais-sparkle--11 { --dx: 75px;    --dy: 130px;   animation-delay: 1s; }
+.ais-sparkle--12 { --dx: 130px;   --dy: 75px;    animation-delay: 1.1s; }
+@keyframes ais-sparkle-burst {
+  0%   { transform: translate(0, 0) scale(0.3); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
+}
+
+.ais-title {
+  font-size: clamp(2.1rem, 8vw, 3.4rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-align: center;
+  background: linear-gradient(100deg, #eaf4ff 0%, #9cc5ff 25%, #eaf4ff 50%, #9cc5ff 75%, #eaf4ff 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(130, 180, 255, 0.6));
+  animation: ais-shimmer 2.2s linear infinite, ais-title-punch 700ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both;
+}
+@keyframes ais-shimmer {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -220% 0; }
+}
+@keyframes ais-title-punch {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.ais-subtitle {
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  font-weight: 700;
+  color: rgba(235, 242, 255, 0.85);
+  text-align: center;
+  animation: ais-subtitle-in 600ms ease 500ms both;
+}
+@keyframes ais-subtitle-in {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ais-overlay,
+  .ais-beams,
+  .ais-flash,
+  .ais-shockwave,
+  .ais-content,
+  .ais-orb,
+  .ais-orb::before,
+  .ais-ring,
+  .ais-sparkle,
+  .ais-title,
+  .ais-subtitle {
+    animation: none;
+  }
+}

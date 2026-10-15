@@ -40,6 +40,7 @@ import { TutorialPage } from "./components/TutorialPage";
 import { OrderBook } from "./components/OrderBook";
 import { CoinChat } from "./components/CoinChat";
 import { TradingAgent } from "./components/TradingAgent";
+import { AgentIntroShowcase } from "./components/AgentIntroShowcase";
 import { Avatar } from "./components/Avatar";
 import { Watchlist } from "./components/Watchlist";
 import { TopMoversCarousel } from "./components/TopMoversCarousel";
@@ -986,6 +987,32 @@ function AppDashboard({
   }, [profile]);
 
   const [assetPanelOpen, setAssetPanelOpen] = useState(false);
+  // One-time flashy "try Agent Ready" showcase, anchored to whichever
+  // trigger is actually on screen (TradingAgent's own .ta-trigger on wide
+  // desktop, FloatingNavBar's .fnb-agent-item on mobile) — both receive
+  // this prop and no-op if their own trigger isn't rendered. Marked seen
+  // here (the single owner of the flag) the moment it's scheduled, not on
+  // dismissal, so it can never re-fire from an interrupted animation.
+  const [showAgentShowcase, setShowAgentShowcase] = useState(false);
+  useEffect(() => {
+    if (activeSection !== "chart") return;
+    if (localStorage.getItem("agentReadyShowcaseSeen")) return;
+    // No ref-based "already scheduled" guard — StrictMode's dev-only
+    // double-invoke (effect → cleanup → effect again) was setting a ref
+    // true on the first pass, which persisted through the synthetic
+    // cleanup (which cancelled that pass's timer) and then blocked the
+    // second pass from ever scheduling a replacement, so the timer never
+    // actually survived to fire. A plain per-invocation `cancelled` flag
+    // lets each pass clean up after only itself; the final (real) pass's
+    // timer is the one left standing.
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      localStorage.setItem("agentReadyShowcaseSeen", "true");
+      setShowAgentShowcase(true);
+    }, 1800);
+    return () => { cancelled = true; window.clearTimeout(id); };
+  }, [activeSection]);
   // Daily Brief's mobile floating-nav slot (replacing Calculator there,
   // which moved into the mobile side menu instead) — icon-triggered full
   // screen, same mutual-exclusion treatment as the other floating panels
@@ -3104,7 +3131,9 @@ function AppDashboard({
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
         onAgentLocked={() => setShowEliteUpsell(true)}
         onReportIssue={() => setContactOpen(true)}
+        showIntroShowcase={showAgentShowcase}
       />
+      {showAgentShowcase && <AgentIntroShowcase />}
       <NotificationsCenter
         open={notificationsCenterOpen}
         onClose={() => setNotificationsCenterOpen(false)}
@@ -3158,6 +3187,7 @@ function AppDashboard({
             setActiveSection("chart");
           }}
           homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
+          showAgentShowcase={showAgentShowcase}
         />
       )}
       {/* Agent Ready is elite-only (see hasAccess(tier, "elite") above) —
