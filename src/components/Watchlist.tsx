@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Keyboard } from "@capacitor/keyboard";
@@ -7,7 +8,7 @@ import {
   useSensor, useSensors, type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext, arrayMove, horizontalListSortingStrategy,
+  SortableContext, arrayMove, verticalListSortingStrategy,
   sortableKeyboardCoordinates, useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -22,7 +23,7 @@ const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
 const CHARTABLE_SYMBOLS = new Set<string>(COINS.map(c => c.symbol));
 
 /* ── Sparkline ──────────────────────────────────────────────────────────── */
-// Exported — TopMoversCarousel's own mobile list view reuses this exact
+// Exported — TopMoversCarousel's own list view reuses this exact
 // implementation instead of a second copy.
 export function Sparkline({ prices, positive, width, height, className }: {
   prices: number[]; positive: boolean; width?: number; height?: number; className?: string;
@@ -55,8 +56,11 @@ function fmtPrice(p: number): string {
   return p.toFixed(6);
 }
 
-/* ── Chip ───────────────────────────────────────────────────────────────── */
-interface ChipProps {
+/* ── Row ────────────────────────────────────────────────────────────────── */
+// Its own component (not inlined in the .map() below) because useSortable
+// is a hook — needs a real component to call it from, same reason the old
+// desktop chip strip had its own WatchlistChip.
+interface RowProps {
   id: string;
   meta?: CatalogEntry;
   entry?: PriceEntry;
@@ -65,20 +69,20 @@ interface ChipProps {
   onImgError: (symbol: string) => void;
   onRemove: (id: string) => void;
   onSelect?: (symbol: string) => void;
-  dragTitle: string;
+  chartable: boolean;
+  manageMode: boolean;
   removeTitle: string;
-  chartTitle: string;
+  dragTitle: string;
 }
 
-function WatchlistChip({
+function WatchlistRow({
   id, meta, entry, spark, imgError, onImgError, onRemove, onSelect,
-  dragTitle, removeTitle, chartTitle,
-}: ChipProps) {
+  chartable, manageMode, removeTitle, dragTitle,
+}: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const symbol = (meta?.symbol ?? "").toUpperCase();
   const pct = entry?.pct ?? 0;
   const up = pct >= 0;
-  const chartable = onSelect && CHARTABLE_SYMBOLS.has(symbol);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -86,51 +90,74 @@ function WatchlistChip({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const chipContent = (
-    <>
-      <div className="wl-chip-icon">
-        {!imgError ? (
-          <img
-            className="wl-coin-img"
-            src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
-            alt={symbol}
-            loading="lazy"
-            onError={() => onImgError(symbol)}
-          />
-        ) : (
-          <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
-        )}
-      </div>
-
-      <div className="wl-chip-text">
-        <span className="wl-chip-sym">{symbol}</span>
-        <div className="wl-chip-row">
-          <span className="wl-chip-price">{entry ? `$${fmtPrice(entry.price)}` : "—"}</span>
-          {entry && (
-            <span className={`wl-chip-pct${up ? " up" : " down"}`}>
-              {up ? "+" : ""}{pct.toFixed(2)}%
-            </span>
-          )}
-        </div>
-      </div>
-
-      {spark.length > 1 && <Sparkline prices={spark} positive={up} />}
-    </>
-  );
-
   return (
-    <div ref={setNodeRef} style={style} className="wl-chip">
-      <button className="wl-chip-handle" title={dragTitle} {...attributes} {...listeners}>⋮⋮</button>
-
-      {chartable ? (
-        <button className="wl-chip-main" onClick={() => onSelect!(symbol)} title={chartTitle}>
-          {chipContent}
+    <div ref={setNodeRef} style={style} className="wl-list-row">
+      {/* Desktop (>=641px): .wl-list-row-main is display:contents, so
+          these children lay out as direct items of .wl-list-row's own
+          grid columns (name/price/sparkline/%). Mobile: .wl-list-row-main
+          is a real flex row instead (see Watchlist.css's own @media
+          split) — same markup, same original mobile look either way,
+          .wl-list-figures just un-wraps on desktop to let price/% sit in
+          their own separate grid columns there. */}
+      <button
+        type="button"
+        className="wl-list-row-main"
+        onClick={() => chartable && onSelect!(symbol)}
+        disabled={!chartable}
+      >
+        <span className="wl-list-identity">
+          <span className="wl-list-icon">
+            {!imgError ? (
+              <img
+                className="wl-coin-img"
+                src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
+                alt={symbol}
+                loading="lazy"
+                onError={() => onImgError(symbol)}
+              />
+            ) : (
+              <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
+            )}
+          </span>
+          <span className="wl-list-names">
+            <span className="wl-list-name">{meta?.name ?? symbol}</span>
+            <span className="wl-list-sym">{symbol}</span>
+          </span>
+        </span>
+        <span className="wl-list-col-price">{entry ? `$${fmtPrice(entry.price)}` : "—"}</span>
+        {spark.length > 1 ? (
+          <Sparkline prices={spark} positive={up} width={64} height={28} className="wl-list-spark" />
+        ) : (
+          <span className="wl-list-spark" />
+        )}
+        <span className={`wl-list-col-pct${entry ? (up ? " up" : " down") : ""}`}>
+          {entry && `${up ? "↗" : "↘"} ${Math.abs(pct).toFixed(2)}%`}
+        </span>
+      </button>
+      {/* Desktop-only (star/handle both display:none on mobile) —
+          decorative star for now (no separate "favorite" concept yet
+          beyond being in the watchlist at all), real drag-to-reorder
+          handle via dnd-kit. */}
+      <span className="wl-list-star" aria-hidden="true">★</span>
+      <button
+        type="button"
+        className="wl-list-handle"
+        title={dragTitle}
+        {...attributes}
+        {...listeners}
+      >
+        ⋮⋮
+      </button>
+      {manageMode && (
+        <button
+          type="button"
+          className="wl-list-remove"
+          onClick={() => onRemove(id)}
+          aria-label={removeTitle}
+        >
+          ×
         </button>
-      ) : (
-        <div className="wl-chip-main wl-chip-main--static">{chipContent}</div>
       )}
-
-      <button className="wl-chip-remove" onClick={() => onRemove(id)} title={removeTitle}>×</button>
     </div>
   );
 }
@@ -140,11 +167,15 @@ interface WatchlistProps {
   onSelectCoin?: (symbol: string) => void;
 }
 
+// Same vertical icon/name/sparkline/price/% row list on every width now —
+// used to be a separate horizontal chip-strip on desktop, dropped in favor
+// of reusing this one everywhere (desktop was asked to just match what
+// mobile already does here instead of keeping its own separate layout).
 export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const { t } = useTranslation();
-  // Matches Watchlist.css's own mobile breakpoint — the full "+ Add to
-  // Watchlist" label is too wide there and crowds out the coin chips, so a
-  // shorter "+ Add" is used instead to leave more room for the content.
+  // Still matters for the search/manage dropdown below (full-screen sheet
+  // vs a small floating popover) even though the row list itself no
+  // longer branches on this.
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 640px)").matches);
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 640px)");
@@ -164,11 +195,22 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
   const [search,     setSearch]     = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [imgErrors,  setImgErrors]  = useState<Set<string>>(new Set());
-  // Mobile-only list view's "Manage" toggle — reveals a remove (×) per
-  // row, same removeCoin the desktop chip strip's own × already uses.
+  // "Manage" toggle — reveals a remove (×) per row plus the "Add More +"
+  // button that opens the search/manage dropdown below.
   const [manageMode, setManageMode] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // The search/manage dropdown portals to document.body + position:fixed
+  // on anything wider than the mobile breakpoint (small floating popover
+  // there vs a full-screen sheet on real mobile) — same approach
+  // AccountMenu.css/.tsx already uses for its own dropdown, so it can't be
+  // clipped or lose a z-index fight against other in-page content.
+  // addBtnRef/dropPos anchor the portaled panel under the real trigger
+  // button; dropdownRef lets the outside-click handler below still
+  // recognize clicks inside it even though it's no longer a DOM
+  // descendant of searchRef once portaled.
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     localStorage.setItem("watchlistCoins_v1", JSON.stringify(watchedIds));
@@ -217,7 +259,8 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
   useEffect(() => {
     if (!searchOpen) return;
     const handle = (e: MouseEvent) => {
-      if (!searchRef.current?.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (!searchRef.current?.contains(t) && !dropdownRef.current?.contains(t)) {
         setSearchOpen(false);
         setSearch("");
       }
@@ -269,23 +312,80 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
     });
   };
 
+  // Computes where the portaled dropdown lands (see searchDropdown below)
+  // from the real button's position — irrelevant on real mobile widths,
+  // where the full-screen sheet CSS ignores dropPos entirely, so this is
+  // always safe to call regardless of width.
+  const openManage = () => {
+    if (!searchOpen && addBtnRef.current) {
+      const r = addBtnRef.current.getBoundingClientRect();
+      const DROPDOWN_W = 300;
+      const DROPDOWN_H = 420;
+      let left = r.right - DROPDOWN_W;
+      let top = r.bottom + 6;
+      if (left < 8) left = 8;
+      if (top + DROPDOWN_H > window.innerHeight - 8) {
+        top = Math.max(8, window.innerHeight - DROPDOWN_H - 8);
+      }
+      setDropPos({ top, left });
+    }
+    setSearchOpen(v => !v);
+  };
+
   const filteredCatalog = CATALOG.filter(c =>
     !watchedIds.includes(c.id) &&
     (c.name.toLowerCase().includes(search.toLowerCase()) ||
      c.symbol.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const scrollBy = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 240, behavior: "smooth" });
-
-  const searchDropdown = searchOpen && (
-    <div className="wl-dropdown">
+  const dropdownContent = (
+    <>
       {/* Full-screen on mobile (see .wl-dropdown's own @media override) —
           tap-outside-to-close doesn't apply there, so this is the only
           way out in that mode. Harmless extra control on desktop too. */}
       <div className="wl-dropdown-header">
-        <span className="wl-dropdown-title">{t("watchlist.addCoin")}</span>
+        <span className="wl-dropdown-title">{t("watchlist.manage", "Manage")}</span>
         <button type="button" className="wl-dropdown-close" onClick={() => { setSearchOpen(false); setSearch(""); }}>✕</button>
       </div>
+
+      {/* Currently-watched coins — remove (×) only, re-adding happens via
+          the search list below. */}
+      {watchedIds.length > 0 && (
+        <div className="wl-dropdown-watched">
+          {watchedIds.map(id => {
+            const meta = CATALOG.find(c => c.id === id);
+            return (
+              <div key={id} className="wl-dropdown-item wl-dropdown-item--watched">
+                <span className="wl-dropdown-icon">
+                  {!imgErrors.has((meta?.symbol ?? "").toUpperCase()) ? (
+                    <img
+                      className="wl-coin-img"
+                      src={`https://assets.coincap.io/assets/icons/${(meta?.symbol ?? "").toLowerCase()}@2x.png`}
+                      alt=""
+                      loading="lazy"
+                      onError={() => setImgErrors(prev => new Set([...prev, (meta?.symbol ?? "").toUpperCase()]))}
+                    />
+                  ) : (
+                    <div className="wl-coin-placeholder">{meta?.symbol?.[0] ?? "?"}</div>
+                  )}
+                </span>
+                <span className="wl-dropdown-sym">{(meta?.symbol ?? "").toUpperCase()}</span>
+                <span className="wl-dropdown-name">{meta?.name}</span>
+                <button
+                  type="button"
+                  className="wl-dropdown-remove"
+                  onClick={() => removeCoin(id)}
+                  aria-label={t("watchlist.removeTitle")}
+                  title={t("watchlist.removeTitle")}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <input
         className="wl-search-input"
         placeholder={t("watchlist.searchPlaceholder")}
@@ -296,6 +396,19 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
       <div className="wl-dropdown-list">
         {filteredCatalog.slice(0, 20).map(c => (
           <button key={c.id} className="wl-dropdown-item" onClick={() => addCoin(c.id)}>
+            <span className="wl-dropdown-icon">
+              {!imgErrors.has(c.symbol.toUpperCase()) ? (
+                <img
+                  className="wl-coin-img"
+                  src={`https://assets.coincap.io/assets/icons/${c.symbol.toLowerCase()}@2x.png`}
+                  alt=""
+                  loading="lazy"
+                  onError={() => setImgErrors(prev => new Set([...prev, c.symbol.toUpperCase()]))}
+                />
+              ) : (
+                <div className="wl-coin-placeholder">{c.symbol[0] ?? "?"}</div>
+              )}
+            </span>
             <span className="wl-dropdown-sym">{c.symbol}</span>
             <span className="wl-dropdown-name">{c.name}</span>
           </button>
@@ -304,130 +417,54 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
           <div className="wl-dropdown-empty">{t("watchlist.noResults")}</div>
         )}
       </div>
-    </div>
+    </>
   );
 
-  // Mobile/iOS — vertical row list (icon, name/symbol, sparkline, price/
-  // change) instead of the horizontal scrolling chip strip desktop keeps
-  // below. Same data/state (priceData, sparklines, watchedIds, addCoin,
-  // removeCoin) as the desktop branch, just a different shape — nothing
-  // about how the watchlist itself works changes, only how it's drawn.
-  if (isMobile) {
-    return (
-      <div className="wl-list">
-        <div className="wl-list-head">
-          <span className="wl-list-title">{t("watchlist.title")}</span>
-          <div className="wl-search-wrap" ref={searchRef}>
-            {manageMode && (
-              <button type="button" className="wl-list-arrow" onClick={() => setSearchOpen(v => !v)}>
-                {t("watchlist.addMore", "Add More")} +
-              </button>
-            )}
-            {searchDropdown}
-          </div>
-        </div>
-
-        {loading && watchedIds.length > 0 && (
-          <div className="wl-loading">{t("watchlist.loading")}</div>
-        )}
-        {!loading && watchedIds.length === 0 && (
-          <div className="wl-empty">{t("watchlist.emptyText")}</div>
-        )}
-
-        {!loading && watchedIds.length > 0 && (
-          <div className="wl-list-rows">
-            {watchedIds.map(id => {
-              const meta = CATALOG.find(c => c.id === id);
-              const symbol = (meta?.symbol ?? "").toUpperCase();
-              const entry = priceData.get(symbol);
-              const spark = sparklines.get(symbol) ?? [];
-              const pct = entry?.pct ?? 0;
-              const up = pct >= 0;
-              const chartable = !!onSelectCoin && CHARTABLE_SYMBOLS.has(symbol);
-              return (
-                <div key={id} className="wl-list-row">
-                  <button
-                    type="button"
-                    className="wl-list-row-main"
-                    onClick={() => chartable && onSelectCoin!(symbol)}
-                    disabled={!chartable}
-                  >
-                    <span className="wl-list-icon">
-                      {!imgErrors.has(symbol) ? (
-                        <img
-                          className="wl-coin-img"
-                          src={`https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png`}
-                          alt={symbol}
-                          loading="lazy"
-                          onError={() => setImgErrors(prev => new Set([...prev, symbol]))}
-                        />
-                      ) : (
-                        <div className="wl-coin-placeholder">{symbol[0] ?? "?"}</div>
-                      )}
-                    </span>
-                    <span className="wl-list-names">
-                      <span className="wl-list-name">{meta?.name ?? symbol}</span>
-                      <span className="wl-list-sym">{symbol}</span>
-                    </span>
-                    {spark.length > 1 && (
-                      <Sparkline prices={spark} positive={up} width={64} height={28} className="wl-list-spark" />
-                    )}
-                    <span className="wl-list-figures">
-                      <span className="wl-list-price">{entry ? `$${fmtPrice(entry.price)}` : "—"}</span>
-                      {entry && (
-                        <span className={`wl-list-pct${up ? " up" : " down"}`}>
-                          {up ? "↗" : "↘"} {Math.abs(pct).toFixed(2)}%
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                  {manageMode && (
-                    <button
-                      type="button"
-                      className="wl-list-remove"
-                      onClick={() => removeCoin(id)}
-                      aria-label={t("watchlist.removeTitle")}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <button type="button" className="wl-list-manage" onClick={() => setManageMode(v => !v)}>
-          {manageMode ? t("watchlist.done", "Done") : t("watchlist.manage", "Manage")}
-        </button>
-      </div>
-    );
-  }
+  const searchDropdown = searchOpen && (
+    isMobile
+      ? <div className="wl-dropdown">{dropdownContent}</div>
+      : createPortal(
+          <div
+            className="wl-dropdown wl-dropdown--portal"
+            ref={dropdownRef}
+            style={{ top: dropPos.top, left: dropPos.left }}
+          >
+            {dropdownContent}
+          </div>,
+          document.body,
+        )
+  );
 
   return (
-    <div className="wl-strip">
-      <div className="wl-strip-label">
-        <span className="wl-strip-dot" />
-        {t("watchlist.title")}
+    <div className="wl-list">
+      <div className="wl-list-head">
+        <span className="wl-list-title">{t("watchlist.title")}</span>
+        <div className="wl-search-wrap" ref={searchRef}>
+          {manageMode && (
+            <button type="button" className="wl-list-arrow" ref={addBtnRef} onClick={openManage}>
+              {t("watchlist.addMore", "Add More")} +
+            </button>
+          )}
+          {searchDropdown}
+        </div>
       </div>
 
       {loading && watchedIds.length > 0 && (
         <div className="wl-loading">{t("watchlist.loading")}</div>
       )}
-
       {!loading && watchedIds.length === 0 && (
         <div className="wl-empty">{t("watchlist.emptyText")}</div>
       )}
 
       {!loading && watchedIds.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={watchedIds} strategy={horizontalListSortingStrategy}>
-            <div className="wl-scroll" ref={scrollRef}>
+          <SortableContext items={watchedIds} strategy={verticalListSortingStrategy}>
+            <div className="wl-list-rows">
               {watchedIds.map(id => {
-                const meta   = CATALOG.find(c => c.id === id);
+                const meta = CATALOG.find(c => c.id === id);
                 const symbol = (meta?.symbol ?? "").toUpperCase();
                 return (
-                  <WatchlistChip
+                  <WatchlistRow
                     key={id}
                     id={id}
                     meta={meta}
@@ -437,9 +474,10 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
                     onImgError={sym => setImgErrors(prev => new Set([...prev, sym]))}
                     onRemove={removeCoin}
                     onSelect={onSelectCoin}
-                    dragTitle={t("watchlist.dragTitle")}
+                    chartable={!!onSelectCoin && CHARTABLE_SYMBOLS.has(symbol)}
+                    manageMode={manageMode}
                     removeTitle={t("watchlist.removeTitle")}
-                    chartTitle={t("watchlist.viewChart")}
+                    dragTitle={t("watchlist.dragTitle")}
                   />
                 );
               })}
@@ -448,16 +486,9 @@ export function Watchlist({ onSelectCoin }: WatchlistProps) {
         </DndContext>
       )}
 
-      <div className="wl-strip-actions">
-        <button className="wl-nav-btn" onClick={() => scrollBy(-1)} aria-label="Scroll left">‹</button>
-        <button className="wl-nav-btn" onClick={() => scrollBy(1)} aria-label="Scroll right">›</button>
-        <div className="wl-search-wrap" ref={searchRef}>
-          <button className="wl-add-btn" onClick={() => setSearchOpen(v => !v)}>
-            {t("watchlist.addCoin")}
-          </button>
-          {searchDropdown}
-        </div>
-      </div>
+      <button type="button" className="wl-list-manage" onClick={() => setManageMode(v => !v)}>
+        {manageMode ? t("watchlist.done", "Done") : t("watchlist.manage", "Manage")}
+      </button>
     </div>
   );
 }

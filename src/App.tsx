@@ -2322,31 +2322,35 @@ function AppDashboard({
                 </span>
               </button>
               <div className="top-nav-icons">
+                {/* Sign out lives inside the avatar's own dropdown now
+                    (AccountMenu's `dropdown` prop) — Settings stays its own
+                    visible icon here too, restyled as a filled dark square
+                    (3x3 grid glyph) to match the reference look. */}
+                <button
+                  className="top-nav-icon-btn top-nav-icon-btn--settings"
+                  onClick={() => setDrawerOpen(true)}
+                  title={t("drawer.settings")}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="5" r="2" />
+                    <circle cx="12" cy="5" r="2" />
+                    <circle cx="19" cy="5" r="2" />
+                    <circle cx="5" cy="12" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="19" cy="12" r="2" />
+                    <circle cx="5" cy="19" r="2" />
+                    <circle cx="12" cy="19" r="2" />
+                    <circle cx="19" cy="19" r="2" />
+                  </svg>
+                </button>
                 <AccountMenu
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
                   onOpenProfile={() => setProfileOpen(true)}
+                  onOpenSettings={() => setDrawerOpen(true)}
                   iconFallback
+                  dropdown
                 />
-                <button
-                  className="top-nav-icon-btn"
-                  onClick={() => setDrawerOpen(true)}
-                  title={t("drawer.settings")}
-                >
-                  <NavIcon
-                    d={[
-                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
-                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
-                    ]}
-                  />
-                </button>
-                <button
-                  className="top-nav-icon-btn"
-                  onClick={() => signOut()}
-                  title={t("nav.signOut")}
-                >
-                  <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-                </button>
               </div>
             </div>
           )}
@@ -2559,32 +2563,8 @@ function AppDashboard({
 
             {activeSection === "chart" && (
               <>
-                {/* Desktop keeps its original order — Watchlist and Top
-                    Movers both above the chart. Mobile/iOS reorders to
-                    chart first, then Watchlist, then Top Movers below (see
-                    the two mobile-only mounts after .chart-page-row) —
-                    same component, just called at a different point in
-                    the tree depending on platform, not a CSS-only reorder
-                    (Top Movers needs to actually leave .chart-column, not
-                    just look like it moved). */}
-                {isWideDesktop && !distractionFree && (
-                  <Watchlist
-                    onSelectCoin={(symbol) => {
-                      setCoin(symbol as CoinSymbol);
-                      clearCandleCache();
-                    }}
-                  />
-                )}
                 <div className="chart-page-row">
                   <div className="chart-column">
-                    {isWideDesktop && !distractionFree && (
-                      <TopMoversCarousel
-                        onSelectCoin={(symbol) => {
-                          setCoin(symbol as CoinSymbol);
-                          clearCandleCache();
-                        }}
-                      />
-                    )}
                     <div
                       className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
                       ref={chartWrapRef}
@@ -2615,7 +2595,28 @@ function AppDashboard({
                           window.history.pushState(null, "", `${window.location.search}#advance-chart`);
                           setActiveSection("advance-chart");
                         }}
-                      />
+                      >
+                        {/* Rendered inside .price-chart-container itself
+                            (PriceChart.tsx's own `children` slot), below
+                            the chart, instead of as separate full-width
+                            blocks after .chart-page-row. */}
+                        {!distractionFree && (
+                          <Watchlist
+                            onSelectCoin={(symbol) => {
+                              setCoin(symbol as CoinSymbol);
+                              clearCandleCache();
+                            }}
+                          />
+                        )}
+                        {!distractionFree && (
+                          <TopMoversCarousel
+                            onSelectCoin={(symbol) => {
+                              setCoin(symbol as CoinSymbol);
+                              clearCandleCache();
+                            }}
+                          />
+                        )}
+                      </PriceChart>
                       <div
                         className="chart-resize-handle"
                         onPointerDown={onResizePointerDown}
@@ -2655,22 +2656,6 @@ function AppDashboard({
                     <DailyBrief coinTickers={coinTickers} variant="page" />
                   )}
                 </div>
-                {!isWideDesktop && !distractionFree && (
-                  <Watchlist
-                    onSelectCoin={(symbol) => {
-                      setCoin(symbol as CoinSymbol);
-                      clearCandleCache();
-                    }}
-                  />
-                )}
-                {!isWideDesktop && !distractionFree && (
-                  <TopMoversCarousel
-                    onSelectCoin={(symbol) => {
-                      setCoin(symbol as CoinSymbol);
-                      clearCandleCache();
-                    }}
-                  />
-                )}
               </>
             )}
             {activeSection === "advance-chart" && (

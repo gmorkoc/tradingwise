@@ -2703,6 +2703,16 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   background: var(--color-input-bg);
   color: var(--color-text-secondary);
 }
+/* --circle (the desktop dropdown variant, AccountMenu's `dropdown` prop) —
+   a solid brand-color bubble with a white initial, like a Google account
+   avatar, instead of the neutral gray fallback above (still used as-is
+   when a real profile photo exists, see img.acct-initial-icon below). */
+.acct-avatar--circle .nav-icon-wrap {
+  background: var(--color-primary);
+}
+.acct-avatar--circle .acct-initial-icon:not(img) {
+  color: #fff;
+}
 
 /* Bare circular icon buttons, no chrome by default — Settings/Sign-out
    read like Yahoo's plain bell icon. */
@@ -2724,6 +2734,19 @@ html:not([data-theme="light"]) .top-nav-search:hover {
 }
 .top-nav-icon-btn:hover {
   background: var(--color-input-bg);
+  color: var(--color-text);
+}
+
+/* --settings — filled light-gray rounded square (3x3 grid glyph) instead
+   of the bare circular outline above, matching the reference's muted
+   app-launcher-style icon (light bg, dark dots, not inverted). */
+.top-nav-icon-btn--settings {
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+}
+.top-nav-icon-btn--settings:hover {
+  background: var(--color-border);
   color: var(--color-text);
 }
 /* ── Coin header bar ────────────────────────────────────────────────────── */
@@ -3064,33 +3087,32 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   flex-shrink: 0;
 }
 
+/* Filled light-gray rounded square, icon-only — same treatment as
+   .top-nav-icon-btn--settings/.buysig-bell, replacing the old flat
+   icon+label look. */
 .mch-search-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: auto;
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  background: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--color-input-bg);
   border: none;
-  border-radius: 0;
+  border-radius: 12px;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color 0.15s;
+  transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
 .mch-search-btn:hover {
+  background: var(--color-border);
   color: var(--color-text);
 }
-/* Shared label for the icon buttons in .mch-right (notif feed, buy
-   signals, etc.) — desktop-only, hidden at the 640px breakpoint below
-   where these buttons square off to icon-only on mobile. */
+/* Was the shared desktop label for these icon buttons (notif feed, buy
+   signals) — both are icon-only now, matching the filled-square look. */
 .mch-btn-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
+  display: none;
 }
 .mch-search-label {
   font-weight: 500;
@@ -3123,10 +3145,18 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 /* ── Notifications toggle — a real iOS-style track+knob switch, not an
    icon button, since this is a binary on/off (role="switch") rather than
    an action like the icon buttons around it. ─────────────────────────── */
+/* Same filled light-gray rounded-square treatment as the icon buttons
+   around it (.mch-search-btn/.buysig-bell/.top-nav-icon-btn--settings) —
+   the switch itself still needs the "Alerts" label since, unlike an icon
+   button, a bare toggle alone doesn't say what it controls. */
 .mch-notif-toggle-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--color-input-bg);
   flex-shrink: 0;
 }
 .mch-notif-toggle-label {

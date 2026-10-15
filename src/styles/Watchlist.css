@@ -1,53 +1,3 @@
-/* Horizontal ticker strip — same chrome pattern as StockTickerStrip.css,
-   extended with drag-to-reorder, remove, and add-coin controls. */
-.wl-strip {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  /* Padding matches .main-coin-header's 24px on both sides so all three
-     rows line up left and right. */
-  padding: 10px 24px;
-  background: var(--pc-panel);
-  border: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
-  backdrop-filter: blur(6px);
-  border-radius: 0;
-}
-
-html[data-theme="light"] .chart-active .wl-strip {
-  border: none;
-  /* Watchlist spans full width above .chart-page-row (chart column +
-     Daily Brief side by side below it) — this is the one line that
-     divides it from both, so it needs to stay even without the shadow. */
-  /* var(--color-border) (0.12 opacity) read as a dark line against this
-     card's light background — half its opacity, matching the same subtle
-     divider color already used elsewhere in light theme (.icon-strip's
-     border-right, .pticker-* borders, App.css). */
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 60%), var(--pc-panel);
-}
-
-.wl-strip-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--pc-text);
-  padding-right: 12px;
-  border-right: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
-  white-space: nowrap;
-}
-
-.wl-strip-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--pc-accent);
-  flex-shrink: 0;
-}
-
 .wl-loading,
 .wl-empty {
   flex: 1;
@@ -55,65 +5,8 @@ html[data-theme="light"] .chart-active .wl-strip {
   color: var(--pc-text-muted);
 }
 
-/* ── Scroll region ──────────────────────────────────────────────────────── */
-.wl-scroll {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  scroll-behavior: smooth;
-  flex: 1;
-  min-width: 0;
-}
-.wl-scroll::-webkit-scrollbar { display: none; }
-
-/* ── Chip ───────────────────────────────────────────────────────────────── */
-.wl-chip {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.wl-chip-handle {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: grab;
-  touch-action: none;
-  color: var(--pc-text-muted);
-  font-size: 0.75rem;
-  line-height: 1;
-  letter-spacing: -2px;
-  padding: 2px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.wl-chip:hover .wl-chip-handle { opacity: 0.5; }
-.wl-chip-handle:hover { opacity: 0.9 !important; }
-.wl-chip-handle:active { cursor: grabbing; }
-
-.wl-chip-main {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-
-.wl-chip-main--static { cursor: default; }
-
-.wl-chip-main:hover .wl-chip-sym { color: var(--pc-accent); }
-
-.wl-chip-icon { flex-shrink: 0; }
-
+/* Shared coin icon treatment — used in the row list (.wl-list-icon) and
+   the search/manage dropdown (.wl-dropdown-icon). */
 .wl-coin-img {
   width: 24px;
   height: 24px;
@@ -136,119 +29,15 @@ html[data-theme="light"] .chart-active .wl-strip {
   flex-shrink: 0;
 }
 
-.wl-chip-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.wl-chip-sym {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--pc-text-secondary);
-}
-
-.wl-chip-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.wl-chip-price {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--pc-text);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.wl-chip-pct {
-  font-size: 0.7rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.wl-chip-pct.up { color: #4ade80; }
-.wl-chip-pct.down { color: #fb7185; }
-
-.wl-chip-spark { flex-shrink: 0; }
-
-.wl-chip-remove {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  color: var(--pc-text-muted);
-  padding: 2px 2px 2px 4px;
-  line-height: 1;
-  opacity: 0;
-  transition: opacity 0.15s, color 0.15s;
-}
-
-.wl-chip:hover .wl-chip-remove { opacity: 0.5; }
-.wl-chip-remove:hover { opacity: 1 !important; color: #fb7185; }
-
-/* ── Trailing actions: scroll nav + add coin ───────────────────────────── */
-.wl-strip-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  padding-left: 8px;
-  border-left: 1px solid color-mix(in srgb, var(--pc-border) 25%, transparent);
-}
-
-.wl-nav-btn {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 6px;
-  background: var(--pc-panel-2);
-  color: var(--pc-text-secondary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.wl-nav-btn:hover { background: var(--pc-border); color: var(--pc-text); }
-
 .wl-search-wrap {
   position: relative;
-  margin-left: 6px;
 }
-
-.wl-add-btn {
-  background: var(--pc-accent-soft);
-  color: var(--pc-accent);
-  border: 1px solid var(--pc-accent);
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.15s;
-}
-
-/* Dark theme only — light theme's --pc-accent-soft is a near-white tint
-   (var(--color-primary-soft) over a white page), so white text there
-   would be unreadable; only dark theme's translucent tint over a dark
-   panel needs the plain-white contrast fix. */
-html:not([data-theme="light"]) .wl-add-btn {
-  color: #fff;
-}
-
-.wl-add-btn:hover { opacity: 0.8; }
 
 .wl-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  width: 240px;
+  width: 300px;
   /* --pc-panel-2 is a ~6%-opacity tint meant to sit as a subtle overlay
      on the solid Aurora background right behind it — fine for buttons/
      pills, but on a FLOATING menu that needs to fully obscure whatever's
@@ -257,16 +46,46 @@ html:not([data-theme="light"]) .wl-add-btn {
      --color-card-bg is what AccountMenu.css already uses for the same
      "opaque floating dropdown" job, so this matches that convention. */
   background: var(--color-card-bg);
-  border: 1px solid var(--pc-border);
+  /* --color-border, not --pc-border — this whole dropdown portals to
+     document.body on desktop (Watchlist.tsx), outside .chart-active's DOM
+     subtree entirely, and --pc-* tokens only exist scoped to .chart-active
+     (PriceChart.css). Every --pc-* reference below this point resolved to
+     nothing there — text had no explicit color at all, falling back to
+     whatever the portal's real ancestor chain (document.body) inherited,
+     which is why rows looked blank/invisible instead of just mistinted. */
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   box-shadow: 0 16px 40px var(--color-shadow);
-  /* Was 50 — got layered underneath Daily Brief's expanded sheet
-     (DailyBrief.css, z-index 100002) whenever both were open at once.
-     Above every other in-page panel now, but still under the account
-     menu/side drawer's 300001 (AccountMenu.css/Drawer.css), which should
-     stay the true topmost layer regardless of what else is open. */
-  z-index: 100010;
+  /* Was 100010 — still got buried by other in-page content once Watchlist
+     moved into the side-by-side .wl-tm-row row. Bumped above this app's
+     entire established z-index ladder (NotificationsCenter 600000/600001
+     is the next-highest tier, see src/styles/*.css) so "Manage" always
+     wins regardless of what else is mounted. */
+  z-index: 900000;
   overflow: hidden;
+}
+
+/* Desktop: portaled to document.body (Watchlist.tsx) — position:fixed
+   instead of absolute, top/left come from React's inline style (computed
+   from the real trigger button's position) instead of this rule's own
+   top/right, which assumed it was still a normal child of
+   .wl-search-wrap (position:relative). max-height keeps a very tall
+   watchlist from pushing the add-search list off the bottom of the
+   screen — it's no longer bounded by a parent's own layout. */
+.wl-dropdown--portal {
+  position: fixed;
+  top: auto;
+  right: auto;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  /* --color-card-bg (the base rule's background) is only 90–95% opaque —
+     fine for a small popover over this app's own normal page background,
+     but floating over Daily Brief's own bright imagery let noticeably
+     more bleed through than intended (worse, not better, when the list
+     is short/empty and there's barely any content of its own to read
+     over that bleed). --color-background is this app's actual fully
+     solid page-background token. */
+  background: var(--color-background);
 }
 
 /* Full screen on mobile/iOS — a 240px anchored popover was cramped for a
@@ -294,51 +113,52 @@ html:not([data-theme="light"]) .wl-add-btn {
   }
 }
 
+/* Used to be display:none on desktop (only shown at the mobile
+   breakpoint) back when desktop had no header row at all — now that the
+   "Manage" title + close button render unconditionally (Watchlist.tsx),
+   this needs to actually show there too. */
 .wl-dropdown-header {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: space-between;
   padding: max(16px, var(--native-safe-area-top, env(safe-area-inset-top))) 16px 8px;
   flex-shrink: 0;
 }
-@media (max-width: 640px) {
-  .wl-dropdown-header { display: flex; }
-}
 .wl-dropdown-title {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--pc-text);
+  color: var(--color-text);
 }
 .wl-dropdown-close {
   background: none;
   border: none;
-  color: var(--pc-text-muted);
+  color: var(--color-text-muted);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 4px 6px;
 }
-.wl-dropdown-close:hover { color: var(--pc-text); }
+.wl-dropdown-close:hover { color: var(--color-text); }
 
 .wl-search-input {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--pc-border);
+  border-bottom: 1px solid var(--color-border);
   padding: 10px 14px;
   font-size: 0.82rem;
-  color: var(--pc-text);
+  color: var(--color-text);
   outline: none;
   box-sizing: border-box;
 }
 
-.wl-search-input::placeholder { color: var(--pc-text-muted); }
+.wl-search-input::placeholder { color: var(--color-text-muted); }
 
 .wl-dropdown-list {
   max-height: 240px;
   overflow-y: auto;
   padding: 4px 0;
   scrollbar-width: thin;
-  scrollbar-color: var(--pc-border) transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 @media (max-width: 640px) {
   .wl-dropdown-list {
@@ -362,57 +182,84 @@ html:not([data-theme="light"]) .wl-add-btn {
   transition: background 0.12s;
 }
 
-.wl-dropdown-item:hover { background: var(--pc-border); }
+.wl-dropdown-item:hover { background: var(--color-border); }
+
+.wl-dropdown-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wl-dropdown-icon .wl-coin-img { width: 100%; height: 100%; }
+.wl-dropdown-icon .wl-coin-placeholder { width: 100%; height: 100%; font-size: 0.6rem; }
 
 .wl-dropdown-sym {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--pc-text);
+  color: var(--color-text);
   min-width: 44px;
 }
 
 .wl-dropdown-name {
   font-size: 0.78rem;
-  color: var(--pc-text-muted);
+  color: var(--color-text-muted);
 }
 
 .wl-dropdown-empty {
   padding: 14px;
   text-align: center;
   font-size: 0.8rem;
-  color: var(--pc-text-muted);
+  color: var(--color-text-muted);
 }
 
-/* Above the 768px mobile cutoff, .price-chart-container's own left inset
-   is margin-left:10px + padding-left:3px = 13px (PriceChart.css's
-   unconditional rule) — this row's own content (.wl-strip-label) has no
-   left padding of its own, so matching that here lines "Watchlist" up
-   with the chart below it. */
-@media (min-width: 769px) {
-  .wl-strip {
-    padding-left: 13px;
-  }
+/* ── Manage: currently-watched list, above the add-search results ────────
+   Same row shape as .wl-dropdown-item, but not itself clickable-to-add
+   (it's already watched) — only the trailing × removes it. */
+.wl-dropdown-watched {
+  max-height: 160px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--color-border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  /* Left trimmed from 12px to 7px to match .price-chart-container's own
-     mobile left inset (PriceChart.css), so this row lines up with the
-     chart below it. */
-  .wl-strip { gap: 8px; padding: 8px 12px 8px 7px; }
-  .wl-strip-label { font-size: 0.68rem; padding-right: 8px; gap: 4px; }
-  .wl-chip-price { font-size: 0.78rem; }
-  .wl-scroll { gap: 16px; }
+.wl-dropdown-item--watched {
+  cursor: default;
+}
+.wl-dropdown-item--watched:hover { background: none; }
 
-  .wl-strip-actions { gap: 0; padding-left: 6px; }
-  .wl-nav-btn { display: none; }
-  .wl-search-wrap { margin-left: 0; }
-  .wl-add-btn { padding: 5px 8px; font-size: 0.68rem; }
+.wl-dropdown-item--watched .wl-dropdown-name {
+  flex: 1;
 }
 
-/* ── Mobile/iOS vertical list variant — see Watchlist.tsx's isMobile
-   branch. A plain stacked list (icon, name/symbol, sparkline, price/%)
-   instead of the horizontal chip strip above, same data either way. ──── */
+.wl-dropdown-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+.wl-dropdown-remove:hover {
+  background: var(--color-border);
+  color: #fb7185;
+}
+
+/* ── Vertical list — icon, name/symbol, sparkline, price/% per row. Same
+   layout on every width now (used to be desktop-only chip-strip vs this
+   list on mobile — see Watchlist.tsx). ──────────────────────────────── */
 .wl-list {
   display: flex;
   flex-direction: column;
@@ -445,18 +292,27 @@ html:not([data-theme="light"]) .wl-add-btn {
   display: flex;
   flex-direction: column;
 }
+/* Row grid — .wl-list-row-main (the button wrapping name/price/sparkline/
+   %) is display:contents so ITS children lay out as direct items of
+   .wl-list-row's own grid, placed by explicit grid-column/grid-row on
+   each one below (not DOM/source order), so the SAME markup can target a
+   totally different arrangement per breakpoint without duplicating it.
+   Mobile (default, below): identity | sparkline | price-over-%-stacked |
+   remove — the original pre-desktop-redesign mobile layout, restored
+   after that redesign's new equal-fr columns (meant for desktop's much
+   wider row) forced horizontal overflow here once applied unconditionally.
+   Desktop (@media min-width:641px override further down): identity |
+   price | sparkline | % | star | drag-handle, each its own column. */
 .wl-list-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 4px;
+  column-gap: 12px;
+  padding: 10px 0;
 }
 .wl-list-row-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
+  display: contents;
   border: none;
   background: none;
   text-align: left;
@@ -477,8 +333,17 @@ html:not([data-theme="light"]) .wl-add-btn {
 }
 .wl-list-icon .wl-coin-img { width: 100%; height: 100%; }
 .wl-list-icon .wl-coin-placeholder { width: 100%; height: 100%; font-size: 0.85rem; }
+/* Wraps icon + name/symbol text — one grid cell/column; .wl-list-names
+   itself just stacks the two text lines within it. */
+.wl-list-identity {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .wl-list-names {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -496,23 +361,35 @@ html:not([data-theme="light"]) .wl-add-btn {
   font-size: 0.78rem;
   color: var(--pc-text-muted);
 }
-.wl-list-spark { flex-shrink: 0; }
-.wl-list-figures {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
-.wl-list-price {
+.wl-list-spark { grid-column: 2; grid-row: 1 / 3; flex-shrink: 0; }
+.wl-list-col-price {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--pc-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.wl-list-pct { font-size: 0.78rem; font-weight: 600; }
-.wl-list-pct.up { color: var(--pc-success); }
-.wl-list-pct.down { color: var(--pc-danger); }
+.wl-list-col-pct {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.wl-list-col-pct.up { color: var(--pc-success); }
+.wl-list-col-pct.down { color: var(--pc-danger); }
+/* Desktop-only columns — see the @media override below. */
+.wl-list-star,
+.wl-list-handle {
+  display: none;
+}
 .wl-list-remove {
+  grid-column: 4;
+  grid-row: 1 / 3;
   flex-shrink: 0;
   width: 26px;
   height: 26px;
@@ -525,6 +402,64 @@ html:not([data-theme="light"]) .wl-add-btn {
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
+}
+
+/* Desktop: equal-fr price/sparkline/% columns, plus the star/drag-handle
+   columns mobile doesn't show at all. */
+@media (min-width: 641px) {
+  .wl-list-row {
+    /* minmax(0, 1fr), not bare 1fr — a bare 1fr track has an implicit
+       auto minimum (its own content's min-content size), which let each
+       list's own column widths drift apart from Top Movers' identical
+       template based on whatever happened to be in that one row (longer
+       prices, etc.) instead of both computing the exact same pixel
+       widths from the fr-ratio alone. */
+    grid-template-columns: minmax(160px, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 28px 20px;
+    grid-template-rows: auto;
+    column-gap: 16px;
+  }
+  .wl-list-identity { grid-row: 1; }
+  .wl-list-col-price {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .wl-list-spark { grid-column: 3; grid-row: 1; }
+  .wl-list-col-pct {
+    grid-column: 4;
+    grid-row: 1;
+    font-size: 0.84rem;
+    justify-self: start;
+  }
+  .wl-list-star {
+    grid-column: 5;
+    grid-row: 1;
+    display: block;
+    color: var(--pc-accent);
+    font-size: 1rem;
+    text-align: center;
+  }
+  .wl-list-handle {
+    grid-column: 6;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--pc-text-muted);
+    font-size: 0.85rem;
+    letter-spacing: -2px;
+    cursor: grab;
+    /* Required for dnd-kit's PointerSensor to get touch drags instead of
+       the browser treating them as a page scroll gesture. */
+    touch-action: none;
+    transition: color 0.15s;
+  }
+  .wl-list-handle:hover { color: var(--pc-text); }
+  .wl-list-handle:active { cursor: grabbing; }
+  .wl-list-remove { grid-row: 1; }
 }
 .wl-list-manage {
   margin-top: 10px;

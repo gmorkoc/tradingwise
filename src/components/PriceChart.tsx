@@ -128,6 +128,11 @@ interface PriceChartProps {
   pageMode?: boolean;
   onNavigateToPage?: () => void;
   onNavigateBack?: () => void;
+  // Rendered inside .price-chart-container itself (below the chart, outside
+  // the fullscreen/scroll wrapper) — App.tsx uses this for Watchlist/
+  // TopMoversCarousel so they visually live inside this card instead of as
+  // separate full-width blocks below it.
+  children?: React.ReactNode;
 }
 
 const INTERVALS: TimeInterval[] = [
@@ -1285,6 +1290,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   pageMode,
   onNavigateToPage,
   onNavigateBack,
+  children,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
@@ -5005,6 +5011,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       {showCompactView && (
         <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
       )}
+
+      {/* Watchlist/TopMoversCarousel (App.tsx) — rendered here, inside
+          .price-chart-container itself, below the chart but outside the
+          fullscreen/scroll wrapper above, so fullscreen mode doesn't drag
+          them along with it. */}
+      {!isFullscreen && children}
     </div>
   );
 };
