@@ -56,14 +56,26 @@
 .alerts-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 299;
+  /* Was 299 — below .price-chart-container--fs's z-index:999 (the
+     fullscreen/Advance Chart page), so opening this from there rendered
+     the panel behind the chart instead of on top of it, unreachable even
+     though it was genuinely open in React state. A popover like this
+     should always be reachable regardless of what page triggered it. */
+  z-index: 1100;
 }
 
 .alerts-panel {
   position: fixed;
-  top: var(--alerts-panel-top, 60px);
+  /* --alerts-panel-top is computed from the real .alerts-bell button's
+     own on-screen position (PriceAlerts.tsx) — on the Advance Chart
+     page, mobile, that button isn't visibly placed there (opened via a
+     click-through from the dock's own Price Alerts quick-icon instead),
+     so the computed rect can land the panel above the safe area (status
+     bar/notch/Dynamic Island). This floor guarantees it never does,
+     regardless of what the anchor calculation produces. */
+  top: max(var(--alerts-panel-top, 60px), calc(env(safe-area-inset-top, 0px) + 10px));
   right: var(--alerts-panel-right, 12px);
-  z-index: 300;
+  z-index: 1101;
   width: 340px;
   max-width: calc(100vw - 24px);
   box-sizing: border-box;
@@ -77,7 +89,10 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
-  max-height: 480px;
+  /* Same safe-area reasoning as top: above — caps height so the panel
+     never runs under the home indicator either, on top of its own
+     480px cap. */
+  max-height: min(480px, calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px));
   overflow: hidden;
   animation: alerts-in 0.18s ease;
 }

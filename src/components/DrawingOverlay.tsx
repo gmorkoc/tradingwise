@@ -354,3 +354,196 @@ export function LineDotFillOverlay({ chartRef, seriesRef, candlesRef, color, gen
   if (!visible) return null;
   return <canvas ref={canvasRef} className="drawing-overlay" />;
 }
+
+// ── Rounded (soft-edge) candles — compact desktop view only ────────────────────
+// lightweight-charts' built-in CandlestickSeries always paints sharp-cornered
+// rectangles — there's no radius option on CandlestickStyleOptions. The real
+// candleRef series is kept mounted (visible:false in this scope, set by
+// PriceChart.tsx) purely as the data/scale source other code already depends
+// on (markers, crosshair price lookups, priceToCoordinate for drawing tools)
+// — this overlay repaints the same bars with rounded-rect bodies on top,
+// same canvas-overlay pattern as PredictionOverlay/LineDotFillOverlay above.
+interface OhlcPoint {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+// Same recurrence PriceChart.tsx's own calcHeikinAshi uses (not imported —
+// importing from PriceChart.tsx here would be a circular import, since
+// PriceChart.tsx imports RoundedCandleOverlay from this file). Duplicated
+// on purpose, small and stable enough that the duplication risk is lower
+// than the circular-import risk.
+function calcHeikinAshiLocal(candles: OhlcPoint[]): OhlcPoint[] {
+  const result: OhlcPoint[] = [];
+  let prevHaOpen = 0;
+  let prevHaClose = 0;
+  candles.forEach((c, i) => {
+    const haClose = (c.open + c.high + c.low + c.close) / 4;
+    const haOpen = i === 0 ? (c.open + c.close) / 2 : (prevHaOpen + prevHaClose) / 2;
+    const haHigh = Math.max(c.high, haOpen, haClose);
+    const haLow = Math.min(c.low, haOpen, haClose);
+    result.push({ ...c, open: haOpen, high: haHigh, low: haLow, close: haClose });
+    prevHaOpen = haOpen;
+    prevHaClose = haClose;
+  });
+  return result;
+}
+
+function paintRoundedCandles(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  candles: OhlcPoint[],
+  barSpacing: number,
+  timeToX: (t: number) => number,
+  priceToY: (p: number) => number,
+  upColor: string,
+  downColor: string,
+  hollowUp: boolean,
+) {
+  ctx.clearRect(0, 0, width, height);
+  if (!candles.length || barSpacing <= 0) return;
+
+  const bodyWidth = Math.max(2, barSpacing * 0.68);
+  const radius = Math.min(bodyWidth / 2, 4);
+
+  for (const c of candles) {
+    const x = timeToX(c.time);
+    if (x < -bodyWidth || x > width + bodyWidth) continue;
+    const highY = priceToY(c.high);
+    const lowY = priceToY(c.low);
+    const openY = priceToY(c.open);
+    const closeY = priceToY(c.close);
+    if (highY <= -9000 || lowY <= -9000 || openY <= -9000 || closeY <= -9000) continue;
+
+    const up = c.close >= c.open;
+    const color = up ? upColor : downColor;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, highY);
+    ctx.lineTo(x, lowY);
+    ctx.stroke();
+
+    const bodyTop = Math.min(openY, closeY);
+    const bodyHeight = Math.max(Math.abs(closeY - openY), 1.5);
+    const bodyPath = new Path2D();
+    if (typeof ctx.roundRect === "function") {
+      bodyPath.roundRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight, radius);
+    } else {
+      bodyPath.rect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+    }
+    // "Hollow Candle" style: up bars are outline-only (matches
+    // redrawCandleSeries's own hollow treatment — up candles get a
+    // transparent fill there too), down bars stay solid.
+    if (hollowUp && up) {
+      ctx.lineWidth = 1.5;
+      ctx.stroke(bodyPath);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fill(bodyPath);
+    }
+  }
+}
+
+interface RoundedCandleOverlayProps {
+  chartRef: React.RefObject<IChartApi | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  seriesRef: React.RefObject<any>;
+  candlesRef: React.RefObject<OhlcPoint[]>;
+  upColor: string;
+  downColor: string;
+  // "candle" = normal filled bodies, "hollow" = up bars outline-only,
+  // "heikinAshi" = recomputed smoothed OHLC (same transform PriceChart.tsx
+  // itself applies via calcHeikinAshi before feeding the real series).
+  style: "candle" | "hollow" | "heikinAshi";
+  generation: number;
+  visible: boolean;
+}
+
+export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor, downColor, style, generation, visible }: RoundedCandleOverlayProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const colorsRef = useRef({ upColor, downColor, style });
+  const renderRef = useRef<(() => void) | null>(null);
+  const subCleanupRef = useRef<(() => void) | null>(null);
+  const subscribedChartRef = useRef<IChartApi | null>(null);
+
+  const render = useCallback(() => {
+    const canvas = canvasRef.current;
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!canvas || !chart || !series) return;
+
+    if (subscribedChartRef.current !== chart) {
+      subCleanupRef.current?.();
+      const cb = () => renderRef.current?.();
+      chart.timeScale().subscribeVisibleTimeRangeChange(cb);
+      subCleanupRef.current = () => chart.timeScale().unsubscribeVisibleTimeRangeChange(cb);
+      subscribedChartRef.current = chart;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const logW = canvas.offsetWidth;
+    const logH = canvas.offsetHeight;
+    if (!logW || !logH || logW > 8192 || logH > 8192) return;
+
+    if (canvas.width !== logW * dpr || canvas.height !== logH * dpr) {
+      canvas.width = logW * dpr;
+      canvas.height = logH * dpr;
+    }
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const rawAll = candlesRef.current ?? [];
+    if (!rawAll.length) { ctx.clearRect(0, 0, logW, logH); return; }
+    // Heikin Ashi is a running recurrence (each bar depends on the previous
+    // one's computed open/close) — must transform the FULL series before
+    // slicing to the visible window, same order PriceChart.tsx's own
+    // redrawCandleSeries applies calcHeikinAshi in.
+    const all = colorsRef.current.style === "heikinAshi" ? calcHeikinAshiLocal(rawAll) : rawAll;
+
+    // Index-based slice (not a time-range filter) — getVisibleLogicalRange
+    // gives fractional bar indices that line up 1:1 with this array's own
+    // order, so there's no per-candle timeToCoordinate resolution risk for
+    // bars outside the visible window (see LineDotFillOverlay's note above
+    // on why that silently drops points for a large "all" history).
+    const logicalRange = chart.timeScale().getVisibleLogicalRange();
+    if (!logicalRange) { ctx.clearRect(0, 0, logW, logH); return; }
+    const fromIdx = Math.max(0, Math.floor(logicalRange.from) - 1);
+    const toIdx = Math.min(all.length - 1, Math.ceil(logicalRange.to) + 1);
+    const visible = fromIdx <= toIdx ? all.slice(fromIdx, toIdx + 1) : [];
+
+    const barSpacing = chart.timeScale().options().barSpacing;
+    const timeToX = (t: number) => (chart.timeScale().timeToCoordinate(t as Time) ?? -9999) as number;
+    const priceToY = (p: number) => (series.priceToCoordinate(p) ?? -9999) as number;
+
+    paintRoundedCandles(ctx, logW, logH, visible, barSpacing, timeToX, priceToY, colorsRef.current.upColor, colorsRef.current.downColor, colorsRef.current.style === "hollow");
+  }, [chartRef, seriesRef, candlesRef]);
+
+  renderRef.current = render;
+
+  useEffect(() => {
+    colorsRef.current = { upColor, downColor, style };
+    if (visible) render();
+  }, [upColor, downColor, style, generation, visible, render]);
+
+  useEffect(() => () => { subCleanupRef.current?.(); }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver(() => { if (visible) render(); });
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [render, visible]);
+
+  if (!visible) return null;
+  return <canvas ref={canvasRef} className="drawing-overlay" />;
+}

@@ -180,6 +180,10 @@ export interface AgentMessage {
   thoughtProcess: string | null;
   navigateTo: NavigateToRequest | null;
   positionsList: PositionsListResponse | null;
+  // "Ask Agent Ready" button (Advance Chart page) — the chart screenshot
+  // a user turn was sent with, if any. Null for every normal typed
+  // message and for every agent reply.
+  imageUrl: string | null;
   createdAt: string;
 }
 
@@ -281,7 +285,7 @@ export async function updatePreferences(userId: string, partial: PreferencesUpda
   if (error) throw new Error(error.message);
 }
 
-const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, navigate_to, positions_list, created_at";
+const MESSAGE_COLUMNS = "id, conversation_id, role, content, action, basket, question, balance_update, news_sources, action_status, watch, watch_id, thought_process, navigate_to, positions_list, image_url, created_at";
 
 function rowToMessage(m: {
   id: number; conversation_id: string; role: "user" | "agent"; content: string;
@@ -290,7 +294,7 @@ function rowToMessage(m: {
   news_sources: NewsSource[] | null; action_status: AgentMessage["actionStatus"];
   watch: { coin: string; condition: string; interval: MarketInterval } | null; watch_id: string | null;
   thought_process: string | null; navigate_to: NavigateToRequest | null;
-  positions_list: PositionsListResponse | null; created_at: string;
+  positions_list: PositionsListResponse | null; image_url: string | null; created_at: string;
 }): AgentMessage {
   return {
     id: m.id,
@@ -307,6 +311,7 @@ function rowToMessage(m: {
     thoughtProcess: m.thought_process,
     navigateTo: m.navigate_to,
     positionsList: m.positions_list,
+    imageUrl: m.image_url,
     actionStatus: m.action_status,
     createdAt: m.created_at,
   };
@@ -381,7 +386,8 @@ async function insertMessage(
   basket: AgentAction[] | null = null, question: AgentQuestion | null = null,
   newsSources: NewsSource[] | null = null, balanceUpdate: BalanceUpdate | null = null,
   thoughtProcess: string | null = null, watch: { coin: string; condition: string; interval: MarketInterval } | null = null,
-  navigateTo: NavigateToRequest | null = null, positionsList: PositionsListResponse | null = null
+  navigateTo: NavigateToRequest | null = null, positionsList: PositionsListResponse | null = null,
+  imageUrl: string | null = null
 ): Promise<AgentMessage> {
   const { data, error } = await supabase
     .from("agent_messages")
@@ -401,6 +407,7 @@ async function insertMessage(
       thought_process: thoughtProcess,
       navigate_to: navigateTo,
       positions_list: positionsList,
+      image_url: imageUrl,
     })
     .select(MESSAGE_COLUMNS)
     .single();
@@ -459,9 +466,13 @@ export async function sendAgentMessage(
   userId: string, conversationId: string, content: string, history: HistoryTurn[], selectedCoin?: string | null,
   onThinking?: (text: string) => void, viaVoice?: boolean, onMarketSnapshot?: (snapshot: CoinSnapshot[] | null) => void,
   onShowChart?: (req: ShowChartRequest) => void, onShowOrderBook?: (req: ShowOrderBookRequest) => void,
-  signal?: AbortSignal, onPreferencesUpdate?: (update: PreferencesUpdate) => void
+  signal?: AbortSignal, onPreferencesUpdate?: (update: PreferencesUpdate) => void,
+  // "Ask Agent Ready" button on the Advance Chart page — a data: URL of a
+  // chart screenshot, appended last (not inserted earlier) so every
+  // existing positional call site keeps working unchanged.
+  imageDataUrl?: string | null,
 ): Promise<AgentMessage> {
-  await insertMessage(userId, conversationId, "user", content, null);
+  await insertMessage(userId, conversationId, "user", content, null, null, null, null, null, null, null, null, null, null, imageDataUrl ?? null);
 
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
@@ -470,7 +481,7 @@ export async function sendAgentMessage(
   const res = await fetch(AGENT_REPLY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ message: content, history, selectedCoin, viaVoice }),
+    body: JSON.stringify({ message: content, history, selectedCoin, viaVoice, imageDataUrl: imageDataUrl ?? undefined }),
     signal,
   });
   if (!res.ok || !res.body) throw new Error(`Agent didn't respond (${res.status}) — please try again`);

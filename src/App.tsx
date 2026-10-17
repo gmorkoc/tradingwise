@@ -60,6 +60,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
+import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 
 // No-op on web/desktop, where this plugin isn't meaningful (and may not
 // be present) — same convention as PriceChart.tsx/TradingAgent.tsx's own
@@ -1340,6 +1341,13 @@ function AppDashboard({
   // user somehow lands directly on #advance-chart without having
   // navigated there via the chart's own Full Screen button.
   const advanceChartPushedRef = useRef(false);
+  // Mobile only — tapping Full Screen on the compact chart opens the real
+  // Advance Chart page (<PriceChart pageMode>) as a draggable bottom sheet
+  // over the current screen instead of a hard section navigation (which is
+  // what still happens on desktop, unchanged, via advanceChartPushedRef
+  // above). No history/hash wiring on purpose — this is a local overlay,
+  // not a real route change, so back/forward navigation is untouched.
+  const [mobileAdvanceChartOpen, setMobileAdvanceChartOpen] = useState(false);
 
   // Value intentionally unread — the bullish/bearish banner render is
   // disabled below, but the computation stays wired up so it's a one-line
@@ -2618,6 +2626,10 @@ function AppDashboard({
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                         onNavigateToPage={() => {
+                          if (!isDesktopWidth) {
+                            setMobileAdvanceChartOpen(true);
+                            return;
+                          }
                           advanceChartPushedRef.current = true;
                           window.history.pushState(null, "", `${window.location.search}#advance-chart`);
                           setActiveSection("advance-chart");
@@ -2707,6 +2719,24 @@ function AppDashboard({
                   } else {
                     setActiveSection("chart");
                   }
+                }}
+              />
+            )}
+            {mobileAdvanceChartOpen && !isDesktopWidth && (
+              <MobileSymbolSheet
+                coin={coin}
+                theme={theme}
+                quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
+                ticker={coinTickers.get(coin)}
+                onOpenAuth={onOpenAuth}
+                onOpenUpgrade={onOpenUpgrade}
+                onOpenCoinPicker={openCoinPicker}
+                onClose={() => setMobileAdvanceChartOpen(false)}
+                onOpenFullChart={() => {
+                  setMobileAdvanceChartOpen(false);
+                  advanceChartPushedRef.current = true;
+                  window.history.pushState(null, "", `${window.location.search}#advance-chart`);
+                  setActiveSection("advance-chart");
                 }}
               />
             )}
@@ -3132,6 +3162,11 @@ function AppDashboard({
         onAgentLocked={() => setShowEliteUpsell(true)}
         onReportIssue={() => setContactOpen(true)}
         showIntroShowcase={showAgentShowcase}
+        // Advance Chart page — the floating trigger asks for (and
+        // attaches) a chart screenshot instead of opening blank; see
+        // TradingAgent.tsx's own Props comments for the event handoff.
+        triggerLabel={activeSection === "advance-chart" ? "Ask Agent ready" : undefined}
+        triggerCapturesChart={activeSection === "advance-chart"}
       />
       {showAgentShowcase && <AgentIntroShowcase />}
       <NotificationsCenter

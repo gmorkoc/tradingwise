@@ -2882,7 +2882,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   display: none;
 }
 .mch-coin-chevron {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 2px;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 .price-source {
   font-size: 0.58rem;
@@ -4923,4 +4928,389 @@ html[data-theme="light"] .pticker-price {
 .nav-badge--mobile,
 .icon-strip-elite-badge {
   display: none !important;
+}
+
+/* Mobile only — MobileSymbolSheet.tsx. Reference-match (TradingView
+   mobile "symbol info" page, the user's 3 screenshots merged into one
+   continuous scroll): coin header, a frozen (fixed-size, non-interactive)
+   real chart, interval row, Trade button, tabs, then Overview/Technicals/
+   Key stats/About flowing directly below with no accordion toggles —
+   opened from App.tsx in place of a hard navigation to #advance-chart.
+   z-index: same reasoning as the tier comment this replaced — above the
+   app chrome/PriceAlerts/TradingAgent/AuthModal-UpgradeModal tier
+   (60–2000), below the ~200000 tier this app's own portaled in-chart
+   sheets (interval picker, BuySignals, FloatingNavBar's "raised" state)
+   use, since the embedded PriceChart can still open those from inside
+   this sheet and they need to render above it. */
+.mss-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1900;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  animation: mss-fade 0.22s ease;
+}
+@keyframes mss-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.mss-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 92vh;
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  animation: mss-slide-up 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-bottom: max(0px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+}
+@keyframes mss-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.mss-handle {
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  margin: 0 auto 8px;
+  flex-shrink: 0;
+}
+/* Every button in this sheet — strips the default blue tap/focus ring
+   mobile WebKit draws on <button> elements (visible as a rounded-rect
+   outline bleeding past each button's own shape, reported on the tab row
+   and the chart tool buttons; applied everywhere here pre-emptively since
+   every button in this sheet is the same plain unstyled-by-default kind). */
+.mss-sheet button {
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mss-close {
+  position: absolute;
+  right: 16px;
+  top: 8px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+/* No side padding here on purpose — the header and chart below need to
+   span full width, and the old approach (pad this container, then have
+   those two break out with a negative margin) made them wider than their
+   parent, which is exactly what let iOS turn this into a horizontally
+   scrollable box in the first place (see the overflow-x/touch-action
+   comment above the old rule this replaced). Every other section pads
+   itself instead — nothing is ever wider than .mss-scroll now, so
+   overflow-x/touch-action here are belt-and-suspenders, not load-bearing. */
+.mss-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding: 4px 0 24px;
+}
+/* The embedded <PriceChart> (compact mode — no pageMode/isFullscreen) is
+   already a fixed 400px-tall, 100%-wide, pan/zoom-disabled chart on its
+   own — this wrapper doesn't add any sizing of its own, just lets it sit
+   in normal scroll flow instead of the flex-fill treatment pageMode uses
+   elsewhere. */
+.mss-header {
+  position: absolute;
+  top: -4px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 16px 6px;
+  background: var(--color-surface);
+  width: 100%;
+}
+.mss-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* .mss-close is position:absolute (right:16px) and no longer reserves
+     its own flex space — this keeps the row's own content (the price in
+     particular, left-aligned next to the coin avatar now, not pushed to
+     the far right) from ever extending underneath it. */
+  padding-right: 44px;
+}
+.mss-header-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.mss-header-price-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.mss-header-price-change {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.mss-coin-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.mss-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mss-coin-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.mss-coin-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+.mss-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+.mss-price-block {
+  margin-top: 72px;
+  padding: 0 16px;
+}
+.mss-price {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.mss-price-unit {
+  margin-left: 4px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.mss-price-change-row {
+  margin-top: 3px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.mss-price-change-label {
+  font-weight: 500;
+  opacity: 0.85;
+}
+.mss-price-change--up {
+  color: #16a34a;
+}
+.mss-price-change--down {
+  color: #ef4444;
+}
+.mss-chart-frozen {
+  margin-top: 14px;
+}
+.mss-chart-frozen .price-chart-container {
+  padding: 0;
+}
+.mss-chart-tools-row {
+  display: flex;
+  justify-content: flex-start;
+  padding: 10px 16px 0;
+}
+.mss-chart-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 4px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mss-chart-tool-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.mss-interval-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 16px 14px;
+}
+.mss-interval-pill {
+  flex: 1;
+  text-align: center;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mss-interval-pill--active {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+/* The embedded compact <PriceChart> brings its own title row, High/Low
+   row, AI-insight banner, icon row (Candle/24H/Indicators/Grid/Order
+   Depth/Save/Fullscreen), a floating "Save" button over the canvas, the
+   "Happening now" event-card carousel, the double-tap-for-fullscreen
+   hint, and a pattern-insight card (e.g. "Inside Bar") — every one of
+   these is real, useful functionality on the normal chart page, but NONE
+   of it exists in the reference screenshots, which show only: coin
+   name/price (this sheet's own custom header), the plain candlestick
+   chart with nothing overlaid, then this sheet's own interval row/Trade
+   button/tabs/stats below. There's no prop on PriceChart.tsx to suppress
+   these individually, so they're hidden here (scoped to this wrapper
+   only) instead of touching that 5000+ line component's render logic for
+   a purely cosmetic trim. */
+.mss-chart-frozen .chart-title-row,
+.mss-chart-frozen .chart-fs-stat-col--row,
+.mss-chart-frozen .interval-banner,
+.mss-chart-frozen .chart-legend-actions,
+.mss-chart-frozen .chart-hero-icon-row,
+.mss-chart-frozen .chart-reset-view-btn,
+.mss-chart-frozen .chart-event-dots-layer,
+.mss-chart-frozen .chart-event-cards,
+.mss-chart-frozen .chart-event-dots-pager,
+.mss-chart-frozen .pattern-insight {
+  display: none !important;
+}
+.mss-chart-frozen .chart-dblclick-wrap::after {
+  display: none !important;
+}
+.mss-trade-btn {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 32px);
+  margin: 14px 16px 0;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: #0a0b0d;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.mss-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.mss-tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  outline: none;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.mss-tab--active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-text);
+}
+.mss-tab-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.mss-news-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+}
+.mss-news-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+}
+.mss-news-item:last-child {
+  border-bottom: none;
+}
+.mss-news-thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--color-input-bg);
+}
+.mss-news-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.mss-news-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.35;
+}
+.mss-news-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.mss-section-title {
+  margin-top: 20px;
+  margin-bottom: 2px;
+  padding: 0 16px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+/* fs-info-list/fs-gauge are shared with PriceChart.tsx's own fs-dock
+   (Overview/Technicals categories there already pad themselves via
+   .fs-dock-body/.fs-dock-category-body) — scoped to this sheet only. */
+.mss-scroll .fs-info-list,
+.mss-scroll .fs-gauge {
+  padding: 0 16px;
 }

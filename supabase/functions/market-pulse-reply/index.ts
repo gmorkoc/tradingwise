@@ -176,6 +176,26 @@ Deno.serve(async (req) => {
       return new Response("not addressed to bot", { status: 200, headers: corsHeaders });
     }
 
+    // Pro/Elite only — same gate analyze-chart's own edge function uses
+    // (checks the poster's own profile row rather than trusting the
+    // client). Before this, any signed-in free-tier user could trigger a
+    // real OpenAI call for free just by @mentioning the bot — nothing
+    // upstream of this point costs anything (the "addressed to bot"
+    // heuristic above and the welcome message are both free), so this is
+    // the one spot that actually needs to gate before the real API call
+    // below. A free user gets silently skipped (no reply posted), same
+    // as the "not addressed to bot" no-op above, rather than a bot
+    // message cluttering a public room with an upsell pitch.
+    const { data: posterProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("tier")
+      .eq("id", comment.user_id)
+      .maybeSingle();
+    if (posterProfile?.tier !== "pro" && posterProfile?.tier !== "elite") {
+      console.log(`[${commentId}] skip — poster tier is ${posterProfile?.tier ?? "unknown"}, not pro/elite`);
+      return new Response("not pro/elite", { status: 200, headers: corsHeaders });
+    }
+
     const market = await getMarketSnapshot(comment.coin);
     const { text: reply, debug } = await generateReply(comment.coin, comment.body, market, comment.image_url);
     if (!reply) {

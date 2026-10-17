@@ -39,33 +39,32 @@
    the page — a faint tinted backdrop behind white, gently rounded cards —
    so the "glossy, rounded" treatment reads without changing the palette. */
 html[data-theme="light"] .chart-active {
-  /* --color-background (not --color-surface-alt) specifically because
-     that's the exact value confirmed by direct device measurement to be
-     what html/body render in the safe-area strip behind the status bar —
-     WebKit won't let this fullscreen view's `position:fixed` overlay
-     paint under the notch no matter what, so matching --pc-bg to that
-     value directly (rather than fixing the overlay) is what actually
-     makes the two strips read as one color. Embedded (non-fullscreen)
-     card views aren't affected — they set their own background below. */
-  --pc-bg: var(--color-background);
+  /* Hardcoded here (not var(--color-*)) on purpose — this page now has
+     its own distinct light palette, deliberately diverging from the
+     rest of the app's light theme rather than aliasing its generic
+     tokens. --pc-bg/--pc-text/--pc-accent are the exact three documented
+     Coinbase brand colors (White #FFFFFF, Woodsmoke #0A0B0D, Blue Ribbon
+     #0052FF) — everything else here is a complementary shade picked to
+     match that same clean/cobalt look, not independently sourced. */
+  --pc-bg: #ffffff;
   --pc-panel: #ffffff;
-  --pc-panel-2: #f2f4f8;
-  --pc-border: var(--color-border);
-  --pc-text: var(--color-text);
-  --pc-text-secondary: var(--color-text-secondary);
-  --pc-text-muted: var(--color-text-muted);
-  --pc-accent: var(--color-primary);
-  --pc-accent-2: var(--color-primary);
-  --pc-accent-soft: var(--color-primary-soft);
-  --pc-success: var(--color-success);
-  --pc-danger: var(--color-danger);
+  --pc-panel-2: #f5f5f5;
+  --pc-border: #e7e9eb;
+  --pc-text: #0a0b0d;
+  --pc-text-secondary: #5b616e;
+  --pc-text-muted: #8a919e;
+  --pc-accent: #0052ff;
+  --pc-accent-2: #0052ff;
+  --pc-accent-soft: rgba(0, 82, 255, 0.1);
+  --pc-success: #05b169;
+  --pc-danger: #e2492b;
   /* Tight blur radius on purpose — .price-chart-container/.ob-card only
      have a 10px margin gap between them, and the old 24px blur bled well
      past that, reading as a gray band in the gap instead of a shadow. */
-  --pc-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --pc-shadow: 0 2px 8px rgba(10, 11, 13, 0.06);
   --pc-chart-bg: #ffffff;
-  --pc-chart-text: #475569;
-  --pc-chart-grid: #e2e8f0;
+  --pc-chart-text: #5b616e;
+  --pc-chart-grid: #f0f1f3;
   --pc-scrim-rgb: 255, 255, 255;
 }
 
@@ -115,6 +114,17 @@ html[data-theme="light"] .chart-active {
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
     padding-right: 10px;
   }
+}
+
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) {
+  background: transparent;
+  border-radius: 20px;
+  /* The base rule sets no overflow at all (defaults to visible) — without
+     this, the candle canvas's own square corners aren't clipped to the
+     radius above, so the rounding never actually shows where the chart
+     fills the box. */
+  overflow: hidden;
 }
 @media (max-width: 768px) {
   .chart-active
@@ -314,11 +324,68 @@ html[data-theme="light"]
 /* Desktop fullscreen — scrolls away with the rest of the page instead of
    pinning to the top, so the whole page (header included) is one
    continuous scroll area. Mobile overrides this back to sticky further
-   below (it wants the header pinned; desktop doesn't). */
+   below (it wants the header pinned; desktop doesn't). Advance Chart page
+   (price-chart-container--page) is the one exception — see the no-scroll
+   override just below, which turns this back into a non-scrolling flex
+   column instead. */
 .price-chart-container--fs .chart-fs-header-group,
 .price-chart-container:fullscreen .chart-fs-header-group {
   position: static;
   margin: 0;
+}
+
+/* Reference-match (TradingView desktop chart) — the Advance Chart page
+   never scrolls: toolbar + header + chart all fit in exactly one
+   viewport, same as TradingView's own app shell. Desktop only (mobile
+   pageMode already had its own flex-fill treatment, untouched above).
+   .price-chart-fs-scroll's base rule (height:100%; overflow-y:scroll)
+   is what every OTHER fullscreen view relies on to scroll the header
+   away with the page — this specifically turns that off just for this
+   one container, replacing it with a column flex layout so
+   .chart-canvas-wrap's own flex:1 (set inline in PriceChart.tsx for
+   pageMode) can actually claim "whatever's left" instead of there being
+   no bounded parent height to fill. */
+@media (min-width: 769px) {
+  .price-chart-container--page.price-chart-container--fs .price-chart-fs-scroll {
+    overflow-y: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+  .price-chart-container--page .chart-fs-header-group,
+  .price-chart-container--page .chart-tv-toolbar {
+    flex-shrink: 0;
+  }
+  /* .chart-dblclick-wrap sits between .price-chart-fs-scroll and the
+     canvas (.chart-canvas-wrap, which already gets flex:"1 1 auto" set
+     inline in PriceChart.tsx for pageMode) — without making THIS a flex
+     column too, that inline flex:1 has no effect (its parent isn't a
+     flex container), so the canvas stayed stuck at a small intrinsic
+     height instead of actually filling "whatever's left", even with
+     page scrolling already off. */
+  .price-chart-container--page .chart-dblclick-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .price-chart-container--page .chart-tv-bottom-bar {
+    flex-shrink: 0;
+  }
+  /* Reference-match (TradingView desktop chart): the drawing-tools rail
+     (ChartDrawingTools, .cdt-toolbar) is position:fixed, floating at
+     chartRect.left + 8px — i.e. INSIDE the chart's own left edge, not
+     beside it — so without this the candles render right underneath it
+     instead of the toolbar having its own reserved column the way
+     TradingView's does. Padding the chart's own mount point pushes the
+     actual rendered candles/axis to start after the toolbar instead;
+     lightweight-charts' autoSize observes this container's content-box,
+     so the chart canvas itself shrinks to fit the remaining width rather
+     than a drawn chart just getting clipped under the padding. */
+  .price-chart-container--page .chart-canvas-wrap {
+    padding-left: 56px;
+    box-sizing: border-box;
+  }
 }
 
 /* Advance Price Chart page, mobile — the header IIFE returns null here
@@ -329,6 +396,100 @@ html[data-theme="light"]
    Collapsing the whole stack removes that gap entirely. */
 .chart-fs-header-group--empty {
   display: none;
+}
+
+/* Reference-match (TradingView mobile full chart) — Advance Price Chart
+   page, mobile only: coin icon/name + live pill up top, price/%-change
+   pinned top-left right under it. Overlaid directly on the chart canvas
+   (position:absolute, same technique as the desktop OHLC overlay a bit
+   below) instead of taking its own layout row — .chart-fs-header-group
+   is collapsed to display:none for this page (chart-fs-header-group--
+   empty) specifically so the canvas keeps the full flex height. The dock
+   further down (fsDockSheet) still owns Style/Indicators/Interval/
+   Overview/Technicals/etc — this is just the always-visible identity/
+   price readout. */
+.chart-mobile-top-header {
+  position: absolute;
+  top: 18px;
+  left: 12px;
+  z-index: 5;
+  pointer-events: none;
+}
+.chart-mobile-top-close {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 50%;
+  background: #0a0b0d;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+.chart-mobile-top-close svg {
+  display: block;
+  pointer-events: none;
+}
+.chart-mobile-top-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.chart-mobile-top-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+.chart-mobile-top-name {
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+.chart-mobile-top-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+.chart-mobile-top-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+.chart-mobile-top-price {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-text);
+}
+.chart-mobile-top-change {
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+.chart-mobile-top-change--up {
+  color: #16a34a;
+}
+.chart-mobile-top-change--down {
+  color: #ef4444;
 }
 
 /* Mobile (iOS and web mobile alike) fullscreen — page scroll is back (the
@@ -449,6 +610,120 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   align-items: stretch;
   gap: 12px;
   flex-shrink: 0;
+}
+
+/* Reference-match: desktop non-fullscreen's own .chart-header-right —
+   the reference screenshot's own chart widget is much wider than our
+   compact card (it sits in a 3-column dashboard grid here), so a literal
+   side-by-side 2-column header crushes against the big price text and
+   wraps left-aligned under it instead of staying pinned right. Forcing
+   this onto its own full-width row below chart-header-left (flex-basis
+   100% in the wrapping .chart-header) keeps the reference's actual
+   intent — pills on the left, icons pinned right, one row — regardless
+   of how narrow the card gets. */
+.chart-active .chart-header-right {
+  flex: 1 1 100%;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.chart-hero-icon-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The compact card (~520-550px here, split 3 ways in the dashboard grid)
+   is much narrower than the reference's own wide standalone chart widget
+   — at the original pill/icon sizing, the pills+icons column overflowed
+   the card's right edge entirely (rendering underneath the Order Book
+   panel next to it, reading as "icons missing/no background"). Smaller
+   pills/icons here, scoped to just this row, keep the full reference
+   content (all 5 intervals + More, all 4 icons) actually on-screen. */
+.chart-quick-interval-pills .interval-pill {
+  padding: 5px 8px !important;
+  font-size: 0.72rem !important;
+}
+.chart-quick-interval-pills {
+  gap: 2px;
+}
+.chart-hero-icon-row .chart-depth-btn {
+  width: 30px !important;
+  height: 30px !important;
+  /* Reference-match: the mockup's own +/sliders/fullscreen/camera row is
+     flat — no circle behind them at all, unlike the interval pills right
+     above which DO keep their gray capsule. Overrides the shared circular-
+     button rule (scoped to .chart-depth-btn generally) just for this row. */
+  background: transparent !important;
+  color: #9ca3af !important;
+}
+.chart-hero-icon-row .chart-depth-btn:hover {
+  background: rgba(10, 11, 13, 0.08) !important;
+  color: #6b7280 !important;
+}
+.chart-hero-icon-row .chart-depth-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Reference-match: a true 2x2 grid — [coin icon+name] [interval pills] on
+   row 1, [price+change badge] [icon buttons] on row 2 — instead of pills
+   and icons sharing one row below everything. flex-wrap's own heuristics
+   kept dropping the whole right side onto its own 3rd row depending on
+   exact pixel widths, so this uses an explicit grid instead: both
+   .chart-header-left and .chart-header-right go display:contents so their
+   children (hero-id-row/title-row, pills/icon-row) become direct grid
+   items that get placed into exact cells, regardless of content width.
+   min-width matches isDesktopWidth's own JS breakpoint (PriceChart.tsx) —
+   below it this component renders a completely different mobile header
+   with none of these classes, so this never touches that layout. */
+@media (min-width: 641px) {
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    column-gap: 14px;
+    row-gap: 10px;
+    align-items: center;
+  }
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-header-left,
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-header-right {
+    display: contents;
+  }
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-hero-id-row {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-title-row {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-quick-interval-pills {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  html[data-theme="light"] .chart-active
+    .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+    .chart-hero-icon-row {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
 }
 
 .chart-title-row {
@@ -584,12 +859,136 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   transition: color 0.25s ease;
 }
 
+/* Reference-match: a big bold price reads as the hero of the header, not
+   a secondary label next to the coin name — desktop non-fullscreen only
+   (fullscreen keeps its own compact exchange-style header untouched). */
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-current-price {
+  font-size: 3.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0a0b0d;
+}
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-current-price--up,
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-current-price--down {
+  color: #0a0b0d;
+}
+
 .chart-current-price--up {
   color: #4ade80;
 }
 
 .chart-current-price--down {
   color: #fb7185;
+}
+
+/* Reference-match hero rows (desktop, non-fullscreen only — these classes
+   are only ever rendered by that branch of PriceChart.tsx's header JSX, so
+   no extra scoping selector is needed to keep fullscreen/mobile untouched).
+   Row 1: small coin icon + "COIN/USDT" label. Row 2: huge price + rounded
+   %-change pill, matching the Coinbase-style screenshot the user supplied. */
+.chart-hero-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chart-hero-coin-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.chart-hero-pair-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #0a0b0d;
+}
+.chart-hero-price-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.chart-hero-change-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-hero-change-badge--up {
+  background: rgba(74, 222, 128, 0.16);
+  color: #16a34a;
+}
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-hero-change-badge--down {
+  background: rgba(251, 113, 133, 0.16);
+  color: #e11d48;
+}
+.chart-hero-change-badge--up {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+}
+.chart-hero-change-badge--down {
+  background: rgba(251, 113, 133, 0.14);
+  color: #fb7185;
+}
+.chart-hero-zone-row {
+  margin-top: 2px;
+}
+.chart-hero-selected-interval {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  padding-right: 10px;
+  border-right: 1px solid var(--color-border);
+}
+
+/* Reference-match floating crosshair tooltip (date + price bubble) —
+   written to imperatively from subscribeCrosshairMove in PriceChart.tsx,
+   desktop non-fullscreen only (that's also the only branch that renders
+   this element at all). position:absolute relies on the same positioned
+   ancestor the other chart overlays (.drawing-overlay etc.) already use. */
+.chart-crosshair-tooltip {
+  position: absolute;
+  z-index: 11;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(10, 11, 13, 0.18), 0 1px 3px rgba(10, 11, 13, 0.1);
+  white-space: nowrap;
+  transition: opacity 0.08s ease;
+}
+.chart-crosshair-tooltip-date {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8a919e;
+}
+.chart-crosshair-tooltip-price {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #0a0b0d;
+  font-variant-numeric: tabular-nums;
 }
 
 /* .chart-mobile-stats/.chart-mobile-avatar/.chart-mobile-vol* (the old
@@ -791,10 +1190,10 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   right: 0;
   bottom: 0;
   z-index: 500;
-  max-height: 80vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: #f6f6f6;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
@@ -816,7 +1215,7 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 6px 14px 8px;
+  padding: 12px 14px;
   flex-shrink: 0;
 }
 .fs-dock-peek-toggle {
@@ -829,52 +1228,330 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   gap: 4px;
   width: 100%;
 }
-/* Save / Reset / Draw / Close as one labeled segmented control, replacing
-   the old icon-only row — each segment is icon + text side by side,
-   equal width, sharing one rounded track. Close is visually distinct
-   (danger color) since it's destructive-ish (leaves the page) compared
-   to the other three; Draw gets the active/pressed treatment while its
-   floating toolbox is open, same convention as elsewhere in this dock. */
-/* --color-* tokens (not --pc-*) — this dock is portaled to document.body
-   (fsDockSheet in PriceChart.tsx), outside .chart-active's DOM subtree
-   where --pc-* is defined, so those just silently fell back to this
-   rule's hardcoded light-mode fallback values regardless of theme —
-   the exact "track reads white in dark theme" bug. Same reason the
-   interval bottom sheet and indicators sheet already use --color-*
-   instead (see the comment above .interval-sheet-backdrop). */
-.fs-dock-segmented {
-  display: flex;
-  align-items: stretch;
-  gap: 3px;
-  margin-top: 4px;
-  padding: 4px;
-  border-radius: 16px;
-  background: var(--color-surface-strong);
+/* "Option E — swipeable hero card" (user-approved) — one full, rich
+   category card at a time in the peek row, swiped between via touch
+   (JS-driven, see PriceChart.tsx) with dot pagination below it. */
+.fs-hero {
+  margin-top: 8px;
 }
-.fs-dock-segment {
-  all: unset;
+.fs-hero-card {
   box-sizing: border-box;
-  cursor: pointer;
-  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  text-align: left;
+}
+.fs-hero-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fs-hero-value {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-hero-value--up {
+  color: #16a34a;
+}
+.fs-hero-value--down {
+  color: #ef4444;
+}
+.fs-hero-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fs-hero-sub-down {
+  color: #ef4444;
+}
+.fs-hero-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+.fs-hero-icon-core {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-input-bg);
+}
+.fs-hero-dots {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 9px 4px;
-  border-radius: 16px;
-  border: 1.5px solid transparent;
-  color: var(--color-text);
-  font-size: 0.78rem;
-  font-weight: 700;
+  gap: 5px;
+  margin-top: 8px;
+}
+.fs-hero-dot {
+  all: unset;
+  box-sizing: border-box;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-border);
+  cursor: pointer;
+}
+.fs-hero-dot--active {
+  width: 14px;
+  background: var(--color-text-secondary);
+}
+/* Slim action strip below the hero card (Option E) — same dot-pagination
+   logic/UI as .fs-hero-dot above: every item starts as a small plain dot,
+   tapping one expands it into the wide pill (icon + label) and collapses
+   every other item back down, full width across the row. No dividers —
+   one continuous track, same as the hero's own dots. */
+.fs-dock-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  width: 100%;
+  /* Lines the first icon's left edge up with the hero card's own text
+     (its 14px own padding, on top of .fs-dock-peek's 14px) instead of
+     sitting flush with the dock's outer edge, 14px further left. */
+  padding-left: 14px;
+}
+.fs-dock-quick-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  overflow: hidden;
   white-space: nowrap;
+  transition: flex-grow 0.22s ease, flex-basis 0.22s ease, width 0.22s ease,
+    padding 0.22s ease, background-color 0.22s ease, gap 0.22s ease;
 }
-.fs-dock-segment--active {
+.fs-dock-quick-btn--active {
+  flex: 1 1 auto;
+  width: auto;
+  gap: 7px;
+  padding: 0 16px;
+  background: var(--color-text-secondary);
+  color: var(--color-surface);
+}
+.fs-dock-quick-btn--on {
+  background: var(--color-text-secondary);
+  color: var(--color-surface);
+}
+/* While one item is expanded, shrink every other (still-a-dot) icon
+   further so the expanded pill gets more room for its options. */
+.fs-dock-quick-row--expanded .fs-dock-quick-btn:not(.fs-dock-quick-btn--active) {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+}
+.fs-dock-quick-row--expanded .fs-dock-quick-btn:not(.fs-dock-quick-btn--active) svg {
+  width: 11px;
+  height: 11px;
+}
+.fs-dock-quick-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  color: inherit;
+  flex-shrink: 0;
+}
+.fs-dock-quick-label {
+  display: none;
+  align-items: center;
+  height: 15px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  color: inherit;
+  white-space: nowrap;
+  /* Font glyphs sit higher than their line box's geometric center —
+     nudge down to true-center against the icon next to it. */
+  position: relative;
+  top: 2px;
+}
+.fs-dock-quick-btn--active .fs-dock-quick-label {
+  display: flex;
+}
+/* Nothing expanded — every item has room to be a labeled pill instead of
+   a bare icon dot. Icon stays on the left, label follows on the right;
+   the row scrolls if the full set doesn't fit at this width. */
+.fs-dock-quick-row:not(.fs-dock-quick-row--expanded) {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.fs-dock-quick-row:not(.fs-dock-quick-row--expanded)::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.fs-dock-quick-row:not(.fs-dock-quick-row--expanded) .fs-dock-quick-btn {
+  flex: 0 0 auto;
+  width: auto;
+  gap: 6px;
+  padding: 0 12px 0 10px;
+}
+.fs-dock-quick-row:not(.fs-dock-quick-row--expanded) .fs-dock-quick-label {
+  display: flex;
+}
+/* Interval/Indicators/Style expand INSIDE this same button instead of
+   anywhere else — a small icon (tap to collapse back to a dot) plus a
+   horizontally scrollable strip of the picker's own options, both
+   living inside the one expanded pill. */
+.fs-dock-quick-btn--picker {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.fs-dock-quick-collapse {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: inherit;
+  cursor: pointer;
+}
+.fs-dock-quick-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 12px 0 0;
+}
+.fs-dock-quick-options::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.fs-dock-quick-option {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.fs-dock-quick-option--active {
   background: var(--color-surface);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-text-secondary);
+  font-weight: 700;
 }
-.fs-dock-segment--danger {
-  color: var(--color-danger);
+.fs-dock-quick-option--locked {
+  opacity: 0.55;
+}
+.fs-dock-quick-option-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+/* "Option A — sliding highlight" (user-approved) — single-select pickers
+   (Interval, Style) only: one continuous track, no per-item border/fill.
+   A single rounded highlight slides to sit behind whichever item is
+   active instead of each option carrying its own chip styling. */
+.fs-dock-slide-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 12px 0 2px;
+}
+.fs-dock-slide-track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.fs-dock-slide-highlight {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.fs-dock-slide-item {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--color-surface) 65%, transparent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.fs-dock-slide-item--active {
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+.fs-dock-slide-item--locked {
+  opacity: 0.55;
 }
 
 /* Advance Price Chart page, mobile — the peek row's title-row shows the
@@ -1000,6 +1677,91 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .fs-dock-category-icon--stats {
   background: rgba(244, 114, 182, 0.16);
   color: #f472b6;
+}
+/* Reference-match (TradingView mobile "symbol info" sheet) */
+.fs-dock-category-icon--overview {
+  background: rgba(96, 165, 250, 0.16);
+  color: #60a5fa;
+}
+.fs-dock-category-icon--technicals {
+  background: rgba(52, 211, 153, 0.16);
+  color: #34d399;
+}
+.fs-dock-category-icon--keystats {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fb923c;
+}
+.fs-dock-category-icon--about {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.fs-info-list {
+  display: flex;
+  flex-direction: column;
+}
+.fs-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.82rem;
+}
+.fs-info-row:last-child {
+  border-bottom: none;
+}
+.fs-info-label {
+  color: var(--color-text-muted);
+}
+.fs-info-value {
+  color: var(--color-text);
+  font-weight: 700;
+  text-align: right;
+}
+.fs-info-link {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-align: right;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.fs-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 0 2px;
+}
+.fs-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 220px;
+  margin-top: 2px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.fs-gauge-value {
+  margin-top: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.fs-gauge-value--strong-sell, .fs-gauge-value--sell, .fs-gauge-value--overbought {
+  color: #ef4444;
+}
+.fs-gauge-value--neutral {
+  color: var(--color-text-muted);
+}
+.fs-gauge-value--strong-buy, .fs-gauge-value--buy, .fs-gauge-value--oversold {
+  color: #16a34a;
 }
 
 .fs-dock-category-label {
@@ -1344,6 +2106,121 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .price-chart-container--fs .chart-canvas-wrap,
 .price-chart-container:fullscreen .chart-canvas-wrap {
   pointer-events: auto;
+}
+
+/* Reference-match (TradingView desktop chart) — OHLC readout + Buy/Sell
+   boxes, overlaid on the chart canvas's own top-left corner instead of a
+   separate header row. Anchored to .chart-canvas-wrap (position:relative
+   above), same positioning context the other chart overlays already use. */
+.chart-tv-ohlc-overlay {
+  position: absolute;
+  top: 8px;
+  /* Clears the full-height drawing-tools rail (.cdt-toolbar--full-rail,
+     ChartDrawingTools.css) sitting at the same left edge — absolute
+     positioning's containing block is the padding box of the nearest
+     positioned ancestor (.chart-canvas-wrap), not its content box, so an
+     8px offset here would land in the exact same zone as that rail
+     (z-index 1002, well above this overlay's 5) and get visually
+     clipped/covered by it. Matches the same ~56px reserved there. */
+  left: 64px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.chart-tv-ohlc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.chart-tv-ohlc-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+.chart-tv-ohlc-title {
+  font-weight: 700;
+  color: var(--color-text);
+}
+.chart-tv-ohlc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chart-tv-ohlc-dot.up {
+  background: #4ade80;
+}
+.chart-tv-ohlc-dot.down {
+  background: #fb7185;
+}
+.chart-tv-ohlc-values {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.chart-tv-ohlc-values b {
+  font-weight: 600;
+}
+.chart-tv-ohlc-up {
+  color: #16a34a;
+}
+.chart-tv-ohlc-down {
+  color: #e11d48;
+}
+.chart-tv-ticket-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+.chart-tv-sell-box,
+.chart-tv-buy-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--color-card-bg);
+  cursor: pointer;
+  line-height: 1.2;
+}
+.chart-tv-ticket-price {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chart-tv-ticket-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.chart-tv-sell-box {
+  border: 1px solid #e11d48;
+}
+.chart-tv-sell-box .chart-tv-ticket-price,
+.chart-tv-sell-box .chart-tv-ticket-label {
+  color: #e11d48;
+}
+.chart-tv-buy-box {
+  border: 1px solid #2563eb;
+}
+.chart-tv-buy-box .chart-tv-ticket-price,
+.chart-tv-buy-box .chart-tv-ticket-label {
+  color: #2563eb;
+}
+.chart-tv-ticket-mid {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
 }
 
 /* The chart canvas itself (.chart-canvas-wrap) is a plain static-position
@@ -1700,6 +2577,14 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   align-items: center;
   gap: 0;
 }
+/* Advance Price Chart page, mobile — clears the new chart-mobile-top-
+   header overlay (coin/price/change) sitting at the same top-left
+   corner, scoped here rather than changing the shared default above. */
+@media (max-width: 768px) {
+  .price-chart-container--page .chart-zone-btn-row {
+    top: 85px;
+  }
+}
 
 .chart-explain-zone-btn {
   display: flex;
@@ -1996,6 +2881,24 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
    outright now rather than just scoped, since it's not wanted even on a
    real desktop mouse hover either. */
 
+/* Reference-match: every pill is a filled light-gray capsule at rest
+   (not just the active one), active = solid near-black fill — desktop
+   non-fullscreen only, same scoping as the price/background overrides
+   above. */
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .interval-pill {
+  background: rgba(10, 11, 13, 0.05);
+  border-radius: 999px;
+  color: #5b616e;
+}
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .interval-pill--active {
+  background: #0a0b0d !important;
+  color: #fff;
+}
+
 .interval-pill--active {
   background: #4f46e5;
   border-color: transparent;
@@ -2111,6 +3014,201 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+/* Reference-match (TradingView desktop chart) — the Advance Chart page's
+   own top toolbar. Desktop pageMode only (see the JSX gate), light theme
+   leaning (matches the reference's plain white bar) but readable in dark
+   theme too via the shared --color-* tokens rather than hardcoded hex. */
+.chart-tv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.chart-tv-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-tv-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.chart-tv-symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chart-tv-symbol:hover {
+  background: var(--color-input-bg);
+}
+.chart-tv-symbol-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+.chart-tv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  /* Was var(--color-text-muted) — too faint to read as a real button
+     against the plain white toolbar (reported as "not visible"). */
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.chart-tv-btn:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+.chart-tv-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chart-tv-save-btn:hover {
+  background: var(--color-input-bg);
+}
+/* Reference-match (Option A sketch, approved) — unified segmented group:
+   Save/Reset/Upgrade fused into one bordered pill, divided by hairlines,
+   with Upgrade's own cell dark-filled so it still reads as the one thing
+   worth a second look without breaking out of the group. */
+.chart-tv-segmented-group {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.chart-tv-segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: none;
+  background: #fff;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.chart-tv-segment-btn:not(:last-child) {
+  border-right: 1px solid var(--color-border);
+}
+.chart-tv-segment-btn:hover {
+  background: var(--color-input-bg);
+}
+.chart-tv-segment-btn svg {
+  /* Explicit, not just relying on the parent's align-items:center — an
+     inline-level replaced element's default baseline alignment can fight
+     flex centering by a visible px or two depending on font metrics. */
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.chart-tv-segment-upgrade {
+  background: #0a0b0d;
+  color: #fff;
+  font-weight: 800;
+}
+.chart-tv-segment-upgrade:hover {
+  background: #0a0b0d;
+  opacity: 0.88;
+}
+/* Standalone echo of TradingAgent's .ta-trigger-orb gradient/glow — see
+   the JSX comment at its usage for why this isn't the real orb element. */
+.chart-tv-orb-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 12%, #f3f8ff 0%, #cfe4ff 20%, #6fa3e8 44%, #2a52a0 66%, #16305f 88%, #0a1430 100%);
+  box-shadow: 0 0 6px 1px rgba(130, 180, 255, 0.5), 0 0 10px 3px rgba(80, 140, 255, 0.3);
+}
+/* The toolbar's own copies of gridStyleControls/fsIntervalButton/
+   indicatorsControl are the exact same bordered-pill desktop buttons the
+   old .chart-legend-actions row used — those already read fine here, no
+   override needed beyond sizing them consistently with .chart-tv-btn. */
+.chart-tv-toolbar-left .chart-depth-btn {
+  height: 32px;
+}
+
+/* Reference-match (TradingView desktop chart) — bottom interval-range
+   bar, flat text pills instead of the bordered-capsule style used
+   elsewhere (matches the reference's own minimal "1D 5D 1M ... All" row). */
+.chart-tv-bottom-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+.chart-tv-bottom-pill {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chart-tv-bottom-pill:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+.chart-tv-bottom-pill.active {
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+/* Reference-match quick interval-pill row (desktop, non-fullscreen only) —
+   replaces the single sheet-trigger button with real inline pills for the
+   5 most-used intervals, same spot in .chart-legend-actions. */
+.chart-quick-interval-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.interval-pill--more-selected {
+  font-weight: 800;
 }
 
 /* Empty spacer between the two button groups in this row — grows to
@@ -2346,6 +3444,21 @@ html[data-theme="light"] .chart-loading-label {
 .interval-banner-title {
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.chart-hero-zone-sentence {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.chart-hero-zone-sentence--bullish {
+  color: #16a34a;
+}
+.chart-hero-zone-sentence--bearish {
+  color: #e11d48;
+}
+.chart-hero-zone-sentence--neutral {
+  color: var(--color-text-muted);
 }
 
 .interval-banner--bullish .interval-banner-title {
@@ -3389,6 +4502,52 @@ html[data-theme="light"] .cap-overlay-feature {
 .chart-depth-btn--active {
   color: var(--color-primary);
   background: var(--color-primary-soft);
+}
+
+/* Reference-match: plain circular gray icon buttons, label hidden —
+   desktop non-fullscreen only, same scoping as the other overrides
+   above. The label stays in the DOM (still read by a screen reader via
+   the button's own accessible name/title) — only visually hidden. */
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-depth-btn,
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-screenshot-btn,
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-fullscreen-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10, 11, 13, 0.06);
+  color: #5b616e;
+}
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-depth-btn:hover,
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-screenshot-btn:hover,
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-fullscreen-btn:hover {
+  background: rgba(10, 11, 13, 0.12);
+  color: #0a0b0d;
+}
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-depth-btn .chart-icon-label,
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-screenshot-btn .chart-icon-label,
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-fullscreen-btn .chart-icon-label {
+  display: none;
 }
 
 /* Bordered, pill-background treatment so Indicators/Order Depth/Save/

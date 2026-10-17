@@ -40,6 +40,13 @@ interface Props {
    * Reset still live in their original spots. */
   onSave?: () => void;
   onReset?: () => void;
+  /** Reference-match (TradingView desktop chart, Advance Chart page only)
+   * — the toolbar anchors to the chart area's own top instead of being
+   * vertically centered, and its background panel stretches the full
+   * viewport height (CSS, via .cdt-toolbar--full-rail) instead of
+   * hugging just the button stack. Omitted everywhere else, which keeps
+   * the original centered floating-card look. */
+  fullHeightRail?: boolean;
 }
 
 export interface ChartDrawingToolsHandle {
@@ -191,7 +198,7 @@ const TRASH_ICON = <IconMulti>
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
-  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset }: Props,
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail }: Props,
   ref,
 ) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
@@ -741,8 +748,17 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
   return (
     <>
       <div
-        className="cdt-toolbar"
-        style={{ top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }}
+        className={`cdt-toolbar${fullHeightRail ? " cdt-toolbar--full-rail" : ""}`}
+        style={
+          fullHeightRail
+            ? // height (not bottom:0) — chartRect is the CHART CANVAS's
+              // own rect, which already excludes the bottom interval bar
+              // (a separate flex sibling below it, see PriceChart.css) —
+              // bottom:0 pins to the true viewport bottom instead and
+              // overlapped that bar's leftmost pill.
+              { top: chartRect.top, left: chartRect.left, height: chartRect.height }
+            : { top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }
+        }
       >
         {(onSave || onReset) && (
           <>

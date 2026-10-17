@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -16,8 +16,10 @@ import {
   createSeriesMarkers,
   SeriesMarker,
   UTCTimestamp,
+  LineStyle,
 } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot } from "../services/coinglass";
+import { fetchCoinMeta, fetchOpenInterestCoins, CoinMeta } from "../services/coinMeta";
 import { ZoneResult, ZoneSignal } from "./PriceChart.types";
 import SignalIndicator from "./SignalIndicator";
 import {
@@ -27,7 +29,7 @@ import {
   getZoneAnalysis,
   ZoneAnalysisResult,
 } from "../services/openai";
-import { PredictionOverlay, PredictionPath, LineDotFillOverlay } from "./DrawingOverlay";
+import { PredictionOverlay, PredictionPath, LineDotFillOverlay, RoundedCandleOverlay } from "./DrawingOverlay";
 import { ChartEventAnnotations } from "./ChartEventAnnotations";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
@@ -39,7 +41,7 @@ import { CompactPriceView } from "./CompactPriceView";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/PriceChart.css";
 
-type TimeInterval =
+export type TimeInterval =
   | "1sec"
   | "1min"
   | "5min"
@@ -64,14 +66,14 @@ const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
   "6h": 56 * 24 * 60 * 60,
 };
 type IntervalTrends = Record<string, "bullish" | "bearish" | null>;
-type ChartStyle = "candle" | "hollow" | "line" | "heikinAshi";
+export type ChartStyle = "candle" | "hollow" | "line" | "heikinAshi";
 const CHART_STYLE_LABELS: Record<ChartStyle, string> = {
   candle: "Candle",
   hollow: "Hollow Candle",
   line: "Line",
   heikinAshi: "Heikin Ashi",
 };
-const CHART_STYLE_ICONS: Record<ChartStyle, JSX.Element> = {
+export const CHART_STYLE_ICONS: Record<ChartStyle, JSX.Element> = {
   candle: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
       <line x1="7" y1="2" x2="7" y2="6" />
@@ -128,6 +130,33 @@ interface PriceChartProps {
   pageMode?: boolean;
   onNavigateToPage?: () => void;
   onNavigateBack?: () => void;
+  // MobileSymbolSheet.tsx — lets an external interval row (built outside
+  // this component, against its own simpler reference-match label set)
+  // drive this chart's real interval instead of duplicating candle-fetch/
+  // indicator logic in a second chart implementation. One-way: setting
+  // requestInterval pushes it into this component's own internal
+  // `interval` state (below); onIntervalChange reports every change
+  // (external or from this component's own UI) back out so the caller's
+  // row can highlight the active one. Both optional — every other call
+  // site is unaffected.
+  requestInterval?: TimeInterval;
+  onIntervalChange?: (interval: TimeInterval) => void;
+  // Same controlled pattern as requestInterval/onIntervalChange, for the
+  // candle-style toggle only — MobileSymbolSheet.tsx deliberately exposes
+  // nothing for indicators/grid (never mirrors indicatorsList/
+  // gridStyleControls out), so there's no way for that sheet to show
+  // either regardless of what's added here later.
+  requestChartStyle?: ChartStyle;
+  onChartStyleChange?: (style: ChartStyle) => void;
+  // MobileSymbolSheet.tsx — every indicator/overlay toggle is a shared,
+  // persisted (readChartPrefs/localStorage) preference across every
+  // PriceChart instance app-wide, so simply not rendering this
+  // component's own Indicators menu (that sheet never does) isn't enough
+  // — whatever the user last turned on elsewhere would still draw on this
+  // embedded chart. This forces every one of them off for just this
+  // instance, once, without touching the saved preference other
+  // instances still read.
+  forceHideIndicators?: boolean;
   // Rendered inside .price-chart-container itself (below the chart, outside
   // the fullscreen/scroll wrapper) — App.tsx uses this for Watchlist/
   // TopMoversCarousel so they visually live inside this card instead of as
@@ -135,7 +164,7 @@ interface PriceChartProps {
   children?: React.ReactNode;
 }
 
-const INTERVALS: TimeInterval[] = [
+export const INTERVALS: TimeInterval[] = [
   "1sec",
   "1min",
   "5min",
@@ -163,7 +192,7 @@ const INTERVAL_LABELS: Record<TimeInterval, string> = {
   "all": "ALL (full history)",
 };
 
-const INTERVAL_SHORT: Record<TimeInterval, string> = {
+export const INTERVAL_SHORT: Record<TimeInterval, string> = {
   "1sec": "1s",
   "1min": "1m",
   "5min": "5m",
@@ -183,14 +212,14 @@ const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
 // Full coin name for the chart title ("Bitcoin" rather than "BTC") — COINS
 // already carries this (services/coinglass.ts), just keyed by symbol here
 // for an O(1) lookup instead of re-scanning the array on every render.
-const COIN_FULL_NAME: Record<string, string> = Object.fromEntries(
+export const COIN_FULL_NAME: Record<string, string> = Object.fromEntries(
   COINS.map((c) => [c.symbol, c.name]),
 );
 
 // Coin avatar (mobile header, right column) — glyph + brand color per
 // coin, same glyph set App.tsx/GlobalSearch.tsx/PriceTickerFullscreen.tsx
 // each keep their own copy of rather than sharing.
-const COIN_GLYPHS: Record<string, string> = {
+export const COIN_GLYPHS: Record<string, string> = {
   BTC: "₿",
   ETH: "Ξ",
   XRP: "◈",
@@ -203,7 +232,7 @@ const COIN_GLYPHS: Record<string, string> = {
   RENDER: "⬡",
   ZEC: "ⓩ",
 };
-const COIN_COLORS: Record<string, string> = {
+export const COIN_COLORS: Record<string, string> = {
   BTC: "#f7931a",
   ETH: "#627eea",
   XRP: "#23292f",
@@ -233,6 +262,18 @@ export function formatLivePrice(p: number): string {
   return `$${p.toFixed(6)}`;
 }
 
+// Reference-match compact axis labels ("92k" instead of "92000.00") —
+// desktop non-fullscreen only, wired through createChart's own
+// localization.priceFormatter below.
+function formatCompactAxisPrice(p: number): string {
+  if (p >= 1000) {
+    const k = p / 1000;
+    return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+  }
+  if (p >= 1) return p.toFixed(2);
+  return p.toFixed(6);
+}
+
 // Advance Price Chart page, mobile — tap feedback on the dock's toggles
 // (sheet expand/collapse, Toolbox), Close, indicator checkboxes, and
 // candle taps. No-op on web/desktop, where this plugin isn't meaningful
@@ -247,11 +288,20 @@ function hapticTap() {
   }
 }
 
-function formatCompactVolume(v: number): string {
+export function formatCompactVolume(v: number): string {
   if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
   if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
   if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
   return `$${v.toFixed(0)}`;
+}
+
+// Same compact scale as formatCompactVolume, no $ prefix — for coin-unit
+// quantities (circulating/total supply) rather than USD amounts.
+export function formatCompactNumber(v: number): string {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toFixed(0);
 }
 
 function formatClockTime(at: number): string {
@@ -770,6 +820,43 @@ function writeChartCandleCache(
   } catch {}
 }
 
+// ── Chart preferences (indicators/grid/candle style) ────────────────────────
+// Global, not per-coin/interval (unlike the candle/pattern caches above) —
+// these are display preferences the user set up once and expects every
+// chart load to just remember, same as any other app setting.
+const CHART_PREFS_KEY = "chart_prefs_v1";
+interface ChartPrefs {
+  showBB?: boolean;
+  showRSI?: boolean;
+  showMACD?: boolean;
+  showEMA20?: boolean;
+  showEMA50?: boolean;
+  showEMA200?: boolean;
+  showMA20?: boolean;
+  showMA50?: boolean;
+  showMA200?: boolean;
+  showFib?: boolean;
+  showSR?: boolean;
+  showZones?: boolean;
+  showDayHL?: boolean;
+  showCME?: boolean;
+  showGrid?: boolean;
+  chartStyle?: ChartStyle;
+}
+function readChartPrefs(): ChartPrefs {
+  try {
+    const r = localStorage.getItem(CHART_PREFS_KEY);
+    return r ? (JSON.parse(r) as ChartPrefs) : {};
+  } catch {
+    return {};
+  }
+}
+function writeChartPrefs(prefs: ChartPrefs) {
+  try {
+    localStorage.setItem(CHART_PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
+}
+
 // ── Gann Pivot Detection ────────────────────────────────────────────────────
 
 interface GannPivot {
@@ -1274,6 +1361,53 @@ function makeFakeFirstLoadCandles(): CandleDataPoint[] {
   });
 }
 
+// Advance Price Chart page, mobile dock — "Option A: sliding highlight"
+// (user-approved sketch) for a single-select picker expanded inline in its
+// own quick-row button: one continuous track, no per-chip border/fill —
+// a single rounded highlight slides to sit behind whichever option is
+// active. Only fits single-select (Interval, Style); Indicators is
+// multi-select and keeps its own per-chip highlighted-dot style instead,
+// since there's no one position a single highlight could represent.
+function FsSlidingOptions({
+  options,
+}: {
+  options: Array<{ key: string; label: React.ReactNode; active: boolean; locked?: boolean; ariaLabel?: string; onClick: () => void }>;
+}) {
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
+  const activeKey = options.find((o) => o.active)?.key;
+
+  useLayoutEffect(() => {
+    const el = activeKey != null ? itemRefs.current[activeKey] : null;
+    if (!el) { setHighlight(null); return; }
+    setHighlight({ left: el.offsetLeft, width: el.offsetWidth });
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeKey, options.length]);
+
+  return (
+    <div className="fs-dock-slide-track">
+      {highlight && (
+        <span
+          className="fs-dock-slide-highlight"
+          style={{ transform: `translateX(${highlight.left}px)`, width: highlight.width }}
+        />
+      )}
+      {options.map((opt) => (
+        <button
+          type="button"
+          key={opt.key}
+          ref={(el) => { itemRefs.current[opt.key] = el; }}
+          className={`fs-dock-slide-item${opt.active ? " fs-dock-slide-item--active" : ""}${opt.locked ? " fs-dock-slide-item--locked" : ""}`}
+          onClick={opt.onClick}
+          aria-label={opt.ariaLabel}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export const PriceChart: React.FC<PriceChartProps> = ({
@@ -1290,6 +1424,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   pageMode,
   onNavigateToPage,
   onNavigateBack,
+  requestInterval,
+  onIntervalChange,
+  requestChartStyle,
+  onChartStyleChange,
+  forceHideIndicators,
   children,
 }) => {
   const { t, i18n } = useTranslation();
@@ -1297,6 +1436,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const isLight = theme === "light";
 
   const [interval, setInterval] = useState<TimeInterval>("1day");
+  useEffect(() => {
+    if (requestInterval && requestInterval !== interval) setInterval(requestInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestInterval]);
+  useEffect(() => {
+    onIntervalChange?.(interval);
+  }, [interval, onIntervalChange]);
   const [loading, setLoading] = useState(true);
   // True once the very first fetch has completed — distinguishes "first
   // page load/refresh" (nothing real to blur yet, so placeholder content
@@ -1314,23 +1460,36 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [patternInsightAt, setPatternInsightAt] = useState<number | null>(
     () => readPatternCache(coin, "1h")?.at ?? null,
   );
-  const [showBB, setShowBB] = useState(false);
-  const [showRSI, setShowRSI] = useState(false);
-  const [showMACD, setShowMACD] = useState(false);
-  const [showEMA20, setShowEMA20] = useState(false);
-  const [showEMA50, setShowEMA50] = useState(false);
-  const [showEMA200, setShowEMA200] = useState(false);
-  const [showMA20, setShowMA20] = useState(false);
-  const [showMA50, setShowMA50] = useState(false);
-  const [showMA200, setShowMA200] = useState(false);
+  // Lazy-initialized from localStorage (readChartPrefs, above) once per
+  // mount — indicator/grid/candle-style choices persist across page loads
+  // instead of resetting to off/"line" every time.
+  const [showBB, setShowBB] = useState(() => readChartPrefs().showBB ?? false);
+  const [showRSI, setShowRSI] = useState(() => readChartPrefs().showRSI ?? false);
+  const [showMACD, setShowMACD] = useState(() => readChartPrefs().showMACD ?? false);
+  const [showEMA20, setShowEMA20] = useState(() => readChartPrefs().showEMA20 ?? false);
+  const [showEMA50, setShowEMA50] = useState(() => readChartPrefs().showEMA50 ?? false);
+  const [showEMA200, setShowEMA200] = useState(() => readChartPrefs().showEMA200 ?? false);
+  const [showMA20, setShowMA20] = useState(() => readChartPrefs().showMA20 ?? false);
+  const [showMA50, setShowMA50] = useState(() => readChartPrefs().showMA50 ?? false);
+  const [showMA200, setShowMA200] = useState(() => readChartPrefs().showMA200 ?? false);
   // setShowGann dropped — nothing can turn this on while the Gann Pivots
   // checkbox is commented out of the indicators menu above (user request);
   // restoring that checkbox should also restore the setter here.
   const [showGann] = useState(false);
-  const [showFib, setShowFib] = useState(false);
-  const [showSR, setShowSR] = useState(false);
-  const [showZones, setShowZones] = useState(false);
-  const [showDayHL, setShowDayHL] = useState(false);
+  const [showFib, setShowFib] = useState(() => readChartPrefs().showFib ?? false);
+  const [showSR, setShowSR] = useState(() => readChartPrefs().showSR ?? false);
+  const [showZones, setShowZones] = useState(() => readChartPrefs().showZones ?? false);
+  const [showDayHL, setShowDayHL] = useState(() => readChartPrefs().showDayHL ?? false);
+  useEffect(() => {
+    if (!forceHideIndicators) return;
+    setShowBB(false); setShowRSI(false); setShowMACD(false);
+    setShowEMA20(false); setShowEMA50(false); setShowEMA200(false);
+    setShowMA20(false); setShowMA50(false); setShowMA200(false);
+    setShowFib(false); setShowSR(false);
+    setShowZones(false); setShowDayHL(false); setShowCME(false);
+    setShowGrid(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceHideIndicators]);
   const [srLevels, setSrLevels] = useState<{ resistance: { price: number }[]; support: { price: number }[] }>({ resistance: [], support: [] });
   const [gannCycles, setGannCycles] = useState<GannCycleDate[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1352,7 +1511,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [intervalMenuOpen, setIntervalMenuOpen] = useState(false);
   const intervalBtnRef = useRef<HTMLButtonElement>(null);
   const [intervalMenuPos, setIntervalMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [showCME, setShowCME] = useState(false);
+  const [showCME, setShowCME] = useState(() => readChartPrefs().showCME ?? false);
   const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
@@ -1380,8 +1539,33 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showDepthProfile, setShowDepthProfile] = useState(false);
   // Manual toggle — defaults on for the Advance Price Chart page
   // (pageMode), off everywhere else (compact view, desktop fullscreen).
-  const [showGrid, setShowGrid] = useState(() => !!pageMode);
-  const [chartStyle, setChartStyle] = useState<ChartStyle>("line");
+  // Advance Price Chart page — always starts with grid on, regardless of
+  // the shared saved preference other chart instances read/write (a user
+  // who turned grid off elsewhere shouldn't land here with it off too;
+  // they can still toggle it back off here if they want, same as always).
+  const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs().showGrid ?? false));
+  // "candle" default for a first-ever visit — reference-match request —
+  // otherwise whatever the user last picked (readChartPrefs).
+  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => readChartPrefs().chartStyle ?? "candle");
+  useEffect(() => {
+    if (requestChartStyle && requestChartStyle !== chartStyle) setChartStyle(requestChartStyle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestChartStyle]);
+  useEffect(() => {
+    onChartStyleChange?.(chartStyle);
+  }, [chartStyle, onChartStyleChange]);
+  // Persist indicator/grid/candle-style choices to localStorage on every
+  // change — the matching lazy useState initializers above (readChartPrefs)
+  // are what actually restores them on the next mount/page load.
+  useEffect(() => {
+    writeChartPrefs({
+      showBB, showRSI, showMACD,
+      showEMA20, showEMA50, showEMA200,
+      showMA20, showMA50, showMA200,
+      showFib, showSR, showZones, showDayHL, showCME,
+      showGrid, chartStyle,
+    });
+  }, [showBB, showRSI, showMACD, showEMA20, showEMA50, showEMA200, showMA20, showMA50, showMA200, showFib, showSR, showZones, showDayHL, showCME, showGrid, chartStyle]);
   // Line-style color — green/red when the visible window has moved
   // meaningfully in one direction, blue when it's basically flat. Recomputed
   // in redrawCandleSeries alongside the line data itself, from the same
@@ -1422,8 +1606,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // original design), expanding in place to show Bid/Ask/Vol-coin/
   // Signal meter/Divergence meter. Starts expanded by default on desktop
   // (room to spare) but collapsed on mobile — either way, still a toggle
-  // the user can collapse/expand themselves, not forced open.
-  const [fsStatsExpanded, setFsStatsExpanded] = useState(isDesktopWidth);
+  // the user can collapse/expand themselves, not forced open. Reference-
+  // match (TradingView desktop chart) exception: the Advance Chart page
+  // starts collapsed too, tucked away behind the same chevron instead of
+  // cluttering the clean reference look by default.
+  const [fsStatsExpanded, setFsStatsExpanded] = useState(isDesktopWidth && !pageMode);
   useEffect(() => {
     if (!isFullscreen) setFsStatsExpanded(isDesktopWidth);
   }, [isFullscreen, isDesktopWidth]);
@@ -1434,17 +1621,61 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Style is the category that's already open, instead of none.
   const [fsSheetExpanded, setFsSheetExpanded] = useState(false);
   // Advance Price Chart page, mobile only — the floating drawing toolbox.
-  // Enabled by default (this is only ever read when pageMode, so the
-  // default is harmless elsewhere); the "Toolbox" segment in the dock
-  // just toggles it back off if the user wants the full chart width.
-  const [fsDrawPanelOpen, setFsDrawPanelOpen] = useState(true);
-  const [fsOpenCategories, setFsOpenCategories] = useState<Record<string, boolean>>({ style: true });
+  // Hidden by default (this is only ever read when pageMode, so the
+  // default is harmless elsewhere) — the full chart gets the full width
+  // first; the "Toolbox" segment in the dock turns it on if wanted.
+  const [fsDrawPanelOpen, setFsDrawPanelOpen] = useState(false);
+  const [fsOpenCategories, setFsOpenCategories] = useState<Record<string, boolean>>({ overview: true });
   // Accordion — only one category open at a time; expanding one collapses
   // whichever other was open instead of stacking them all open at once.
   const toggleFsCategory = useCallback((key: string) => {
     setFsOpenCategories((prev) => (prev[key] ? {} : { [key]: true }));
   }, []);
+  // No longer set by anything in the peek row — kept for the handle's
+  // manual full-accordion expand/collapse, which always resets this to
+  // null so the full category list shows.
+  const [fsFocusedCategory, setFsFocusedCategory] = useState<string | null>(null);
+  // Advance Price Chart page, mobile — "Option E" hero-card carousel in
+  // the peek row: which of the content categories (Technicals/Key stats/
+  // Overview/About/Stats) is currently showing, swiped between via
+  // fsHeroTouchX below instead of a tap-to-reveal icon row.
+  const [fsHeroIndex, setFsHeroIndex] = useState(0);
+  const fsHeroTouchX = useRef<number | null>(null);
+  // Peek handle — swiping up/down on it opens/closes the sheet outright
+  // (not a toggle, see fsHandleTouchY's onTouchEnd), same handle a small
+  // tap-without-drag still just toggles via the button's own onClick.
+  const fsHandleTouchY = useRef<number | null>(null);
+  // Same dot-pagination logic/UI as the hero card's own dots, applied to
+  // the action strip below it: whichever item is expanded — Interval/
+  // Indicators/Style show their own picker INSIDE that same button
+  // (horizontally scrollable if it overflows) instead of anywhere else;
+  // Toolbox/Alerts just show as a wide pill since they have nothing to
+  // pick. -1 = nothing expanded, every item collapsed to a small dot.
+  // Index into [interval, indicators, style, toolbox, alerts], defaults
+  // to Interval expanded.
+  const [fsActionIndex, setFsActionIndex] = useState(0);
   const fsDockRef = useRef<HTMLDivElement>(null);
+  // Reference-match (TradingView mobile "symbol info" sheet) — Overview/
+  // Key stats/About need real fundamentals (ATH, supply, market cap,
+  // project links) this app never tracked before; Open Interest is a
+  // separate live fetch (Binance futures, this app's own existing OI
+  // source elsewhere is BTC-only, see coinglass.ts) multiplied by the
+  // live price already on hand instead of a second price fetch. Both
+  // reset to null on coin change so a stale coin's numbers never flash
+  // before the new fetch resolves, and only run while the sheet can
+  // actually be seen (isFullscreen && mobile) — no point spending the
+  // request otherwise.
+  const [coinMeta, setCoinMeta] = useState<CoinMeta | null>(null);
+  const [oiCoins, setOiCoins] = useState<number | null>(null);
+  useEffect(() => {
+    if (!(isFullscreen && !isDesktopWidth)) return;
+    let cancelled = false;
+    setCoinMeta(null);
+    setOiCoins(null);
+    fetchCoinMeta(coin).then((m) => { if (!cancelled) setCoinMeta(m); });
+    fetchOpenInterestCoins(coin).then((v) => { if (!cancelled) setOiCoins(v); });
+    return () => { cancelled = true; };
+  }, [isFullscreen, isDesktopWidth, coin]);
   // Advance Price Chart page, mobile — how much bottom clearance the
   // scroll container needs to reserve so the chart's own time-axis date
   // labels clear the docked bottom sheet. Measured from the actual
@@ -1470,6 +1701,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!isFullscreen) {
       setFsSheetExpanded(false);
       setFsOpenCategories({ style: true });
+      setFsFocusedCategory(null);
+      // Interval is always the default-expanded quick-row item — reset
+      // back to it (not whatever the user last had open/collapsed)
+      // every time the page is left and reopened.
+      setFsActionIndex(0);
     }
   }, [isFullscreen]);
   // Tapping anywhere outside the docked sheet collapses it back to peek,
@@ -1480,6 +1716,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const onPointerDown = (e: PointerEvent) => {
       if (fsDockRef.current && !fsDockRef.current.contains(e.target as Node)) {
         setFsSheetExpanded(false);
+        setFsFocusedCategory(null);
       }
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -1492,10 +1729,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const prevIsFullscreenForToggleRef = useRef(isFullscreen);
   const textColor = isLight
     ? isFullscreen
-      ? "#0f172a"
-      : "#475569"
+      ? "#0a0b0d"
+      : "#5b616e"
     : "#9490c0";
-  const gridColor = isLight ? "#eef2f7" : "#2b2748";
+  const gridColor = isLight ? "#f0f1f3" : "#2b2748";
   // Light is #ffffff (--color-background) in BOTH modes — compact
   // already was; the old code had fullscreen light backwards at
   // "#f8fafc" (--color-surface-alt), the exact same grayish mismatch
@@ -1635,6 +1872,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   // Main chart refs
   const containerRef = useRef<HTMLDivElement>(null);
+  // Reference-match floating date/price bubble shown next to the crosshair,
+  // desktop non-fullscreen only — written imperatively from
+  // subscribeCrosshairMove (not React state) so it updates every mouse-move
+  // tick without triggering a re-render.
+  const crosshairTooltipRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candleRef = useRef<any>(null);
@@ -1810,19 +2052,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return;
       }
 
-      // Fullscreen always opens on candles, compact always on line — must
-      // happen BEFORE the candle/line series are created just below,
-      // since their own `visible` option is set once at creation from
-      // this exact ref. Setting it only afterward (what this used to do)
-      // meant the new series were born with the PREVIOUS mode's
-      // visibility already baked in, and the fix only arrived a render
-      // later via the chartStyle state-sync effect — which never fired
-      // at all if chartStyle state hadn't actually changed (e.g. it was
-      // already "candle" from an earlier fullscreen session), leaving
-      // the wrong series visible with no correction ever coming.
-      const forcedStyle = isFullscreen ? "candle" : "line";
+      // Opens on whatever chartStyle already is — that state is itself
+      // lazy-initialized from the saved chart_prefs_v1 preference (or
+      // "candle" as the default for a first-ever visit, matching the
+      // reference Coinbase-style screenshot the header/toolbar was
+      // matched to). This must happen BEFORE the candle/line series are
+      // created just below, since their own `visible` option is set once
+      // at creation from this exact ref — setting it only afterward left
+      // the new series born with the PREVIOUS mode's visibility already
+      // baked in.
+      const forcedStyle: ChartStyle = chartStyle;
       chartStyleRef.current = forcedStyle;
-      if (chartStyle !== forcedStyle) setChartStyle(forcedStyle);
 
       const chart = createChart(el, {
         width,
@@ -1836,6 +2076,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // autoSize and manual chart.resize() calls aren't meant to be used
         // together).
         autoSize: true,
+        localization: !isFullscreen && isDesktopWidth
+          ? { priceFormatter: formatCompactAxisPrice }
+          : undefined,
         layout: {
           // Library's own TradingView attribution badge, bottom-left of
           // the pane — defaults to true on every createChart() call. Not
@@ -1850,7 +2093,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             // value before the sync effect corrects it a tick later.
             color: isLight ? "#ffffff" : "#111827",
           },
-          textColor: isLight ? "#475569" : "#9490c0",
+          textColor: isLight ? "#5b616e" : "#9490c0",
         },
         // Gridlines only read as useful at fullscreen/expanded size — in
         // the compact inline card they just add visual noise, so start
@@ -1860,12 +2103,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           vertLines: { color: "transparent" },
           horzLines: { color: "transparent" },
         },
-        crosshair: { mode: 1 },
+        // Reference-match: dashed crosshair with a dark price-label pill
+        // on the axis, matching the Coinbase-style screenshot — only
+        // visually distinct from the library default in the dashed style
+        // + pill color; still off entirely in fullscreen/mobile via the
+        // subscribeCrosshairMove gate below, which also drives the custom
+        // white date/price tooltip bubble.
+        crosshair: {
+          mode: 1,
+          vertLine: {
+            width: 1,
+            style: LineStyle.Dashed,
+            color: isLight ? "#0a0b0d" : "#9490c0",
+            labelBackgroundColor: isLight ? "#0a0b0d" : "#2b2748",
+          },
+          horzLine: {
+            width: 1,
+            style: LineStyle.Dashed,
+            color: isLight ? "#0a0b0d" : "#9490c0",
+            labelBackgroundColor: isLight ? "#0a0b0d" : "#2b2748",
+          },
+        },
         // Matches the gridlines — transparent until the theme-sync effect
         // turns it on for fullscreen/expanded view or the Grid toggle.
         rightPriceScale: { borderColor: "transparent" },
         timeScale: {
-          borderColor: isLight ? "#e2e8f0" : "#2b2748",
+          borderColor: isLight ? "#e7e9eb" : "#2b2748",
           timeVisible: true,
           secondsVisible: false,
           // Without this, autoSize's resize() keeps bar spacing constant
@@ -1928,19 +2191,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         crosshairMarkerVisible: false,
       });
 
+      // Reference-match: compact desktop paints its own rounded-corner
+      // candles via RoundedCandleOverlay instead (LWC's own CandlestickSeries
+      // has no radius option) — making the real series transparent (NOT
+      // visible:false — that stopped the price scale autoscaling off it
+      // entirely, collapsing the Y-axis to whatever tiny range the other
+      // series left) keeps it painting nothing of its own while staying the
+      // real data/scale source for autoscale, markers, crosshair price
+      // lookups, and drawing tools; the overlay paints the rounded bars on
+      // top of this invisible-but-present series.
+      const candleColorsTransparent = !isFullscreen && isDesktopWidth && (chartStyleRef.current as ChartStyle) !== "line";
       candleRef.current = chart.addSeries(CandlestickSeries, {
-        upColor: "#4ade80",
-        downColor: "#fb7185",
-        borderUpColor: "#4ade80",
-        borderDownColor: "#fb7185",
-        wickUpColor: "#4ade80",
-        wickDownColor: "#fb7185",
-        visible: chartStyleRef.current !== "line",
+        upColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        downColor: candleColorsTransparent ? "transparent" : "#fb7185",
+        borderUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        borderDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+        wickUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        wickDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+        visible: (chartStyleRef.current as ChartStyle) !== "line",
       });
       lineCloseRef.current = chart.addSeries(LineSeries, {
         color: "#818cf8",
         lineWidth: 2,
-        visible: chartStyleRef.current === "line",
+        visible: (chartStyleRef.current as ChartStyle) === "line",
       });
       volumeRef.current = chart.addSeries(HistogramSeries, {
         priceScaleId: "volume",
@@ -2043,6 +2316,45 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       if (pageMode && !isDesktopWidth) {
         chart.subscribeClick(() => hapticTap());
       }
+
+      // Reference-match floating tooltip bubble (date + price) that
+      // follows the crosshair — desktop, non-fullscreen only; fullscreen/
+      // mobile keep the library's default axis-only crosshair labels.
+      // Written straight to the DOM (not React state) since this fires on
+      // every mouse-move tick.
+      if (!pageMode && isDesktopWidth) {
+        chart.subscribeCrosshairMove((param) => {
+          const tooltipEl = crosshairTooltipRef.current;
+          const wrapEl = containerRef.current;
+          if (!tooltipEl || !wrapEl) return;
+          const activeSeries = chartStyleRef.current === "line" ? lineCloseRef.current : candleRef.current;
+          const point = activeSeries && param.seriesData.get(activeSeries);
+          if (
+            !param.point ||
+            !point ||
+            param.point.x < 0 ||
+            param.point.x > wrapEl.clientWidth ||
+            param.point.y < 0 ||
+            param.point.y > wrapEl.clientHeight
+          ) {
+            tooltipEl.style.opacity = "0";
+            return;
+          }
+          const price = "close" in point ? point.close : (point as { value: number }).value;
+          const date = new Date((param.time as number) * 1000);
+          const dateLabel = date.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+          tooltipEl.querySelector(".chart-crosshair-tooltip-date")!.textContent = dateLabel;
+          tooltipEl.querySelector(".chart-crosshair-tooltip-price")!.textContent = formatLivePrice(price);
+          const tooltipWidth = 150;
+          let left = param.point.x + 14;
+          if (left + tooltipWidth > wrapEl.clientWidth) left = param.point.x - tooltipWidth - 14;
+          let top = param.point.y - 44;
+          if (top < 0) top = param.point.y + 14;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.opacity = "1";
+        });
+      }
     };
 
     initChart();
@@ -2064,13 +2376,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ── Update chart colours on theme change ────────────────────────────────
   useEffect(() => {
     const themeOpts = {
-      layout: { background: { type: ColorType.Solid, color: bgColor }, textColor },
+      layout: {
+        background: { type: ColorType.Solid, color: bgColor },
+        textColor,
+      },
+      localization: !isFullscreen && isDesktopWidth
+        ? { priceFormatter: formatCompactAxisPrice }
+        : { priceFormatter: undefined },
       grid: {
-        vertLines: { color: showGrid ? gridColor : "transparent" },
-        horzLines: { color: showGrid ? gridColor : "transparent" },
+        // Reference-match (TradingView desktop chart): dotted gridlines
+        // on the Advance Chart page specifically — every other view keeps
+        // the existing solid (default) grid style.
+        vertLines: { color: showGrid ? gridColor : "transparent", style: pageMode ? LineStyle.Dotted : LineStyle.Solid },
+        horzLines: { color: showGrid ? gridColor : "transparent", style: pageMode ? LineStyle.Dotted : LineStyle.Solid },
       },
       rightPriceScale: { borderColor: showGrid ? gridColor : "transparent" },
       timeScale: { borderColor: gridColor },
+      crosshair: {
+        vertLine: {
+          color: isLight ? "#0a0b0d" : "#9490c0",
+          labelBackgroundColor: isLight ? "#0a0b0d" : "#2b2748",
+        },
+        horzLine: {
+          color: isLight ? "#0a0b0d" : "#9490c0",
+          labelBackgroundColor: isLight ? "#0a0b0d" : "#2b2748",
+        },
+      },
       // Pan/zoom only once expanded — in the compact inline card these
       // gestures mostly just fight with the page's own scroll/swipe
       // instead of being useful, so the compact view is display-only and
@@ -2093,6 +2424,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     rsiChartRef.current?.applyOptions(themeOpts);
     macdChartRef.current?.applyOptions(themeOpts);
     bbFillLowerRef.current?.applyOptions({ topColor: bgColor, bottomColor: bgColor });
+    // Keeps the real candle series' own paint transparent (so the
+    // RoundedCandleOverlay shows through) in sync on a plain fullscreen
+    // toggle too, not just the initial chart creation — see the long
+    // comment at this series' addSeries() call above for why this is
+    // transparent colors, not visible:false.
+    {
+      const candleColorsTransparent = !isFullscreen && isDesktopWidth && (chartStyleRef.current as ChartStyle) !== "line";
+      candleRef.current?.applyOptions({
+        upColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        downColor: candleColorsTransparent ? "transparent" : "#fb7185",
+        borderUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        borderDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+        wickUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+        wickDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+      });
+    }
     // Mirrors the volume scaleMargins set at chart creation (initChart,
     // above) — that only re-runs on a theme change, not a plain
     // fullscreen toggle, so this effect (which DOES fire on every
@@ -2105,23 +2452,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
     // THIS is the effect that actually fires on a fullscreen toggle — the
     // chart instance itself is NOT recreated here (that only happens on a
-    // theme change, a separate effect above), so the "force candle in
-    // fullscreen / line in compact, reset the view" logic that used to
-    // live only inside chart creation never ran for a plain fullscreen
-    // enter/exit at all. prevIsFullscreenForToggleRef scopes this to an
-    // actual isFullscreen transition specifically — this effect also
-    // fires for grid/theme changes alone, which shouldn't force a style
-    // switch or reset the zoom the user was just looking at.
+    // theme change, a separate effect above), so the "reset the view"
+    // logic that used to live only inside chart creation never ran for a
+    // plain fullscreen enter/exit at all. prevIsFullscreenForToggleRef
+    // scopes this to an actual isFullscreen transition specifically —
+    // this effect also fires for grid/theme changes alone, which
+    // shouldn't reset the zoom the user was just looking at. Style is no
+    // longer force-changed here (it used to reset to "candle" on every
+    // fullscreen toggle) — chartStyle is a persisted user preference now
+    // (chart_prefs_v1), so entering/exiting fullscreen shouldn't silently
+    // override whatever style the user picked.
     if (chart && prevIsFullscreenForToggleRef.current !== isFullscreen) {
       prevIsFullscreenForToggleRef.current = isFullscreen;
-      const forcedStyle = isFullscreen ? "candle" : "line";
-      if (chartStyleRef.current !== forcedStyle) {
-        chartStyleRef.current = forcedStyle;
-        setChartStyle(forcedStyle);
-        candleRef.current?.applyOptions({ visible: forcedStyle !== "line" });
-        lineCloseRef.current?.applyOptions({ visible: forcedStyle === "line" });
-        if (lastCandlesRef.current.length > 0) redrawCandleSeries(lastCandlesRef.current);
-      }
       if (lastCandlesRef.current.length > 0) {
         const window = INTERVAL_WINDOW[interval];
         const lastCandleTime = lastCandlesRef.current[lastCandlesRef.current.length - 1].time as number;
@@ -2210,6 +2552,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           await waitForSeriesReady();
           if (cancelled) return;
           redrawCandleSeries(data);
+          // The !hasLoadedOnce branch above force-hides candleRef (always-
+          // line placeholder, by design) — now that real data is in,
+          // restore its visibility to match the CURRENT style. Forcing
+          // "candle" everywhere (chartStyleRef is now always "candle",
+          // never "line" by default) means the chartStyle-sync effect
+          // elsewhere never re-fires to undo that hide on its own (its
+          // deps don't change if chartStyle was already "candle" from
+          // mount), so candles silently never appeared after the very
+          // first load — or after switching coins, which goes through
+          // this same !hasLoadedOnce placeholder path again.
+          candleRef.current?.applyOptions({ visible: (chartStyleRef.current as ChartStyle) !== "line" });
+          lineCloseRef.current?.applyOptions({ visible: (chartStyleRef.current as ChartStyle) === "line" });
+          // RoundedCandleOverlay (compact desktop) only repaints when its
+          // own `generation` prop changes or a visible-time-range event
+          // fires on the chart — neither is guaranteed to happen exactly
+          // when real data replaces the first-load placeholder, which is
+          // what actually left the overlay blank/stale on some loads (the
+          // real series itself was already fixed above, but the overlay
+          // painting on top of it wasn't repainting in sync). Bumping
+          // this here forces it to redraw against the real data every
+          // time, not just at initial chart creation.
+          setChartGeneration((g) => g + 1);
           updateCurrentPrice(data[data.length - 1].close);
           if (showFibRef.current) redrawFibLines();
           volumeRef.current?.setData(
@@ -2321,7 +2685,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           const div = detectRSIDivergence(data, rsiData);
           setDivergence(div);
           if (candleRef.current) {
-            const priceMarkers: SeriesMarker<number>[] = (div && isPaid)
+            const priceMarkers: SeriesMarker<number>[] = (div && isPaid && !forceHideIndicators)
               ? div.pivots.map((p) => ({
                   time: p.time,
                   position:
@@ -2599,8 +2963,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     chartStyleRef.current = chartStyle;
     candleRef.current?.applyOptions({ visible: chartStyle !== "line" });
     lineCloseRef.current?.applyOptions({ visible: chartStyle === "line" });
+    // The rounded-candle overlay (RoundedCandleOverlay, below) only knows
+    // how to paint standard OHLC bodies — picking Hollow/Line/Heikin Ashi
+    // from the style dropdown needs the REAL series visible again (not
+    // forced transparent) so those styles actually render, instead of the
+    // overlay silently keeping yesterday's plain candles on screen no
+    // matter what style got picked.
+    const candleColorsTransparent = !isFullscreen && isDesktopWidth && chartStyle !== "line";
+    candleRef.current?.applyOptions({
+      upColor: candleColorsTransparent ? "transparent" : "#4ade80",
+      downColor: candleColorsTransparent ? "transparent" : "#fb7185",
+      borderUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+      borderDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+      wickUpColor: candleColorsTransparent ? "transparent" : "#4ade80",
+      wickDownColor: candleColorsTransparent ? "transparent" : "#fb7185",
+    });
     if (lastCandlesRef.current.length > 0) redrawCandleSeries(lastCandlesRef.current);
-  }, [chartStyle, redrawCandleSeries]);
+  }, [chartStyle, isFullscreen, isDesktopWidth, redrawCandleSeries]);
 
   // ── Fibonacci retracement lines ──────────────────────────────────────────
   const redrawFibLines = useCallback(() => {
@@ -2849,8 +3228,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       // toggle turns gridlines on (fullscreen no longer force-enables
       // them).
       grid: {
-        vertLines: { color: showGrid ? gridColor : "transparent" },
-        horzLines: { color: showGrid ? gridColor : "transparent" },
+        vertLines: { color: showGrid ? gridColor : "transparent", style: pageMode ? LineStyle.Dotted : LineStyle.Solid },
+        horzLines: { color: showGrid ? gridColor : "transparent", style: pageMode ? LineStyle.Dotted : LineStyle.Solid },
       },
       rightPriceScale: {
         borderColor: showGrid ? gridColor : "transparent",
@@ -3030,9 +3409,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // symptom. The CSS fix alone is sufficient; this was actively fighting it.
 
   // ── Screenshot ───────────────────────────────────────────────────────────
-  const handleScreenshot = async () => {
+  // Pulled out of handleScreenshot (below) so "Ask Agent Ready" can reuse
+  // the exact same composed chart+overlays+RSI/MACD image without
+  // triggering a save/share dialog — same canvas work, two different
+  // destinations for the resulting data URL.
+  const captureChartDataUrl = (): { dataUrl: string; filename: string } | null => {
     const mainCanvas = chartRef.current?.takeScreenshot();
-    if (!mainCanvas) return;
+    if (!mainCanvas) return null;
 
     const rsiCanvas =
       showRSI && rsiChartRef.current
@@ -3138,6 +3521,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
     const dataUrl = out.toDataURL("image/png");
     const filename = `${coin}-${shortInterval}-${new Date().toISOString().slice(0, 10)}.png`;
+    return { dataUrl, filename };
+  };
+
+  const handleScreenshot = async () => {
+    const captured = captureChartDataUrl();
+    if (!captured) return;
+    const { dataUrl, filename } = captured;
 
     if (Capacitor.isNativePlatform()) {
       // <a download> is a no-op in a WKWebView — there's no downloads
@@ -3166,6 +3556,45 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     link.download = filename;
     link.click();
   };
+
+  // "Ask Agent Ready" button (Advance Chart page toolbar) — captures the
+  // current chart the same way Save does, then hands it to TradingAgent
+  // (always mounted at the App.tsx root) via the same kind of custom-
+  // event trigger "open-trading-agent"/"toggle-trading-agent" already
+  // use there, instead of a new prop drilled all the way down to this
+  // page specifically. TradingAgent owns showing/sending it from here —
+  // this just opens the panel with the image attached, doesn't auto-send.
+  // Shared by the Advance Chart page's top toolbar (next to Save) and
+  // ChartDrawingTools' own mobile rail (its onReset prop) — same "fit
+  // everything back to the loaded range" behavior either way.
+  const handleResetView = () => {
+    chartRef.current?.timeScale().fitContent();
+    rsiChartRef.current?.timeScale().fitContent();
+    macdChartRef.current?.timeScale().fitContent();
+  };
+
+  const handleAskAgentReady = () => {
+    const captured = captureChartDataUrl();
+    if (!captured) return;
+    window.dispatchEvent(new CustomEvent("open-trading-agent-with-image", {
+      detail: {
+        imageDataUrl: captured.dataUrl,
+        prompt: `Can you analyze this ${coin} chart?`,
+      },
+    }));
+  };
+  // TradingAgent's own floating trigger (bottom-right, always mounted at
+  // the App.tsx root) dispatches this when tapped on this exact page
+  // (triggerCapturesChart prop, App.tsx) instead of opening blank — the
+  // toolbar's own "Ask Agent Ready" button was removed in favor of this
+  // single entry point, so handleAskAgentReady above is now only ever
+  // called from here.
+  useEffect(() => {
+    if (!(pageMode && isDesktopWidth)) return;
+    const onRequest = () => handleAskAgentReady();
+    window.addEventListener("request-chart-screenshot", onRequest);
+    return () => window.removeEventListener("request-chart-screenshot", onRequest);
+  }, [pageMode, isDesktopWidth, coin]);
 
   // The checkbox list — shared between desktop's positioned dropdown and
   // mobile's bottom sheet (indicatorsControl below).
@@ -3360,6 +3789,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       </label>
     </>
   );
+
+  // Minimal dot+label chip version of the same indicator toggles above,
+  // for the Advance Chart page's quick-row (no checkbox input, no group
+  // headers — those didn't fit a single scrollable row of small pills).
+  const fsQuickIndicators: Array<{ key: string; label: string; color: string; checked: boolean; onToggle: () => void; pro?: boolean }> = [
+    { key: "bb", label: t("chart.bollingerBands"), color: "rgba(251,113,133,0.85)", checked: showBB, onToggle: () => setShowBB((v) => !v) },
+    { key: "ema20", label: t("chart.ema20"), color: "#4ade80", checked: showEMA20, onToggle: () => setShowEMA20((v) => !v) },
+    { key: "ema50", label: t("chart.ema50"), color: "#fb923c", checked: showEMA50, onToggle: () => setShowEMA50((v) => !v) },
+    { key: "ema200", label: t("chart.ema200"), color: "#c084fc", checked: showEMA200, onToggle: () => setShowEMA200((v) => !v) },
+    { key: "ma20", label: t("chart.ma20"), color: "#818cf8", checked: showMA20, onToggle: () => setShowMA20((v) => !v) },
+    { key: "ma50", label: t("chart.ma50"), color: "#f472b6", checked: showMA50, onToggle: () => setShowMA50((v) => !v) },
+    { key: "ma200", label: t("chart.ma200"), color: "#facc15", checked: showMA200, onToggle: () => setShowMA200((v) => !v) },
+    { key: "cme", label: t("chart.cmeGaps"), color: "rgba(251,191,36,0.85)", checked: showCME, onToggle: () => setShowCME((v) => !v) },
+    { key: "fib", label: "Fibonacci Levels", color: "rgba(251,191,36,0.85)", checked: showFib, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowFib((v) => !v); } },
+    { key: "sr", label: "Support / Resistance", color: "rgba(251,113,133,0.75)", checked: showSR, onToggle: () => setShowSR((v) => !v) },
+    { key: "dayhl", label: "24H High/Low", color: "#facc15", checked: showDayHL, onToggle: () => setShowDayHL((v) => !v) },
+    { key: "zones", label: "Buy/Sell Zones", color: "rgba(74,222,128,0.75)", checked: showZones, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowZones((v) => !v); } },
+    { key: "rsi", label: t("chart.rsi14"), color: "#818cf8", checked: showRSI, onToggle: () => setShowRSI((v) => !v) },
+    { key: "macd", label: t("chart.macd1269"), color: "#f97316", checked: showMACD, onToggle: () => setShowMACD((v) => !v) },
+  ];
 
   // Indicators toggle — icon button matches Order Depth/Save/Expand
   // (chart-legend-actions), same spot on desktop and mobile. Desktop opens
@@ -3631,6 +4080,91 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
+  // Reference-match inline interval pills (desktop, non-fullscreen only) —
+  // the 11-value INTERVALS list is too many for a flat pill row like the
+  // screenshot's 5m/1h/8h/1D/1W, so this shows the 5 most-used intervals
+  // as real pills and folds the rest (1sec/15min/6h/1month/all) behind a
+  // trailing "More" pill that opens the exact same dropdown fsIntervalButton
+  // already uses above — nothing becomes unreachable, it's reorganized.
+  const QUICK_INTERVALS: TimeInterval[] = ["5min", "1h", "4h", "1day", "1week"];
+  const quickIntervalPills = (
+    <div className="chart-quick-interval-pills">
+      {QUICK_INTERVALS.map((opt) => {
+        const needsPro = PRO_INTERVALS.has(opt);
+        const locked = needsPro && !isPaid;
+        const trend = trends[opt];
+        return (
+          <button
+            type="button"
+            key={opt}
+            className={`interval-pill${interval === opt ? " interval-pill--active" : ""}`}
+            onClick={() => {
+              if (locked) { onOpenUpgrade?.("pro"); return; }
+              setInterval(opt);
+            }}
+          >
+            {INTERVAL_SHORT[opt]}
+            {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+              : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+              : null}
+          </button>
+        );
+      })}
+      <button
+        ref={intervalBtnRef}
+        type="button"
+        className={`interval-pill interval-pill--more${intervalMenuOpen ? " interval-pill--active" : ""}${QUICK_INTERVALS.includes(interval) ? "" : " interval-pill--more-selected"}`}
+        onClick={() => {
+          if (!intervalMenuOpen && intervalBtnRef.current) {
+            const r = intervalBtnRef.current.getBoundingClientRect();
+            setIntervalMenuPos({ top: r.bottom + 6, left: r.left });
+          }
+          setIntervalMenuOpen((v) => !v);
+        }}
+        title={t("chart.interval", "Interval")}
+      >
+        {QUICK_INTERVALS.includes(interval) ? "···" : INTERVAL_SHORT[interval]}
+      </button>
+      {/* fsIntervalButton (above) owns the only other copy of this exact
+          dropdown, but that component is never mounted at the same time
+          as this one (the toolbar picks one or the other) — without its
+          own copy here, the "···" button toggled state with nothing ever
+          rendering the list. */}
+      {intervalMenuOpen && intervalMenuPos && ReactDOM.createPortal(
+        <>
+          <div className="indicators-menu-backdrop" onClick={() => setIntervalMenuOpen(false)} />
+          <div className="indicators-menu indicators-menu--portal" style={{ top: intervalMenuPos.top, left: intervalMenuPos.left }}>
+            {INTERVALS.map((opt) => {
+              const needsPro = PRO_INTERVALS.has(opt);
+              const locked = needsPro && !isPaid;
+              const trend = trends[opt];
+              return (
+                <div
+                  key={opt}
+                  className="indicators-menu-item"
+                  onClick={() => {
+                    if (locked) { onOpenUpgrade?.("pro"); return; }
+                    setInterval(opt);
+                    setIntervalMenuOpen(false);
+                  }}
+                >
+                  {INTERVAL_LABELS[opt]}
+                  {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                    : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                    : null}
+                  {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                    : interval === opt ? <span className="chart-style-check">✓</span>
+                    : null}
+                </div>
+              );
+            })}
+          </div>
+        </>,
+        document.body,
+      )}
+    </div>
+  );
+
   // Fullscreen's persistent docked bottom sheet — options only (Style/
   // Indicators/Interval), grouped as independent accordion categories the
   // user expands one at a time instead of scrolling one long list. High/
@@ -3656,6 +4190,141 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     : t("chart.none", "None");
   const fsDivPct = fsDivBucket === "bearish" ? 0 : fsDivBucket === "bullish" ? 100 : 50;
 
+  // Reference-match (TradingView mobile "symbol info" sheet) — the
+  // Technicals gauge reuses zone.signal, the exact same real composite
+  // signal already driving fsSignalBucket/the zone-signal badges
+  // elsewhere on this page, just read as a 5-point Strong Sell…Strong Buy
+  // scale instead of the 3-bucket oversold/neutral/overbought one those
+  // use. oversold/overbought fold into Buy/Sell respectively — same
+  // bullish-on-oversold convention fsSignalBucket already uses above.
+  const fsTechnicalsPct: Record<ZoneSignal, number> = {
+    "strong-sell": 5, "sell": 25, "overbought": 25,
+    "neutral": 50,
+    "oversold": 75, "buy": 75, "strong-buy": 95,
+  };
+  const fsTechnicalsLabel: Record<ZoneSignal, string> = {
+    "strong-sell": t("chart.strongSell"), "sell": t("chart.sell"), "overbought": t("chart.sell"),
+    "neutral": t("chart.neutralZone"),
+    "oversold": t("chart.buy"), "buy": t("chart.buy"), "strong-buy": t("chart.strongBuy"),
+  };
+  const fsTechnicalsColor: Record<ZoneSignal, string> = {
+    "strong-sell": "#ef4444", "sell": "#ef4444", "overbought": "#ef4444",
+    "neutral": "var(--color-text-muted)",
+    "oversold": "#16a34a", "buy": "#16a34a", "strong-buy": "#16a34a",
+  };
+  const fsSignalClass = (signal: ZoneSignal) =>
+    signal === "strong-sell" || signal === "sell" || signal === "overbought" ? " fs-hero-value--down"
+    : signal === "strong-buy" || signal === "buy" || signal === "oversold" ? " fs-hero-value--up"
+    : "";
+
+  // "Option E — swipeable hero card" (user-approved) — one full, rich
+  // category card at a time instead of a tap-to-reveal icon row; the
+  // data itself is the card. Only the categories that actually have
+  // browsable content belong here — Style/Indicators/Interval/Toolbox/
+  // Alerts stay pure actions in the slim strip below since there's
+  // nothing to "read" about them, just a value to set.
+  const fsHeroCategories = useMemo(() => {
+    const list: Array<"technicals" | "keystats" | "overview" | "about" | "stats"> = [];
+    if (zone) list.push("technicals");
+    list.push("keystats", "overview", "about", "stats");
+    return list;
+  }, [zone]);
+  const fsHeroKey = fsHeroCategories[Math.min(fsHeroIndex, fsHeroCategories.length - 1)];
+  const renderFsHeroCard = (key: string) => {
+    switch (key) {
+      case "technicals": {
+        const pct = zone ? fsTechnicalsPct[zone.signal] : 50;
+        const color = zone ? fsTechnicalsColor[zone.signal] : "var(--color-text-muted)";
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow">{t("chart.technicals", "Technicals")}</div>
+              <div className={`fs-hero-value${zone ? fsSignalClass(zone.signal) : ""}`}>
+                {zone ? fsTechnicalsLabel[zone.signal] : "—"}
+              </div>
+              <div className="fs-hero-sub">
+                <span>{t("chart.divergence", "Divergence")} {fsDivLabel}</span>
+              </div>
+            </div>
+            <div className="fs-hero-icon" style={{ background: `conic-gradient(${color} ${pct}%, var(--color-border) 0)` }}>
+              <span className="fs-hero-icon-core" />
+            </div>
+          </>
+        );
+      }
+      case "keystats":
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow">{t("chart.keyStats", "Key stats")}</div>
+              <div className="fs-hero-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</div>
+              <div className="fs-hero-sub">
+                <span>{t("chart.tradingVolume24h", "Trading volume 24h")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+              </div>
+            </div>
+            <span className="fs-hero-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            </span>
+          </>
+        );
+      case "overview":
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow">{t("chart.overview", "Overview")}</div>
+              <div className="fs-hero-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</div>
+              <div className="fs-hero-sub">
+                <span>{t("chart.circulatingSupply", "Circulating supply")} {coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
+              </div>
+            </div>
+            <span className="fs-hero-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            </span>
+          </>
+        );
+      case "about":
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow">{t("chart.about", "About")}</div>
+              <div className="fs-hero-value">{coinMeta?.category ?? "—"}</div>
+              <div className="fs-hero-sub">
+                <span>{coinMeta?.homepage ? coinMeta.homepage.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "") : t("chart.noLink", "No link")}</span>
+              </div>
+            </div>
+            <span className="fs-hero-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+              </svg>
+            </span>
+          </>
+        );
+      case "stats":
+      default:
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow">{t("chart.stats", "Stats")}</div>
+              <div className="fs-hero-value fs-hero-value--up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</div>
+              <div className="fs-hero-sub">
+                <span className="fs-hero-sub-down">{t("chart.low", "Low")} {dayLow !== null ? formatLivePrice(dayLow) : "—"}</span>
+                <span>{t("chart.volUsd", "Vol (USD)")} {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+              </div>
+            </div>
+            <span className="fs-hero-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" /><path d="M7 16l4-5 3 3 5-7" />
+              </svg>
+            </span>
+          </>
+        );
+    }
+  };
+
   const fsDockSheet = isFullscreen && !isDesktopWidth && ReactDOM.createPortal(
     <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}`}>
       <div className="fs-dock-peek">
@@ -3664,83 +4333,275 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           className="fs-dock-peek-toggle"
           onClick={() => {
             if (pageMode) hapticTap();
+            setFsFocusedCategory(null);
             setFsSheetExpanded((v) => !v);
+          }}
+          onTouchStart={(e) => { fsHandleTouchY.current = e.touches[0].clientY; }}
+          onTouchEnd={(e) => {
+            const startY = fsHandleTouchY.current;
+            fsHandleTouchY.current = null;
+            if (startY == null) return;
+            const dy = e.changedTouches[0].clientY - startY;
+            // Small movement = a tap, left to onClick above. A real
+            // swipe always lands on the gesture's direction (up = open,
+            // down = close) instead of toggling off the prior state.
+            if (dy <= -28) {
+              if (pageMode) hapticTap();
+              setFsFocusedCategory(null);
+              setFsSheetExpanded(true);
+            } else if (dy >= 28) {
+              if (pageMode) hapticTap();
+              setFsFocusedCategory(null);
+              setFsSheetExpanded(false);
+            }
           }}
         >
           <span className="fs-dock-handle" />
-          <span className="fs-dock-title-row">
-            {pageMode && !isDesktopWidth ? (
-              <>
-                <span
-                  className="fs-dock-coin-avatar"
-                  style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
-                >
-                  {COIN_GLYPHS[coin] ?? coin[0]}
-                </span>
-                <span className="fs-dock-title">{COIN_FULL_NAME[coin] ?? coin}</span>
-                {currentPrice !== null && (
-                  <span className={`fs-dock-coin-price${priceDirection ? ` fs-dock-coin-price--${priceDirection}` : ""}`}>
-                    {formatLivePrice(currentPrice)}
-                  </span>
-                )}
-                {dayChangePercent !== null && (
-                  <span className={`fs-dock-coin-change${dayChangePercent >= 0 ? " fs-dock-coin-change--up" : " fs-dock-coin-change--down"}`}>
-                    {dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <svg className="fs-dock-title-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-                <span className="fs-dock-title">{t("chart.chartSettings", "Chart Settings")}</span>
-              </>
-            )}
-            <span className="fs-dock-interval-badge">{INTERVAL_SHORT[interval]}</span>
-            <div style={{ flex: 1 }} />
-            {fsSheetExpanded ? (
-              <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="18 15 12 9 6 15" />
-              </svg>
-            ) : (
-              <svg className="chart-fs-strip-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            )}
-          </span>
         </button>
-        {/* Advance Price Chart page, mobile only — Save/Reset/Draw/Close
-            used to float over the chart in the header's icon row (Close
-            was its own corner button); they live here instead now as one
-            labeled segmented control, so the chart gets the full screen.
-            A sibling of fs-dock-peek-toggle above (not nested inside it)
-            so tapping a segment doesn't also expand/collapse the sheet. */}
+        {/* "Option E — swipeable hero card" (user-approved) — one full,
+            rich category card at a time (Technicals/Key stats/Overview/
+            About/Stats), swiped between with dot pagination instead of a
+            row of tap-to-reveal icons. The data shown IS the card: no tap
+            needed to see it. Advance Chart page, mobile only. */}
+        {pageMode && !isDesktopWidth && fsHeroCategories.length > 0 && (
+          <div
+            className="fs-hero"
+            onTouchStart={(e) => { fsHeroTouchX.current = e.touches[0].clientX; }}
+            onTouchEnd={(e) => {
+              const startX = fsHeroTouchX.current;
+              fsHeroTouchX.current = null;
+              if (startX == null) return;
+              const dx = e.changedTouches[0].clientX - startX;
+              if (Math.abs(dx) < 36) return;
+              hapticTap();
+              setFsHeroIndex((i) => {
+                const len = fsHeroCategories.length;
+                return dx < 0 ? (i + 1) % len : (i - 1 + len) % len;
+              });
+            }}
+          >
+            <div className="fs-hero-card">
+              {renderFsHeroCard(fsHeroKey)}
+            </div>
+            {fsHeroCategories.length > 1 && (
+              <div className="fs-hero-dots">
+                {fsHeroCategories.map((key, i) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`fs-hero-dot${i === fsHeroIndex ? " fs-hero-dot--active" : ""}`}
+                    aria-label={key}
+                    onClick={() => { hapticTap(); setFsHeroIndex(i); }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {/* Slim fixed action strip — Interval/Indicators/Style expand
+            INSIDE their own button when tapped (horizontally scrollable
+            if the options overflow), instead of showing anywhere else;
+            Toolbox/Alerts stay direct actions with nothing to pick. */}
         {pageMode && !isDesktopWidth && (
-          <div className="fs-dock-segmented">
+          <div className={`fs-dock-quick-row${fsActionIndex !== -1 ? " fs-dock-quick-row--expanded" : ""}`}>
+            {fsActionIndex === 0 ? (
+              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
+                <button
+                  type="button"
+                  className="fs-dock-quick-collapse"
+                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
+                  aria-label={t("chart.interval", "Interval")}
+                  title={t("chart.interval", "Interval")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3.5 2" />
+                  </svg>
+                </button>
+                <FsSlidingOptions
+                  options={INTERVALS.map((opt) => {
+                    const needsPro = PRO_INTERVALS.has(opt);
+                    const locked = needsPro && !isPaid;
+                    const trend = trends[opt];
+                    return {
+                      key: opt,
+                      active: interval === opt,
+                      locked,
+                      ariaLabel: INTERVAL_LABELS[opt],
+                      onClick: () => {
+                        hapticTap();
+                        if (locked) { onOpenUpgrade?.("pro"); return; }
+                        setInterval(opt);
+                      },
+                      label: (
+                        <>
+                          {INTERVAL_LABELS[opt]}
+                          {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                            : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                            : null}
+                          {locked && <span className="interval-sheet-item-pro">PRO</span>}
+                        </>
+                      ),
+                    };
+                  })}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="fs-dock-quick-btn"
+                onClick={() => { setFsActionIndex(0); hapticTap(); }}
+                aria-label={t("chart.interval", "Interval")}
+                title={t("chart.interval", "Interval")}
+              >
+                <span className="fs-dock-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3.5 2" />
+                  </svg>
+                </span>
+                <span className="fs-dock-quick-label">{INTERVAL_SHORT[interval]}</span>
+              </button>
+            )}
+            {fsActionIndex === 1 ? (
+              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
+                <button
+                  type="button"
+                  className="fs-dock-quick-collapse"
+                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
+                  aria-label={t("chart.indicators")}
+                  title={t("chart.indicators")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="M7 16l4-5 3 3 5-7" />
+                  </svg>
+                </button>
+                <div className="fs-dock-quick-options">
+                  {fsQuickIndicators.map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.key}
+                      className={`fs-dock-quick-option${ind.checked ? " fs-dock-quick-option--active" : ""}`}
+                      onClick={() => { hapticTap(); ind.onToggle(); }}
+                    >
+                      <span className="fs-dock-quick-option-dot" style={{ background: ind.color }} />
+                      {ind.label}
+                      {ind.pro && !isPaid && <span className="tier-badge tier-badge--pro">P</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="fs-dock-quick-btn"
+                onClick={() => { setFsActionIndex(1); hapticTap(); }}
+                aria-label={t("chart.indicators")}
+                title={t("chart.indicators")}
+              >
+                <span className="fs-dock-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="M7 16l4-5 3 3 5-7" />
+                  </svg>
+                </span>
+                <span className="fs-dock-quick-label">
+                  {[showBB, showRSI, showMACD, showEMA20, showEMA50, showEMA200, showMA20, showMA50, showMA200, showFib, showSR].filter(Boolean).length || t("chart.indicators")}
+                </span>
+              </button>
+            )}
+            {fsActionIndex === 2 ? (
+              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
+                <button
+                  type="button"
+                  className="fs-dock-quick-collapse"
+                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
+                  aria-label={t("chart.style", "Style")}
+                  title={t("chart.style", "Style")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
+                  </svg>
+                </button>
+                <FsSlidingOptions
+                  options={(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => ({
+                    key: s,
+                    active: chartStyle === s,
+                    ariaLabel: CHART_STYLE_LABELS[s],
+                    onClick: () => { hapticTap(); setChartStyle(s); },
+                    label: (
+                      <>
+                        <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
+                        {CHART_STYLE_LABELS[s]}
+                      </>
+                    ),
+                  }))}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="fs-dock-quick-btn"
+                onClick={() => { setFsActionIndex(2); hapticTap(); }}
+                aria-label={t("chart.style", "Style")}
+                title={t("chart.style", "Style")}
+              >
+                <span className="fs-dock-quick-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
+                  </svg>
+                </span>
+                <span className="fs-dock-quick-label">{CHART_STYLE_LABELS[chartStyle]}</span>
+              </button>
+            )}
             <button
               type="button"
-              className={`fs-dock-segment${fsDrawPanelOpen ? " fs-dock-segment--active" : ""}`}
-              onClick={() => { hapticTap(); setFsDrawPanelOpen((v) => !v); }}
+              className={`fs-dock-quick-btn${fsActionIndex === 3 ? " fs-dock-quick-btn--active" : fsDrawPanelOpen ? " fs-dock-quick-btn--on" : ""}`}
+              onClick={() => { setFsActionIndex(3); hapticTap(); setFsDrawPanelOpen((v) => !v); }}
+              aria-label={t("chart.toolbox", "Toolbox")}
+              title={t("chart.toolbox", "Toolbox")}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                <path d="M2 2l7.586 7.586" />
-                <circle cx="11" cy="11" r="2" />
-              </svg>
-              <span>{t("chart.toolbox", "Toolbox")}</span>
+              <span className="fs-dock-quick-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                  <path d="M2 2l7.586 7.586" />
+                  <circle cx="11" cy="11" r="2" />
+                </svg>
+              </span>
+              <span className="fs-dock-quick-label">{t("chart.toolbox", "Toolbox")}</span>
             </button>
             <button
               type="button"
-              className="fs-dock-segment fs-dock-segment--danger"
-              onClick={() => { hapticTap(); toggleFullscreen(); }}
+              className={`fs-dock-quick-btn${fsActionIndex === 4 ? " fs-dock-quick-btn--active" : ""}`}
+              onClick={() => {
+                setFsActionIndex(4);
+                hapticTap();
+                // PriceAlerts (App.tsx root, always mounted) owns its own
+                // open state internally too — same click-through reuse as
+                // the desktop toolbar's own Alert button, via its real
+                // bell button (.alerts-bell) instead of a new prop here.
+                document.querySelector<HTMLButtonElement>(".alerts-bell")?.click();
+              }}
+              aria-label={t("priceAlerts.title", "Alert")}
+              title={t("priceAlerts.title", "Alert")}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-              <span>{t("chart.close", "Close")}</span>
+              <span className="fs-dock-quick-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </span>
+              <span className="fs-dock-quick-label">{t("priceAlerts.title", "Alert")}</span>
             </button>
           </div>
         )}
@@ -3749,6 +4610,179 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       {fsSheetExpanded && (
         <div className="fs-dock-body">
 
+          {/* Reference-match (TradingView mobile "symbol info" sheet) —
+              Overview/Technicals/Key stats/About, Advance Chart page only
+              (same pageMode scoping the existing Stats category below
+              already uses) — the regular compact-chart mobile fullscreen
+              doesn't grow this extra content unexpectedly. */}
+          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "overview") && (
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("overview")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--overview">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.overview", "Overview")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.overview ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.overview && (
+              <div className="fs-dock-category-body">
+                <div className="fs-info-list">
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
+                    <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
+                  </div>
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
+                    <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
+                  </div>
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
+                    <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
+                  </div>
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
+                    <span className="fs-info-value">{oiCoins != null && currentPrice != null ? formatCompactVolume(oiCoins * currentPrice) : "—"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+
+          {pageMode && zone && (!fsFocusedCategory || fsFocusedCategory === "technicals") && (
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("technicals")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--technicals">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a10 10 0 1 0 10 10" />
+                  <path d="M12 12l5-5" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.technicals", "Technicals")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.technicals ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.technicals && (() => {
+              const pct = fsTechnicalsPct[zone.signal];
+              const theta = (180 - pct * 1.8) * (Math.PI / 180);
+              const needleX = 80 + 52 * Math.cos(theta);
+              const needleY = 86 - 52 * Math.sin(theta);
+              return (
+                <div className="fs-dock-category-body">
+                  <div className="fs-gauge">
+                    <svg width="160" height="92" viewBox="0 0 160 92">
+                      <path d="M10,86 A70,70 0 0 1 23.4,44.8" fill="none" stroke="#ef4444" strokeWidth="14" strokeLinecap="round" />
+                      <path d="M23.4,44.8 A70,70 0 0 1 58.4,19.4" fill="none" stroke="#f97316" strokeWidth="14" />
+                      <path d="M58.4,19.4 A70,70 0 0 1 101.6,19.4" fill="none" stroke="#9ca3af" strokeWidth="14" />
+                      <path d="M101.6,19.4 A70,70 0 0 1 136.6,44.8" fill="none" stroke="#4ade80" strokeWidth="14" />
+                      <path d="M136.6,44.8 A70,70 0 0 1 150,86" fill="none" stroke="#16a34a" strokeWidth="14" strokeLinecap="round" />
+                      <line x1="80" y1="86" x2={needleX} y2={needleY} stroke="var(--color-text)" strokeWidth="2.4" strokeLinecap="round" />
+                      <circle cx="80" cy="86" r="4.5" fill="var(--color-text)" />
+                    </svg>
+                    <div className="fs-gauge-labels">
+                      <span>{t("chart.strongSell")}</span>
+                      <span>{t("chart.sell")}</span>
+                      <span>{t("chart.neutralZone")}</span>
+                      <span>{t("chart.buy")}</span>
+                      <span>{t("chart.strongBuy")}</span>
+                    </div>
+                    <div className={`fs-gauge-value fs-gauge-value--${zone.signal}`}>{fsTechnicalsLabel[zone.signal]}</div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+          )}
+
+          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "keystats") && (
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("keystats")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--keystats">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.keyStats", "Key stats")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.keystats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.keystats && (
+              <div className="fs-dock-category-body">
+                <div className="fs-info-list">
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.tradingVolume24h", "Trading volume 24h")}</span>
+                    <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+                  </div>
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.marketCap", "Market capitalization")}</span>
+                    <span className="fs-info-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</span>
+                  </div>
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.fdv", "Fully diluted market cap")}</span>
+                    <span className="fs-info-value">{coinMeta?.fdvUSD != null ? formatCompactVolume(coinMeta.fdvUSD) : "—"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+
+          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "about") && (
+          <div className="fs-dock-category">
+            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("about")}>
+              <span className="fs-dock-category-icon fs-dock-category-icon--about">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </span>
+              <span className="fs-dock-category-label">{t("chart.about", "About")}</span>
+              <svg className={`fs-dock-category-chevron${fsOpenCategories.about ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {fsOpenCategories.about && (
+              <div className="fs-dock-category-body">
+                <div className="fs-info-list">
+                  <div className="fs-info-row">
+                    <span className="fs-info-label">{t("chart.category", "Category")}</span>
+                    <span className="fs-info-value">{coinMeta?.category ?? "—"}</span>
+                  </div>
+                  {([
+                    ["chart.website", "Website", coinMeta?.homepage],
+                    ["chart.sourceCode", "Source Code", coinMeta?.sourceCode],
+                    ["chart.explorers", "Explorers", coinMeta?.explorer],
+                    ["chart.whitepaper", "Whitepaper", coinMeta?.whitepaper],
+                    ["chart.community", "Community", coinMeta?.subreddit],
+                  ] as const).map(([key, fallback, url]) => (
+                    <div className="fs-info-row" key={key}>
+                      <span className="fs-info-label">{t(key, fallback)}</span>
+                      {url ? (
+                        <a className="fs-info-link" href={url} target="_blank" rel="noopener noreferrer">
+                          {url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                        </a>
+                      ) : (
+                        <span className="fs-info-value">—</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          )}
+
+          {(!fsFocusedCategory || fsFocusedCategory === "style") && (
           <div className="fs-dock-category">
             <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("style")}>
               <span className="fs-dock-category-icon fs-dock-category-icon--style">
@@ -3791,7 +4825,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             )}
           </div>
+          )}
 
+          {(!fsFocusedCategory || fsFocusedCategory === "indicators") && (
           <div className="fs-dock-category">
             <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("indicators")}>
               <span className="fs-dock-category-icon fs-dock-category-icon--indicators">
@@ -3822,7 +4858,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             )}
           </div>
+          )}
 
+          {(!fsFocusedCategory || fsFocusedCategory === "interval") && (
           <div className="fs-dock-category">
             <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("interval")}>
               <span className="fs-dock-category-icon fs-dock-category-icon--interval">
@@ -3869,12 +4907,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             )}
           </div>
+          )}
 
           {/* Advance Price Chart page only — High/Low/Vol/Bid/Ask/Vol-coin/
               Signal/Divergence, the same content the header's expandable
               stats strip shows elsewhere, just relocated here since the
               header on this page is trimmed down to coin/price/change. */}
-          {pageMode && (
+          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "stats") && (
           <div className="fs-dock-category">
             <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("stats")}>
               <span className="fs-dock-category-icon fs-dock-category-icon--stats">
@@ -4021,11 +5060,47 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     "strong-sell": t("chart.strongSell"),
   }[zone.signal];
 
+  // Reference-match: signal + zone + divergence as one plain-text sentence
+  // inside the AI insight banner, instead of separate dot-indicator/pill
+  // badges (SignalIndicator, .div-badge) next to the title. These three
+  // are genuinely independent sources (an earlier version used a
+  // zone.signal-derived bull/bear bucket as "signal" too, which just
+  // restated zoneLabel in different words — "Buy Zone signal in a
+  // bullish zone" — so this uses trends[interval] instead, the same
+  // independent bullish/bearish reading the interval pills' own little
+  // arrows already show): "signal" = this interval's trend direction,
+  // "zone" = zoneLabel (the price-zone status, e.g. "Buy Zone"/
+  // "Oversold"), "div" = divergence.
+  const intervalSignal = trends[interval];
+  const rawZoneDivergenceSentence = isPaid && (intervalSignal || zoneLabel || divergence)
+    ? intervalSignal && zoneLabel && divergence
+      ? t("chart.signalZoneDivSentence", "{{signal}} signal in a {{zone}}, with a {{div}} divergence.", { signal: intervalSignal, zone: zoneLabel, div: divergence.type })
+      : intervalSignal && zoneLabel
+        ? t("chart.signalZoneSentence", "{{signal}} signal in a {{zone}}.", { signal: intervalSignal, zone: zoneLabel })
+        : zoneLabel && divergence
+          ? t("chart.zoneDivSentence", "In a {{zone}}, with a {{div}} divergence.", { zone: zoneLabel, div: divergence.type })
+          : intervalSignal && divergence
+            ? t("chart.signalDivSentence", "{{signal}} signal with a {{div}} divergence.", { signal: intervalSignal, div: divergence.type })
+            : zoneLabel
+              ? t("chart.zoneSentence", "In a {{zone}}.", { zone: zoneLabel })
+              : intervalSignal
+                ? t("chart.signalSentence", "{{signal}} signal.", { signal: intervalSignal })
+                : divergence
+                  ? t("chart.divergenceSentence", "{{div}} divergence detected.", { div: divergence.type })
+                  : null
+    : null;
+  // Sentence-case regardless of how the pieces above were capitalized
+  // (zoneLabel comes in as "Buy Zone"/"Oversold" etc) — first letter up,
+  // everything else down.
+  const zoneDivergenceSentence = rawZoneDivergenceSentence
+    ? rawZoneDivergenceSentence.charAt(0).toUpperCase() + rawZoneDivergenceSentence.slice(1).toLowerCase()
+    : null;
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}`}
+      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
@@ -4037,7 +5112,95 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         }
         onScroll={isFullscreen ? updateFsThumb : undefined}
       >
-        <div className={`chart-fs-header-group${pageMode && !isDesktopWidth ? " chart-fs-header-group--empty" : ""}`}>
+        {/* Reference-match (TradingView desktop chart) — the Advance Chart
+            page's own top toolbar: symbol/interval/style/indicators on the
+            left, save + Trade + Upgrade on the right. Desktop pageMode
+            only; reuses the exact same gridStyleControls/fsIntervalButton/
+            indicatorsControl components the old .chart-legend-actions row
+            used (now excluded from that row in this exact scope, above,
+            so there's no duplicate-ref/duplicate-menu collision). */}
+        {pageMode && isDesktopWidth && (
+          <div className="chart-tv-toolbar">
+            <div className="chart-tv-toolbar-left">
+              <button
+                type="button"
+                className="chart-tv-symbol"
+                onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+              >
+                <span
+                  className="chart-tv-symbol-icon"
+                  style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                >
+                  {COIN_GLYPHS[coin] ?? coin[0]}
+                </span>
+                {coin}USD
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {fsIntervalButton}
+              {gridStyleControls}
+              {indicatorsControl}
+              {gridToggleButton}
+              <button
+                type="button"
+                className="chart-tv-save-btn"
+                onClick={() => {
+                  // PriceAlerts (App.tsx root, always mounted) owns its own
+                  // open state internally too — same .ta-trigger-style
+                  // click-through reuse as the Trade button above, via its
+                  // own real bell button (.alerts-bell) instead of a new
+                  // prop just for this.
+                  document.querySelector<HTMLButtonElement>(".alerts-bell")?.click();
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                {t("priceAlerts.title", "Alert")}
+              </button>
+            </div>
+            <div className="chart-tv-toolbar-right">
+              <div className="chart-tv-segmented-group">
+                <button type="button" className="chart-tv-segment-btn" onClick={handleScreenshot}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  {t("chart.save")}
+                </button>
+                <button type="button" className="chart-tv-segment-btn" onClick={handleResetView} title={t("chart.reset")} data-tooltip={t("chart.reset")}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                  </svg>
+                  {t("chart.reset")}
+                </button>
+                {!isPaid && (
+                  <button
+                    type="button"
+                    className="chart-tv-segment-btn chart-tv-segment-upgrade"
+                    onClick={() => onOpenUpgrade?.("pro")}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <path d="M13 2L3 14h7l-1 8 11-14h-8l1-6z" />
+                    </svg>
+                    {t("chart.upgrade", "Upgrade")}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Reference-match (TradingView desktop chart): the coin name/
+            price/change/High-Low/signal header block is replaced by an
+            OHLC readout + Buy/Sell boxes OVERLAID directly on the chart
+            canvas's own top-left corner (new block below, inside
+            .chart-canvas-wrap) instead of taking its own layout row —
+            collapsing this whole group the same way pageMode mobile
+            already does, reclaiming that vertical space for the chart. */}
+        <div className={`chart-fs-header-group${pageMode ? " chart-fs-header-group--empty" : ""}`}>
           <div className="chart-header">
             <div className="chart-header-left">
               {/* Fullscreen (mobile/iOS and desktop alike): exchange-style
@@ -4047,10 +5210,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   above. Only normal (non-fullscreen) mobile/desktop keep
                   the original title row below/further down. */}
               {isFullscreen ? (() => {
-                // Advance Price Chart page, mobile — no header at all now;
-                // coin/price/change moved into the dock's peek row itself
-                // (fsDockSheet below), so the chart canvas starts right at
-                // the very top of the screen.
+                // Advance Price Chart page, mobile — no header row here;
+                // coin/price/change now overlay directly on the chart
+                // canvas instead (chart-mobile-top-header, rendered inside
+                // .chart-canvas-wrap below, same technique the desktop
+                // OHLC overlay already uses) so the canvas keeps the full
+                // flex height instead of losing a row's worth of space to
+                // a header block.
                 if (pageMode && !isDesktopWidth) return null;
                 // "Minimal Header" layout — single compact coin+price row,
                 // High/Low/Vol/Signal collapsed into one tappable strip
@@ -4264,8 +5430,38 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </div>
               ) : isDesktopWidth ? (
                 <>
+                {/* Reference-match hero rows (compact view only — fullscreen
+                    keeps its own header above untouched): small coin-icon +
+                    pair-name row, then a big price + rounded %-change badge
+                    row below it. currentPrice/dayChangePercent/priceDirection
+                    already exist in this component's scope (used by the
+                    fullscreen/mobile branches above). */}
+                {!isFullscreen && (
+                  <div className="chart-hero-id-row">
+                    <span
+                      className="chart-hero-coin-icon"
+                      style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                    >
+                      {COIN_GLYPHS[coin] ?? coin[0]}
+                    </span>
+                    <span className="chart-hero-pair-name">{COIN_FULL_NAME[coin] ?? coin}</span>
+                  </div>
+                )}
                 <div className="chart-title-row">
-                  <h3>{t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}</h3>
+                  {!isFullscreen && currentPrice !== null ? (
+                    <span className="chart-hero-price-row">
+                      <span className="chart-current-price">
+                        {formatLivePrice(currentPrice)}
+                      </span>
+                      {dayChangePercent !== null && (
+                        <span className={`chart-hero-change-badge${dayChangePercent >= 0 ? " chart-hero-change-badge--up" : " chart-hero-change-badge--down"}`}>
+                          {dayChangePercent >= 0 ? "▲" : "▼"} {Math.abs(dayChangePercent).toFixed(2)}%
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <h3>{t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}</h3>
+                  )}
                   {isFullscreen && currentPrice !== null && (
                     <span className="chart-current-price-group">
                       <span
@@ -4276,10 +5472,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
                     </span>
                   )}
-                  {zone && isPaid && zoneLabel && (
+                  {/* Reference-match: the compact hero stays just
+                      icon+name/price+change — zone/divergence signal
+                      badges and the High/Low row are real functionality,
+                      not deleted, just folded to the fullscreen header
+                      only now so the compact card matches the reference's
+                      clean, minimal look. */}
+                  {isFullscreen && zone && isPaid && zoneLabel && (
                     <SignalIndicator signal={zone.signal} label={zoneLabel} />
                   )}
-                  {!isPaid && (
+                  {isFullscreen && !isPaid && (
                     <button
                       className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
                       onClick={() => onOpenUpgrade?.("pro")}
@@ -4288,12 +5490,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       Unlock Status
                     </button>
                   )}
-                  {divergence && isPaid && (
+                  {isFullscreen && divergence && isPaid && (
                     <span className={`div-badge div-badge--${divergence.type}`}>
                       {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
                     </span>
                   )}
-                  {!isPaid && (
+                  {isFullscreen && !isPaid && (
                     <button
                       className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
                       onClick={() => onOpenUpgrade?.("pro")}
@@ -4304,20 +5506,119 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   )}
                 </div>
                 {displayDayHigh !== null && displayDayLow !== null && (
-                  <div className="chart-fs-stat-col chart-fs-stat-col--row">
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
+                  <div className="chart-fs-stat-col">
+                    <div className="chart-fs-stat-col chart-fs-stat-col--row">
+                      {!isFullscreen && (
+                        <span className="chart-hero-selected-interval">{INTERVAL_SHORT[interval]}</span>
+                      )}
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
+                      </div>
+                      <div className="chart-fs-stat-row">
+                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
+                        <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
+                      </div>
                     </div>
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
-                    </div>
+                    {/* Zone status + divergence badges moved into the AI
+                        insight banner's header below (interval-banner-
+                        header) instead of living here too — same data,
+                        one place. Free users (no banner at all) still get
+                        the upsell gates here. */}
+                    {!isFullscreen && !isPaid && (
+                      <div className="chart-fs-stat-col chart-fs-stat-col--row chart-hero-zone-row">
+                        <button
+                          className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                          onClick={() => onOpenUpgrade?.("pro")}
+                        >
+                          <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                          Unlock Status
+                        </button>
+                        <button
+                          className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                          onClick={() => onOpenUpgrade?.("pro")}
+                        >
+                          <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                          Unlock Divergence
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 </>
               ) : null}
             </div>
+            {/* Reference-match: pills + icon buttons sit beside the coin-
+                name/price rows (a 2x2 grid — name/pills on top, price/icons
+                below), not in their own full-width row under the header
+                like before. Desktop non-fullscreen only; reuses the exact
+                same handlers/components (quickIntervalPills,
+                indicatorsControl, gridStyleControls, handleScreenshot,
+                toggleFullscreen) the old below-header row used, so nothing
+                is duplicated — that row's own copies are hidden for this
+                exact scope just below (search chart-legend-actions). */}
+            {!isFullscreen && isDesktopWidth && (
+              <div className="chart-header-right">
+                {quickIntervalPills}
+                <div className="chart-hero-icon-row">
+                  {indicatorsControl}
+                  {gridStyleControls}
+                  {gridToggleButton}
+                  <button
+                    className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
+                    onClick={() => setShowDepthProfile((v) => !v)}
+                    title={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+                    data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="6" />
+                      <line x1="21" y1="10" x2="6" y2="10" />
+                      <line x1="15" y1="14" x2="6" y2="14" />
+                      <line x1="12" y1="18" x2="6" y2="18" />
+                    </svg>
+                  </button>
+                  {((Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || !Capacitor.isNativePlatform()) && (
+                    <button
+                      className="chart-depth-btn"
+                      onClick={() => {
+                        if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                        setShowCompactView(true);
+                      }}
+                      title={t("chart.compactView", "Compact View")}
+                      data-tooltip={t("chart.compactView", "Compact View")}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="chart-depth-btn"
+                    onClick={handleScreenshot}
+                    title={t("chart.save")}
+                    data-tooltip={t("chart.save")}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="chart-depth-btn"
+                    onClick={toggleFullscreen}
+                    title={t("chart.fullscreen", "Fullscreen")}
+                    data-tooltip={t("chart.fullscreen", "Fullscreen")}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
@@ -4356,6 +5657,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             </div>
             <p className="interval-banner-body interval-banner-body--preview pi-fade-in pi-fade-in--d1">{displayBanner.body}</p>
+            {zoneDivergenceSentence && !isFullscreen && (
+              <p className={`chart-hero-zone-sentence chart-hero-zone-sentence--${intervalSignal ?? divergence?.type ?? "neutral"}`}>
+                {zoneDivergenceSentence}
+              </p>
+            )}
           </div>
         )}
         {patternInsightSheetOpen && displayBanner && ReactDOM.createPortal(
@@ -4455,8 +5761,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {/* Advance Price Chart page, mobile — this whole icon row
                 (Save/Reset/depth/Exit-fullscreen etc.) moves into the
                 dock's peek row instead (fsDockSheet below), so the chart
-                gets the space back. Desktop fullscreen keeps it. */}
-            {!(pageMode && !isDesktopWidth) && (
+                gets the space back. Desktop fullscreen keeps it.
+                Compact desktop also skips this row now — its equivalent
+                (style/indicators/interval pills + save/fullscreen) moved
+                up into .chart-header-right, reference-match layout.
+                pageMode desktop (the dedicated Advance Chart page) also
+                skips it — its own equivalent moved into the new top
+                toolbar (.chart-tv-toolbar, TradingView-reference-match)
+                instead, so there's one toolbar row, not two. */}
+            {!(pageMode && !isDesktopWidth) && !(!isFullscreen && isDesktopWidth) && !(pageMode && isDesktopWidth) && (
             <div className={`chart-legend-actions${Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? " chart-legend-actions--ios" : ""}`}>
               {/* Chart style/Interval/Indicators — every compact view
                   (mobile/iOS and desktop alike) plus desktop fullscreen,
@@ -4656,16 +5969,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             ref={containerRef}
             className="chart-canvas-wrap chart-main-wrap"
             style={
-              pageMode && !isDesktopWidth
-                ? // Advance Price Chart page, mobile — flex-fill instead of
-                  // a fixed viewport-relative height (.price-chart-fs-scroll
-                  // is a flex column for this case, see PriceChart.css).
-                  // The chart gets exactly whatever's left after the
-                  // header, with the scroll container's own bottom padding
-                  // reserving space for the docked bottom sheet — so the
-                  // date-axis strip fits on screen without scrolling,
-                  // instead of a guessed pixel height that goes stale every
-                  // time the header's own content changes.
+              pageMode
+                ? // Advance Price Chart page (mobile AND desktop) —
+                  // flex-fill instead of a fixed viewport-relative height
+                  // (.price-chart-fs-scroll is a flex column for this case,
+                  // see PriceChart.css — desktop now matches mobile's own
+                  // treatment here instead of being a scrolling page). The
+                  // chart gets exactly whatever's left after the header/
+                  // toolbar, so the whole page fits in one viewport with
+                  // no scroll, instead of a guessed pixel height that goes
+                  // stale every time the header's own content changes.
                   { width: "100%", flex: "1 1 auto", minHeight: 0 }
                 : {
                     width: "100%",
@@ -4675,10 +5988,164 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   }
             }
           />
+          {/* Reference-match (TradingView desktop chart) — interval-range
+              bar docked at the bottom of the page instead of only living
+              in the top toolbar's single pill, same real intervals/pro-
+              gating the rest of the app already uses. flex-shrink:0 (see
+              PriceChart.css) keeps this a fixed-height row while the
+              chart canvas above it (flex:1) does all the shrinking. */}
+          {pageMode && isDesktopWidth && (
+            <div className="chart-tv-bottom-bar">
+              {INTERVALS.map((opt) => {
+                const needsPro = PRO_INTERVALS.has(opt);
+                const locked = needsPro && !isPaid;
+                return (
+                  <button
+                    type="button"
+                    key={opt}
+                    className={`chart-tv-bottom-pill${interval === opt ? " active" : ""}`}
+                    onClick={() => {
+                      if (locked) { onOpenUpgrade?.("pro"); return; }
+                      setInterval(opt);
+                    }}
+                  >
+                    {INTERVAL_SHORT[opt]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {!pageMode && isDesktopWidth && (
+            <div
+              ref={crosshairTooltipRef}
+              className="chart-crosshair-tooltip"
+              style={{ opacity: 0 }}
+            >
+              <span className="chart-crosshair-tooltip-date" />
+              <span className="chart-crosshair-tooltip-price" />
+            </div>
+          )}
+          {/* Reference-match (TradingView desktop chart): OHLC readout +
+              Buy/Sell boxes overlaid on the chart canvas's own top-left
+              corner, replacing the old separate header row (collapsed
+              above via chart-fs-header-group--empty). Real data — the
+              latest loaded candle's own open/high/low/close, not
+              placeholder numbers; "Sell"/"Buy" open the real TradingAgent
+              panel (same .ta-trigger reuse as the toolbar's own Trade
+              button) since this app has no literal order-ticket feature
+              to back a real buy/sell action here. */}
+          {pageMode && isDesktopWidth && (() => {
+            const lastCandle = lastCandlesRef.current[lastCandlesRef.current.length - 1];
+            if (!lastCandle) return null;
+            const live = currentPrice ?? lastCandle.close;
+            const changeUp = (dayChangeAbs ?? 0) >= 0;
+            return (
+              <div className="chart-tv-ohlc-overlay">
+                <div className="chart-tv-ohlc-row">
+                  <span
+                    className="chart-tv-ohlc-icon"
+                    style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                  >
+                    {COIN_GLYPHS[coin] ?? coin[0]}
+                  </span>
+                  <span className="chart-tv-ohlc-title">
+                    {COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar · {INTERVAL_SHORT[interval]} · CRYPTO
+                  </span>
+                  <span className={`chart-tv-ohlc-dot${changeUp ? " up" : " down"}`} />
+                  <span className="chart-tv-ohlc-values">
+                    O<b>{formatLivePrice(lastCandle.open)}</b>{" "}
+                    H<b>{formatLivePrice(lastCandle.high)}</b>{" "}
+                    L<b>{formatLivePrice(lastCandle.low)}</b>{" "}
+                    <span className={changeUp ? "chart-tv-ohlc-up" : "chart-tv-ohlc-down"}>
+                      C<b>{formatLivePrice(live)}</b>{" "}
+                      {dayChangeAbs !== null && dayChangePercent !== null && (
+                        <>
+                          {changeUp ? "+" : ""}{dayChangeAbs.toFixed(2)} ({changeUp ? "+" : ""}{dayChangePercent.toFixed(2)}%)
+                        </>
+                      )}
+                    </span>
+                  </span>
+                </div>
+                <div className="chart-tv-ticket-row">
+                  <button
+                    type="button"
+                    className="chart-tv-sell-box"
+                    onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}
+                  >
+                    <span className="chart-tv-ticket-price">{formatLivePrice(live)}</span>
+                    <span className="chart-tv-ticket-label">SELL</span>
+                  </button>
+                  <span className="chart-tv-ticket-mid">0.00</span>
+                  <button
+                    type="button"
+                    className="chart-tv-buy-box"
+                    onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}
+                  >
+                    <span className="chart-tv-ticket-price">{formatLivePrice(live)}</span>
+                    <span className="chart-tv-ticket-label">BUY</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+          {/* Reference-match (TradingView mobile full chart) — coin icon/
+              name + live pill + price/%-change, overlaid directly on the
+              canvas the same way the desktop OHLC overlay above is
+              (.chart-fs-header-group is collapsed to empty for this page
+              now, same as desktop pageMode already was), instead of
+              taking its own row and shrinking the chart's available
+              height. */}
+          {pageMode && !isDesktopWidth && (
+            <div className="chart-mobile-top-header">
+              <div className="chart-mobile-top-row">
+                <span
+                  className="chart-mobile-top-icon"
+                  style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                >
+                  {COIN_GLYPHS[coin] ?? coin[0]}
+                </span>
+                <span className="chart-mobile-top-name">{COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar</span>
+                <span className="chart-mobile-top-live" aria-hidden="true" />
+              </div>
+              {currentPrice !== null && (
+                <div className="chart-mobile-top-price-row">
+                  <span className="chart-mobile-top-price">{formatLivePrice(currentPrice)}</span>
+                  {dayChangeAbs !== null && dayChangePercent !== null && (
+                    <span className={`chart-mobile-top-change${dayChangePercent >= 0 ? " chart-mobile-top-change--up" : " chart-mobile-top-change--down"}`}>
+                      {dayChangePercent >= 0 ? "+" : "-"}{formatLivePrice(Math.abs(dayChangeAbs))} ({dayChangePercent >= 0 ? "+" : ""}{dayChangePercent.toFixed(2)}%)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {pageMode && !isDesktopWidth && (
+            <button
+              type="button"
+              className="chart-mobile-top-close"
+              onClick={() => { hapticTap(); toggleFullscreen(); }}
+              aria-label={t("chart.close", "Close")}
+              title={t("chart.close", "Close")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
           <PredictionOverlay
             chartRef={chartRef}
             seriesRef={candleRef}
             prediction={predictionPath}
+          />
+          <RoundedCandleOverlay
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            candlesRef={lastCandlesRef}
+            upColor="#4ade80"
+            downColor="#fb7185"
+            style={chartStyle === "hollow" ? "hollow" : chartStyle === "heikinAshi" ? "heikinAshi" : "candle"}
+            generation={chartGeneration}
+            visible={!isFullscreen && isDesktopWidth && chartStyle !== "line"}
           />
           <LineDotFillOverlay
             chartRef={chartRef}
@@ -4708,11 +6175,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             persistRef={drawingsPersistRef}
             onZoneComplete={handleZoneComplete}
             onSave={pageMode && !isDesktopWidth ? handleScreenshot : undefined}
-            onReset={pageMode && !isDesktopWidth ? () => {
-              chartRef.current?.timeScale().fitContent();
-              rsiChartRef.current?.timeScale().fitContent();
-              macdChartRef.current?.timeScale().fitContent();
-            } : undefined}
+            // Desktop pageMode's own Reset moved next to Save in the top
+            // toolbar (.chart-tv-toolbar-right) instead of living here —
+            // mobile keeps it in this rail, unchanged.
+            onReset={pageMode && !isDesktopWidth ? handleResetView : undefined}
+            fullHeightRail={pageMode && isDesktopWidth}
           />
           <button
             className="chart-reset-view-btn chart-save-view-btn"

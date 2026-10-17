@@ -541,7 +541,8 @@ const SAFE_LOOKBACK = 60;
 async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
   marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[], viaVoice: boolean,
-  positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean, tradeHistory: TradeHistoryRow[]
+  positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean, tradeHistory: TradeHistoryRow[],
+  safeImageDataUrl: string | null
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -758,8 +759,27 @@ ${JSON_DELIMITER}
             role: "system" as const,
             content: "VOICE MODE — override the narration instruction above: do NOT write the 5-step walkthrough. Output at most one short, natural spoken sentence of narration (or skip narration entirely and go straight to the JSON delimiter) — you still have to actually reason through trend/RSI/MACD/volume/news internally to answer well, you just don't narrate it step by step. Prioritize answering fast and conversationally, exactly like a real person replying right after you stop talking, over the detailed walkthrough. Everything else (the JSON shape, personality, substance, risk discipline, including \"positionsRequest\") stays exactly the same.",
           }] : []),
+          // "Ask Agent Ready" button (Advance Chart page) attaches a
+          // screenshot of the chart the user is ALREADY looking at — the
+          // navigateTo instruction above says to recommend "Price Chart"
+          // freely whenever a deeper look would help, which (with no
+          // awareness of this) fires on nearly every chart-analysis reply
+          // and renders a nonsensical "Open Price Chart →" button under a
+          // reply about the chart they're currently staring at.
+          ...(safeImageDataUrl ? [{
+            role: "system" as const,
+            content: "The user just sent a screenshot of the chart they are CURRENTLY viewing on the Price Chart page — they are already there. Do not set \"navigateTo\" to {\"section\":\"chart\",...} on this turn, and do not tell them to go check out the Price Chart page, since that is exactly the screen in front of them right now. Every other navigateTo page (heatmap, onchain, etc.) and every other field still follows the normal rules.",
+          }] : []),
           ...history.map((h) => ({ role: h.role === "agent" ? "assistant" as const : "user" as const, content: h.content })),
-          { role: "user" as const, content: message },
+          safeImageDataUrl
+            ? {
+                role: "user" as const,
+                content: [
+                  { type: "text" as const, text: message },
+                  { type: "image_url" as const, image_url: { url: safeImageDataUrl, detail: "auto" as const } },
+                ],
+              }
+            : { role: "user" as const, content: message },
   ];
 
   // One full OpenAI completion + the narration/JSON split-parse, isolated
@@ -1010,10 +1030,17 @@ Deno.serve(async (req) => {
 
     if (!OPENAI_API_KEY) return new Response("Server not configured", { status: 500, headers: corsHeaders });
 
-    const { message, selectedCoin, history, viaVoice } = await req.json();
+    const { message, selectedCoin, history, viaVoice, imageDataUrl } = await req.json();
     if (typeof message !== "string" || !message.trim()) {
       return new Response("Missing message", { status: 400, headers: corsHeaders });
     }
+    // "Ask Agent Ready" button on the Advance Chart page — a data: URL of
+    // the current chart's own screenshot, attached the same way a vision-
+    // capable turn already works elsewhere (market-pulse-reply). gpt-4o
+    // (used below regardless) is already vision-capable, so this only
+    // needs the final user turn's content reshaped into parts when
+    // present — nothing else about the prompt/parsing changes.
+    const safeImageDataUrl = typeof imageDataUrl === "string" && imageDataUrl.startsWith("data:image/") ? imageDataUrl : null;
     const safeHistory: HistoryTurn[] = Array.isArray(history)
       ? history.filter((h): h is HistoryTurn => h && (h.role === "user" || h.role === "agent") && typeof h.content === "string")
       : [];
@@ -1102,7 +1129,7 @@ Deno.serve(async (req) => {
         .map((c, i) => [c.toUpperCase(), positioningResults[i]] as const)
         .filter((entry): entry is [string, Positioning] => entry[1] !== null),
     );
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage, tradeHistoryRows);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage, tradeHistoryRows, safeImageDataUrl);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the

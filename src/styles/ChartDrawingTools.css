@@ -21,6 +21,20 @@
   box-shadow: 0 4px 20px var(--color-shadow), 0 0 0 1px var(--color-border);
 }
 
+/* Reference-match (TradingView desktop chart) — a continuous full-height
+   strip instead of a small floating card: no rounded corners/shadow, a
+   plain right border matching the top toolbar's own border, buttons
+   stacked at the top with the rest of the height just blank panel
+   (TradingView's own rail looks exactly like this — a background, not a
+   button list filling the whole height). */
+.cdt-toolbar.cdt-toolbar--full-rail {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-right: 1px solid var(--color-border) !important;
+  padding-top: 8px;
+}
+
 .cdt-btn {
   display: flex;
   align-items: center;

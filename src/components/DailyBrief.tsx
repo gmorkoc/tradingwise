@@ -26,7 +26,7 @@ const openExternalLink = (url: string) => {
 
 type Category = "crypto" | "markets" | "geopolitics";
 
-interface BriefItem {
+export interface BriefItem {
   title: string;
   url: string;
   source: string;
@@ -188,7 +188,7 @@ async function fetchFeed(feed: FeedDef): Promise<BriefItem[]> {
   }
 }
 
-async function fetchBrief(): Promise<BriefItem[]> {
+export async function fetchBrief(): Promise<BriefItem[]> {
   const results = await Promise.allSettled(FEEDS.map(fetchFeed));
   const all = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
@@ -256,7 +256,7 @@ async function fetchVideoForTitle(title: string): Promise<FeaturedVideo | null> 
   }
 }
 
-function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
+export function timeAgo(ts: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const mins = Math.max(1, Math.round((Date.now() - ts) / 60000));
   if (mins < 60) return t("dailyBrief.minutesAgo", { count: mins });
   const hours = Math.round(mins / 60);

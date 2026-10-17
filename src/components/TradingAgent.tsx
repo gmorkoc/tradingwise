@@ -384,6 +384,20 @@ interface Props {
   // (mobile), since there's no .ta-trigger here to anchor it to there —
   // FloatingNavBar's own .fnb-agent-item plays the mobile equivalent.
   showIntroShowcase?: boolean;
+  // Advance Chart page — the floating trigger reads "Ask Agent ready"
+  // there instead of the normal steady-state "Agent ready" (App.tsx
+  // passes this based on activeSection), since that page's whole point
+  // is asking it to analyze the chart rather than general trading chat.
+  // Only the steady-state label changes — the one-time first-use "Agent
+  // is connecting" typing sequence stays the same everywhere.
+  triggerLabel?: string;
+  // Advance Chart page again — tapping the trigger there (while closed)
+  // dispatches "request-chart-screenshot" instead of just opening blank;
+  // PriceChart.tsx listens for that, captures the chart, and dispatches
+  // back "open-trading-agent-with-image" (the same event this component
+  // already listens for elsewhere) with the result. Closing an already-
+  // open panel still works exactly as a normal toggle either way.
+  triggerCapturesChart?: boolean;
 }
 
 // Plain monochrome SVG, not an emoji — a colored bell emoji stood out
@@ -681,7 +695,7 @@ function ActionProposalCard({
   );
 }
 
-export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue, showIntroShowcase }: Props) {
+export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers, onNavigateToSection, onAgentLocked, onReportIssue, showIntroShowcase, triggerLabel = "Agent ready", triggerCapturesChart }: Props) {
   const { user, tier, profile } = useAuth();
   const isDesktop = useIsDesktop();
 
@@ -735,6 +749,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     window.addEventListener("open-trading-agent", onOpen);
     return () => window.removeEventListener("open-trading-agent", onOpen);
   }, [canUseAgent, onAgentLocked]);
+
+  // "Ask Agent Ready" button (PriceChart.tsx, Advance Chart page) listener
+  // moved below handleSend's own definition — see the comment there (it
+  // calls handleSend directly, which isn't declared yet at this point in
+  // the file; a plain `const` isn't hoisted the way a function
+  // declaration would be).
 
   // FloatingNavBar's own raised Agent button (mobile, see hideTrigger
   // above) dispatches this on tap instead of calling setOpen directly —
@@ -805,6 +825,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
 
     setPanelIntro(true);
     (async () => {
+      // Deliberately always "Agent ready" here, never triggerLabel — the
+      // panel-open intro orb is a different moment from the floating
+      // trigger pill (which DOES say "Ask Agent ready" on this page);
+      // once the panel is open the "ask" already happened.
       await typeOut("Agent ready", 45);
       await sleep(1400);
       if (!cancelled) setPanelIntro(false);
@@ -874,14 +898,24 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         await typeText("Agent is connecting");
         await sleep(900);
         await eraseText("Agent is connecting");
-        await typeText("Agent ready");
+        await typeText(triggerLabel);
         localStorage.setItem("tradingAgentFirstUseDone", "true");
       } else {
-        setLabel("Agent ready");
+        setLabel(triggerLabel);
       }
       if (!cancelledRef.current) setPhase("ready");
     })();
   }, [phase]);
+
+  // The effect above only ever runs once (the entrance animation, gated
+  // on `phase`) — triggerLabel can change later on its own as the user
+  // navigates to/from the Advance Chart page, without this component
+  // remounting (it's mounted once at the App.tsx root). Once the
+  // entrance has settled, just swap the label directly — no need to
+  // replay "Agent is connecting" typing again for a plain text change.
+  useEffect(() => {
+    if (phase === "ready") setLabel(triggerLabel);
+  }, [triggerLabel, phase]);
 
   const [portfolio, setPortfolio] = useState<PaperPortfolio | null>(null);
   const [performance, setPerformance] = useState<AgentPerformance | null>(null);
@@ -916,6 +950,13 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // render branch below, no hub-sheet logic at all).
   const [hubOpen, setHubOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  // "Ask Agent Ready" button on the Advance Chart page — a chart
+  // screenshot (data: URL) attached to the NEXT message sent, shown as a
+  // thumbnail above the composer until then. Not persisted into chat
+  // history beyond that one send (insertMessage only stores `content`,
+  // same as every other turn) — reopening/scrolling back won't show it
+  // again, just the reply that analyzed it.
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   // Own silence detection, not just trusting the native plugin's own
@@ -1428,7 +1469,14 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // as the next message without the user having to type it — it's just a
   // normal chat turn from the agent's perspective, so no special "answer"
   // plumbing is needed.
-  const handleSend = async (overrideContent?: string) => {
+  // overrideImage lets a caller (the "Ask Agent Ready" auto-send path
+  // below) pass the just-captured screenshot directly instead of going
+  // through `pendingImage` state — setPendingImage+handleSend called back
+  // to back in the same tick would otherwise read the STALE pre-update
+  // state (setState isn't synchronous), silently sending with no image
+  // attached. undefined (not passed) means "use whatever's already in
+  // pendingImage", same as every normal manual send.
+  const handleSend = async (overrideContent?: string, overrideImage?: string | null) => {
     const content = overrideContent ?? draft.trim();
     if (!content || sending) return;
     // Reset immediately (not after the round trip) so a typed message sent
@@ -1437,6 +1485,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     // does.
     const viaVoice = lastSendWasVoiceRef.current;
     lastSendWasVoiceRef.current = false;
+    // Snapshot + clear now (not after the round trip) — same reasoning as
+    // draft below: this send "uses up" the pending screenshot regardless
+    // of whether the request ultimately succeeds, same as the optimistic
+    // draft clear just below.
+    const imageForThisSend = overrideImage !== undefined ? overrideImage : pendingImage;
+    setPendingImage(null);
     setDraft("");
     // Explicit blur before disabling — on WebKit, disabling an input that
     // still has focus can leave its blinking caret visually stuck in place
@@ -1470,6 +1524,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       thoughtProcess: null,
       navigateTo: null,
       positionsList: null,
+      imageUrl: imageForThisSend ?? null,
       createdAt: new Date().toISOString(),
     }]);
     // Lets a tap on the "Thinking…" bubble (handleInterruptTyping below)
@@ -1489,6 +1544,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         (req) => setOrderBookModalCoin(req.coin),
         controller.signal,
         (update) => { preferencesUpdate = update; },
+        imageForThisSend,
       );
       // Applied before loadAll() below refreshes `portfolio`, so that
       // reload already reflects it instead of showing stale data for one
@@ -1517,6 +1573,31 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       setSending(false);
     }
   };
+
+  // "Ask Agent Ready" button (PriceChart.tsx, Advance Chart page) —
+  // dispatches this with a chart screenshot instead of calling
+  // sendAgentMessage directly itself, same reasoning as every other
+  // external trigger here: this component owns its own open/draft/send
+  // state, nothing outside it should reach in and mutate that directly.
+  // Declared here (after handleSend, not up with the other window
+  // listeners above) since it calls handleSend directly and a `const`
+  // isn't hoisted the way a function declaration would be.
+  useEffect(() => {
+    const onOpenWithImage = (e: Event) => {
+      if (!canUseAgent) { onAgentLocked?.(); return; }
+      const detail = (e as CustomEvent<{ imageDataUrl: string; prompt?: string }>).detail;
+      if (!detail?.imageDataUrl) return;
+      setOpen(true);
+      // Auto-send, not pre-filled for review — explicit request: the
+      // whole point of tapping the trigger on this page is "analyze what
+      // I'm looking at right now", so it sends immediately with the
+      // captured screenshot + default prompt, same as if the user had
+      // typed it and hit Send themselves.
+      handleSend(detail.prompt ?? "Can you analyze this chart?", detail.imageDataUrl);
+    };
+    window.addEventListener("open-trading-agent-with-image", onOpenWithImage);
+    return () => window.removeEventListener("open-trading-agent-with-image", onOpenWithImage);
+  }, [canUseAgent, onAgentLocked, handleSend]);
 
   // Set right before stopping for an explicit Cancel (see handleMicCancel)
   // — the "listeningState: stopped" listener below fires either way (a
@@ -2307,6 +2388,9 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     <p className="ta-thought-process-text">{m.thoughtProcess}</p>
                   </div>
                 )}
+                {m.imageUrl && (
+                  <img src={m.imageUrl} alt="Chart screenshot" className="ta-msg-image" />
+                )}
                 <p className="ta-msg-text">{m.content}</p>
                 <span className="ta-msg-time">{formatMsgTime(m.createdAt)}</span>
                 {m.newsSources && m.newsSources.length > 0 && (
@@ -2640,6 +2724,20 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
             </button>
           )}
 
+          {pendingImage && (
+            <div className="ta-pending-image">
+              <img src={pendingImage} alt="Chart screenshot to analyze" />
+              <button
+                type="button"
+                className="ta-pending-image-remove"
+                onClick={() => setPendingImage(null)}
+                aria-label="Remove attached image"
+                title="Remove attached image"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className={`ta-composer${listening ? " ta-composer--recording" : ""}`}>
             {listening && SPEECH_AVAILABLE && (
               <button
@@ -2757,6 +2855,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
           onClick={() => {
             if (!canUseAgent) { onAgentLocked?.(); return; }
             setShowcasePlaying(false);
+            if (triggerCapturesChart && !open) {
+              window.dispatchEvent(new CustomEvent("request-chart-screenshot"));
+              return;
+            }
             setOpen((v) => !v);
           }}
         >
