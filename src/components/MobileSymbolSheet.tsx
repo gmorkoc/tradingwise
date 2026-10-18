@@ -105,6 +105,45 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
   // block is still on screen (would just duplicate it).
   const scrollRef = useRef<HTMLDivElement>(null);
   const priceBlockRef = useRef<HTMLDivElement>(null);
+  // Native-feeling drag on the sticky header/handle — down dismisses the
+  // sheet (same gesture a real iOS sheet uses), up opens the real
+  // #advance-chart page (same action as tapping "Full Chart" below).
+  // Imperative style writes during the touch (not React state) so it
+  // tracks the finger at 60fps; only commits on release.
+  const mssSheetRef = useRef<HTMLDivElement>(null);
+  const mssDragRef = useRef<{ startY: number } | null>(null);
+  const handleMssHeaderTouchStart = (e: React.TouchEvent) => {
+    mssDragRef.current = { startY: e.touches[0].clientY };
+    const sheet = mssSheetRef.current;
+    if (sheet) sheet.style.transition = "none";
+  };
+  const handleMssHeaderTouchMove = (e: React.TouchEvent) => {
+    const drag = mssDragRef.current;
+    const sheet = mssSheetRef.current;
+    if (!drag || !sheet) return;
+    const dy = e.touches[0].clientY - drag.startY;
+    // Dragging down only moves the sheet once its content is scrolled to
+    // the top — otherwise the gesture belongs to the content's own
+    // native scroll, same as a real sheet.
+    if (dy > 0 && (scrollRef.current?.scrollTop ?? 0) > 0) return;
+    // Downward follows the finger 1:1 (a real dismiss preview); upward
+    // is just a small rubber-banded hint since the sheet can't actually
+    // grow past full height — the real "open full chart" action only
+    // fires on release.
+    const translate = dy > 0 ? dy : Math.max(dy / 3, -40);
+    sheet.style.transform = `translateY(${translate}px)`;
+  };
+  const handleMssHeaderTouchEnd = (e: React.TouchEvent) => {
+    const drag = mssDragRef.current;
+    mssDragRef.current = null;
+    const sheet = mssSheetRef.current;
+    if (!drag || !sheet) return;
+    const dy = e.changedTouches[0].clientY - drag.startY;
+    sheet.style.transition = "";
+    sheet.style.transform = "";
+    if (dy > 90) onClose();
+    else if (dy < -60) onOpenFullChart();
+  };
   const [showHeaderPrice, setShowHeaderPrice] = useState(false);
   useEffect(() => {
     const root = scrollRef.current;
@@ -137,9 +176,14 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
   // the bottom nav bar despite a much higher z-index.
   return ReactDOM.createPortal(
     <div className="mss-backdrop" onClick={onClose}>
-      <div className="mss-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="mss-sheet" ref={mssSheetRef} onClick={(e) => e.stopPropagation()}>
         <div className="mss-scroll" ref={scrollRef}>
-          <div className="mss-header">
+          <div
+            className="mss-header"
+            onTouchStart={handleMssHeaderTouchStart}
+            onTouchMove={handleMssHeaderTouchMove}
+            onTouchEnd={handleMssHeaderTouchEnd}
+          >
             {/* Lives inside the sticky header itself (not a separate
                 static element above it) — a handle pinned by .mss-sheet's
                 own static layout and a header pinned by position:sticky

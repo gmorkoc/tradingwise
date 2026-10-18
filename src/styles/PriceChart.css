@@ -433,9 +433,12 @@ html[data-theme="light"]
   -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
   border-radius: 50%;
-  background: #0a0b0d;
+  /* Inverted per theme instead of hardcoded black — dark so it's visible
+     on light theme (the original ask), light so it's visible against the
+     dark chart canvas in dark theme, instead of near-blending into it. */
+  background: var(--color-text);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  color: #fff;
+  color: var(--color-surface);
   cursor: pointer;
 }
 .chart-mobile-top-close svg {
@@ -681,7 +684,12 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
    below it this component renders a completely different mobile header
    with none of these classes, so this never touches that layout. */
 @media (min-width: 641px) {
-  html[data-theme="light"] .chart-active
+  /* Was html[data-theme="light"]-only — the grid layout itself has
+     nothing to do with color, just fixes flex-wrap dropping the pills/
+     icon row onto its own 3rd line (see comment above), so dark theme
+     was left stuck with that exact flex-wrap bug this was written to
+     avoid. Applies to both themes now. */
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-header {
     display: grid;
@@ -690,34 +698,34 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
     row-gap: 10px;
     align-items: center;
   }
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-header-left,
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-header-right {
     display: contents;
   }
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-hero-id-row {
     grid-column: 1;
     grid-row: 1;
   }
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-title-row {
     grid-column: 1;
     grid-row: 2;
   }
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-quick-interval-pills {
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
   }
-  html[data-theme="light"] .chart-active
+  .chart-active
     .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
     .chart-hero-icon-row {
     grid-column: 2;
@@ -868,6 +876,15 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   font-size: 3.2rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+/* The hardcoded black below (matching the --up/--down overrides right
+   after it) was missing this same light-theme scope, so it was
+   overriding the base .chart-current-price rule's var(--color-text) in
+   BOTH themes — near-black text on dark theme's own navy background,
+   unreadable. */
+html[data-theme="light"] .chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-current-price {
   color: #0a0b0d;
 }
 html[data-theme="light"] .chart-active
@@ -912,6 +929,12 @@ html[data-theme="light"] .chart-active
 .chart-hero-pair-name {
   font-size: 1.3rem;
   font-weight: 600;
+  color: var(--color-text);
+}
+/* Same deliberate "stays neutral/black, not theme-colored" look as the
+   price text right below it (.chart-current-price) — was unscoped,
+   hardcoding black in dark theme too, invisible on its own navy bg. */
+html[data-theme="light"] .chart-hero-pair-name {
   color: #0a0b0d;
 }
 .chart-hero-price-row {
@@ -1193,7 +1216,7 @@ html[data-theme="light"] .chart-active
   max-height: 88vh;
   display: flex;
   flex-direction: column;
-  background: #f6f6f6;
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
@@ -1236,15 +1259,30 @@ html[data-theme="light"] .chart-active
 }
 .fs-hero-card {
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   width: 100%;
   min-height: 60px;
   padding: 11px 14px;
   border-radius: 14px;
   text-align: left;
+  overflow: hidden;
+}
+.fs-hero-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  animation: fs-hero-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes fs-hero-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .fs-hero-eyebrow {
   font-size: 0.66rem;
@@ -1252,6 +1290,19 @@ html[data-theme="light"] .chart-active
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+/* Agent Ready's hero card only — the same orb used elsewhere for the
+   agent (TradingAgent.tsx's trigger button), just sized down and placed
+   as a direct flex child next to the eyebrow text instead of its own
+   wrapper, which has broken its rendering before. */
+.fs-hero-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.fs-hero-agent-orb {
+  width: 13px;
+  height: 13px;
 }
 .fs-hero-value {
   font-size: 1.02rem;
@@ -1282,6 +1333,19 @@ html[data-theme="light"] .chart-active
 }
 .fs-hero-sub-down {
   color: #ef4444;
+}
+.fs-hero-agent-text {
+  margin-top: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-text);
+  white-space: normal;
+}
+.fs-hero-agent-loading {
+  color: var(--color-text-muted);
+  font-weight: 700;
+  white-space: nowrap;
 }
 .fs-hero-icon {
   flex-shrink: 0;
@@ -1622,9 +1686,20 @@ html[data-theme="light"] .chart-active
   border-radius: 999px;
 }
 
+/* Always mounted (not conditionally rendered) so the open/close can be a
+   real height animation instead of content snapping in/out — collapsed
+   is max-height:0 (set inline, from the measured fsDockBodyH in state),
+   expanded animates up to that exact value. The drag gesture on the peek
+   handle writes this same max-height directly during a touch, bypassing
+   React, then clears its inline override on release so this transition
+   finishes the motion smoothly to the settled state. */
 .fs-dock-body {
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  transition: max-height 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.fs-dock-body-inner {
   padding: 0 14px 10px;
 }
 
@@ -3119,7 +3194,10 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   gap: 6px;
   padding: 0 14px;
   border: none;
-  background: #fff;
+  /* Was hardcoded #fff — white background + var(--color-text)'s own
+     near-white value in dark theme meant white text on a white button,
+     invisible. */
+  background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.78rem;
   font-weight: 700;
@@ -3139,13 +3217,16 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   vertical-align: middle;
   flex-shrink: 0;
 }
+/* Inverted per theme (same fix as .mss-trade-btn/.chart-mobile-top-close)
+   instead of hardcoded black — that washed out against dark theme's own
+   near-black surface here, barely visible. */
 .chart-tv-segment-upgrade {
-  background: #0a0b0d;
-  color: #fff;
+  background: var(--color-text);
+  color: var(--color-surface);
   font-weight: 800;
 }
 .chart-tv-segment-upgrade:hover {
-  background: #0a0b0d;
+  background: var(--color-text);
   opacity: 0.88;
 }
 /* Standalone echo of TradingAgent's .ta-trigger-orb gradient/glow — see
@@ -4504,10 +4585,30 @@ html[data-theme="light"] .cap-overlay-feature {
   background: var(--color-primary-soft);
 }
 
-/* Reference-match: plain circular gray icon buttons, label hidden —
-   desktop non-fullscreen only, same scoping as the other overrides
-   above. The label stays in the DOM (still read by a screen reader via
-   the button's own accessible name/title) — only visually hidden. */
+/* Reference-match: plain circular icon buttons, label hidden — desktop
+   non-fullscreen only. The label stays in the DOM (still read by a
+   screen reader via the button's own accessible name/title) — only
+   visually hidden. Shape (size/circle/no border) was light-theme-only
+   below, so dark theme fell back to the base rule's very different
+   auto-width/icon-over-label-column/5px-radius shape — same buttons,
+   different size and silhouette depending on theme. Shape is layout,
+   not color, so it applies to both now; only the fill stays themed. */
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-depth-btn,
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-screenshot-btn,
+.chart-active
+  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
+  .chart-fullscreen-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+}
 html[data-theme="light"] .chart-active
   .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
   .chart-depth-btn,
@@ -4517,12 +4618,6 @@ html[data-theme="light"] .chart-active
 html[data-theme="light"] .chart-active
   .price-chart-container:not(.price-chart-container--fs):not(:fullscreen)
   .chart-fullscreen-btn {
-  width: 34px;
-  height: 34px;
-  min-width: 0;
-  padding: 0;
-  border-radius: 50%;
-  border: none;
   background: rgba(10, 11, 13, 0.06);
   color: #5b616e;
 }

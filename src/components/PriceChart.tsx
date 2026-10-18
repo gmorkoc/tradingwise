@@ -39,6 +39,7 @@ import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters
 import { AstroSuggestions } from "./AstroSuggestions";
 import { CompactPriceView } from "./CompactPriceView";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { supabase } from "../services/supabase";
 import "../styles/PriceChart.css";
 
 export type TimeInterval =
@@ -1373,19 +1374,48 @@ function FsSlidingOptions({
 }: {
   options: Array<{ key: string; label: React.ReactNode; active: boolean; locked?: boolean; ariaLabel?: string; onClick: () => void }>;
 }) {
+  const trackRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
   const activeKey = options.find((o) => o.active)?.key;
 
-  useLayoutEffect(() => {
+  const measure = useCallback(() => {
     const el = activeKey != null ? itemRefs.current[activeKey] : null;
+    const track = trackRef.current;
     if (!el) { setHighlight(null); return; }
     setHighlight({ left: el.offsetLeft, width: el.offsetWidth });
-    el.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [activeKey, options.length]);
+    // scrollIntoView's own inline:"center" is unreliable in WKWebView —
+    // compute the centered scrollLeft by hand instead, same math.
+    if (track) {
+      track.scrollLeft = el.offsetLeft - (track.clientWidth - el.offsetWidth) / 2;
+    }
+  }, [activeKey]);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure, options.length]);
+
+  // The track sits inside the quick-row button that's mid flex-grow
+  // transition (34px -> full width) the first time this item is the
+  // default-expanded one on page load — measuring once on mount can
+  // catch it before that animation settles, landing the highlight at a
+  // stale/incorrect position. A ResizeObserver re-measures on every
+  // frame the track's own box actually changes size, so it always
+  // converges on the correct final position once the transition ends.
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    // Re-center too, not just re-highlight — ResizeObserver only ever
+    // fires from the track's own box actually changing size (the open
+    // animation finishing, an orientation change), never from scrolling
+    // it, so this can't fight a user's own horizontal swipe.
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [measure]);
 
   return (
-    <div className="fs-dock-slide-track">
+    <div className="fs-dock-slide-track" ref={trackRef}>
       {highlight && (
         <span
           className="fs-dock-slide-highlight"
@@ -1641,10 +1671,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // fsHeroTouchX below instead of a tap-to-reveal icon row.
   const [fsHeroIndex, setFsHeroIndex] = useState(0);
   const fsHeroTouchX = useRef<number | null>(null);
-  // Peek handle — swiping up/down on it opens/closes the sheet outright
-  // (not a toggle, see fsHandleTouchY's onTouchEnd), same handle a small
-  // tap-without-drag still just toggles via the button's own onClick.
-  const fsHandleTouchY = useRef<number | null>(null);
+  // Peek handle — native-feeling drag instead of a binary swipe-up/down
+  // threshold: the sheet's height follows the finger in real time
+  // (imperative style writes during the drag, see onTouchMove below, for
+  // 60fps without a re-render per pixel moved) and only commits to
+  // fsSheetExpanded — which then drives the CSS-transitioned rest state
+  // — once the finger lifts. fsDockBodyH is the body's own measured
+  // natural height (ResizeObserver-tracked below) so max-height can
+  // animate between 0 and an exact pixel value instead of "auto", which
+  // CSS can't transition.
+  const fsDockBodyRef = useRef<HTMLDivElement>(null);
+  const fsDockBodyInnerRef = useRef<HTMLDivElement>(null);
+  const [fsDockBodyH, setFsDockBodyH] = useState(0);
+  const fsDockDragRef = useRef<{ startY: number; startH: number } | null>(null);
   // Same dot-pagination logic/UI as the hero card's own dots, applied to
   // the action strip below it: whichever item is expanded — Interval/
   // Indicators/Style show their own picker INSIDE that same button
@@ -1697,6 +1736,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!fsSheetExpanded) setFsDockClearance(el.offsetHeight);
     return () => ro.disconnect();
   }, [pageMode, isDesktopWidth, isFullscreen, fsSheetExpanded]);
+  // Natural height of the (always-mounted) accordion body content, so
+  // .fs-dock-body's max-height can animate to an exact px value instead
+  // of "auto" — stays correct as categories open/close or data loads in.
+  useEffect(() => {
+    if (!(pageMode && !isDesktopWidth && isFullscreen)) return;
+    const el = fsDockBodyInnerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setFsDockBodyH(el.scrollHeight));
+    ro.observe(el);
+    setFsDockBodyH(el.scrollHeight);
+    return () => ro.disconnect();
+  }, [pageMode, isDesktopWidth, isFullscreen]);
   useEffect(() => {
     if (!isFullscreen) {
       setFsSheetExpanded(false);
@@ -4224,12 +4275,42 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Alerts stay pure actions in the slim strip below since there's
   // nothing to "read" about them, just a value to set.
   const fsHeroCategories = useMemo(() => {
-    const list: Array<"technicals" | "keystats" | "overview" | "about" | "stats"> = [];
+    const list: Array<"technicals" | "keystats" | "overview" | "about" | "stats" | "agent"> = [];
     if (zone) list.push("technicals");
-    list.push("keystats", "overview", "about", "stats");
+    list.push("keystats", "overview", "about", "stats", "agent");
     return list;
   }, [zone]);
   const fsHeroKey = fsHeroCategories[Math.min(fsHeroIndex, fsHeroCategories.length - 1)];
+  // Agent Ready's quick take, hero card only — cached per-coin for 5
+  // minutes (not a real Agent Ready conversation turn, see chart-quick-
+  // take edge function's own comment) so swiping back to the same coin
+  // doesn't refire the request, but switching coins or waiting past the
+  // window asks again.
+  const fsAgentTakeCache = useRef<Record<string, { text: string; at: number } | "loading" | "error">>({});
+  const [, forceFsAgentTakeRerender] = useState(0);
+  useEffect(() => {
+    if (!(pageMode && !isDesktopWidth && isFullscreen && fsHeroKey === "agent")) return;
+    const cached = fsAgentTakeCache.current[coin];
+    if (cached === "loading") return;
+    if (cached && cached !== "error" && Date.now() - cached.at < 5 * 60 * 1000) return;
+    fsAgentTakeCache.current[coin] = "loading";
+    forceFsAgentTakeRerender((v) => v + 1);
+    let cancelled = false;
+    supabase.functions.invoke("chart-quick-take", {
+      body: {
+        coin,
+        interval: INTERVAL_SHORT[interval],
+        price: currentPrice,
+        changePct24h: dayChangePercent,
+        signal: zone ? fsTechnicalsLabel[zone.signal] : null,
+      },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      fsAgentTakeCache.current[coin] = error || !data?.take ? "error" : { text: data.take, at: Date.now() };
+      forceFsAgentTakeRerender((v) => v + 1);
+    });
+    return () => { cancelled = true; };
+  }, [pageMode, isDesktopWidth, isFullscreen, fsHeroKey, coin, interval, currentPrice, dayChangePercent, zone]);
   const renderFsHeroCard = (key: string) => {
     switch (key) {
       case "technicals": {
@@ -4303,6 +4384,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
           </>
         );
+      case "agent": {
+        const cached = fsAgentTakeCache.current[coin];
+        return (
+          <>
+            <div>
+              <div className="fs-hero-eyebrow-row">
+                <span className="ta-trigger-orb fs-hero-agent-orb" aria-hidden="true" />
+                <span className="fs-hero-eyebrow">{t("chart.agentTake", "Agent Ready")}</span>
+              </div>
+              {cached === "loading" || cached === undefined ? (
+                <div className="fs-hero-value fs-hero-agent-loading">{t("chart.agentThinking", "Reading the chart…")}</div>
+              ) : cached === "error" ? (
+                <div className="fs-hero-value">{t("chart.agentUnavailable", "Couldn't get a take — try again later")}</div>
+              ) : (
+                <div className="fs-hero-agent-text">{cached.text}</div>
+              )}
+            </div>
+            <span className="fs-hero-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z" />
+                <path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
+              </svg>
+            </span>
+          </>
+        );
+      }
       case "stats":
       default:
         return (
@@ -4336,24 +4443,40 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             setFsFocusedCategory(null);
             setFsSheetExpanded((v) => !v);
           }}
-          onTouchStart={(e) => { fsHandleTouchY.current = e.touches[0].clientY; }}
+          onTouchStart={(e) => {
+            fsDockDragRef.current = { startY: e.touches[0].clientY, startH: fsSheetExpanded ? fsDockBodyH : 0 };
+            const body = fsDockBodyRef.current;
+            // No transition while actively dragging — it has to follow
+            // the finger with zero lag, not ease toward it.
+            if (body) body.style.transition = "none";
+          }}
+          onTouchMove={(e) => {
+            const drag = fsDockDragRef.current;
+            const body = fsDockBodyRef.current;
+            if (!drag || !body || fsDockBodyH <= 0) return;
+            const dy = e.touches[0].clientY - drag.startY;
+            let next = drag.startH - dy; // dragging up (dy<0) opens further
+            // Rubber-band resistance past either end, like a native sheet.
+            if (next < 0) next = next / 3;
+            else if (next > fsDockBodyH) next = fsDockBodyH + (next - fsDockBodyH) / 3;
+            body.style.maxHeight = `${Math.max(0, next)}px`;
+          }}
           onTouchEnd={(e) => {
-            const startY = fsHandleTouchY.current;
-            fsHandleTouchY.current = null;
-            if (startY == null) return;
-            const dy = e.changedTouches[0].clientY - startY;
-            // Small movement = a tap, left to onClick above. A real
-            // swipe always lands on the gesture's direction (up = open,
-            // down = close) instead of toggling off the prior state.
-            if (dy <= -28) {
-              if (pageMode) hapticTap();
-              setFsFocusedCategory(null);
-              setFsSheetExpanded(true);
-            } else if (dy >= 28) {
-              if (pageMode) hapticTap();
-              setFsFocusedCategory(null);
-              setFsSheetExpanded(false);
-            }
+            const drag = fsDockDragRef.current;
+            fsDockDragRef.current = null;
+            const body = fsDockBodyRef.current;
+            if (body) body.style.transition = "";
+            if (!drag || !body) return;
+            const dy = e.changedTouches[0].clientY - drag.startY;
+            body.style.maxHeight = "";
+            // Negligible movement = a tap, left entirely to onClick above
+            // (no need to also decide expanded/collapsed here — that
+            // would just fight the toggle on a plain tap).
+            if (Math.abs(dy) < 6) return;
+            const settled = fsDockBodyH > 0 ? (drag.startH - dy) / fsDockBodyH : 0;
+            if (pageMode) hapticTap();
+            setFsFocusedCategory(null);
+            setFsSheetExpanded(settled > 0.35);
           }}
         >
           <span className="fs-dock-handle" />
@@ -4381,7 +4504,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             }}
           >
             <div className="fs-hero-card">
-              {renderFsHeroCard(fsHeroKey)}
+              {/* key={fsHeroKey} forces a remount on every card change (auto
+                  or manual) so the slide-in animation replays each time. */}
+              <div className="fs-hero-card-content" key={fsHeroKey}>
+                {renderFsHeroCard(fsHeroKey)}
+              </div>
             </div>
             {fsHeroCategories.length > 1 && (
               <div className="fs-hero-dots">
@@ -4607,8 +4734,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
       </div>
 
-      {fsSheetExpanded && (
-        <div className="fs-dock-body">
+      <div
+        ref={fsDockBodyRef}
+        className="fs-dock-body"
+        style={{ maxHeight: fsSheetExpanded ? fsDockBodyH : 0 }}
+      >
+        <div ref={fsDockBodyInnerRef} className="fs-dock-body-inner">
 
           {/* Reference-match (TradingView mobile "symbol info" sheet) —
               Overview/Technicals/Key stats/About, Advance Chart page only
@@ -5013,7 +5144,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
 
         </div>
-      )}
+      </div>
     </div>,
     document.body,
   );
@@ -5561,9 +5692,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="chart-header-right">
                 {quickIntervalPills}
                 <div className="chart-hero-icon-row">
-                  {indicatorsControl}
                   {gridStyleControls}
-                  {gridToggleButton}
                   <button
                     className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                     onClick={() => setShowDepthProfile((v) => !v)}
