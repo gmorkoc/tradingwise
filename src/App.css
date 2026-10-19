@@ -2479,59 +2479,6 @@ html[data-theme="light"] .icon-strip-quota-bar {
   background: none;
 }
 
-/* ── Focus mode switch (desktop only, Coinbase's own "Advanced" toggle
-   at the bottom of its rail) — .icon-strip-btn gives it the exact same
-   icon-over-label look, padding and hover state as every other rail
-   item; this just adds the pill/knob underneath, no divider. Not the
-   active-pill background though — the switch already shows on/off,
-   so a highlighted pill behind it too would be redundant. */
-.icon-strip-focus {
-  gap: 6px;
-  margin-top: 4px;
-}
-.icon-strip-focus.active {
-  background: none !important;
-  color: var(--color-text-muted);
-}
-.icon-strip-focus .nav-icon-wrap,
-.icon-strip-focus .nav-icon-wrap svg {
-  width: 18px;
-  height: 18px;
-}
-.icon-strip-focus-switch {
-  width: 40px;
-  height: 22px;
-  margin-top: 14px;
-  padding: 0;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  border-radius: 999px;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  position: relative;
-  flex-shrink: 0;
-  transition: background 0.2s, border-color 0.2s;
-}
-.icon-strip-focus-switch.on {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-}
-.icon-strip-focus-knob {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px var(--color-shadow);
-  transition: left 0.2s;
-}
-.icon-strip-focus-switch.on .icon-strip-focus-knob {
-  left: calc(100% - 19px);
-}
-
 /* ── Main panel ─────────────────────────────────────────────────────────── */
 .main-panel {
   flex: 1;
@@ -2993,16 +2940,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   margin: 0 8px;
 }
 
-/* Wraps .mch-mobile-summary (mobile-only identity/signal/high-low/price
-   card, hidden here) + .mch-stats into one unit. display:contents makes
-   it invisible to layout on desktop, so .mch-stats stays a direct flex
-   child of .main-coin-header exactly as before — only the mobile media
-   query below turns this into a real box (the glass card). */
+/* Wraps .mch-stats. display:contents makes it invisible to layout on
+   desktop, so .mch-stats stays a direct flex child of .main-coin-header
+   exactly as before — only the mobile media query below turns this into
+   a real box (the glass card). */
 .mch-body {
   display: contents;
-}
-.mch-mobile-summary {
-  display: none;
 }
 
 /* Scrollable stats strip */
@@ -3113,6 +3056,48 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .mch-search-btn:hover {
   background: var(--color-border);
   color: var(--color-text);
+}
+/* Active (Focus on) gets a filled, colored look — same shared button
+   box as its siblings, this is the only state difference since there's
+   no label anymore to say "Focus" in words. */
+.mch-focus-btn--on {
+  background: var(--color-primary);
+  color: #fff;
+}
+.mch-focus-btn--on:hover {
+  background: var(--color-primary);
+  opacity: 0.88;
+}
+/* Self-dismissing confirmation (App.tsx's focusToast state) — the Focus
+   button has no label anymore to say what it just did, so this is the
+   only feedback that the click registered. Portaled to <body>, same
+   100000 z-index tier as BtcMoveToast, for the same reason (otherwise an
+   ancestor's own stacking context can trap it below other floating UI
+   regardless of how high a more "local" z-index looks on paper). */
+.focus-toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 100000;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px var(--color-shadow);
+  pointer-events: none;
+  animation: focus-toast-pop 2.5s ease forwards;
+}
+@keyframes focus-toast-pop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
 }
 /* Was the shared desktop label for these icon buttons (notif feed, buy
    signals) — both are icon-only now, matching the filled-square look. */
@@ -3980,10 +3965,10 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     width: 24px;
     height: 24px;
   }
-  /* Coin pair/price/change pill — redundant now that the big price readout
-     lives in the unified mobile glass card (.mch-mobile-summary, below),
-     so the top bar stays just menu + toggle + alerts (coin switching is
-     still reachable via FloatingNavBar's Search icon). */
+  /* Coin pair/price/change pill — redundant with PriceChart.tsx's own
+     compact-view header (coin icon, COIN/USD, live price/change), so the
+     top bar stays just menu + toggle + alerts (coin switching is still
+     reachable via FloatingNavBar's Search icon). */
   .mch-coin-btn {
     display: none;
   }
@@ -4047,9 +4032,9 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     display: none;
   }
 
-  /* The unified glass card — identity/signal/high-low/price/change
-     (.mch-mobile-summary) stacked above the stats strip (.mch-stats),
-     both inside one frosted card instead of .mch-stats alone. */
+  /* The frosted glass card wrapping the stats strip (.mch-stats) —
+     used to also stack the now-removed .mch-mobile-summary identity/
+     price card above it; just .mch-stats inside the card now. */
   .mch-body {
     display: flex;
     flex-direction: column;
@@ -4065,7 +4050,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
        .main-content now, right under the ptr-indicator. */
     margin: 0 16px 12px;
     z-index: 15;
-    border-radius: 18px;
+    /* Top-left square, not 18px like the other 3 — .mch-stats sits flush
+       against this edge (padding-left:0, to align with everything else
+       on the page at the same 16px inset) with no top margin of its own
+       (first thing in .main-content), so a rounded corner here clipped
+       into the first stat's own text ("Liq Above"'s "L") since the arc's
+       clip region starts right at x=0. Padding instead of a square corner
+       either shifted the text's left edge out of alignment with
+       everything below it, or (to clear it at x=0 specifically) would
+       need ~18px of extra top padding, pushing the whole row down
+       noticeably — squaring just this one corner needs neither. */
+    border-radius: 0 18px 18px 18px;
     overflow: hidden;
   }
   /* Two soft color blobs behind the frosted glass — the glassmorphism
@@ -4098,163 +4093,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     right: -50px;
   }
 
-  .mch-mobile-summary {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    position: relative;
-    z-index: 1;
-    padding: 4px 14px 8px;
-    padding-left: 0;
-  }
-  .mch-mobile-top {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  .mch-mobile-coin-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    /* Full coin names ("Hyperliquid", "NEAR Protocol"...) can run long —
-       min-width:0 lets the button shrink (and the name ellipsis) below
-       its intrinsic content width when the row is tight, using the
-       default flex-shrink:1. No flex-grow here on purpose — growing to
-       fill the row would shove the signal indicator out to the row's
-       far right edge, into the same corner .mch-mobile-top-right's
-       (absolutely positioned) vol chip already occupies. */
-    min-width: 0;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    color: var(--color-text);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .mch-mobile-coin-btn .mch-coin-icon {
-    font-size: 1.1rem;
-  }
-  .mch-mobile-coin-name {
-    font-weight: 800;
-    font-size: 0.92rem;
-    letter-spacing: -0.01em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .mch-mobile-chevron {
-    /* A real SVG icon, not the text glyph "▾" — a glyph's own font metrics
-       (baseline/descender space, same class of bug as SVG icons needed
-       display:block for elsewhere in this header) made it sit visibly
-       off-center next to the coin name even with align-items:center on
-       the row; an SVG with display:block has no such hidden box to fight. */
-    display: block;
-    color: var(--color-text-muted);
-    flex-shrink: 0;
-  }
-  /* Signal readout here is now <SignalIndicator> (src/components/
-     SignalIndicator.tsx + styles/SignalIndicator.css) — the old
-     .mch-mobile-signal pill is gone, replaced app-wide (PriceChart.tsx's
-     .zone-signal pill too) by the same component. */
-
-  /* Signal pill + vol chip, stacked in a right-hand column — taken out
-     of normal flow (absolute, pinned to .mch-mobile-summary's padding
-     box, which is the nearest position:relative ancestor) instead of
-     sitting inline in .mch-mobile-top. In-flow, this column's height
-     (pill + vol chip stacked) made the WHOLE row as tall as itself even
-     though the coin button beside it is one short line, leaving a big
-     gap of invisible space before High/Low could start; floating it out
-     of flow lets the row collapse to just the button's real height. */
-  .mch-mobile-top-right {
-    position: absolute;
-    /* .mch-body clips to its own 18px rounded corner (overflow:hidden, to
-       mask the blob pseudo-elements) — .mch-mobile-summary's own padding
-       (12px/14px) isn't enough inset to clear that curve on its own, so
-       the pill's sharp corner was getting sliced by it. A few extra px
-       moves it clear of the curve. */
-    top: 4px;
-    right: 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .mch-mobile-vol {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    text-align: center;
-  }
-  .mch-mobile-vol-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    color: #fff;
-    background: linear-gradient(165deg, #f7931a, #ffb24d);
-    flex-shrink: 0;
-    margin-bottom: 4px;
-  }
-  .mch-mobile-vol-label {
-    position: relative;
-    color: var(--color-text-muted);
-    font-weight: 600;
-    font-size: 0.6rem;
-    padding-bottom: 6px;
-  }
-  .mch-mobile-vol-label::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: 2px;
-    transform: translateX(-50%);
-    width: 16px;
-    border-bottom: 2px dotted var(--color-border);
-  }
-  .mch-mobile-vol-value {
-    color: var(--color-text);
-    font-weight: 700;
-    font-size: 0.68rem;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .mch-mobile-hl {
-    font-size: 0.68rem;
-    color: var(--color-text-muted);
-    margin-top: 6px;
-  }
-  .mch-mobile-hl b {
-    color: var(--color-text);
-    font-weight: 700;
-  }
-  .mch-mobile-price {
-    font-size: 1.7rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    margin-top: 2px;
-    line-height: 1.15;
-  }
-  .mch-mobile-chg {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    margin-top: 1px;
-  }
-  .mch-mobile-chg--up {
-    color: var(--color-success);
-  }
-  .mch-mobile-chg--down {
-    color: var(--color-danger);
-  }
-
   .mch-stats {
     order: unset;
     flex: 0 0 auto;
@@ -4270,7 +4108,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     align-items: flex-start;
     -webkit-overflow-scrolling: touch;
     position: relative;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .mch-stat {
@@ -4314,9 +4151,6 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   html[data-theme="light"] .mch-body::before,
   html[data-theme="light"] .mch-body::after {
     opacity: 0.35;
-  }
-  html[data-theme="light"] .mch-stats {
-    border-top-color: rgba(15, 23, 42, 0.08);
   }
 }
 

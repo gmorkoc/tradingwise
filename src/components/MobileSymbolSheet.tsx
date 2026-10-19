@@ -12,10 +12,11 @@ interface Props {
   theme?: "dark" | "light";
   quoteVolume24h?: number;
   // Reference-match header (coin icon/name, big price, today's change) —
-  // the embedded compact <PriceChart> has no equivalent prominent header
-  // on mobile (that's desktop-only there), so this sheet builds its own
-  // from the same live ticker App.tsx already keeps for every coin,
-  // rather than threading a new callback through PriceChart.tsx for it.
+  // the embedded compact <PriceChart> below renders with forceHideHeader
+  // (its own hero/price/interval row would just duplicate this), so this
+  // sheet builds its own from the same live ticker App.tsx already keeps
+  // for every coin, rather than threading a new callback through
+  // PriceChart.tsx for it.
   ticker?: Ticker24h;
   onOpenAuth?: () => void;
   onOpenUpgrade?: (plan?: "pro" | "elite") => void;
@@ -285,6 +286,7 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
               requestChartStyle={requestedStyle}
               onChartStyleChange={setActiveStyle}
               forceHideIndicators
+              forceHideHeader
             />
           </div>
 

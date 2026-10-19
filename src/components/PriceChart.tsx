@@ -158,6 +158,14 @@ interface PriceChartProps {
   // instance, once, without touching the saved preference other
   // instances still read.
   forceHideIndicators?: boolean;
+  // MobileSymbolSheet.tsx again — this sheet builds its own coin/price/
+  // change header and its own interval row (mss-interval-row) above/below
+  // this embedded compact <PriceChart>, so this instance's own header
+  // (hero id/price row, Full/Compact switch, interval pills + fullscreen)
+  // would just duplicate what the sheet already shows. Every OTHER
+  // <PriceChart> instance (the plain #chart page, pageMode) still renders
+  // its own header as normal — this only suppresses it for this one embed.
+  forceHideHeader?: boolean;
   // Rendered inside .price-chart-container itself (below the chart, outside
   // the fullscreen/scroll wrapper) — App.tsx uses this for Watchlist/
   // TopMoversCarousel so they visually live inside this card instead of as
@@ -1459,6 +1467,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   requestChartStyle,
   onChartStyleChange,
   forceHideIndicators,
+  forceHideHeader,
   children,
 }) => {
   const { t, i18n } = useTranslation();
@@ -1619,6 +1628,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // full chart rather than replacing it. Same min-width:641px breakpoint
   // App.tsx's own isDesktopWidth uses.
   const [showCompactView, setShowCompactView] = useState(false);
+  // Compact View shows one fixed live line, not a real per-interval
+  // chart — changing the interval while it's up implies the user wants
+  // the real candlestick chart at that interval, so switch back to Full
+  // immediately instead of leaving them on a view the new interval
+  // doesn't actually affect.
+  useEffect(() => { setShowCompactView(false); }, [interval]);
+  // Desktop #chart hero row's coin icon — real per-coin logo (same
+  // CoinCap image CompactPriceView's own header already uses) instead of
+  // the generic colored-letter circle every other icon spot here still
+  // uses, falling back to that same letter circle if the image 404s.
+  const [heroLogoError, setHeroLogoError] = useState(false);
+  useEffect(() => setHeroLogoError(false), [coin]);
   const [isDesktopWidth, setIsDesktopWidth] = useState(() => window.matchMedia("(min-width: 641px)").matches);
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 641px)");
@@ -4164,13 +4185,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <button
         ref={intervalBtnRef}
         type="button"
-        className={`interval-pill interval-pill--more${intervalMenuOpen ? " interval-pill--active" : ""}${QUICK_INTERVALS.includes(interval) ? "" : " interval-pill--more-selected"}`}
+        className={`interval-pill interval-pill--more${(isDesktopWidth ? intervalMenuOpen : intervalSheetOpen) ? " interval-pill--active" : ""}${QUICK_INTERVALS.includes(interval) ? "" : " interval-pill--more-selected"}`}
         onClick={() => {
-          if (!intervalMenuOpen && intervalBtnRef.current) {
-            const r = intervalBtnRef.current.getBoundingClientRect();
-            setIntervalMenuPos({ top: r.bottom + 6, left: r.left });
+          // Same width-aware split as fsIntervalButton above: desktop gets
+          // the floating anchored dropdown, mobile/iOS gets the real
+          // native-style bottom sheet (.interval-sheet/intervalSheetPortal,
+          // portaled to document.body below) instead of that dropdown
+          // rendered small and cramped at phone width.
+          if (isDesktopWidth) {
+            if (!intervalMenuOpen && intervalBtnRef.current) {
+              const r = intervalBtnRef.current.getBoundingClientRect();
+              setIntervalMenuPos({ top: r.bottom + 6, left: r.left });
+            }
+            setIntervalMenuOpen((v) => !v);
+            return;
           }
-          setIntervalMenuOpen((v) => !v);
+          setIntervalSheetOpen(true);
         }}
         title={t("chart.interval", "Interval")}
       >
@@ -4180,8 +4210,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           dropdown, but that component is never mounted at the same time
           as this one (the toolbar picks one or the other) — without its
           own copy here, the "···" button toggled state with nothing ever
-          rendering the list. */}
-      {intervalMenuOpen && intervalMenuPos && ReactDOM.createPortal(
+          rendering the list. Desktop only — mobile/iOS uses intervalSheetOpen
+          (intervalSheetPortal, rendered once near the bottom of this
+          component) instead, same as fsIntervalButton already does. */}
+      {intervalMenuOpen && isDesktopWidth && intervalMenuPos && ReactDOM.createPortal(
         <>
           <div className="indicators-menu-backdrop" onClick={() => setIntervalMenuOpen(false)} />
           <div className="indicators-menu indicators-menu--portal" style={{ top: intervalMenuPos.top, left: intervalMenuPos.left }}>
@@ -4214,6 +4246,34 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         document.body,
       )}
     </div>
+  );
+
+  // Replaces the old single "Compact View" icon button, then the
+  // segmented Full/Compact switch — same label + underlined-link pattern
+  // as TradeManager's own mode switch (.rcw-switch-row/.rcw-switch:
+  // "Beginner mode  Switch to Pro"), reused here as "Full view  Switch to
+  // Compact". Desktop renders this in its own row below .chart-header;
+  // mobile/iOS renders the exact same element inline inside
+  // .chart-header-right instead (both read from this one constant so the
+  // label/link/handler can never drift out of sync between the two spots).
+  const chartViewSwitchRow = (
+    <span className="chart-view-switch-row">
+      {showCompactView ? t("chart.compactViewLabel", "Compact view") : t("chart.fullViewLabel", "Full view")}
+      {" "}
+      <button
+        type="button"
+        className="chart-view-switch-link"
+        onClick={() => {
+          if (showCompactView) { setShowCompactView(false); return; }
+          if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+          setShowCompactView(true);
+        }}
+      >
+        {showCompactView
+          ? t("chart.switchToFull", "Switch to Full")
+          : t("chart.switchToCompact", "Switch to Compact")}
+      </button>
+    </span>
   );
 
   // Fullscreen's persistent docked bottom sheet — options only (Style/
@@ -5331,6 +5391,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             .chart-canvas-wrap) instead of taking its own layout row —
             collapsing this whole group the same way pageMode mobile
             already does, reclaiming that vertical space for the chart. */}
+        {!forceHideHeader && (
+        <>
         <div className={`chart-fs-header-group${pageMode ? " chart-fs-header-group--empty" : ""}`}>
           <div className="chart-header">
             <div className="chart-header-left">
@@ -5502,64 +5564,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   )}
                 </div>
                 );
-              })() : !isDesktopWidth ? (
-                <div className="chart-fs-header-block">
-                  <div className="chart-title-row">
-                    <button
-                      type="button"
-                      className="chart-title-glow-btn"
-                      style={{ "--coin-tint": COIN_COLORS[coin] ?? "var(--pc-accent)" } as React.CSSProperties}
-                      onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
-                    >
-                      <span className="chart-title-glow-dot">
-                        {COIN_GLYPHS[coin] ?? coin[0]}
-                      </span>
-                      {t("chart.title", { coin: COIN_FULL_NAME[coin] ?? coin })}
-                      <svg className="chart-title-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </button>
-                    {zone && isPaid && zoneLabel && (
-                      <SignalIndicator signal={zone.signal} label={zoneLabel} />
-                    )}
-                    {!isPaid && (
-                      <button
-                        className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
-                        onClick={() => onOpenUpgrade?.("pro")}
-                      >
-                        <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                        Unlock Status
-                      </button>
-                    )}
-                    {divergence && isPaid && (
-                      <span className={`div-badge div-badge--${divergence.type}`}>
-                        {divergence.type === "bullish" ? "↑ Bull Div" : "↓ Bear Div"}
-                      </span>
-                    )}
-                    {!isPaid && (
-                      <button
-                        className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
-                        onClick={() => onOpenUpgrade?.("pro")}
-                      >
-                        <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                        Unlock Divergence
-                      </button>
-                    )}
-                  </div>
-                  {displayDayHigh !== null && displayDayLow !== null && (
-                    <div className="chart-fs-stat-col chart-fs-stat-col--row">
-                      <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.high", "High")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--up">{formatLivePrice(displayDayHigh)}</span>
-                      </div>
-                      <div className="chart-fs-stat-row">
-                        <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
-                        <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : isDesktopWidth ? (
+              })() : (
+                // Identical for mobile and desktop now — same markup,
+                // same classes, no separate mobile-only version. The
+                // existing responsive CSS (the .chart-header grid is
+                // itself min-width:641px-gated, falling back to its
+                // base flex-wrap below that) adapts this to width on its
+                // own instead of two parallel hand-built layouts drifting
+                // apart from each other over time.
                 <>
                 {/* Reference-match hero rows (compact view only — fullscreen
                     keeps its own header above untouched): small coin-icon +
@@ -5569,24 +5581,76 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     fullscreen/mobile branches above). */}
                 {!isFullscreen && (
                   <div className="chart-hero-id-row">
-                    <span
-                      className="chart-hero-coin-icon"
-                      style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
-                    >
-                      {COIN_GLYPHS[coin] ?? coin[0]}
+                    {(() => {
+                      const icon = !heroLogoError ? (
+                        <img
+                          className="chart-hero-coin-icon chart-hero-coin-icon--img"
+                          src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                          alt=""
+                          loading="lazy"
+                          onError={() => setHeroLogoError(true)}
+                        />
+                      ) : (
+                        <span
+                          className="chart-hero-coin-icon"
+                          style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                        >
+                          {COIN_GLYPHS[coin] ?? coin[0]}
+                        </span>
+                      );
+                      // Mobile/iOS only — desktop's own coin switcher lives
+                      // in the sidebar/top bar already (App.tsx mch-coin-
+                      // btn), so this stays plain text there; mobile has no
+                      // equivalent entry point on this page, so the name
+                      // itself becomes the tap target, same onOpenCoinPicker
+                      // the Advance Chart page's own chart-tv-symbol button
+                      // (above) already opens.
+                      if (!isDesktopWidth) {
+                        return (
+                          <button
+                            type="button"
+                            className="chart-hero-coin-selector"
+                            onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                          >
+                            {icon}
+                            <span className="chart-hero-pair-name">{coin}/USD</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                        );
+                      }
+                      return (
+                        <>
+                          {icon}
+                          <span className="chart-hero-pair-name">{coin}/USD</span>
+                        </>
+                      );
+                    })()}
+                    <span className="chart-hero-live-badge">
+                      <span className="chart-hero-live-dot" />
+                      {t("chart.live", "LIVE")}
                     </span>
-                    <span className="chart-hero-pair-name">{COIN_FULL_NAME[coin] ?? coin}</span>
                   </div>
                 )}
                 <div className="chart-title-row">
                   {!isFullscreen && currentPrice !== null ? (
-                    <span className="chart-hero-price-row">
-                      <span className="chart-current-price">
+                    // Same cpv-price-row markup/classes CompactPriceView's
+                    // own price display uses — adopted here (price chart's
+                    // header), same direction as the icon/LIVE-badge swap,
+                    // using this page's own real 24H change instead of
+                    // CompactPriceView's separate 1H-window figures.
+                    <span className="cpv-price-row">
+                      <span className={`cpv-price${dayChangePercent !== null && dayChangePercent >= 0 ? " cpv-up" : " cpv-down"}`}>
                         {formatLivePrice(currentPrice)}
                       </span>
-                      {dayChangePercent !== null && (
-                        <span className={`chart-hero-change-badge${dayChangePercent >= 0 ? " chart-hero-change-badge--up" : " chart-hero-change-badge--down"}`}>
+                      {dayChangeAbs !== null && dayChangePercent !== null && (
+                        <span className={`cpv-change${dayChangePercent >= 0 ? " cpv-up" : " cpv-down"}`}>
                           {dayChangePercent >= 0 ? "▲" : "▼"} {Math.abs(dayChangePercent).toFixed(2)}%
+                          <span className="cpv-change-abs">
+                            ({formatLivePrice(Math.abs(dayChangeAbs))})
+                          </span>
+                          <span className="cpv-change-window">24H</span>
                         </span>
                       )}
                     </span>
@@ -5650,6 +5714,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <span className="chart-fs-stat-label">{t("chart.low", "Low")}</span>
                         <span className="chart-fs-stat-value chart-fs-stat-value--down">{formatLivePrice(displayDayLow)}</span>
                       </div>
+                      {!isFullscreen && quoteVolume24h !== undefined && (
+                        <div className="chart-fs-stat-row">
+                          <span className="chart-fs-stat-label">{t("chart.vol24h", "24hr vol")}</span>
+                          <span className="chart-fs-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
+                        </div>
+                      )}
                     </div>
                     {/* Zone status + divergence badges moved into the AI
                         insight banner's header below (interval-banner-
@@ -5677,22 +5747,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </div>
                 )}
                 </>
-              ) : null}
+              )}
             </div>
             {/* Reference-match: pills + icon buttons sit beside the coin-
-                name/price rows (a 2x2 grid — name/pills on top, price/icons
-                below), not in their own full-width row under the header
-                like before. Desktop non-fullscreen only; reuses the exact
-                same handlers/components (quickIntervalPills,
-                indicatorsControl, gridStyleControls, handleScreenshot,
-                toggleFullscreen) the old below-header row used, so nothing
-                is duplicated — that row's own copies are hidden for this
-                exact scope just below (search chart-legend-actions). */}
-            {!isFullscreen && isDesktopWidth && (
+                name/price rows (a 2x2 grid on desktop — name/pills on top,
+                price/icons below; the grid CSS itself is min-width:641px-
+                gated, so this just stacks below 641px instead). Mobile and
+                desktop both now, identical markup; reuses the exact same
+                handlers/components (quickIntervalPills, indicatorsControl,
+                gridStyleControls, handleScreenshot, toggleFullscreen) the
+                old below-header row used, so nothing is duplicated —
+                that row's own copies are hidden for this exact scope
+                just below (search chart-legend-actions). */}
+            {!isFullscreen && (
               <div className="chart-header-right">
-                {quickIntervalPills}
+                {/* Mobile web/iOS: moved below the chart, merged with the
+                    fullscreen button into one row (see
+                    chart-mobile-interval-fs-row, right after
+                    .chart-dblclick-wrap closes) — desktop keeps both here. */}
+                {isDesktopWidth && quickIntervalPills}
                 <div className="chart-hero-icon-row">
                   {gridStyleControls}
+                  {gridToggleButton}
                   <button
                     className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                     onClick={() => setShowDepthProfile((v) => !v)}
@@ -5706,22 +5782,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       <line x1="12" y1="18" x2="6" y2="18" />
                     </svg>
                   </button>
-                  {((Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") || !Capacitor.isNativePlatform()) && (
-                    <button
-                      className="chart-depth-btn"
-                      onClick={() => {
-                        if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                        setShowCompactView(true);
-                      }}
-                      title={t("chart.compactView", "Compact View")}
-                      data-tooltip={t("chart.compactView", "Compact View")}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
-                        <circle cx="12" cy="12" r="4" />
-                      </svg>
-                    </button>
-                  )}
                   <button
                     type="button"
                     className="chart-depth-btn"
@@ -5734,31 +5794,45 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       <circle cx="12" cy="13" r="4" />
                     </svg>
                   </button>
-                  <button
-                    type="button"
-                    className="chart-depth-btn"
-                    onClick={toggleFullscreen}
-                    title={t("chart.fullscreen", "Fullscreen")}
-                    data-tooltip={t("chart.fullscreen", "Fullscreen")}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
-                    </svg>
-                  </button>
+                  {isDesktopWidth && (
+                    <button
+                      type="button"
+                      className="chart-depth-btn"
+                      onClick={toggleFullscreen}
+                      title={t("chart.fullscreen", "Fullscreen")}
+                      data-tooltip={t("chart.fullscreen", "Fullscreen")}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
+                {/* Mobile/iOS only — same row as the icon group above
+                    instead of its own row below .chart-header (desktop
+                    keeps that, just below this whole group). */}
+                {!isDesktopWidth && chartViewSwitchRow}
               </div>
             )}
           </div>
 
         </div>
 
+        {!isFullscreen && isDesktopWidth && chartViewSwitchRow}
+        </>
+        )}
+
         {displayBanner && isPaid && !isFullscreen && (
           <div
-            className={`interval-banner interval-banner--${displayBanner.sentiment} interval-banner--tappable`}
-            role="button"
-            tabIndex={0}
-            onClick={() => setPatternInsightSheetOpen(true)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
+            className={`interval-banner interval-banner--${displayBanner.sentiment}${isDesktopWidth ? "" : " interval-banner--tappable"}`}
+            // Desktop has no pattern-insight sheet to tap into (the full
+            // text/context already sits in the hero row above this), so
+            // this stays a plain read-only banner there — mobile keeps
+            // the tap-to-expand behavior.
+            role={isDesktopWidth ? undefined : "button"}
+            tabIndex={isDesktopWidth ? undefined : 0}
+            onClick={isDesktopWidth ? undefined : () => setPatternInsightSheetOpen(true)}
+            onKeyDown={isDesktopWidth ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
           >
             <div className="interval-banner-header">
               <span className="interval-banner-title pi-fade-in">{displayBanner.title}</span>
@@ -5887,18 +5961,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }`}
           ref={dblClickWrapRef}
         >
+            {/* "Compact" side of the Full/Compact switch above — covers
+                just this chart area (not the header/switch themselves,
+                both outside .chart-dblclick-wrap) instead of the old
+                full-viewport portal takeover, so switching feels like
+                swapping the chart in place rather than leaving the page.
+                Mobile and desktop compact both use this now — only
+                fullscreen/pageMode still get the standalone modal. */}
+            {showCompactView && !pageMode && !isFullscreen && (
+              <div className="chart-compact-inline">
+                <CompactPriceView inline coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
+              </div>
+            )}
             {/* Advance Price Chart page, mobile — this whole icon row
                 (Save/Reset/depth/Exit-fullscreen etc.) moves into the
                 dock's peek row instead (fsDockSheet below), so the chart
                 gets the space back. Desktop fullscreen keeps it.
-                Compact desktop also skips this row now — its equivalent
-                (style/indicators/interval pills + save/fullscreen) moved
-                up into .chart-header-right, reference-match layout.
-                pageMode desktop (the dedicated Advance Chart page) also
-                skips it — its own equivalent moved into the new top
-                toolbar (.chart-tv-toolbar, TradingView-reference-match)
-                instead, so there's one toolbar row, not two. */}
-            {!(pageMode && !isDesktopWidth) && !(!isFullscreen && isDesktopWidth) && !(pageMode && isDesktopWidth) && (
+                Compact (non-fullscreen, non-pageMode) also skips this row
+                now, mobile AND desktop — its equivalent (style/indicators/
+                interval pills + save/fullscreen) moved up into
+                .chart-header-right, identical reference-match layout
+                either width. pageMode desktop (the dedicated Advance
+                Chart page) also skips it — its own equivalent moved into
+                the new top toolbar (.chart-tv-toolbar, TradingView-
+                reference-match) instead, so there's one toolbar row,
+                not two. */}
+            {!(pageMode && !isDesktopWidth) && !(!isFullscreen && isDesktopWidth) && !(pageMode && isDesktopWidth) && !(!pageMode && !isFullscreen) && (
             <div className={`chart-legend-actions${Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios" ? " chart-legend-actions--ios" : ""}`}>
               {/* Chart style/Interval/Indicators — every compact view
                   (mobile/iOS and desktop alike) plus desktop fullscreen,
@@ -6379,6 +6467,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
         </div>
 
+        {/* Mobile web/iOS only — desktop keeps both of these up in
+            .chart-header-right instead (see isDesktopWidth guards there).
+            Same quickIntervalPills constant, just relocated + the
+            fullscreen button merged onto its trailing end as one row.
+            Also suppressed for forceHideHeader (MobileSymbolSheet) — that
+            embed has its own mss-interval-row + Full Chart button already. */}
+        {!isFullscreen && !isDesktopWidth && !forceHideHeader && (
+          <div className="chart-mobile-interval-fs-row">
+            {quickIntervalPills}
+            <button
+              type="button"
+              className="chart-depth-btn chart-mobile-interval-fs-btn"
+              onClick={toggleFullscreen}
+              title={t("chart.fullscreen", "Fullscreen")}
+              data-tooltip={t("chart.fullscreen", "Fullscreen")}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div ref={eventCardsSlotRef} />
 
         {fsDockSheet}
@@ -6604,7 +6715,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
       </div>
 
-      {showCompactView && (
+      {/* #chart (compact, non-fullscreen) renders its own inline version
+          above instead (chart-compact-inline), mobile and desktop both —
+          this modal only stays for pageMode/fullscreen now. */}
+      {showCompactView && !(!pageMode && !isFullscreen) && (
         <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
       )}
 

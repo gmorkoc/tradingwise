@@ -92,7 +92,6 @@ import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
 import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
-import SignalIndicator from "./components/SignalIndicator";
 import { Tier, hasAccess, saveTermsAgreement } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ChartAnalyzeModal } from "./components/ChartAnalyzeModal";
@@ -350,14 +349,6 @@ function NavIcon({ d }: { d: string | string[] }) {
   );
 }
 
-// Full coin name for the mobile coin header ("Bitcoin" rather than "BTC")
-// — COINS already carries this (services/coinglass.ts), just keyed by
-// symbol here for an O(1) lookup instead of re-scanning the array on
-// every render (same pattern PriceChart.tsx uses for its own title).
-const COIN_FULL_NAME: Record<string, string> = Object.fromEntries(
-  COINS.map((c) => [c.symbol, c.name]),
-);
-
 const COIN_ICONS: Record<string, string> = {
   BTC: "₿",
   ETH: "Ξ",
@@ -558,15 +549,40 @@ function AppDashboard({
   useEffect(() => {
     localStorage.setItem("coinchat-visible", String(showCoinChat));
   }, [showCoinChat]);
-  // Coinbase-style rail toggle (desktop only, see icon-strip-focus below) —
-  // hides Watchlist/Top Movers/Daily Brief so the chart is the only thing
+  // Hides Watchlist/Top Movers/Daily Brief so the chart is the only thing
   // on screen. Persisted the same way as every other rail preference here.
+  // Controlled by the header's own Focus button (mch-focus-btn below) —
+  // the old separate sidebar rail button for this was removed as a
+  // redundant second entry point once that button did everything it did.
   const [distractionFree, setDistractionFree] = useState(
     () => localStorage.getItem("distraction-free") === "true",
   );
   useEffect(() => {
     localStorage.setItem("distraction-free", String(distractionFree));
   }, [distractionFree]);
+  // Self-dismissing confirmation — the button itself has no label
+  // anymore (icon-only), so turning Focus ON needs some other feedback
+  // that it actually did something, same as any mute toggle with no
+  // persistent visible state nearby. Only shown turning ON, not off —
+  // off is "back to normal," nothing worth announcing.
+  const [focusToast, setFocusToast] = useState(false);
+  const focusToastTimerRef = useRef<number | null>(null);
+  // Single combined control — mutes all alerts AND hides the
+  // distraction-free panels together, not just one or the other.
+  const toggleFocusMode = useCallback(() => {
+    setDistractionFree((v) => {
+      const next = !v;
+      setNotificationsEnabled(!next);
+      if (next) {
+        setFocusToast(true);
+        if (focusToastTimerRef.current) window.clearTimeout(focusToastTimerRef.current);
+        focusToastTimerRef.current = window.setTimeout(() => setFocusToast(false), 2500);
+      } else {
+        setFocusToast(false);
+      }
+      return next;
+    });
+  }, []);
   // Desktop-only: stretches the floating dock to near full viewport height
   // instead of its usual capped 640px. Not persisted — always starts
   // collapsed, same as every other transient UI toggle in this file.
@@ -1725,87 +1741,15 @@ function AppDashboard({
 
   const mchBodyEl = (
             <div className="mch-body">
-              {btcData && (() => {
-                const ticker = coinTickers.get(coin);
-                // The REAL buy-zone signal (same one the chart's own title
-                // row/paywall gate uses, via onZoneChange→chartZone) — not
-                // a separately invented metric, so this badge can't ever
-                // disagree with the rest of the app about bullish/bearish.
-                // null for non-paid users (onZoneChange already withholds
-                // it there) or before the chart's first zone calc lands.
-                const zoneLabel = chartZone && {
-                  "strong-buy": t("chart.strongBuy"),
-                  "buy": t("chart.buy"),
-                  "oversold": t("chart.oversold"),
-                  "overbought": t("chart.overbought"),
-                  "neutral": t("chart.neutralZone"),
-                  "sell": t("chart.sell"),
-                  "strong-sell": t("chart.strongSell"),
-                }[chartZone.signal];
-                const price = livePrice ?? btcData.price ?? null;
-                return (
-                  <div className="mch-mobile-summary">
-                    <div className="mch-mobile-top">
-                      <button
-                        type="button"
-                        className="mch-mobile-coin-btn"
-                        onClick={() => {
-                          if (coinBtnClickTimer.current) {
-                            clearTimeout(coinBtnClickTimer.current);
-                            coinBtnClickTimer.current = null;
-                            prevTickerPrice.current = livePrice;
-                            tickerOpenPrice.current = livePrice;
-                            tickerLastMilestone.current =
-                              livePrice !== null ? Math.floor(livePrice / 100) * 100 : null;
-                            setPriceTicker(true);
-                          } else {
-                            coinBtnClickTimer.current = setTimeout(() => {
-                              coinBtnClickTimer.current = null;
-                              openCoinPicker();
-                            }, 250);
-                          }
-                        }}
-                      >
-                        <span className="mch-coin-icon">{COIN_ICONS[coin] ?? coin[0]}</span>
-                        <span className="mch-mobile-coin-name">{COIN_FULL_NAME[coin] ?? coin}</span>
-                        <svg className="mch-mobile-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-                      {chartZone && zoneLabel && (
-                        <SignalIndicator signal={chartZone.signal} label={zoneLabel} />
-                      )}
-                      <div className="mch-mobile-top-right">
-                        {ticker?.quoteVolume != null && (
-                          <div className="mch-mobile-vol">
-                            <span className="mch-mobile-vol-avatar">{COIN_ICONS[coin] ?? coin[0]}</span>
-                            <span className="mch-mobile-vol-label">{t("chart.vol24h", "24hr vol")}</span>
-                            <span className="mch-mobile-vol-value">{fmtTableVolume(ticker.quoteVolume)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {ticker && Number.isFinite(ticker.high) && Number.isFinite(ticker.low) && (
-                      <div className="mch-mobile-hl">
-                        High <b>{formatLivePrice(ticker.high)}</b> &nbsp; Low <b>{formatLivePrice(ticker.low)}</b>
-                      </div>
-                    )}
-                    {price !== null && Number.isFinite(price) && (
-                      // Full precision here (formatLivePrice), not
-                      // formatHeaderPriceMobile — that one deliberately
-                      // drops decimals to fit the tight coin-pill elsewhere,
-                      // but this big readout has plenty of room and should
-                      // show the real price (e.g. "$80,570.42" for BTC).
-                      <div className="mch-mobile-price">{formatLivePrice(price)}</div>
-                    )}
-                    {ticker?.change !== undefined && (
-                      <span className={`mch-mobile-chg${ticker.change >= 0 ? " mch-mobile-chg--up" : " mch-mobile-chg--down"}`}>
-                        {ticker.change >= 0 ? "↗" : "↘"} {Math.abs(ticker.change).toFixed(2)}% · 24H
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
+            {/* The old .mch-mobile-summary card (coin/zone-signal/price/
+                change/high-low/vol) lived here, mobile-only — fully
+                redundant now that PriceChart.tsx's own compact-view
+                header shows the exact same data, mobile and desktop
+                both (chart-hero-id-row/cpv-price-row/chart-fs-stat-row),
+                and removed so mobile stops showing information desktop
+                never did. .mch-stats below (liquidation/OI/funding/RSI/
+                MACD/long-short — genuinely different, market-wide data)
+                is unrelated and still shown on both as before. */}
             <div className="mch-stats">
               {btcData &&
                 (() => {
@@ -2246,36 +2190,6 @@ function AppDashboard({
             </div>
           )}
 
-          {/* Coinbase-style rail toggle — desktop only, always the rail's
-              last item regardless of whether icon-strip-bottom above it
-              rendered (it doesn't on desktop web, see that block's own
-              condition). */}
-          {isDesktopWidth && (
-            <button
-              type="button"
-              role="switch"
-              aria-checked={distractionFree}
-              aria-label={t("nav.focusMode", "Focus")}
-              className={`icon-strip-btn icon-strip-focus${distractionFree ? " active" : ""}`}
-              onClick={() => setDistractionFree((v) => !v)}
-              title={t("nav.focusMode", "Focus")}
-            >
-              <span className="nav-icon-wrap">
-                <NavIcon
-                  d={[
-                    "M4 21L4 14", "M4 10L4 3",
-                    "M12 21L12 12", "M12 8L12 3",
-                    "M20 21L20 16", "M20 12L20 3",
-                    "M1 14L7 14", "M9 8L15 8", "M17 16L23 16",
-                  ]}
-                />
-              </span>
-              <span className="icon-strip-label">{t("nav.focusMode", "Focus")}</span>
-              <span className={`icon-strip-focus-switch${distractionFree ? " on" : ""}`}>
-                <span className="icon-strip-focus-knob" />
-              </span>
-            </button>
-          )}
         </nav>
 
         {/* Desktop-only Coinbase-style flyout — replaces the inline
@@ -2487,16 +2401,35 @@ function AppDashboard({
               </button>
             </div>
 
-            {/* Wraps the mobile-only summary block (coin/signal/high-low/
-                price/change — all new) together with the existing
-                .mch-stats row into ONE card. Transparent/no-op on desktop
-                (.mch-mobile-summary stays display:none there, .mch-body
-                carries no background) so .mch-stats keeps rendering
-                exactly as it always has there — only mobile gets the
-                glassmorphism card treatment, applied to this wrapper. */}
+            {/* Just .mch-stats now (the old mobile-only identity/price
+                summary card was removed, redundant with PriceChart.tsx's
+                own header) — mchBodyEl's wrapper still only gets the
+                glassmorphism card treatment on mobile (App.css media
+                query), transparent/no-op here on desktop. */}
             {isDesktopWidth && mchBodyEl}
 
             <div className="mch-right">
+              {isWideDesktop && (
+                // Icon-only mute toggle, no label — was a labeled switch
+                // (track + knob); the mute-bell glyph itself communicates
+                // the state instead of needing a word next to it. Same
+                // combined Focus state as before (toggleFocusMode above):
+                // hides Watchlist/Top Movers/Daily Brief AND mutes all
+                // alerts together, not just the alert half.
+                <button
+                  type="button"
+                  className={`mch-search-btn mch-focus-btn${distractionFree ? " mch-focus-btn--on" : ""}`}
+                  onClick={toggleFocusMode}
+                  role="switch"
+                  aria-checked={distractionFree}
+                  aria-label="Focus mode"
+                  title={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                  </svg>
+                </button>
+              )}
               {/* Search, notifications, and the portfolio ($) button are
                   desktop-only here — mobile gets those from FloatingNavBar
                   instead. BuySignals stays mounted for both (hideTrigger
@@ -2507,11 +2440,11 @@ function AppDashboard({
               {activeSection === "chart" && chartModeToggle}
               <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
               <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
-              {/* The notifications FEED (this button) vs the notifications
-                  TOGGLE (the next one, on/off permission switch, desktop-
-                  only). Now the only way to reach the feed on mobile too —
-                  FloatingNavBar's own Notifications icon was removed since
-                  it'd otherwise be a duplicate entry point. */}
+              {/* The notifications FEED (this button) vs the Focus TOGGLE
+                  (mute-all switch, now the row's first item above instead
+                  of its last). Now the only way to reach the feed on
+                  mobile too — FloatingNavBar's own Notifications icon was
+                  removed since it'd otherwise be a duplicate entry point. */}
               <button
                 className="mch-search-btn mch-notif-feed-btn"
                 onClick={() => setNotificationsCenterOpen(true)}
@@ -2537,28 +2470,6 @@ function AppDashboard({
                   <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
                 )}
               </button>
-              {isWideDesktop && (
-                // Real on/off switch (track + sliding knob), not an icon
-                // button — this is a binary global mute toggle (role=
-                // "switch"), not an action like the icon buttons around it,
-                // and looked like a duplicate of the feed-bell button next
-                // to it when it was just another bell glyph. Labeled now too
-                // (was icon-only) so it doesn't read as an unexplained
-                // floating switch.
-                <div className="mch-notif-toggle-group">
-                  <span className="mch-notif-toggle-label" id="mch-notif-toggle-label">Alerts</span>
-                  <button
-                    className={`mch-notif-toggle${notificationsEnabled ? " mch-notif-toggle--on" : ""}`}
-                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    role="switch"
-                    aria-checked={notificationsEnabled}
-                    aria-labelledby="mch-notif-toggle-label"
-                    title={notificationsEnabled ? "Alerts on — click to disable all alerts" : "Alerts off — click to enable"}
-                  >
-                    <span className="mch-notif-toggle-knob" />
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
@@ -3274,6 +3185,15 @@ function AppDashboard({
           ))}
     </div>
     <BtcMoveToast alert={notificationsEnabled && !chartFullscreen ? btcMoveAlert : null} onDismiss={dismissBtcAlert} />
+    {focusToast && ReactDOM.createPortal(
+      <div className="focus-toast" role="status">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        Focus mode activated
+      </div>,
+      document.body,
+    )}
     </>
   );
 }

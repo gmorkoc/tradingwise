@@ -591,6 +591,69 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   gap: 20px;
   padding: 8px;
 }
+/* Mobile web/iOS only (matches isDesktopWidth's own 641px breakpoint) —
+   desktop keeps the 8px base padding above. */
+@media (max-width: 640px) {
+  .chart-header {
+    padding: 0;
+  }
+  .chart-fs-header-group {
+    margin-bottom: 8px;
+  }
+}
+
+/* #chart (compact, non-fullscreen) — was the old single "Compact View"
+   icon button, then a Full/Compact segmented switch; now the same
+   muted-label + underlined-link pattern TradeManager's own mode switch
+   uses (.rcw-switch-row/.rcw-switch: "Beginner mode  Switch to Pro"),
+   reused here as "Full view  Switch to Compact". Desktop renders this as
+   its own row below .chart-header (this base rule); mobile/iOS renders
+   the same element nested inside .chart-header-right instead, alongside
+   the icon row (override just below). */
+.chart-view-switch-row {
+  display: block;
+  width: fit-content;
+  margin: 2px 8px 10px auto;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+/* Nested in .chart-header-right (mobile/iOS only) — that row is already
+   display:flex + justify-content:space-between (.chart-active
+   .chart-header-right below), which alone puts the icon row and this on
+   opposite ends of one row; just drop the standalone block's own
+   margin/width so it doesn't add extra spacing or height on top of that. */
+.chart-header-right .chart-view-switch-row {
+  display: inline-flex;
+  align-items: center;
+  /* inline-flex turns the "{' '}" text node between the label and the
+     link (PriceChart.tsx's chartViewSwitchRow) into its own near-zero-
+     width anonymous flex item instead of normal inline whitespace — gap
+     puts a real, reliable space back between the two. */
+  gap: 4px;
+  width: auto;
+  margin: 0;
+  /* Mobile/iOS only (this nested context never applies on desktop) —
+     a touch smaller than the standalone row's 0.72rem. font-size is
+     rem-based (root-relative, not inherited), so .chart-view-switch-link
+     below needs its own matching override too. */
+  font-size: 0.64rem;
+}
+.chart-header-right .chart-view-switch-row .chart-view-switch-link {
+  font-size: 0.64rem;
+}
+.chart-view-switch-link {
+  all: unset;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #0a84ff;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s;
+}
+.chart-view-switch-link:hover {
+  color: #a5b4fc;
+}
 
 /* Above the mobile cutoff, .price-chart-container's own padding-left:3px
    is the whole inset — this 8px on top of it would leave "Bitcoin" 8px
@@ -649,9 +712,6 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 .chart-quick-interval-pills .interval-pill {
   padding: 5px 8px !important;
   font-size: 0.72rem !important;
-}
-.chart-quick-interval-pills {
-  gap: 2px;
 }
 .chart-hero-icon-row .chart-depth-btn {
   width: 30px !important;
@@ -926,6 +986,10 @@ html[data-theme="light"] .chart-active
   font-size: 0.95rem;
   font-weight: 800;
 }
+.chart-hero-coin-icon--img {
+  object-fit: cover;
+  background: var(--color-input-bg);
+}
 .chart-hero-pair-name {
   font-size: 1.3rem;
   font-weight: 600;
@@ -936,6 +1000,47 @@ html[data-theme="light"] .chart-active
    hardcoding black in dark theme too, invisible on its own navy bg. */
 html[data-theme="light"] .chart-hero-pair-name {
   color: #0a0b0d;
+}
+/* Mobile/iOS only (PriceChart.tsx: !isDesktopWidth) — wraps the icon +
+   .chart-hero-pair-name + chevron in a real button instead of the plain
+   row desktop keeps; all-unset so it still lays out/looks identical to
+   that plain row, just tappable now (opens onOpenCoinPicker). */
+.chart-hero-coin-selector {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.chart-hero-coin-selector svg {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+/* Same badge CompactPriceView's own header uses — adopted here so the
+   main chart's header matches it instead of the other way around. */
+.chart-hero-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 99px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #22c55e;
+}
+.chart-hero-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: chart-hero-live-pulse 1.8s ease-in-out infinite;
+}
+@keyframes chart-hero-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.75); }
 }
 .chart-hero-price-row {
   display: inline-flex;
@@ -2147,6 +2252,22 @@ html[data-theme="light"] .chart-active
   touch-action: pan-y;
   position: relative;
 }
+/* Desktop #chart's Full/Compact switch, "Compact" side — covers just
+   this chart area (the dblclick-wrap it's a sibling of) instead of the
+   full viewport, so switching reads as the chart itself changing, not
+   leaving the page for a separate screen. */
+.chart-compact-inline {
+  position: absolute;
+  inset: 0;
+  /* Redundant with inset:0 by spec, but a belt-and-suspenders fallback —
+     cheap insurance against the exact "stretches to only part of the
+     container" symptom this was added to fix. */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  z-index: 20;
+  background: var(--color-background);
+}
 /* Fullscreen overrides pan-y back to none — the browser would otherwise
    still claim vertical touch for native scroll before LWC's JS ever saw
    it, blocking the single-finger vertical drag (vertTouchDrag, enabled
@@ -3286,10 +3407,63 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
 .chart-quick-interval-pills {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 .interval-pill--more-selected {
   font-weight: 800;
+}
+
+/* Mobile web/iOS only (PriceChart.tsx: !isFullscreen && !isDesktopWidth) —
+   intervals + fullscreen button as one row below the chart canvas, instead
+   of desktop's layout (both up in .chart-header-right). Full width: negative
+   margin cancels .price-chart-container's own 16px side padding (base rule
+   and the 768px mobile override both use the same 16px), so this row spans
+   edge to edge like the chart above it instead of sitting inset. */
+.chart-mobile-interval-fs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px -16px 0;
+  padding: 0 16px;
+}
+.chart-mobile-interval-fs-row .chart-quick-interval-pills {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.chart-mobile-interval-fs-row .chart-quick-interval-pills::-webkit-scrollbar {
+  display: none;
+}
+.chart-mobile-interval-fs-btn {
+  flex-shrink: 0;
+  /* Bigger than the 34px .chart-active .chart-depth-btn shape rule gives
+     it by default — this is the only icon button in this row (not a
+     cluster of same-size icons like .chart-hero-icon-row above), so it
+     can afford to read larger. */
+  width: 44px !important;
+  height: 44px !important;
+}
+.chart-mobile-interval-fs-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+/* No pill/capsule shape here — plain text, only the selected interval
+   keeps a background (its normal .interval-pill--active fill) to show
+   which one is active. !important beats the desktop light-theme capsule
+   rule (.chart-active .price-chart-container... .interval-pill), which
+   has no width scoping of its own and would otherwise still apply here. */
+.chart-mobile-interval-fs-row .interval-pill:not(.interval-pill--active) {
+  background: transparent !important;
+  border-radius: 0;
+}
+/* Fullscreen icon here: same beats-the-shape-rule reasoning — just the
+   bare icon, no circular fill behind it. */
+.chart-mobile-interval-fs-btn,
+.chart-mobile-interval-fs-btn:hover {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Empty spacer between the two button groups in this row — grows to
@@ -3579,6 +3753,15 @@ html[data-theme="light"] .chart-loading-label {
   line-height: 1.55;
   color: var(--color-text-secondary);
 }
+/* Single line everywhere (was mobile-only, desktop wrapped to 2+ lines
+   depending on how long the AI's generated text happened to be — a teaser
+   should read the same length every time, tap/the sheet is for the rest). */
+.interval-banner-body--preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
 /* ── AI banner placeholder (free users) ───────────────────────────────── */
 .chart-ai-placeholder {
@@ -3794,22 +3977,6 @@ html[data-theme="light"] .cap-overlay-feature {
   border-radius: 12px;
 }
 
-/* Phone widths, non-fullscreen only: the title-row/signal/High-Low content
-   that used to live in .chart-header is now gated off entirely in
-   PriceChart.tsx (isDesktopWidth check) — that content moved for real into
-   .main-coin-header's unified mobile card (.mch-body/.mch-mobile-summary,
-   App.css). .chart-header itself still mounts (as an empty box, now that
-   its children render nothing here) so it's collapsed to avoid leaving
-   behind its own padding as a blank gap. Scoped to exactly .mch-body's own
-   breakpoint (640px, not this file's 768px) so there's no gap between them
-   where neither renders. Fullscreen is untouched — .mch-body doesn't exist
-   there at all. */
-@media (max-width: 640px) {
-  .price-chart-container:not(.price-chart-container--fs):not(:fullscreen) .chart-header {
-    display: none;
-  }
-}
-
 @media (max-width: 768px) {
   .price-chart-container {
     padding: 8px 16px;
@@ -3823,57 +3990,6 @@ html[data-theme="light"] .cap-overlay-feature {
   .chart-fs-header-group {
     padding-left: 0;
     padding-right: 0;
-  }
-
-  /* Two columns — left: name/status/H-L/divergence, right: 24h vol/price/
-     change% (.chart-mobile-stats, mobileStatsBlock in PriceChart.tsx).
-     Interval pills move to their own full-width row below instead of
-     sharing chart-header-right with the stats (see
-     chart-header-controls/.interval-pills, rendered as a sibling after
-     .chart-header closes on mobile — chartControlsPanel in
-     PriceChart.tsx). */
-  .chart-header {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .chart-header-left {
-    gap: 3px;
-    min-width: 0;
-  }
-
-  .chart-header h3 {
-    font-size: 1.4rem;
-    font-weight: 800;
-  }
-
-  /* Tighter than the 14px desktop gap — on mobile this row is just
-     name/status/div-badge stacked close together, not spread across a
-     wide header. */
-  .chart-title-row {
-    gap: 6px;
-  }
-
-  .chart-header-right {
-    width: auto;
-    flex-shrink: 0;
-    gap: 6px;
-  }
-
-  /* flex:1 and margin-top removed — .chart-interval-row-standalone (its
-     new parent, below the chart) now owns the spacing above it and
-     centers it; flex:1 here would stretch it to fill that row and
-     override the centering. */
-  .chart-header-controls {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
   }
 
   .indicators-toggle {

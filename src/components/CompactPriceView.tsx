@@ -9,6 +9,10 @@ interface Props {
   coin: CoinSymbol;
   theme: "dark" | "light";
   onClose: () => void;
+  // Desktop #chart's Full/Compact switch — renders as a normal in-tree
+  // element filling its parent (the caller's own positioned wrapper)
+  // instead of portaling to <body> as a full-viewport takeover.
+  inline?: boolean;
 }
 
 interface Tick {
@@ -26,7 +30,7 @@ const SEED_INTERVAL: "1min" = "1min";
 // compact chart), but without any of the actual wager/odds UI — just the
 // visual density/pacing, applied to our own real-time 1s price + trade
 // data (see OrderFlowTape.tsx for the same Kraken trade-feed pattern).
-export function CompactPriceView({ coin, theme, onClose }: Props) {
+export function CompactPriceView({ coin, theme, onClose, inline }: Props) {
   const { t } = useTranslation();
   const isLight = theme === "light";
 
@@ -73,8 +77,14 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
       color: "#22c55e",
       lineWidth: 2,
       crosshairMarkerVisible: false,
-      priceLineVisible: false,
-      lastValueVisible: false,
+      // A live price tag that tracks the line itself — the dashed guide
+      // line at the current value, plus its label on the price axis,
+      // both built into the series and auto-updating on every tick, no
+      // custom overlay needed.
+      priceLineVisible: true,
+      priceLineWidth: 1,
+      priceLineStyle: 2,
+      lastValueVisible: true,
     });
     lineRef.current = lineSeries;
 
@@ -100,8 +110,27 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
     });
     ro.observe(containerRef.current);
 
+    // The container's own size can still be mid-layout (e.g. inline mode:
+    // its ancestor chain is position:absolute inset:0 over a sibling
+    // whose height isn't settled until the next paint) at the exact
+    // moment createChart reads clientWidth/clientHeight above — if that
+    // first reading is wrong and the container's size never changes
+    // again afterward, the ResizeObserver above has nothing to fire on
+    // and the chart stays locked to that stale, too-small size. One
+    // forced re-measure next frame, once layout has actually settled,
+    // catches that case without waiting on a resize that may never come.
+    const raf = requestAnimationFrame(() => {
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
+        });
+      }
+    });
+
     return () => {
       cancelled = true;
+      cancelAnimationFrame(raf);
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
@@ -168,56 +197,64 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
   const changePct = change !== null && openPrice ? (change / openPrice) * 100 : null;
   const changeUp = (change ?? 0) >= 0;
 
-  // Portaled straight to <body> — same reasoning as CoinChat's own mobile
-  // sheet (see its createPortal calls): nested anywhere inside the normal
-  // component tree, a position:fixed + high z-index can still get trapped
-  // under whichever ancestor happens to create its own stacking context,
-  // and silently lose to *other* portaled UI (Daily Brief, the CoinChat
-  // dock) regardless of how high the z-index number is. Escaping to
-  // <body> is what actually guarantees this renders above everything.
-  return createPortal(
-    <div className="cpv-overlay">
-      <div className="cpv-root">
-        <div className="cpv-header">
-          <button type="button" className="cpv-back" onClick={onClose} aria-label={t("common.close", "Close")}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <span className="cpv-header-info">
-            <span className="cpv-coin-logo">
-              {!logoError ? (
-                <img
-                  src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
-                  alt=""
-                  loading="lazy"
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <span className="cpv-coin-logo-fallback">{coin[0] ?? "?"}</span>
-              )}
-            </span>
-            <span className="cpv-coin">{coin}/USD</span>
-            <span className="cpv-live-badge">
-              <span className="cpv-live-dot" />
-              {t("chart.live", "LIVE")}
-            </span>
-          </span>
-        </div>
-        <p className="cpv-subtitle">{t("chart.compactSubtitle", "Real-time price, updates every second")}</p>
-
-        <div className="cpv-price-row">
-          <span className={`cpv-price${changeUp ? " cpv-up" : " cpv-down"}`}>
-            {current !== null ? `$${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : "—"}
-          </span>
-          {change !== null && changePct !== null && (
-            <span className={`cpv-change${changeUp ? " cpv-up" : " cpv-down"}`}>
-              {changeUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
-              <span className="cpv-change-abs">
-                (${Math.abs(change).toLocaleString(undefined, { maximumFractionDigits: 6 })})
+  const content = (
+      <div className={`cpv-root${inline ? " cpv-root--inline" : ""}`}>
+        {/* Skipped inline — the real chart's own title (icon, coin name,
+            price, change) already sits directly above this component on
+            the page (chart-hero-id-row), so this would just duplicate it
+            with slightly different styling/data (1H window vs the page's
+            own 24H). The modal (not inline) still needs its own, since
+            it's the only title on screen there. */}
+        {!inline && (
+          <>
+            <div className="cpv-header">
+              <button type="button" className="cpv-back" onClick={onClose} aria-label={t("common.close", "Close")}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <span className="cpv-header-info">
+                <span className="cpv-coin-logo">
+                  {!logoError ? (
+                    <img
+                      src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                      alt=""
+                      loading="lazy"
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : (
+                    <span className="cpv-coin-logo-fallback">{coin[0] ?? "?"}</span>
+                  )}
+                </span>
+                <span className="cpv-coin">{coin}/USD</span>
+                <span className="cpv-live-badge">
+                  <span className="cpv-live-dot" />
+                  {t("chart.live", "LIVE")}
+                </span>
               </span>
-              <span className="cpv-change-window">1H</span>
+            </div>
+            <p className="cpv-subtitle">{t("chart.compactSubtitle", "Real-time price, updates every second")}</p>
+          </>
+        )}
+
+        {/* Skipped inline for the same reason as the header above — the
+            page's own header now shows this exact price-row style
+            (adopted from here), with real 24H data instead of this
+            component's own 1H figures, directly above this chart. */}
+        {!inline && (
+          <div className="cpv-price-row">
+            <span className={`cpv-price${changeUp ? " cpv-up" : " cpv-down"}`}>
+              {current !== null ? `$${current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}` : "—"}
             </span>
-          )}
-        </div>
+            {change !== null && changePct !== null && (
+              <span className={`cpv-change${changeUp ? " cpv-up" : " cpv-down"}`}>
+                {changeUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
+                <span className="cpv-change-abs">
+                  (${Math.abs(change).toLocaleString(undefined, { maximumFractionDigits: 6 })})
+                </span>
+                <span className="cpv-change-window">1H</span>
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="cpv-chart-wrap">
           <div className="cpv-ticks">
@@ -230,7 +267,19 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
           <div className="cpv-chart" ref={containerRef} />
         </div>
       </div>
-    </div>,
+  );
+
+  if (inline) return content;
+
+  // Portaled straight to <body> — same reasoning as CoinChat's own mobile
+  // sheet (see its createPortal calls): nested anywhere inside the normal
+  // component tree, a position:fixed + high z-index can still get trapped
+  // under whichever ancestor happens to create its own stacking context,
+  // and silently lose to *other* portaled UI (Daily Brief, the CoinChat
+  // dock) regardless of how high the z-index number is. Escaping to
+  // <body> is what actually guarantees this renders above everything.
+  return createPortal(
+    <div className="cpv-overlay">{content}</div>,
     document.body
   );
 }

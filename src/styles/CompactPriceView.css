@@ -27,6 +27,20 @@
   padding: 16px;
   gap: 16px;
 }
+/* Rendered directly inside .chart-compact-inline (position:absolute;
+   inset:0) instead of .cpv-overlay's fixed-viewport flex column — needs
+   its own explicit height to fill that parent instead of flex:1, which
+   has nothing to flex within here. */
+.cpv-root--inline {
+  /* .chart-compact-inline is a row-direction flex container — flex:none
+     here left width at content-size (shrink-to-fit) since width is the
+     main axis there, only height stretched via the cross-axis default.
+     flex:1 plus explicit width/height makes it fill regardless of which
+     axis is which. */
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+}
 
 .cpv-header {
   display: flex;
