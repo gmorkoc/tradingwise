@@ -37,7 +37,12 @@ import { BuySignals } from "./components/BuySignals";
 import { useBuySignalRealtime } from "./hooks/useBuySignalRealtime";
 import { ProfilePage } from "./components/ProfilePage";
 import { TutorialPage } from "./components/TutorialPage";
-import { OrderBook } from "./components/OrderBook";
+// OrderBook (full bid/ask ladder) — commented out, not deleted, along with
+// its call site below; replaced there by OrderFlowPanel.
+// import { OrderBook } from "./components/OrderBook";
+import { OrderFlowPanel } from "./components/OrderFlowPanel";
+import { PaperTradingCard } from "./components/PaperTradingCard";
+import type { ChartEvent } from "./components/ChartEventAnnotations";
 import { CoinChat } from "./components/CoinChat";
 import { TradingAgent } from "./components/TradingAgent";
 import { AgentIntroShowcase } from "./components/AgentIntroShowcase";
@@ -257,7 +262,6 @@ const NAV_ITEMS: {
   {
     id: "riskcalc",
     labelKey: "nav.riskcalc",
-    requiredTier: "pro",
     category: "trading",
     d: ["M21 4H8", "M3 4h.01", "M21 12H11", "M3 12h.01", "M21 20H8", "M3 20h.01", "M8 2v4", "M11 10v4", "M8 18v4"],
   },
@@ -1350,6 +1354,9 @@ function AppDashboard({
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [chartZone, setChartZone] = useState<ZoneResult | null>(null);
   const [chartPrice, setChartPrice] = useState(0);
+  // OrderFlowPanel's "Today's Story" feed — same events PriceChart.tsx's
+  // own ChartEventAnnotations already computes for its on-chart dots.
+  const [chartEvents, setChartEvents] = useState<ChartEvent[]>([]);
   const [chartFullscreen, setChartFullscreen] = useState(false);
   // true once we've pushed a history entry for the Advance Price Chart
   // page this session — guards onNavigateBack below from calling
@@ -2530,6 +2537,7 @@ function AppDashboard({
                           setChartZone(zone);
                           setChartPrice(price);
                         }}
+                        onChartEventsChange={setChartEvents}
                         onOpenAuth={onOpenAuth}
                         onOpenUpgrade={onOpenUpgrade}
                         onOpenCoinPicker={openCoinPicker}
@@ -2599,7 +2607,11 @@ function AppDashboard({
                           <polyline points="58,20 62,24 58,28" />
                         </svg>
                       </div>
-                      <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} />
+                      <div className="chart-right-col">
+                        <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
+                        {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
+                        <OrderFlowPanel coin={coin} events={chartEvents} />
+                      </div>
                     </div>
                   </div>
                   {isWideDesktop && !distractionFree && (
@@ -2699,15 +2711,7 @@ function AppDashboard({
                 />
               )}
               {activeSection === "riskcalc" && (
-                <BlurGate
-                  requiredTier="pro"
-                  featureName="Position Size Calculator"
-                  onOpenAuth={onOpenAuth}
-                  onOpenUpgrade={onOpenUpgrade}
-                  className="bg-root--top"
-                >
-                  <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
-                </BlurGate>
+                <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
               )}
               {activeSection === "markets" && <GlobalMarkets />}
               {activeSection === "marketheatmap" && <MarketHeatmap />}

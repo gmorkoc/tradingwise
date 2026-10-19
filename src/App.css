@@ -1679,15 +1679,52 @@ html[data-theme="light"] .coin-picker-menu--table {
   min-width: 0;
 }
 
-.chart-section-wrap > .ob-card {
-  /* Only actually resolves at desktop (>=961px) — the 641-960px tablet
-     band below overrides this to width:100%, and mobile uses a fully
-     separate portaled layout, so bumping this value is desktop-only in
-     practice without needing its own media query. */
-  width: 420px;
+/* Groups PaperTradingCard above OrderFlowPanel's .ob-card into one
+   column — width/margin that used to sit directly on .ob-card (still
+   below, see .chart-right-col > .ob-card) move up here since the two
+   cards now share one column instead of .ob-card alone filling it.
+   Only actually resolves at desktop (>=961px) — the 641-960px tablet
+   band below overrides this to width:100%, and mobile uses a fully
+   separate portaled layout, so bumping this value is desktop-only in
+   practice without needing its own media query. */
+.chart-section-wrap > .chart-right-col {
+  width: 520px;
   flex-shrink: 0;
   margin: 0 4px 10px 10px;
-  padding: 0 20px 18px 3px;
+  padding-left: 16px;
+  padding-top: 8px;
+  /* --pc-border (not --color-border) — matches .db-page's own left
+     border (DailyBrief.css), the same divider-against-the-chart-column
+     treatment, same token .price-chart-container/.ob-card already use. */
+  border-left: 1px solid var(--pc-border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+}
+.chart-right-col > .ob-card {
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  padding: 8px 20px 18px 3px;
+}
+/* Divider between PaperTradingCard and OrderFlowPanel — neither card has
+   its own border now, so the 10px flex gap (above) alone no longer marks
+   where one stops and the next starts. A ::before pseudo-element (not a
+   border-top on the child itself) so it can be inset left/right and
+   given its own breathing room independent of the child's own padding;
+   `> * + *` so it works regardless of which/how many cards actually sit
+   in this column, not hardcoded to these two. Each child is already a
+   flex column of its own (.ob-card/.ptc-card), so this renders as that
+   column's own first item, right where the divider should sit. */
+.chart-right-col > * + *::before {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  height: 1px;
+  margin: 0 8px 12px 13px;
+  background: color-mix(in srgb, var(--pc-border) 45%, transparent);
 }
 
 @media (max-width: 960px) {
@@ -1699,7 +1736,21 @@ html[data-theme="light"] .coin-picker-menu--table {
     flex: 1;
     min-width: 0;
   }
-  .chart-section-wrap > .ob-card {
+  /* .ob-card is no longer a direct child here either (wrapped in
+     .chart-right-col, same as desktop) — descendant selectors below
+     instead of the child combinator, so these still match regardless.
+     --ob-h still cascades down fine (a CSS custom property, unaffected
+     by the extra nesting level) — the drag-resize JS sets it on
+     chartWrapRef (.chart-section-wrap itself), several levels above
+     either selector here. */
+  .chart-right-col {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .chart-section-wrap .ob-card {
     width: 100%;
     height: var(--ob-h, 380px);
     flex-shrink: 0;
@@ -1707,7 +1758,7 @@ html[data-theme="light"] .coin-picker-menu--table {
   }
   /* Only transitioned during the on-load resize-affordance hint — plain
      drags stay untransitioned so the order book tracks the finger 1:1. */
-  .chart-section-wrap--resize-intro > .ob-card {
+  .chart-section-wrap--resize-intro .ob-card {
     transition: height 0.6s cubic-bezier(0.34, 1.15, 0.64, 1);
   }
   .chart-resize-handle {
@@ -4281,7 +4332,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
      also reserve space next to the visible one (which stays static/
      in-flow, per .chart-section-wrap > .price-chart-container/.ob-card
      below). */
-  .chart-section-wrap--tab-chart > .ob-card,
+  .chart-section-wrap--tab-chart .chart-right-col,
   .chart-section-wrap--tab-orderbook > .price-chart-container {
     visibility: hidden;
     position: absolute;
@@ -4293,10 +4344,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     min-width: 0;
     overflow-y: auto;
   }
-  .chart-section-wrap > .ob-card {
+  .chart-section-wrap > .chart-right-col {
     flex: 1;
     width: auto !important;
     min-width: 0;
+    height: auto !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .chart-right-col > .ob-card {
+    flex: 1;
+    min-height: 0;
     height: auto !important;
   }
 }

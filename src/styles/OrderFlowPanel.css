@@ -1,0 +1,176 @@
+@keyframes ofp-fade-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes ofp-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* .ob-card (OrderBook.css) sizes/positions this panel correctly next to
+   the chart (same slot, same card) — reused on the wrapper below instead
+   of re-deriving that sizing. Its left/right padding (3px/20px) is a
+   deliberate mirror of .price-chart-container's own (same values,
+   PriceChart.css) so the two side-by-side cards' content starts at the
+   same x position — kept as-is, NOT overridden here. .ob-card's own
+   top padding is 0 (the old ladder got its top inset for free from
+   .ob-tabs' own padding, which this content doesn't have), so this adds
+   its own 8px on top of that instead.
+   Same rotating conic-gradient glow border as .ptc-card (PaperTradingCard.css,
+   @property --ptc-angle/@keyframes ptc-border-spin defined there — both
+   cards share this column, so one definition covers both) — border/
+   background/radius win over .ob-card's own (same specificity, later in
+   the bundled stylesheet) without touching that rule's padding. */
+.ofp-card {
+  gap: 14px;
+  padding-top: 8px;
+  border: 1.5px solid transparent;
+  border-radius: 16px;
+  background:
+    linear-gradient(var(--pc-bg), var(--pc-bg)) padding-box,
+    conic-gradient(from var(--ptc-angle, 0deg), #22ffaa, #00c2ff, #7c4dff, #ff2fb0, #22ffaa) border-box;
+  animation: ptc-border-spin 6s linear infinite;
+}
+
+.ofp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+/* Matches .db-head-title (DailyBrief.css) — same title size/weight as
+   Daily Brief's own panel header, same row. */
+.ofp-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+.ofp-spread {
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ofp-loading {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+}
+
+.ofp-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--color-border);
+}
+.ofp-bar-bid, .ofp-bar-ask {
+  position: relative;
+  overflow: hidden;
+}
+.ofp-bar-bid { background: var(--pc-success); }
+.ofp-bar-ask { background: var(--pc-danger); }
+/* A moving light sweep across the live buy/ask split — "alive," not a
+   static filled bar. */
+.ofp-bar-bid::after, .ofp-bar-ask::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
+  background-size: 300% 100%;
+  animation: ofp-sweep 3s linear infinite;
+}
+
+.ofp-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.ofp-bar-label--bid { color: var(--pc-success); }
+.ofp-bar-label--ask { color: var(--pc-danger); }
+
+.ofp-feed-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.ofp-feed {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Bounded, not flex:1 — the ladder below needs a share of the card's
+     height too. Taller than before now that this is a real accumulating
+     log (one entry per 15min) rather than just the latest ≤3 live
+     events, so there's actually something to scroll through. */
+  flex: 0 1 auto;
+  max-height: 320px;
+  min-height: 0;
+}
+.ofp-feed-empty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 8px 0;
+}
+
+.ofp-feed-item {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  padding: 0 0 16px 2px;
+  /* animation-delay is set inline per item (OrderFlowPanel.tsx, staggered
+     by index) — inline style wins over this shorthand's own 0s reset. */
+  opacity: 0;
+  animation: ofp-fade-in 0.4s ease forwards;
+}
+.ofp-feed-item::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+.ofp-feed-item:last-child::before { display: none; }
+.ofp-feed-dot {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 3px;
+  border: 2px solid var(--pc-bg);
+  position: relative;
+  z-index: 1;
+}
+.ofp-feed-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ofp-feed-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+.ofp-feed-time {
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+}
+
+/* Always shown (no collapse toggle) — fills whatever's left in the card
+   and scrolls internally via OrderBook.tsx's own .ob-section rules; this
+   wrapper only needs to be a bounded flex column for those to work. */
+.ofp-ladder-wrap {
+  flex: 1;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}

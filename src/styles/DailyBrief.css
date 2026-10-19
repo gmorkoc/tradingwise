@@ -804,9 +804,9 @@ html[data-theme="light"] .db-sheet .db-live--red {
 .db-page {
   display: flex;
   flex-direction: column;
-  flex: 0 1 360px;
-  min-width: 300px;
-  max-width: 400px;
+  flex: 0 1 390px;
+  min-width: 320px;
+  max-width: 430px;
   background: var(--pc-panel);
   border-radius: 0;
   /* Flush against .chart-column now that neither side has a margin/shadow

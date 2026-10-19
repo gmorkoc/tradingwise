@@ -30,7 +30,7 @@ import {
   ZoneAnalysisResult,
 } from "../services/openai";
 import { PredictionOverlay, PredictionPath, LineDotFillOverlay, RoundedCandleOverlay } from "./DrawingOverlay";
-import { ChartEventAnnotations } from "./ChartEventAnnotations";
+import { ChartEventAnnotations, ChartEvent } from "./ChartEventAnnotations";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDrawingTools";
@@ -166,6 +166,10 @@ interface PriceChartProps {
   // <PriceChart> instance (the plain #chart page, pageMode) still renders
   // its own header as normal — this only suppresses it for this one embed.
   forceHideHeader?: boolean;
+  // OrderFlowPanel.tsx's "Today's Story" feed (App.tsx) — App.tsx has no
+  // other way to reach the candles/srLevels/zone state ChartEventAnnotations
+  // already computes these from internally.
+  onChartEventsChange?: (events: ChartEvent[]) => void;
   // Rendered inside .price-chart-container itself (below the chart, outside
   // the fullscreen/scroll wrapper) — App.tsx uses this for Watchlist/
   // TopMoversCarousel so they visually live inside this card instead of as
@@ -1468,6 +1472,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   onChartStyleChange,
   forceHideIndicators,
   forceHideHeader,
+  onChartEventsChange,
   children,
 }) => {
   const { t, i18n } = useTranslation();
@@ -6381,6 +6386,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             coin={coin}
             visible={!isFullscreen && !isDesktopWidth}
             cardsSlotRef={eventCardsSlotRef}
+            onEventsChange={onChartEventsChange}
           />
           <ChartDrawingTools
             ref={drawingToolsRef}

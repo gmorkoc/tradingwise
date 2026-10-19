@@ -17,6 +17,20 @@
   padding: 0 20px 18px 3px;
 }
 
+/* embedded=true (OrderFlowPanel.tsx) — same flex-column shape .ob-card
+   gives .ob-body to fill/scroll within, minus the card-specific
+   background/margin/fixed-height, which belong to whatever bounded-
+   height wrapper the new parent (.ofp-ladder-wrap, OrderFlowPanel.css)
+   puts around this instead. */
+.ob-embedded {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
 /* Fixed, not stretched/measured to match the price chart's own (content-
    driven, so genuinely indeterminate) height — a flat constant is a
    deliberate choice here, not a fallback, so tune this one number if the
@@ -50,7 +64,7 @@
   color: var(--pc-text-muted);
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 5px 9px;
+  padding: 0;
   cursor: pointer;
   white-space: nowrap;
 }

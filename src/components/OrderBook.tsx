@@ -16,6 +16,13 @@ interface OrderBookProps {
   coin: CoinSymbol;
   onHide?: () => void;
   onOpenUpgrade?: () => void;
+  // OrderFlowPanel.tsx nests this inside its own card (the ladder as a
+  // collapsible section underneath the pressure bar/story feed) — true
+  // skips this component's own .ob-card wrapper (fixed height/margin/
+  // background, tuned to sit as App.tsx's own top-level sibling of the
+  // chart) in favor of a plain flex column that fills whatever bounded
+  // height its new parent gives it.
+  embedded?: boolean;
 }
 
 interface Level {
@@ -268,7 +275,7 @@ interface Trade {
   side: "buy" | "sell";
 }
 
-export function OrderBook({ coin, onHide }: OrderBookProps) {
+export function OrderBook({ coin, onHide, embedded }: OrderBookProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
   const [exchange, setExchange] = useState<Exchange>("Binance");
@@ -404,7 +411,7 @@ export function OrderBook({ coin, onHide }: OrderBookProps) {
   );
 
   return (
-    <div className="ob-card">
+    <div className={embedded ? "ob-embedded" : "ob-card"}>
       {onHide && (
         <button className="ob-hide-btn" onClick={onHide} title="Hide order book">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

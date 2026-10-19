@@ -19,7 +19,11 @@ function formatPrice(p: number): string {
 }
 
 // event.time is unix seconds (see coinglass.ts's CandleDataPoint).
-function formatRelativeTime(unixSeconds: number): string {
+// Exported for OrderFlowPanel.tsx's "Today's Story" feed — a coarser
+// interval's candles (1D/1W) all close at the same hour-of-day, so an
+// absolute hour:minute display collided across genuinely different days;
+// relative time ("2h ago"/"3d ago") doesn't have that problem.
+export function formatRelativeTime(unixSeconds: number): string {
   const deltaSec = Math.max(0, Math.floor(Date.now() / 1000) - unixSeconds);
   if (deltaSec < 60) return "just now";
   const mins = Math.floor(deltaSec / 60);
@@ -49,20 +53,30 @@ export interface ChartEvent {
 // category is shown at all rather than a stale one.
 const RECENT_EVENT_WINDOW = 20;
 
+// How close (as a fraction of price) a close needs to be to a level to
+// count as "testing" it right now, rather than just passing nearby.
+const PROXIMITY_PCT = 0.005;
+
 // Rule-based, no AI call — templated sentences from data PriceChart.tsx
-// already computes locally (srLevels, zone). Capped at 3 so the chart
-// doesn't get cluttered; fewer dots than 3 is fine if fewer genuine
-// events are found, matching the reference (2 dots, not a fixed count).
+// already computes locally (srLevels, zone). maxEvents defaults to 3 (the
+// on-chart dots' own cap, so the chart doesn't get cluttered — fewer
+// dots than 3 is fine if fewer genuine events are found, matching the
+// reference); OrderFlowPanel's "Today's Story" feed (PriceChart.tsx's
+// onEventsChange) is a scrollable log with no such clutter concern, so
+// it calls this with a higher cap to surface more of the scenarios below
+// in the same pass instead of only ever seeing 3 of them.
 function buildChartEvents(
   candles: CandleDataPoint[],
   srLevels: { support: { price: number }[]; resistance: { price: number }[] },
   zone: ZoneResult | null,
   coin: CoinSymbol,
+  maxEvents: number = 3,
 ): ChartEvent[] {
   if (candles.length < 2) return [];
   const name = COIN_NAME[coin] ?? coin;
   const events: ChartEvent[] = [];
   const last = candles[candles.length - 1];
+  const floor = Math.max(1, candles.length - RECENT_EVENT_WINDOW);
 
   // 1. Current state — always present if we have a zone signal.
   if (zone) {
@@ -79,11 +93,12 @@ function buildChartEvents(
     }
   }
 
+  const nearestSupport = [...srLevels.support].sort((a, b) => b.price - a.price)[0];
+  const nearestResistance = [...srLevels.resistance].sort((a, b) => a.price - b.price)[0];
+
   // 2. Most recent support break — latest close crossing below a known
   // support level after previously trading above it.
-  const nearestSupport = [...srLevels.support].sort((a, b) => b.price - a.price)[0];
   if (nearestSupport) {
-    const floor = Math.max(1, candles.length - RECENT_EVENT_WINDOW);
     for (let i = candles.length - 1; i >= floor; i--) {
       const c = candles[i];
       const prev = candles[i - 1];
@@ -105,9 +120,7 @@ function buildChartEvents(
   }
 
   // 3. Most recent resistance rejection — symmetric case.
-  const nearestResistance = [...srLevels.resistance].sort((a, b) => a.price - b.price)[0];
   if (nearestResistance) {
-    const floor = Math.max(1, candles.length - RECENT_EVENT_WINDOW);
     for (let i = candles.length - 1; i >= floor; i--) {
       const c = candles[i];
       const prev = candles[i - 1];
@@ -124,7 +137,72 @@ function buildChartEvents(
     }
   }
 
-  return events.slice(0, 3);
+  // 4. Resistance breakout — the bullish mirror of #2: latest close
+  // crossing ABOVE resistance after previously trading below it.
+  if (nearestResistance) {
+    for (let i = candles.length - 1; i >= floor; i--) {
+      const c = candles[i];
+      const prev = candles[i - 1];
+      if (c.close > nearestResistance.price && prev.close <= nearestResistance.price) {
+        let daysBelow = 0;
+        for (let j = i - 1; j >= 0 && candles[j].close <= nearestResistance.price; j--) daysBelow++;
+        if (daysBelow > 0) {
+          events.push({
+            id: "resistance-breakout",
+            time: c.time,
+            price: c.close,
+            title: "Resistance Breakout",
+            body: `${name} broke above ${formatPrice(nearestResistance.price)}, a price it's mostly stayed under over the past ${daysBelow} candle${daysBelow === 1 ? "" : "s"}.`,
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  // 5. Support bounce — the bullish mirror of #3: latest close crossing
+  // back above support after trading below it.
+  if (nearestSupport) {
+    for (let i = candles.length - 1; i >= floor; i--) {
+      const c = candles[i];
+      const prev = candles[i - 1];
+      if (c.close > nearestSupport.price && prev.close <= nearestSupport.price) {
+        events.push({
+          id: "support-bounce",
+          time: c.time,
+          price: c.close,
+          title: "Support Bounce",
+          body: `${name} bounced off support near ${formatPrice(nearestSupport.price)} and recovered.`,
+        });
+        break;
+      }
+    }
+  }
+
+  // 6/7. Sitting right at a level right now — distinct from an actual
+  // break/bounce/rejection above, which all need a CROSSING; this is
+  // just "still parked here," which a crossing-only scan would miss
+  // entirely on a candle that's hovered near the line without crossing it.
+  if (nearestSupport && Math.abs(last.close - nearestSupport.price) / nearestSupport.price < PROXIMITY_PCT) {
+    events.push({
+      id: "at-support",
+      time: last.time,
+      price: last.close,
+      title: "At Support",
+      body: `${name} is testing support near ${formatPrice(nearestSupport.price)}.`,
+    });
+  }
+  if (nearestResistance && Math.abs(last.close - nearestResistance.price) / nearestResistance.price < PROXIMITY_PCT) {
+    events.push({
+      id: "at-resistance",
+      time: last.time,
+      price: last.close,
+      title: "At Resistance",
+      body: `${name} is testing resistance near ${formatPrice(nearestResistance.price)}.`,
+    });
+  }
+
+  return events.slice(0, maxEvents);
 }
 
 interface Props {
@@ -148,9 +226,14 @@ interface Props {
   // Portaling the cards out keeps the wrapper's height pinned to the
   // canvas only.
   cardsSlotRef: React.RefObject<HTMLDivElement | null>;
+  // OrderFlowPanel.tsx's "Today's Story" feed (App.tsx) — the exact same
+  // events this component already computes for its own on-chart dots/
+  // cards, just also handed up to a sibling panel that has no other way
+  // to reach PriceChart.tsx's internal candles/srLevels/zone state.
+  onEventsChange?: (events: ChartEvent[]) => void;
 }
 
-export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevels, zone, coin, visible, cardsSlotRef }: Props) {
+export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevels, zone, coin, visible, cardsSlotRef, onEventsChange }: Props) {
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -176,6 +259,16 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     setEvents(next);
     setSelectedId((prev) => (next.some((e) => e.id === prev) ? prev : next[0]?.id ?? null));
   }, [visible, srLevels, zone, coin, candlesRef]);
+
+  // onEventsChange (OrderFlowPanel.tsx's feed, App.tsx) deliberately
+  // ignores `visible` — that flag only gates the on-chart dots/cards
+  // this component itself renders (mobile only, see the visible prop at
+  // its PriceChart.tsx call site), but the feed is also the desktop
+  // Order Book replacement's only source for this data, which needs it
+  // regardless of whether the dots are shown here.
+  useEffect(() => {
+    onEventsChange?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
+  }, [srLevels, zone, coin, candlesRef, onEventsChange]);
 
   const reposition = useCallback(() => {
     const chart = chartRef.current;
@@ -233,6 +326,15 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     }, 2000);
     return () => window.clearInterval(id);
   }, [visible, reposition, srLevels, zone, coin, candlesRef]);
+
+  // Same "ignore visible" reasoning as the effect above — the feed still
+  // needs to tick even when nothing is visible on-chart to recompute.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      onEventsChange?.(buildChartEvents(candlesRef.current ?? [], srLevels, zone, coin, 7));
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [srLevels, zone, coin, candlesRef, onEventsChange]);
 
   // Cards are 88% width with a real margin-gap between them (not 100%
   // flush), so the scroll step per card is each card's own measured
