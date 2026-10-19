@@ -1606,7 +1606,7 @@ html[data-theme="light"] .coin-picker-menu--table {
 .chart-page-row {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 0;
 }
 
 .chart-column {
@@ -1690,9 +1690,8 @@ html[data-theme="light"] .coin-picker-menu--table {
 .chart-section-wrap > .chart-right-col {
   width: 520px;
   flex-shrink: 0;
-  margin: 0 4px 10px 10px;
-  padding-left: 16px;
-  padding-top: 8px;
+  margin: 0 0 10px 10px;
+  padding: 16px;
   /* --pc-border (not --color-border) — matches .db-page's own left
      border (DailyBrief.css), the same divider-against-the-chart-column
      treatment, same token .price-chart-container/.ob-card already use. */
@@ -1707,7 +1706,7 @@ html[data-theme="light"] .coin-picker-menu--table {
   flex: 1;
   min-height: 0;
   height: auto;
-  padding: 8px 20px 18px 3px;
+  padding: 8px 0 18px 0px;
 }
 /* Divider between PaperTradingCard and OrderFlowPanel — neither card has
    its own border now, so the 10px flex gap (above) alone no longer marks
@@ -1749,6 +1748,10 @@ html[data-theme="light"] .coin-picker-menu--table {
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  .chart-section-wrap > .chart-right-col {
+    border-left: none;
+    padding-left: 0;
   }
   .chart-section-wrap .ob-card {
     width: 100%;
@@ -4351,6 +4354,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
     height: auto !important;
     display: flex;
     flex-direction: column;
+    /* No chart column to its left at this width (stacked, not
+       side-by-side) — the divider/inset the desktop rule adds
+       (border-left + padding-left:16px, same specificity, earlier in
+       this file) has nothing to separate from here. */
+    border-left: none;
+    padding-left: 0;
   }
   .chart-right-col > .ob-card {
     flex: 1;

@@ -152,7 +152,10 @@ export function OrderFlowPanel({ coin, events }: Props) {
   return (
     <div className="ob-card ofp-card">
       <div className="ofp-header">
-        <span className="ofp-title"><span className="ptc-pulse-dot" />Order Flow Pressure</span>
+        <span className="ofp-title">
+          Order Flow Pressure
+          <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
+        </span>
         {!loading && !unavailable && (
           <span className="ofp-spread">Spread {fmtPrice(spread)} ({spreadBps.toFixed(4)} bps)</span>
         )}

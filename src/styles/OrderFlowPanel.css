@@ -2,10 +2,6 @@
   from { opacity: 0; transform: translateX(-6px); }
   to { opacity: 1; transform: translateX(0); }
 }
-@keyframes ofp-sweep {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
 
 /* .ob-card (OrderBook.css) sizes/positions this panel correctly next to
    the chart (same slot, same card) — reused on the wrapper below instead
@@ -15,21 +11,13 @@
    same x position — kept as-is, NOT overridden here. .ob-card's own
    top padding is 0 (the old ladder got its top inset for free from
    .ob-tabs' own padding, which this content doesn't have), so this adds
-   its own 8px on top of that instead.
-   Same rotating conic-gradient glow border as .ptc-card (PaperTradingCard.css,
-   @property --ptc-angle/@keyframes ptc-border-spin defined there — both
-   cards share this column, so one definition covers both) — border/
-   background/radius win over .ob-card's own (same specificity, later in
-   the bundled stylesheet) without touching that rule's padding. */
+   a bit more than before on top of that instead — no border on this card
+   (background + spacing separates it, same as .ptc-card), so the extra
+   top padding stands in for what a border used to visually provide. */
 .ofp-card {
   gap: 14px;
-  padding-top: 8px;
-  border: 1.5px solid transparent;
+  padding-top: 12px;
   border-radius: 16px;
-  background:
-    linear-gradient(var(--pc-bg), var(--pc-bg)) padding-box,
-    conic-gradient(from var(--ptc-angle, 0deg), #22ffaa, #00c2ff, #7c4dff, #ff2fb0, #22ffaa) border-box;
-  animation: ptc-border-spin 6s linear infinite;
 }
 
 .ofp-header {
@@ -41,6 +29,9 @@
 /* Matches .db-head-title (DailyBrief.css) — same title size/weight as
    Daily Brief's own panel header, same row. */
 .ofp-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-text);
@@ -65,22 +56,8 @@
   overflow: hidden;
   background: var(--color-border);
 }
-.ofp-bar-bid, .ofp-bar-ask {
-  position: relative;
-  overflow: hidden;
-}
 .ofp-bar-bid { background: var(--pc-success); }
 .ofp-bar-ask { background: var(--pc-danger); }
-/* A moving light sweep across the live buy/ask split — "alive," not a
-   static filled bar. */
-.ofp-bar-bid::after, .ofp-bar-ask::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.5) 50%, transparent 70%);
-  background-size: 300% 100%;
-  animation: ofp-sweep 3s linear infinite;
-}
 
 .ofp-bar-labels {
   display: flex;

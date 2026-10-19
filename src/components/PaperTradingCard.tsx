@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinSymbol, fetchLivePrice } from "../services/coinglass";
 import {
@@ -6,11 +7,6 @@ import {
   PaperPortfolio, AgentPerformance, PaperPosition, AgentAction,
 } from "../services/paperTrading";
 import { LiquidationGauge } from "./LiquidationGauge";
-// .ta-trigger-orb (the Agent Ready glow/pulse orb) — reused as-is on the
-// nudge button below; it's a direct flex child there, same hard
-// constraint as everywhere else it's used (TradingAgent.tsx) — wrapping
-// it in another element stops it rendering on-device.
-import "../styles/TradingAgent.css";
 import "../styles/PaperTradingCard.css";
 
 interface Props {
@@ -95,6 +91,10 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [closingKey, setClosingKey] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Fullscreen option — same content, rendered a second time (not instead
+  // of, alongside) inside a portaled modal when true, so the inline card
+  // never has to unmount/remount or lose its own scroll position.
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Editable cash balance — same manual-override pattern as TradingAgent.tsx's
   // own portfolio header (startEditCash/saveCash there), same underlying
@@ -241,11 +241,13 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const openCount = positions.length;
   const formPrice = livePrices[coin];
 
-  return (
-    <div className="ptc-card">
+  const body = (
+    <>
       <div className="ptc-header">
-        <span className="ptc-title"><span className="ptc-pulse-dot" />Paper Trading</span>
-        <span className="ptc-badge">FREE</span>
+        <span className="ptc-title">Paper Trading</span>
+        <div className="ptc-header-right">
+          <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
+        </div>
       </div>
 
       {!user && (
@@ -255,7 +257,17 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
         </>
       )}
 
-      {user && loading && <div className="ptc-loading">Loading…</div>}
+      {user && loading && (
+        <div className="ptc-skeleton">
+          <div className="ptc-skeleton-stats">
+            <span className="ptc-skeleton-box" />
+            <span className="ptc-skeleton-box" />
+            <span className="ptc-skeleton-box" />
+          </div>
+          <span className="ptc-skeleton-row" />
+          <span className="ptc-skeleton-row" style={{ width: "70%" }} />
+        </div>
+      )}
 
       {user && !loading && (
         <>
@@ -369,8 +381,12 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
                         </div>
                       );
                     })() : null}
-                    {isExpanded && (
-                      <div className="ptc-position-detail">
+                    {/* Always mounted (not gated behind isExpanded) — the
+                        grid-template-rows 0fr/1fr transition below needs
+                        real content present to animate TO; conditionally
+                        rendering it would just pop in/out with no slide. */}
+                    <div className={`ptc-position-detail${isExpanded ? " ptc-position-detail--open" : ""}`}>
+                      <div className="ptc-position-detail-inner">
                         <div className="ptc-detail-row"><span>Side</span><strong>{pos.market === "futures" ? `${pos.side === "long" ? "LONG" : "SHORT"} ${fmtLev(pos.leverage)}x` : "SPOT"}</strong></div>
                         <div className="ptc-detail-row"><span>Size</span><strong>{pos.qty} {pos.coin}</strong></div>
                         <div className="ptc-detail-row"><span>Entry</span><strong>${pos.avgEntryPrice.toLocaleString()}</strong></div>
@@ -386,7 +402,7 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
                         )}
                         <div className="ptc-detail-row"><span>Opened</span><strong>{new Date(pos.updatedAt).toLocaleString()}</strong></div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -465,9 +481,37 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
         className="ptc-agent-nudge"
         onClick={() => window.dispatchEvent(new CustomEvent("open-trading-agent"))}
       >
-        <span className="ta-trigger-orb" />
-        Not sure what to trade? Ask Agent ready.
+        <span className="ptc-agent-nudge-link">Not sure what to trade? Ask Agent ready.</span>
       </button>
-    </div>
+
+      {/* Promotes the full Trade Manager page (App.tsx: setActiveSection
+          "riskcalc") — this card covers open/close/manage already, but
+          the full page has the richer flows (beginner wizard, AI review)
+          this one deliberately doesn't try to replicate. */}
+      <button type="button" className="ptc-page-link" onClick={onOpen}>
+        Want more tools? Open the full Trade Manager →
+      </button>
+    </>
+  );
+
+  return (
+    <>
+      {/* Double-click anywhere on the card toggles fullscreen — same
+          double-click-to-expand convention the chart canvas itself uses
+          (.chart-dblclick-wrap, PriceChart.tsx), no dedicated button. */}
+      <div className="ptc-card" onDoubleClick={() => setIsFullscreen((v) => !v)}>{body}</div>
+      {isFullscreen && createPortal(
+        <div className="ptc-modal-backdrop" onClick={() => setIsFullscreen(false)}>
+          <div
+            className="ptc-card ptc-card--modal"
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }}
+          >
+            {body}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
