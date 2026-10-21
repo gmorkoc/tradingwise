@@ -1512,6 +1512,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // fills in below) from a later coin/interval switch (real stale content
   // already exists and blurs in place instead).
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  // coin/interval the last fetch actually ran for — lets the fetch effect
+  // tell a real coin/interval switch (the user did something, blur-in-
+  // place is the right feedback) apart from a same-coin/interval refresh
+  // (refreshTrigger alone changed, the user did nothing — this should be
+  // silent). Without this, every 30s background refresh (App.tsx's own
+  // setInterval(fetchBTCData, 30000), unrelated to whichever chart
+  // interval is selected) re-blurred the whole chart/stats for its full
+  // fetch+recompute+redraw duration, which read as a freeze.
+  const lastLoadedKeyRef = useRef<string | null>(null);
   const [error, setError] = useState("");
   const [trends, setTrends] = useState<IntervalTrends>({});
   const [banner, setBanner] = useState<IntervalAnalysis | null>(null);
@@ -2590,8 +2599,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       }
     };
 
+    const fetchKey = `${coin}:${interval}`;
+    const isBackgroundRefresh = hasLoadedOnce && lastLoadedKeyRef.current === fetchKey;
+    lastLoadedKeyRef.current = fetchKey;
+
     const fetch = async () => {
-      setLoading(true);
+      if (!isBackgroundRefresh) setLoading(true);
       setError("");
       if (!hasLoadedOnce) {
         await waitForSeriesReady();
