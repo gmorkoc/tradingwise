@@ -101,8 +101,8 @@ html[data-theme="light"] .chart-active {
      where this card (and everything meant to line up with it) sat 17px
      further right than everywhere else. Setting it here closes that gap
      instead of only patching it at one specific width. */
-  margin: 0 4px 10px 10px;
-  padding: 0 20px 18px 3px;
+  margin: 0 0px 0px 0px;
+  padding: 16px 0px 16px 16px;
   border-radius: 0;
   border: none;
 }

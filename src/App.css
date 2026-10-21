@@ -1812,7 +1812,6 @@ html[data-theme="light"] .coin-picker-menu--table {
   flex-shrink: 0;
   gap: 24px;
   border-bottom: 1px solid var(--pc-border);
-  margin-bottom: 14px;
 }
 .crc-tab {
   all: unset;
@@ -2007,6 +2006,28 @@ html[data-theme="light"] .coin-picker-menu--table {
   flex: 0 1 auto;
   max-height: 70%;
   min-height: 0;
+}
+/* Pre-activation (PaperTradingCard.tsx's own .ptc-card--activating) wants
+   this row to actually fill the available space instead of sizing to its
+   own (now much shorter, header-less) content — the row's default
+   content-sized/70%-capped behavior above is for the normal tabbed
+   stats view, where Daily Brief below still needs to keep a visible
+   share; the activation banner has no such sibling content to protect
+   space for, so it can take the room normal mode deliberately holds
+   back. */
+.chart-two-col-right-row--top:has(.ptc-card--activating) {
+  flex: 1 1 auto;
+  max-height: 400px;
+}
+/* .chart-right-col itself (the row's one child) still defaults to
+   content-sized height otherwise — a flex column's child doesn't inherit
+   its parent's own new height automatically, it needs its own flex-grow
+   too, same reasoning down the rest of this chain (.crc-tab-panel
+   already has flex:1 of its own; .ptc-card--activating already has
+   height:100%) for the full row->column->panel->card chain to actually
+   carry the row's new real height all the way down. */
+.chart-two-col-right-row--top:has(.ptc-card--activating) > .chart-right-col {
+  flex: 1;
 }
 /* Once dragged (App.tsx sets an inline height + this class): a real,
    fixed height in both directions, not just a cap — flex:0 0 auto so an
@@ -2225,6 +2246,9 @@ html[data-theme="light"] .coin-picker-menu--table {
      (see that rule) — not scrolling here too, to avoid nesting two
      scrollable boxes inside each other. */
   overflow-y: visible;
+}
+.chart-three-col-right {
+  width: clamp(340px, 26vw, 460px);
 }
 .chart-three-col-right .db-page {
   border-left: none;

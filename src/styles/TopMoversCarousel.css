@@ -32,6 +32,7 @@
 .tmc-list-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding-bottom: 8px;
 }
@@ -39,6 +40,28 @@
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--pc-text);
+}
+.tmc-tabs {
+  display: flex;
+  gap: 4px;
+}
+.tmc-tab {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--pc-text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.tmc-tab:hover {
+  background: var(--pc-accent-soft);
+}
+.tmc-tab--active {
+  background: var(--pc-accent-soft);
+  color: var(--pc-accent);
 }
 .tmc-list-rows {
   display: flex;

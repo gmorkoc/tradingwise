@@ -67,6 +67,10 @@ import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
+// Static, not lazy, like PriceChart above — "markets" is the default
+// landing section now, needed immediately on load, same reasoning as the
+// comment on the lazy block below.
+import { GlobalMarkets } from "./components/GlobalMarkets";
 
 // No-op on web/desktop, where this plugin isn't meaningful (and may not
 // be present) — same convention as PriceChart.tsx/TradingAgent.tsx's own
@@ -135,7 +139,6 @@ const PredictionEngine = lazy(() => import("./components/PredictionEngine").then
 const FundingBot = lazy(() => import("./components/FundingBot").then(m => ({ default: m.FundingBot })));
 const CandleWatcher = lazy(() => import("./components/CandleWatcher").then(m => ({ default: m.CandleWatcher })));
 const TradeManager = lazy(() => import("./components/TradeManager").then(m => ({ default: m.TradeManager })));
-const GlobalMarkets = lazy(() => import("./components/GlobalMarkets").then(m => ({ default: m.GlobalMarkets })));
 const AltAnalysis = lazy(() => import("./components/AltAnalysis").then(m => ({ default: m.AltAnalysis })));
 const OptionsAnalytics = lazy(() => import("./components/OptionsAnalytics").then(m => ({ default: m.OptionsAnalytics })));
 const CorrelationMatrix = lazy(() => import("./components/CorrelationMatrix").then(m => ({ default: m.CorrelationMatrix })));
@@ -214,6 +217,17 @@ const NAV_ITEMS: {
   category?: NavCategoryId;
 }[] = [
   {
+    id: "markets",
+    labelKey: "nav.markets",
+    d: [
+      "M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0",
+      "M3.6 9h16.8",
+      "M3.6 15h16.8",
+      "M11.5 3a17 17 0 0 0 0 18",
+      "M12.5 3a17 17 0 0 1 0 18",
+    ],
+  },
+  {
     id: "chart",
     labelKey: "nav.chart",
     requiredTier: "pro",
@@ -279,18 +293,6 @@ const NAV_ITEMS: {
     labelKey: "nav.riskcalc",
     category: "trading",
     d: ["M21 4H8", "M3 4h.01", "M21 12H11", "M3 12h.01", "M21 20H8", "M3 20h.01", "M8 2v4", "M11 10v4", "M8 18v4"],
-  },
-  {
-    id: "markets",
-    labelKey: "nav.markets",
-    category: "market",
-    d: [
-      "M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0",
-      "M3.6 9h16.8",
-      "M3.6 15h16.8",
-      "M11.5 3a17 17 0 0 0 0 18",
-      "M12.5 3a17 17 0 0 1 0 18",
-    ],
   },
   {
     id: "marketheatmap",
@@ -467,7 +469,11 @@ function AppDashboard({
     const hash = window.location.hash.slice(1) as SectionId;
     // "advance-chart" has no NAV_ITEMS entry (no nav icon) but is still a
     // valid section reachable via hash — accept it explicitly.
-    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
+    // Default landing is the market overview ("markets", GlobalMarkets),
+    // not one coin's own chart — a fresh visit should see the market
+    // first, same as any other crypto app's landing page, and drill into
+    // a single coin's chart from there.
+    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "markets";
   });
   // Tapping Agent Ready while locked (non-elite) opens this instead of the
   // generic onOpenUpgrade — see the render block below, near TradingAgent.
@@ -2658,7 +2664,7 @@ function AppDashboard({
                     </svg>
                   </button>
                 )}
-                {(activeSection === "chart" || activeSection === "advance-chart") && isWideDesktop && !distractionFree && (
+                {(activeSection === "chart" || activeSection === "advance-chart" || activeSection === "markets") && isWideDesktop && !distractionFree && (
                   <div className="top-nav-layout-wrap" ref={layoutMenuWrapRef}>
                     <button
                       type="button"
@@ -2942,7 +2948,7 @@ function AppDashboard({
 
           <div
             ref={mainContentRef}
-            className={`main-content${activeSection === "chart" || activeSection === "advance-chart" ? " chart-active" : ""}`}
+            className={`main-content${activeSection === "chart" || activeSection === "advance-chart" || activeSection === "markets" ? " chart-active" : ""}`}
           >
             <div
               className={`ptr-indicator${!ptrDragging ? " ptr-indicator--settling" : ""}`}
@@ -2973,7 +2979,7 @@ function AppDashboard({
               </div>
             )}
 
-            {activeSection === "chart" && (() => {
+            {(activeSection === "chart" || activeSection === "markets") && (() => {
               // Built once, rendered in exactly ONE of two possible spots
               // below depending on isWideDesktop — never both at once, so
               // PaperTradingCard/OrderFlowPanel (which poll live data in
@@ -3073,7 +3079,37 @@ function AppDashboard({
                 </div>
               );
               const dailyBriefEl = <DailyBrief coinTickers={coinTickers} variant="page" />;
-              const chartColumnEl = (
+              // Markets keeps the exact same right-column sidebar (Paper
+              // Trading/Order Flow/Daily Brief) and layout-mode machinery
+              // below as the Chart page — just a much simpler left column
+              // (GlobalMarkets itself has no order-book/resize-handle/
+              // mobile-tab concept to wire up, unlike PriceChart's own). At
+              // narrow widths chartRightColEl moves inside this column
+              // (same fallback PriceChart's own chart-section-wrap does
+              // via `{!isWideDesktop && chartRightColEl}` below) since the
+              // page-row fallback further down only ever renders this one
+              // column on its own.
+              const chartColumnEl = activeSection === "markets" ? (
+                <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
+                  {/* Markets goes through this same chart-layout plumbing as
+                      the Chart page (hence the shared chartColumnEl), which
+                      normally skips SectionBanner entirely — the page-level
+                      one further below is gated off for both "chart" and
+                      "advance-chart" and rendered AFTER this whole block, so
+                      without this it would've landed below GlobalMarkets
+                      instead of above it like every other page. */}
+                  <SectionBanner section="markets" />
+                  <GlobalMarkets
+                    onSelectCoin={(symbol) => {
+                      setCoin(symbol as CoinSymbol);
+                      clearCandleCache();
+                      setRecentCoins(addRecentCoin(symbol));
+                      setActiveSection("chart");
+                    }}
+                  />
+                  {!isWideDesktop && chartRightColEl}
+                </div>
+              ) : (
                     <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
                     <div
                       className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
@@ -3295,7 +3331,7 @@ function AppDashboard({
                 }}
               />
             )}
-            {activeSection !== "chart" && activeSection !== "advance-chart" && (
+            {activeSection !== "chart" && activeSection !== "advance-chart" && activeSection !== "markets" && (
               <SectionBanner section={activeSection} />
             )}
             <Suspense fallback={<SectionLoading />}>
@@ -3345,7 +3381,6 @@ function AppDashboard({
               {activeSection === "riskcalc" && (
                 <TradeManager onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
               )}
-              {activeSection === "markets" && <GlobalMarkets />}
               {activeSection === "marketheatmap" && <MarketHeatmap />}
               {activeSection === "altanalysis" && (
                 <BlurGate

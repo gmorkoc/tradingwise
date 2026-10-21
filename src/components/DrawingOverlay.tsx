@@ -355,7 +355,7 @@ export function LineDotFillOverlay({ chartRef, seriesRef, candlesRef, color, gen
   return <canvas ref={canvasRef} className="drawing-overlay" />;
 }
 
-// ── Rounded (soft-edge) candles — compact desktop view only ────────────────────
+// ── Rounded (soft-edge) candles — every view, desktop and mobile alike ─────────
 // lightweight-charts' built-in CandlestickSeries always paints sharp-cornered
 // rectangles — there's no radius option on CandlestickStyleOptions. The real
 // candleRef series is kept mounted (visible:false in this scope, set by

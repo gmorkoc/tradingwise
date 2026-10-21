@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid
+  CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush,
 } from "recharts";
 import "../styles/GlobalMarkets.css";
 
@@ -25,8 +25,24 @@ interface CoinRow {
   market_cap_rank: number; current_price: number;
   price_change_percentage_24h: number;
   price_change_percentage_7d_in_currency: number;
+  price_change_percentage_30d_in_currency?: number;
   market_cap: number; total_volume: number;
+  sparkline_in_7d?: { price: number[] };
 }
+
+interface TrendingCoin {
+  id: string; name: string; symbol: string; thumb: string;
+  market_cap_rank: number; price_btc: number; score: number;
+  // CoinGecko's trending response nests real USD price/24h change here —
+  // already present in the same response we already fetch, no extra
+  // request needed for the list to show real numbers instead of just
+  // rank/name.
+  data?: { price: number; price_change_percentage_24h?: { usd?: number } };
+}
+
+interface SentimentCoin { id: string; symbol: string; name: string; up: number; down: number; }
+
+interface FearGreedPoint { value: string; value_classification: string; timestamp: string; }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const PERIODS = [
@@ -42,6 +58,20 @@ const CHART_TABS = [
 ] as const;
 
 type ChartKey = typeof CHART_TABS[number]["key"];
+
+// CoinGlass's own liquidation endpoints are all currently rejecting with
+// "Upgrade plan" on the live key (verified directly against the proxy), so
+// the "Market Pulse" section below is an honest substitute built entirely
+// from CoinGecko data actually available: daily BTC price swings (real,
+// derived) standing in for the long/short liquidation histogram, and
+// today's biggest real movers standing in for curated liquidation events.
+const LIQ_RANGES = [
+  { label: "1M", days: 30  },
+  { label: "3M", days: 90  },
+  { label: "1Y", days: 365 },
+] as const;
+
+const TABLE_PAGE_SIZE = 25;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtBig(n: number): string {
@@ -64,9 +94,34 @@ function fmtDate(ts: number, days: number): string {
   return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
+// Counts up from 0 to `value` over a short burst on mount/value-change —
+// same "number feels alive" cue a lot of fancy dashboards use for a
+// headline stat, instead of the figure just silently appearing.
+function useCountUp(value: number, durationMs = 900): number {
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
+  useEffect(() => {
+    if (!Number.isFinite(value)) return;
+    const from = fromRef.current;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(from + (value - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = value;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return display;
+}
+
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
-const TTL = { global: 60_000, chart: 120_000, coins: 90_000 };
+const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000 };
 const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 
 async function cgFetch<T>(url: string, ttl: number): Promise<T> {
@@ -84,48 +139,205 @@ async function cgFetch<T>(url: string, ttl: number): Promise<T> {
   return data as T;
 }
 
-// ── Tooltip ────────────────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; payload: ChartPoint }[]; label?: string }) {
+// Plain fetch (no CoinGecko key appended) for other public APIs sharing
+// the same in-memory TTL cache — alternative.me's Fear & Greed index.
+async function plainFetch<T>(url: string, ttl: number): Promise<T> {
+  const now = Date.now();
+  if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
+  const res = await fetch(url, { headers: { accept: "application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  cache[url] = { data, ts: now };
+  return data as T;
+}
+
+// ── Sparkline ──────────────────────────────────────────────────────────────────
+function Sparkline({ data, color, width = 90, height = 28 }: { data?: number[]; color: string; width?: number; height?: number }) {
+  if (!data || data.length < 2) return <span className="gm-spark-empty" style={{ width, height }} />;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = width / (data.length - 1);
+  const pts = data.map((v, i) => `${(i * step).toFixed(1)},${(height - ((v - min) / range) * height).toFixed(1)}`).join(" ");
+  const areaPts = `0,${height} ${pts} ${width},${height}`;
+  const id = `gmspark-${color.replace("#", "")}`;
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="gm-spark" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <polygon points={areaPts} fill={`url(#${id})`} />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// ── Fear & Greed gauge ───────────────────────────────────────────────────────────
+function fngColor(value: number): string {
+  if (value <= 24) return "#ef4444";
+  if (value <= 44) return "#f97316";
+  if (value <= 55) return "#eab308";
+  if (value <= 75) return "#84cc16";
+  return "#22c55e";
+}
+function FearGreedGauge({ value, label, compact }: { value: number; label: string; compact?: boolean }) {
+  const targetAngle = -90 + Math.max(0, Math.min(100, value)) / 100 * 180;
+  const [angle, setAngle] = useState(-90);
+  useEffect(() => {
+    const t = setTimeout(() => setAngle(targetAngle), 120);
+    return () => clearTimeout(t);
+  }, [targetAngle]);
+  const color = fngColor(value);
+  return (
+    <div className={`gm-fng${compact ? " gm-fng--compact" : ""}`}>
+      <svg viewBox="0 0 200 118" className="gm-fng-svg">
+        <defs>
+          <linearGradient id="gmFngGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="50%" stopColor="#eab308" />
+            <stop offset="75%" stopColor="#84cc16" />
+            <stop offset="100%" stopColor="#22c55e" />
+          </linearGradient>
+        </defs>
+        <path d="M 12 100 A 88 88 0 0 1 188 100" fill="none" stroke="url(#gmFngGrad)" strokeWidth="13" strokeLinecap="round" opacity="0.9" />
+        <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: "100px 100px", transition: "transform 1.1s cubic-bezier(0.22,1,0.36,1)" }}>
+          <line x1="100" y1="100" x2="100" y2="28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="gm-fng-needle" />
+        </g>
+        <circle cx="100" cy="100" r="7" fill="currentColor" className="gm-fng-pivot" />
+      </svg>
+      <div className="gm-fng-readout">
+        <span className="gm-fng-value" style={{ color }}>{Math.round(value)}</span>
+        <span className="gm-fng-label">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Sentiment gauge (Community column) — a small radial ring, same
+// "gauge" treatment as the Fear & Greed meter above, instead of a flat
+// bar: sweeps in from 0 on mount/value-change. ──────────────────────────
+function SentimentGauge({ symbol, up, delay }: { symbol: string; up: number; delay: number }) {
+  const R = 26;
+  const C = 2 * Math.PI * R;
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setPct(up), 150 + delay);
+    return () => clearTimeout(t);
+  }, [up, delay]);
+  const color = pct >= 50 ? "var(--color-success)" : "var(--color-danger)";
+  return (
+    <div className="gm-sentiment-gauge">
+      <svg viewBox="0 0 64 64" className="gm-sentiment-gauge-svg">
+        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--color-border)" strokeWidth="6" />
+        <circle
+          cx="32" cy="32" r={R} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C - (pct / 100) * C}
+          transform="rotate(-90 32 32)"
+          style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1), stroke 0.3s" }}
+        />
+      </svg>
+      <div className="gm-sentiment-gauge-center">
+        <span className="gm-sentiment-gauge-pct" style={{ color }}>{Math.round(up)}%</span>
+      </div>
+      <span className="gm-sentiment-gauge-sym">{symbol}</span>
+    </div>
+  );
+}
+
+// ── Donut dominance chart ────────────────────────────────────────────────────────
+const DOM_COLORS = ["#f7931a", "#627eea", "#9945ff", "#00bcd4", "#f3ba2f", "#94a3b8", "#64748b"];
+function DomTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number }[] }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="gm-tooltip">
-      <div className="gm-tooltip-label">{label}</div>
-      <div className="gm-tooltip-value">{fmtBig(payload[0].payload.raw)}</div>
+      <div className="gm-tooltip-label">{payload[0].name}</div>
+      <div className="gm-tooltip-value">{payload[0].value.toFixed(1)}%</div>
     </div>
   );
 }
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, subColor }: { label: string; value: string; sub?: string; subColor?: string }) {
+// ── Skeleton loader ──────────────────────────────────────────────────────────────
+function GmSkeleton() {
   return (
-    <div className="gm-stat-card">
-      <div className="gm-stat-label">{label}</div>
-      <div className="gm-stat-value">{value}</div>
-      {sub && <div className="gm-stat-sub" style={{ color: subColor }}>{sub}</div>}
+    <div className="gm-wrap">
+      <div className="gm-skel gm-skel-hero" />
+      <div className="gm-stats-grid">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
+        ))}
+      </div>
+      <div className="gm-skel gm-skel-section" />
+      <div className="gm-skel gm-skel-section" />
+      <div className="gm-loading-row">
+        <span className="gm-spinner" />
+        Loading global market data…
+      </div>
     </div>
   );
 }
+
+// ── Icons (plain inline SVGs, no icon package) ───────────────────────────────────
+const IC = {
+  cap: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9 9.5a3 3 0 0 1 3-1.5h.5a2.5 2.5 0 0 1 0 5H11a2.5 2.5 0 0 0 0 5h.5a3 3 0 0 0 3-1.5" /></svg>,
+  vol: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l5-6 4 3 5-8 4 5" /></svg>,
+  btc: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M9.5 8h3a2 2 0 0 1 0 4h-3m0 0h3.5a2 2 0 0 1 0 4h-3.5m0-8v8m0-8V6m0 10v2M13 6v2M13 16v2" /></svg>,
+  eth: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l6 10-6 4-6-4z" /><path d="M6 13l6 9 6-9-6 4z" /></svg>,
+  coins: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18H4v-3.34" /></svg>,
+  markets: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>,
+  fire: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2s-6 6.5-6 11a6 6 0 0 0 12 0c0-1.5-.5-2.5-1-3.5.5 2-1 3-1 3 .3-2-1.5-4-2-6.5-.5 1.5-2 2.5-2 4.5 0 1 .5 1.5 1 2" /></svg>,
+};
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export function GlobalMarkets() {
+interface Props {
+  // Jumps straight to the Chart page for this coin (App.tsx wires this to
+  // setCoin/clearCandleCache/setActiveSection("chart"), same pattern
+  // Watchlist/TopMoversCarousel/PriceChart's own hero stack already use).
+  // Any CoinGecko coin can be clicked, not just ones the app's own COINS
+  // roster recognizes — an unsupported symbol just lands on the chart's
+  // existing "No chart data available" empty state instead of a crash.
+  onSelectCoin?: (symbol: string) => void;
+}
+
+export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const [global, setGlobal]       = useState<GlobalData | null>(null);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [coins, setCoins]         = useState<CoinRow[]>([]);
+  // Table pagination — 250 rows (each with its own sparkline SVG) is too
+  // much to mount/animate at once, same reasoning any large data table
+  // paginates instead of rendering everything up front.
+  const [tablePage, setTablePage] = useState(1);
+  // Gainers/Losers default to 5 each, expandable independently up to 20.
+  const [gainersExpanded, setGainersExpanded] = useState(false);
+  const [losersExpanded, setLosersExpanded] = useState(false);
+  const [trending, setTrending]   = useState<TrendingCoin[]>([]);
+  const [fng, setFng]             = useState<FearGreedPoint | null>(null);
+  const [sentiment, setSentiment] = useState<SentimentCoin[]>([]);
   const [period, setPeriod]       = useState<{ label: string; days: number }>(PERIODS[1]);
   const [chartKey, setChartKey]   = useState<ChartKey>("market_caps");
   const [loading, setLoading]     = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
   const [error, setError]         = useState("");
+  // "Market Pulse" (Liquidations-style widget substitute, see LIQ_RANGES comment)
+  const [liqRange, setLiqRange]   = useState<{ label: string; days: number }>(LIQ_RANGES[1]);
+  const [liqData, setLiqData]     = useState<{ time: string; ret: number; price: number }[]>([]);
+  const [liqLoading, setLiqLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  // Fetch global stats + top coins on mount
+  // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
     mountedRef.current = true;
     setLoading(true);
     Promise.all([
       cgFetch<{ data: GlobalData }>("https://api.coingecko.com/api/v3/global", TTL.global),
+      // 250 is CoinGecko's own hard per_page cap on this endpoint (asking
+      // for more just gets silently clamped back to it) — the real "all
+      // of them" within a single request.
       cgFetch<CoinRow[]>(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&price_change_percentage=7d",
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=7d,30d&sparkline=true",
         TTL.coins
       ),
     ])
@@ -133,6 +345,7 @@ export function GlobalMarkets() {
         if (!mountedRef.current) return;
         setGlobal(g.data);
         setCoins(c);
+        setTablePage(1);
         setLoading(false);
       })
       .catch(e => {
@@ -141,6 +354,45 @@ export function GlobalMarkets() {
         setLoading(false);
       });
     return () => { mountedRef.current = false; };
+  }, []);
+
+  // Trending searched coins — its own independent fetch/failure, never
+  // blocks the rest of the page (a dead trending widget shouldn't take
+  // down everything else that already loaded fine).
+  useEffect(() => {
+    cgFetch<{ coins: { item: TrendingCoin }[] }>("https://api.coingecko.com/api/v3/search/trending", TTL.trending)
+      .then(d => { if (mountedRef.current) setTrending(d.coins.map(c => c.item)); })
+      .catch(() => {});
+  }, []);
+
+  // Fear & Greed index — alternative.me's free public endpoint, no key.
+  useEffect(() => {
+    plainFetch<{ data: FearGreedPoint[] }>("https://api.alternative.me/fng/?limit=1&format=json", TTL.fng)
+      .then(d => { if (mountedRef.current) setFng(d.data[0] ?? null); })
+      .catch(() => {});
+  }, []);
+
+  // Community sentiment — real CoinGecko field (sentiment_votes_up/down_
+  // percentage, the up/down vote widget shown on each coin's own CoinGecko
+  // page), for a couple of major coins. Independent fetch/failure, same
+  // reasoning as trending — never blocks the rest of the page.
+  useEffect(() => {
+    Promise.all(
+      ["bitcoin", "ethereum", "solana"].map(id =>
+        cgFetch<{
+          id: string; symbol: string; name: string;
+          sentiment_votes_up_percentage: number | null;
+          sentiment_votes_down_percentage: number | null;
+        }>(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false`, TTL.global)
+      )
+    )
+      .then(rows => {
+        if (!mountedRef.current) return;
+        setSentiment(rows
+          .filter(r => r.sentiment_votes_up_percentage != null)
+          .map(r => ({ id: r.id, symbol: r.symbol, name: r.name, up: r.sentiment_votes_up_percentage!, down: r.sentiment_votes_down_percentage ?? (100 - r.sentiment_votes_up_percentage!) })));
+      })
+      .catch(() => {});
   }, []);
 
   // Fetch chart data when period or chartKey changes (free-tier BTC market chart)
@@ -161,141 +413,466 @@ export function GlobalMarkets() {
       .catch(() => setChartLoading(false));
   }, [period, chartKey]);
 
+  // "Market Pulse" chart data — resample CoinGecko's raw (hourly-for-short-
+  // range) BTC price series down to one point per day, then derive each
+  // day's % swing from consecutive daily closes. Real, computed data, not
+  // CoinGlass's actual long/short liquidation volume (unavailable).
+  useEffect(() => {
+    setLiqLoading(true);
+    const url = `/gecko-api/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${liqRange.days}`;
+    cgFetch<{ prices: [number, number][] }>(url, TTL.chart)
+      .then(d => {
+        const raw = d.prices ?? [];
+        const isHourly = liqRange.days <= 90;
+        const step = isHourly ? 24 : 1;
+        const daily = step > 1 ? raw.filter((_, i) => i % step === 0) : raw;
+        const pts: { time: string; ret: number; price: number }[] = [];
+        for (let i = 1; i < daily.length; i++) {
+          const prev = daily[i - 1][1];
+          const [ts, price] = daily[i];
+          pts.push({ time: fmtDate(ts, liqRange.days), ret: prev ? ((price - prev) / prev) * 100 : 0, price });
+        }
+        setLiqData(pts);
+        setLiqLoading(false);
+      })
+      .catch(() => setLiqLoading(false));
+  }, [liqRange]);
+
   const activeTab = CHART_TABS.find(t => t.key === chartKey)!;
 
-  if (loading) return (
-    <div className="gm-wrap">
-      <div className="gm-loading"><div className="gm-spinner" /> Loading global market data…</div>
-    </div>
-  );
+  const mcap   = global?.total_market_cap?.usd ?? 0;
+  const mcapAnimated = useCountUp(mcap / 1e9, 1100); // in $B, animated
+
+  if (loading) return <GmSkeleton />;
   if (error) return (
     <div className="gm-wrap"><div className="gm-error">{error}</div></div>
   );
 
   const g = global!;
-  const mcap   = g.total_market_cap?.usd ?? 0;
   const vol    = g.total_volume?.usd ?? 0;
   const btcDom = g.market_cap_percentage?.btc ?? 0;
-  const ethDom = g.market_cap_percentage?.eth ?? 0;
   const chg24h = g.market_cap_change_percentage_24h_usd ?? 0;
 
-  // Dominance bar — top 5 coins
+  // Dominance — top 6 coins, donut chart
   const domEntries = Object.entries(g.market_cap_percentage ?? {})
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-  const domColors = ["#f7931a","#627eea","#9945ff","#00bcd4","#f3ba2f","#94a3b8"];
+  const othersPct = Math.max(0, 100 - domEntries.reduce((s, [, p]) => s + p, 0));
+  const pieData = [
+    ...domEntries.map(([sym, pct], i) => ({ name: sym.toUpperCase(), value: pct, fill: DOM_COLORS[i] })),
+    { name: "Others", value: othersPct, fill: DOM_COLORS[6] },
+  ];
+
+  const gainers = [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, gainersExpanded ? 20 : 5);
+  const losers = [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, losersExpanded ? 20 : 5);
+
+  // "Market Pulse" stat card + movers list (see LIQ_RANGES comment above)
+  const gainersCount = coins.filter(c => (c.price_change_percentage_24h ?? 0) >= 0).length;
+  const losersCount = coins.length - gainersCount;
+  const topMovers = [...coins]
+    .sort((a, b) => Math.abs(b.price_change_percentage_24h ?? 0) - Math.abs(a.price_change_percentage_24h ?? 0))
+    .slice(0, 3);
+
+  const fngValue = fng ? Number(fng.value) : null;
+
+  const tableTotalPages = Math.max(1, Math.ceil(coins.length / TABLE_PAGE_SIZE));
+  const pagedCoins = coins.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
+
+  // "Altcoin Strength" — this app's own honest equivalent of
+  // blockchaincenter.net's "Altcoin Season Index": there's no free public
+  // JSON API for that exact index (checked), and the real methodology
+  // uses a 90-day window CoinGecko's free tier doesn't offer (only
+  // 1h/24h/7d/14d/30d/200d/1y) — so this is a genuinely real, from-real-
+  // data computation over a 30-day window instead, labeled as such rather
+  // than claiming parity with the original index's name/window.
+  const btcRow = coins.find(c => c.id === "bitcoin");
+  const btc30d = btcRow?.price_change_percentage_30d_in_currency ?? 0;
+  const altcoinBasket = coins.filter(c => c.id !== "bitcoin" && c.id !== "tether" && c.id !== "usd-coin").slice(0, 50);
+  const altcoinsBeatingBtc = altcoinBasket.filter(c => (c.price_change_percentage_30d_in_currency ?? -999) > btc30d).length;
+  const altcoinStrengthPct = altcoinBasket.length > 0 ? Math.round((altcoinsBeatingBtc / altcoinBasket.length) * 100) : null;
+
+  // "Market Activity" — real CoinGecko-sourced volume figures, standing
+  // in for a Derivatives panel: CoinGlass's own derivatives endpoints
+  // (open interest, liquidations) are all currently rejecting every
+  // request with "Upgrade plan" (verified directly against the live
+  // proxy), so this uses only sources confirmed actually working instead
+  // of fabricating numbers for metrics that aren't reachable right now.
+  const marketActivity = [
+    { label: "Total 24h Volume", value: fmtBig(vol), icon: IC.vol },
+    { label: "BTC 24h Volume", value: btcRow ? fmtBig(btcRow.total_volume) : "—", icon: IC.btc },
+    { label: "Active Markets", value: g.markets?.toLocaleString() ?? "—", icon: IC.markets },
+    { label: "Active Cryptocurrencies", value: g.active_cryptocurrencies?.toLocaleString() ?? "—", icon: IC.coins },
+  ];
+
+  // Rendered twice (inline in the side-by-side grid, and again inside its
+  // own portaled modal when expanded) — kept as one JSX value each so the
+  // two copies can't drift apart from editing only one of them.
+  const domSectionBody = (
+    <>
+      <div className="gm-dom-layout">
+        <div className="gm-dom-donut">
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88}
+                paddingAngle={2} startAngle={90} endAngle={-270} animationDuration={900} animationBegin={100} stroke="none">
+                {pieData.map(d => <Cell key={d.name} fill={d.fill} />)}
+              </Pie>
+              <Tooltip content={<DomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="gm-dom-center">
+            <span className="gm-dom-center-value">{btcDom.toFixed(1)}%</span>
+            <span className="gm-dom-center-label">BTC</span>
+          </div>
+        </div>
+        <div className="gm-dom-legend">
+          {pieData.map((d, i) => (
+            <div key={d.name} className="gm-dom-legend-item" style={{ animationDelay: `${i * 50}ms` }}>
+              <span className="gm-dom-dot" style={{ background: d.fill }} />
+              <span className="gm-dom-sym">{d.name}</span>
+              <span className="gm-dom-pct">{d.value.toFixed(1)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
+  const chartSectionBody = (
+    <>
+      <div className="gm-section-header">
+        <div className="gm-chart-tabs">
+          {CHART_TABS.map(t => (
+            <button key={t.key}
+              className={`gm-chart-tab${chartKey === t.key ? " gm-chart-tab--active" : ""}`}
+              style={chartKey === t.key ? { color: t.color, borderColor: t.color } : {}}
+              onClick={() => setChartKey(t.key)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="gm-period-tabs">
+          {PERIODS.map(p => (
+            <button key={p.label}
+              className={`gm-period-tab${period.label === p.label ? " gm-period-tab--active" : ""}`}
+              onClick={() => setPeriod(p)}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="gm-chart-wrap">
+        {chartLoading && (
+          <div className="gm-chart-loading">
+            <div className="gm-chart-skel-bars">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <span key={i} className="gm-chart-skel-bar" style={{ animationDelay: `${i * 70}ms`, height: `${30 + (i * 37) % 60}%` }} />
+              ))}
+            </div>
+          </div>
+        )}
+        {!chartLoading && chartData.length > 0 && (
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gmGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={activeTab.color} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={activeTab.color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="time" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                tickLine={false} axisLine={false}
+                interval={Math.floor(chartData.length / 6)} />
+              <YAxis tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                tickLine={false} axisLine={false} width={52}
+                tickFormatter={v => `$${v >= 1000 ? `${(v/1000).toFixed(0)}T` : `${v.toFixed(0)}B`}`} />
+              <Tooltip content={<ChartTooltip />} />
+              <Area type="monotone" dataKey="value" stroke={activeTab.color} strokeWidth={2}
+                fill="url(#gmGrad)" dot={false} activeDot={{ r: 4, fill: activeTab.color }}
+                isAnimationActive animationDuration={700} />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </>
+  );
 
   return (
     <div className="gm-wrap">
-      <div className="gm-header">
-        <h2 className="gm-title">Global Crypto Market</h2>
-        <p className="gm-subtitle">Real-time global market data · Updated every minute</p>
-      </div>
-
-      {/* ── Stat cards ──────────────────────────────────────────────────────── */}
-      <div className="gm-stats-grid">
-        <StatCard
-          label="Total Market Cap"
-          value={fmtBig(mcap)}
-          sub={`${chg24h >= 0 ? "▲" : "▼"} ${Math.abs(chg24h).toFixed(2)}% (24h)`}
-          subColor={chg24h >= 0 ? "#22c55e" : "#fb7185"}
-        />
-        <StatCard label="24h Volume"              value={fmtBig(vol)} />
-        <StatCard label="BTC Dominance"           value={`${btcDom.toFixed(1)}%`} />
-        <StatCard label="ETH Dominance"           value={`${ethDom.toFixed(1)}%`} />
-        <StatCard label="Active Cryptocurrencies" value={g.active_cryptocurrencies?.toLocaleString() ?? "—"} />
-        <StatCard label="Active Markets"          value={g.markets?.toLocaleString() ?? "—"} />
-      </div>
-
-      {/* ── Dominance bar ──────────────────────────────────────────────────── */}
-      <div className="gm-section">
-        <div className="gm-section-header">
-          <span className="gm-section-title">Market Cap Dominance</span>
-        </div>
-        <div className="gm-dom-bar">
-          {domEntries.map(([sym, pct], i) => (
-            <div key={sym} className="gm-dom-seg"
-              style={{ width: `${pct}%`, background: domColors[i] ?? "#94a3b8" }}
-              title={`${sym.toUpperCase()}: ${pct.toFixed(1)}%`} />
-          ))}
-          <div className="gm-dom-seg gm-dom-seg--other"
-            style={{ flex: 1 }}
-            title="Others" />
-        </div>
-        <div className="gm-dom-legend">
-          {domEntries.map(([sym, pct], i) => (
-            <div key={sym} className="gm-dom-legend-item">
-              <span className="gm-dom-dot" style={{ background: domColors[i] }} />
-              <span className="gm-dom-sym">{sym.toUpperCase()}</span>
-              <span className="gm-dom-pct">{pct.toFixed(1)}%</span>
+      {/* ── Hero: one glowing card (the original gm-hero treatment) now
+          carrying the Market Status / Trending / Market Activity /
+          Community columns instead of just the market-cap figure — real
+          data only (no fabricated metrics — see the comments on
+          altcoinStrengthPct/marketActivity above for what's genuinely
+          available right now vs. what isn't). ─────────────────────────── */}
+      <div className="gm-hero">
+        <span className="gm-hero-glow" />
+        <div className="gm-status-grid">
+        {/* Market Status */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>Market Status</div>
+          {fngValue !== null ? (
+            <div className="gm-status-fng">
+              <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
             </div>
-          ))}
-          <div className="gm-dom-legend-item">
-            <span className="gm-dom-dot" style={{ background: "#94a3b8" }} />
-            <span className="gm-dom-sym">Others</span>
-            <span className="gm-dom-pct">
-              {(100 - domEntries.reduce((s, [, p]) => s + p, 0)).toFixed(1)}%
+          ) : (
+            <div className="gm-fng-skel">
+              <span className="gm-skel gm-fng-skel-arc" />
+              <span className="gm-skel gm-fng-skel-value" />
+            </div>
+          )}
+          <div className={`gm-status-mcap${chg24h >= 0 ? " gm-status-mcap--up" : " gm-status-mcap--down"}`}>
+            <span className="gm-status-mcap-value">${mcapAnimated.toFixed(1)}B</span>
+            <span className={`gm-status-row-chg${chg24h >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
+              {chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* ── Chart ──────────────────────────────────────────────────────────── */}
-      <div className="gm-section">
-        <div className="gm-section-header">
-          <div className="gm-chart-tabs">
-            {CHART_TABS.map(t => (
-              <button key={t.key}
-                className={`gm-chart-tab${chartKey === t.key ? " gm-chart-tab--active" : ""}`}
-                style={chartKey === t.key ? { color: t.color, borderColor: t.color } : {}}
-                onClick={() => setChartKey(t.key)}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div className="gm-period-tabs">
-            {PERIODS.map(p => (
-              <button key={p.label}
-                className={`gm-period-tab${period.label === p.label ? " gm-period-tab--active" : ""}`}
-                onClick={() => setPeriod(p)}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="gm-chart-wrap">
-          {chartLoading && <div className="gm-chart-loading"><div className="gm-spinner" /></div>}
-          {!chartLoading && chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gmGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={activeTab.color} stopOpacity={0.25} />
-                    <stop offset="95%" stopColor={activeTab.color} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="time" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
-                  tickLine={false} axisLine={false}
-                  interval={Math.floor(chartData.length / 6)} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
-                  tickLine={false} axisLine={false} width={52}
-                  tickFormatter={v => `$${v >= 1000 ? `${(v/1000).toFixed(0)}T` : `${v.toFixed(0)}B`}`} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="value" stroke={activeTab.color} strokeWidth={1.8}
-                  fill="url(#gmGrad)" dot={false} activeDot={{ r: 4, fill: activeTab.color }} />
-              </AreaChart>
-            </ResponsiveContainer>
+          {altcoinStrengthPct !== null && (
+            <div className="gm-status-gauge">
+              <div className="gm-status-gauge-head">
+                <span className="gm-status-row-label">Altcoin Strength <em>(30D)</em></span>
+                <span className="gm-status-gauge-value">{altcoinStrengthPct}%</span>
+              </div>
+              <div className="gm-status-gauge-track">
+                <span
+                  className={`gm-status-gauge-fill${altcoinStrengthPct >= 75 ? " gm-status-gauge-fill--season" : ""}`}
+                  style={{ width: `${altcoinStrengthPct}%` }}
+                />
+              </div>
+            </div>
           )}
         </div>
+
+        {/* Trending Coins (compact) */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.fire}</span>Trending Coins</div>
+          <div className="gm-status-list">
+            {trending.length === 0
+              ? Array.from({ length: 10 }).map((_, i) => (
+                  <span key={i} className="gm-skel gm-status-skel-row" style={{ animationDelay: `${i * 60}ms` }} />
+                ))
+              : trending.slice(0, 10).map((t, i) => {
+                  const tchg = t.data?.price_change_percentage_24h?.usd;
+                  return (
+                    <button key={t.id} type="button" className="gm-status-list-row" onClick={() => onSelectCoin?.(t.symbol.toUpperCase())}>
+                      <span className={`gm-status-list-rank${i < 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][i]}` : ""}`}>{i + 1}</span>
+                      <img src={t.thumb} alt="" className="gm-status-list-img" loading="lazy" />
+                      <span className="gm-status-list-sym">{t.symbol.toUpperCase()}</span>
+                      <span className="gm-status-list-price">{t.data?.price != null ? fmtPrice(t.data.price) : "—"}</span>
+                      {tchg != null && (
+                        <span className={`gm-status-list-chg${tchg >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
+                          {tchg >= 0 ? "▲" : "▼"} {Math.abs(tchg).toFixed(1)}%
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+          </div>
+        </div>
+
+        {/* Market Activity (stands in for Derivatives — see comment above
+            marketActivity: CoinGlass's own OI/liquidation endpoints are
+            all currently rejecting with "Upgrade plan" on the live key,
+            so this sticks to sources confirmed working instead). */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Market Activity</div>
+          <div className="gm-activity-grid">
+            {marketActivity.map((m, i) => (
+              <div key={m.label} className="gm-activity-tile" style={{ animationDelay: `${i * 70}ms` }}>
+                <span className="gm-activity-tile-icon">{m.icon}</span>
+                <span className="gm-activity-tile-value">{m.value}</span>
+                <span className="gm-activity-tile-label">{m.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Community (CoinGecko's own real up/down sentiment-vote field) —
+            radial gauges, not flat bars, same "gauge" treatment the Fear &
+            Greed meter above already uses. */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.coins}</span>Community</div>
+          <div className="gm-sentiment-grid">
+            {sentiment.length === 0
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <span key={i} className="gm-skel gm-sentiment-skel" style={{ animationDelay: `${i * 60}ms` }} />
+                ))
+              : sentiment.map((s, i) => (
+                  <SentimentGauge key={s.id} symbol={s.symbol.toUpperCase()} up={s.up} delay={i * 80} />
+                ))}
+          </div>
+        </div>
+        </div>
       </div>
 
-      {/* ── Top 50 coins table ─────────────────────────────────────────────── */}
+      {/* ── Market Pulse (Liquidations-style layout, honest substitute data —
+          see LIQ_RANGES comment above: CoinGlass's own liquidation endpoints
+          are all currently rejecting with "Upgrade plan") ─────────────────── */}
+      <div className="gm-section gm-liq">
+        <div className="gm-section-header">
+          <span className="gm-section-title">{IC.vol} Market Pulse</span>
+          <span className="gm-section-sub">live CoinGecko data</span>
+        </div>
+
+        <div className="gm-liq-grid">
+          <div className="gm-liq-side">
+            <div className="gm-liq-stat-card">
+              <div className="gm-liq-stat-label">24h Trading Volume</div>
+              <div className="gm-liq-stat-value">{fmtBig(vol)}</div>
+              <div className="gm-liq-stat-row">
+                <span className="gm-liq-stat-row-label">Gainers</span>
+                <span className="gm-liq-stat-row-value gm-pct--pos">{gainersCount}</span>
+              </div>
+              <div className="gm-liq-stat-row">
+                <span className="gm-liq-stat-row-label">Losers</span>
+                <span className="gm-liq-stat-row-value gm-pct--neg">{losersCount}</span>
+              </div>
+            </div>
+
+            <div className="gm-liq-events-card">
+              <div className="gm-liq-events-title">Today's Biggest Movers</div>
+              {topMovers.map((c, i) => {
+                const chg = c.price_change_percentage_24h ?? 0;
+                return (
+                  <button key={c.id} type="button" className="gm-liq-event-row" onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                    <span className="gm-liq-event-medal">{["🥇", "🥈", "🥉"][i]}</span>
+                    <span className="gm-liq-event-sym">{c.symbol.toUpperCase()}</span>
+                    <span className="gm-liq-event-name">{c.name}</span>
+                    <span className={`gm-liq-event-chg${chg >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
+                      {chg >= 0 ? "+" : ""}
+                      {chg.toFixed(1)}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="gm-liq-chart-card">
+            <div className="gm-liq-chart-head">
+              <span className="gm-liq-chart-title">BTC Price &amp; Daily Swings</span>
+              <div className="gm-period-tabs">
+                {LIQ_RANGES.map(r => (
+                  <button key={r.label}
+                    className={`gm-period-tab${liqRange.label === r.label ? " gm-period-tab--active" : ""}`}
+                    onClick={() => setLiqRange(r)}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="gm-liq-legend">
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--up" />Up day</span>
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--down" />Down day</span>
+              <span className="gm-liq-legend-item"><span className="gm-liq-dot gm-liq-dot--price" />Bitcoin Price</span>
+            </div>
+
+            {liqLoading && (
+              <div className="gm-chart-loading">
+                <div className="gm-chart-skel-bars">
+                  {Array.from({ length: 14 }).map((_, i) => (
+                    <span key={i} className="gm-skel gm-chart-skel-bar" style={{ animationDelay: `${i * 70}ms`, height: `${30 + (i * 37) % 60}%` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {!liqLoading && liqData.length > 0 && (
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={liqData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <XAxis dataKey="time" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} interval={Math.floor(liqData.length / 6)} />
+                  <YAxis yAxisId="ret" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} width={40} tickFormatter={v => `${v}%`} />
+                  <YAxis yAxisId="price" orientation="right" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} width={56} tickFormatter={v => fmtPrice(v)} />
+                  <Tooltip content={<LiqTooltip />} />
+                  <Bar yAxisId="ret" dataKey="ret" radius={[2, 2, 2, 2]} isAnimationActive animationDuration={600}>
+                    {liqData.map((d, i) => <Cell key={i} fill={d.ret >= 0 ? "#22c55e" : "#ef4444"} />)}
+                  </Bar>
+                  <Line yAxisId="price" type="monotone" dataKey="price" stroke="#f59e0b" strokeWidth={2}
+                    dot={false} isAnimationActive animationDuration={700} />
+                  <Brush dataKey="time" height={24} stroke="var(--color-border)" fill="var(--color-input-bg)" travellerWidth={8} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+
+      {/* ── Dominance donut + Chart, side by side ───────────────────────────── */}
+      <div className="gm-dom-chart-grid">
+        <div className="gm-section">
+          <div className="gm-section-header">
+            <span className="gm-section-title">Market Cap Dominance</span>
+          </div>
+          {domSectionBody}
+        </div>
+
+        {/* ── Chart ────────────────────────────────────────────────────────── */}
+        <div className="gm-section">
+          {chartSectionBody}
+        </div>
+      </div>
+
+      {/* ── Gainers / Losers ──────────────────────────────────────────────────── */}
+      <div className="gm-movers-grid">
+        <div className="gm-section gm-movers">
+          <div className="gm-section-header">
+            <span className="gm-section-title gm-movers-title--up">▲ Top Gainers</span>
+            <span className="gm-section-sub">24h</span>
+          </div>
+          <div className="gm-movers-list">
+            {gainers.map((c, i) => (
+              <div key={c.id} className="gm-mover-row" style={{ animationDelay: `${i * 45}ms` }}
+                onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                <img src={c.image} alt="" className="gm-coin-img" loading="lazy" />
+                <div className="gm-mover-id">
+                  <span className="gm-coin-sym">{c.symbol.toUpperCase()}</span>
+                  <span className="gm-mover-price">{fmtPrice(c.current_price)}</span>
+                </div>
+                <Sparkline data={c.sparkline_in_7d?.price} color="#22c55e" />
+                <span className="gm-pct--pos gm-mover-pct">▲ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="gm-movers-toggle" onClick={() => setGainersExpanded(v => !v)}>
+            {gainersExpanded ? "Show less ▲" : "Show top 20 ▼"}
+          </button>
+        </div>
+        <div className="gm-section gm-movers">
+          <div className="gm-section-header">
+            <span className="gm-section-title gm-movers-title--down">▼ Top Losers</span>
+            <span className="gm-section-sub">24h</span>
+          </div>
+          <div className="gm-movers-list">
+            {losers.map((c, i) => (
+              <div key={c.id} className="gm-mover-row" style={{ animationDelay: `${i * 45}ms` }}
+                onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                <img src={c.image} alt="" className="gm-coin-img" loading="lazy" />
+                <div className="gm-mover-id">
+                  <span className="gm-coin-sym">{c.symbol.toUpperCase()}</span>
+                  <span className="gm-mover-price">{fmtPrice(c.current_price)}</span>
+                </div>
+                <Sparkline data={c.sparkline_in_7d?.price} color="#fb7185" />
+                <span className="gm-pct--neg gm-mover-pct">▼ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="gm-movers-toggle" onClick={() => setLosersExpanded(v => !v)}>
+            {losersExpanded ? "Show less ▲" : "Show top 20 ▼"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Top coins table (paginated) ─────────────────────────────────────── */}
       <div className="gm-section">
         <div className="gm-section-header">
           <span className="gm-section-title">Top Cryptocurrencies</span>
-          <span className="gm-section-sub">by market capitalization</span>
+          <span className="gm-section-sub">{coins.length.toLocaleString()} coins by market capitalization</span>
         </div>
         <div className="gm-table-wrap">
           <table className="gm-table">
@@ -306,16 +883,18 @@ export function GlobalMarkets() {
                 <th className="gm-th gm-th--r">Price</th>
                 <th className="gm-th gm-th--r">24h %</th>
                 <th className="gm-th gm-th--r">7d %</th>
+                <th className="gm-th gm-th--c">Last 7 Days</th>
                 <th className="gm-th gm-th--r">Market Cap</th>
                 <th className="gm-th gm-th--r">Volume (24h)</th>
               </tr>
             </thead>
             <tbody>
-              {coins.map(c => {
+              {pagedCoins.map((c, i) => {
                 const chg24  = c.price_change_percentage_24h ?? 0;
                 const chg7d  = c.price_change_percentage_7d_in_currency ?? 0;
                 return (
-                  <tr key={c.id} className="gm-tr">
+                  <tr key={c.id} className="gm-tr" style={{ animationDelay: `${Math.min(i, 20) * 20}ms` }}
+                    onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
                     <td className="gm-td gm-td--rank">{c.market_cap_rank}</td>
                     <td className="gm-td gm-td--name">
                       <img src={c.image} alt={c.name} className="gm-coin-img" loading="lazy" />
@@ -329,6 +908,9 @@ export function GlobalMarkets() {
                     <td className={`gm-td gm-td--r gm-pct${chg7d >= 0 ? "--pos" : "--neg"}`}>
                       {chg7d >= 0 ? "▲" : "▼"} {Math.abs(chg7d).toFixed(2)}%
                     </td>
+                    <td className="gm-td gm-td--c">
+                      <Sparkline data={c.sparkline_in_7d?.price} color={chg7d >= 0 ? "#22c55e" : "#fb7185"} width={80} height={24} />
+                    </td>
                     <td className="gm-td gm-td--r gm-td--muted">{fmtBig(c.market_cap)}</td>
                     <td className="gm-td gm-td--r gm-td--muted">{fmtBig(c.total_volume)}</td>
                   </tr>
@@ -337,9 +919,63 @@ export function GlobalMarkets() {
             </tbody>
           </table>
         </div>
+        <div className="gm-pagination">
+          <span className="gm-pagination-info">
+            {(tablePage - 1) * TABLE_PAGE_SIZE + 1}–{Math.min(tablePage * TABLE_PAGE_SIZE, coins.length)} of {coins.length}
+          </span>
+          <div className="gm-pagination-controls">
+            <button type="button" className="gm-page-btn" disabled={tablePage <= 1}
+              onClick={() => setTablePage(p => Math.max(1, p - 1))} aria-label="Previous page">
+              ‹
+            </button>
+            {/* First, last, current ±1 — never the full page list (could
+                be 10 pages at 25/page), same "don't render 250 rows at
+                once" reasoning this pagination exists for in the first
+                place. Gaps show as a plain "…", not a clickable control. */}
+            {Array.from({ length: tableTotalPages }, (_, idx) => idx + 1)
+              .filter(p => p === 1 || p === tableTotalPages || Math.abs(p - tablePage) <= 1)
+              .map((p, idx, arr) => (
+                <span key={p} style={{ display: "contents" }}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span className="gm-page-ellipsis">…</span>}
+                  <button type="button" className={`gm-page-btn${p === tablePage ? " gm-page-btn--active" : ""}`}
+                    onClick={() => setTablePage(p)}>
+                    {p}
+                  </button>
+                </span>
+              ))}
+            <button type="button" className="gm-page-btn" disabled={tablePage >= tableTotalPages}
+              onClick={() => setTablePage(p => Math.min(tableTotalPages, p + 1))} aria-label="Next page">
+              ›
+            </button>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <p className="gm-disclaimer">Data from CoinGecko · Updated every 60s · Not financial advice</p>
+// ── Tooltip ────────────────────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; payload: ChartPoint }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="gm-tooltip">
+      <div className="gm-tooltip-label">{label}</div>
+      <div className="gm-tooltip-value">{fmtBig(payload[0].payload.raw)}</div>
+    </div>
+  );
+}
+
+function LiqTooltip({ active, payload, label }: { active?: boolean; payload?: { payload: { ret: number; price: number } }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="gm-tooltip">
+      <div className="gm-tooltip-label">{label}</div>
+      <div className="gm-tooltip-value">{fmtPrice(d.price)}</div>
+      <div className={d.ret >= 0 ? "gm-pct--pos" : "gm-pct--neg"} style={{ fontSize: "0.72rem", fontWeight: 700 }}>
+        {d.ret >= 0 ? "+" : ""}
+        {d.ret.toFixed(2)}%
+      </div>
     </div>
   );
 }

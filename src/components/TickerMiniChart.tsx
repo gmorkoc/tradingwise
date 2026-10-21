@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { createChart, CandlestickSeries, UTCTimestamp } from "lightweight-charts";
+import { createChart, CandlestickSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import { coinglass } from "../services/coinglass";
+import { RoundedCandleOverlay } from "./DrawingOverlay";
 
 interface Props {
   coin: string;
@@ -10,6 +11,10 @@ interface Props {
 
 export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef  = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const candlesRef = useRef<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
+  const [generation, setGeneration] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,26 +47,34 @@ export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
       handleScale:  false,
     });
 
+    // Transparent — RoundedCandleOverlay below paints the visible
+    // rounded-corner bodies/wicks, same pattern as PriceChart.tsx. Series
+    // stays mounted (just invisible) so it keeps driving scale/crosshair.
     const series = chart.addSeries(CandlestickSeries, {
-      upColor:          "#22c55e",
-      downColor:        "#ef4444",
-      borderUpColor:    "#22c55e",
-      borderDownColor:  "#ef4444",
-      wickUpColor:      "#22c55e88",
-      wickDownColor:    "#ef444488",
+      upColor:          "transparent",
+      downColor:        "transparent",
+      borderUpColor:    "transparent",
+      borderDownColor:  "transparent",
+      wickUpColor:      "transparent",
+      wickDownColor:    "transparent",
       priceLineVisible: false,
       lastValueVisible: false,
     });
+    chartRef.current  = chart;
+    seriesRef.current = series;
 
     coinglass.get24hMinuteCandles(coin, 30).then(candles => {
       if (!candles.length) return;
-      series.setData(candles.map(c => ({
+      const points = candles.map(c => ({
         time:  c.time as UTCTimestamp,
         open:  c.open,
         high:  c.high,
         low:   c.low,
         close: c.close,
-      })));
+      }));
+      series.setData(points);
+      candlesRef.current = points;
+      setGeneration(g => g + 1);
       chart.timeScale().fitContent();
       setLoading(false);
     });
@@ -72,7 +85,12 @@ export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
     });
     ro.observe(containerRef.current);
 
-    return () => { ro.disconnect(); chart.remove(); };
+    return () => {
+      ro.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+    };
   }, [coin, coinColor, isDark]);
 
   return (
@@ -88,6 +106,16 @@ export function TickerMiniChart({ coin, coinColor, isDark }: Props) {
         </div>
       )}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      <RoundedCandleOverlay
+        chartRef={chartRef}
+        seriesRef={seriesRef}
+        candlesRef={candlesRef}
+        upColor="#22c55e"
+        downColor="#ef4444"
+        style="candle"
+        generation={generation}
+        visible={true}
+      />
     </div>
   );
 }

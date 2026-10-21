@@ -7,21 +7,44 @@
   gap: 28px;
 }
 
+/* The Markets page's SectionBanner sits just above .gm-wrap (as a sibling,
+   not inside it — see App.tsx's chartColumnEl) with its own default
+   margin, which didn't match .gm-wrap's own inset, so its edges looked
+   misaligned against the content below it. Scoped to .chart-column so
+   other pages' SectionBanner (different margin/no .gm-wrap next to it)
+   is untouched. */
+.chart-column > .sec-banner {
+  margin: 24px 20px 0;
+}
+@media (max-width: 640px) {
+  .chart-column > .sec-banner { margin: 16px 14px 0; }
+}
+
+/* ── Shared entrance animation ────────────────────────────────────────────── */
+@keyframes gm-rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ── Loading / Error ──────────────────────────────────────────────────────── */
-.gm-loading {
+.gm-loading-row {
   display: flex;
   align-items: center;
   gap: 12px;
   justify-content: center;
-  padding: 80px 20px;
+  padding: 20px 20px 0;
   color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .gm-error {
   text-align: center;
   padding: 60px 20px;
-  color: #fb7185;
+  color: var(--color-danger);
   font-size: 0.9rem;
 }
 
@@ -29,7 +52,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid var(--color-border);
-  border-top-color: var(--color-accent);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: gm-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -38,6 +61,26 @@
 @keyframes gm-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Skeleton loader ──────────────────────────────────────────────────────── */
+@keyframes gm-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.gm-skel {
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-text) 6%, transparent) 25%,
+    color-mix(in srgb, var(--color-text) 13%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 6%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: gm-shimmer 1.4s ease-in-out infinite, gm-fade-in 0.3s ease both;
+}
+.gm-skel-hero { height: 150px; }
+.gm-skel-stat { height: 78px; border-radius: 12px; }
+.gm-skel-section { height: 220px; }
 
 /* ── Page header ──────────────────────────────────────────────────────────── */
 .gm-header { display: flex; flex-direction: column; gap: 4px; }
@@ -55,52 +98,536 @@
   margin: 0;
 }
 
-/* ── Stat cards grid ──────────────────────────────────────────────────────── */
+/* ── Hero (the original single glowing card) now carrying the Market
+   Status / Trending / Market Activity / Community columns instead of
+   just the market-cap figure. ──────────────────────────────────────────── */
+.gm-hero {
+  position: relative;
+  padding: 22px 24px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  overflow: hidden;
+  animation: gm-rise-in 0.4s ease both;
+}
+.gm-hero-glow {
+  position: absolute;
+  top: -60px;
+  left: -40px;
+  width: 320px;
+  height: 240px;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--color-primary) 30%, transparent), transparent 65%),
+    radial-gradient(circle at 70% 70%, color-mix(in srgb, var(--color-success) 22%, transparent), transparent 65%);
+  filter: blur(30px);
+  opacity: 0.7;
+  animation: gm-hero-glow-breathe 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gm-hero-glow-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(0.95); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+.gm-status-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+/* Plain columns, no own border/background — one shared glowing card
+   (.gm-hero above) now, not four separate boxes. A divider line between
+   columns instead of each one's own border. */
+.gm-status-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 22px;
+}
+.gm-status-col + .gm-status-col {
+  border-left: 1px solid var(--color-border);
+}
+.gm-status-col-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.gm-status-fng {
+  display: flex;
+  justify-content: center;
+  margin: -4px 0 2px;
+}
+.gm-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.74rem;
+}
+.gm-status-row-label {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.gm-status-row-label em {
+  font-style: normal;
+  opacity: 0.7;
+}
+.gm-status-row-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.gm-status-row-chg {
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.gm-status-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Vertical list, 10 real rows — capped to ~5 rows tall with a vertical
+   scroll for the rest, instead of growing the status column's height. */
+.gm-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 158px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.gm-status-list::-webkit-scrollbar { width: 3px; }
+.gm-status-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.gm-status-list-row {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.gm-status-list-row:hover {
+  background: var(--color-input-bg);
+}
+.gm-status-list-rank {
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+/* Top-3 trending rows get a little medal-colored circle instead of a
+   plain number. */
+.gm-status-list-rank--gold,
+.gm-status-list-rank--silver,
+.gm-status-list-rank--bronze {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  font-size: 0.6rem;
+}
+.gm-status-list-rank--gold { background: linear-gradient(135deg, #fde68a, #f59e0b); }
+.gm-status-list-rank--silver { background: linear-gradient(135deg, #e2e8f0, #94a3b8); }
+.gm-status-list-rank--bronze { background: linear-gradient(135deg, #fdba74, #b45309); color: #fff; }
+.gm-status-col-icon {
+  display: flex;
+  color: var(--color-primary);
+}
+.gm-status-list-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gm-status-list-sym {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+.gm-status-list-price {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gm-status-list-chg {
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.gm-status-empty {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+/* ── Market Activity tiles (icon + big value + label, 2x2) ──────────────── */
+.gm-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.gm-activity-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--color-input-bg);
+  animation: gm-rise-in 0.35s ease both;
+  transition: transform 0.15s;
+}
+.gm-activity-tile:hover {
+  transform: translateY(-2px);
+}
+.gm-activity-tile-icon {
+  display: flex;
+  color: var(--color-primary);
+  margin-bottom: 2px;
+}
+.gm-activity-tile-value {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.gm-activity-tile-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  line-height: 1.2;
+}
+
+/* ── Community sentiment gauges (radial rings, not flat bars) ──────────── */
+.gm-sentiment-grid {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex: 1;
+  gap: 10px;
+}
+.gm-sentiment-gauge {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gm-sentiment-gauge-svg {
+  width: 84px;
+  height: 84px;
+}
+.gm-sentiment-gauge-center {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gm-sentiment-gauge-pct {
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+.gm-sentiment-gauge-sym {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+.gm-sentiment-skel {
+  width: 84px;
+  height: 104px;
+  border-radius: 12px;
+}
+.gm-status-mcap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.gm-status-mcap-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.gm-status-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gm-status-gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.gm-status-gauge-value {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.gm-status-gauge-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-input-bg);
+  overflow: hidden;
+}
+.gm-status-gauge-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-danger), #eab308, var(--color-success));
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gm-status-gauge-fill--season {
+  box-shadow: 0 0 8px var(--color-success);
+}
+.gm-fng-skel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.gm-fng-skel-arc {
+  width: 120px;
+  height: 64px;
+  border-radius: 64px 64px 0 0;
+}
+.gm-fng-skel-value {
+  width: 40px;
+  height: 14px;
+  border-radius: 6px;
+  margin-top: -20px;
+}
+.gm-status-skel-row {
+  display: block;
+  height: 26px;
+  border-radius: 8px;
+}
+
+/* ── Fear & Greed gauge ───────────────────────────────────────────────────── */
+.gm-fng {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 150px;
+}
+.gm-fng--compact {
+  width: 120px;
+}
+.gm-fng-svg {
+  width: 100%;
+  height: auto;
+  color: var(--color-text);
+}
+.gm-fng-needle {
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.4));
+}
+.gm-fng-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -36px;
+}
+.gm-fng-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.gm-fng-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Market Pulse (Liquidations-style layout, honest substitute data) ───── */
+.gm-liq-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 860px) {
+  .gm-liq-grid { grid-template-columns: 1fr; }
+}
+
+.gm-liq-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+.gm-liq-events-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gm-liq-stat-card,
+.gm-liq-events-card,
+.gm-liq-chart-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.gm-liq-stat-label {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.gm-liq-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 4px 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+.gm-liq-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  border-top: 1px solid var(--color-border);
+}
+.gm-liq-stat-row-label {
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+}
+.gm-liq-stat-row-value {
+  font-size: 0.84rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gm-liq-events-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+.gm-liq-event-row {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 4px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.gm-liq-event-row:hover { background: var(--color-input-bg); }
+.gm-liq-event-row + .gm-liq-event-row { border-top: 1px solid var(--color-border); }
+.gm-liq-event-medal { font-size: 1rem; flex-shrink: 0; }
+.gm-liq-event-sym {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+.gm-liq-event-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gm-liq-event-chg {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gm-liq-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.gm-liq-chart-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.gm-liq-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.gm-liq-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+}
+.gm-liq-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.gm-liq-dot--up { background: #22c55e; }
+.gm-liq-dot--down { background: #ef4444; }
+.gm-liq-dot--price { background: #f59e0b; }
+
+/* .gm-stats-grid/.gm-skel-stat (below) are still used by the skeleton
+   loader's placeholder shapes even though the real stat-card grid they
+   used to lay out is gone (folded into .gm-status-grid above). */
 .gm-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 12px;
 }
 
-.gm-stat-card {
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.gm-stat-label {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-text-secondary);
-  font-weight: 600;
-}
-
-.gm-stat-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.2;
-}
-
-.gm-stat-sub {
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
 /* ── Generic section card ──────────────────────────────────────────────────── */
 .gm-section {
+  position: relative;
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  animation: gm-rise-in 0.4s ease both;
 }
 
 .gm-section-header {
@@ -112,66 +639,98 @@
 }
 
 .gm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--color-text);
 }
+.gm-movers-title--up { color: var(--color-success); }
+.gm-movers-title--down { color: var(--color-danger); }
 
 .gm-section-sub {
   font-size: 0.72rem;
   color: var(--color-text-secondary);
 }
 
-/* ── Dominance bar ──────────────────────────────────────────────────────────── */
-.gm-dom-bar {
+
+/* ── Dominance donut ──────────────────────────────────────────────────────── */
+/* Centered, not stretched — .gm-dom-legend used to flex-grow to fill
+   whatever was left in a very wide section, and its own .gm-dom-sym
+   (flex:1) stretched right along with it, shoving each row's percentage
+   way out to the far edge instead of sitting right next to its label. */
+.gm-dom-layout {
   display: flex;
-  height: 12px;
-  border-radius: 6px;
-  overflow: hidden;
-  gap: 2px;
-}
-
-.gm-dom-seg {
-  height: 100%;
-  border-radius: 4px;
-  transition: opacity 0.15s;
-}
-
-.gm-dom-seg:hover { opacity: 0.8; cursor: default; }
-
-.gm-dom-seg--other {
-  background: rgba(148, 163, 184, 0.2);
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  /* Fills the card's own full height (now matching the chart card's
+     height, .gm-dom-chart-grid default stretch above) and centers its
+     content vertically in it, instead of leaving dead space below. */
   flex: 1;
+}
+.gm-dom-donut {
+  position: relative;
+  flex: 0 0 auto;
+  width: 240px;
+}
+.gm-dom-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.gm-dom-center-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.gm-dom-center-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
 }
 
 .gm-dom-legend {
+  flex: 0 0 auto;
+  width: 220px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .gm-dom-legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  animation: gm-rise-in 0.3s ease both;
 }
 
 .gm-dom-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .gm-dom-sym {
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--color-text);
+  flex: 1;
+  min-width: 0;
 }
 
 .gm-dom-pct {
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Chart tabs / period tabs ──────────────────────────────────────────────── */
@@ -203,8 +762,8 @@
 .gm-chart-tab--active,
 .gm-period-tab--active {
   background: var(--color-input-bg);
-  color: var(--color-accent);
-  border-color: var(--color-accent);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* ── Chart wrap ───────────────────────────────────────────────────────────── */
@@ -217,11 +776,27 @@
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  background: var(--color-card-bg);
-  border-radius: 10px;
   z-index: 1;
+}
+.gm-chart-skel-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px 20px;
+}
+.gm-chart-skel-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, var(--color-primary-soft), transparent);
+  animation: gm-bar-pulse 1.2s ease-in-out infinite;
+}
+@keyframes gm-bar-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
 }
 
 /* ── Tooltip ──────────────────────────────────────────────────────────────── */
@@ -245,6 +820,78 @@
   color: var(--color-text);
 }
 
+/* ── Sparklines ───────────────────────────────────────────────────────────── */
+.gm-spark {
+  display: block;
+  flex-shrink: 0;
+}
+.gm-spark-empty {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ── Gainers / Losers ─────────────────────────────────────────────────────── */
+.gm-dom-chart-grid,
+.gm-movers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.gm-movers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gm-movers-toggle {
+  all: unset;
+  box-sizing: border-box;
+  align-self: center;
+  margin-top: 4px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gm-movers-toggle:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+.gm-mover-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  transition: background 0.15s;
+  animation: gm-rise-in 0.3s ease both;
+  cursor: pointer;
+}
+.gm-mover-row:hover {
+  background: var(--color-input-bg);
+}
+.gm-mover-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 52px;
+}
+.gm-mover-price {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.gm-mover-pct {
+  margin-left: auto;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ── Top coins table ──────────────────────────────────────────────────────── */
 .gm-table-wrap {
   overflow-x: auto;
@@ -255,6 +902,59 @@
 
 .gm-table-wrap::-webkit-scrollbar { height: 4px; }
 .gm-table-wrap::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+.gm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.gm-pagination-info {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.gm-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.gm-page-btn {
+  all: unset;
+  box-sizing: border-box;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gm-page-btn:hover:not(:disabled) {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+.gm-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.gm-page-btn--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+.gm-page-ellipsis {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  padding: 0 2px;
+}
 
 .gm-table {
   width: 100%;
@@ -276,10 +976,13 @@
 
 .gm-th--rank { width: 36px; }
 .gm-th--r { text-align: right; }
+.gm-th--c { text-align: center; }
 
 .gm-tr {
   border-bottom: 1px solid rgba(255,255,255,0.04);
   transition: background 0.12s;
+  animation: gm-fade-in 0.4s ease both;
+  cursor: pointer;
 }
 
 .gm-tr:hover { background: var(--color-input-bg); }
@@ -303,6 +1006,7 @@
 }
 
 .gm-td--r { text-align: right; }
+.gm-td--c { text-align: center; }
 
 .gm-td--muted { color: var(--color-text-secondary); }
 
@@ -324,23 +1028,37 @@
   font-weight: 500;
 }
 
-.gm-pct--pos { color: #22c55e; }
-.gm-pct--neg { color: #fb7185; }
+.gm-pct--pos { color: var(--color-success); }
+.gm-pct--neg { color: var(--color-danger); }
 
-/* ── Disclaimer ───────────────────────────────────────────────────────────── */
-.gm-disclaimer {
-  text-align: center;
-  font-size: 0.68rem;
-  color: var(--color-text-secondary);
-  opacity: 0.5;
-  margin: 0;
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .gm-status-col,
+  .gm-section,
+  .gm-dom-legend-item,
+  .gm-mover-row,
+  .gm-tr,
+  .gm-skel,
+  .gm-fng-needle,
+  .gm-chart-skel-bar,
+  .gm-spinner {
+    animation: none !important;
+  }
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .gm-status-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .gm-dom-chart-grid,
+  .gm-movers-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
   .gm-wrap { padding: 16px 14px 36px; gap: 20px; }
-  .gm-stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .gm-stat-value { font-size: 1.05rem; }
+  .gm-status-grid { grid-template-columns: 1fr; }
   .gm-section { padding: 14px; }
   .gm-section-header { gap: 8px; }
+  .gm-td--c { display: none; }
+  .gm-th--c { display: none; }
 }

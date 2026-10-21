@@ -2,7 +2,7 @@ import { fetchBn } from "./coinglass";
 import { CATALOG } from "./coinCatalog";
 
 export interface PriceEntry { price: number; pct: number; vol: number }
-export interface TopMover { symbol: string; name: string; price: number; pct: number }
+export interface TopMover { symbol: string; name: string; price: number; pct: number; thumb?: string }
 
 // Some symbols trade under a different name on Binance
 const BINANCE_OVERRIDE: Record<string, string> = {
@@ -71,7 +71,7 @@ export async function fetchBinancePrices(symbols: string[]): Promise<Map<string,
 // per coin. Restricting the ranking to CATALOG (curated, ~145 known coins)
 // rather than Binance's whole listing is what keeps this from surfacing
 // illiquid/leveraged-token noise with wild, meaningless swings.
-export async function fetchTopMovers(limit = 8): Promise<TopMover[]> {
+export async function fetchTopMovers(limit = 8, direction: "gainers" | "losers" = "gainers"): Promise<TopMover[]> {
   try {
     const all = await fetchFullTicker();
     const lookup = new Map(all.map(t => [t.symbol, t]));
@@ -81,7 +81,7 @@ export async function fetchTopMovers(limit = 8): Promise<TopMover[]> {
       if (!t) continue;
       movers.push({ symbol: c.symbol, name: c.name, price: parseFloat(t.lastPrice), pct: parseFloat(t.priceChangePercent) });
     }
-    return movers.sort((a, b) => b.pct - a.pct).slice(0, limit);
+    return movers.sort((a, b) => direction === "losers" ? a.pct - b.pct : b.pct - a.pct).slice(0, limit);
   } catch { return []; }
 }
 

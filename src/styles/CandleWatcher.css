@@ -626,6 +626,15 @@
   touch-action: none;
 }
 
+/* RoundedCandleOverlay's own canvas (see DrawingOverlay.css) defaults to
+   z-index: 10 — above .cw-forecast-badge/.cw-reset-view-btn/.cw-save-btn
+   (z-index 4-5), which would otherwise visually bury those controls under
+   the candle-painting canvas. Pin it below them instead, same stacking
+   order the real (now-transparent) candle series had as the base layer. */
+.cw-chart-wrap canvas.drawing-overlay {
+  z-index: 3;
+}
+
 /* Double-click/double-tap (see the CandleWatcher.tsx effects near
    toggleChartFullscreen) to fullscreen the candle chart — plain in
    normal flow until --fullscreen is added, which takes it out of the

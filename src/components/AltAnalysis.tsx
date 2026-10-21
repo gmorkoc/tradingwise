@@ -3,6 +3,7 @@ import { createChart, IChartApi, ISeriesApi, CandlestickData, ColorType, Candles
 import { COINS, coinglass, fetchCoinMarketCaps, fetchCoin24hTickers, fetchCoinChanges24h, fetchFundingRate, CandleDataPoint, CoinSnapshot } from "../services/coinglass";
 import { getAltPricePrediction, AltPricePrediction } from "../services/openai";
 import { AIQuotaWall } from "./AIQuotaWall";
+import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { useAuth } from "../contexts/AuthContext";
 import { useAIQuota } from "../hooks/useAIQuota";
 import "../styles/AltAnalysis.css";
@@ -88,6 +89,8 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef          = useRef<IChartApi | null>(null);
   const seriesRef         = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const overlayCandlesRef = useRef<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
+  const [chartGeneration, setChartGeneration] = useState(0);
   const isDark = document.documentElement.getAttribute("data-theme") !== "light";
 
   const sector     = SECTOR_MAP[coin.symbol] ?? "Other";
@@ -180,10 +183,13 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
         handleScroll: true,
         handleScale: true,
       });
+      // Transparent — RoundedCandleOverlay below paints the visible
+      // rounded-corner bodies/wicks, same pattern as PriceChart.tsx. Series
+      // stays mounted (just invisible) so it keeps driving scale/crosshair.
       seriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
-        upColor: "#4ade80", downColor: "#f87171",
-        borderUpColor: "#4ade80", borderDownColor: "#f87171",
-        wickUpColor: "#4ade80", wickDownColor: "#f87171",
+        upColor: "transparent", downColor: "transparent",
+        borderUpColor: "transparent", borderDownColor: "transparent",
+        wickUpColor: "transparent", wickDownColor: "transparent",
       });
     }
 
@@ -203,6 +209,10 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
       open: c.open, high: c.high, low: c.low, close: c.close,
     }));
     seriesRef.current.setData(data);
+    overlayCandlesRef.current = data.map(d => ({
+      time: d.time as number, open: d.open, high: d.high, low: d.low, close: d.close,
+    }));
+    setChartGeneration(g => g + 1);
     chartRef.current?.timeScale().fitContent();
   }, [candles]);
 
@@ -516,7 +526,19 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
                 ))}
               </div>
             </div>
-            <div className="alt-chart-container" ref={chartContainerRef} style={{ height: 380 }} />
+            <div style={{ position: "relative", height: 380 }}>
+              <div className="alt-chart-container" ref={chartContainerRef} style={{ height: 380 }} />
+              <RoundedCandleOverlay
+                chartRef={chartRef}
+                seriesRef={seriesRef}
+                candlesRef={overlayCandlesRef}
+                upColor="#4ade80"
+                downColor="#f87171"
+                style="candle"
+                generation={chartGeneration}
+                visible={true}
+              />
+            </div>
           </div>
 
           {/* 20% signals panel */}

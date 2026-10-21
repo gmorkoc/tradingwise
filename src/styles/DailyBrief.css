@@ -309,9 +309,8 @@ html[data-theme="light"] .db-sheet .db-live {
   background: #f0fdf4;
 }
 
-/* Red variant — next to .db-featured-badge in the sheet's header row,
-   distinct from the green "fresh data" badge used elsewhere (desktop's
-   .db-page-head keeps the green one). */
+/* Red variant — distinct from the green "fresh data" badge used
+   elsewhere (desktop's .db-page-head keeps the green one). */
 .db-live--red {
   color: #ef4444;
 }
@@ -371,37 +370,6 @@ html[data-theme="light"] .db-sheet .db-live--red {
   padding-bottom: 6px;
 }
 
-.db-featured-badge {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 12px 14px 8px 0;
-  margin-left: 6px;
-  margin-right: 6px;
-}
-/* Desktop (.db-page sidebar) only — mobile's .db-sheet keeps the base
-   padding/margin-left above. */
-.db-page .db-featured-badge {
-  padding: 0 14px 4px 0;
-  margin-left: 0;
-}
-/* The sheet variant now shows .db-featured-badge once already, promoted
-   to the header row as its title (DailyBrief.tsx) — this hides the
-   second copy that'd otherwise still render inline atop the featured
-   card's own content below. Scoped to .db-card specifically so desktop's
-   .db-page (no header slot for it) keeps its own inline badge untouched. */
-.db-sheet .db-card .db-featured-badge {
-  display: none;
-}
-/* .top-nav-logo is sized for the real top nav bar (18px, and itself
-   display:flex/align-items:center internally) — scaled down here to sit
-   as plain inline text next to the subtitle instead of a full logo
-   lockup, so baseline alignment between the two actually lines up. */
-.db-featured-badge .top-nav-logo {
-  display: inline;
-  font-size: 15px;
-  letter-spacing: -0.2px;
-}
 
 .db-featured-brand-sub {
   font-size: 18px;

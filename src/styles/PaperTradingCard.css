@@ -11,6 +11,7 @@
    padding bumped up a notch since the border isn't doing any of that
    separation anymore. */
 .ptc-card {
+  position: relative;
   background: var(--pc-bg);
   border-radius: 16px;
   display: flex;
@@ -18,12 +19,28 @@
   gap: 16px;
   flex-shrink: 0;
 }
+/* Pre-activation: no header/title/LIVE badge left as a sibling to size
+   against, so this fills the full height of whatever container it's in
+   (back to matching the real container instead of a guessed fixed px,
+   which never matched every layout context the same way) — .ptc-activate
+   below's own tightened padding/justify-content:center is what keeps the
+   content from reading as floating in dead space now, not a capped
+   height. !important — the tabbed right-column context (App.css:
+   .main-content .chart-right-col--tabbed .crc-tab-panel .ptc-card, 4
+   classes) otherwise wins on specificity alone with flex-shrink:1,
+   letting this collapse below 100% instead of actually filling it. */
+.ptc-card--activating {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
 
 .ptc-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  padding-top: 8px;
 }
 .ptc-header-right {
   display: flex;
@@ -114,6 +131,331 @@
   font-size: 12px;
   color: var(--color-text-muted);
   line-height: 1.4;
+}
+
+/* ── Activation banner (consentAcceptedAt gate, PaperTradingCard.tsx) ────
+   Shown instead of the live stats/form for a signed-in user who hasn't
+   accepted the one-time risk disclaimer yet — mostly motion (orbiting
+   rings + a pulsing coin glyph) rather than another wall of text, since
+   the actual disclaimer copy below it already carries the real content. */
+.ptc-activate {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* flex-start, not center — centering split whatever extra height this
+     fills (now 100% of .chart-two-col-right-row--top, App.css) evenly
+     above AND below the content, leaving dead space below the button
+     too. Top-anchored instead, so any extra room just falls below with
+     nothing to balance against above it. */
+  justify-content: flex-start;
+  text-align: center;
+  gap: 18px;
+  width: 100%;
+  padding: 64px 16px 8px;
+  overflow: hidden;
+  background: var(--pc-bg);
+}
+/* Cross-dissolve on activation (PaperTradingCard.tsx: dissolving) — a
+   real two-scene movie cut, not an instant swap. Three things happen in
+   the same ~0.75s window:
+     1. This banner (scene A) — lifted out of flow to float on top of
+        whatever's now underneath — zooms in and rotates slightly while
+        dissolving away, like a camera pulling back off the first scene.
+     2. .ptc-card--revealing's own descendants (scene B: header/stats/
+        links, below) iris/wipe in via clip-path, starting blurred and
+        oversized and settling into place — the classic "scene B swells
+        into frame" cut, not a flat fade.
+     3. .ptc-card--revealing::after (further below) flashes once at the
+        crossover, the bright frame real film cuts/dissolves often have
+        right at the join between two scenes. */
+.ptc-activate--dissolving {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  animation: ptc-activate-dissolve-out 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes ptc-activate-dissolve-out {
+  0% { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0); }
+  100% { opacity: 0; transform: scale(1.35) rotate(2deg); filter: blur(14px); }
+}
+/* Scene B's own entrance — header/stats/the two links below all share
+   this one keyframe via the shared .ptc-card--revealing ancestor class,
+   so they all wipe/settle in together as one scene instead of each
+   firing its own separate, out-of-sync animation. */
+.ptc-card--revealing .ptc-header,
+.ptc-card--revealing .ptc-stats,
+.ptc-card--revealing .ptc-agent-nudge,
+.ptc-card--revealing .ptc-page-link {
+  animation: ptc-scene-b-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.08s;
+}
+@keyframes ptc-scene-b-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.12);
+    filter: blur(10px);
+    clip-path: circle(0% at 50% 36px);
+  }
+  55% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+    clip-path: circle(150% at 50% 36px);
+  }
+}
+/* Brief clip during the transition only — .ptc-card itself stays
+   overflow:visible normally (other states may need to scroll), this
+   just keeps the flash/the zoomed-in scene-b content from poking past
+   the card's own rounded corners for this one 0.75s window. */
+.ptc-card--revealing {
+  overflow: hidden;
+}
+/* The crossover flash — a quick bright pulse right at the join between
+   the two scenes, same beat real dissolve cuts use. Pseudo-element, no
+   extra markup needed. */
+.ptc-card--revealing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 30%, #fff, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  animation: ptc-scene-flash 0.75s ease-out forwards;
+}
+@keyframes ptc-scene-flash {
+  0%, 30% { opacity: 0; }
+  42% { opacity: 0.55; }
+  65% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-activate--dissolving {
+    animation: none;
+    opacity: 0;
+  }
+  .ptc-card--revealing .ptc-header,
+  .ptc-card--revealing .ptc-stats,
+  .ptc-card--revealing .ptc-agent-nudge,
+  .ptc-card--revealing .ptc-page-link,
+  .ptc-card--revealing::after {
+    animation: none;
+  }
+}
+/* Soft dual-tone glow breathing behind everything — primary blue bleeding
+   into success green, the two colors the whole card's own stats already
+   use (profit/loss), so the "get started" moment borrows the same
+   palette instead of introducing a third accent. */
+.ptc-activate-glow {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  width: 240px;
+  height: 180px;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--color-primary) 32%, transparent), transparent 60%),
+    radial-gradient(circle at 65% 60%, color-mix(in srgb, var(--pc-success, #22c55e) 26%, transparent), transparent 60%);
+  filter: blur(18px);
+  opacity: 0.8;
+  animation: ptc-activate-glow-breathe 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ptc-activate-glow-breathe {
+  0%, 100% { opacity: 0.55; transform: translateX(-50%) scale(0.94); }
+  50% { opacity: 0.9; transform: translateX(-50%) scale(1.06); }
+}
+.ptc-activate-orbit {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.ptc-activate-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px dashed var(--color-primary);
+  opacity: 0.35;
+}
+.ptc-activate-ring--1 {
+  animation: ptc-activate-spin 7s linear infinite;
+}
+.ptc-activate-ring--2 {
+  inset: 12px;
+  opacity: 0.3;
+  border-color: var(--pc-success, #22c55e);
+  animation: ptc-activate-spin 5s linear infinite reverse;
+}
+.ptc-activate-ring--3 {
+  inset: 24px;
+  opacity: 0.22;
+  border-style: solid;
+  animation: ptc-activate-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ptc-activate-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ptc-activate-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.18; }
+  50% { transform: scale(1.08); opacity: 0.36; }
+}
+/* Six little sparks riding the outer ring's own orbit — each rotates a
+   full lap via its own .ptc-activate-spark--N rule (one per 60°, below)
+   with a staggered delay/duration so they drift apart instead of moving
+   as one rigid, visibly-fake clump. */
+.ptc-activate-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--color-primary) 70%, transparent);
+  animation: ptc-activate-orbit-spark linear infinite;
+}
+.ptc-activate-spark--0 { animation-duration: 6s; animation-delay: 0s; }
+.ptc-activate-spark--1 { animation-duration: 6s; animation-delay: -1s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
+.ptc-activate-spark--2 { animation-duration: 6s; animation-delay: -2s; }
+.ptc-activate-spark--3 { animation-duration: 6s; animation-delay: -3s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
+.ptc-activate-spark--4 { animation-duration: 6s; animation-delay: -4s; }
+.ptc-activate-spark--5 { animation-duration: 6s; animation-delay: -5s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
+/* Plain translateX(radius) + rotate — no counter-rotation needed since a
+   round dot looks identical at every angle, unlike an icon/arrow shape. */
+@keyframes ptc-activate-orbit-spark {
+  from { transform: rotate(0deg) translateX(40px); opacity: 0.9; }
+  50% { opacity: 0.35; }
+  to { transform: rotate(360deg) translateX(40px); opacity: 0.9; }
+}
+.ptc-activate-coin {
+  position: relative;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--color-primary), var(--pc-success, #22c55e));
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--color-primary-soft), 0 4px 14px color-mix(in srgb, var(--color-primary) 45%, transparent);
+  animation: ptc-activate-coin-pulse 2.4s ease-in-out infinite;
+}
+/* Diagonal shine sweeping across the coin every few seconds — a cheap,
+   common "something good is happening here" cue (same idea as a loading
+   shimmer, just slower/rarer so it reads as a flourish, not a spinner). */
+.ptc-activate-coin::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  animation: ptc-activate-coin-shine 3.2s ease-in-out infinite;
+}
+@keyframes ptc-activate-coin-shine {
+  0%, 30% { transform: translateX(-60%); }
+  70%, 100% { transform: translateX(60%); }
+}
+@keyframes ptc-activate-coin-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.ptc-activate-title {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  background: linear-gradient(90deg, var(--color-text), var(--color-primary), var(--pc-success, #22c55e), var(--color-text));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ptc-activate-title-sheen 5s ease-in-out infinite;
+}
+@keyframes ptc-activate-title-sheen {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.ptc-activate-sub {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-width: 280px;
+}
+.ptc-activate-cta {
+  all: unset;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 0;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--color-primary), var(--pc-success, #22c55e));
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s;
+}
+.ptc-activate-cta:hover {
+  transform: translateY(-1px);
+}
+.ptc-activate-cta:active {
+  transform: translateY(0);
+}
+.ptc-activate-cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+.ptc-activate-cta-label {
+  position: relative;
+  z-index: 1;
+}
+.ptc-activate-cta-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: ptc-activate-cta-sweep 3.6s ease-in-out infinite;
+}
+@keyframes ptc-activate-cta-sweep {
+  0%, 20% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-activate-ring,
+  .ptc-activate-spark,
+  .ptc-activate-coin,
+  .ptc-activate-coin::after,
+  .ptc-activate-glow,
+  .ptc-activate-title,
+  .ptc-activate-cta-shine {
+    animation: none;
+  }
 }
 
 @keyframes ptc-shimmer {

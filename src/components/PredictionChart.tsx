@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -10,6 +10,7 @@ import {
 } from "lightweight-charts";
 import { coinglass, CoinSymbol, CandleDataPoint } from "../services/coinglass";
 import { PredictionResponse, ScenarioItem } from "../services/openai";
+import { RoundedCandleOverlay } from "./DrawingOverlay";
 
 interface Props {
   coin: CoinSymbol;
@@ -39,6 +40,9 @@ const TF_COLORS: Record<string, string> = {
 export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin, currentPrice, prediction, theme }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef     = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const candlesRef   = useRef<CandleDataPoint[]>([]);
+  const [chartGeneration, setChartGeneration] = useState(0);
 
   useImperativeHandle(ref, () => ({
     resetZoom: () => chartRef.current?.timeScale().fitContent(),
@@ -78,14 +82,19 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
     });
     chartRef.current = chart;
 
+    // Real series colors are transparent — RoundedCandleOverlay below paints
+    // the visible rounded-corner bodies/wicks on a canvas overlay, same
+    // pattern as PriceChart.tsx. The real series stays mounted (just
+    // invisible) so it keeps driving scale/crosshair/autoscale.
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor:         "#22c55e",
-      downColor:       "#ef4444",
-      borderUpColor:   "#22c55e",
-      borderDownColor: "#ef4444",
-      wickUpColor:     "#22c55e",
-      wickDownColor:   "#ef4444",
+      upColor:         "transparent",
+      downColor:       "transparent",
+      borderUpColor:   "transparent",
+      borderDownColor: "transparent",
+      wickUpColor:     "transparent",
+      wickDownColor:   "transparent",
     });
+    candleSeriesRef.current = candleSeries;
 
     // current price line
     candleSeries.createPriceLine({
@@ -141,6 +150,8 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
       if (!candles.length) return;
 
       candleSeries.setData(candles as any);
+      candlesRef.current = candles;
+      setChartGeneration(g => g + 1);
 
       const lastTime = candles[candles.length - 1].time as number;
 
@@ -181,6 +192,7 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
+      candleSeriesRef.current = null;
     };
   }, [coin, currentPrice, prediction, theme]);
 
@@ -237,7 +249,19 @@ export const PredictionChart = forwardRef<PredictionChartHandle, Props>(({ coin,
         </div>
       )}
 
-      <div ref={containerRef} className="aip-pred-chart-canvas" />
+      <div style={{ position: "relative" }}>
+        <div ref={containerRef} className="aip-pred-chart-canvas" />
+        <RoundedCandleOverlay
+          chartRef={chartRef}
+          seriesRef={candleSeriesRef}
+          candlesRef={candlesRef}
+          upColor="#22c55e"
+          downColor="#ef4444"
+          style="candle"
+          generation={chartGeneration}
+          visible={true}
+        />
+      </div>
     </div>
   );
 });

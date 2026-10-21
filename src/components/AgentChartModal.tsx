@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createChart, IChartApi, ISeriesApi, ColorType, CandlestickSeries, HistogramSeries } from "lightweight-charts";
 import { coinglass } from "../services/coinglass";
 import { CookingLoader } from "./CookingLoader";
+import { RoundedCandleOverlay } from "./DrawingOverlay";
 import "../styles/AgentChartModal.css";
 
 // Full interval set, matching PriceChart.tsx's own INTERVALS exactly (not
@@ -41,6 +42,8 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
   const [interval, setIntervalValue] = useState<ChartInterval>(initialInterval ?? "1h");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const candlesRef = useRef<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
+  const [chartGeneration, setChartGeneration] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -63,10 +66,14 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
       width: el.clientWidth,
       height: el.clientHeight || 360,
     });
+    // Transparent — RoundedCandleOverlay (JSX below) paints the visible
+    // rounded-corner bodies/wicks on its own canvas instead, same pattern as
+    // PriceChart.tsx. Series stays mounted (just invisible) so it keeps
+    // driving scale/crosshair/autoscale.
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e", downColor: "#ef4444",
-      borderUpColor: "#22c55e", borderDownColor: "#ef4444",
-      wickUpColor: "#22c55e", wickDownColor: "#ef4444",
+      upColor: "transparent", downColor: "transparent",
+      borderUpColor: "transparent", borderDownColor: "transparent",
+      wickUpColor: "transparent", wickDownColor: "transparent",
     });
     const volSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: "volume" },
@@ -102,9 +109,12 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
         if (cancelled || !candleRef.current || !volRef.current) return;
         if (!candles.length) { setError(true); return; }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        candleRef.current.setData(candles.map((c: any) => ({
+        const points = candles.map((c: any) => ({
           time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
-        })));
+        }));
+        candleRef.current.setData(points);
+        candlesRef.current = points;
+        setChartGeneration(g => g + 1);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         volRef.current.setData(candles.map((c: any) => ({
           time: c.time,
@@ -148,6 +158,16 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
         </div>
         <div className="acm-chart-wrap">
           <div ref={containerRef} className="acm-chart-container" />
+          <RoundedCandleOverlay
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            candlesRef={candlesRef}
+            upColor="#22c55e"
+            downColor="#ef4444"
+            style="candle"
+            generation={chartGeneration}
+            visible={true}
+          />
           {loading && <div className="acm-overlay"><CookingLoader /></div>}
           {!loading && error && <div className="acm-overlay">No data available</div>}
         </div>

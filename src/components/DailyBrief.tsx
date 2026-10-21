@@ -633,22 +633,8 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
 
   const latestRows = latestItems.map((item) => renderRow(item));
 
-  // Reused in two places: inline atop the featured card (desktop's
-  // variant="page" has no separate header slot for it) and standalone in
-  // the mobile sheet's header row, where it now stands in for the old
-  // plain "Daily Brief" title.
-  const featuredBadge = featured && (
-    <div className="db-featured-badge">
-      <div className="top-nav-logo">
-        coinhint<span className="top-nav-logo-accent">z</span>
-      </div>
-      <span className="db-featured-brand-sub">{t("dailyBrief.blogBrandSub", "crypto market blog")}</span>
-    </div>
-  );
-
   const featuredCard = featured && (
     <div className={`db-featured${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
-      {featuredBadge}
       <div className="db-featured-main">
         {/* A video actually about this headline (see fetchVideoForTitle)
             replaces the static photo entirely — click-to-play, so no
@@ -850,15 +836,10 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         >
           <span className="db-handle" />
           <div className="db-head">
-            {/* Two-zone layout (sketch "E"): .db-featured-badge stands in
-                for the old plain "Daily Brief" title and stays alone on
-                the left — only once there's a featured story to badge
-                (nothing to brand before the first load resolves) — while
-                LIVE + "Updated X ago" stack together in the top-right
-                corner instead of competing with it on the same line. */}
-            <span className="db-head-title-row">
-              {featuredBadge}
-            </span>
+            {/* Empty spacer — keeps .db-head-status pinned to the right
+                via justify-content:space-between now that the left-side
+                badge (.db-featured-badge) is gone. */}
+            <span className="db-head-title-row" />
             {sheetState !== "minimized" && (
               <span className="db-head-status">
                 <span className="db-live">

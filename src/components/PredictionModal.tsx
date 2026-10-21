@@ -1,9 +1,9 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { createChart, CandlestickSeries, IChartApi, Time, createSeriesMarkers } from "lightweight-charts";
 import { CandleDataPoint } from "../services/coinglass";
-import { PredictionPath } from "./DrawingOverlay";
+import { PredictionPath, RoundedCandleOverlay } from "./DrawingOverlay";
 import { ChartPrediction } from "../services/openai";
 import "../styles/PredictionModal.css";
 
@@ -153,8 +153,19 @@ export function PredictionModal({
   const chartRef      = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seriesRef     = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const futureSeriesRef = useRef<any>(null);
   const divergenceRef = useRef(divergence);
   divergenceRef.current = divergence;
+
+  // Real/projected candle arrays + generation counter for the two
+  // RoundedCandleOverlay instances below (real series keeps its usual
+  // green/red palette, the projected series keeps its white/dark "ghost"
+  // palette) — same shared overlay component PriceChart.tsx uses, since the
+  // real CandlestickSeries colors are made transparent below.
+  const realCandlesRef   = useRef<CandleDataPoint[]>([]);
+  const futureCandlesRef = useRef<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
+  const [chartGeneration, setChartGeneration] = useState(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -176,16 +187,20 @@ export function PredictionModal({
 
     // Real candles (last 100 so divergence pivots are in range)
     const real = candles.slice(-100).map(c => ({ ...c, time: c.time as Time }));
+    // Transparent — RoundedCandleOverlay below paints the visible
+    // rounded-corner bodies/wicks, same pattern as PriceChart.tsx. Series
+    // stays mounted (just invisible) so it keeps driving scale/crosshair.
     const realSeries = chart.addSeries(CandlestickSeries, {
-      upColor:         "#22c55e",
-      downColor:       "#ef4444",
-      borderUpColor:   "#22c55e",
-      borderDownColor: "#ef4444",
-      wickUpColor:     "#22c55e",
-      wickDownColor:   "#ef4444",
+      upColor:         "transparent",
+      downColor:       "transparent",
+      borderUpColor:   "transparent",
+      borderDownColor: "transparent",
+      wickUpColor:     "transparent",
+      wickDownColor:   "transparent",
     });
     realSeries.setData(real);
     seriesRef.current = realSeries;
+    realCandlesRef.current = candles.slice(-100);
 
     // Projected candles
     const intervalSec   = INTERVAL_SEC[interval] ?? 3600;
@@ -196,16 +211,24 @@ export function PredictionModal({
 
     if (futureCandles.length > 0) {
       const ft = futureCandles.map(c => ({ ...c, time: c.time as Time }));
+      // Transparent — same rounded-overlay treatment as realSeries above,
+      // keeping the projected series' own white/dark "ghost" palette on the
+      // overlay instead of the real green/red one (see the second
+      // RoundedCandleOverlay in the JSX below).
       const futureSeries = chart.addSeries(CandlestickSeries, {
-        upColor:         "#ffffff",
-        downColor:       "#1a1a1a",
-        borderUpColor:   "#cccccc",
-        borderDownColor: "#888888",
-        wickUpColor:     "#bbbbbb",
-        wickDownColor:   "#777777",
+        upColor:         "transparent",
+        downColor:       "transparent",
+        borderUpColor:   "transparent",
+        borderDownColor: "transparent",
+        wickUpColor:     "transparent",
+        wickDownColor:   "transparent",
       });
       futureSeries.setData(ft);
+      futureSeriesRef.current = futureSeries;
+      futureCandlesRef.current = futureCandles;
     }
+
+    setChartGeneration(g => g + 1);
 
     // Key levels from AI
     for (const kl of chartPrediction.keyLevels ?? []) {
@@ -389,7 +412,7 @@ export function PredictionModal({
     return () => {
       ro.disconnect();
       chart.remove();
-      chartRef.current = seriesRef.current = null;
+      chartRef.current = seriesRef.current = futureSeriesRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -409,6 +432,14 @@ export function PredictionModal({
 
     // 1. Full chart from lightweight-charts
     ctx.drawImage(chartCanvas, 0, 0);
+
+    // 1b. Rounded-candle overlay(s) — the real CandlestickSeries colors are
+    //     transparent now (RoundedCandleOverlay paints the visible bodies on
+    //     its own <canvas class="drawing-overlay"> instead), so takeScreenshot()
+    //     alone would save a candle-less chart. Composite those canvases in
+    //     before the fib/path overlay so arrows/labels stay on top.
+    const roundedCanvases = containerRef.current?.parentElement?.querySelectorAll<HTMLCanvasElement>("canvas.drawing-overlay");
+    roundedCanvases?.forEach(c => ctx.drawImage(c, 0, 0, out.width, out.height));
 
     // 2. Prediction overlay (fib zone, dashed path, arrows, divergence lines)
     //    Overlay canvas is at logical size * DPR — scale it to match chartCanvas
@@ -475,6 +506,26 @@ export function PredictionModal({
         {/* ── Chart ── */}
         <div className="pred-modal-chart-wrap">
           <div ref={containerRef} />
+          <RoundedCandleOverlay
+            chartRef={chartRef}
+            seriesRef={seriesRef}
+            candlesRef={realCandlesRef}
+            upColor="#22c55e"
+            downColor="#ef4444"
+            style="candle"
+            generation={chartGeneration}
+            visible={true}
+          />
+          <RoundedCandleOverlay
+            chartRef={chartRef}
+            seriesRef={futureSeriesRef}
+            candlesRef={futureCandlesRef}
+            upColor="#ffffff"
+            downColor="#1a1a1a"
+            style="candle"
+            generation={chartGeneration}
+            visible={true}
+          />
           <canvas ref={canvasRef} className="pred-modal-canvas" />
           <button className="pred-modal-save-btn" onClick={saveChart} title="Save chart as PNG">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

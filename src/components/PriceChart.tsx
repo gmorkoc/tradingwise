@@ -1680,6 +1680,33 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
   }, []);
+  // Mobile never shows the grid or any overlay indicator — there's no
+  // toggle UI for them there (gridToggleButton/indicatorsControl stay
+  // desktop-only, chart-hero-icon-row), so a value persisted from
+  // earlier desktop use (readChartPrefs' localStorage) would otherwise
+  // be stuck permanently visible on a phone with no way to turn it back
+  // off. Forces them off instead of adding more mobile toggle UI.
+  useEffect(() => {
+    // pageMode (Advance Chart) excluded — that page defaults showGrid to
+    // true on purpose (see its own useState initializer above) regardless
+    // of width, a different page this complaint isn't about.
+    if (isDesktopWidth || pageMode) return;
+    setShowGrid(false);
+    setShowBB(false);
+    setShowRSI(false);
+    setShowMACD(false);
+    setShowEMA20(false);
+    setShowEMA50(false);
+    setShowEMA200(false);
+    setShowMA20(false);
+    setShowMA50(false);
+    setShowMA200(false);
+    setShowFib(false);
+    setShowSR(false);
+    setShowZones(false);
+    setShowDayHL(false);
+    setShowCME(false);
+  }, [isDesktopWidth]);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(() => !!pageMode);
   useEffect(() => {
@@ -2296,16 +2323,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         crosshairMarkerVisible: false,
       });
 
-      // Reference-match: compact desktop paints its own rounded-corner
-      // candles via RoundedCandleOverlay instead (LWC's own CandlestickSeries
-      // has no radius option) — making the real series transparent (NOT
+      // Every view (desktop/mobile, fullscreen or not) paints its own
+      // rounded-corner candles via RoundedCandleOverlay instead (LWC's own
+      // CandlestickSeries has no radius option) — making the real series
+      // transparent (NOT
       // visible:false — that stopped the price scale autoscaling off it
       // entirely, collapsing the Y-axis to whatever tiny range the other
       // series left) keeps it painting nothing of its own while staying the
       // real data/scale source for autoscale, markers, crosshair price
       // lookups, and drawing tools; the overlay paints the rounded bars on
       // top of this invisible-but-present series.
-      const candleColorsTransparent = !isFullscreen && isDesktopWidth && (chartStyleRef.current as ChartStyle) !== "line";
+      const candleColorsTransparent = (chartStyleRef.current as ChartStyle) !== "line";
       candleRef.current = chart.addSeries(CandlestickSeries, {
         upColor: candleColorsTransparent ? "transparent" : "#4ade80",
         downColor: candleColorsTransparent ? "transparent" : "#fb7185",
@@ -2535,7 +2563,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // comment at this series' addSeries() call above for why this is
     // transparent colors, not visible:false.
     {
-      const candleColorsTransparent = !isFullscreen && isDesktopWidth && (chartStyleRef.current as ChartStyle) !== "line";
+      const candleColorsTransparent = (chartStyleRef.current as ChartStyle) !== "line";
       candleRef.current?.applyOptions({
         upColor: candleColorsTransparent ? "transparent" : "#4ade80",
         downColor: candleColorsTransparent ? "transparent" : "#fb7185",
@@ -2673,7 +2701,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           // this same !hasLoadedOnce placeholder path again.
           candleRef.current?.applyOptions({ visible: (chartStyleRef.current as ChartStyle) !== "line" });
           lineCloseRef.current?.applyOptions({ visible: (chartStyleRef.current as ChartStyle) === "line" });
-          // RoundedCandleOverlay (compact desktop) only repaints when its
+          // RoundedCandleOverlay only repaints when its
           // own `generation` prop changes or a visible-time-range event
           // fires on the chart — neither is guaranteed to happen exactly
           // when real data replaces the first-load placeholder, which is
@@ -3078,7 +3106,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // forced transparent) so those styles actually render, instead of the
     // overlay silently keeping yesterday's plain candles on screen no
     // matter what style got picked.
-    const candleColorsTransparent = !isFullscreen && isDesktopWidth && chartStyle !== "line";
+    const candleColorsTransparent = chartStyle !== "line";
     candleRef.current?.applyOptions({
       upColor: candleColorsTransparent ? "transparent" : "#4ade80",
       downColor: candleColorsTransparent ? "transparent" : "#fb7185",
@@ -6501,7 +6529,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             downColor="#fb7185"
             style={chartStyle === "hollow" ? "hollow" : chartStyle === "heikinAshi" ? "heikinAshi" : "candle"}
             generation={chartGeneration}
-            visible={!isFullscreen && isDesktopWidth && chartStyle !== "line"}
+            visible={chartStyle !== "line"}
           />
           <LineDotFillOverlay
             chartRef={chartRef}

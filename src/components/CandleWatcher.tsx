@@ -12,6 +12,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import { MMNarrationFeed, MMFeedEntry } from "./MMNarrationFeed";
 import { COIN_COLORS, COIN_GLYPHS } from "./PriceChart";
+import { RoundedCandleOverlay } from "./DrawingOverlay";
 import "../styles/CandleWatcher.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -2047,6 +2048,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const showSessionLevelsRef = useRef(false);
   const [showSessionLevels, setShowSessionLevels] = useState(false);
 
+  // Rounded-candle overlay state — real series colors are made transparent
+  // below (both the main candleSeries and the forecast series), with
+  // RoundedCandleOverlay painting the visible rounded-corner bodies/wicks on
+  // top, same shared pattern PriceChart.tsx uses.
+  const [chartGeneration, setChartGeneration] = useState(0);
+  const forecastCandlesRef = useRef<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
+  const [forecastColors, setForecastColors] = useState({ up: "#7dd3fc", down: "#fca5a5" });
+
   const interval = INTERVALS[intervalIdx];
   const isDark   = theme === "dark";
 
@@ -2073,10 +2082,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       height: 460,
     });
 
+    // Transparent — RoundedCandleOverlay (rendered in the JSX below) paints
+    // the visible rounded-corner bodies/wicks on its own canvas instead.
+    // Series stays mounted (just invisible) so it keeps driving
+    // scale/crosshair/autoscale/priceLines, same pattern as PriceChart.tsx.
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e", downColor: "#ef4444",
-      borderUpColor: "#22c55e", borderDownColor: "#ef4444",
-      wickUpColor: "#22c55e", wickDownColor: "#ef4444",
+      upColor: "transparent", downColor: "transparent",
+      borderUpColor: "transparent", borderDownColor: "transparent",
+      wickUpColor: "transparent", wickDownColor: "transparent",
     });
 
     const volSeries = chart.addSeries(HistogramSeries, {
@@ -2247,6 +2260,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       open: c.open, high: c.high, low: c.low, close: c.close,
     }));
     candleSeriesRef.current.setData(cdl);
+    setChartGeneration(g => g + 1);
 
     if (volSeriesRef.current) {
       volSeriesRef.current.setData(data.map(c => ({
@@ -2593,6 +2607,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         chartRef.current.removeSeries(forecastSeriesRef.current);
         forecastSeriesRef.current = null;
       }
+      forecastCandlesRef.current = [];
       if (forecastBullRef.current) {
         chartRef.current.removeSeries(forecastBullRef.current);
         forecastBullRef.current = null;
@@ -2609,8 +2624,18 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     if (!chartRef.current) return;
     const canvas = chartRef.current.takeScreenshot();
 
-    // Stamp a small watermark onto the captured canvas
+    // Rounded-candle overlay(s) — the real CandlestickSeries colors are
+    // transparent now (RoundedCandleOverlay paints the visible bodies on its
+    // own canvas.drawing-overlay instead), so takeScreenshot() alone would
+    // save a candle-less chart. Composite those canvases in before the
+    // watermark stamp.
     const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const roundedCanvases = chartContainerRef.current?.querySelectorAll<HTMLCanvasElement>("canvas.drawing-overlay");
+      roundedCanvases?.forEach(c => ctx.drawImage(c, 0, 0, canvas.width, canvas.height));
+    }
+
+    // Stamp a small watermark onto the captured canvas
     if (ctx) {
       const stamp = `coinhintz · ${coin}/USD ${interval.label} · ${new Date().toLocaleString()}`;
       ctx.font = '500 11px ui-monospace, monospace';
@@ -2642,19 +2667,26 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const isBull = bias === "bullish";
     const isBear = bias === "bearish";
 
-    // Black forecast candles — clearly distinct from real candles
-    const upColor = "#000000";
-    const dnColor = "#000000";
-    const brdUp   = isBull ? "#7dd3fc" : "#fca5a5";
-    const brdDn   = isBear ? "#fca5a5" : "#7dd3fc";
+    // Forecast candles — clearly distinct from real candles. Real colors
+    // below are transparent now; RoundedCandleOverlay (JSX below) paints the
+    // rounded bodies using brdUp/brdDn instead (the bias-tinted border
+    // colors — the only part of the original black-body/colored-border
+    // look that survives the overlay's single fill-color-per-side model).
+    const brdUp = isBull ? "#7dd3fc" : "#fca5a5";
+    const brdDn = isBear ? "#fca5a5" : "#7dd3fc";
 
     const series = chartRef.current.addSeries(CandlestickSeries, {
-      upColor, downColor: dnColor,
-      borderUpColor: brdUp, borderDownColor: brdDn,
-      wickUpColor:   brdUp, wickDownColor:   brdDn,
+      upColor: "transparent", downColor: "transparent",
+      borderUpColor: "transparent", borderDownColor: "transparent",
+      wickUpColor:   "transparent", wickDownColor:   "transparent",
     });
     series.setData(fc);
     forecastSeriesRef.current = series;
+    forecastCandlesRef.current = fc.map(c => ({
+      time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close,
+    }));
+    setForecastColors({ up: brdUp, down: brdDn });
+    setChartGeneration(g => g + 1);
 
     // Uncertainty fan — bolder lines
     if (bullPath.length) {
@@ -4013,6 +4045,26 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               </button>
             )}
             <div className="cw-chart-wrap" ref={chartContainerRef}>
+              <RoundedCandleOverlay
+                chartRef={chartRef}
+                seriesRef={candleSeriesRef}
+                candlesRef={candlesRef}
+                upColor="#22c55e"
+                downColor="#ef4444"
+                style="candle"
+                generation={chartGeneration}
+                visible={true}
+              />
+              <RoundedCandleOverlay
+                chartRef={chartRef}
+                seriesRef={forecastSeriesRef}
+                candlesRef={forecastCandlesRef}
+                upColor={forecastColors.up}
+                downColor={forecastColors.down}
+                style="candle"
+                generation={chartGeneration}
+                visible={showForecast}
+              />
               {loading && !loadError && <div className="cw-chart-loader">Loading candles…</div>}
               {loadError && (
                 <div className="cw-chart-error">

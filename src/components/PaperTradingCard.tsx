@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinSymbol, fetchLivePrice } from "../services/coinglass";
 import {
-  fetchPortfolio, fetchAgentPerformance, closePosition, executeTrade, updateCashBalance, fetchClosedPositions,
+  fetchPortfolio, fetchAgentPerformance, closePosition, executeTrade, updateCashBalance, fetchClosedPositions, acceptConsent,
   PaperPortfolio, AgentPerformance, PaperPosition, AgentAction, PositionsListItem,
 } from "../services/paperTrading";
 import { LiquidationGauge } from "./LiquidationGauge";
@@ -92,6 +92,33 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [closingKey, setClosingKey] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // Same one-time risk-disclaimer gate TradingAgent.tsx already uses
+  // (consentAcceptedAt/acceptConsent, paperTrading.ts) — a signed-in user
+  // who hasn't accepted it yet sees the activation banner below instead
+  // of live stats, same shared account-level flag either entry point sets.
+  const [activating, setActivating] = useState(false);
+  // Cinematic cross-dissolve on activation — real movie-cut grammar (two
+  // scenes briefly overlapping, one dissolving out as the other's already
+  // visible underneath) instead of an instant swap from banner to stats.
+  // The stats view is free to mount underneath immediately (it already
+  // has its own fade/rise-in entrance, .ptc-stats' animation below) since
+  // consentAcceptedAt flips the instant loadPortfolio resolves; this flag
+  // just keeps the banner alive a little longer, absolutely positioned
+  // over it, fading/blurring out on its own instead of disappearing the
+  // same frame the stats appear.
+  const [dissolving, setDissolving] = useState(false);
+  const handleActivate = async () => {
+    if (!user || activating) return;
+    setActivating(true);
+    try {
+      await acceptConsent(user.id);
+      await loadPortfolio(user.id);
+      setDissolving(true);
+      setTimeout(() => setDissolving(false), 750);
+    } finally {
+      setActivating(false);
+    }
+  };
   // Fullscreen option — same content, rendered a second time (not instead
   // of, alongside) inside a portaled modal when true, so the inline card
   // never has to unmount/remount or lose its own scroll position.
@@ -267,13 +294,20 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const positions = portfolio?.positions ?? [];
   const openCount = positions.length;
   const formPrice = livePrices[coin];
+  // Title/breadcrumb/LIVE badge are all "the real card is open" chrome —
+  // none of it means anything yet for a signed-in user who hasn't
+  // activated paper trading, so the whole header hides for that one case
+  // and the activation banner takes over the full card instead (see
+  // .ptc-card--activating/.ptc-activate below).
+  const needsActivation = !!user && !loading && !portfolio?.consentAcceptedAt;
 
   const body = (
     <>
+      {!needsActivation && (
       <div className="ptc-header">
         <span className="ptc-title">
           Paper Trading
-          {user && !loading && (
+          {user && !loading && portfolio?.consentAcceptedAt && (
             <>
               <span className="ptc-crumb-sep">/</span>
               <button
@@ -290,6 +324,7 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
           <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
         </div>
       </div>
+      )}
 
       {!user && (
         <>
@@ -310,7 +345,37 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
         </div>
       )}
 
-      {user && !loading && (
+      {user && !loading && (needsActivation || dissolving) && (
+        <div className={`ptc-activate${dissolving ? " ptc-activate--dissolving" : ""}`}>
+          <span className="ptc-activate-glow" />
+          <div className="ptc-activate-orbit">
+            <span className="ptc-activate-ring ptc-activate-ring--1" />
+            <span className="ptc-activate-ring ptc-activate-ring--2" />
+            <span className="ptc-activate-ring ptc-activate-ring--3" />
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <span key={i} className={`ptc-activate-spark ptc-activate-spark--${i}`} />
+            ))}
+            <span className="ptc-activate-coin">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+              </svg>
+            </span>
+          </div>
+          <p className="ptc-activate-title">Practice with real market prices, zero real risk</p>
+          <p className="ptc-activate-sub">
+            Simulated money, simulated trades — not financial advice, and coinhintz isn't responsible for any
+            losses, simulated or otherwise. We'll only ask you to accept this once.
+          </p>
+          <button type="button" className="ptc-activate-cta" onClick={handleActivate} disabled={activating}>
+            <span className="ptc-activate-cta-shine" />
+            <span className="ptc-activate-cta-label">
+              {activating ? "Activating…" : "Activate Paper Trading"}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {user && !loading && portfolio?.consentAcceptedAt && (
         <>
           <div className="ptc-stats">
             <div className="ptc-stat">
@@ -550,21 +615,25 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
         </>
       )}
 
-      <button
-        type="button"
-        className="ptc-agent-nudge"
-        onClick={() => window.dispatchEvent(new CustomEvent("open-trading-agent"))}
-      >
-        <span className="ptc-agent-nudge-link">Not sure what to trade? Ask Agent ready.</span>
-      </button>
+      {user && !loading && portfolio?.consentAcceptedAt && (
+        <>
+          <button
+            type="button"
+            className="ptc-agent-nudge"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-trading-agent"))}
+          >
+            <span className="ptc-agent-nudge-link">Not sure what to trade? Ask Agent ready.</span>
+          </button>
 
-      {/* Promotes the full Trade Manager page (App.tsx: setActiveSection
-          "riskcalc") — this card covers open/close/manage already, but
-          the full page has the richer flows (beginner wizard, AI review)
-          this one deliberately doesn't try to replicate. */}
-      <button type="button" className="ptc-page-link" onClick={onOpen}>
-        Want more tools? Open the full Trade Manager →
-      </button>
+          {/* Promotes the full Trade Manager page (App.tsx: setActiveSection
+              "riskcalc") — this card covers open/close/manage already, but
+              the full page has the richer flows (beginner wizard, AI review)
+              this one deliberately doesn't try to replicate. */}
+          <button type="button" className="ptc-page-link" onClick={onOpen}>
+            Want more tools? Open the full Trade Manager →
+          </button>
+        </>
+      )}
     </>
   );
 
@@ -573,11 +642,11 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
       {/* Double-click anywhere on the card toggles fullscreen — same
           double-click-to-expand convention the chart canvas itself uses
           (.chart-dblclick-wrap, PriceChart.tsx), no dedicated button. */}
-      <div className="ptc-card" onDoubleClick={() => setIsFullscreen((v) => !v)}>{body}</div>
+      <div className={`ptc-card${needsActivation || dissolving ? " ptc-card--activating" : ""}${dissolving ? " ptc-card--revealing" : ""}`} onDoubleClick={() => setIsFullscreen((v) => !v)}>{body}</div>
       {isFullscreen && createPortal(
         <div className="ptc-modal-backdrop" onClick={() => setIsFullscreen(false)}>
           <div
-            className="ptc-card ptc-card--modal"
+            className={`ptc-card ptc-card--modal${needsActivation || dissolving ? " ptc-card--activating" : ""}${dissolving ? " ptc-card--revealing" : ""}`}
             onClick={(e) => e.stopPropagation()}
             onDoubleClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }}
           >
