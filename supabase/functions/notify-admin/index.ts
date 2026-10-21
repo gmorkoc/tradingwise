@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "coinhintz <onboarding@resend.dev>",
+      from: "coinhintz <support@coinhintz.com>",
       to: ADMIN_NOTIFY_EMAIL,
       subject,
       html,

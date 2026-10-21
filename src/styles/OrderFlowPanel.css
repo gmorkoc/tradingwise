@@ -29,17 +29,51 @@
 /* Matches .db-head-title (DailyBrief.css) — same title size/weight as
    Daily Brief's own panel header, same row. */
 .ofp-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
 }
+/* LIVE badge + spread grouped on the right — same left-title/right-group
+   split as .ptc-header/.ptc-header-right (PaperTradingCard.tsx), instead
+   of the badge sitting right next to the title text. */
+.ofp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ofp-spread {
   font-size: 10.5px;
   color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Pinned top-right corner, its own row above .ofp-title — not inline
+   next to the title, per explicit placement request. */
+.ofp-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* Flow/Book switcher — picks which single read on live depth this card
+   shows (never both stacked). Plain text + link, not a pill/segmented
+   control: a muted label for the current view, then a blue underlined
+   link naming the other one. */
+.ofp-view-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.ofp-view-link {
+  all: unset;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
   white-space: nowrap;
 }
 

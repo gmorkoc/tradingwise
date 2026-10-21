@@ -3,10 +3,11 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinSymbol, fetchLivePrice } from "../services/coinglass";
 import {
-  fetchPortfolio, fetchAgentPerformance, closePosition, executeTrade, updateCashBalance,
-  PaperPortfolio, AgentPerformance, PaperPosition, AgentAction,
+  fetchPortfolio, fetchAgentPerformance, closePosition, executeTrade, updateCashBalance, fetchClosedPositions,
+  PaperPortfolio, AgentPerformance, PaperPosition, AgentAction, PositionsListItem,
 } from "../services/paperTrading";
 import { LiquidationGauge } from "./LiquidationGauge";
+import { formatRelativeTime } from "./ChartEventAnnotations";
 import "../styles/PaperTradingCard.css";
 
 interface Props {
@@ -114,6 +115,32 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const [stopLoss, setStopLoss] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Open/closed is a top-level view switch (same place/pattern as
+  // OrderFlowPanel's own Flow/Book switcher), not a collapsible section
+  // tucked somewhere in the card — closed positions kept getting moved
+  // around (next to the open list: too busy together; at the very
+  // bottom: still the wrong spot) because "a separate section" never had
+  // a right place to live. Making it a view of the same list sidesteps
+  // that entirely. Lazy-loaded the first time you switch to it, not
+  // fetched alongside the portfolio on every mount, since most visits to
+  // this card are just a glance at open positions/cash.
+  const [positionsView, setPositionsView] = useState<"open" | "closed">("open");
+  const [closedPositions, setClosedPositions] = useState<PositionsListItem[] | null>(null);
+  const [closedLoading, setClosedLoading] = useState(false);
+  const switchToClosed = async () => {
+    setPositionsView("closed");
+    if (closedPositions === null && user) {
+      setClosedLoading(true);
+      try {
+        setClosedPositions(await fetchClosedPositions(user.id));
+      } catch {
+        setClosedPositions([]);
+      } finally {
+        setClosedLoading(false);
+      }
+    }
+  };
 
   const loadPortfolio = async (userId: string) => {
     const [p, perfRes] = await Promise.all([
@@ -244,7 +271,21 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const body = (
     <>
       <div className="ptc-header">
-        <span className="ptc-title">Paper Trading</span>
+        <span className="ptc-title">
+          Paper Trading
+          {user && !loading && (
+            <>
+              <span className="ptc-crumb-sep">/</span>
+              <button
+                type="button"
+                className="ptc-crumb-link"
+                onClick={() => (positionsView === "open" ? switchToClosed() : setPositionsView("open"))}
+              >
+                {positionsView === "open" ? "Closed Positions" : "Open Positions"}
+              </button>
+            </>
+          )}
+        </span>
         <div className="ptc-header-right">
           <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
         </div>
@@ -310,7 +351,7 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
             </div>
           </div>
 
-          {openCount > 0 && (
+          {positionsView === "open" && openCount > 0 && (
             <div className="ptc-positions">
               {positions.map((pos) => {
                 const key = positionKey(pos);
@@ -409,13 +450,13 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
             </div>
           )}
 
-          {!formOpen && (
+          {positionsView === "open" && !formOpen && (
             <button type="button" className="ptc-new-position" onClick={() => setFormOpen(true)}>
               + Open {coin} position
             </button>
           )}
 
-          {formOpen && (
+          {positionsView === "open" && formOpen && (
             <div className="ptc-form">
               <div className="ptc-form-row">
                 <div className="ptc-segmented">
@@ -471,6 +512,39 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
                   {submitting ? "Opening…" : "Open position"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Same list area, the other view (the .ptc-header-top switcher
+              above swaps between them) — not a separate section bolted
+              on somewhere else in the card, which never had a right
+              place to live (busy next to the open list, still wrong at
+              the very bottom). */}
+          {positionsView === "closed" && (
+            <div className="ptc-closed-list">
+              {closedLoading && <p className="ptc-closed-empty">Loading…</p>}
+              {!closedLoading && closedPositions && closedPositions.length === 0 && (
+                <p className="ptc-closed-empty">No closed positions yet.</p>
+              )}
+              {!closedLoading && closedPositions && closedPositions.slice(0, 5).map((item, i) => (
+                <div key={`${item.coin}-${item.closedAt}-${i}`} className="ptc-closed-row">
+                  <span className={`ptc-position-side ptc-position-side--${item.side}`}>
+                    {item.side === "long" ? "LONG" : "SHORT"}
+                  </span>
+                  <span className="ptc-position-coin">{item.coin}</span>
+                  {item.leverage > 1 && <span className="ptc-position-lev">{fmtLev(item.leverage)}x</span>}
+                  <span className="ptc-closed-exit">@ ${item.exitPrice?.toLocaleString()}</span>
+                  <span className="ptc-closed-time">{item.closedAt ? formatRelativeTime(Math.floor(new Date(item.closedAt).getTime() / 1000)) : ""}</span>
+                  <span className={`ptc-closed-pnl ${(item.realizedPnl ?? 0) >= 0 ? "ptc-up" : "ptc-down"}`}>
+                    {fmtUsd(item.realizedPnl ?? 0)}
+                  </span>
+                </div>
+              ))}
+              {!closedLoading && closedPositions && closedPositions.length > 5 && (
+                <button type="button" className="ptc-page-link" onClick={onOpen}>
+                  View all {closedPositions.length} closed positions →
+                </button>
+              )}
             </div>
           )}
         </>

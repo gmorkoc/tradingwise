@@ -22,6 +22,14 @@ function fmtPrice(p: number): string {
   return p.toFixed(6);
 }
 
+// Spread is usually a tiny sub-$1 difference — fmtPrice's own fixed 6
+// decimals for that range pads it with trailing zeros ("0.010000") that
+// bestBid/bestAsk (real prices, where fixed-width digits matter) don't
+// have this problem with. Trims those back to the real precision instead.
+function fmtSpread(p: number): string {
+  return Number(fmtPrice(p)).toString();
+}
+
 // ChartEvent (buildChartEvents, ChartEventAnnotations.tsx) carries no
 // sentiment field of its own — these are the only title shapes it ever
 // produces, so the mapping is exhaustive by inspection, not a guess.
@@ -41,6 +49,13 @@ function eventColor(ev: ChartEvent): string {
 interface Props {
   coin: CoinSymbol;
   events: ChartEvent[];
+  // Controlled from outside (the 2col layout's Paper Trading/Flow/Book
+  // tab switcher, App.tsx) — when passed, this panel's own internal
+  // Flow/Book switch (.ofp-header-top) is hidden and `view` always wins,
+  // since the outer tabs are the one switcher the user sees. Omit it (as
+  // every other call site still does) to keep this panel fully self-
+  // contained with its own internal switcher, unchanged.
+  view?: "flow" | "orderbook";
 }
 
 interface HistoryEntry {
@@ -63,7 +78,17 @@ const SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
 // "every resting order," and "what's actually happened" (the same
 // support/resistance/zone events already driving the on-chart dots,
 // ChartEventAnnotations.tsx) instead of a wall of numbers.
-export function OrderFlowPanel({ coin, events }: Props) {
+export function OrderFlowPanel({ coin, events, view: controlledView }: Props) {
+  // Which of the two reads on live depth this card currently shows — never
+  // both stacked at once. Title keeps the same .ofp-title styling either
+  // way; only the label text and the switcher's active side change.
+  // Uncontrolled by default (own useState + its own switcher UI below);
+  // controlledView (if passed) takes over both the value and hides that
+  // switcher, since something outside already renders one.
+  const [internalView, setInternalView] = useState<"flow" | "orderbook">("flow");
+  const view = controlledView ?? internalView;
+  const setView = setInternalView;
+  const showOwnSwitch = controlledView === undefined;
   const [bestBid, setBestBid] = useState(0);
   const [bestAsk, setBestAsk] = useState(0);
   const [bidPct, setBidPct] = useState(50);
@@ -151,59 +176,77 @@ export function OrderFlowPanel({ coin, events }: Props) {
 
   return (
     <div className="ob-card ofp-card">
+      {showOwnSwitch && (
+        <div className="ofp-header-top">
+          <span className="ofp-view-label">{view === "flow" ? "Flow" : "Order Book"}</span>
+          <button
+            type="button"
+            className="ofp-view-link"
+            onClick={() => setView(view === "flow" ? "orderbook" : "flow")}
+          >
+            Switch to {view === "flow" ? "Order Book" : "Flow"}
+          </button>
+        </div>
+      )}
       <div className="ofp-header">
-        <span className="ofp-title">
-          Order Flow Pressure
+        <span className="ofp-title">{view === "flow" ? "Order Flow Pressure" : "Order Book"}</span>
+        <div className="ofp-header-right">
+          {view === "flow" && !loading && !unavailable && (
+            <span className="ofp-spread">Spread {fmtSpread(spread)} ({spreadBps.toFixed(4)} bps)</span>
+          )}
           <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
-        </span>
-        {!loading && !unavailable && (
-          <span className="ofp-spread">Spread {fmtPrice(spread)} ({spreadBps.toFixed(4)} bps)</span>
-        )}
+        </div>
       </div>
 
-      {loading && <div className="ofp-loading">Loading…</div>}
-      {!loading && unavailable && <div className="ofp-loading">Order flow unavailable for {coin}.</div>}
-
-      {!loading && !unavailable && (
+      {view === "flow" && (
         <>
-          <div className="ofp-bar">
-            <div className="ofp-bar-bid" style={{ width: `${bidPct}%` }} />
-            <div className="ofp-bar-ask" style={{ width: `${askPct}%` }} />
-          </div>
-          <div className="ofp-bar-labels">
-            <span className="ofp-bar-label ofp-bar-label--bid">{bidPct}% buyers · {fmtPrice(bestBid)}</span>
-            <span className="ofp-bar-label ofp-bar-label--ask">{askPct}% sellers · {fmtPrice(bestAsk)}</span>
+          {loading && <div className="ofp-loading">Loading…</div>}
+          {!loading && unavailable && <div className="ofp-loading">Order flow unavailable for {coin}.</div>}
+
+          {!loading && !unavailable && (
+            <>
+              <div className="ofp-bar">
+                <div className="ofp-bar-bid" style={{ width: `${bidPct}%` }} />
+                <div className="ofp-bar-ask" style={{ width: `${askPct}%` }} />
+              </div>
+              <div className="ofp-bar-labels">
+                <span className="ofp-bar-label ofp-bar-label--bid">{bidPct}% buyers · {fmtPrice(bestBid)}</span>
+                <span className="ofp-bar-label ofp-bar-label--ask">{askPct}% sellers · {fmtPrice(bestAsk)}</span>
+              </div>
+            </>
+          )}
+
+          <div className="ofp-feed-label">Today's Story</div>
+          <div className="ofp-feed">
+            {history.length === 0 && (
+              <div className="ofp-feed-empty">No notable signals on this chart right now.</div>
+            )}
+            {history.map(({ key, ev }, i) => (
+              <div key={key} className="ofp-feed-item" style={{ animationDelay: `${Math.min(i, 8) * 0.07}s` }}>
+                <span className="ofp-feed-dot" style={{ background: eventColor(ev) }} />
+                <div className="ofp-feed-body">
+                  <span className="ofp-feed-text"><b>{ev.title}</b> — {ev.body}</span>
+                  {/* ev.time (unix seconds, buildChartEvents/ChartEventAnnotations.tsx)
+                      — when THAT signal actually became true (its own candle's
+                      close time), not snapshotAt (when this 15-min tick ran;
+                      identical for every event captured in the same tick).
+                      Relative, not absolute hour:minute — a coarser interval's
+                      candles (1D/1W) all close at the same hour-of-day, so an
+                      absolute clock time collided across genuinely different
+                      days; "2h ago"/"3d ago" doesn't have that problem. */}
+                  <span className="ofp-feed-time">{formatRelativeTime(ev.time)}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
 
-      <div className="ofp-feed-label">Today's Story</div>
-      <div className="ofp-feed">
-        {history.length === 0 && (
-          <div className="ofp-feed-empty">No notable signals on this chart right now.</div>
-        )}
-        {history.map(({ key, ev }, i) => (
-          <div key={key} className="ofp-feed-item" style={{ animationDelay: `${Math.min(i, 8) * 0.07}s` }}>
-            <span className="ofp-feed-dot" style={{ background: eventColor(ev) }} />
-            <div className="ofp-feed-body">
-              <span className="ofp-feed-text"><b>{ev.title}</b> — {ev.body}</span>
-              {/* ev.time (unix seconds, buildChartEvents/ChartEventAnnotations.tsx)
-                  — when THAT signal actually became true (its own candle's
-                  close time), not snapshotAt (when this 15-min tick ran;
-                  identical for every event captured in the same tick).
-                  Relative, not absolute hour:minute — a coarser interval's
-                  candles (1D/1W) all close at the same hour-of-day, so an
-                  absolute clock time collided across genuinely different
-                  days; "2h ago"/"3d ago" doesn't have that problem. */}
-              <span className="ofp-feed-time">{formatRelativeTime(ev.time)}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="ofp-ladder-wrap">
-        <OrderBook coin={coin} embedded />
-      </div>
+      {view === "orderbook" && (
+        <div className="ofp-ladder-wrap">
+          <OrderBook coin={coin} embedded />
+        </div>
+      )}
     </div>
   );
 }

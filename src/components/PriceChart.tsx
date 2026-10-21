@@ -121,6 +121,11 @@ interface PriceChartProps {
   onOpenAuth?: () => void;
   onOpenUpgrade?: (plan?: "pro" | "elite") => void;
   onOpenCoinPicker?: (anchor: HTMLElement) => void;
+  // Direct jump to one of the top-5-by-market-cap coins shown next to the
+  // selector (chart-hero-top-coins below) — skips the full picker modal,
+  // same shortcut Watchlist/TopMoversCarousel's own onSelectCoin already
+  // gives from further down this same page.
+  onSelectCoin?: (symbol: string) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   coinChatOpen?: boolean;
   onToggleCoinChat?: () => void;
@@ -175,6 +180,14 @@ interface PriceChartProps {
   // TopMoversCarousel so they visually live inside this card instead of as
   // separate full-width blocks below it.
   children?: React.ReactNode;
+  // App.tsx's own .mch-stats (LIQ above/below, Open Interest, Funding,
+  // RSI/MACD/L-S ratio) — same composition pattern as `children` above,
+  // just rendered inside .chart-fs-header-group instead of below the whole
+  // card, so it reads as part of the chart's own header instead of a
+  // separate top-level bar. Already collapsed to nothing in pageMode via
+  // that group's own chart-fs-header-group--empty modifier, so this never
+  // needs its own pageMode check here.
+  headerStats?: React.ReactNode;
 }
 
 export const INTERVALS: TimeInterval[] = [
@@ -258,6 +271,10 @@ export const COIN_COLORS: Record<string, string> = {
   RENDER: "#6633cc",
   ZEC: "#f4b728",
 };
+// COINS (coinglass.ts) is already ordered by market cap — the first 5
+// entries, in order, are the top 5. Next to the coin selector, overlapping
+// avatar-stack style (chart-hero-top-coins below).
+const TOP5_COINS = COINS.slice(0, 5).map((c) => c.symbol);
 
 const FIB_LEVELS = [
   { ratio: 0, label: "0", color: "rgba(251,191,36,0.85)" },
@@ -1460,6 +1477,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   onZoneChange,
   onOpenUpgrade = () => {},
   onOpenCoinPicker,
+  onSelectCoin,
   onFullscreenChange,
   coinChatOpen,
   onToggleCoinChat,
@@ -1474,6 +1492,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   forceHideHeader,
   onChartEventsChange,
   children,
+  headerStats,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
@@ -4253,32 +4272,48 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
 
-  // Replaces the old single "Compact View" icon button, then the
-  // segmented Full/Compact switch — same label + underlined-link pattern
-  // as TradeManager's own mode switch (.rcw-switch-row/.rcw-switch:
-  // "Beginner mode  Switch to Pro"), reused here as "Full view  Switch to
-  // Compact". Desktop renders this in its own row below .chart-header;
-  // mobile/iOS renders the exact same element inline inside
-  // .chart-header-right instead (both read from this one constant so the
-  // label/link/handler can never drift out of sync between the two spots).
+  // Back to a single icon button (the label+link version in between was
+  // its own separate row, disconnected from the other icon controls) —
+  // now styled and placed exactly like its chart-hero-icon-row siblings
+  // (chart-depth-btn: depth profile/screenshot/fullscreen), not its own
+  // row below the header. One constant, rendered from inside that row
+  // only now, so the icon/handler still can't drift out of sync between
+  // call sites.
   const chartViewSwitchRow = (
-    <span className="chart-view-switch-row">
-      {showCompactView ? t("chart.compactViewLabel", "Compact view") : t("chart.fullViewLabel", "Full view")}
-      {" "}
-      <button
-        type="button"
-        className="chart-view-switch-link"
-        onClick={() => {
-          if (showCompactView) { setShowCompactView(false); return; }
-          if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-          setShowCompactView(true);
-        }}
-      >
-        {showCompactView
-          ? t("chart.switchToFull", "Switch to Full")
-          : t("chart.switchToCompact", "Switch to Compact")}
-      </button>
-    </span>
+    <button
+      type="button"
+      className={`chart-depth-btn${showCompactView ? " chart-depth-btn--active" : ""}`}
+      onClick={() => {
+        if (showCompactView) { setShowCompactView(false); return; }
+        if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+        setShowCompactView(true);
+      }}
+      title={showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}
+      data-tooltip={showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}
+    >
+      {/* Shape-based, not another set of lines (grid/depth/chart-style
+          nearby already are) — represents the CURRENT view, not the
+          target: candles while on the normal full chart, radio-wave
+          while already in compact. */}
+      {!showCompactView ? (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="8" y1="3" x2="8" y2="21" />
+          <rect x="6" y="8" width="4" height="8" rx="1" fill="currentColor" stroke="none" />
+          <line x1="16" y1="5" x2="16" y2="19" />
+          <rect x="14" y="9" width="4" height="7" rx="1" />
+        </svg>
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+          <path d="M15.21 8.17 A5 5 0 0 1 15.21 15.83" />
+          <path d="M8.79 8.17 A5 5 0 0 0 8.79 15.83" />
+          <path d="M17.14 5.87 A8 8 0 0 1 17.14 18.13" />
+          <path d="M6.86 5.87 A8 8 0 0 0 6.86 18.13" />
+          <path d="M19.07 3.57 A11 11 0 0 1 19.07 20.43" />
+          <path d="M4.93 3.57 A11 11 0 0 0 4.93 20.43" />
+        </svg>
+      )}
+    </button>
   );
 
   // Fullscreen's persistent docked bottom sheet — options only (Style/
@@ -5603,39 +5638,54 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           {COIN_GLYPHS[coin] ?? coin[0]}
                         </span>
                       );
-                      // Mobile/iOS only — desktop's own coin switcher lives
-                      // in the sidebar/top bar already (App.tsx mch-coin-
-                      // btn), so this stays plain text there; mobile has no
-                      // equivalent entry point on this page, so the name
-                      // itself becomes the tap target, same onOpenCoinPicker
-                      // the Advance Chart page's own chart-tv-symbol button
-                      // (above) already opens.
-                      if (!isDesktopWidth) {
-                        return (
-                          <button
-                            type="button"
-                            className="chart-hero-coin-selector"
-                            onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
-                          >
-                            {icon}
-                            <span className="chart-hero-pair-name">{coin}/USD</span>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </button>
-                        );
-                      }
+                      // Now the ONE coin switcher on this page, mobile and
+                      // desktop alike — App.tsx's own mch-coin-btn (top bar)
+                      // is gone, so this is the only entry point left;
+                      // same onOpenCoinPicker the Advance Chart page's own
+                      // chart-tv-symbol button (above) already opens.
                       return (
-                        <>
+                        <button
+                          type="button"
+                          className="chart-hero-coin-selector"
+                          onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                        >
                           {icon}
                           <span className="chart-hero-pair-name">{coin}/USD</span>
-                        </>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
                       );
                     })()}
-                    <span className="chart-hero-live-badge">
-                      <span className="chart-hero-live-dot" />
-                      {t("chart.live", "LIVE")}
-                    </span>
+                    {/* Top 5 by market cap, overlapping avatar stack —
+                        hover un-overlaps them for an easier target; click
+                        one to jump straight to it (onSelectCoin, skips the
+                        full picker), or click the trailing "…" to open the
+                        full picker (onOpenCoinPicker) same as the main
+                        selector button above. */}
+                    <div className="chart-hero-top-coins">
+                      {TOP5_COINS.map((symbol, i) => (
+                        <button
+                          key={symbol}
+                          type="button"
+                          className={`chart-hero-top-coin${symbol === coin ? " chart-hero-top-coin--current" : ""}`}
+                          style={{ zIndex: TOP5_COINS.length - i, background: COIN_COLORS[symbol] ?? "var(--pc-accent)" }}
+                          onClick={() => onSelectCoin?.(symbol)}
+                          title={`Switch to ${symbol}`}
+                        >
+                          {COIN_GLYPHS[symbol] ?? symbol[0]}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="chart-hero-top-coin chart-hero-top-coin--more"
+                        style={{ zIndex: 0 }}
+                        onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                        title="More coins"
+                      >
+                        …
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className="chart-title-row">
@@ -5721,6 +5771,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       </div>
                       {!isFullscreen && quoteVolume24h !== undefined && (
                         <div className="chart-fs-stat-row">
+                          {/* Mobile/iOS only — small coin icon ahead of the
+                              label, same icon/fallback pattern as the hero
+                              row above (.chart-hero-coin-icon). */}
+                          {!isDesktopWidth && (
+                            !heroLogoError ? (
+                              <img
+                                className="chart-fs-stat-coin-icon"
+                                src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                                alt=""
+                                loading="lazy"
+                                onError={() => setHeroLogoError(true)}
+                              />
+                            ) : (
+                              <span
+                                className="chart-fs-stat-coin-icon chart-fs-stat-coin-icon--fallback"
+                                style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                              >
+                                {COIN_GLYPHS[coin] ?? coin[0]}
+                              </span>
+                            )
+                          )}
                           <span className="chart-fs-stat-label">{t("chart.vol24h", "24hr vol")}</span>
                           <span className="chart-fs-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                         </div>
@@ -5754,6 +5825,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </>
               )}
             </div>
+            {/* Mobile only — headerStats (.mch-body/.mch-stats) moves up
+                here, above chart-header-right (the pills/icon row right
+                below), instead of its usual spot after .chart-header
+                closes entirely (still that spot on desktop, below). */}
+            {!isDesktopWidth && headerStats}
             {/* Reference-match: pills + icon buttons sit beside the coin-
                 name/price rows (a 2x2 grid on desktop — name/pills on top,
                 price/icons below; the grid CSS itself is min-width:641px-
@@ -5772,8 +5848,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     .chart-dblclick-wrap closes) — desktop keeps both here. */}
                 {isDesktopWidth && quickIntervalPills}
                 <div className="chart-hero-icon-row">
+                  {/* Chart style (candle/line/area) picker — mobile and
+                      desktop both now; it already has its own mobile
+                      bottom-sheet branch built in (isDesktopWidth ? portal
+                      dropdown : indicators-sheet), unlike gridToggleButton
+                      right below, which stays desktop-only. */}
                   {gridStyleControls}
-                  {gridToggleButton}
+                  {isDesktopWidth && gridToggleButton}
                   <button
                     className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
                     onClick={() => setShowDepthProfile((v) => !v)}
@@ -5787,6 +5868,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       <line x1="12" y1="18" x2="6" y2="18" />
                     </svg>
                   </button>
+                  {/* Desktop only — mobile goes back to its own text link
+                      below the header instead (chart-compact-link, right
+                      after this row closes), not merged into this icon
+                      set. */}
+                  {isDesktopWidth && chartViewSwitchRow}
                   <button
                     type="button"
                     className="chart-depth-btn"
@@ -5813,17 +5899,47 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     </button>
                   )}
                 </div>
-                {/* Mobile/iOS only — same row as the icon group above
-                    instead of its own row below .chart-header (desktop
-                    keeps that, just below this whole group). */}
-                {!isDesktopWidth && chartViewSwitchRow}
+                {/* Mobile's own separate row — the text link this control
+                    used to be before it was folded into chart-hero-icon-
+                    row (desktop only now, above) as a bare icon. */}
+                {!isDesktopWidth && (
+                  <button
+                    type="button"
+                    className="chart-compact-link"
+                    onClick={() => {
+                      if (showCompactView) { setShowCompactView(false); return; }
+                      if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                      setShowCompactView(true);
+                    }}
+                  >
+                    {!showCompactView ? (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="8" y1="3" x2="8" y2="21" />
+                        <rect x="6" y="8" width="4" height="8" rx="1" fill="currentColor" stroke="none" />
+                        <line x1="16" y1="5" x2="16" y2="19" />
+                        <rect x="14" y="9" width="4" height="7" rx="1" />
+                      </svg>
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+                        <path d="M15.21 8.17 A5 5 0 0 1 15.21 15.83" />
+                        <path d="M8.79 8.17 A5 5 0 0 0 8.79 15.83" />
+                        <path d="M17.14 5.87 A8 8 0 0 1 17.14 18.13" />
+                        <path d="M6.86 5.87 A8 8 0 0 0 6.86 18.13" />
+                        <path d="M19.07 3.57 A11 11 0 0 1 19.07 20.43" />
+                        <path d="M4.93 3.57 A11 11 0 0 0 4.93 20.43" />
+                      </svg>
+                    )}
+                    <span>{showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
 
-        </div>
+          {isDesktopWidth && headerStats}
 
-        {!isFullscreen && isDesktopWidth && chartViewSwitchRow}
+        </div>
         </>
         )}
 
@@ -6089,8 +6205,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M3 12h4M17 12h4M12 3v4M12 17v4" />
-                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+                    <path d="M15.21 8.17 A5 5 0 0 1 15.21 15.83" />
+                    <path d="M8.79 8.17 A5 5 0 0 0 8.79 15.83" />
+                    <path d="M17.14 5.87 A8 8 0 0 1 17.14 18.13" />
+                    <path d="M6.86 5.87 A8 8 0 0 0 6.86 18.13" />
+                    <path d="M19.07 3.57 A11 11 0 0 1 19.07 20.43" />
+                    <path d="M4.93 3.57 A11 11 0 0 0 4.93 20.43" />
                   </svg>
                   <span className="chart-icon-label">{t("chart.compactView", "Compact View")}</span>
                 </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -62,6 +62,7 @@ import { BlurGate } from "./components/MembershipGate";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { useAIQuota } from "./hooks/useAIQuota";
 import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
@@ -89,6 +90,20 @@ function formatHeaderPriceMobile(p: number): string {
   }
   return formatLivePrice(p);
 }
+
+// 2col layout's "drag to resize" divider hint — shown at most once per
+// day, not once per page load (which would replay it on every refresh).
+// A cookie, not localStorage, specifically so it expires on its own at
+// the next local midnight rather than needing anything to clear it.
+const DIVIDER_INTRO_COOKIE = "crcDividerIntroShown";
+function hasShownDividerIntroToday(): boolean {
+  return document.cookie.split("; ").some((c) => c.startsWith(`${DIVIDER_INTRO_COOKIE}=`));
+}
+function markDividerIntroShownToday(): void {
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  document.cookie = `${DIVIDER_INTRO_COOKIE}=1; expires=${midnight.toUTCString()}; path=/`;
+}
 import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -97,7 +112,7 @@ import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
 import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
 import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
-import { Tier, hasAccess, saveTermsAgreement } from "./services/supabase";
+import { Tier, hasAccess, saveTermsAgreement, supabase } from "./services/supabase";
 import { ContactForm } from "./components/ContactForm";
 import { ChartAnalyzeModal } from "./components/ChartAnalyzeModal";
 import { ResolutionBanner } from "./components/ResolutionBanner";
@@ -980,6 +995,7 @@ function AppDashboard({
   }, []);
 
   const { tier, user, profile, signOut } = useAuth();
+  const { used: aiUsed, limit: aiLimit } = useAIQuota();
   // Shows the in-app buy-signal toast anywhere in the app, the instant it
   // fires — independent of whether a push notification actually made it
   // through (browser push subscriptions can go stale; this doesn't rely
@@ -1143,6 +1159,80 @@ function AppDashboard({
     return () => { cancelled = true; clearInterval(id); };
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // Desktop-only collapse to a narrow icon-only rail (persisted — a
+  // layout choice, not per-session state). Collapsed mode drops labels/
+  // category grouping entirely and falls back to the flyout panel for a
+  // category's items (same mechanism already in place for the 641-960px
+  // tablet range), rather than trying to show an inline indented list
+  // with no room for it.
+  const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("navCollapsed") === "1");
+  useEffect(() => {
+    localStorage.setItem("navCollapsed", navCollapsed ? "1" : "0");
+  }, [navCollapsed]);
+  // Drag-to-collapse handle on the rail's own right edge instead of a
+  // dedicated button — the rail only ever has the two built widths
+  // (88px/280px, CSS above), so this is a snap, not a continuous
+  // resize: dragging left past the threshold collapses it, dragging
+  // back right past the threshold re-expands it. startX resets after
+  // each snap so the next toggle needs a fresh drag, not flapping back
+  // immediately from the same pointer position.
+  const navResizeDragState = useRef({ active: false, startX: 0, wasCollapsed: false, snapped: false });
+  const onNavResizeDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      navResizeDragState.current = { active: true, startX: e.clientX, wasCollapsed: navCollapsed, snapped: false };
+    },
+    [navCollapsed],
+  );
+  const onNavResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = navResizeDragState.current;
+    if (!d.active) return;
+    const delta = e.clientX - d.startX;
+    const threshold = 60;
+    if (!d.wasCollapsed && delta < -threshold) {
+      setNavCollapsed(true);
+      navResizeDragState.current = { active: true, startX: e.clientX, wasCollapsed: true, snapped: true };
+    } else if (d.wasCollapsed && delta > threshold) {
+      setNavCollapsed(false);
+      navResizeDragState.current = { active: true, startX: e.clientX, wasCollapsed: false, snapped: true };
+    }
+  }, []);
+  const onNavResizeUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    const d = navResizeDragState.current;
+    // A plain click (barely any movement, no drag threshold crossed) also
+    // toggles — the handle doubles as a click target, not drag-only.
+    if (d.active && !d.snapped && Math.abs(e.clientX - d.startX) < 4) {
+      setNavCollapsed((v) => !v);
+    }
+    d.active = false;
+  }, []);
+  // Desktop-web-only bottom section (Settings/Support/Invite/Profile) —
+  // dismissible invite card, not persisted (reappears each session, same
+  // as most promo-card conventions). Sent server-side (send-invite edge
+  // function, Resend — same provider/pattern notify-admin already uses),
+  // not a mailto: link — the whole point was not needing the user's own
+  // mail client to open at all.
+  const [inviteCardOpen, setInviteCardOpen] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteStatus, setInviteStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const sendInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email || !email.includes("@") || inviteStatus === "sending") return;
+    setInviteStatus("sending");
+    try {
+      const { error } = await supabase.functions.invoke("send-invite", {
+        body: { email, inviterName: profile?.full_name || user?.email || "" },
+      });
+      if (error) throw error;
+      setInviteStatus("sent");
+      setInviteEmail("");
+      window.setTimeout(() => setInviteStatus("idle"), 2500);
+    } catch {
+      setInviteStatus("error");
+      window.setTimeout(() => setInviteStatus("idle"), 2500);
+    }
+  };
   // Segmented Chart/Order Book tabs — real phones (<=640px) and full
   // desktop (>=961px, see App.css); the in-between tablet range ignores
   // this entirely and keeps showing both side by side, resizable.
@@ -1236,6 +1326,79 @@ function AppDashboard({
     },
     [],
   );
+
+  // 2col layout only — how much of .chart-two-col-right's height the top
+  // row (Paper Trading/Order Flow/Order Book tabs) gets vs. Daily Brief
+  // below it, as a percent. null (the starting value) means "not resized
+  // yet" — the row just sizes to its own content (capped, same as
+  // before) instead of a px/percent guess that might not match where
+  // the content actually ends; only once the user actually drags the
+  // handle does this become a real fixed height. Same drag-to-resize
+  // pattern as the chart/order-book split above (onResizePointerDown/
+  // Move/Up, obSize), just a single vertical axis against this column's
+  // own height instead of chartWrapRef's.
+  const [rightColSplit, setRightColSplit] = useState<number | null>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const rightColTopRef = useRef<HTMLDivElement>(null);
+  const rightColDragState = useRef({ active: false, startY: 0, startSplit: 65, totalH: 1 });
+  const onRightColResizeDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const totalH = rightColRef.current?.getBoundingClientRect().height || 1;
+      // First drag ever — start from wherever the row actually is right
+      // now (its real, content-driven height), not an arbitrary default,
+      // so the very first move doesn't jump the row to some unrelated
+      // size.
+      const startSplit = rightColSplit ?? ((rightColTopRef.current?.getBoundingClientRect().height || 0) / totalH) * 100;
+      rightColDragState.current = { active: true, startY: e.clientY, startSplit, totalH };
+    },
+    [rightColSplit],
+  );
+  const onRightColResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const d = rightColDragState.current;
+    if (!d.active) return;
+    const deltaPct = ((e.clientY - d.startY) / d.totalH) * 100;
+    setRightColSplit(Math.max(5, Math.min(95, d.startSplit + deltaPct)));
+  }, []);
+  const onRightColResizeUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    rightColDragState.current.active = false;
+  }, []);
+
+  // On-load hint that the divider below is draggable — the real row
+  // boundary actually rises then lowers (not just a floating label/glow
+  // with nothing really moving), the same way it would if you dragged
+  // it yourself, with the "Drag to resize" label + glow riding along for
+  // the same window (rightColDividerIntro gates both: the CSS pulse/
+  // label in App.css, and the real height nudge below). At most once a
+  // day (hasShownDividerIntroToday/markDividerIntroShownToday) — lazy
+  // useState init so a day that's already shown it skips the whole
+  // effect below outright, not just the visible class.
+  const [rightColDividerIntro, setRightColDividerIntro] = useState(() => !hasShownDividerIntroToday());
+  useEffect(() => {
+    if (!rightColDividerIntro) return;
+    markDividerIntroShownToday();
+    const el = rightColTopRef.current;
+    const t0 = setTimeout(() => {
+      if (el) {
+        const naturalH = el.getBoundingClientRect().height;
+        if (naturalH > 40) {
+          el.style.transition = "height 0.7s cubic-bezier(0.45, 0, 0.55, 1)";
+          el.style.height = `${naturalH - 34}px`;
+          setTimeout(() => {
+            el.style.height = `${naturalH + 10}px`;
+            setTimeout(() => {
+              el.style.height = "";
+              setTimeout(() => { el.style.transition = ""; }, 750);
+            }, 750);
+          }, 750);
+        }
+      }
+    }, 300);
+    const t1 = setTimeout(() => setRightColDividerIntro(false), 2600);
+    return () => { clearTimeout(t0); clearTimeout(t1); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Resize-affordance hint — mobile/tablet only (desktop's order book is a
   // fixed width, not resizable, so there's nothing to hint at there). Opens
@@ -1357,6 +1520,57 @@ function AppDashboard({
   // OrderFlowPanel's "Today's Story" feed — same events PriceChart.tsx's
   // own ChartEventAnnotations already computes for its on-chart dots.
   const [chartEvents, setChartEvents] = useState<ChartEvent[]>([]);
+  // Chart-page layout picker (wide desktop only, >=961px — same threshold
+  // Daily Brief itself already requires). Three user-selectable arrangements
+  // of the same three blocks (chart / chart-right-col / Daily Brief), see
+  // the top-nav-bar's .top-nav-layout-* dropdown and .chart-layout-- rules in App.css:
+  //   "2col" — col1 chart, col2 stacks chart-right-col above Daily Brief.
+  //   "3col" — three side-by-side columns, one block each.
+  //   "2row" — row1 chart (full width), row2 chart-right-col + Daily Brief
+  //            side by side.
+  // Persisted so the choice survives a reload.
+  const [chartLayoutMode, setChartLayoutMode] = useState<"2col" | "3col" | "2row">(() => {
+    const saved = localStorage.getItem("chartLayoutMode");
+    return saved === "3col" || saved === "2row" ? saved : "2col";
+  });
+  useEffect(() => {
+    localStorage.setItem("chartLayoutMode", chartLayoutMode);
+  }, [chartLayoutMode]);
+  // Top-nav dropdown version of the layout picker (desktop web only) —
+  // the trigger always shows the 2-col glyph regardless of which mode is
+  // actually active (per explicit "main icon should be the two col
+  // icon"), not the current selection's own icon.
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  const layoutMenuWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!layoutMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (layoutMenuWrapRef.current && !layoutMenuWrapRef.current.contains(e.target as Node)) {
+        setLayoutMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [layoutMenuOpen]);
+  // "2col" mode only: either column can be clicked to expand itself at the
+  // other's expense — animated via a plain width transition (see
+  // .chart-two-col-* in App.css), not grid-template-columns (inconsistent
+  // transition support across browsers).
+  const [rightColExpanded, setRightColExpanded] = useState(false);
+  // "2col" mode only: Paper Trading / Order Flow Pressure / Order Book
+  // shown one at a time as tabs instead of stacked (3col/2row keep the
+  // original stacked chartRightColEl, unaffected — scoped to this one
+  // layout per explicit request).
+  const [rightColTab, setRightColTab] = useState<"paper" | "flow" | "orderbook">("paper");
+  // Measured sliding glow-underline position (fancy-tabs sketch option A)
+  // — same measure-and-position approach as CandleWatcher's interval
+  // pills, since the three labels are different widths.
+  const crcTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [crcHighlight, setCrcHighlight] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = crcTabRefs.current[rightColTab];
+    if (el) setCrcHighlight({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [rightColTab]);
   const [chartFullscreen, setChartFullscreen] = useState(false);
   // true once we've pushed a history entry for the Advance Price Chart
   // page this session — guards onNavigateBack below from calling
@@ -1947,7 +2161,7 @@ function AppDashboard({
 
   return (
     <>
-    <div className="app-shell">
+    <div className={`app-shell${navCollapsed ? " nav-collapsed" : ""}`}>
       {showOnboarding && (
         <OnboardingWizard
           onComplete={() => setShowOnboarding(false)}
@@ -2027,7 +2241,7 @@ function AppDashboard({
             onClick={() => setMobileNavOpen(false)}
           />
         )}
-        <nav className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}`}>
+        <nav className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed ? " nav-collapsed" : ""}`}>
           <button
             className="icon-strip-logo"
             onClick={fetchBTCData}
@@ -2035,6 +2249,16 @@ function AppDashboard({
           >
             <CoinHintzLogo loading={loading || refreshing} />
           </button>
+
+          {/* Desktop only (>=961px, App.css) — drag to snap the wide
+              labeled rail to a narrow icon-only one and back. */}
+          <div
+            className="icon-strip-resize-handle"
+            onPointerDown={onNavResizeDown}
+            onPointerMove={onNavResizeMove}
+            onPointerUp={onNavResizeUp}
+            title={navCollapsed ? "Drag to expand sidebar" : "Drag to collapse sidebar"}
+          />
 
           {/* Mobile-only profile header */}
           <button
@@ -2197,6 +2421,142 @@ function AppDashboard({
             </div>
           )}
 
+          {/* Desktop web only — the wide labeled sidebar (>=961px,
+              App.css) has room for this; the narrow rail/tablet flyout
+              doesn't. Settings/sign-out above still cover mobile+native;
+              this isn't a duplicate of those, it's the desktop-web
+              equivalent that was missing entirely before (that platform
+              had no bottom section at all). */}
+          {!Capacitor.isNativePlatform() && isWideDesktop && (
+            <div className="icon-strip-bottom-web">
+              <button type="button" className="icon-strip-btn" onClick={() => setDrawerOpen(true)} title={t("drawer.settings")}>
+                <span className="nav-icon-wrap">
+                  <NavIcon
+                    d={[
+                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
+                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+                    ]}
+                  />
+                </span>
+                <span className="icon-strip-label">{t("nav.settings")}</span>
+              </button>
+
+              <button type="button" className="icon-strip-btn icon-strip-support" onClick={() => setContactOpen(true)}>
+                <span className="nav-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </span>
+                <span className="icon-strip-label">{t("nav.support", "Support")}</span>
+                <span className="icon-strip-support-badge">
+                  <span className="icon-strip-support-dot" />
+                  {t("nav.online", "Online")}
+                </span>
+              </button>
+
+              {inviteCardOpen && (
+                <div className="icon-strip-invite-card">
+                  <button type="button" className="icon-strip-invite-close" onClick={() => setInviteCardOpen(false)} aria-label="Dismiss">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                  <div className="icon-strip-invite-title">{t("nav.inviteTitle", "Invite a friend")}</div>
+                  <p className="icon-strip-invite-sub">
+                    {t("nav.inviteSub", "Know someone who'd like CoinHintz? Send them an invite.")}
+                  </p>
+                  <input
+                    type="email"
+                    className="icon-strip-invite-input"
+                    placeholder="friend@email.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") sendInvite(); }}
+                    disabled={inviteStatus === "sending"}
+                  />
+                  <button
+                    type="button"
+                    className={`icon-strip-invite-send${inviteStatus === "sent" ? " icon-strip-invite-send--sent" : ""}${inviteStatus === "error" ? " icon-strip-invite-send--error" : ""}`}
+                    onClick={sendInvite}
+                    disabled={!inviteEmail.trim() || inviteStatus === "sending"}
+                  >
+                    {inviteStatus === "sending"
+                      ? t("nav.inviteSending", "Sending…")
+                      : inviteStatus === "sent"
+                        ? t("nav.inviteSent", "Invite sent ✓")
+                        : inviteStatus === "error"
+                          ? t("nav.inviteError", "Couldn't send — try again")
+                          : t("nav.inviteSend", "Send invite")}
+                  </button>
+                </div>
+              )}
+
+              {/* Right above the account row, not after Support — same
+                  used/limit useAIQuota already computes for ProfilePage's
+                  own AI Usage section, reused here, not re-derived, so
+                  the two never drift out of sync. */}
+              <div className="icon-strip-usage-card">
+                <div className="icon-strip-usage-head">
+                  <span className={`icon-strip-usage-icon${tier === "elite" ? " icon-strip-usage-icon--elite" : tier === "pro" ? " icon-strip-usage-icon--pro" : ""}`}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                    </svg>
+                  </span>
+                  <span className="icon-strip-usage-title">{t("nav.aiUsage", "AI Usage")}</span>
+                  {tier !== "elite" && (
+                    <button type="button" className="icon-strip-usage-upgrade" onClick={onOpenUpgrade}>
+                      {t("nav.upgrade", "Upgrade")}
+                    </button>
+                  )}
+                </div>
+                {/* Always the bar, no matter the tier — elite just
+                    renders it full with an "Unlimited" caption instead
+                    of swapping to a different, bar-less layout. */}
+                {/* Tier's own color (same values as TIER_CONFIG in
+                    ProfilePage.tsx: pro #38bdf8, elite #a78bfa) as the
+                    base fill — amber/red still take over once close to
+                    the limit, a more useful signal in the moment than
+                    staying on-brand. */}
+                <div className="icon-strip-usage-track">
+                  <div
+                    className={`icon-strip-usage-fill${tier === "elite" ? " icon-strip-usage-fill--elite" : tier === "pro" ? " icon-strip-usage-fill--pro" : ""}${tier === "elite" ? "" : aiLimit > 0 && aiUsed / aiLimit >= 0.9 ? " icon-strip-usage-fill--red" : aiLimit > 0 && aiUsed / aiLimit >= 0.6 ? " icon-strip-usage-fill--amber" : ""}`}
+                    style={{ width: tier === "elite" ? "100%" : aiLimit > 0 ? `${Math.min(100, (aiUsed / aiLimit) * 100)}%` : "100%" }}
+                  />
+                </div>
+                <div className="icon-strip-usage-caption">
+                  {tier === "elite"
+                    ? t("profile.aiUsage.unlimited", "Unlimited")
+                    : aiLimit > 0
+                      ? t("nav.usageOfLimit", "{{used}} of {{limit}} used", { used: aiUsed, limit: aiLimit })
+                      : t("nav.usageLocked", "Upgrade to unlock AI requests")}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="icon-strip-profile-row"
+                onClick={() => { if (user) setProfileOpen(true); else onOpenAuth(); }}
+              >
+                <Avatar
+                  url={profile?.avatar_url}
+                  fallback={
+                    profile?.full_name
+                      ? profile.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+                      : (user?.email?.[0] ?? "?").toUpperCase()
+                  }
+                  className="icon-strip-profile-avatar"
+                />
+                <span className="icon-strip-profile-info">
+                  <span className="icon-strip-profile-name">{profile?.full_name || t("nav.guest", "Guest")}</span>
+                  <span className="icon-strip-profile-email">{user?.email ?? t("nav.signInPrompt", "Sign in")}</span>
+                </span>
+              </button>
+            </div>
+          )}
+
         </nav>
 
         {/* Desktop-only Coinbase-style flyout — replaces the inline
@@ -2249,10 +2609,6 @@ function AppDashboard({
         <div className="main-panel">
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
             <div className="top-nav-bar">
-              <div className="top-nav-logo">
-                coinhint<span className="top-nav-logo-accent">z</span>
-                <sup className="top-nav-logo-tm">©</sup>
-              </div>
               <button
                 ref={topNavSearchRef}
                 className="top-nav-search"
@@ -2278,6 +2634,120 @@ function AppDashboard({
                 </span>
               </button>
               <div className="top-nav-icons">
+                {/* Every icon-button moved up here from .mch-right (the
+                    ticker-strip row below) — this row (.top-nav-bar) only
+                    ever renders on desktop web (!Capacitor.isNativePlatform()
+                    && isDesktopWidth), so that's already an implicit guard;
+                    .mch-right's own copies of these same four are only
+                    rendered in the opposite case (mobile/native), so
+                    PriceAlerts/BuySignals (which need to stay mounted
+                    somewhere at every width for their own background price-
+                    watching/toast effects) are never mounted twice at once. */}
+                {isWideDesktop && (
+                  <button
+                    type="button"
+                    className={`mch-search-btn mch-focus-btn${distractionFree ? " mch-focus-btn--on" : ""}`}
+                    onClick={toggleFocusMode}
+                    role="switch"
+                    aria-checked={distractionFree}
+                    aria-label="Focus mode"
+                    title={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                  </button>
+                )}
+                {(activeSection === "chart" || activeSection === "advance-chart") && isWideDesktop && !distractionFree && (
+                  <div className="top-nav-layout-wrap" ref={layoutMenuWrapRef}>
+                    <button
+                      type="button"
+                      className={`mch-search-btn top-nav-layout-btn${layoutMenuOpen ? " top-nav-layout-btn--open" : ""}`}
+                      onClick={() => setLayoutMenuOpen((v) => !v)}
+                      title="Chart layout"
+                      aria-haspopup="true"
+                      aria-expanded={layoutMenuOpen}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                        <rect x="1.5" y="2" width="7" height="12" rx="1" />
+                        <rect x="10" y="2" width="4.5" height="5.3" rx="1" />
+                        <rect x="10" y="8.7" width="4.5" height="5.3" rx="1" />
+                      </svg>
+                    </button>
+                    {layoutMenuOpen && (
+                      <div className="top-nav-layout-menu" role="radiogroup" aria-label="Chart page layout">
+                        {([
+                          { mode: "2col" as const, title: "2 columns" },
+                          { mode: "3col" as const, title: "3 columns" },
+                          { mode: "2row" as const, title: "2 rows" },
+                        ]).map(({ mode, title }) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            role="radio"
+                            aria-checked={chartLayoutMode === mode}
+                            className={`top-nav-layout-option${chartLayoutMode === mode ? " active" : ""}`}
+                            onClick={() => {
+                              setChartLayoutMode(mode);
+                              setLayoutMenuOpen(false);
+                            }}
+                          >
+                            <span className="top-nav-layout-option-icon">
+                              {mode === "2col" && (
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                                  <rect x="1.5" y="2" width="7" height="12" rx="1" />
+                                  <rect x="10" y="2" width="4.5" height="5.3" rx="1" />
+                                  <rect x="10" y="8.7" width="4.5" height="5.3" rx="1" />
+                                </svg>
+                              )}
+                              {mode === "3col" && (
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                                  <rect x="1.5" y="2" width="4" height="12" rx="1" />
+                                  <rect x="6" y="2" width="4" height="12" rx="1" />
+                                  <rect x="10.5" y="2" width="4" height="12" rx="1" />
+                                </svg>
+                              )}
+                              {mode === "2row" && (
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                                  <rect x="1.5" y="2" width="13" height="5.3" rx="1" />
+                                  <rect x="1.5" y="8.7" width="6" height="5.3" rx="1" />
+                                  <rect x="8.5" y="8.7" width="6" height="5.3" rx="1" />
+                                </svg>
+                              )}
+                            </span>
+                            {title}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeSection === "chart" && chartModeToggle}
+                <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
+                <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
+                <button
+                  className="mch-search-btn mch-notif-feed-btn"
+                  onClick={() => setNotificationsCenterOpen(true)}
+                  title="Notifications"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  <span className="mch-btn-label">Notifications</span>
+                  {unreadNotifCount > 0 && (
+                    <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
+                  )}
+                </button>
                 {/* Sign out lives inside the avatar's own dropdown now
                     (AccountMenu's `dropdown` prop) — Settings stays its own
                     visible icon here too, restyled as a filled dark square
@@ -2310,6 +2780,18 @@ function AppDashboard({
               </div>
             </div>
           )}
+          {/* Skipped entirely on desktop web, for every page, not just
+              Chart/Advance Chart — everything it would show there is
+              already gone or moved: the hamburger (desktop has the
+              persistent .icon-strip sidebar, never needs a mobile-nav
+              toggle), the logo (already isDesktopWidth-hidden), the coin
+              button (chart-hero-id-row is the selector on chart pages;
+              other pages never had one worth duplicating here), and
+              mch-right (already moved up into .top-nav-bar's own
+              .top-nav-icons for desktop web). Mobile/native still get the
+              real thing: the hamburger, mch-right's fallback icons, and
+              the coin button are all still needed there. */}
+          {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
           <div className="main-coin-header">
             <div className="mch-left">
               <button
@@ -2346,6 +2828,13 @@ function AppDashboard({
                   <sup className="top-nav-logo-tm">©</sup>
                 </div>
               )}
+              {/* Chart/Advance Chart pages: PriceChart.tsx's own
+                  chart-hero-id-row is now the coin selector there too
+                  (desktop included, not just mobile) — this button would
+                  just be a second, redundant coin switcher right next to
+                  it. Every other page still has no such hero, so this
+                  stays the only one there. */}
+              {activeSection !== "chart" && activeSection !== "advance-chart" && (
               <button
                 className={`mch-coin-btn${
                   coinTickers.get(coin)?.change !== undefined
@@ -2396,9 +2885,6 @@ function AppDashboard({
                     </span>
                   </span>
                 </div>
-                {/* Mobile-only badge (see .mch-coin-chg in App.css) — desktop
-                    keeps the full .mch-stats ticker row instead, so this
-                    stays hidden there to avoid saying the same thing twice. */}
                 {coinTickers.get(coin)?.change !== undefined && (
                   <span className={`mch-coin-chg${coinTickers.get(coin)!.change >= 0 ? " mch-coin-chg--up" : " mch-coin-chg--down"}`}>
                     {coinTickers.get(coin)!.change >= 0 ? "▲" : "▼"} {Math.abs(coinTickers.get(coin)!.change).toFixed(1)}%
@@ -2406,79 +2892,53 @@ function AppDashboard({
                 )}
                 <span className="mch-coin-chevron">▾</span>
               </button>
+              )}
             </div>
-
-            {/* Just .mch-stats now (the old mobile-only identity/price
-                summary card was removed, redundant with PriceChart.tsx's
-                own header) — mchBodyEl's wrapper still only gets the
-                glassmorphism card treatment on mobile (App.css media
-                query), transparent/no-op here on desktop. */}
-            {isDesktopWidth && mchBodyEl}
 
             <div className="mch-right">
-              {isWideDesktop && (
-                // Icon-only mute toggle, no label — was a labeled switch
-                // (track + knob); the mute-bell glyph itself communicates
-                // the state instead of needing a word next to it. Same
-                // combined Focus state as before (toggleFocusMode above):
-                // hides Watchlist/Top Movers/Daily Brief AND mutes all
-                // alerts together, not just the alert half.
-                <button
-                  type="button"
-                  className={`mch-search-btn mch-focus-btn${distractionFree ? " mch-focus-btn--on" : ""}`}
-                  onClick={toggleFocusMode}
-                  role="switch"
-                  aria-checked={distractionFree}
-                  aria-label="Focus mode"
-                  title={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </svg>
-                </button>
+              {/* Only rendered on real phones/native now — the desktop-web
+                  copy of this exact same set of controls lives in
+                  .top-nav-icons instead (moved up there per instruction).
+                  Never both at once: this is the mobile/native fallback for
+                  PriceAlerts/BuySignals, which still need to stay mounted
+                  somewhere at every width for their own background price-
+                  watching/toast effects, and for the notifications bell,
+                  which is still the only way to reach the feed on mobile
+                  (FloatingNavBar's own Notifications icon was removed as a
+                  duplicate entry point). */}
+              {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
+                <>
+                  {activeSection === "chart" && chartModeToggle}
+                  <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
+                  <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
+                  <button
+                    className="mch-search-btn mch-notif-feed-btn"
+                    onClick={() => setNotificationsCenterOpen(true)}
+                    title="Notifications"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span className="mch-btn-label">Notifications</span>
+                    {unreadNotifCount > 0 && (
+                      <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
+                    )}
+                  </button>
+                </>
               )}
-              {/* Search, notifications, and the portfolio ($) button are
-                  desktop-only here — mobile gets those from FloatingNavBar
-                  instead. BuySignals stays mounted for both (hideTrigger
-                  on mobile only, since FloatingNavBar's Signals icon opens
-                  it via the "open-buy-signals" event either way) — this
-                  row is otherwise exactly what was on desktop before any
-                  of that mobile work. */}
-              {activeSection === "chart" && chartModeToggle}
-              <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
-              <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
-              {/* The notifications FEED (this button) vs the Focus TOGGLE
-                  (mute-all switch, now the row's first item above instead
-                  of its last). Now the only way to reach the feed on
-                  mobile too — FloatingNavBar's own Notifications icon was
-                  removed since it'd otherwise be a duplicate entry point. */}
-              <button
-                className="mch-search-btn mch-notif-feed-btn"
-                onClick={() => setNotificationsCenterOpen(true)}
-                title="Notifications"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {/* Desktop-only — hidden at the same 640px breakpoint that
-                    squares this button off to icon-only on mobile (App.css). */}
-                <span className="mch-btn-label">Notifications</span>
-                {unreadNotifCount > 0 && (
-                  <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
-                )}
-              </button>
             </div>
           </div>
+          )}
 
           <div
             ref={mainContentRef}
@@ -2499,7 +2959,6 @@ function AppDashboard({
                 </span>
               )}
             </div>
-            {!isDesktopWidth && activeSection === "chart" && mchBodyEl}
             {profile?.subscription_status === "past_due" && (
               <div className="pastdue-banner">
                 <span>⚠️ {t("billing.pastDue.message")}</span>
@@ -2514,10 +2973,108 @@ function AppDashboard({
               </div>
             )}
 
-            {activeSection === "chart" && (
-              <>
-                <div className="chart-page-row">
-                  <div className="chart-column">
+            {activeSection === "chart" && (() => {
+              // Built once, rendered in exactly ONE of two possible spots
+              // below depending on isWideDesktop — never both at once, so
+              // PaperTradingCard/OrderFlowPanel (which poll live data in
+              // the background) are never double-mounted. At every width
+              // narrower than 961px this renders exactly where it always
+              // has (beside the chart, inside .chart-section-wrap,
+              // preserving the existing tablet/mobile tab-switching
+              // behavior untouched); only >=961px moves it into the new
+              // experimental second column below.
+              const chartRightColEl = (
+                <div className="chart-right-col">
+                  <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
+                  {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
+                  <OrderFlowPanel coin={coin} events={chartEvents} />
+                </div>
+              );
+              // "2col" layout only — Paper Trading / Order Flow Pressure /
+              // Order Book as one flat tab row instead of stacked, so the
+              // top section never needs its own internal scroll just to
+              // reach whichever of the three you actually want. Both cards
+              // stay mounted (hidden via CSS, not conditionally rendered)
+              // so neither loses its own live polling/state when you
+              // switch tabs.
+              const chartRightColTabbedEl = (
+                <div className="chart-right-col chart-right-col--tabbed">
+                  {/* Glow underline (fancy-tabs sketch option A) — a thin
+                      gradient bar that shimmers continuously and glows
+                      under the active tab, sliding/resizing between them;
+                      the icon pops with a little overshoot on switch. */}
+                  <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Order Flow / Order Book">
+                    {([
+                      {
+                        key: "paper" as const,
+                        label: "Paper Trading",
+                        icon: (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="6" width="20" height="13" rx="3" />
+                            <path d="M2 10.5h20" />
+                            <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        key: "flow" as const,
+                        label: "Order Flow Pressure",
+                        icon: (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 17l5-6 4 3 5-8 4 5" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        key: "orderbook" as const,
+                        label: "Order Book",
+                        icon: (
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="4" y1="7" x2="20" y2="7" />
+                            <line x1="4" y1="12" x2="20" y2="12" />
+                            <line x1="4" y1="17" x2="14" y2="17" />
+                          </svg>
+                        ),
+                      },
+                    ]).map(({ key, label, icon }) => (
+                      <button
+                        key={key}
+                        ref={(el) => { crcTabRefs.current[key] = el; }}
+                        type="button"
+                        role="tab"
+                        aria-selected={rightColTab === key}
+                        className={`crc-tab${rightColTab === key ? " active" : ""}`}
+                        onClick={() => setRightColTab(key)}
+                      >
+                        <span className="crc-tab-icon">{icon}</span>
+                        {label}
+                      </button>
+                    ))}
+                    {crcHighlight && (
+                      <div
+                        className="crc-tab-highlight"
+                        style={{ transform: `translateX(${crcHighlight.left}px)`, width: crcHighlight.width }}
+                      />
+                    )}
+                  </div>
+                  {/* No `key` on either panel — both PaperTradingCard and
+                      OrderFlowPanel must stay the exact same mounted
+                      instance across tab switches (live polling/state),
+                      so the per-switch entrance animation below comes
+                      from .crc-tab-panel-enter's CSS animation
+                      restarting on its own whenever a display:none panel
+                      toggles back to display:flex — no remount needed. */}
+                  <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab === "paper" ? "flex" : "none" }}>
+                    <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
+                  </div>
+                  <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab !== "paper" ? "flex" : "none" }}>
+                    <OrderFlowPanel coin={coin} events={chartEvents} view={rightColTab === "orderbook" ? "orderbook" : "flow"} />
+                  </div>
+                </div>
+              );
+              const dailyBriefEl = <DailyBrief coinTickers={coinTickers} variant="page" />;
+              const chartColumnEl = (
+                    <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
                     <div
                       className={`chart-section-wrap${obResizeIntro ? " chart-section-wrap--resize-intro" : ""} chart-section-wrap--tab-${mobileChartTab}`}
                       ref={chartWrapRef}
@@ -2541,9 +3098,15 @@ function AppDashboard({
                         onOpenAuth={onOpenAuth}
                         onOpenUpgrade={onOpenUpgrade}
                         onOpenCoinPicker={openCoinPicker}
+                        onSelectCoin={(symbol) => {
+                          setCoin(symbol as CoinSymbol);
+                          clearCandleCache();
+                          setRecentCoins(addRecentCoin(symbol));
+                        }}
                         onFullscreenChange={setChartFullscreen}
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
+                        headerStats={mchBodyEl}
                         onNavigateToPage={() => {
                           if (!isDesktopWidth) {
                             setMobileAdvanceChartOpen(true);
@@ -2607,19 +3170,83 @@ function AppDashboard({
                           <polyline points="58,20 62,24 58,28" />
                         </svg>
                       </div>
-                      <div className="chart-right-col">
-                        <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
-                        {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
-                        <OrderFlowPanel coin={coin} events={chartEvents} />
-                      </div>
+                      {!isWideDesktop && chartRightColEl}
                     </div>
                   </div>
-                  {isWideDesktop && !distractionFree && (
-                    <DailyBrief coinTickers={coinTickers} variant="page" />
-                  )}
-                </div>
+              );
+              return (
+              <>
+                {isWideDesktop && !distractionFree ? (
+                  chartLayoutMode === "2row" ? (
+                    <div className="chart-layout chart-layout--2row">
+                      <div className="chart-row-top">{chartColumnEl}</div>
+                      <div className="chart-row-bottom">
+                        <div className="chart-row-bottom-col">{chartRightColEl}</div>
+                        <div className="chart-row-bottom-col">{dailyBriefEl}</div>
+                      </div>
+                    </div>
+                  ) : chartLayoutMode === "3col" ? (
+                    <div className="chart-layout chart-layout--3col">
+                      {chartColumnEl}
+                      <div className="chart-three-col-mid">{chartRightColEl}</div>
+                      <div className="chart-three-col-right">{dailyBriefEl}</div>
+                    </div>
+                  ) : (
+                    <div className="chart-layout chart-layout--2col">
+                      {chartColumnEl}
+                      <div
+                        ref={rightColRef}
+                        className={`chart-two-col-right${rightColExpanded ? " chart-two-col-right--expanded" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          className="chart-col-expand-toggle"
+                          onClick={() => setRightColExpanded((v) => !v)}
+                          title={rightColExpanded ? "Collapse this column" : "Expand this column"}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: rightColExpanded ? "rotate(180deg)" : "none" }}>
+                            <polyline points="15 6 9 12 15 18" />
+                          </svg>
+                        </button>
+                        <div
+                          ref={rightColTopRef}
+                          className={`chart-two-col-right-row chart-two-col-right-row--top${rightColSplit !== null ? " chart-two-col-right-row--top-manual" : ""}`}
+                          style={rightColSplit !== null ? { height: `${rightColSplit}%` } : undefined}
+                        >
+                          {chartRightColTabbedEl}
+                        </div>
+                        {/* A sibling between the two rows, not a border/
+                            pseudo-element inside either one — both rows
+                            scroll internally, and anything living inside
+                            them would scroll away with their content
+                            instead of staying put as a fixed divider.
+                            Doubles as the drag handle that adjusts
+                            rightColSplit (the top row's max-height %). */}
+                        <div
+                          className={`chart-two-col-right-divider${rightColDividerIntro ? " chart-two-col-right-divider--intro" : ""}`}
+                          onPointerDown={onRightColResizeDown}
+                          onPointerMove={onRightColResizeMove}
+                          onPointerUp={onRightColResizeUp}
+                          title="Drag to resize"
+                        >
+                          {/* A real visible label for the on-load hint, not
+                              just the title="" tooltip above (which only
+                              shows on hover, so it never actually
+                              announces itself on its own). */}
+                          {rightColDividerIntro && <span className="chart-two-col-right-divider-label">Drag to resize</span>}
+                        </div>
+                        <div className="chart-two-col-right-row chart-two-col-right-row--bottom">
+                          {dailyBriefEl}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="chart-page-row">{chartColumnEl}</div>
+                )}
               </>
-            )}
+              );
+            })()}
             {activeSection === "advance-chart" && (
               <PriceChart
                 refreshTrigger={refreshTrigger}
@@ -2633,6 +3260,11 @@ function AppDashboard({
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
                 onOpenCoinPicker={openCoinPicker}
+                onSelectCoin={(symbol) => {
+                  setCoin(symbol as CoinSymbol);
+                  clearCandleCache();
+                  setRecentCoins(addRecentCoin(symbol));
+                }}
                 onFullscreenChange={setChartFullscreen}
                 pageMode
                 onNavigateBack={() => {
@@ -2772,6 +3404,7 @@ function AppDashboard({
                     visible={activeSection === "candleai"}
                     onOpenAuth={onOpenAuth}
                     onOpenUpgrade={onOpenUpgrade}
+                    ticker={coinTickers.get(coin)}
                   />
                 </Suspense>
               </div>

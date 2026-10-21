@@ -11,170 +11,216 @@
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
 
+/* Just a wrapper around .cw-header-left now (cw-header-right moved out,
+   it belongs with the right column) — shares a row with .cw-interval-tabs
+   in .cw-left-top-row, so no padding/wrap of its own here. */
 .cw-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0 12px;
-  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .cw-header-left {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cw-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Font sizes/weights below are copied exactly from #chart's own
+   chart-header (PriceChart.css/CompactPriceView.css) — .chart-hero-
+   coin-icon, .chart-hero-pair-name, .cpv-price, .cpv-change,
+   .cpv-change-abs, .cpv-change-window — not independently chosen. */
+.cw-coin-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-input-bg);
+}
+.cw-coin-icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
 }
 
 .cw-coin {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.cw-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .cw-price {
-  font-size: 1.3rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
 .cw-change {
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 .cw-change--up   { color: #22c55e; }
 .cw-change--down { color: #ef4444; }
+.cw-change-abs {
+  font-weight: 600;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
 
-.cw-interval-tabs {
-  align-self: flex-end;
-  display: flex;
-  gap: 2px;
+.cw-interval-pill {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 2px 5px;
+  border-radius: 4px;
   background: var(--color-input-bg);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 3px;
+  color: var(--color-text-muted);
+}
+
+.cw-left-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
+/* A single capsule track with one sliding highlight behind the active pill
+   (measured/animated in CandleWatcher.tsx via ivHighlight), not a row of
+   separately-colored pills — margin-left:auto keeps it pinned right on its
+   own regardless of what else is or isn't in this row. */
+.cw-interval-tabs {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-input-bg);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  animation: cw-iv-tabs-in 0.35s 0.05s ease forwards;
+}
+@keyframes cw-iv-tabs-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cw-iv-highlight {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, #7c3aed));
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 45%, transparent);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
 .cw-iv-tab {
-  padding: 4px 8px 5px;
-  border-radius: 4px;
-  border: none;
-  background: transparent;
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  padding: 6px 12px 7px;
+  border-radius: 999px;
   color: var(--color-text-muted);
-  font-size: 0.72rem;
+  font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.2s, transform 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
 }
-.cw-iv-tab:hover { color: var(--color-text); }
+.cw-iv-tab:hover { color: var(--color-text); transform: translateY(-1px); }
 .cw-iv-tab--active {
-  background: var(--color-card-bg);
-  color: #6366f1;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  color: #fff;
+  transform: scale(1.04);
 }
 .cw-iv-tab-label {
   line-height: 1;
 }
 .cw-iv-tab-countdown {
-  font-size: 0.56rem;
+  font-size: 0.68rem;
   font-weight: 500;
   opacity: 0.55;
   line-height: 1;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, "SF Mono", monospace;
+  transition: opacity 0.2s, color 0.2s;
 }
 .cw-iv-tab--active .cw-iv-tab-countdown {
-  opacity: 0.8;
-  color: #0a84ff;
+  opacity: 0.9;
+  color: #fff;
+  animation: cw-signal-countdown-pulse 2s ease-in-out infinite;
 }
 
+/* Always-rendered row (cw-panel-toggle-btn here is the only way to
+   un-collapse .cw-right, so it can't live inside .cw-right itself, which
+   unmounts entirely when collapsed) — sits above .cw-grid, right-aligned
+   so it lands over the sidebar column's position when expanded. */
 .cw-header-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
-}
-
-.cw-candle-close {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(99,102,241,0.25);
-  background: rgba(99,102,241,0.07);
-}
-
-.cw-candle-close--daily {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 10px;
-  border-color: rgba(245,158,11,0.35);
-  background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06));
-  box-shadow: 0 0 12px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.06);
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-}
-
-/* Shimmer sweep on the daily close pill */
-.cw-candle-close--daily::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.18) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: cw-daily-shimmer 3s ease-in-out infinite;
-  pointer-events: none;
-  border-radius: inherit;
-}
-@keyframes cw-daily-shimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
-}
-
-/* Clock icon before label */
-.cw-candle-close--daily .cw-candle-close-label::before {
-  content: '⏳';
-  font-size: 0.7rem;
-  margin-right: 4px;
-}
-
-.cw-candle-close-label {
-  font-size: 0.52rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(245,158,11,0.75);
-}
-
-.cw-candle-close-value {
-  font-size: 0.82rem;
-  font-weight: 900;
-  color: #0a84ff;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-.cw-candle-close--daily .cw-candle-close-value {
-  color: #fbbf24;
-  font-size: 0.95rem;
-  text-shadow: 0 0 12px rgba(251,191,36,0.5);
+  margin-bottom: 8px;
 }
 
 .cw-updated {
   font-size: 0.7rem;
   color: var(--color-text-muted);
+}
+
+/* 24h High/Low/Vol strip. */
+.cw-ticker-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -4px 0 10px;
+}
+.cw-ticker-stats-label,
+.cw-ticker-stat {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.cw-ticker-stat strong {
+  font-size: 0.88rem;
+  color: var(--color-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cw-ticker-stat-up { color: #22c55e !important; }
+.cw-ticker-stat-down { color: #ef4444 !important; }
+.cw-ticker-sep {
+  color: var(--color-border);
+  opacity: 0.8;
 }
 
 .cw-refresh-btn {
@@ -192,6 +238,11 @@
   transition: background 0.15s, color 0.15s;
 }
 .cw-refresh-btn:hover { background: var(--color-border); color: var(--color-text); }
+.cw-refresh-btn--spinning {
+  color: var(--color-primary);
+  pointer-events: none;
+  animation: cw-spin 0.6s linear infinite;
+}
 
 /* ── Daily close banner ──────────────────────────────────────────────────── */
 .cw-daily-banner {
@@ -295,48 +346,252 @@
   grid-template-columns: 1fr;
 }
 
-/* One solid pill is the whole control — no separate button chrome around
-   it, matching a plain iOS-style labeled switch rather than a bordered
-   toolbar button with a switch stuck inside it. */
+/* Round chevron, sitting right after the interval pills — a real, visible
+   button (solid fill + border) rather than a faint ghost glyph, so it
+   reads clearly as a control and not just leftover chrome. Rotates 180°
+   instead of swapping icons (CandleWatcher.tsx). */
 .cw-panel-toggle-btn {
-  height: 26px;
-  padding: 2px;
-  border-radius: 999px;
-  border: none;
-  background: #3f3f46;
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  transition: background 0.15s;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.25s ease;
 }
-.cw-panel-toggle-btn:hover { background: #52525b; }
-
-.cw-panel-toggle-btn--collapsed {
-  flex-direction: row-reverse;
+.cw-panel-toggle-btn:hover {
+  background: var(--color-border);
+  transform: scale(1.06);
+}
+.cw-panel-toggle-btn[aria-checked="false"] {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-.cw-panel-toggle-knob {
-  width: 22px;
-  height: 22px;
+/* ── Signal cards briefing strip ─────────────────────────────────────────── */
+
+.cw-signal-cards-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.cw-signal-cards-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Fixed 5-column track (not auto-fit) — always exactly one row at desktop
+   widths, full page width (sits above .cw-grid, not inside the narrower
+   .cw-left column). Wraps to fewer columns only at the mobile breakpoint
+   below. */
+.cw-signal-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.cw-signal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  min-width: 0;
+  opacity: 0;
+  animation: cw-signal-card-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.cw-signal-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--color-text) 25%, var(--color-border));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+/* Staggered entrance — each card a beat behind the last, left to right. */
+.cw-signal-cards > .cw-signal-card:nth-child(1) { animation-delay: 0s; }
+.cw-signal-cards > .cw-signal-card:nth-child(2) { animation-delay: 0.06s; }
+.cw-signal-cards > .cw-signal-card:nth-child(3) { animation-delay: 0.12s; }
+.cw-signal-cards > .cw-signal-card:nth-child(4) { animation-delay: 0.18s; }
+.cw-signal-cards > .cw-signal-card:nth-child(5) { animation-delay: 0.24s; }
+@keyframes cw-signal-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cw-signal-card-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.cw-signal-card-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cw-signal-card-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.cw-signal-card-value--mono {
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 1.1rem;
+}
+/* A gentle living pulse on the countdown digits — this card's version of
+   the "alive" cue the pulsing dot gives the others. */
+.cw-signal-countdown {
+  animation: cw-signal-countdown-pulse 2s ease-in-out infinite;
+}
+@keyframes cw-signal-countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+.cw-signal-card-note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+.cw-signal-card-tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.cw-signal-card-tag--up { color: #22c55e; }
+.cw-signal-card-tag--down { color: #ef4444; }
+.cw-signal-card-tag--neutral { color: var(--color-text-muted); }
+
+/* Elliott Wave's little zigzag — draws itself in instead of just appearing. */
+.cw-signal-wave-line {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: cw-signal-wave-draw 0.8s 0.1s ease forwards;
+}
+@keyframes cw-signal-wave-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.cw-signal-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+/* Shimmering skeleton placeholders, shown while the page's initial candle
+   fetch (the same `loading` flag the chart itself uses) is in flight. */
+.cw-signal-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+.cw-signal-skeleton-line {
+  display: block;
+  height: 10px;
+  width: 60%;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-text) 6%, transparent) 25%,
+    color-mix(in srgb, var(--color-text) 14%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 6%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: cw-signal-shimmer 1.4s ease-in-out infinite;
+}
+.cw-signal-skeleton-line--wide { width: 85%; height: 16px; }
+.cw-signal-skeleton-line--bar { width: 100%; height: 8px; border-radius: 99px; }
+@keyframes cw-signal-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.cw-signal-range-track {
+  position: relative;
+  height: 8px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #22c55e, #d7c58b, #ef4444);
+}
+.cw-signal-range-marker-wrap {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+}
+.cw-signal-range-marker {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   background: #fff;
-  flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--color-text);
+}
+/* Soft expanding ring behind the marker — same cw-live-pulse-style "alive"
+   cue as the header dot, scaled up for a bigger target. */
+.cw-signal-range-ping {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--color-text);
+  opacity: 0.5;
+  animation: cw-signal-range-ping 1.8s ease-out infinite;
+}
+@keyframes cw-signal-range-ping {
+  0%   { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.cw-signal-range-labels {
+  display: flex;
+  justify-content: space-between;
 }
 
-.cw-panel-toggle-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #fff;
-  padding-right: 10px;
+.cw-signal-bar-track {
+  flex: 1;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--color-input-bg);
+  overflow: hidden;
 }
-.cw-panel-toggle-btn--collapsed .cw-panel-toggle-label {
-  padding-right: 0;
-  padding-left: 10px;
+.cw-signal-bar-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+  overflow: hidden;
 }
+/* A light sweep crossing the fill, looping — reads as "live," not static. */
+.cw-signal-bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  background-size: 200% 100%;
+  animation: cw-signal-shimmer 2.2s ease-in-out infinite;
+}
+.cw-signal-bar-fill--bull,
+.cw-signal-bar-fill--warn { background: #22c55e; }
+.cw-signal-bar-fill--bear { background: #ef4444; }
+.cw-signal-bar-fill--neutral { background: var(--color-text-muted); }
 
 .cw-resize-handle {
   display: flex;
@@ -922,8 +1177,12 @@ body.cw-chart-fullscreen-active .fnb-bar {
 
 /* ── Right: AI card ──────────────────────────────────────────────────────── */
 
-.cw-right { min-width: 0; }
-
+.cw-right {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .cw-right-panel {
   display: flex;
   flex-direction: column;
@@ -1086,7 +1345,17 @@ body.cw-chart-fullscreen-active .fnb-bar {
 }
 .cw-pattern-tag--bullish { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
 .cw-pattern-tag--bearish { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
-.cw-pattern-tag--neutral { background: rgba(148,163,184,0.12); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
+
+/* "updated Xs ago" + refresh — moved here from the always-visible header
+   row above .cw-grid, since they're about this card's own data. margin-
+   left:auto (not just relying on .cw-ai-header's space-between) keeps it
+   pinned right regardless of whether the pattern tag next to it renders. */
+.cw-ai-header-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
 
 /* Bias bar */
 .cw-bias-bar {
@@ -3242,22 +3511,24 @@ body.cw-chart-fullscreen-active .fnb-bar {
   .cw-panel-toggle-btn { display: none; }
 }
 
+@media (max-width: 900px) {
+  .cw-signal-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 600px) {
   .cw-page { padding: 0 8px 16px; }
   .cw-header { gap: 8px; }
   .cw-price { font-size: 1.1rem; }
   .cw-chart-wrap { height: 320px; }
-  .cw-interval-tabs { gap: 2px; }
-  .cw-iv-tab { padding: 3px 7px 4px; }
-  .cw-iv-tab-label { font-size: 0.68rem; }
-  .cw-iv-tab-countdown { font-size: 0.52rem; }
+  .cw-interval-tabs { gap: 4px; }
+  .cw-iv-tab { padding: 4px 8px 5px; }
+  .cw-iv-tab-label { font-size: 0.78rem; }
+  .cw-iv-tab-countdown { font-size: 0.6rem; }
   .cw-right-tabs { padding: 8px 10px; }
   .cw-right-tab { font-size: 0.6rem; gap: 5px; }
   .cw-right-tab-icon { width: 18px; height: 18px; }
   .cw-pills { gap: 4px; }
   .cw-pill { padding: 5px 7px; min-width: 48px; }
-  .cw-header-right { width: 100%; }
-  .cw-candle-close--daily { flex: 1; }
 
   /* Live tape: let names and descriptions wrap fully on mobile, smaller fonts */
   .cw-tape-name {

@@ -21,6 +21,15 @@
   background: var(--color-border);
   color: var(--color-text);
 }
+/* Dark mode's --color-input-bg is nearly the same navy as the bar this
+   sits on, so it read as background-less until hovered — same fix as
+   .mch-search-btn/.top-nav-icon-btn--settings (App.css). */
+html:not([data-theme="light"]) .buysig-bell {
+  background: rgba(255, 255, 255, 0.08);
+}
+html:not([data-theme="light"]) .buysig-bell:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
 .buysig-bell--active {
   color: #22c55e;
 }

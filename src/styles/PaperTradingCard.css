@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 .ptc-header-right {
   display: flex;
@@ -73,6 +74,8 @@
 }
 /* Matches .db-head-title (DailyBrief.css) — same title size/weight as
    Daily Brief's own panel header, same row. */
+/* Identical to DailyBrief.css's .db-head-title — same title treatment
+   across every card in this sidebar, not two near-matching ones. */
 .ptc-title {
   display: flex;
   align-items: center;
@@ -81,6 +84,7 @@
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
+  text-shadow: 0 1px 8px var(--color-shadow);
 }
 /* Shared with OrderFlowPanel.css's .ofp-title (OrderFlowPanel.tsx reuses
    this same class) — a small "alive" indicator before each title. Flat
@@ -239,8 +243,16 @@
      them. Only one position is ever expanded at a time (expandedKey is a
      single value), so this just needs to comfortably fit one fully-
      expanded card alongside a couple of its collapsed siblings. */
-  max-height: 460px;
-  overflow-y: auto;
+  /* No max-height/overflow of its own — this list now always lives
+     inside a card that's itself the real scroll container (chart-right-
+     col or the tabbed panel's .ptc-card, both overflow-y:auto). Capping
+     this nested list too meant two clipping boundaries that rarely
+     lined up with an actual row edge, so opening the new-position form
+     (which eats into the space below) could slice the next row clean in
+     half instead of either fully showing or fully scrolling it out of
+     view — a visibly broken-looking sliver. Letting it grow naturally
+     and scroll at the outer level removes that double-boundary case
+     entirely. */
 }
 /* No border — background tint instead, same reasoning as .ptc-stat. */
 .ptc-position-wrap {
@@ -594,6 +606,63 @@
   cursor: default;
 }
 
+/* Closed positions — collapsed toggle + list, same visual language as the
+   open positions above (position-side/coin/lev classes reused as-is). */
+/* Open/Closed view switch — a breadcrumb trailing the title itself
+   ("Paper Trading / Closed Positions"), not a separate row above it. */
+.ptc-crumb-sep {
+  margin: 0 6px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.ptc-crumb-link {
+  all: unset;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.ptc-crumb-link:hover {
+  text-decoration: underline;
+}
+.ptc-closed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: ptc-rise-in 0.3s ease;
+}
+.ptc-closed-empty {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+.ptc-closed-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  font-size: 11px;
+}
+.ptc-closed-exit {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.ptc-closed-time {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.ptc-closed-pnl {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ptc-closed-pnl.ptc-up { color: var(--pc-success); }
+.ptc-closed-pnl.ptc-down { color: var(--pc-danger); }
+
 .ptc-agent-nudge {
   all: unset;
   box-sizing: border-box;
@@ -622,9 +691,6 @@
   display: block;
   width: 100%;
   text-align: left;
-  /* No inset needed now — the orb sits mid-sentence on the row above
-     ("Ask [orb] Agent ready"), not leading it, so that row's text
-     already starts flush left same as this one. */
   cursor: pointer;
   margin-top: 4px;
   font-size: 11px;

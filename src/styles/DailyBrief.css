@@ -286,6 +286,8 @@ html[data-theme="light"] .db-card {
 .db-live {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
   gap: 4px;
   font-size: 0.62rem;
   font-weight: 800;
@@ -380,7 +382,7 @@ html[data-theme="light"] .db-sheet .db-live--red {
 /* Desktop (.db-page sidebar) only — mobile's .db-sheet keeps the base
    padding/margin-left above. */
 .db-page .db-featured-badge {
-  padding: 14px 14px 10px;
+  padding: 0 14px 4px 0;
   margin-left: 0;
 }
 /* The sheet variant now shows .db-featured-badge once already, promoted
@@ -425,7 +427,7 @@ html[data-theme="light"] .db-sheet .db-live--red {
   display: flex;
   flex-direction: column-reverse;
   gap: 10px;
-  padding: 0 14px 10px;
+  padding: 0 0 10px 0;
 }
 
 .db-featured-main > a {
@@ -804,9 +806,15 @@ html[data-theme="light"] .db-sheet .db-live--red {
 .db-page {
   display: flex;
   flex-direction: column;
-  flex: 0 1 390px;
-  min-width: 320px;
-  max-width: 430px;
+  /* clamp(), not a flat flex-basis — on a narrower desktop viewport this
+     used to stay fixed-ish while the actual chart (App.css's own
+     .price-chart-container) shrank to whatever space was left over,
+     making this and .chart-right-col together bigger than the chart
+     itself. Scales down with viewport width so the chart stays the
+     single largest pane. */
+  flex: 0 1 clamp(260px, 20vw, 330px);
+  min-width: 260px;
+  max-width: 330px;
   background: var(--pc-panel);
   border-radius: 0;
   /* Flush against .chart-column now that neither side has a margin/shadow
@@ -834,21 +842,26 @@ html[data-theme="light"] .db-sheet .db-live--red {
    shadowed treatment for the same flat, square, flush look in both
    themes (PriceChart.css / OrderBook.css) — this matches that: no
    light-specific override left, both themes just use the flat rule
-   above. */
+   above. Dark theme desktop gets its own further override below:
+   no panel fill at all, just the border-left divider, so it reads as
+   part of the page instead of a separate boxed card. */
+html:not([data-theme="light"]) .db-page {
+  background: transparent;
+}
 
 .db-page-head {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--pc-border);
+  padding: 14px 0 14px 16px;
 }
 
 .db-page-head-left {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .db-page-list {
@@ -866,7 +879,7 @@ html[data-theme="light"] .db-sheet .db-live--red {
    some size for fitting more headlines on screen at once. */
 .db-page .db-list-item {
   gap: 10px;
-  padding: 10px 14px;
+  padding: 10px 0 10px 14px;
   /* Lighter than the base rule's --color-border, which reads too dark
      against this panel's background — halve it via color-mix rather
      than a hardcoded literal, so it stays correct in both themes. */

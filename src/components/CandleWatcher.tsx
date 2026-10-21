@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
-import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn } from "../services/coinglass";
+import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn, Ticker24h } from "../services/coinglass";
 import { calcEMA, calcRSI, calcRSIArray, calcMACD, calcTEMA, calcBB, calcATR, calcVolRatio } from "../services/indicators";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
@@ -11,6 +11,7 @@ import { BlurGate } from "./MembershipGate";
 import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import { MMNarrationFeed, MMFeedEntry } from "./MMNarrationFeed";
+import { COIN_COLORS, COIN_GLYPHS } from "./PriceChart";
 import "../styles/CandleWatcher.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -23,6 +24,11 @@ interface Props {
   onReady?: () => void;
   refreshTrigger?: number;
   visible?: boolean;
+  // Real 24h High/Low/Volume — App.tsx's own coinTickers Map (fetchCoin24hTickers),
+  // the same source PriceChart.tsx's chart-hero stat row reads from; candles
+  // alone can't give this (lastPrice below is derived from whatever
+  // interval's candles are selected, not a fixed 24h window).
+  ticker?: Ticker24h;
 }
 
 type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number; nextClose?: (nowSec: number) => number };
@@ -1895,10 +1901,41 @@ function IndicatorPill({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true }) => {
+export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker }) => {
   const { tier } = useAuth();
   const isPaid = hasAccess(tier, "pro");
   const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
+  // Sliding highlight behind the active interval pill — same measure-the-
+  // active-item-and-animate-a-transform technique as PriceChart.tsx's own
+  // FsSlidingOptions (mobile dock interval/style picker), reimplemented
+  // here rather than imported since that component isn't exported and this
+  // item also needs a second (countdown) line it doesn't support.
+  const ivTrackRef = useRef<HTMLDivElement>(null);
+  const ivItemRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const [ivHighlight, setIvHighlight] = useState<{ left: number; width: number } | null>(null);
+  const measureIvHighlight = useCallback(() => {
+    const el = ivItemRefs.current[intervalIdx];
+    if (!el) return;
+    setIvHighlight({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [intervalIdx]);
+  useLayoutEffect(() => {
+    measureIvHighlight();
+  }, [measureIvHighlight]);
+  // On first mount, intervalCountdowns is still all-empty strings (it fills
+  // in a moment later, once the countdown tick effect runs) — the pills
+  // start one line shorter than their real height, so the layout effect
+  // above measures a too-small box. A ResizeObserver re-measures whenever
+  // the track's box actually changes size (countdowns appearing, fonts
+  // loading), the same fix PriceChart.tsx's own FsSlidingOptions uses for
+  // the identical class of bug.
+  useEffect(() => {
+    const track = ivTrackRef.current;
+    if (!track) return;
+    const ro = new ResizeObserver(() => measureIvHighlight());
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [measureIvHighlight]);
+  const [heroLogoError, setHeroLogoError] = useState(false);
   const [candles, setCandles] = useState<CandleDataPoint[]>([]);
   const candlesRef = useRef<CandleDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2784,14 +2821,54 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // question it's already answered; a genuinely new candle gets a fresh key.
   const aiCacheRef = useRef<Map<string, { aiRead: AIRead; predData: PredictionResponse | null }>>(new Map());
   // Belt-and-suspenders on top of the candle-keyed cache above: even if
-  // something re-fires triggerAI for a coin/interval we just ran AI on
-  // (rapid tab switching, a race, future code touching this), never spend
-  // AI quota on it again within 5 minutes. Keyed by coin|interval only
-  // (not candle time) since real candle closes are always >=15min apart
-  // anyway — this only ever blocks abnormal rapid re-fires, never a
-  // legitimate new candle.
-  const lastAiCallAtRef = useRef<Map<string, number>>(new Map());
+  // something re-fires triggerAI for a coin we just ran AI on (rapid tab
+  // switching, a race, future code touching this, or just hitting refresh
+  // on the page), never spend AI quota on it again within 5 minutes.
+  // Keyed by coin ONLY — not coin|interval and not candle time — so
+  // switching intervals (15m/1h/4h/...) on the same coin can't dodge the
+  // cooldown, and persisted to localStorage (not just this ref) so a real
+  // page reload, which wipes every in-memory ref, still remembers the last
+  // call instead of firing again immediately.
+  const lastAiCallAtRef = useRef<Map<string, number>>(new Map(
+    (() => {
+      try {
+        const raw = localStorage.getItem("cwLastAiCallAt");
+        return raw ? Object.entries(JSON.parse(raw) as Record<string, number>) : [];
+      } catch { return []; }
+    })()
+  ));
+  const persistAiCooldown = () => {
+    try {
+      localStorage.setItem("cwLastAiCallAt", JSON.stringify(Object.fromEntries(lastAiCallAtRef.current)));
+    } catch { /* ignore */ }
+  };
   const AI_COOLDOWN_MS = 5 * 60 * 1000;
+
+  // Last-known AI read, persisted across reloads — a cooldown skip or a
+  // page refresh should show the most recent real analysis instead of a
+  // blank "no read yet" state, since the whole point of the cooldown is to
+  // avoid re-asking the AI for something it already answered recently.
+  // Keyed by coin AND interval (unlike the cooldown timer above, which is
+  // deliberately coin-only) — a 1D read is not an accurate stand-in for
+  // 15m, so switching intervals must show that interval's own last read,
+  // or nothing, never a different interval's analysis mislabeled as
+  // current just because something was cached for the coin.
+  const loadPersistedAiRead = (c: string, iv: string): AIRead | null => {
+    try {
+      const raw = localStorage.getItem("cwLastAiRead");
+      if (!raw) return null;
+      const all = JSON.parse(raw) as Record<string, AIRead>;
+      return all[`${c}|${iv}`] ?? null;
+    } catch { return null; }
+  };
+  const savePersistedAiRead = (c: string, iv: string, read: AIRead) => {
+    try {
+      const raw = localStorage.getItem("cwLastAiRead");
+      const all = raw ? (JSON.parse(raw) as Record<string, AIRead>) : {};
+      all[`${c}|${iv}`] = read;
+      localStorage.setItem("cwLastAiRead", JSON.stringify(all));
+    } catch { /* ignore */ }
+  };
 
   const fetchCandles = useCallback(async (triggerAnalysis = false) => {
     const data = await coinglass.getCandles(coin, interval.value, interval.limit);
@@ -2811,6 +2888,20 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   }, [coin, interval, feedChart, lastCandleTime]);
 
   const [loadError, setLoadError] = useState(false);
+  // Manual refresh button's own spin — independent of aiLoading, which only
+  // reflects a real AI call being in flight. Inside the 5-minute AI
+  // cooldown, fetchCandles(true) still re-fetches live candles/price (that
+  // part's never gated) but the AI call itself gets skipped — without this,
+  // clicking refresh then would look like nothing happened at all. A
+  // minimum visible duration keeps the spin from flashing imperceptibly
+  // fast when the underlying fetch resolves instantly.
+  const [refreshSpinning, setRefreshSpinning] = useState(false);
+  const handleManualRefresh = useCallback(() => {
+    if (refreshSpinning) return;
+    setRefreshSpinning(true);
+    const minSpin = new Promise<void>(resolve => setTimeout(resolve, 650));
+    Promise.allSettled([fetchCandles(true), minSpin]).then(() => setRefreshSpinning(false));
+  }, [fetchCandles, refreshSpinning]);
   const [retryKey, setRetryKey] = useState(0);
 
   // Initial load + interval change
@@ -2818,7 +2909,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
-    setAiRead(null);
+    // Show the last real AI read for this exact coin+interval immediately
+    // (survives page refresh) instead of blanking to "no read yet" every
+    // time — scoped per interval so this never shows a different
+    // interval's analysis while a fresh/cached read for the current one
+    // hasn't loaded yet. A fresh call only replaces it once the
+    // cache/cooldown checks below actually allow one.
+    setAiRead(loadPersistedAiRead(coin as string, interval.value));
     setMmFeed([]);
     setLastCandleTime(null);
 
@@ -3003,14 +3100,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // hunting for month-scale shape repeats (30-day window), not shape-matching
   // whatever short interval the chart happens to be set to. Both the "live"
   // window and the historical search corpus come from this same daily pull.
-  // Re-runs on coin change AND every time the Monthly Fractals tab is
-  // (re)opened — rightTab is in the deps and the effect only fetches while
-  // it's the active tab, so switching away and back always gets a fresh
-  // pull instead of showing whatever was last computed (prices/candles can
-  // have moved on since). `cancelled` guards against a slower in-flight
-  // fetch for a since-abandoned coin/tab state clobbering a newer one.
+  // Re-runs on coin change only now — the aggregate result (matches/upCount/
+  // avgForwardReturn) feeds the always-visible Fractal Match signal card, not
+  // just the Monthly Fractals tab, so it can no longer wait for that tab to
+  // be opened first. `cancelled` guards against a slower in-flight fetch for
+  // a since-abandoned coin clobbering a newer one.
   useEffect(() => {
-    if (!isPaid || !coin || rightTab !== "fractal") return;
+    if (!isPaid || !coin) return;
     let cancelled = false;
     setFractalLoading(true);
     // 6000 daily candles (~16y) comfortably exceeds any coin's actual
@@ -3032,7 +3128,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       setFractalAnalogs(null);
     }).finally(() => { if (!cancelled) setFractalLoading(false); });
     return () => { cancelled = true; };
-  }, [coin, isPaid, rightTab]);
+  }, [coin, isPaid]);
 
   // Run AI + macro fetch when flagged — pro+ only
   useEffect(() => {
@@ -3045,14 +3141,21 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const ict = detectICT(candles);
     aiScanIctRef.current = ict;
     aiCancelledRef.current = false;
-    setAiLoading(true);
 
     const last = candles[candles.length - 1];
     const cacheKey = `${coin}|${interval.value}|${last.time}`;
     const cached = aiCacheRef.current.get(cacheKey);
 
-    const throttleKey = `${coin}|${interval.value}`;
+    const throttleKey = coin as string;
     const inCooldown = !cached && (Date.now() - (lastAiCallAtRef.current.get(throttleKey) ?? 0)) < AI_COOLDOWN_MS;
+
+    // Only show the "Analyzing…" overlay when a real AI call is actually
+    // about to go out — a cache hit resolves instantly and a cooldown skip
+    // never calls it at all, so putting the full-screen spinner up for
+    // either of those (as a flat `setAiLoading(true)` above used to) made
+    // every page refresh look like a fresh analysis was running, even when
+    // the AI API wasn't being touched at all.
+    if (!cached && !inCooldown) setAiLoading(true);
 
     // Fetch HTF candles for multi-timeframe liquidity pockets
     const HTF_FRAMES = [
@@ -3071,10 +3174,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // back to a coin/interval we just looked at) — reuse it instead of
     // spending AI quota on an answer that can't have changed. And even on
     // a genuine cache miss, never fire twice within AI_COOLDOWN_MS for the
-    // same coin/interval — see lastAiCallAtRef above.
+    // same coin (any interval) — see lastAiCallAtRef above.
     const mmPromise = cached ? Promise.resolve<AIRead | null>(cached.aiRead)
       : inCooldown ? Promise.resolve<AIRead | null>(null)
       : (lastAiCallAtRef.current.set(throttleKey, Date.now()),
+         persistAiCooldown(),
          getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current));
 
     Promise.all([
@@ -3087,6 +3191,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       if (aiCancelledRef.current) return;
       if (res) {
         setAiRead(res);
+        if (!cached) savePersistedAiRead(coin as string, interval.value, res);
         setMmFeed(prev => {
           const entry: MMFeedEntry = {
             id: `${coin}-${last.time}`,
@@ -3185,7 +3290,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
   const lastPrice  = candles.length ? candles[candles.length - 1].close : null;
   const secondLast = candles.length >= 2 ? candles[candles.length - 2].close : null;
+  // Change over the selected interval's own last candle (not a fixed 24h
+  // window) — the hero price row's pill shows the interval's own label
+  // (4H/1D/1W/...) precisely so this stays correct as the interval changes.
+  const heroPrice  = ticker?.price ?? lastPrice;
   const pctChange  = lastPrice && secondLast ? ((lastPrice - secondLast) / secondLast) * 100 : null;
+  const absChange  = lastPrice && secondLast ? lastPrice - secondLast : null;
 
   const feedCandles = candles.slice(-15);
   const prevFeedLen = useRef(0);
@@ -3575,53 +3685,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           );
         })()}
 
-        {/* ── Header ── */}
-        <div className="cw-header">
-          <div className="cw-header-left">
-            <span className="cw-coin">{coin}/USD</span>
-            {lastPrice && (
-              <span className="cw-price">
-                ${lastPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            )}
-            {pctChange !== null && (
-              <span className={`cw-change ${pctChange >= 0 ? "cw-change--up" : "cw-change--down"}`}>
-                {pctChange >= 0 ? "▲" : "▼"} {Math.abs(pctChange).toFixed(2)}%
-              </span>
-            )}
-          </div>
-
-          <div className="cw-header-right">
-            {dailyCountdown && (
-              <div className="cw-candle-close cw-candle-close--daily">
-                <span className="cw-candle-close-label">daily close</span>
-                <span className="cw-candle-close-value">{dailyCountdown}</span>
-              </div>
-            )}
-            {secondsAgo !== null && (
-              <span className="cw-updated">↻ {secondsAgo}s ago</span>
-            )}
-            <button
-              className="cw-refresh-btn"
-              onClick={() => fetchCandles(false)}
-              title="Refresh price data — AI only re-runs once a new candle closes"
-            >
-              ↻
-            </button>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!rightPanelCollapsed}
-              className={`cw-panel-toggle-btn${rightPanelCollapsed ? " cw-panel-toggle-btn--collapsed" : ""}`}
-              onClick={() => setRightPanelCollapsed(v => !v)}
-              title={rightPanelCollapsed ? "Show Elliott Wave / AI panel" : "Hide panel — stretch chart"}
-            >
-              <span className="cw-panel-toggle-knob" />
-              <span className="cw-panel-toggle-label">{rightPanelCollapsed ? "SHOW" : "HIDE"}</span>
-            </button>
-          </div>
-        </div>
-
         {/* ── Daily close banner ── */}
         {dailyCloseBanner && !dailyCloseBanner.dismissed && (
           <div className={`cw-daily-banner cw-daily-banner--${dailyCloseBanner.direction}`}>
@@ -3659,6 +3722,159 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
           </div>
         )}
 
+        {/* Signal cards — a full-width, single-row briefing strip above the
+            2-column chart/AI-panel grid below (not inside .cw-left, which
+            is narrower than the full page once the sidebar grid column is
+            back) — all reusing real state already computed elsewhere in
+            this component (elliottResult, fractalAnalogs,
+            ind.support/resistance/rsi/volRatio) rather than duplicating
+            any of that logic. */}
+        <div className="cw-signal-cards-head">
+          <span className="cw-feed-live-dot" />
+          <span className="cw-signal-cards-title">Live Signals</span>
+        </div>
+        <div className="cw-signal-cards">
+          <div className="cw-signal-card">
+            <span className="cw-signal-card-label">Elliott Wave</span>
+            {loading ? (
+              <div className="cw-signal-skeleton">
+                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+                <span className="cw-signal-skeleton-line" />
+              </div>
+            ) : elliottResult && elliottResult.pattern !== "none" ? (
+              <>
+                <div className="cw-signal-card-main">
+                  <svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true">
+                    <polyline className="cw-signal-wave-line" points="2,22 10,6 14,13 22,2 27,11 38,4" fill="none"
+                      stroke={elliottResult.direction === "bullish" ? "#22c55e" : elliottResult.direction === "bearish" ? "#ef4444" : "var(--color-text-muted)"}
+                      strokeWidth="2" />
+                  </svg>
+                  <div>
+                    <div className="cw-signal-card-value">
+                      {elliottResult.pattern === "impulse" ? "Wave" : "Corr."} {elliottResult.currentWave}
+                    </div>
+                    <div className={`cw-signal-card-tag cw-signal-card-tag--${elliottResult.direction === "bullish" ? "up" : elliottResult.direction === "bearish" ? "down" : "neutral"}`}>
+                      {elliottResult.direction === "bullish" ? "Bullish" : elliottResult.direction === "bearish" ? "Bearish" : "Neutral"}
+                    </div>
+                  </div>
+                </div>
+                <p className="cw-signal-card-note">{elliottResult.description}</p>
+              </>
+            ) : (
+              <p className="cw-signal-card-note">No clear wave count on this interval yet.</p>
+            )}
+          </div>
+
+          <div className="cw-signal-card">
+            <span className="cw-signal-card-label">Fractal Match</span>
+            {loading ? (
+              <div className="cw-signal-skeleton">
+                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+                <span className="cw-signal-skeleton-line" />
+              </div>
+            ) : (
+              <>
+                {fractalLoading && (
+                  <div className="cw-signal-loading">
+                    <span className="cw-ai-spinner" />
+                    <span>Searching daily history…</span>
+                  </div>
+                )}
+                {!fractalLoading && isPaid && fractalAnalogs && fractalAnalogs.matches.length > 0 && (
+                  <>
+                    <div className="cw-signal-card-value">
+                      {fractalAnalogs.upCount}/{fractalAnalogs.matches.length} rose
+                    </div>
+                    <p className="cw-signal-card-note">
+                      Avg forward return {fractalAnalogs.avgForwardReturn >= 0 ? "+" : ""}{fractalAnalogs.avgForwardReturn.toFixed(2)}% over the next {fractalAnalogs.forwardHorizon} days.
+                    </p>
+                  </>
+                )}
+                {!fractalLoading && (!isPaid || !fractalAnalogs || fractalAnalogs.matches.length === 0) && (
+                  <p className="cw-signal-card-note">Not enough daily history yet to search for monthly analogs.</p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="cw-signal-card">
+            <span className="cw-signal-card-label">Support / Resistance</span>
+            {loading ? (
+              <div className="cw-signal-skeleton">
+                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
+                <span className="cw-signal-skeleton-line" />
+              </div>
+            ) : ind && ind.support[0] !== undefined && ind.resistance[0] !== undefined ? (() => {
+              const sup = ind.support[0];
+              const res = ind.resistance[0];
+              const pct = heroPrice ? Math.min(100, Math.max(0, ((heroPrice - sup) / (res - sup)) * 100)) : 50;
+              return (
+                <>
+                  <div className="cw-signal-range">
+                    <div className="cw-signal-range-track">
+                      <div className="cw-signal-range-marker-wrap" style={{ left: `${pct}%` }}>
+                        <span className="cw-signal-range-ping" />
+                        <span className="cw-signal-range-marker" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="cw-signal-range-labels">
+                    <span className="cw-signal-card-tag cw-signal-card-tag--up">${sup.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                    <span className="cw-signal-card-tag cw-signal-card-tag--down">${res.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </>
+              );
+            })() : (
+              <p className="cw-signal-card-note">Not enough candles yet to map nearby levels.</p>
+            )}
+          </div>
+
+          <div className="cw-signal-card">
+            <span className="cw-signal-card-label">Daily Close</span>
+            {loading ? (
+              <div className="cw-signal-skeleton">
+                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+                <span className="cw-signal-skeleton-line" />
+              </div>
+            ) : (
+              <>
+                <div className="cw-signal-card-value cw-signal-card-value--mono cw-signal-countdown">{dailyCountdown || "—"}</div>
+                {ticker && (
+                  <p className="cw-signal-card-note">
+                    H <strong className="cw-signal-card-tag--up">${ticker.high.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
+                    {" · "}
+                    L <strong className="cw-signal-card-tag--down">${ticker.low.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="cw-signal-card">
+            <span className="cw-signal-card-label">Momentum</span>
+            {loading ? (
+              <div className="cw-signal-skeleton">
+                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
+                <span className="cw-signal-skeleton-line" />
+              </div>
+            ) : ind && ind.rsi !== null ? (
+              <>
+                <div className="cw-signal-card-main">
+                  <div className="cw-signal-bar-track">
+                    <div className={`cw-signal-bar-fill cw-signal-bar-fill--${rsiStatus()}`} style={{ width: `${Math.min(100, Math.max(0, ind.rsi))}%` }} />
+                  </div>
+                  <span className="cw-signal-card-value">RSI {ind.rsi.toFixed(0)}</span>
+                </div>
+                {ind.volRatio !== null && (
+                  <p className="cw-signal-card-note">Volume {ind.volRatio.toFixed(2)}× the 20-period average.</p>
+                )}
+              </>
+            ) : (
+              <p className="cw-signal-card-note">Not enough candles yet to read momentum.</p>
+            )}
+          </div>
+        </div>
+
         {/* ── Main grid ── */}
         <div
           className={`cw-grid${rightPanelCollapsed ? " cw-grid--panel-collapsed" : ""}`}
@@ -3667,20 +3883,119 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
           {/* Left: chart + indicators */}
           <div className="cw-left">
-            <div className="cw-interval-tabs">
-              {INTERVALS.map((iv, i) => (
-                <button
-                  key={iv.label}
-                  className={`cw-iv-tab${i === intervalIdx ? " cw-iv-tab--active" : ""}`}
-                  onClick={() => setIntervalIdx(i)}
-                >
-                  <span className="cw-iv-tab-label">{iv.label}</span>
-                  {intervalCountdowns[i] && (
-                    <span className="cw-iv-tab-countdown">{intervalCountdowns[i]}</span>
-                  )}
-                </button>
-              ))}
+            {/* ── Header + interval pills: same row, two columns ── */}
+            <div className="cw-left-top-row">
+              <div className="cw-header">
+                <div className="cw-header-left">
+                  <div className="cw-id-row">
+                    {!heroLogoError ? (
+                      <img
+                        className="cw-coin-icon"
+                        src={`https://assets.coincap.io/assets/icons/${(coin as string).toLowerCase()}@2x.png`}
+                        alt=""
+                        loading="lazy"
+                        onError={() => setHeroLogoError(true)}
+                      />
+                    ) : (
+                      <span
+                        className="cw-coin-icon cw-coin-icon--fallback"
+                        style={{ background: COIN_COLORS[coin as string] ?? "var(--color-primary)" }}
+                      >
+                        {COIN_GLYPHS[coin as string] ?? (coin as string)[0]}
+                      </span>
+                    )}
+                    <span className="cw-coin">{coin}/USD</span>
+                  </div>
+                  <div className="cw-price-row">
+                    {heroPrice && (
+                      <span className="cw-price">
+                        ${heroPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    {pctChange !== null && (
+                      <span className={`cw-change ${pctChange >= 0 ? "cw-change--up" : "cw-change--down"}`}>
+                        {pctChange >= 0 ? "▲" : "▼"} {Math.abs(pctChange).toFixed(2)}%
+                        {absChange !== null && (
+                          <span className="cw-change-abs">
+                            (${Math.abs(absChange).toLocaleString("en-US", { maximumFractionDigits: 4 })})
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    <span className="cw-interval-pill">{interval.label.toUpperCase()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cw-interval-tabs" ref={ivTrackRef}>
+                {ivHighlight && (
+                  <span
+                    className="cw-iv-highlight"
+                    style={{ transform: `translateX(${ivHighlight.left}px)`, width: ivHighlight.width }}
+                  />
+                )}
+                {INTERVALS.map((iv, i) => (
+                  <button
+                    key={iv.label}
+                    ref={(el) => { ivItemRefs.current[i] = el; }}
+                    className={`cw-iv-tab${i === intervalIdx ? " cw-iv-tab--active" : ""}`}
+                    onClick={() => setIntervalIdx(i)}
+                  >
+                    <span className="cw-iv-tab-label">{iv.label}</span>
+                    {intervalCountdowns[i] && (
+                      <span className="cw-iv-tab-countdown">{intervalCountdowns[i]}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chevron, not an icon-button or switch — sits right after
+                  the interval pills instead of floating alone in its own
+                  row above the grid. Always rendered (unlike .cw-right,
+                  which unmounts entirely when collapsed) since this is the
+                  only way back in once it's hidden. Points away from the
+                  panel it reveals/hides, same direction convention as a
+                  splitter's own collapse arrow. */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!rightPanelCollapsed}
+                className="cw-panel-toggle-btn"
+                onClick={() => setRightPanelCollapsed(v => !v)}
+                title={rightPanelCollapsed ? "Show Elliott Wave / AI panel" : "Hide panel — full-width chart"}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: rightPanelCollapsed ? "rotate(180deg)" : "none" }}>
+                  <polyline points="9 6 15 12 9 18" />
+                </svg>
+              </button>
             </div>
+
+            {/* 24h High/Low/Vol — real ticker data (App.tsx's coinTickers Map,
+                fetchCoin24hTickers), not derived from candles like lastPrice
+                above (that tracks whatever interval is selected, not a fixed
+                24h window). Same data PriceChart.tsx's own chart-hero stat row
+                shows. */}
+            {ticker && (
+              <div className="cw-ticker-stats">
+                <span className="cw-ticker-stats-label">24H</span>
+                <span className="cw-ticker-sep">|</span>
+                <span className="cw-ticker-stat">
+                  High <strong className="cw-ticker-stat-up">${ticker.high.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong>
+                </span>
+                <span className="cw-ticker-stat">
+                  Low <strong className="cw-ticker-stat-down">${ticker.low.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong>
+                </span>
+                {ticker.quoteVolume !== undefined && (
+                  <>
+                    <span className="cw-ticker-sep">|</span>
+                    <span className="cw-ticker-stat">
+                      24hr vol <strong>{ticker.quoteVolume >= 1e9 ? `$${(ticker.quoteVolume / 1e9).toFixed(2)}B` : `$${(ticker.quoteVolume / 1e6).toFixed(2)}M`}</strong>
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
             <div
               ref={chartDblClickWrapRef}
               className={`cw-chart-dblclick-wrap${isChartFullscreen ? " cw-chart-dblclick-wrap--fullscreen" : ""}`}
@@ -3885,7 +4200,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
           {/* Right: AI analysis */}
           <div className="cw-right">
-
           <div className="cw-right-panel">
             <div className="cw-right-tabs">
               <button
@@ -4330,11 +4644,23 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             <div className="cw-ai-card">
               <div className="cw-ai-header">
                 <span className="cw-ai-badge">✦ AI READ</span>
-                {pattern && (
+                {pattern && pattern.type !== "neutral" && (
                   <span className={`cw-pattern-tag cw-pattern-tag--${pattern.type}`}>
                     {pattern.emoji} {pattern.name}
                   </span>
                 )}
+                <div className="cw-ai-header-refresh">
+                  {secondsAgo !== null && (
+                    <span className="cw-updated">↻ {secondsAgo}s ago</span>
+                  )}
+                  <button
+                    className={`cw-refresh-btn${refreshSpinning ? " cw-refresh-btn--spinning" : ""}`}
+                    onClick={handleManualRefresh}
+                    title="Refresh — re-runs the AI read if it's been 5+ minutes since the last call"
+                  >
+                    ↻
+                  </button>
+                </div>
               </div>
 
               {!aiLoading && aiRead && (

@@ -596,64 +596,25 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
 @media (max-width: 640px) {
   .chart-header {
     padding: 0;
+    /* Was the shared 20px desktop value — on mobile .mch-body (the LIQ/OI
+       stats) wraps onto its own row here (chart-header's own flex-wrap),
+       so that 20px became a real gap above chart-header-right (the
+       style/grid/screenshot icons + Switch to Compact link) on top of
+       .mch-body's own margin-bottom and .mch-stats' own bottom padding —
+       three paddings stacking into one big gap. */
+    gap: 14px;
   }
   .chart-fs-header-group {
     margin-bottom: 8px;
   }
+  .chart-header .mch-body {
+    margin-bottom: 6px;
+  }
+  .chart-header .mch-stats {
+    padding-bottom: 8px;
+  }
 }
 
-/* #chart (compact, non-fullscreen) — was the old single "Compact View"
-   icon button, then a Full/Compact segmented switch; now the same
-   muted-label + underlined-link pattern TradeManager's own mode switch
-   uses (.rcw-switch-row/.rcw-switch: "Beginner mode  Switch to Pro"),
-   reused here as "Full view  Switch to Compact". Desktop renders this as
-   its own row below .chart-header (this base rule); mobile/iOS renders
-   the same element nested inside .chart-header-right instead, alongside
-   the icon row (override just below). */
-.chart-view-switch-row {
-  display: block;
-  width: fit-content;
-  margin: 2px 8px 10px auto;
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-}
-/* Nested in .chart-header-right (mobile/iOS only) — that row is already
-   display:flex + justify-content:space-between (.chart-active
-   .chart-header-right below), which alone puts the icon row and this on
-   opposite ends of one row; just drop the standalone block's own
-   margin/width so it doesn't add extra spacing or height on top of that. */
-.chart-header-right .chart-view-switch-row {
-  display: inline-flex;
-  align-items: center;
-  /* inline-flex turns the "{' '}" text node between the label and the
-     link (PriceChart.tsx's chartViewSwitchRow) into its own near-zero-
-     width anonymous flex item instead of normal inline whitespace — gap
-     puts a real, reliable space back between the two. */
-  gap: 4px;
-  width: auto;
-  margin: 0;
-  /* Mobile/iOS only (this nested context never applies on desktop) —
-     a touch smaller than the standalone row's 0.72rem. font-size is
-     rem-based (root-relative, not inherited), so .chart-view-switch-link
-     below needs its own matching override too. */
-  font-size: 0.64rem;
-}
-.chart-header-right .chart-view-switch-row .chart-view-switch-link {
-  font-size: 0.64rem;
-}
-.chart-view-switch-link {
-  all: unset;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #0a84ff;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  transition: color 0.15s;
-}
-.chart-view-switch-link:hover {
-  color: #a5b4fc;
-}
 
 /* Above the mobile cutoff, .price-chart-container's own padding-left:3px
    is the whole inset — this 8px on top of it would leave "Bitcoin" 8px
@@ -694,6 +655,28 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   justify-content: space-between;
   gap: 10px;
 }
+/* Mobile-only "Switch to Compact"/"Switch to Full" control, its own row
+   below chart-header-right — a pure text link (no pill/border/bg), not
+   merged into chart-hero-icon-row's icon set like the desktop version. */
+.chart-compact-link {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.chart-compact-link svg {
+  flex-shrink: 0;
+}
+.chart-compact-link > :last-child {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .chart-hero-icon-row {
   display: flex;
   align-items: center;
@@ -993,18 +976,18 @@ html[data-theme="light"] .chart-active
 .chart-hero-pair-name {
   font-size: 1.3rem;
   font-weight: 600;
-  color: var(--color-text);
+  /* Tinted like a link, not neutral text — the clearest signal that this
+     whole row (icon/name/chevron) is clickable, no background/border
+     needed (tried, didn't like it). Replaces the old deliberate "stays
+     neutral/black, not theme-colored" treatment this used to share with
+     .chart-current-price right below it — that one stays neutral, this
+     one no longer does, since this row alone is the interactive one. */
+  color: var(--color-primary);
 }
-/* Same deliberate "stays neutral/black, not theme-colored" look as the
-   price text right below it (.chart-current-price) — was unscoped,
-   hardcoding black in dark theme too, invisible on its own navy bg. */
-html[data-theme="light"] .chart-hero-pair-name {
-  color: #0a0b0d;
-}
-/* Mobile/iOS only (PriceChart.tsx: !isDesktopWidth) — wraps the icon +
-   .chart-hero-pair-name + chevron in a real button instead of the plain
-   row desktop keeps; all-unset so it still lays out/looks identical to
-   that plain row, just tappable now (opens onOpenCoinPicker). */
+/* Mobile and desktop both now — the only coin switcher on this page since
+   App.tsx's own mch-coin-btn (top bar) is gone; all-unset so it still
+   lays out/looks identical to a plain row, just tappable (opens
+   onOpenCoinPicker). */
 .chart-hero-coin-selector {
   all: unset;
   display: flex;
@@ -1014,33 +997,76 @@ html[data-theme="light"] .chart-hero-pair-name {
 }
 .chart-hero-coin-selector svg {
   flex-shrink: 0;
-  color: var(--color-text-secondary);
+  color: var(--color-primary);
 }
-/* Same badge CompactPriceView's own header uses — adopted here so the
-   main chart's header matches it instead of the other way around. */
-.chart-hero-live-badge {
-  display: inline-flex;
+
+/* Top-5-by-market-cap avatar stack, next to the selector — overlapping
+   at rest (negative margin-left on everyone after the first), spreads
+   out to a normal row on hover so each one is a full, separate click
+   target instead of a sliver. The trailing "…" circle opens the full
+   picker, same as the main selector button. */
+.chart-hero-top-coins {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px 3px 6px;
-  border-radius: 99px;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #22c55e;
+  margin-left: 2px;
 }
-.chart-hero-live-dot {
-  width: 6px;
-  height: 6px;
+.chart-hero-top-coin {
+  all: unset;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #22c55e;
-  animation: chart-hero-live-pulse 1.8s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: 2px solid var(--pc-panel, var(--color-card-bg));
+  margin-left: -9px;
+  transition: margin-left 0.18s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
-@keyframes chart-hero-live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.4; transform: scale(0.75); }
+.chart-hero-top-coins:hover .chart-hero-top-coin {
+  margin-left: 3px;
+}
+.chart-hero-top-coin:first-child {
+  margin-left: 0 !important;
+}
+.chart-hero-top-coin:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.chart-hero-top-coin--current {
+  box-shadow: 0 0 0 1.5px var(--color-primary);
+}
+.chart-hero-top-coin--more {
+  background: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+/* Mobile/iOS only (PriceChart.tsx: !isDesktopWidth) — small coin icon
+   ahead of the "24hr vol" label inside the existing High/Low/Vol stat
+   row (.chart-fs-stat-row), instead of a separate floating badge
+   elsewhere in the header. Normal flex flow, no positioning tricks. */
+.chart-fs-stat-coin-icon {
+  flex-shrink: 0;
+  align-self: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface);
+}
+.chart-fs-stat-coin-icon--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
 }
 .chart-hero-price-row {
   display: inline-flex;

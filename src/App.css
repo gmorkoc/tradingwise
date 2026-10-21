@@ -1614,6 +1614,7 @@ html[data-theme="light"] .coin-picker-menu--table {
   flex-direction: column;
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .chart-section-wrap {
@@ -1676,7 +1677,11 @@ html[data-theme="light"] .coin-picker-menu--table {
 
 .chart-section-wrap > .price-chart-container {
   flex: 1;
-  min-width: 0;
+  /* A floor, not 0 — paired with .chart-right-col's own clamp() above,
+     this guarantees the actual chart stays the single largest pane on
+     screen instead of silently shrinking to whatever's left over once
+     the sidebar and Daily Brief take their share. */
+  min-width: 480px;
 }
 
 /* Groups PaperTradingCard above OrderFlowPanel's .ob-card into one
@@ -1688,7 +1693,13 @@ html[data-theme="light"] .coin-picker-menu--table {
    separate portaled layout, so bumping this value is desktop-only in
    practice without needing its own media query. */
 .chart-section-wrap > .chart-right-col {
-  width: 520px;
+  /* clamp(), not a flat px — on a narrower desktop viewport (laptop-width
+     windows, ~1250-1350px) a flat 440px left the actual chart canvas
+     smaller than this column once Daily Brief's own width was also
+     subtracted, inverting the intended hierarchy (chart first, everything
+     else secondary). Scales down with viewport width instead of staying
+     fixed while the chart absorbs whatever's left over. */
+  width: clamp(320px, 28vw, 440px);
   flex-shrink: 0;
   margin: 0 0 10px 10px;
   padding: 16px;
@@ -1701,12 +1712,42 @@ html[data-theme="light"] .coin-picker-menu--table {
   min-height: 0;
   gap: 10px;
 }
-.chart-right-col > .ob-card {
+/* Descendant, not direct-child — the tabbed 2col variant nests this one
+   more level deep (.chart-right-col > .crc-tab-panel > .ob-card), and a
+   direct-child selector here stopped matching there entirely, silently
+   falling back to .ob-card's own base rule (OrderBook.css): a fixed
+   height:calc(100% - 20px) plus, at >=961px, .chart-active .ob-card's
+   own flat height:780px — neither in effect while this rule actually
+   matched, both quietly back once it didn't. */
+/* .main-content prefixed (3 classes, not 2) — specificity-wise, not just
+   source order, beats OrderBook.css's own media-query
+   ".chart-active .ob-card { height: 780px }" (also 2 classes), which
+   would otherwise win on source order alone depending on which css file
+   vite happens to concatenate last. */
+.main-content .chart-right-col .ob-card {
   margin: 0;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   height: auto;
   padding: 8px 0 18px 0px;
+}
+/* The asks/bids lists themselves are the scrollable containers — not an
+   ancestor several levels up. max-height (not a flat height — a flat
+   height left dead empty space above the spread row whenever there
+   weren't enough rows to fill it) sizes each box to its own content up
+   to the cap, scrolling locally once there's enough real content to need
+   it. This also fixes mouse-wheel scrolling over the ladder moving the
+   whole page/chart instead: a wheel event only stays local to the
+   element the cursor is over when that element itself has real,
+   definite overflow to consume — deferring to an ancestor further up
+   the chain left nothing underneath the cursor able to capture it. */
+.chart-right-col .ob-section {
+  flex: 0 0 auto;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.chart-right-col .ob-section--bids {
+  max-height: 200px;
 }
 /* Divider between PaperTradingCard and OrderFlowPanel — neither card has
    its own border now, so the 10px flex gap (above) alone no longer marks
@@ -1716,14 +1757,553 @@ html[data-theme="light"] .coin-picker-menu--table {
    `> * + *` so it works regardless of which/how many cards actually sit
    in this column, not hardcoded to these two. Each child is already a
    flex column of its own (.ob-card/.ptc-card), so this renders as that
-   column's own first item, right where the divider should sit. */
-.chart-right-col > * + *::before {
+   column's own first item, right where the divider should sit.
+   :not(.chart-right-col--tabbed) — the tabbed variant's own children
+   (.crc-tabs, .crc-tab-panel) aren't two stacked cards needing a divider
+   between them; .crc-tabs' own border-bottom already separates it from
+   whichever panel is showing. */
+.chart-right-col:not(.chart-right-col--tabbed) > * + *::before {
   content: "";
   display: block;
   flex-shrink: 0;
   height: 1px;
   margin: 0 8px 12px 13px;
   background: color-mix(in srgb, var(--pc-border) 45%, transparent);
+}
+
+/* Plain/unscoped — chart-right-col's own flex-column behavior, needed in
+   BOTH places it can now live: nested inside .chart-section-wrap (641-
+   960px tablet, old behavior, styled further by the scoped rule above)
+   and standalone inside .chart-two-col-right-row (>=961px, the new
+   experimental column, below). The scoped rule's width/padding/border
+   are desktop-tablet-specific and don't apply in the new location, which
+   gets its own sizing from .chart-two-col-right-row instead. */
+.chart-right-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+  /* The column itself is the one scroll container for its two cards
+     combined (no fixed height anywhere, including on the cards
+     themselves) — avoids PaperTradingCard (flex-shrink:0, sized to its
+     own content) and OrderFlowPanel fighting over a forced-shrunk share
+     of space, which was collapsing OrderFlowPanel to ~0 height and
+     making it look unscrollable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Tabbed variant (2col layout only) — Paper Trading / Order Flow Pressure
+   / Order Book one at a time instead of stacked. The tab row itself
+   doesn't scroll (flex-shrink:0); whichever panel is visible fills the
+   rest and scrolls on its own (each panel is just that one card, already
+   its own flex column). */
+.chart-right-col--tabbed {
+  gap: 0;
+}
+/* Glow underline (picked from the fancy-tabs Design sketches,
+   KvwB2LJU3URseXX3zfSx2f, option A) — plain icon+label tabs, a thin
+   gradient bar that shimmers continuously and glows under the active
+   one, sliding/resizing between tabs (measured in App.tsx: crcTabRefs/
+   crcHighlight, same approach as CandleWatcher's interval pills). */
+.crc-tabs {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  gap: 24px;
+  border-bottom: 1px solid var(--pc-border);
+  margin-bottom: 14px;
+}
+.crc-tab {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 9px 1px 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color 0.25s ease;
+}
+.crc-tab-icon {
+  display: flex;
+  color: inherit;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.crc-tab.active {
+  color: var(--color-text);
+}
+.crc-tab.active .crc-tab-icon {
+  transform: scale(1.25) rotate(-6deg);
+}
+.crc-tab:hover:not(.active) {
+  color: var(--color-text);
+}
+.crc-tab-highlight {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes crc-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.crc-tab-panel-enter {
+  animation: crc-panel-in 0.22s ease;
+}
+.crc-tab-panel {
+  /* flex:1, not left at the default flex:0 1 auto — without this, the
+     panel sized itself to its own content instead of filling whatever
+     .chart-right-col actually had, so the real card inside it (itself
+     flex:1) had nothing extra to grow into and just rendered at full,
+     unbounded natural height — scrollable in theory via .chart-right-
+     col's own overflow, but in practice this nested indefinite-height
+     chain was the same bug class as the earlier Daily Brief one. */
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+/* .ob-card/.ptc-card's own flex-shrink:0 (set for the STACKED variant,
+   so neither of the two cards shrinks and fights the other for space —
+   .chart-right-col itself does the shrinking/scrolling there) actively
+   broke scrolling here: with only one card per panel (no sibling to
+   avoid fighting with), flex-shrink:0 meant NOTHING in this chain would
+   ever compress to fit the available box, so the overflow never reached
+   a scrollable ancestor — same end result as Daily Brief's old sticky/
+   fixed-height bug, different cause. Letting the card itself shrink
+   (back to the default) is what makes it behave like .db-page: fills
+   its row, one real internal scroll, same as Daily Brief. */
+.main-content .chart-right-col--tabbed .crc-tab-panel .ob-card,
+.main-content .chart-right-col--tabbed .crc-tab-panel .ptc-card {
+  flex-shrink: 1;
+  min-height: 0;
+  /* The card itself is the one real scroll container here (not
+     .chart-right-col, which would just double up) — exactly
+     .db-page's own split: a fixed head (.crc-tabs / .db-page-head)
+     above a single scrollable body (this card / .db-page-list).
+     overflow-x:hidden explicit, not left ambiguous — and border-radius:0
+     (.ptc-card's own base rule sets 16px): once overflow is non-visible
+     on an element with rounded corners, the corners actively clip
+     content, and .ptc-title sits flush at the card's own top-left (no
+     padding there) — clipped by the rounded corner itself, which is
+     exactly what sliced the left edge off the "P" in "Paper Trading". */
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 0;
+  overscroll-behavior: contain;
+  /* .chart-two-col-right's own padding is 16px 16px 0 (no bottom) — fine
+     when Daily Brief sat below it with its own top padding providing the
+     gap, but here this card's own scroll boundary IS the bottom edge, so
+     without this the last row of content sat flush against it. */
+  padding-bottom: 16px;
+}
+/* Matches: scrolling happens on the card above, not here too.
+   overflow-y alone (overflow-x left at its default 'visible') is an
+   invalid combination — the spec forces overflow-x to 'auto' in that
+   case, which was introducing a 1px horizontal scroll/clip shift that
+   sliced the left edge off .ptc-title's "Paper Trading" text. Hidden on
+   both axes explicitly avoids that auto-correction. */
+.chart-right-col--tabbed {
+  overflow: hidden;
+}
+.crc-tab-panel > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Experimental 2-column chart page layout (>=961px only) ──────────────
+   Column 1: just the chart. Column 2: chart-right-col stacked above Daily
+   Brief instead of beside the chart. Either column can be clicked (the
+   small chevron at the seam) to expand itself at the other's expense —
+   a plain width transition, not grid-template-columns (animating that
+   property is inconsistent across browsers). */
+.chart-two-col-left {
+  /* No explicit width of its own (sized by flex:1 filling whatever
+     .chart-two-col-right doesn't take) — transitioning `width` itself
+     still animates its smoothly, since that's the property whose
+     COMPUTED value changes as the sibling's own width transitions. */
+  transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chart-two-col-right {
+  /* Bounded to the viewport directly (position:sticky + an explicit
+     height), not via chart-layout/.main-content.chart-multicol's flex
+     chain — .chart-column (the chart itself, PLUS whatever renders below
+     it via PriceChart's children prop: Watchlist, Top Movers, signal
+     cards...) is legitimately tall/unbounded content that the whole page
+     has always scrolled normally to reach, so align-items:stretch just
+     made this column match THAT height instead of the viewport, and
+     nothing ever actually got a bounded box to scroll within. Same
+     proven pattern .db-page itself used to use before being nested in
+     here — align-self:flex-start opts out of the stretch that would
+     otherwise override this explicit height with .chart-column's own
+     (much taller) natural height. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100vh - 64px - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
+  display: flex;
+  flex-direction: column;
+  width: 440px;
+  flex-shrink: 0;
+  min-height: 0;
+  /* Not overflow:hidden — it was clipping .chart-col-expand-toggle (the
+     round chevron button, deliberately positioned at left:-13px so it
+     pokes outside this box over the divider seam) down to a sliver, and
+     also clipping the first glyph of whatever sits flush against the
+     left edge (the "P" in the Paper Trading tab). Not actually needed
+     for correctness either — .chart-two-col-right-row--top/--bottom
+     already bound/scroll themselves (max-height / flex:1+overflow-y:auto),
+     so their combined height fills this box exactly rather than
+     overflowing it. */
+  margin: 0 0 10px 10px;
+  padding: 0 16px 0;
+  border-left: 1px solid var(--pc-border);
+  gap: 14px;
+  transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chart-two-col-right--expanded {
+  /* ~15% over the base 440px, not the old fixed 840px (nearly double) —
+     that jump was wide enough to push .price-chart-container below its
+     own 480px min-width floor at common desktop widths (e.g. 1512px
+     with the sidebar expanded), forcing an overflow that broke the
+     layout. This stays comfortably clear of that floor instead. */
+  width: 506px;
+}
+.chart-two-col-right-row {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Top row sizes to its own content (Paper Trading + Order Flow Pressure's
+   header) instead of being forced into an even half-split with Daily
+   Brief below — a flat 50/50 split could push Order Flow Pressure's own
+   title below the fold, behind PaperTradingCard, needing a scroll to even
+   see it exists on first load. flex-shrink stays on (not 0 0 auto) so it
+   still yields space back to Daily Brief, just isn't capped at exactly
+   half regardless of actual content height. The top row doesn't scroll
+   itself either way — .chart-right-col (its only child) is the actual
+   scroll container, so content doesn't end up nested inside two
+   scrollable boxes at once. */
+/* Default (not yet dragged, rightColSplit === null in App.tsx): sizes to
+   its own content, capped so Daily Brief below always keeps a real,
+   visible share — same reasoning as the old flat-% version, just not
+   forced to a fixed number before the user ever touches the handle. */
+.chart-two-col-right-row--top {
+  flex: 0 1 auto;
+  max-height: 70%;
+  min-height: 0;
+}
+/* Once dragged (App.tsx sets an inline height + this class): a real,
+   fixed height in both directions, not just a cap — flex:0 0 auto so an
+   inline max-height-only approach can't silently block growing it back
+   down past where it started. If content is shorter than that it just
+   leaves empty space below it (same as any ordinary resizable split
+   pane); if taller, the card inside it (already its own overflow-y:auto
+   scroll container) scrolls instead of being capped mid-row. */
+.chart-two-col-right-row--top-manual {
+  flex: 0 0 auto;
+  max-height: none;
+}
+.chart-two-col-right-row--bottom {
+  flex: 1;
+  min-height: 100px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Sibling of both rows (App.tsx), not inside either — a short, centered
+   line, not a full-width border. */
+/* The visible 1px line is centered inside a taller invisible hit area
+   (cursor:row-resize) — dragging this adjusts rightColSplit (App.tsx),
+   same drag-to-resize affordance as .chart-resize-handle (the chart/
+   order-book split) elsewhere on this page. */
+.chart-two-col-right-divider {
+  flex-shrink: 0;
+  width: 100%;
+  height: 9px;
+  box-sizing: border-box;
+  padding: 4px 0;
+  cursor: row-resize;
+  touch-action: none;
+  position: relative;
+  z-index: 2;
+}
+.chart-two-col-right-divider::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: color-mix(in srgb, var(--pc-border) 60%, transparent);
+  transition: background 0.15s ease, height 0.15s ease;
+}
+.chart-two-col-right-divider:hover::before,
+.chart-two-col-right-divider:active::before {
+  height: 2px;
+  background: var(--color-primary);
+}
+/* On-load hint that this is draggable — a glowing pulse right on the
+   handle itself (not a demo of what dragging does, see App.tsx), a few
+   times then it's gone; App.tsx removes the class after ~2.6s. */
+@keyframes crc-divider-intro-pulse {
+  0%, 100% {
+    height: 1px;
+    background: color-mix(in srgb, var(--pc-border) 60%, transparent);
+    box-shadow: none;
+  }
+  50% {
+    height: 1.5px;
+    background: color-mix(in srgb, var(--color-primary) 70%, var(--pc-border));
+    box-shadow: 0 0 4px 0 color-mix(in srgb, var(--color-primary) 30%, transparent);
+  }
+}
+.chart-two-col-right-divider--intro::before {
+  animation: crc-divider-intro-pulse 0.85s ease-in-out 3;
+}
+/* Moves up and down a bit, then back — the drag itself is vertical
+   (resizes row height), so this shows that motion, not a horizontal
+   sweep. */
+/* Stays centered on the divider itself — the real row-height nudge
+   (App.tsx) is what actually moves, this just fades in/out riding along
+   with it instead of also bouncing on its own on top of that. */
+@keyframes crc-divider-label-sweep {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+}
+.chart-two-col-right-divider-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  white-space: nowrap;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-primary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px -2px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  opacity: 0;
+  animation: crc-divider-label-sweep 2.6s ease-in-out;
+}
+/* .db-page is normally its own direct .chart-page-row child with its own
+   left border/margin (DailyBrief.css) — both redundant/doubled up once
+   it's nested a level deeper in here instead, so they're dropped for
+   this one specific spot. */
+.chart-two-col-right-row--bottom .db-page {
+  border-left: none;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  /* .db-page's own base rule (DailyBrief.css) is built for its ORIGINAL
+     spot — a direct .chart-page-row sibling, sticky against the whole
+     page and sized to the viewport (position:sticky; height:calc(100vh -
+     64px...)). Nested in here instead, that fixed near-viewport height
+     blew way past this row's own small allotted box, and align-self:
+     flex-start opted it out of stretching to fill it — net result, this
+     row's box stayed empty (the actual Daily Brief content rendered,
+     but far taller/differently-positioned than this box could ever
+     show). Neutralized back to a plain block that fills whatever height
+     this row actually has. */
+  position: static;
+  align-self: stretch;
+  height: 100%;
+}
+/* .db-page-head's own 16px left padding (DailyBrief.css) stacked on top
+   of .chart-two-col-right's own 16px left padding put "Your daily brief"
+   32px from the sidebar's edge, while .ptc-title (zero padding of its
+   own, same outer 16px only) sits at just 16px — a visible 16px
+   misalignment between the two titles. Dropped here so they share the
+   same left edge. */
+.chart-two-col-right-row--bottom .db-page-head {
+  padding-left: 0;
+}
+.chart-col-expand-toggle {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: -13px;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+.chart-col-expand-toggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+/* Chart-page layout picker — moved into a top-nav-bar dropdown
+   (.top-nav-layout-*, below) instead of living inline above the chart
+   content. See chartLayoutMode in App.tsx. */
+
+/* .chart-layout is NOT height-bounded/clipped — .chart-column (the chart
+   itself, plus whatever PriceChart's children prop renders below it:
+   Watchlist, Top Movers, signal cards...) is legitimately tall content
+   the whole page has always scrolled normally to reach. An earlier
+   attempt bounded this whole row to the viewport instead (expecting
+   align-items:stretch to make every column match a short, fixed chart
+   height) — backwards: align-items:stretch instead made every OTHER
+   column match .chart-column's own tall natural height, so nothing
+   was ever actually bounded, and overflow:hidden here risked clipping
+   the chart's own below-chart content outright. The side columns
+   (.chart-two-col-right, .chart-three-col-mid/-right) bound and scroll
+   themselves independently instead — position:sticky + an explicit
+   viewport-relative height, same proven pattern .db-page itself used
+   before being nested in here, with align-self:flex-start on each to
+   opt out of this row's stretch. */
+.chart-layout {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 3-col: two extra columns beside chart-two-col-left, one block each,
+   each independently scrollable (matches the user's own sketch). */
+.chart-layout--3col > .chart-column {
+  flex: 1;
+  min-width: 480px;
+}
+.chart-three-col-mid,
+.chart-three-col-right {
+  /* Same reasoning as .chart-two-col-right (above) — bounded to the
+     viewport directly instead of relying on this row's own
+     align-items:stretch, which would otherwise just match
+     .chart-column's own tall, unbounded natural content height. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100vh - 64px - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: clamp(260px, 22vw, 360px);
+  flex-shrink: 0;
+  margin: 0;
+  padding: 16px 16px 0;
+  border-left: 1px solid var(--pc-border);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 10px;
+}
+.chart-three-col-mid {
+  width: clamp(320px, 27vw, 440px);
+  /* Its only child, .chart-right-col, is itself the scroll container
+     (see that rule) — not scrolling here too, to avoid nesting two
+     scrollable boxes inside each other. */
+  overflow-y: visible;
+}
+.chart-three-col-right .db-page {
+  border-left: none;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  /* Same neutralization as .chart-two-col-right-row--bottom .db-page
+     above — .db-page's base position:sticky/height:calc(100vh...)/
+     align-self:flex-start are built for its original standalone spot. */
+  position: static;
+  align-self: stretch;
+  height: 100%;
+}
+/* No left/right padding on the title or any item here — only
+   .chart-three-col-right's own padding (16px 16px 0) provides the
+   horizontal inset, so everything lines up against one shared edge
+   instead of each row adding its own on top of it. */
+.chart-three-col-right .db-page-head,
+.chart-three-col-right .db-featured-badge,
+.chart-three-col-right .db-list-item,
+.chart-three-col-right .db-section-label {
+  padding-left: 0;
+  padding-right: 0;
+}
+.chart-three-col-right .db-page-head {
+  padding-top: 0;
+}
+
+/* 2-row: row1 chart (full width), row2 chart-right-col + Daily Brief
+   side by side underneath. */
+.chart-layout--2row {
+  flex-direction: column;
+}
+.chart-row-top {
+  display: flex;
+}
+.chart-row-top > .chart-column {
+  flex: 1;
+  min-width: 0;
+}
+.chart-row-bottom {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-height: 280px;
+  margin-top: 10px;
+  border-top: 1px solid var(--pc-border);
+}
+.chart-row-bottom-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+}
+.chart-row-bottom-col + .chart-row-bottom-col {
+  border-left: 1px solid var(--pc-border);
+}
+/* Whichever one holds .chart-right-col doesn't scroll itself — that
+   child is its own scroll container (see .chart-right-col), avoiding two
+   nested scrollable boxes. */
+.chart-row-bottom-col:has(> .chart-right-col) {
+  overflow-y: visible;
+}
+.chart-row-bottom-col .db-page {
+  border-left: none;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+  flex: 1;
+  /* Same neutralization as .chart-two-col-right-row--bottom .db-page
+     above — .db-page's base position:sticky/height:calc(100vh...)/
+     align-self:flex-start are built for its original standalone spot. */
+  position: static;
+  align-self: stretch;
+  height: 100%;
 }
 
 @media (max-width: 960px) {
@@ -2392,6 +2972,683 @@ html[data-theme="light"] .icon-strip {
   opacity: 1;
 }
 
+/* ── Desktop-only wide sidebar (>=961px, not the 641-960px tablet rail
+   above) — gray canvas + white active-item pill + grouped section labels,
+   same reference look as the chart-page sidebar cards (taskless.app-style).
+   Widens the rail from 88px to 240px, swaps icon-over-label back to icon+
+   label side by side, turns the category "head" from a clickable icon
+   button into a plain small uppercase group label (categories are always
+   expanded here — the flyout panel below is for narrower desktop/tablet
+   widths only now, hidden entirely in this range). !important throughout
+   where a property this overrides is itself only set inside the 641px
+   block above (which is also true at this width) and would otherwise win
+   on source order. */
+@media (min-width: 961px) {
+  .icon-strip {
+    width: 280px;
+    background: #00000003;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .icon-strip-logo {
+    justify-content: flex-start;
+    padding: 6px 10px;
+  }
+  .icon-strip-logo .st-logo {
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+  }
+  .icon-strip-logo .st-logo-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .icon-strip-logo .st-logo-wordmark {
+    display: flex !important;
+    opacity: 1;
+    font-size: 19px;
+  }
+
+  .icon-strip-nav {
+    align-items: stretch;
+    gap: 1px;
+  }
+
+  /* Same size/weight as a regular item, not a small muted label — a
+     category head IS a full nav row here, clickable to expand/collapse
+     its items inline. Starts collapsed except Market Data
+     (openNavCategory's default, App.tsx), same as the mobile accordion,
+     just no flyout panel at this width. */
+  .icon-strip-cat-head {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    width: 100%;
+    margin: 2px 0;
+    padding: 8px 12px !important;
+    gap: 10px !important;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+  }
+  .icon-strip-cat-head:hover {
+    background: var(--color-input-bg) !important;
+    color: var(--color-text-secondary) !important;
+  }
+  /* Open = the gray pill, same as the reference's "Finances" row — not
+     the white/shadowed look .icon-strip-btn.active uses for an actually-
+     selected page, since a category being open isn't itself a page. */
+  .icon-strip-cat-head.open {
+    background: var(--color-input-bg) !important;
+    color: var(--color-text) !important;
+  }
+  .icon-strip-cat-head.current {
+    color: var(--color-primary) !important;
+  }
+  .icon-strip-cat-head .icon-strip-cat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .icon-strip-cat-head .icon-strip-cat-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  /* Dark filled circle behind the icon while open, same as the
+     reference's "Finances" badge — swap the icon color to match. */
+  .icon-strip-cat-head.open .icon-strip-cat-icon {
+    background: var(--color-text);
+    color: var(--color-surface);
+  }
+  .icon-strip-cat-head .icon-strip-cat-label {
+    display: block;
+    flex: 1;
+    text-align: left;
+    font-size: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Down when collapsed, up when open — the base rule's chevron points
+     right by default and rotates 90deg open (the old flyout-era meaning,
+     "collapsed = next/closed book"); this reference reads the other way,
+     so this is rotated to start pointing down instead and flips a full
+     180deg open, not just 90. */
+  .icon-strip-cat-head .icon-strip-cat-chev {
+    display: block;
+    width: 12px;
+    height: 12px;
+    transform: rotate(90deg);
+  }
+  .icon-strip-cat-head.open .icon-strip-cat-chev {
+    transform: rotate(270deg);
+  }
+
+  /* Collapsed by default (.icon-strip-cat-items.collapsed, driven by
+     openNavCategory/isOpen in App.tsx) — same inline-accordion mechanic
+     the mobile drawer already uses, just rendered here instead of inside
+     a flyout panel. display:flex is the actual fix here — the 641px
+     tablet block above (further up this file) sets display:none to hand
+     this off to the flyout panel instead, and without restating it here
+     that none ALWAYS won (nothing else in this block touched `display`),
+     so expanding never visibly did anything regardless of the
+     max-height/opacity transition still firing correctly underneath.
+     max-height:none/overflow:visible — the base rule's own 280px cap
+     (sized for the old small flyout-replacement accordion) was clipping
+     a real category's full item list (7 items in Market Data alone)
+     instead of just letting it render at its natural height; the outer
+     .icon-strip-nav already scrolls the whole rail if it runs long.
+     position:relative + the ::before below draw the thin vertical
+     connector line next to the indented sub-items, like the reference. */
+  .icon-strip-cat-items {
+    display: flex;
+    position: relative;
+    padding-left: 20px;
+    margin-left: 16px;
+  }
+  /* Scoped to the expanded state only — applying max-height:none/
+     overflow:visible unconditionally undid .collapsed's own
+     max-height:0 + the base rule's overflow:hidden, so a COLLAPSED
+     category's content was still occupying real layout space (just
+     invisible via opacity:0) and sitting on top of whatever category
+     came right after it in the rail, silently eating its clicks. That's
+     why Trading Tools (sitting right below Technical Analysis) stopped
+     responding to clicks on its own title. */
+  .icon-strip-cat-items:not(.collapsed) {
+    max-height: none;
+    overflow: visible;
+  }
+  .icon-strip-cat-items::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    bottom: 10px;
+    left: 0;
+    width: 1px;
+    background: var(--color-border);
+  }
+
+  /* The flyout panel (below) is for the narrower desktop/tablet range
+     only — categories render inline here instead. */
+  .nav-cat-panel,
+  .nav-cat-backdrop {
+    display: none !important;
+  }
+
+  .icon-strip-btn {
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    gap: 10px !important;
+    border-radius: 8px;
+  }
+  .icon-strip-btn:hover {
+    background: var(--color-input-bg) !important;
+  }
+  .icon-strip-btn.active {
+    background: var(--color-primary-soft) !important;
+    box-shadow: none;
+    color: var(--color-primary);
+  }
+  .icon-strip-btn.active .nav-icon-wrap,
+  .icon-strip-btn.active .icon-strip-label {
+    color: var(--color-primary);
+  }
+  .icon-strip-label {
+    text-align: left;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  /* Forced, not left to whatever each icon's own viewBox/width attribute
+     happens to be — every item (top-level and inside a category alike)
+     gets the exact same box. !important since this is the one property
+     most likely to have a conflicting rule elsewhere in the cascade that
+     hasn't been traced down. */
+  .icon-strip .icon-strip-btn .nav-icon-wrap,
+  .icon-strip .icon-strip-btn .nav-icon-wrap svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+}
+
+/* Drag-to-collapse handle — desktop only, riding the rail's own right
+   edge (same spot/shape as the chart's own drag dividers) instead of a
+   separate click target. Invisible until hover so it doesn't read as a
+   decorative border the rest of the time. */
+.icon-strip-resize-handle {
+  display: none;
+}
+@media (min-width: 961px) {
+  .icon-strip-resize-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 5;
+    touch-action: none;
+  }
+  .icon-strip-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 2px;
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    transition: background 0.15s ease;
+  }
+  .icon-strip-resize-handle:hover::after,
+  .icon-strip-resize-handle:active::after {
+    background: var(--color-primary);
+  }
+}
+
+/* ── Collapsed desktop rail (navCollapsed, App.tsx) ──────────────────────
+   Narrow icon-only rail, same 88px width the 641-960px tablet range
+   already uses (so the flyout panel's own hardcoded left:88px/left:368px
+   offsets, below, keep working without needing their own collapsed-
+   specific recompute) — the icon group sits vertically centered instead
+   of stretched top-to-bottom, matching the reference. Category clicks
+   fall back to the flyout panel (also already built for that tablet
+   range) instead of an inline indented list with no room for labels. */
+@media (min-width: 961px) {
+  .icon-strip.nav-collapsed {
+    width: 88px;
+    /* The expanded rail's own 12px left/right gutter (above) doesn't
+       apply here — centering is handled below. */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    align-items: center;
+    /* Containing block for .icon-strip-nav's absolute centering below. */
+    position: relative;
+  }
+  .icon-strip.nav-collapsed .icon-strip-logo {
+    justify-content: center;
+    width: auto;
+  }
+  .icon-strip.nav-collapsed .icon-strip-logo .st-logo-wordmark {
+    display: none !important;
+  }
+  /* Absolutely boxed, not flex:1 + justify-content — that depends on
+     every sibling (logo, the hidden-but-still-in-the-DOM bottom section)
+     actually yielding the real leftover space back to this element for
+     flex:1 to distribute, which this file's own tangle of other flex/
+     width rules made unreliable. This instead measures against the whole
+     strip directly: top:8px starts it just under the logo, and
+     bottom:<reserved> stops it short of the Settings/Support/Account
+     block below (now icon-over-label columns too, not bare circles —
+     see the reserved value's own comment further down) so the two never
+     overlap. Top-aligned (justify-content:flex-start), not centered —
+     explicit ask, these items read top-down like a real menu. */
+  .icon-strip.nav-collapsed .icon-strip-nav {
+    position: absolute !important;
+    top: 64px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 200px !important;
+    transform: none !important;
+    flex: none !important;
+    width: auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    overflow: visible;
+  }
+  /* Nav items (Chart/Inside the Candle/Market Data/…): icon-over-label
+     column, same look the 641-960px tablet rail already uses — not a
+     bare icon-only circle. Scoped to .icon-strip-nav specifically so it
+     doesn't touch the Settings/Support/Account row below, which keeps
+     its own icon-only circle treatment (next rule down). */
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-btn,
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-cat-head {
+    box-sizing: border-box !important;
+    width: calc(100% - 16px) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex-shrink: 0 !important;
+    margin: 0 8px !important;
+    padding: 8px 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px;
+    gap: 4px !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-label,
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-cat-label {
+    display: block !important;
+    font-size: 0.62rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+  /* Settings/Support row: same icon-over-label column treatment as the
+     nav items above, not its own separate icon-only circle look. */
+  .icon-strip.nav-collapsed .icon-strip-bottom-web .icon-strip-btn {
+    box-sizing: border-box !important;
+    width: calc(100% - 16px) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex-shrink: 0 !important;
+    margin: 0 8px !important;
+    padding: 8px 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px;
+    gap: 4px !important;
+  }
+  /* Every icon the exact same size, in both kinds of row (.icon-strip-btn
+     AND .icon-strip-cat-head — the earlier force-size rule only covered
+     .icon-strip-btn, so a category's own icon was left at whatever size
+     its own rule happened to set instead of matching the rest).
+     .app-shell.nav-collapsed prefix, not just .icon-strip.nav-collapsed —
+     a plain 2-class selector here was LOSING to the earlier expanded-mode
+     force-size rule (.icon-strip .icon-strip-btn .nav-icon-wrap, 3
+     classes), since both carry !important and specificity (not source
+     order) decides between two !important rules. This is deliberately
+     one class heavier than that rule so it wins outright. */
+  .app-shell.nav-collapsed .icon-strip .nav-icon-wrap,
+  .app-shell.nav-collapsed .icon-strip .nav-icon-wrap svg,
+  .app-shell.nav-collapsed .icon-strip .icon-strip-cat-icon,
+  .app-shell.nav-collapsed .icon-strip .icon-strip-cat-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+    background: none !important;
+    color: inherit !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-bottom-web .icon-strip-label {
+    display: block !important;
+    font-size: 0.62rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-cat-chev {
+    display: none !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-cat-items {
+    display: none !important;
+  }
+  /* Settings/Support/Profile now get a collapsed-friendly icon-over-
+     label version too, same column look as the nav items above — Invite
+     card and AI Usage card still don't (no room for their text content),
+     so those two stay hidden outright instead of overflowing.
+     margin-top:auto (the only in-flow sibling left, since .icon-strip-nav
+     above is pulled out via position:absolute) pins this to the bottom
+     of the rail, same spot it sits in expanded mode. */
+  .icon-strip.nav-collapsed .icon-strip-bottom-web {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: auto 0 16px !important;
+    border-top: none !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-invite-card,
+  .icon-strip.nav-collapsed .icon-strip-usage-card,
+  .icon-strip.nav-collapsed .icon-strip-support-badge {
+    display: none !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-row {
+    box-sizing: border-box !important;
+    width: calc(100% - 16px) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 8px !important;
+    padding: 8px 2px !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 4px !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-info {
+    align-items: center !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-name {
+    font-size: 0.62rem;
+    max-width: 100%;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-email {
+    display: none !important;
+  }
+  /* Overrides the earlier block's unconditional display:none — only
+     collapsed mode brings the flyout back; the expanded rail still shows
+     categories inline. Higher specificity (3 classes) wins regardless of
+     source order. */
+  .app-shell.nav-collapsed .nav-cat-panel,
+  .app-shell.nav-collapsed .nav-cat-backdrop {
+    display: flex !important;
+  }
+}
+
+/* ── Desktop-web-only bottom section (Settings/Support/Invite/Profile,
+   App.tsx) — the wide labeled sidebar has room for it; collapsed/tablet
+   widths don't, so this is entirely gated off at >=961px, same threshold
+   the rest of this redesign uses. ───────────────────────────────────── */
+@media (min-width: 961px) {
+  .icon-strip-bottom-web {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 10px;
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .icon-strip-support {
+    position: relative;
+  }
+  .icon-strip-support-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+  .icon-strip-support-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+  }
+
+  .icon-strip-usage-card {
+    margin: 14px 2px 12px;
+    padding: 4px 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .icon-strip-usage-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .icon-strip-usage-icon {
+    display: flex;
+    color: var(--color-primary);
+    flex-shrink: 0;
+  }
+  .icon-strip-usage-icon--pro {
+    color: #38bdf8;
+  }
+  .icon-strip-usage-icon--elite {
+    color: #a78bfa;
+  }
+  .icon-strip-usage-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .icon-strip-usage-upgrade {
+    all: unset;
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .icon-strip-usage-upgrade:hover {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .icon-strip-usage-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-input-bg);
+    overflow: hidden;
+  }
+  .icon-strip-usage-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--color-primary);
+    transition: width 0.3s ease, background 0.2s ease;
+  }
+  /* Same colors as TIER_CONFIG in ProfilePage.tsx — pro's sky blue,
+     elite's purple — instead of the generic primary-blue default. */
+  .icon-strip-usage-fill--pro {
+    background: #38bdf8;
+  }
+  .icon-strip-usage-fill--elite {
+    background: #a78bfa;
+  }
+  .icon-strip-usage-fill--amber {
+    background: #f59e0b;
+  }
+  .icon-strip-usage-fill--red {
+    background: #ef4444;
+  }
+  .icon-strip-usage-caption {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+  }
+
+  .icon-strip-invite-card {
+    position: relative;
+    margin: 16px 2px 14px;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .icon-strip-invite-close {
+    all: unset;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 6px;
+  }
+  .icon-strip-invite-close:hover {
+    background: var(--color-input-bg);
+    color: var(--color-text);
+  }
+  .icon-strip-invite-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-text);
+    padding-right: 18px;
+  }
+  .icon-strip-invite-sub {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+  }
+  .icon-strip-invite-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-input-bg);
+    color: var(--color-text);
+    font-size: 0.78rem;
+  }
+  .icon-strip-invite-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+  .icon-strip-invite-send {
+    all: unset;
+    box-sizing: border-box;
+    width: 100%;
+    text-align: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .icon-strip-invite-send:hover {
+    filter: brightness(1.08);
+  }
+  .icon-strip-invite-send:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .icon-strip-invite-send--sent {
+    background: var(--color-success, #22c55e);
+    opacity: 1;
+  }
+  .icon-strip-invite-send--error {
+    background: var(--color-danger, #ef4444);
+    opacity: 1;
+  }
+
+  .icon-strip-profile-row {
+    all: unset;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .icon-strip-profile-row:hover {
+    background: var(--color-input-bg);
+  }
+  .icon-strip-profile-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .icon-strip-profile-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: left;
+  }
+  .icon-strip-profile-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .icon-strip-profile-email {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* AI quota pill */
 .icon-strip-quota {
   width: 58px;
@@ -2750,6 +4007,65 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   background: var(--color-border);
   color: var(--color-text);
 }
+html:not([data-theme="light"]) .top-nav-icon-btn--settings {
+  background: rgba(255, 255, 255, 0.08);
+}
+html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Chart layout dropdown (top-nav-bar, desktop web only) ───────────────
+   Trigger always shows the 2-col glyph, regardless of which mode is
+   actually selected — the dropdown itself is what shows/marks the current
+   choice. */
+.top-nav-layout-wrap {
+  position: relative;
+}
+.top-nav-layout-btn--open {
+  background: var(--color-border) !important;
+  color: var(--color-text);
+}
+.top-nav-layout-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.top-nav-layout-option {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 7px;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.top-nav-layout-option:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
+}
+.top-nav-layout-option.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.top-nav-layout-option-icon {
+  display: flex;
+  flex-shrink: 0;
+}
 /* ── Coin header bar ────────────────────────────────────────────────────── */
 /* iOS 26 "Liquid Glass" — same real-translucency material as .fnb-bar
    (FloatingNavBar.css)/.db-sheet (DailyBrief.css)/.ta-trigger
@@ -3006,45 +4322,92 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .mch-stats {
   display: flex;
   align-items: stretch;
+  gap: 10px;
   flex: 1;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   height: 100%;
   scrollbar-width: none;
-  margin-left: 8px;
+  /* Left offset matches .chart-header's own 8px padding exactly (both
+     are direct/near children of .chart-fs-header-group) — the "24H"
+     label and the first stat here now start at the same x position. */
+  margin-left: 0;
+  padding: 10px 2px 10px 8px;
 }
 .mch-stats::-webkit-scrollbar {
   display: none;
 }
 
+/* Genuine redesign, not a restyle: a round direction icon on the left
+   (built from .mch-stat-signal, which this repoints from a text caption
+   into a glyph badge) instead of a 3-line text-only stack. No looping
+   animation anywhere — one-time entrance on mount, nothing else moves. */
 .mch-stat {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 16px 0 16px;
-  margin-right: 16px;
+  position: relative;
+  display: grid;
+  /* Text column first, signal icon after — was 30px 1fr (icon first);
+     the two grid-column values below (.mch-stat-label/-value/-signal)
+     are swapped to match. */
+  grid-template-columns: 1fr 30px;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 0;
+  align-items: center;
+  padding: 7px 14px 7px 10px;
+  border-radius: 10px;
+  background: transparent;
   white-space: nowrap;
   flex-shrink: 0;
   cursor: help;
+  opacity: 0;
+  animation: mch-stat-in 0.3s ease forwards;
+  transition: background 0.15s ease;
 }
-.mch-stat:first-child {
-  margin-left: 8px;
+/* Its own 10px left padding (above) pushed the content past .mch-stats'
+   own 8px container offset — ignored on the first item only so it
+   starts flush with that edge (same x as the "24H" label above it). */
+.mch-stats > .mch-stat:first-child {
+  padding-left: 0;
+}
+.mch-stat:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+.mch-stat + .mch-stat {
+  border-left: 1px solid var(--color-border);
+}
+.mch-stat:nth-child(1) { animation-delay: 0s; }
+.mch-stat:nth-child(2) { animation-delay: 0.04s; }
+.mch-stat:nth-child(3) { animation-delay: 0.08s; }
+.mch-stat:nth-child(4) { animation-delay: 0.12s; }
+.mch-stat:nth-child(5) { animation-delay: 0.16s; }
+.mch-stat:nth-child(6) { animation-delay: 0.2s; }
+.mch-stat:nth-child(7) { animation-delay: 0.24s; }
+.mch-stat:nth-child(8) { animation-delay: 0.28s; }
+.mch-stat:nth-child(9) { animation-delay: 0.32s; }
+@keyframes mch-stat-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .mch-stat-label {
-  font-size: 0.65rem;
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 0.6rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  line-height: 1.4;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
 }
+
 .mch-stat-value {
-  font-size: 0.95rem;
-  font-weight: 700;
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 0.98rem;
+  font-weight: 800;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 .mch-stat-value.positive {
   color: var(--color-success);
@@ -3053,21 +4416,46 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   color: var(--color-danger);
 }
 
+/* Was a text caption ("RISK"/"SUPPORT"/"NEUTRAL"...) under the value —
+   now a round glyph badge spanning both rows on the left instead. The
+   original word still reaches the user, just via the tooltip (HoverTip
+   already wraps every .mch-stat with a fuller description) rather than
+   printed twice in two different forms in the same small space. */
 .mch-stat-signal {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  white-space: nowrap;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  background: color-mix(in srgb, var(--color-text-muted) 14%, transparent);
+}
+.mch-stat-signal::before {
+  font-weight: 900;
+  line-height: 1;
 }
 .mch-stat-signal--bull {
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+}
+.mch-stat-signal--bull::before {
+  content: "▲";
+  font-size: 0.72rem;
   color: var(--color-success);
 }
 .mch-stat-signal--bear {
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+}
+.mch-stat-signal--bear::before {
+  content: "▼";
+  font-size: 0.72rem;
   color: var(--color-danger);
 }
-.mch-stat-signal--neutral {
+.mch-stat-signal--neutral::before {
+  content: "–";
+  font-size: 1rem;
   color: var(--color-text-muted);
 }
 
@@ -3110,6 +4498,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
 .mch-search-btn:hover {
   background: var(--color-border);
   color: var(--color-text);
+}
+/* Dark mode's --color-input-bg (rgba(15,23,42,0.8)) is nearly the same
+   navy as the bar it sits on, so the button reads as background-less
+   until hovered — a flat white tint shows up against that dark surface
+   without needing hover, same as the hover state already provides
+   contrast via --color-border. */
+html:not([data-theme="light"]) .mch-search-btn {
+  background: rgba(255, 255, 255, 0.08);
+}
+html:not([data-theme="light"]) .mch-search-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 /* Active (Focus on) gets a filled, colored look — same shared button
    box as its siblings, this is the only state difference since there's
@@ -4099,10 +5498,12 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
        decorations below to anchor to. */
     position: relative;
     /* Matches the 16px side gutter .main-coin-header used to provide as
-       this card's parent; 12px bottom separates it from whatever renders
-       next in the feed. No top margin — it's the first thing in
-       .main-content now, right under the ptr-indicator. */
-    margin: 0 16px 12px;
+       this card's parent, right side only now — 12px bottom separates it
+       from whatever renders next in the feed. No top margin — it's the
+       first thing in .main-content now, right under the ptr-indicator.
+       No left margin either — flush against the edge, matching
+       .mch-stats' own padding-left:0 first item below. */
+    margin: 0 16px 12px 0;
     z-index: 15;
     /* Top-left square, not 18px like the other 3 — .mch-stats sits flush
        against this edge (padding-left:0, to align with everything else
@@ -4165,11 +5566,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   }
 
   .mch-stat {
+    /* Grid (label/value left, signal icon right spanning both rows),
+       same as the base/desktop rule above — was flex-direction:column
+       here, stacking the value above the icon instead of beside it. */
     position: relative;
     z-index: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: 1fr 30px;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    row-gap: 0;
+    align-items: center;
     padding: 0 10px;
     margin-right: 0;
     flex-shrink: 0;
