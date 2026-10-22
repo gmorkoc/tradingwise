@@ -1509,7 +1509,7 @@
     "signals": "Confluence",
     "fundingbot": "Funding Bot",
     "candleai": "Inside the Candle",
-    "markets": "Global Markets",
+    "markets": "Markets",
     "marketheatmap": "Market Heatmap",
     "altanalysis": "Alt Analysis",
     "riskcalc": "Position Size Calc",
@@ -2138,7 +2138,7 @@
       ]
     },
     "markets": {
-      "title": "Global Markets",
+      "title": "Markets",
       "desc": "Real-time overview of major crypto markets — prices, 24h changes, market caps and volume across hundreds of assets. Spot opportunities and compare performance across sectors at a glance.",
       "tags": [
         "Market Overview",
@@ -2343,7 +2343,7 @@
     }
   },
   "dailyBrief": {
-    "title": "Crypto Market Headlines",
+    "title": "Market Pulse",
     "lastUpdated": "Updated",
     "loading": "Loading your daily brief…",
     "categoryCrypto": "Crypto",
@@ -2354,6 +2354,9 @@
     "daysAgo": "{{count}}d ago",
     "showMore": "Show more",
     "showLess": "Show less",
+    "sectionTopStories": "Top Stories",
+    "sectionMarkets": "Markets & Economy",
+    "sectionGeopolitics": "Geopolitics",
     "minimize": "Minimize",
     "close": "Close",
     "expand": "Expand",

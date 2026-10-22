@@ -430,7 +430,7 @@ html[data-theme="light"] .db-sheet .db-live--red {
 
 .db-featured-title {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.32;
   color: var(--color-text);
 }
@@ -598,24 +598,12 @@ html[data-theme="light"] .db-sheet .db-live--red {
 }
 
 .db-section-label {
-  position: relative;
   padding: 12px 14px 6px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-muted);
-}
-
-/* Same light, inset divider as between list items — separates the
-   featured card above from "Your latest" below. */
-.db-section-label::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 14px;
-  right: 14px;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
 }
 
 .db-list-chips {
@@ -761,7 +749,6 @@ html[data-theme="light"] .db-sheet .db-live--red {
   /* Left stays 22px — that's room for the timeline dot/marker graphic
      (.db-timeline-marker), not a side gutter, so it isn't part of this. */
   .db-timeline { padding-right: 8px; }
-  .db-section-label::before { left: 8px; right: 8px; }
 }
 
 /* ── "page" variant — always-visible sidebar rendered next to the chart
@@ -832,6 +819,35 @@ html:not([data-theme="light"]) .db-page {
   min-width: 0;
 }
 
+.db-section-cols {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--color-input-bg);
+}
+.db-section-cols-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.db-section-cols-btn:hover {
+  color: var(--color-text);
+}
+.db-section-cols-btn.active {
+  background: var(--color-card-bg);
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
 .db-page-list {
   flex: 1 1 auto;
   min-height: 0;
@@ -871,4 +887,321 @@ html:not([data-theme="light"]) .db-page {
 .db-page .db-chip {
   font-size: 0.7rem;
   padding: 2px 6px;
+}
+
+/* ── Fancy pass (both variants) ──────────────────────────────────────────
+   Category accent colors + glow/gradient polish on the live badge,
+   featured card and list rows — purely visual, no layout/state changes,
+   so the sheet's drag mechanics (and .db-page's own layout) are
+   untouched. */
+.db-sheet,
+.db-page {
+  --db-accent-crypto: var(--color-primary);
+  --db-accent-markets: #8b5cf6;
+  --db-accent-geopolitics: #f59e0b;
+}
+
+/* Live badge — a soft pulsing halo behind the bars instead of a flat dot
+   row, so "LIVE" actually reads as alive. */
+.db-sheet .db-live-bars,
+.db-page .db-live-bars {
+  position: relative;
+}
+.db-sheet .db-live-bars::before,
+.db-page .db-live-bars::before {
+  content: "";
+  position: absolute;
+  inset: -4px -3px;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, #16a34a 35%, transparent), transparent 70%);
+  animation: db-live-glow-pulse 2s ease-in-out infinite;
+}
+@keyframes db-live-glow-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50%      { opacity: 0.9; transform: scale(1.15); }
+}
+
+/* Category dot — small colored marker in each row's meta line. */
+.db-cat-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 5px currentColor;
+}
+.db-cat-dot--crypto      { background: var(--db-accent-crypto);      color: var(--db-accent-crypto); }
+.db-cat-dot--markets     { background: var(--db-accent-markets);     color: var(--db-accent-markets); }
+.db-cat-dot--geopolitics { background: var(--db-accent-geopolitics); color: var(--db-accent-geopolitics); }
+
+/* Featured card — a glowing accent ring that breathes slowly around the
+   lead story, plus a colored top rail and a one-shot shine sweep across
+   the thumbnail when it first appears/updates. */
+.db-sheet .db-featured,
+.db-page .db-featured {
+  position: relative;
+  border-radius: 14px;
+  padding: 10px 10px 6px;
+  margin: 2px 2px 6px;
+  background: var(--color-card-bg);
+  border: 1px solid color-mix(in srgb, var(--db-accent-crypto) 25%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-crypto) 10%, transparent),
+              0 6px 20px color-mix(in srgb, var(--db-accent-crypto) 10%, transparent);
+  animation: db-featured-breathe 4s ease-in-out infinite;
+}
+.db-sheet .db-featured--markets,
+.db-page .db-featured--markets {
+  border-color: color-mix(in srgb, var(--db-accent-markets) 25%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-markets) 10%, transparent),
+              0 6px 20px color-mix(in srgb, var(--db-accent-markets) 10%, transparent);
+}
+.db-sheet .db-featured--geopolitics,
+.db-page .db-featured--geopolitics {
+  border-color: color-mix(in srgb, var(--db-accent-geopolitics) 25%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-geopolitics) 10%, transparent),
+              0 6px 20px color-mix(in srgb, var(--db-accent-geopolitics) 10%, transparent);
+}
+@keyframes db-featured-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-crypto) 8%, transparent), 0 6px 20px color-mix(in srgb, var(--db-accent-crypto) 8%, transparent); }
+  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-crypto) 22%, transparent), 0 8px 26px color-mix(in srgb, var(--db-accent-crypto) 16%, transparent); }
+}
+.db-sheet .db-featured-thumb,
+.db-sheet .db-video-thumb,
+.db-page .db-featured-thumb,
+.db-page .db-video-thumb {
+  position: relative;
+  overflow: hidden;
+}
+.db-sheet .db-featured::before,
+.db-page .db-featured::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  height: 130px;
+  border-radius: 10px;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: db-shine-sweep 1.4s ease-out 0.3s 1;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes db-shine-sweep {
+  to { transform: translateX(120%); }
+}
+
+/* List rows — a quick scale/highlight on tap/hover instead of just a
+   color change, and the thumbnail gets a subtle zoom to match. */
+.db-sheet .db-list-item,
+.db-page .db-list-item {
+  transition: background 0.15s ease;
+}
+.db-sheet .db-list-item:active,
+.db-page .db-list-item:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+.db-sheet .db-list-thumb,
+.db-page .db-list-thumb {
+  transition: transform 0.2s ease;
+}
+.db-sheet .db-list-item:active .db-list-thumb,
+.db-page .db-list-item:hover .db-list-thumb {
+  transform: scale(1.04);
+}
+
+/* Chips — a soft gradient-tinted pill instead of a flat bordered box,
+   colored toward the real price direction for ticker chips. */
+.db-sheet .db-chip,
+.db-page .db-chip {
+  border: none;
+  background: var(--color-input-bg);
+}
+.db-sheet .db-chip--ticker.up,
+.db-page .db-chip--ticker.up {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-success) 16%, transparent), color-mix(in srgb, var(--color-success) 6%, transparent));
+}
+.db-sheet .db-chip--ticker.down,
+.db-page .db-chip--ticker.down {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-danger) 16%, transparent), color-mix(in srgb, var(--color-danger) 6%, transparent));
+}
+
+/* A freshly-added item gets a brief colored glow sweep instead of just
+   fading in (db-item-enter, defined earlier in this file, still handles
+   the entrance itself — this layers an extra highlight on top). */
+.db-sheet .db-item--new,
+.db-page .db-item--new {
+  animation: db-item-enter 0.4s ease both, db-new-glow 1.6s ease-out 0.1s;
+}
+@keyframes db-new-glow {
+  0%   { background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+  100% { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-sheet .db-live-bars::before,
+  .db-page .db-live-bars::before,
+  .db-sheet .db-featured,
+  .db-page .db-featured,
+  .db-sheet .db-featured::before,
+  .db-page .db-featured::before,
+  .db-sheet .db-item--new,
+  .db-page .db-item--new {
+    animation: none !important;
+  }
+  .db-section {
+    transition: none !important;
+  }
+}
+
+/* ── Desktop "page" layout — Yahoo Finance style: one big hero lead
+   story, then labeled topic sections (first item shown with its own
+   thumbnail, the rest as compact text rows), stacked (this is still a
+   sidebar, not a full page width) rather than literal side-by-side
+   columns. See DailyBrief.tsx's variant==="page" branch. ───────────── */
+.db-page .db-page-list {
+  padding: 0;
+  gap: 4px;
+}
+.db-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  padding: 12px;
+  margin: 2px 0 10px;
+  border-radius: 14px;
+  background: var(--color-card-bg);
+  border: 1px solid color-mix(in srgb, var(--db-accent-crypto) 25%, var(--color-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--db-accent-crypto) 10%, transparent),
+              0 6px 20px color-mix(in srgb, var(--db-accent-crypto) 10%, transparent);
+}
+.db-hero-thumb {
+  width: 100%;
+  height: 170px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--color-input-bg);
+}
+.db-hero-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.28;
+  color: var(--color-text);
+}
+.db-hero:hover .db-hero-title {
+  color: var(--color-primary);
+}
+.db-hero-meta {
+  font-size: 0.8rem;
+}
+
+/* Real side-by-side columns now that .chart-three-col-right has the
+   width to spare (Markets only — see its own comment in App.css) —
+   falls back to one stacked column below that width (narrower desktop
+   splits, or if this ever renders somewhere tighter again) rather than
+   squeezing three illegible slivers. */
+.db-sections-grid {
+  display: grid;
+  gap: 0;
+}
+.db-sections-grid--cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.db-sections-grid--cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.db-sections-grid--cols-1 { grid-template-columns: 1fr; }
+/* Below this width three (or even two) real columns stop being legible
+   regardless of what the picker says — same floor every stacked case
+   below already uses. */
+@media (max-width: 720px) {
+  .db-sections-grid--cols-3,
+  .db-sections-grid--cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+.db-section {
+  padding: 10px 14px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  transition: padding 0.3s ease, border-color 0.3s ease;
+}
+.db-sections-grid--cols-2 .db-section,
+.db-sections-grid--cols-3 .db-section {
+  border-top: none;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+.db-sections-grid--cols-2 .db-section:first-child,
+.db-sections-grid--cols-3 .db-section:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+/* 1 column (by picker choice, not just a narrow viewport) — every
+   section stacks, so every one of them needs the top-divider/no-left-
+   padding treatment, not just the first. */
+.db-sections-grid--cols-1 .db-section {
+  border-left: none;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  padding: 10px 0 0;
+}
+.db-sections-grid--cols-1 .db-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+@media (max-width: 720px) {
+  .db-sections-grid--cols-2 .db-section,
+  .db-sections-grid--cols-3 .db-section {
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+    padding: 10px 0 0;
+  }
+  .db-sections-grid--cols-2 .db-section:first-child,
+  .db-sections-grid--cols-3 .db-section:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+}
+.db-section + .db-section {
+  margin-top: 4px;
+}
+.db-section-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0 10px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.db-section-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-decoration: none;
+  padding: 8px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+}
+.db-section-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.db-section-row-thumb {
+  width: 100%;
+  height: 110px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-input-bg);
+  margin-bottom: 2px;
+}
+.db-section-row-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.db-section-row--lead .db-section-row-title {
+  font-size: 0.95rem;
+}
+.db-section-row:hover .db-section-row-title {
+  color: var(--color-primary);
 }

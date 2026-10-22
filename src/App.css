@@ -2248,7 +2248,22 @@ html[data-theme="light"] .coin-picker-menu--table {
   overflow-y: visible;
 }
 .chart-three-col-right {
-  width: clamp(340px, 26vw, 460px);
+  /* Wide enough for Daily Brief's real 3-across section grid on Markets
+     (its only remaining use now that Chart no longer shows Daily Brief
+     at all — see dailyBriefEl's usages) — this isn't squeezed next to a
+     third Paper Trading column anymore, so it can take the room a true
+     Yahoo Finance-style layout needs instead of staying sidebar-narrow.
+     --db-page-width (DailyBrief.tsx, set on the document root since that
+     component is a child here, not an ancestor) shrinks this along with
+     the 1/2/3-column picker so a narrower column selection actually
+     gives more room back to the chart instead of leaving dead space. */
+  width: var(--db-page-width, clamp(440px, 30vw, 600px));
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-three-col-right {
+    transition: none;
+  }
 }
 .chart-three-col-right .db-page {
   border-left: none;
@@ -3962,6 +3977,17 @@ html:not([data-theme="light"]) .top-nav-search:hover {
   margin-left: auto;
   flex-shrink: 0;
 }
+/* HoverTip's own wrapper div (App.tsx/BuySignals.tsx/PriceAlerts.tsx).
+   inline-flex, not display:contents — contents removes the element's
+   own box entirely, and with no box there's nothing for the cursor to
+   actually be "over," so its mouseenter/mouseleave (how HoverTip detects
+   hover) never fired at all. inline-flex still shrinks to exactly wrap
+   its one button child (no visible gap/sizing change in this row) while
+   staying a real, hoverable box. HoverTip itself portals its bubble to
+   document.body, so this never affects the row's own layout either way. */
+.top-nav-icon-tip {
+  display: inline-flex;
+}
 /* Icon-only here — AccountMenu's name label makes sense in the sidebar's
    vertical list, not this compact horizontal cluster. */
 .top-nav-icons .icon-strip-label {
@@ -4090,6 +4116,8 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
   display: flex;
   flex-shrink: 0;
 }
+
+
 /* ── Coin header bar ────────────────────────────────────────────────────── */
 /* iOS 26 "Liquid Glass" — same real-translucency material as .fnb-bar
    (FloatingNavBar.css)/.db-sheet (DailyBrief.css)/.ta-trigger
@@ -4523,6 +4551,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   background: var(--color-border);
   color: var(--color-text);
 }
+
 /* Dark mode's --color-input-bg (rgba(15,23,42,0.8)) is nearly the same
    navy as the bar it sits on, so the button reads as background-less
    until hovered — a flat white tint shows up against that dark surface
@@ -4737,14 +4766,118 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
 }
 
 /* ── Section content area ───────────────────────────────────────────────── */
+/* Holds .main-content plus .activated-panels-rail side by side — added
+   so Paper Trading/Buy Signals (desktop top-bar icons) can render as a
+   real column next to whichever page is showing instead of a floating
+   dropdown/modal, on every page, not just Chart/Markets (which already
+   have their own unrelated column layouts nested inside .main-content
+   itself). */
+.main-content-row {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 .main-content {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
   background: var(--color-card-bg);
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
+}
+/* Collapses to nothing on its own (:empty) whenever neither Paper
+   Trading nor Buy Signals is actually open — nothing has to separately
+   track "is anything active" just for layout purposes. */
+.activated-panels-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 460px;
+  flex-shrink: 0;
+  padding: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-background);
+  /* PaperTradingCard/OrderFlowPanel were always previously rendered
+     somewhere inside .chart-active (PriceChart.css), which is where
+     every --pc-* token they use is actually defined — several of those
+     (--pc-success/--pc-danger/--pc-bg) have no fallback value, so with
+     this rail sitting OUTSIDE that subtree (a sibling of .main-content,
+     not a descendant — custom properties don't cross that), they
+     resolved to nothing at all. That's why Order Flow Pressure's buy/
+     sell bar rendered as one flat gray bar instead of a colored split:
+     background: var(--pc-success) with nothing to fall back to is an
+     invalid value, so the browser painted nothing, and the plain gray
+     *track* underneath was all that showed through. Aliased to the
+     app's own generic tokens here (not the full chart-page "Aurora
+     Glass" palette those same names resolve to inside .chart-active) —
+     this rail shows up on ordinary pages too, not just the chart, so it
+     should look like a normal card there, not chart-themed. Every --pc-*
+     token either of those two files (or OrderBook.tsx, also rendered in
+     here via OrderFlowPanel's "show both" mode) reads without a
+     fallback is aliased below — same audit, same reasoning. */
+  --pc-bg: var(--color-card-bg);
+  --pc-success: var(--color-success);
+  --pc-danger: var(--color-danger);
+  --pc-border: var(--color-border);
+  --pc-text: var(--color-text);
+  --pc-text-muted: var(--color-text-muted);
+  --pc-accent: var(--color-primary);
+  --pc-panel: var(--color-input-bg);
+  --pc-panel-2: var(--color-input-bg);
+}
+.activated-panels-rail:empty {
+  display: none;
+  width: 0;
+  padding: 0;
+  border-left: none;
+}
+.activated-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+}
+/* Floats over the card's own top instead of sitting above it on its own
+   plain-background bar — PaperTradingCard's pre-activation screen has a
+   soft gradient wash across its whole card (.ptc-activate-glow), and a
+   separate opaque header above it broke that into two visibly different
+   surfaces. pointer-events:none lets taps reach whatever's underneath
+   (the activate button, scroll, etc.); only the close button re-enables
+   them for itself. */
+.activated-panel-head {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.activated-panel-close {
+  all: unset;
+  box-sizing: border-box;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--color-background) 55%, transparent);
+  backdrop-filter: blur(4px);
+}
+.activated-panel-close:hover {
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 /* Same cutoff FloatingNavBar.css hides the floating bar above — below it,
    the bar is fixed on top of this scroll area with nothing reserving
@@ -4754,6 +4887,16 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
 @media (max-width: 899px) {
   .main-content {
     padding-bottom: 90px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* Chart/Markets/Advance Chart manage their own inset (.gm-wrap,
+     .price-chart-container, now padding:0 on mobile) — the generic 16px
+     gutter above would just re-add what those already chose not to have,
+     breaking the flush-to-edge look. */
+  .main-content.chart-active {
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 

@@ -454,7 +454,13 @@ export function OrderBook({ coin, onHide, embedded }: OrderBookProps) {
             <PillSelect title="Exchange" value={exchange} options={EXCHANGES} labelFor={(v) => v} onChange={setExchange} />
           </div>
 
-          {loading && <div className="ob-loading">{t("orderBook.loading")}</div>}
+          {loading && (
+            <div className="ob-skeleton-rows">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={i} className="ob-skeleton-row" />
+              ))}
+            </div>
+          )}
           {!loading && unavailable && (
             <div className="ob-loading">{t("orderBook.unavailable", { coin, exchange })}</div>
           )}
@@ -510,7 +516,13 @@ export function OrderBook({ coin, onHide, embedded }: OrderBookProps) {
             <span>Amount ({coin})</span>
             <span>Time</span>
           </div>
-          {tradesLoading && <div className="ob-loading">{t("orderBook.loading")}</div>}
+          {tradesLoading && (
+            <div className="ob-skeleton-rows">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={i} className="ob-skeleton-row" />
+              ))}
+            </div>
+          )}
           {!tradesLoading && tradesUnavailable && (
             <div className="ob-loading">{t("orderBook.unavailable", { coin, exchange: "Binance" })}</div>
           )}

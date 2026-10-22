@@ -339,6 +339,40 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   // since it mounts this fresh on each tap rather than keeping it mounted
   // in the background the old auto-open sheet did.
   const [sheetState, setSheetState] = useState<SheetState>(initialState);
+  // "page" variant only — how many of the 3 topic sections (Top Stories/
+  // Markets & Economy/Geopolitics) render side by side vs. stacked.
+  // Purely width-driven, always — <=1600px (a Mac laptop's typical
+  // 1440/1512 logical-px default, where 3 real columns leaves each one
+  // too narrow to be worth it) is 2, above that is 3. No persisted
+  // override: an earlier version let a manual click "stick" across
+  // reloads regardless of which screen you were actually on next, which
+  // is exactly the opposite of what this is supposed to do — dragging
+  // the window between a wide external display and the laptop's own
+  // screen (or just resizing it) should always reflect whichever one
+  // it's actually on right now. The 1/2/3 buttons still work, just as a
+  // same-session override that the next resize or reload replaces.
+  const widthToCols = () => (window.innerWidth <= 1600 ? 2 : 3);
+  const [sectionCols, setSectionCols] = useState<1 | 2 | 3>(widthToCols);
+  useEffect(() => {
+    const onResize = () => setSectionCols(widthToCols());
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  // Drives .chart-three-col-right's own width (App.css) — that's an
+  // ancestor App.tsx renders, not this component, so a CSS custom
+  // property on the document root is the simplest way to reach it
+  // without prop-drilling sectionCols back up through App.tsx. Only
+  // takes effect for variant==="page" (desktop sidebar); the mobile
+  // sheet never reads this variable.
+  useEffect(() => {
+    if (variant !== "page") return;
+    const widths: Record<1 | 2 | 3, string> = {
+      1: "clamp(340px, 22vw, 420px)",
+      2: "clamp(380px, 26vw, 480px)",
+      3: "clamp(440px, 30vw, 600px)",
+    };
+    document.documentElement.style.setProperty("--db-page-width", widths[sectionCols]);
+  }, [sectionCols, variant]);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
@@ -608,7 +642,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`db-list-item${newUrls.has(item.url) ? " db-item--new" : ""}`}
+        className={`db-list-item db-list-item--${item.category}${newUrls.has(item.url) ? " db-item--new" : ""}`}
         onClick={(e) => openNewsLink(e, item.url)}
       >
         {item.thumbnail ? (
@@ -619,6 +653,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
         <span className="db-list-body">
           <span className="db-list-title">{item.title}</span>
           <span className="db-list-meta">
+            <span className={`db-cat-dot db-cat-dot--${item.category}`} />
             {item.source} <span className="db-list-dot">•</span> {timeAgo(item.pubDate, t)}
           </span>
           {chips.length > 0 && (
@@ -634,7 +669,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   const latestRows = latestItems.map((item) => renderRow(item));
 
   const featuredCard = featured && (
-    <div className={`db-featured${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
+    <div className={`db-featured db-featured--${featured.category}${newUrls.has(featured.url) ? " db-item--new" : ""}`}>
       <div className="db-featured-main">
         {/* A video actually about this headline (see fetchVideoForTitle)
             replaces the static photo entirely — click-to-play, so no
@@ -773,11 +808,79 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
 
   if (variant === "page") {
     if (items.length === 0) return null;
+
+    // Yahoo Finance-style section layout: one big hero lead story, then
+    // labeled topic sections (first item of each shown with its own
+    // thumbnail, the rest as compact text rows) — stacked, not literal
+    // side-by-side columns, since .db-page is still a sidebar next to
+    // the chart, not a full page width. "Earnings" isn't a real section
+    // here (no earnings data source) — these are the app's own actual
+    // categories instead.
+    const heroChips = featured ? extractChips(featured.title) : [];
+    const topStories = cryptoItems.slice(1, 6);
+    const marketsItems = items.filter((i) => i.category === "markets").slice(0, 5);
+    const geoItems = items.filter((i) => i.category === "geopolitics").slice(0, 5);
+    const sections: { label: string; category: Category; rows: BriefItem[] }[] = [
+      { label: t("dailyBrief.sectionTopStories", "Top Stories"), category: "crypto" as const, rows: topStories },
+      { label: t("dailyBrief.sectionMarkets", "Markets & Economy"), category: "markets" as const, rows: marketsItems },
+      { label: t("dailyBrief.sectionGeopolitics", "Geopolitics"), category: "geopolitics" as const, rows: geoItems },
+    ].filter((s) => s.rows.length > 0);
+
+    const renderSectionRow = (item: BriefItem, withThumb: boolean) => {
+      const chips = extractChips(item.title);
+      return (
+        <a
+          key={item.url}
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`db-section-row${withThumb ? " db-section-row--lead" : ""}${newUrls.has(item.url) ? " db-item--new" : ""}`}
+          onClick={(e) => openNewsLink(e, item.url)}
+        >
+          {withThumb && (
+            item.thumbnail ? (
+              <img className="db-section-row-thumb" src={item.thumbnail} alt="" loading="lazy" />
+            ) : (
+              <ThumbPlaceholder className="db-section-row-thumb" category={item.category} />
+            )
+          )}
+          <span className="db-section-row-title">{item.title}</span>
+          <span className="db-list-meta">
+            <span className={`db-cat-dot db-cat-dot--${item.category}`} />
+            {item.source} <span className="db-list-dot">•</span> {timeAgo(item.pubDate, t)}
+          </span>
+          {chips.length > 0 && (
+            <span className="db-list-chips">{chips.map((c) => renderChip(c, item.category, coinTickers))}</span>
+          )}
+        </a>
+      );
+    };
+
     return (
       <aside className="db-page">
         <div className="db-page-head">
           <span className="db-page-head-left">
             <span className="db-head-title">{t("dailyBrief.title")}</span>
+            <span className="db-section-cols" role="radiogroup" aria-label="Topic section columns">
+              {([1, 2, 3] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={sectionCols === n}
+                  className={`db-section-cols-btn${sectionCols === n ? " active" : ""}`}
+                  title={`${n} column${n > 1 ? "s" : ""}`}
+                  onClick={() => setSectionCols(n)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                    {Array.from({ length: n }).map((_, i) => {
+                      const w = 13 / n - (n > 1 ? 1.2 : 0);
+                      return <rect key={i} x={1.5 + i * (w + 1.2)} y="2" width={w} height="12" rx="1" />;
+                    })}
+                  </svg>
+                </button>
+              ))}
+            </span>
           </span>
           <span className="db-live">
             <span className="db-live-bars">
@@ -798,10 +901,40 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
           </span>
         </div>
         <div className="db-page-list">
-          {featuredCard}
-          {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
-          <div ref={listRowsRef} className="db-list-rows">
-            {latestRows}
+          {featured && (
+            <a
+              href={featured.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`db-hero${newUrls.has(featured.url) ? " db-item--new" : ""}`}
+              onClick={(e) => openNewsLink(e, featured.url)}
+            >
+              {featured.thumbnail ? (
+                <img className="db-hero-thumb" src={featured.thumbnail} alt="" loading="lazy" />
+              ) : (
+                <ThumbPlaceholder className="db-hero-thumb" category={featured.category} />
+              )}
+              <span className="db-hero-title">{featured.title}</span>
+              <span className="db-list-meta db-hero-meta">
+                <span className={`db-cat-dot db-cat-dot--${featured.category}`} />
+                {featured.source} <span className="db-list-dot">•</span> {timeAgo(featured.pubDate, t)}
+              </span>
+              {heroChips.length > 0 && (
+                <span className="db-list-chips">{heroChips.map((c) => renderChip(c, featured.category, coinTickers))}</span>
+              )}
+            </a>
+          )}
+          <div className={`db-sections-grid db-sections-grid--cols-${sectionCols}`}>
+            {sections.map((section) => (
+              <div key={section.category} className="db-section">
+                <div className="db-section-head">
+                  <span className={`db-cat-dot db-cat-dot--${section.category}`} />
+                  {section.label}
+                </div>
+                {renderSectionRow(section.rows[0], true)}
+                {section.rows.slice(1).map((item) => renderSectionRow(item, false))}
+              </div>
+            ))}
           </div>
         </div>
       </aside>

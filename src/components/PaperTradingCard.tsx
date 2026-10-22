@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinSymbol, fetchLivePrice } from "../services/coinglass";
 import {
   fetchPortfolio, fetchAgentPerformance, closePosition, executeTrade, updateCashBalance, fetchClosedPositions, acceptConsent,
+  computeLiquidationPrice,
   PaperPortfolio, AgentPerformance, PaperPosition, AgentAction, PositionsListItem,
 } from "../services/paperTrading";
 import { LiquidationGauge } from "./LiquidationGauge";
@@ -36,6 +36,17 @@ function sanitizeAmountInput(raw: string): string {
   const firstDot = cleaned.indexOf(".");
   if (firstDot === -1) return cleaned;
   return cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+}
+
+// Comma-grouped display of a sanitizeAmountInput string, e.g. "1234.5" ->
+// "1,234.5" — purely cosmetic, the underlying state stays the plain digit
+// string sanitizeAmountInput produces (what parseFloat/the trade math
+// actually use); this only formats what's shown in the USD amount pill.
+function formatUsdAmountDisplay(raw: string): string {
+  if (!raw) return raw;
+  const [intPart, decPart] = raw.split(".");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return decPart !== undefined ? `${grouped}.${decPart}` : grouped;
 }
 
 // executeTrade's "blended leverage" math (paperTrading.ts) is a real
@@ -119,11 +130,6 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
       setActivating(false);
     }
   };
-  // Fullscreen option — same content, rendered a second time (not instead
-  // of, alongside) inside a portaled modal when true, so the inline card
-  // never has to unmount/remount or lose its own scroll position.
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
   // Editable cash balance — same manual-override pattern as TradingAgent.tsx's
   // own portfolio header (startEditCash/saveCash there), same underlying
   // updateCashBalance call.
@@ -133,10 +139,14 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const [cashError, setCashError] = useState<string | null>(null);
 
   // Inline "open a position" form state.
-  const [formOpen, setFormOpen] = useState(false);
   const [market, setMarket] = useState<"spot" | "futures">("spot");
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [amountUsd, setAmountUsd] = useState("100");
+  // Whichever unit the amount pill is currently in — the raw text above is
+  // always interpreted against this (dollars or coin quantity), converted
+  // live via formPrice whenever the user flips the toggle so the number
+  // they see keeps meaning the same real size, not just a reinterpreted digit.
+  const [amountUnit, setAmountUnit] = useState<"usd" | "coin">("usd");
   const [leverage, setLeverage] = useState("2");
   const [takeProfit, setTakeProfit] = useState("");
   const [stopLoss, setStopLoss] = useState("");
@@ -265,8 +275,13 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
 
   const handleSubmitOpen = async () => {
     if (!user) return;
-    const amount = parseFloat(amountUsd);
-    if (!Number.isFinite(amount) || amount <= 0) { setFormError("Enter a valid amount."); return; }
+    const raw = parseFloat(amountUsd);
+    if (!Number.isFinite(raw) || raw <= 0) { setFormError("Enter a valid amount."); return; }
+    let amount = raw;
+    if (amountUnit === "coin") {
+      if (!formPrice) { setFormError("Waiting for a live price…"); return; }
+      amount = raw * formPrice;
+    }
     const lev = market === "futures" ? Math.min(20, Math.max(1, parseFloat(leverage) || 1)) : 1;
     const tp = parseFloat(takeProfit);
     const sl = parseFloat(stopLoss);
@@ -281,7 +296,6 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
     try {
       await executeTrade(user.id, action);
       await loadPortfolio(user.id);
-      setFormOpen(false);
       setTakeProfit("");
       setStopLoss("");
     } catch (err) {
@@ -294,6 +308,38 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   const positions = portfolio?.positions ?? [];
   const openCount = positions.length;
   const formPrice = livePrices[coin];
+  // Only meaningful when entering a coin quantity — in USD mode the input
+  // IS the cost already, showing it again would just repeat the number.
+  const amountNum = parseFloat(amountUsd);
+  const totalCostUsd = amountUnit === "coin" && formPrice && Number.isFinite(amountNum) && amountNum > 0
+    ? amountNum * formPrice
+    : null;
+  // Same thing, generalized across both input modes — what handleSubmitOpen
+  // will actually send as amountUsd (margin, for futures) once submitted.
+  const costUsd = amountUnit === "coin"
+    ? totalCostUsd
+    : (Number.isFinite(amountNum) && amountNum > 0 ? amountNum : null);
+  // Live order-ticket preview — mirrors executeTrade's own futures math
+  // (paperTrading.ts) exactly (same computeLiquidationPrice call, same
+  // notional/qty formulas) so what's shown here never drifts from what
+  // actually gets opened.
+  const futuresPreview = (() => {
+    if (market !== "futures" || costUsd === null || !formPrice) return null;
+    const levNum = Math.min(20, Math.max(1, parseFloat(leverage) || 1));
+    const notional = costUsd * levNum;
+    const qty = notional / formPrice;
+    const wantSide: "long" | "short" = side === "buy" ? "long" : "short";
+    const liq = computeLiquidationPrice(formPrice, levNum, wantSide);
+    const tp = parseFloat(takeProfit);
+    const sl = parseFloat(stopLoss);
+    const tpProfit = Number.isFinite(tp) && tp > 0
+      ? (wantSide === "long" ? (tp - formPrice) * qty : (formPrice - tp) * qty)
+      : null;
+    const slLoss = Number.isFinite(sl) && sl > 0
+      ? (wantSide === "long" ? (sl - formPrice) * qty : (formPrice - sl) * qty)
+      : null;
+    return { margin: costUsd, notional, qty, liq, tpProfit, slLoss };
+  })();
   // Title/breadcrumb/LIVE badge are all "the real card is open" chrome —
   // none of it means anything yet for a signed-in user who hasn't
   // activated paper trading, so the whole header hides for that one case
@@ -515,48 +561,76 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
             </div>
           )}
 
-          {positionsView === "open" && !formOpen && (
-            <button type="button" className="ptc-new-position" onClick={() => setFormOpen(true)}>
-              + Open {coin} position
-            </button>
-          )}
-
-          {positionsView === "open" && formOpen && (
+          {positionsView === "open" && (
             <div className="ptc-form">
               <div className="ptc-form-row">
                 <div className="ptc-segmented">
                   <button type="button" className={market === "spot" ? "ptc-segment ptc-segment--active" : "ptc-segment"} onClick={() => setMarket("spot")}>Spot</button>
                   <button type="button" className={market === "futures" ? "ptc-segment ptc-segment--active" : "ptc-segment"} onClick={() => setMarket("futures")}>Futures</button>
                 </div>
-                <div className="ptc-segmented">
-                  <button
-                    type="button"
-                    className={`ptc-segment ptc-segment--buy${side === "buy" ? " ptc-segment--active" : ""}`}
-                    onClick={() => setSide("buy")}
-                  >
-                    {market === "futures" ? "Long" : "Buy"}
-                  </button>
-                  <button
-                    type="button"
-                    className={`ptc-segment ptc-segment--sell${side === "sell" ? " ptc-segment--active" : ""}`}
-                    onClick={() => setSide("sell")}
-                  >
-                    {market === "futures" ? "Short" : "Sell"}
-                  </button>
-                </div>
               </div>
-              <div className="ptc-form-row">
-                <label className="ptc-field">
-                  <span>Amount (USD)</span>
-                  <input type="number" min="1" value={amountUsd} onChange={(e) => setAmountUsd(e.target.value)} />
-                </label>
-                {market === "futures" && (
+              <div className="ptc-buysell">
+                <button
+                  type="button"
+                  className={`ptc-buysell-half ptc-buysell-half--sell${side === "sell" ? " ptc-buysell-half--active" : ""}`}
+                  onClick={() => setSide("sell")}
+                >
+                  <span className="ptc-buysell-label">{market === "futures" ? "Short" : "Sell"}</span>
+                  {formPrice !== undefined && (
+                    <span className="ptc-buysell-price">{formPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  )}
+                </button>
+                <span className="ptc-buysell-amount-pill">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={amountUnit === "usd" ? formatUsdAmountDisplay(amountUsd) : amountUsd}
+                    onChange={(e) => setAmountUsd(sanitizeAmountInput(e.target.value.replace(/,/g, "")))}
+                  />
+                  <button
+                    type="button"
+                    className="ptc-amount-unit-toggle"
+                    onClick={() => {
+                      const current = parseFloat(amountUsd);
+                      const nextUnit = amountUnit === "usd" ? "coin" : "usd";
+                      if (formPrice && Number.isFinite(current) && current > 0) {
+                        const converted = nextUnit === "coin" ? current / formPrice : current * formPrice;
+                        setAmountUsd(String(Math.round(converted * 1e6) / 1e6));
+                      }
+                      setAmountUnit(nextUnit);
+                    }}
+                    title={amountUnit === "usd" ? `Switch to ${coin}` : "Switch to USD"}
+                  >
+                    {amountUnit === "usd" ? "$" : coin}
+                  </button>
+                </span>
+                <button
+                  type="button"
+                  className={`ptc-buysell-half ptc-buysell-half--buy${side === "buy" ? " ptc-buysell-half--active" : ""}`}
+                  onClick={() => setSide("buy")}
+                >
+                  <span className="ptc-buysell-label">{market === "futures" ? "Long" : "Buy"}</span>
+                  {formPrice !== undefined && (
+                    <span className="ptc-buysell-price">{formPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  )}
+                </button>
+              </div>
+              {totalCostUsd !== null && (
+                <span className="ptc-amount-total">
+                  ≈ ${totalCostUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })} total
+                </span>
+              )}
+              {market === "futures" && (
+                <div className="ptc-form-row">
                   <label className="ptc-field ptc-field--narrow">
                     <span>Leverage</span>
-                    <input type="number" min="1" max="20" value={leverage} onChange={(e) => setLeverage(e.target.value)} />
+                    <span className="ptc-leverage-input-wrap">
+                      <input type="number" min="1" max="20" value={leverage} onChange={(e) => setLeverage(e.target.value)} />
+                      <span className="ptc-leverage-suffix">x</span>
+                    </span>
                   </label>
-                )}
-              </div>
+                </div>
+              )}
               <div className="ptc-form-row">
                 <label className="ptc-field">
                   <span>Take Profit (optional)</span>
@@ -567,12 +641,21 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
                   <input type="number" min="0" placeholder="$" value={stopLoss} onChange={(e) => setStopLoss(e.target.value)} />
                 </label>
               </div>
-              {formPrice !== undefined && (
-                <span className="ptc-form-price">{coin} live: ${formPrice.toLocaleString()}</span>
+              {futuresPreview && (
+                <div className="ptc-futures-preview">
+                  <div className="ptc-detail-row"><span>Margin</span><strong>${futuresPreview.margin.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+                  <div className="ptc-detail-row"><span>Position Size</span><strong>{futuresPreview.qty.toLocaleString(undefined, { maximumFractionDigits: 6 })} {coin} (${futuresPreview.notional.toLocaleString(undefined, { maximumFractionDigits: 2 })})</strong></div>
+                  <div className="ptc-detail-row"><span>Est. Liquidation</span><strong className="ptc-down">${futuresPreview.liq.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></div>
+                  {futuresPreview.tpProfit !== null && (
+                    <div className="ptc-detail-row"><span>Profit at TP</span><strong className="ptc-up">{fmtUsd(futuresPreview.tpProfit)}</strong></div>
+                  )}
+                  {futuresPreview.slLoss !== null && (
+                    <div className="ptc-detail-row"><span>Loss at SL</span><strong className="ptc-down">{fmtUsd(futuresPreview.slLoss)}</strong></div>
+                  )}
+                </div>
               )}
               {formError && <span className="ptc-form-error">{formError}</span>}
               <div className="ptc-form-row">
-                <button type="button" className="ptc-form-cancel" onClick={() => { setFormOpen(false); setFormError(null); }}>Cancel</button>
                 <button type="button" className="ptc-cta" onClick={handleSubmitOpen} disabled={submitting}>
                   {submitting ? "Opening…" : "Open position"}
                 </button>
@@ -638,23 +721,6 @@ export function PaperTradingCard({ coin, onOpen }: Props) {
   );
 
   return (
-    <>
-      {/* Double-click anywhere on the card toggles fullscreen — same
-          double-click-to-expand convention the chart canvas itself uses
-          (.chart-dblclick-wrap, PriceChart.tsx), no dedicated button. */}
-      <div className={`ptc-card${needsActivation || dissolving ? " ptc-card--activating" : ""}${dissolving ? " ptc-card--revealing" : ""}`} onDoubleClick={() => setIsFullscreen((v) => !v)}>{body}</div>
-      {isFullscreen && createPortal(
-        <div className="ptc-modal-backdrop" onClick={() => setIsFullscreen(false)}>
-          <div
-            className={`ptc-card ptc-card--modal${needsActivation || dissolving ? " ptc-card--activating" : ""}${dissolving ? " ptc-card--revealing" : ""}`}
-            onClick={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }}
-          >
-            {body}
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
+    <div className={`ptc-card${needsActivation || dissolving ? " ptc-card--activating" : ""}${dissolving ? " ptc-card--revealing" : ""}`}>{body}</div>
   );
 }

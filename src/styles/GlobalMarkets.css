@@ -7,17 +7,22 @@
   gap: 28px;
 }
 
-/* The Markets page's SectionBanner sits just above .gm-wrap (as a sibling,
-   not inside it — see App.tsx's chartColumnEl) with its own default
-   margin, which didn't match .gm-wrap's own inset, so its edges looked
-   misaligned against the content below it. Scoped to .chart-column so
-   other pages' SectionBanner (different margin/no .gm-wrap next to it)
-   is untouched. */
-.chart-column > .sec-banner {
-  margin: 24px 20px 0;
+/* The Markets page's SectionBanner is now GlobalMarkets' own first
+   .gm-wrap child (not an external sibling) — SectionBanner.css's own
+   default margin (12px all round) is overridden to 0 here so .gm-wrap's
+   own padding/gap is the only spacing, same as every other child. Scoped
+   to .gm-wrap so other pages' SectionBanner (rendered by App.tsx, no
+   .gm-wrap next to it) is untouched. */
+.gm-wrap > .sec-banner {
+  margin: 0;
 }
 @media (max-width: 640px) {
-  .chart-column > .sec-banner { margin: 16px 14px 0; }
+  .gm-wrap > .sec-banner { padding: 10px 0; gap: 10px; }
+  .gm-wrap > .sec-banner .sec-banner-icon { width: 26px; height: 26px; font-size: 0.74rem; border-radius: 8px; }
+  .gm-wrap > .sec-banner .sec-banner-title { font-size: 0.76rem; }
+  .gm-wrap > .sec-banner .sec-banner-desc { font-size: 0.7rem; line-height: 1.35; }
+  .gm-wrap > .sec-banner .sec-banner-tags { gap: 4px; margin-top: 4px; }
+  .gm-wrap > .sec-banner .sec-banner-tag { font-size: 0.6rem; padding: 1px 7px; }
 }
 
 /* ── Shared entrance animation ────────────────────────────────────────────── */
@@ -1055,10 +1060,33 @@
   .gm-movers-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .gm-wrap { padding: 16px 14px 36px; gap: 20px; }
+  .gm-wrap { padding: 16px 0 36px; gap: 20px; }
+  .gm-hero { padding-left: 0; padding-right: 0; }
+  .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; }
-  .gm-section { padding: 14px; }
+  .gm-status-col + .gm-status-col { border-left: none; }
+  .gm-status-col { padding-left: 0; padding-right: 0; }
+  /* space-around leaves a half-gap at the first/last gauge vs. between
+     them — space-between puts the end gauges flush against the edges
+     instead, now that every ancestor is already edge-to-edge. */
+  .gm-sentiment-grid { justify-content: space-between; }
+  .gm-section { padding: 14px 0; }
   .gm-section-header { gap: 8px; }
+  .gm-liq-stat-card,
+  .gm-liq-events-card,
+  .gm-liq-chart-card { padding: 14px 0; }
   .gm-td--c { display: none; }
   .gm-th--c { display: none; }
+
+  /* Container borders only — cards still separate via background
+     contrast, not an outline, since that's what reads as "boxy" on a
+     narrow screen. Dividers (column separators, table rows), the tab
+     border and the tooltip border are untouched. */
+  .gm-hero,
+  .gm-section,
+  .gm-liq-stat-card,
+  .gm-liq-events-card,
+  .gm-liq-chart-card {
+    border: none;
+  }
 }

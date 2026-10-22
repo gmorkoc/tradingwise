@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { supabase, hasAccess, toggleMutedSignalCoin, toggleWatchlistSignalCoin } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { COINS } from "../services/coinglass";
+import { HoverTip } from "./HoverTip";
 import "../styles/BuySignals.css";
 
 interface SignalHit { id: string; label: string; value: number }
@@ -100,9 +101,15 @@ interface Props {
   // already listened for below), this skips rendering this component's
   // own header button while keeping its panel/state/listeners intact.
   hideTrigger?: boolean;
+  // Desktop only — when provided, the open panel portals here (a real
+  // column in App.tsx's layout, see activatedPanelsRailEl) instead of
+  // document.body as a floating backdrop+panel overlay. Undefined (the
+  // mobile/native mount of this same component) keeps the original
+  // floating behavior untouched.
+  columnTarget?: HTMLElement | null;
 }
 
-export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
+export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) {
   const { t } = useTranslation();
   const { tier, user, profile, refreshProfile } = useAuth();
   const isPaid = hasAccess(tier, "pro");
@@ -339,29 +346,31 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
   return (
     <>
       {!hideTrigger && (
-        <button
-          ref={bellRef}
-          className={`buysig-bell${rows.length > 0 ? " buysig-bell--active" : ""}`}
-          onClick={handleClick}
-          title={t("buySignals.title", "Buy & Sell Signals")}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 17l6-6 4 4 8-8" />
-            <path d="M15 7h6v6" />
-          </svg>
-          {/* Desktop-only — hidden at the same 640px breakpoint that
-              squares this button off to icon-only on mobile (App.css). */}
-          <span className="mch-btn-label">Signals</span>
-          {rows.length > 0 && <span className="buysig-bell-count">{rows.length}</span>}
-        </button>
+        <HoverTip className="top-nav-icon-tip" placement="left" text={t("buySignals.title", "Buy & Sell Signals")}>
+          <button
+            ref={bellRef}
+            className={`buysig-bell${rows.length > 0 ? " buysig-bell--active" : ""}`}
+            onClick={handleClick}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 17l6-6 4 4 8-8" />
+              <path d="M15 7h6v6" />
+            </svg>
+            {rows.length > 0 && <span className="buysig-bell-count">{rows.length}</span>}
+          </button>
+        </HoverTip>
       )}
 
       {ReactDOM.createPortal(
         <>
           {open && (
             <>
-              <div className="buysig-backdrop" onClick={() => setOpen(false)} />
-              <div className="buysig-panel">
+              {/* No backdrop in column mode — a persistent column next to
+                  the page shouldn't close just because you clicked into
+                  that page, only the panel's own close button/toggle
+                  should dismiss it (same call as Paper Trading's column). */}
+              {!columnTarget && <div className="buysig-backdrop" onClick={() => setOpen(false)} />}
+              <div className={`buysig-panel${columnTarget ? " buysig-panel--column" : ""}`}>
                 <div className="buysig-panel-header">
                   <div>
                     <span className="buysig-panel-title">{t("buySignals.title", "Buy & Sell Signals")}</span>
@@ -456,7 +465,7 @@ export function BuySignals({ onOpenUpgrade, hideTrigger }: Props) {
             </>
           )}
         </>,
-        document.body
+        columnTarget ?? document.body
       )}
     </>
   );

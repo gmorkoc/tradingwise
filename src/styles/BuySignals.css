@@ -84,6 +84,19 @@ html:not([data-theme="light"]) .buysig-bell:hover {
   overflow: hidden;
   animation: buysig-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Rendered inline as a real column (App.tsx's activated-panels-rail,
+   via the columnTarget prop) instead of a centered floating modal —
+   same content, no backdrop/centering/shadow chrome. */
+.buysig-panel--column {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  box-shadow: none;
+  border-radius: 12px;
+  animation: none;
+}
 @keyframes buysig-in {
   from { opacity: 0; transform: translate(-50%, -46%); }
   to   { opacity: 1; transform: translate(-50%, -50%); }

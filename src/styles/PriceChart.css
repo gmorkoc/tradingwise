@@ -613,6 +613,9 @@ html[data-theme="light"] .price-chart-container:fullscreen .chart-header {
   .chart-header .mch-stats {
     padding-bottom: 8px;
   }
+  .price-chart-container {
+    padding: 0;
+  }
 }
 
 

@@ -690,7 +690,7 @@ async function logTrade(
 // maintenance-margin buffer a real exchange reserves, so it's directionally
 // correct (closer to entry at higher leverage) rather than exchange-exact.
 // Fine for a paper simulation; not fine to present as precise.
-function computeLiquidationPrice(entryPrice: number, leverage: number, side: "long" | "short"): number {
+export function computeLiquidationPrice(entryPrice: number, leverage: number, side: "long" | "short"): number {
   return side === "long" ? entryPrice * (1 - 1 / leverage) : entryPrice * (1 + 1 / leverage);
 }
 

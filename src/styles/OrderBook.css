@@ -175,7 +175,12 @@
   z-index: 40;
   max-height: 260px;
   overflow-y: auto;
-  background: var(--pc-panel);
+  /* --color-card-bg, not --pc-panel — --pc-panel is a near-transparent
+     highlight tint (rgba(255,255,255,0.035) in dark .chart-active), fine
+     layered on top of a card that's already opaque underneath, but a
+     floating menu needs its OWN solid backdrop or the ladder rows behind
+     it show straight through. */
+  background: var(--color-card-bg);
   border: 1px solid var(--pc-border);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
@@ -281,6 +286,43 @@
 .ob-sheet-options .ob-pill-check {
   color: var(--color-primary);
   font-weight: 800;
+}
+
+/* Fake rows instead of a plain "Loading…" string, shaped like the real
+   price/amount/total (or price/amount/time) grid they're about to be
+   replaced by. */
+@keyframes ob-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.ob-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+}
+/* One long bar per row (not three short per-column cells) — plainer,
+   more standard "content loader" look, varying width per row (set
+   inline in OrderBook.tsx) so the stack doesn't look like a single
+   repeated block. */
+.ob-skeleton-row {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--pc-text) 6%, transparent) 25%,
+    color-mix(in srgb, var(--pc-text) 13%, transparent) 50%,
+    color-mix(in srgb, var(--pc-text) 6%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: ob-shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-skeleton-row {
+    animation: none;
+  }
 }
 
 .ob-loading {

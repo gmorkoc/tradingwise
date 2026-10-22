@@ -18,6 +18,7 @@
   flex-direction: column;
   gap: 16px;
   flex-shrink: 0;
+  padding: 16px;
 }
 /* Pre-activation: no header/title/LIVE badge left as a sibling to size
    against, so this fills the full height of whatever container it's in
@@ -33,6 +34,7 @@
   flex: 1 1 auto !important;
   height: 100% !important;
   min-height: 0 !important;
+  padding: 0;
 }
 
 .ptc-header {
@@ -47,50 +49,6 @@
   align-items: center;
   gap: 8px;
 }
-/* Fullscreen option — same .ptc-card content, portaled over everything
-   (PaperTradingCard.tsx: isFullscreen). Escaping to document.body is what
-   actually guarantees this renders above every other portaled UI (Daily
-   Brief, CoinChat, TradingAgent's own panel) regardless of z-index,
-   same reasoning CompactPriceView's own modal variant already uses. */
-.ptc-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100000;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-/* Every --pc-* token this file leans on (bg, success, danger, text*) is
-   only DEFINED on .chart-active (PriceChart.css) — this modal is
-   portaled to document.body, outside that subtree entirely, so every
-   var(--pc-*) resolved to nothing there: no background (see-through
-   "card" over the dark backdrop), and every green/red P&L color, stat
-   value, etc. invisible too. Redeclaring them here (inherited by every
-   descendant that reads them) fixes all of that in one place instead of
-   touching each individual rule — --color-* equivalents are real :root
-   tokens (App.css), already theme-aware, available everywhere regardless
-   of where something's portaled to. */
-.ptc-card--modal {
-  --pc-bg: var(--color-surface);
-  --pc-success: var(--color-success);
-  --pc-danger: var(--color-danger);
-  --pc-text: var(--color-text);
-  --pc-text-muted: var(--color-text-muted);
-  --pc-text-secondary: var(--color-text-secondary);
-  width: min(960px, 94vw);
-  height: min(880px, 90vh);
-  overflow-y: auto;
-  /* .ptc-card (shared base) has no padding — deliberately removed for the
-     small inline sidebar card, but this large modal needs its own
-     breathing room back. */
-  padding: 22px 26px;
-  background: var(--pc-bg);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-}
-/* Matches .db-head-title (DailyBrief.css) — same title size/weight as
-   Daily Brief's own panel header, same row. */
 /* Identical to DailyBrief.css's .db-head-title — same title treatment
    across every card in this sidebar, not two near-matching ones. */
 .ptc-title {
@@ -663,6 +621,19 @@
 }
 .ptc-detail-row strong.ptc-up { color: var(--pc-success); }
 .ptc-detail-row strong.ptc-down { color: var(--pc-danger); }
+/* Live margin/size/liquidation/TP-SL breakdown shown while the futures
+   form has a valid amount+leverage — reuses .ptc-detail-row (already used
+   for an open position's own expanded detail) for the same label/value
+   look, grouped in its own card so it doesn't read as part of the form
+   inputs above it. */
+.ptc-futures-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border-radius: 8px;
+}
 .ptc-gauge-wrap {
   padding: 2px 12px 10px;
 }
@@ -807,26 +778,6 @@
   cursor: default;
 }
 
-.ptc-new-position {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  width: 100%;
-  padding: 9px 0;
-  border-radius: 8px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 700;
-  transition: opacity 0.15s;
-}
-.ptc-new-position:hover {
-  opacity: 0.9;
-}
-
 .ptc-form {
   display: flex;
   flex-direction: column;
@@ -850,8 +801,13 @@
   all: unset;
   box-sizing: border-box;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
   text-align: center;
-  padding: 7px 0;
+  padding: 6px 0;
   cursor: pointer;
   font-size: 11.5px;
   font-weight: 700;
@@ -862,11 +818,98 @@
   background: var(--color-primary);
   color: #fff;
 }
-.ptc-segment--buy.ptc-segment--active {
-  background: var(--pc-success);
+/* Full-width Sell/Buy order-ticket control — each half corner-anchors its
+   label (sell to the left, buy to the right) with the live price under it,
+   and the amount input floats as a pill straddling the seam between them. */
+.ptc-buysell {
+  position: relative;
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
 }
-.ptc-segment--sell.ptc-segment--active {
-  background: var(--pc-danger);
+.ptc-buysell-half {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: var(--color-text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.ptc-buysell-half--sell { align-items: flex-start; text-align: left; }
+.ptc-buysell-half--buy { align-items: flex-end; text-align: right; }
+.ptc-buysell-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.ptc-buysell-price {
+  font-size: 13px;
+  font-weight: 700;
+}
+.ptc-buysell-half--sell.ptc-buysell-half--active {
+  background: color-mix(in srgb, var(--pc-danger) 16%, transparent);
+  color: var(--pc-danger);
+}
+.ptc-buysell-half--buy.ptc-buysell-half--active {
+  background: color-mix(in srgb, var(--pc-success) 16%, transparent);
+  color: var(--pc-success);
+}
+.ptc-buysell-amount-pill {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  border-radius: 6px;
+  background: var(--pc-bg);
+  overflow: hidden;
+}
+.ptc-buysell-amount-pill input {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 56px;
+  padding: 3px 4px 3px 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.ptc-amount-unit-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-width: 20px;
+  height: 100%;
+  padding: 3px 7px 3px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  transition: background 0.15s, color 0.15s;
+}
+.ptc-amount-unit-toggle:hover {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary);
+}
+/* Live USD cost of a coin-quantity amount (ptc-amount-unit-toggle's "coin"
+   mode) — the input itself is the cost already in USD mode, so this only
+   renders then (PaperTradingCard.tsx: totalCostUsd). */
+.ptc-amount-total {
+  align-self: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }
 .ptc-field {
   flex: 1;
@@ -878,6 +921,23 @@
 }
 .ptc-field--narrow {
   flex: 0 0 80px;
+}
+.ptc-leverage-input-wrap {
+  position: relative;
+  display: block;
+}
+.ptc-leverage-input-wrap input {
+  padding-right: 20px !important;
+}
+.ptc-leverage-suffix {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  pointer-events: none;
 }
 .ptc-field input {
   box-sizing: border-box;
@@ -894,31 +954,13 @@
   outline: none;
   background: color-mix(in srgb, var(--color-primary) 10%, var(--pc-bg));
 }
-.ptc-form-price {
-  font-size: 10.5px;
-  color: var(--color-text-muted);
-}
 .ptc-form-error {
   font-size: 11px;
   color: var(--pc-danger);
 }
-.ptc-form-cancel {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex: 0 0 90px;
-  padding: 10px 0;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-text) 6%, transparent);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
 /* .ptc-cta is also used standalone elsewhere (full width there) — inside
-   this row it shares space with .ptc-form-cancel instead. */
+   this row it's the row's only flex item, so flex:1 gives it the same
+   full-width result. */
 .ptc-form-row .ptc-cta {
   width: auto;
   flex: 1;

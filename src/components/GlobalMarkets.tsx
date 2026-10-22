@@ -4,6 +4,7 @@ import {
   CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush,
 } from "recharts";
 import "../styles/GlobalMarkets.css";
+import { SectionBanner } from "./SectionBanner";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface GlobalData {
@@ -264,6 +265,7 @@ function DomTooltip({ active, payload }: { active?: boolean; payload?: { name: s
 function GmSkeleton() {
   return (
     <div className="gm-wrap">
+      <SectionBanner section="markets" />
       <div className="gm-skel gm-skel-hero" />
       <div className="gm-stats-grid">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -445,7 +447,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
 
   if (loading) return <GmSkeleton />;
   if (error) return (
-    <div className="gm-wrap"><div className="gm-error">{error}</div></div>
+    <div className="gm-wrap"><SectionBanner section="markets" /><div className="gm-error">{error}</div></div>
   );
 
   const g = global!;
@@ -601,6 +603,8 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
 
   return (
     <div className="gm-wrap">
+      <SectionBanner section="markets" />
+
       {/* ── Hero: one glowing card (the original gm-hero treatment) now
           carrying the Market Status / Trending / Market Activity /
           Community columns instead of just the market-cap figure — real

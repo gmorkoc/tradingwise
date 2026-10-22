@@ -95,19 +95,6 @@ function formatHeaderPriceMobile(p: number): string {
   return formatLivePrice(p);
 }
 
-// 2col layout's "drag to resize" divider hint — shown at most once per
-// day, not once per page load (which would replay it on every refresh).
-// A cookie, not localStorage, specifically so it expires on its own at
-// the next local midnight rather than needing anything to clear it.
-const DIVIDER_INTRO_COOKIE = "crcDividerIntroShown";
-function hasShownDividerIntroToday(): boolean {
-  return document.cookie.split("; ").some((c) => c.startsWith(`${DIVIDER_INTRO_COOKIE}=`));
-}
-function markDividerIntroShownToday(): void {
-  const midnight = new Date();
-  midnight.setHours(24, 0, 0, 0);
-  document.cookie = `${DIVIDER_INTRO_COOKIE}=1; expires=${midnight.toUTCString()}; path=/`;
-}
 import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -350,12 +337,12 @@ const NAV_ITEMS: {
   },
 ];
 
-function NavIcon({ d }: { d: string | string[] }) {
+function NavIcon({ d, size = 22 }: { d: string | string[]; size?: number }) {
   const paths = Array.isArray(d) ? d : [d];
   return (
     <svg
-      width="22"
-      height="22"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -1089,12 +1076,26 @@ function AppDashboard({
   // BuySignals' own broadcast (see the listener below it), so closing it
   // from here has to go back through the same event channel rather than
   // a setter.
+  // Desktop web's access point for Paper Trading / Order Flow Pressure on
+  // every page except Chart (which already shows chartRightColEl inline,
+  // as part of its own layout). Renders as a real column
+  // (activatedPanelsRailEl, declared further down near where it's used)
+  // instead of a dropdown anchored to the icon — added when activated,
+  // removed when toggled off, joining the same mutually-exclusive group
+  // as signalsOpen/assetPanelOpen/profileOpen/globalSearch/
+  // dailyBriefPanelOpen right below (only one of the five ever showing
+  // at once — Paper Trading and Buy Signals included). Declared up here,
+  // not next to activatedPanelsRailEl further down, specifically so
+  // those effects (which reference it) aren't reading a variable that
+  // hasn't been declared yet in this component's hook order.
+  const [paperTradingFlyoutOpen, setPaperTradingFlyoutOpen] = useState(false);
   useEffect(() => {
     if (!signalsOpen) return;
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (profileOpen) setProfileOpen(false);
     if (globalSearch) setGlobalSearch(false);
     if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
+    if (paperTradingFlyoutOpen) setPaperTradingFlyoutOpen(false);
   }, [signalsOpen]);
   useEffect(() => {
     if (!assetPanelOpen) return;
@@ -1102,6 +1103,7 @@ function AppDashboard({
     if (profileOpen) setProfileOpen(false);
     if (globalSearch) setGlobalSearch(false);
     if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
+    if (paperTradingFlyoutOpen) setPaperTradingFlyoutOpen(false);
   }, [assetPanelOpen]);
   useEffect(() => {
     if (!profileOpen) return;
@@ -1109,6 +1111,7 @@ function AppDashboard({
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (globalSearch) setGlobalSearch(false);
     if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
+    if (paperTradingFlyoutOpen) setPaperTradingFlyoutOpen(false);
   }, [profileOpen]);
   useEffect(() => {
     if (!globalSearch) return;
@@ -1116,6 +1119,7 @@ function AppDashboard({
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (profileOpen) setProfileOpen(false);
     if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
+    if (paperTradingFlyoutOpen) setPaperTradingFlyoutOpen(false);
   }, [globalSearch]);
   useEffect(() => {
     if (!dailyBriefPanelOpen) return;
@@ -1123,7 +1127,16 @@ function AppDashboard({
     if (assetPanelOpen) setAssetPanelOpen(false);
     if (profileOpen) setProfileOpen(false);
     if (globalSearch) setGlobalSearch(false);
+    if (paperTradingFlyoutOpen) setPaperTradingFlyoutOpen(false);
   }, [dailyBriefPanelOpen]);
+  useEffect(() => {
+    if (!paperTradingFlyoutOpen) return;
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    if (assetPanelOpen) setAssetPanelOpen(false);
+    if (profileOpen) setProfileOpen(false);
+    if (globalSearch) setGlobalSearch(false);
+    if (dailyBriefPanelOpen) setDailyBriefPanelOpen(false);
+  }, [paperTradingFlyoutOpen]);
 
   // Desktop's search opens as a dropdown attached directly under
   // .top-nav-search (YouTube's own search-bar-with-suggestions pattern),
@@ -1239,30 +1252,51 @@ function AppDashboard({
       window.setTimeout(() => setInviteStatus("idle"), 2500);
     }
   };
-  // Segmented Chart/Order Book tabs — real phones (<=640px) and full
-  // desktop (>=961px, see App.css); the in-between tablet range ignores
-  // this entirely and keeps showing both side by side, resizable.
+  // Segmented "current page" / Paper Trading+Order Flow tabs — real
+  // phones (<=640px) and full desktop (>=961px, see App.css); the
+  // in-between tablet range ignores this entirely and keeps showing both
+  // side by side, resizable. Originally chart-page-only (hence the
+  // "chart"/"orderbook" naming and the legacy "Order Book" title/icon —
+  // it actually always toggled the WHOLE chart-right-col, Paper Trading
+  // Card + Order Flow Panel together, never a literal order book), now
+  // reused as-is for every page: "chart" means "show this page's own
+  // content", "orderbook" means "show chart-right-col instead", entirely
+  // in place — no navigation, on every page including Chart/Markets.
   const [mobileChartTab, setMobileChartTab] = useState<"chart" | "orderbook">("chart");
-  // Bumped on every tap of the chart tab's logo icon — used as a `key` so
-  // the spin keyframe (.chart-tab-logo-spin) remounts and replays each
-  // time, instead of only firing once on mount.
+  // Any real navigation (menu, coin button, etc.) backs out of a
+  // mid-page chart-right-col swap, same as it would reset any other
+  // page-local UI state.
+  useEffect(() => {
+    setMobileChartTab("chart");
+  }, [activeSection]);
+  // Bumped on every tap of the first icon while it's showing the chart
+  // logo — used as a `key` so the spin keyframe (.chart-tab-logo-spin)
+  // remounts and replays each time, instead of only firing once on mount.
   const [chartTabSpinKey, setChartTabSpinKey] = useState(0);
   // Simple two-icon segmented switch, mounted once in the top bar
-  // (.mch-right) at every width.
+  // (.mch-right) at every width. First icon always represents — and
+  // returns to — whatever page is actually active (its own NAV_ITEMS
+  // icon; the branded logo + spin only for "chart" itself, same special
+  // treatment it always had).
+  const onChartPage = activeSection === "chart";
   const chartModeToggle = (
     <div className="chart-mobile-tabs">
       <button
         type="button"
         className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
-        title={t("chart.tabLabel", "Chart")}
+        title={onChartPage ? t("chart.tabLabel", "Chart") : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection)}
         onClick={() => {
           setMobileChartTab("chart");
-          setChartTabSpinKey((k) => k + 1);
+          if (onChartPage) setChartTabSpinKey((k) => k + 1);
         }}
       >
-        <span key={chartTabSpinKey} className="chart-tab-logo-spin">
-          <LogoIcon size={18} />
-        </span>
+        {onChartPage ? (
+          <span key={chartTabSpinKey} className="chart-tab-logo-spin">
+            <LogoIcon size={18} />
+          </span>
+        ) : (
+          <NavIcon d={NAV_ITEMS.find((n) => n.id === activeSection)?.d ?? ["M3 3v18h18", "M7 16l4-4 4 4 5-5"]} size={16} />
+        )}
       </button>
       <button
         type="button"
@@ -1333,78 +1367,6 @@ function AppDashboard({
     [],
   );
 
-  // 2col layout only — how much of .chart-two-col-right's height the top
-  // row (Paper Trading/Order Flow/Order Book tabs) gets vs. Daily Brief
-  // below it, as a percent. null (the starting value) means "not resized
-  // yet" — the row just sizes to its own content (capped, same as
-  // before) instead of a px/percent guess that might not match where
-  // the content actually ends; only once the user actually drags the
-  // handle does this become a real fixed height. Same drag-to-resize
-  // pattern as the chart/order-book split above (onResizePointerDown/
-  // Move/Up, obSize), just a single vertical axis against this column's
-  // own height instead of chartWrapRef's.
-  const [rightColSplit, setRightColSplit] = useState<number | null>(null);
-  const rightColRef = useRef<HTMLDivElement>(null);
-  const rightColTopRef = useRef<HTMLDivElement>(null);
-  const rightColDragState = useRef({ active: false, startY: 0, startSplit: 65, totalH: 1 });
-  const onRightColResizeDown = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      const totalH = rightColRef.current?.getBoundingClientRect().height || 1;
-      // First drag ever — start from wherever the row actually is right
-      // now (its real, content-driven height), not an arbitrary default,
-      // so the very first move doesn't jump the row to some unrelated
-      // size.
-      const startSplit = rightColSplit ?? ((rightColTopRef.current?.getBoundingClientRect().height || 0) / totalH) * 100;
-      rightColDragState.current = { active: true, startY: e.clientY, startSplit, totalH };
-    },
-    [rightColSplit],
-  );
-  const onRightColResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const d = rightColDragState.current;
-    if (!d.active) return;
-    const deltaPct = ((e.clientY - d.startY) / d.totalH) * 100;
-    setRightColSplit(Math.max(5, Math.min(95, d.startSplit + deltaPct)));
-  }, []);
-  const onRightColResizeUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    rightColDragState.current.active = false;
-  }, []);
-
-  // On-load hint that the divider below is draggable — the real row
-  // boundary actually rises then lowers (not just a floating label/glow
-  // with nothing really moving), the same way it would if you dragged
-  // it yourself, with the "Drag to resize" label + glow riding along for
-  // the same window (rightColDividerIntro gates both: the CSS pulse/
-  // label in App.css, and the real height nudge below). At most once a
-  // day (hasShownDividerIntroToday/markDividerIntroShownToday) — lazy
-  // useState init so a day that's already shown it skips the whole
-  // effect below outright, not just the visible class.
-  const [rightColDividerIntro, setRightColDividerIntro] = useState(() => !hasShownDividerIntroToday());
-  useEffect(() => {
-    if (!rightColDividerIntro) return;
-    markDividerIntroShownToday();
-    const el = rightColTopRef.current;
-    const t0 = setTimeout(() => {
-      if (el) {
-        const naturalH = el.getBoundingClientRect().height;
-        if (naturalH > 40) {
-          el.style.transition = "height 0.7s cubic-bezier(0.45, 0, 0.55, 1)";
-          el.style.height = `${naturalH - 34}px`;
-          setTimeout(() => {
-            el.style.height = `${naturalH + 10}px`;
-            setTimeout(() => {
-              el.style.height = "";
-              setTimeout(() => { el.style.transition = ""; }, 750);
-            }, 750);
-          }, 750);
-        }
-      }
-    }, 300);
-    const t1 = setTimeout(() => setRightColDividerIntro(false), 2600);
-    return () => { clearTimeout(t0); clearTimeout(t1); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Resize-affordance hint — mobile/tablet only (desktop's order book is a
   // fixed width, not resizable, so there's nothing to hint at there). Opens
@@ -1526,6 +1488,18 @@ function AppDashboard({
   // OrderFlowPanel's "Today's Story" feed — same events PriceChart.tsx's
   // own ChartEventAnnotations already computes for its on-chart dots.
   const [chartEvents, setChartEvents] = useState<ChartEvent[]>([]);
+  // Lifted out of the chart/markets-only layout block below so it's the
+  // exact same element (never remounted, never double-mounted) whichever
+  // page renders it — Paper Trading/Order Flow Pressure now also show on
+  // every OTHER page's mobile view (see the post-Suspense block further
+  // down), not just Chart/Markets.
+  const chartRightColEl = (
+    <div className="chart-right-col">
+      <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
+      {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
+      <OrderFlowPanel coin={coin} events={chartEvents} />
+    </div>
+  );
   // Chart-page layout picker (wide desktop only, >=961px — same threshold
   // Daily Brief itself already requires). Three user-selectable arrangements
   // of the same three blocks (chart / chart-right-col / Daily Brief), see
@@ -1547,6 +1521,12 @@ function AppDashboard({
   // actually active (per explicit "main icon should be the two col
   // icon"), not the current selection's own icon.
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  // Markets desktop only has the one fixed chart+Daily Brief arrangement
+  // (no 2row/3col/2col picker — see chartColumnEl's markets branch), but
+  // still wants a way to go full width and close Daily Brief entirely,
+  // same spirit as Chart's own layout picker just without the choice of
+  // three arrangements.
+  const [marketsSingleColumn, setMarketsSingleColumn] = useState(false);
   const layoutMenuWrapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!layoutMenuOpen) return;
@@ -1558,11 +1538,20 @@ function AppDashboard({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [layoutMenuOpen]);
-  // "2col" mode only: either column can be clicked to expand itself at the
-  // other's expense — animated via a plain width transition (see
-  // .chart-two-col-* in App.css), not grid-template-columns (inconsistent
-  // transition support across browsers).
-  const [rightColExpanded, setRightColExpanded] = useState(false);
+  // Shared mount point for both Paper Trading's column (rendered directly
+  // below) and Buy Signals' own portaled column (BuySignals.tsx's
+  // columnTarget prop) — :empty in CSS collapses this to nothing when
+  // neither is active, so nothing has to separately track "is anything
+  // in here" for layout purposes. State, not a plain ref — passing
+  // columnTarget={someRef.current} as a prop would hand BuySignals
+  // whatever that ref held during the PREVIOUS commit (refs update after
+  // commit, not during render), so the very first render always sees
+  // null/stale regardless of whether the node already exists; a callback
+  // ref into state re-renders once the real node is there instead.
+  const [activatedPanelsRailEl, setActivatedPanelsRailEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPaperTradingFlyoutOpen(false);
+  }, [activeSection]);
   // "2col" mode only: Paper Trading / Order Flow Pressure / Order Book
   // shown one at a time as tabs instead of stacked (3col/2row keep the
   // original stacked chartRightColEl, unaffected — scoped to this one
@@ -2650,27 +2639,32 @@ function AppDashboard({
                     somewhere at every width for their own background price-
                     watching/toast effects) are never mounted twice at once. */}
                 {isWideDesktop && (
-                  <button
-                    type="button"
-                    className={`mch-search-btn mch-focus-btn${distractionFree ? " mch-focus-btn--on" : ""}`}
-                    onClick={toggleFocusMode}
-                    role="switch"
-                    aria-checked={distractionFree}
-                    aria-label="Focus mode"
-                    title={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
+                  <HoverTip
+                    className="top-nav-icon-tip"
+                    placement="left"
+                    text={distractionFree ? "Focus on — alerts muted, distractions hidden. Click to turn off" : "Focus off — click to hide distractions and mute all alerts"}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                    </svg>
-                  </button>
+                    <button
+                      type="button"
+                      className={`mch-search-btn mch-focus-btn${distractionFree ? " mch-focus-btn--on" : ""}`}
+                      onClick={toggleFocusMode}
+                      role="switch"
+                      aria-checked={distractionFree}
+                      aria-label="Focus mode"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                      </svg>
+                    </button>
+                  </HoverTip>
                 )}
-                {(activeSection === "chart" || activeSection === "advance-chart" || activeSection === "markets") && isWideDesktop && !distractionFree && (
+                {(activeSection === "chart" || activeSection === "advance-chart") && isWideDesktop && !distractionFree && (
                   <div className="top-nav-layout-wrap" ref={layoutMenuWrapRef}>
+                    <HoverTip className="top-nav-icon-tip" placement="left" text="Chart layout">
                     <button
                       type="button"
                       className={`mch-search-btn top-nav-layout-btn${layoutMenuOpen ? " top-nav-layout-btn--open" : ""}`}
                       onClick={() => setLayoutMenuOpen((v) => !v)}
-                      title="Chart layout"
                       aria-haspopup="true"
                       aria-expanded={layoutMenuOpen}
                     >
@@ -2680,6 +2674,7 @@ function AppDashboard({
                         <rect x="10" y="8.7" width="4.5" height="5.3" rx="1" />
                       </svg>
                     </button>
+                    </HoverTip>
                     {layoutMenuOpen && (
                       <div className="top-nav-layout-menu" role="radiogroup" aria-label="Chart page layout">
                         {([
@@ -2728,53 +2723,93 @@ function AppDashboard({
                     )}
                   </div>
                 )}
-                {activeSection === "chart" && chartModeToggle}
-                <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
-                <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
-                <button
-                  className="mch-search-btn mch-notif-feed-btn"
-                  onClick={() => setNotificationsCenterOpen(true)}
-                  title="Notifications"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                {activeSection === "markets" && isWideDesktop && !distractionFree && (
+                  <HoverTip
+                    className="top-nav-icon-tip"
+                    placement="left"
+                    text={marketsSingleColumn ? "Show Daily Brief" : "Full width (close Daily Brief)"}
                   >
-                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
-                  <span className="mch-btn-label">Notifications</span>
-                  {unreadNotifCount > 0 && (
-                    <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
-                  )}
-                </button>
+                    <button
+                      type="button"
+                      className={`mch-search-btn top-nav-layout-btn${marketsSingleColumn ? " top-nav-layout-btn--open" : ""}`}
+                      onClick={() => setMarketsSingleColumn((v) => !v)}
+                      aria-pressed={marketsSingleColumn}
+                    >
+                      {marketsSingleColumn ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                          <rect x="1.5" y="2" width="13" height="12" rx="1" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
+                          <rect x="1.5" y="2" width="7" height="12" rx="1" />
+                          <rect x="10" y="2" width="4.5" height="12" rx="1" />
+                        </svg>
+                      )}
+                    </button>
+                  </HoverTip>
+                )}
+                {activeSection === "chart" && chartModeToggle}
+                {activeSection !== "chart" && activeSection !== "advance-chart" && (
+                  <HoverTip className="top-nav-icon-tip" placement="left" text={t("paperTrading.title", "Paper Trading")}>
+                    <button
+                      type="button"
+                      className={`mch-search-btn top-nav-layout-btn${paperTradingFlyoutOpen ? " top-nav-layout-btn--open" : ""}`}
+                      onClick={() => setPaperTradingFlyoutOpen((v) => !v)}
+                      aria-pressed={paperTradingFlyoutOpen}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                      </svg>
+                    </button>
+                  </HoverTip>
+                )}
+                <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
+                <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} columnTarget={activatedPanelsRailEl} />
+                <HoverTip className="top-nav-icon-tip" placement="left" text="Notifications">
+                  <button
+                    className="mch-search-btn mch-notif-feed-btn"
+                    onClick={() => setNotificationsCenterOpen(true)}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {unreadNotifCount > 0 && (
+                      <span className="mch-notif-feed-count">{unreadNotifCount > 9 ? "9+" : unreadNotifCount}</span>
+                    )}
+                  </button>
+                </HoverTip>
                 {/* Sign out lives inside the avatar's own dropdown now
                     (AccountMenu's `dropdown` prop) — Settings stays its own
                     visible icon here too, restyled as a filled dark square
                     (3x3 grid glyph) to match the reference look. */}
-                <button
-                  className="top-nav-icon-btn top-nav-icon-btn--settings"
-                  onClick={() => setDrawerOpen(true)}
-                  title={t("drawer.settings")}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="5" r="2" />
-                    <circle cx="12" cy="5" r="2" />
-                    <circle cx="19" cy="5" r="2" />
-                    <circle cx="5" cy="12" r="2" />
-                    <circle cx="12" cy="12" r="2" />
-                    <circle cx="19" cy="12" r="2" />
-                    <circle cx="5" cy="19" r="2" />
-                    <circle cx="12" cy="19" r="2" />
-                    <circle cx="19" cy="19" r="2" />
-                  </svg>
-                </button>
+                <HoverTip className="top-nav-icon-tip" placement="left" text={t("drawer.settings")}>
+                  <button
+                    className="top-nav-icon-btn top-nav-icon-btn--settings"
+                    onClick={() => setDrawerOpen(true)}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="5" cy="5" r="2" />
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="19" cy="5" r="2" />
+                      <circle cx="5" cy="12" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="19" cy="12" r="2" />
+                      <circle cx="5" cy="19" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                      <circle cx="19" cy="19" r="2" />
+                    </svg>
+                  </button>
+                </HoverTip>
                 <AccountMenu
                   onOpenAuth={onOpenAuth}
                   onOpenUpgrade={onOpenUpgrade}
@@ -2914,7 +2949,7 @@ function AppDashboard({
                   duplicate entry point). */}
               {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
                 <>
-                  {activeSection === "chart" && chartModeToggle}
+                  {chartModeToggle}
                   <PriceAlerts coin={coin} currentPrice={btcData?.price ?? 0} coinChatOpen={activeSection === "chart" && showCoinChat} />
                   <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
                   <button
@@ -2946,6 +2981,7 @@ function AppDashboard({
           </div>
           )}
 
+          <div className="main-content-row">
           <div
             ref={mainContentRef}
             className={`main-content${activeSection === "chart" || activeSection === "advance-chart" || activeSection === "markets" ? " chart-active" : ""}`}
@@ -2980,8 +3016,10 @@ function AppDashboard({
             )}
 
             {(activeSection === "chart" || activeSection === "markets") && (() => {
-              // Built once, rendered in exactly ONE of two possible spots
-              // below depending on isWideDesktop — never both at once, so
+              // chartRightColEl itself is now declared once at component
+              // scope (see its own comment above) so it's shared with the
+              // every-other-page mobile block further down — rendered in
+              // exactly ONE spot at a time regardless of which page, so
               // PaperTradingCard/OrderFlowPanel (which poll live data in
               // the background) are never double-mounted. At every width
               // narrower than 961px this renders exactly where it always
@@ -2989,13 +3027,6 @@ function AppDashboard({
               // preserving the existing tablet/mobile tab-switching
               // behavior untouched); only >=961px moves it into the new
               // experimental second column below.
-              const chartRightColEl = (
-                <div className="chart-right-col">
-                  <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
-                  {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
-                  <OrderFlowPanel coin={coin} events={chartEvents} />
-                </div>
-              );
               // "2col" layout only — Paper Trading / Order Flow Pressure /
               // Order Book as one flat tab row instead of stacked, so the
               // top section never needs its own internal scroll just to
@@ -3091,23 +3122,29 @@ function AppDashboard({
               // column on its own.
               const chartColumnEl = activeSection === "markets" ? (
                 <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
-                  {/* Markets goes through this same chart-layout plumbing as
-                      the Chart page (hence the shared chartColumnEl), which
-                      normally skips SectionBanner entirely — the page-level
-                      one further below is gated off for both "chart" and
-                      "advance-chart" and rendered AFTER this whole block, so
-                      without this it would've landed below GlobalMarkets
-                      instead of above it like every other page. */}
-                  <SectionBanner section="markets" />
-                  <GlobalMarkets
-                    onSelectCoin={(symbol) => {
-                      setCoin(symbol as CoinSymbol);
-                      clearCandleCache();
-                      setRecentCoins(addRecentCoin(symbol));
-                      setActiveSection("chart");
-                    }}
-                  />
-                  {!isWideDesktop && chartRightColEl}
+                  {/* SectionBanner now rendered by GlobalMarkets itself,
+                      inside .gm-wrap — it needs .gm-wrap's own
+                      padding/gap for alignment, and rendering it as an
+                      external sibling here (as every other page's
+                      SectionBanner is) meant duplicating that spacing via
+                      a pile of .chart-column > .sec-banner CSS overrides
+                      instead of just being a normal child. */}
+                  {/* Hidden (not unmounted), same display:none/contents
+                      swap as every other page uses below for the same
+                      mobileChartTab state — keeps GlobalMarkets' own
+                      scroll position/live polling intact across toggles
+                      instead of refetching every time. */}
+                  <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
+                    <GlobalMarkets
+                      onSelectCoin={(symbol) => {
+                        setCoin(symbol as CoinSymbol);
+                        clearCandleCache();
+                        setRecentCoins(addRecentCoin(symbol));
+                        setActiveSection("chart");
+                      }}
+                    />
+                  </div>
+                  {!isWideDesktop && mobileChartTab === "orderbook" && chartRightColEl}
                 </div>
               ) : (
                     <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
@@ -3213,67 +3250,40 @@ function AppDashboard({
               return (
               <>
                 {isWideDesktop && !distractionFree ? (
-                  chartLayoutMode === "2row" ? (
+                  activeSection === "markets" ? (
+                    // Markets desktop: always just chart + Daily Brief (no
+                    // Paper Trading/Order Flow column, no expand toggle —
+                    // the three chartLayoutMode choices below are a Chart-
+                    // page-specific preference between three blocks;
+                    // Markets only ever has two, so it ignores that picker
+                    // entirely), or Daily Brief closed outright via the
+                    // single-column toggle (marketsSingleColumn, its own
+                    // icon next to where that picker would be).
+                    marketsSingleColumn ? (
+                      <div className="chart-page-row">{chartColumnEl}</div>
+                    ) : (
+                      <div className="chart-layout chart-layout--3col">
+                        {chartColumnEl}
+                        <div className="chart-three-col-right">{dailyBriefEl}</div>
+                      </div>
+                    )
+                  ) : chartLayoutMode === "2row" ? (
                     <div className="chart-layout chart-layout--2row">
                       <div className="chart-row-top">{chartColumnEl}</div>
                       <div className="chart-row-bottom">
                         <div className="chart-row-bottom-col">{chartRightColEl}</div>
-                        <div className="chart-row-bottom-col">{dailyBriefEl}</div>
                       </div>
                     </div>
                   ) : chartLayoutMode === "3col" ? (
                     <div className="chart-layout chart-layout--3col">
                       {chartColumnEl}
                       <div className="chart-three-col-mid">{chartRightColEl}</div>
-                      <div className="chart-three-col-right">{dailyBriefEl}</div>
                     </div>
                   ) : (
                     <div className="chart-layout chart-layout--2col">
                       {chartColumnEl}
-                      <div
-                        ref={rightColRef}
-                        className={`chart-two-col-right${rightColExpanded ? " chart-two-col-right--expanded" : ""}`}
-                      >
-                        <button
-                          type="button"
-                          className="chart-col-expand-toggle"
-                          onClick={() => setRightColExpanded((v) => !v)}
-                          title={rightColExpanded ? "Collapse this column" : "Expand this column"}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: rightColExpanded ? "rotate(180deg)" : "none" }}>
-                            <polyline points="15 6 9 12 15 18" />
-                          </svg>
-                        </button>
-                        <div
-                          ref={rightColTopRef}
-                          className={`chart-two-col-right-row chart-two-col-right-row--top${rightColSplit !== null ? " chart-two-col-right-row--top-manual" : ""}`}
-                          style={rightColSplit !== null ? { height: `${rightColSplit}%` } : undefined}
-                        >
-                          {chartRightColTabbedEl}
-                        </div>
-                        {/* A sibling between the two rows, not a border/
-                            pseudo-element inside either one — both rows
-                            scroll internally, and anything living inside
-                            them would scroll away with their content
-                            instead of staying put as a fixed divider.
-                            Doubles as the drag handle that adjusts
-                            rightColSplit (the top row's max-height %). */}
-                        <div
-                          className={`chart-two-col-right-divider${rightColDividerIntro ? " chart-two-col-right-divider--intro" : ""}`}
-                          onPointerDown={onRightColResizeDown}
-                          onPointerMove={onRightColResizeMove}
-                          onPointerUp={onRightColResizeUp}
-                          title="Drag to resize"
-                        >
-                          {/* A real visible label for the on-load hint, not
-                              just the title="" tooltip above (which only
-                              shows on hover, so it never actually
-                              announces itself on its own). */}
-                          {rightColDividerIntro && <span className="chart-two-col-right-divider-label">Drag to resize</span>}
-                        </div>
-                        <div className="chart-two-col-right-row chart-two-col-right-row--bottom">
-                          {dailyBriefEl}
-                        </div>
+                      <div className="chart-two-col-right">
+                        {chartRightColTabbedEl}
                       </div>
                     </div>
                   )
@@ -3331,6 +3341,14 @@ function AppDashboard({
                 }}
               />
             )}
+            {/* Hidden (not unmounted) rather than swapped out entirely
+                while mobileChartTab is "orderbook" — same reasoning as
+                candleAIVisited's own display:none/contents toggle just
+                inside here: the page underneath (incl. CandleWatcher's
+                already-persisted instance) keeps its scroll position/
+                live polling/local state instead of refetching every time
+                chart-right-col is flipped on and back off. */}
+            <div style={{ display: mobileChartTab === "orderbook" ? "none" : "contents" }}>
             {activeSection !== "chart" && activeSection !== "advance-chart" && activeSection !== "markets" && (
               <SectionBanner section={activeSection} />
             )}
@@ -3444,6 +3462,40 @@ function AppDashboard({
                 </Suspense>
               </div>
             )}
+            </div>
+            {/* Paper Trading / Order Flow Pressure — only while mobileChartTab
+                is "orderbook", replacing the page above instead of
+                stacking below it. Chart/Markets never hit this (they
+                already render the exact same chartRightColEl as part of
+                their own layout, driven by the same mobileChartTab state
+                — never both at once). Advance Chart has no equivalent
+                slot at all, so it's excluded rather than silently broken. */}
+            {!isWideDesktop && mobileChartTab === "orderbook" && activeSection !== "chart" && activeSection !== "markets" && activeSection !== "advance-chart" && chartRightColEl}
+          </div>
+          {/* Paper Trading / Buy Signals, added as a real column here
+              when activated from their top-bar icons (desktop only —
+              nothing ever renders into this on mobile/native, so it
+              stays :empty/collapsed there), removed again the moment
+              they're toggled off. BuySignals portals its own column
+              content into this same element via columnTarget; Paper
+              Trading's is simple enough to just render directly. */}
+          <aside className="activated-panels-rail" ref={setActivatedPanelsRailEl}>
+            {paperTradingFlyoutOpen && (
+              <div className="activated-panel">
+                <div className="activated-panel-head">
+                  <button
+                    type="button"
+                    className="activated-panel-close"
+                    onClick={() => setPaperTradingFlyoutOpen(false)}
+                    aria-label={t("common.close", "Close")}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {chartRightColEl}
+              </div>
+            )}
+          </aside>
           </div>
         </div>
 
