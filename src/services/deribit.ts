@@ -172,8 +172,48 @@ function pickDefaultExpiry(expiries: ExpiryGroup[]): ExpiryGroup | null {
   return expiries.find(e => e.totalOI >= MIN_OI_FLOOR) ?? expiries[0];
 }
 
+// ── DVOL (Deribit's own implied-volatility index) ─────────────────────────────
+// Real, free, no-key public endpoint — NOT CoinMarketCap's "Volmex" (a
+// different provider/brand); callers should label this honestly as
+// "DVOL (Deribit)". Separate, shorter-lived cache from the options
+// snapshot above since DVOL moves on its own clock, not an options chain's.
+const VOL_CACHE_TTL = 60 * 1000;
+const volCache = new Map<OptionCurrency, { value: number; fetchedAt: number }>();
+const volInFlight = new Map<OptionCurrency, Promise<number | null>>();
+
+async function fetchDvol(currency: OptionCurrency): Promise<number | null> {
+  const cached = volCache.get(currency);
+  if (cached && Date.now() - cached.fetchedAt < VOL_CACHE_TTL) return cached.value;
+
+  const flying = volInFlight.get(currency);
+  if (flying) return flying;
+
+  const doFetch = async (): Promise<number | null> => {
+    try {
+      const now = Date.now();
+      // 2h window at 1h resolution — comfortably returns at least one candle.
+      const start = now - 2 * 60 * 60 * 1000;
+      const res = await deribitApi.get('/get_volatility_index_data', {
+        params: { currency, start_timestamp: start, end_timestamp: now, resolution: 3600 },
+      });
+      const data = res.data?.result?.data as [number, number, number, number, number][] | undefined;
+      if (!data?.length) return cached?.value ?? null;
+      const value = data[data.length - 1][4]; // close of the latest candle
+      volCache.set(currency, { value, fetchedAt: Date.now() });
+      return value;
+    } catch {
+      return cached?.value ?? null;
+    }
+  };
+
+  const promise = doFetch().finally(() => volInFlight.delete(currency));
+  volInFlight.set(currency, promise);
+  return promise;
+}
+
 export const deribit = {
   getOptionsSnapshot: fetchSnapshot,
   computeExpiryStats,
   pickDefaultExpiry,
+  getVolatilityIndex: fetchDvol,
 };

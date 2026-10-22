@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import "../styles/GlobalMarkets.css";
 import { SectionBanner } from "./SectionBanner";
+import { deribit } from "../services/deribit";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface GlobalData {
@@ -59,6 +60,15 @@ const CHART_TABS = [
 ] as const;
 
 type ChartKey = typeof CHART_TABS[number]["key"];
+
+// Standalone "Crypto Market Cap" card's own period tabs — separate from
+// the BTC chart's own PERIODS above since this card has a different range
+// set (matches CoinMarketCap's own 30d/1y/All), not shared state.
+const MCAP_PERIODS = [
+  { label: "30D", days: 30 },
+  { label: "1Y",  days: 365 },
+  { label: "All", days: "max" as const },
+] as const;
 
 // CoinGlass's own liquidation endpoints are all currently rejecting with
 // "Upgrade plan" on the live key (verified directly against the proxy), so
@@ -122,7 +132,7 @@ function useCountUp(value: number, durationMs = 900): number {
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
-const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000 };
+const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000 };
 const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 
 async function cgFetch<T>(url: string, ttl: number): Promise<T> {
@@ -327,7 +337,30 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const [liqRange, setLiqRange]   = useState<{ label: string; days: number }>(LIQ_RANGES[1]);
   const [liqData, setLiqData]     = useState<{ time: string; ret: number; price: number }[]>([]);
   const [liqLoading, setLiqLoading] = useState(true);
+  // BTC/ETH open interest, in base-asset units (BTC/ETH), Binance perps via
+  // Coinalyze — see fetch effect below. Converted to USD at render time
+  // using the real spot prices already fetched into `coins`. Deliberately
+  // NOT a global/aggregate-across-the-whole-market OI total: CoinGlass's
+  // own OI endpoints (which could potentially give one) are all currently
+  // rejecting with "Upgrade plan" on the live key (re-verified directly
+  // against the proxy), so this sticks to the one real figure confirmed
+  // reachable — Binance's own BTC/ETH perpetual OI — labeled as such, not
+  // relabeled as "the market total".
+  const [oi, setOi] = useState<{ btcAmt: number; ethAmt: number } | null>(null);
+  // Deribit DVOL — real implied-volatility index, but Deribit's own brand,
+  // not CoinMarketCap's "Volmex" widget (different data provider). Labeled
+  // honestly in the UI as "DVOL (Deribit)".
+  const [dvol, setDvol] = useState<{ btc: number; eth: number } | null>(null);
+  // Standalone "Crypto Market Cap" card state — own period, own series
+  // (mcap + volume together, for the line+volume-bars combo chart), not
+  // reusing the BTC chart's chartData/period above.
+  const [mcapPeriod, setMcapPeriod] = useState<typeof MCAP_PERIODS[number]>(MCAP_PERIODS[0]);
+  const [mcapSeries, setMcapSeries] = useState<{ time: string; mcap: number; vol: number }[]>([]);
+  const [mcapLoading, setMcapLoading] = useState(true);
   const mountedRef = useRef(true);
+  // Current BTC dominance fraction — needed by the mcap-card effect below
+  // to derive its estimated total-market-cap series (see its own comment).
+  const btcDomPct = global?.market_cap_percentage?.btc ?? 0;
 
   // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
@@ -397,6 +430,40 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       .catch(() => {});
   }, []);
 
+  // BTC/ETH open interest — Coinalyze's free API, Binance perps specifically
+  // (the ".A" exchange-code suffix is Binance's own Coinalyze code, verified
+  // against Coinalyze's /v1/exchanges list — not an "aggregated" marker).
+  // Same proxy (/coinalyze-api, mirrored in prod by middleware.ts) and
+  // base-units-to-USD convention src/services/coinglass.ts already uses for
+  // its own OI fallback. Independent fetch/failure — never blocks the rest
+  // of the page.
+  useEffect(() => {
+    plainFetch<{ symbol: string; value: number }[]>(
+      "/coinalyze-api/v1/open-interest?symbols=BTCUSDT_PERP.A,ETHUSDT_PERP.A",
+      TTL.oi
+    )
+      .then(rows => {
+        if (!mountedRef.current) return;
+        const btcAmt = rows.find(r => r.symbol === "BTCUSDT_PERP.A")?.value;
+        const ethAmt = rows.find(r => r.symbol === "ETHUSDT_PERP.A")?.value;
+        if (btcAmt != null && ethAmt != null) setOi({ btcAmt, ethAmt });
+      })
+      .catch(() => {});
+  }, []);
+
+  // DVOL (Deribit's own implied-volatility index) — real, free, no-key
+  // public endpoint; see src/services/deribit.ts's getVolatilityIndex for
+  // why this is labeled "DVOL (Deribit)", not "Volmex" (different
+  // provider). Independent fetch/failure, same reasoning as the others.
+  useEffect(() => {
+    Promise.all([deribit.getVolatilityIndex("BTC"), deribit.getVolatilityIndex("ETH")])
+      .then(([btc, eth]) => {
+        if (!mountedRef.current) return;
+        if (btc != null && eth != null) setDvol({ btc, eth });
+      })
+      .catch(() => {});
+  }, []);
+
   // Fetch chart data when period or chartKey changes (free-tier BTC market chart)
   useEffect(() => {
     setChartLoading(true);
@@ -414,6 +481,33 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       })
       .catch(() => setChartLoading(false));
   }, [period, chartKey]);
+
+  // Standalone "Crypto Market Cap" card's own series — CoinGecko's free
+  // tier has no historical TOTAL-market-cap endpoint (/global/market_cap_
+  // chart is Pro-only — verified live against the proxy, returns
+  // error_code 10005 "limited to PRO API subscribers"), so this derives it
+  // from the real BTC market-cap/volume series ÷ the CURRENT BTC dominance
+  // fraction. An approximation, not exact (dominance drifts day to day
+  // across the window), disclosed via .gm-chart-est-note below rather than
+  // presented as a literal historical total — same house rule as
+  // altcoinStrengthPct/marketActivity elsewhere in this file.
+  useEffect(() => {
+    setMcapLoading(true);
+    const url = `/gecko-api/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${mcapPeriod.days}`;
+    cgFetch<{ market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart)
+      .then(d => {
+        const divisor = btcDomPct > 0 ? btcDomPct / 100 : 1;
+        const vols = d.total_volumes ?? [];
+        const pts = (d.market_caps ?? []).map(([ts, mcapVal], i) => ({
+          time: fmtDate(ts, typeof mcapPeriod.days === "number" ? mcapPeriod.days : 365),
+          mcap: mcapVal / divisor / 1e9,
+          vol: (vols[i]?.[1] ?? 0) / divisor / 1e9,
+        }));
+        setMcapSeries(pts);
+        setMcapLoading(false);
+      })
+      .catch(() => setMcapLoading(false));
+  }, [mcapPeriod, btcDomPct]);
 
   // "Market Pulse" chart data — resample CoinGecko's raw (hourly-for-short-
   // range) BTC price series down to one point per day, then derive each
@@ -453,6 +547,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const g = global!;
   const vol    = g.total_volume?.usd ?? 0;
   const btcDom = g.market_cap_percentage?.btc ?? 0;
+  const ethDom = g.market_cap_percentage?.eth ?? 0;
   const chg24h = g.market_cap_change_percentage_24h_usd ?? 0;
 
   // Dominance — top 6 coins, donut chart
@@ -464,6 +559,10 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     ...domEntries.map(([sym, pct], i) => ({ name: sym.toUpperCase(), value: pct, fill: DOM_COLORS[i] })),
     { name: "Others", value: othersPct, fill: DOM_COLORS[6] },
   ];
+  // Simple 3-segment version of the same real dominance data for the
+  // horizontal-bar widget (BTC / ETH / Others), matching the screenshot's
+  // layout — no new fetch, same g.market_cap_percentage already used above.
+  const othersDomPct = Math.max(0, 100 - btcDom - ethDom);
 
   const gainers = [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, gainersExpanded ? 20 : 5);
   const losers = [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, losersExpanded ? 20 : 5);
@@ -488,10 +587,19 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // data computation over a 30-day window instead, labeled as such rather
   // than claiming parity with the original index's name/window.
   const btcRow = coins.find(c => c.id === "bitcoin");
+  const ethRow = coins.find(c => c.id === "ethereum");
   const btc30d = btcRow?.price_change_percentage_30d_in_currency ?? 0;
   const altcoinBasket = coins.filter(c => c.id !== "bitcoin" && c.id !== "tether" && c.id !== "usd-coin").slice(0, 50);
   const altcoinsBeatingBtc = altcoinBasket.filter(c => (c.price_change_percentage_30d_in_currency ?? -999) > btc30d).length;
   const altcoinStrengthPct = altcoinBasket.length > 0 ? Math.round((altcoinsBeatingBtc / altcoinBasket.length) * 100) : null;
+
+  // Open interest in USD — Coinalyze's base-asset-unit figures (see the `oi`
+  // fetch effect above) × the real current spot price already in `coins`.
+  // Per-coin (Binance perps), not a market-wide total — see the comment on
+  // the `oi` state declaration for why.
+  const oiStats = oi && btcRow && ethRow
+    ? { btcUsd: oi.btcAmt * btcRow.current_price, ethUsd: oi.ethAmt * ethRow.current_price }
+    : null;
 
   // "Market Activity" — real CoinGecko-sourced volume figures, standing
   // in for a Derivatives panel: CoinGlass's own derivatives endpoints
@@ -535,6 +643,27 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
               <span className="gm-dom-pct">{d.value.toFixed(1)}%</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Bitcoin Dominance — same real market_cap_percentage data as the
+          donut above, just re-rendered as a horizontal segmented bar
+          (BTC / ETH / Others) to match the screenshot's layout. No new
+          fetch — see othersDomPct comment above. */}
+      <div className="gm-dom-hbar-wrap">
+        <div className="gm-dom-hbar-head">
+          <span className="gm-dom-hbar-title">Bitcoin Dominance</span>
+          <span className="gm-dom-hbar-value">{btcDom.toFixed(1)}%</span>
+        </div>
+        <div className="gm-dom-hbar">
+          <span className="gm-dom-hbar-seg" style={{ width: `${btcDom}%`, background: DOM_COLORS[0] }} />
+          <span className="gm-dom-hbar-seg" style={{ width: `${ethDom}%`, background: DOM_COLORS[1] }} />
+          <span className="gm-dom-hbar-seg" style={{ width: `${othersDomPct}%`, background: DOM_COLORS[5] }} />
+        </div>
+        <div className="gm-dom-hbar-legend">
+          <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[0] }} />BTC {btcDom.toFixed(1)}%</span>
+          <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[1] }} />ETH {ethDom.toFixed(1)}%</span>
+          <span className="gm-dom-hbar-legend-item"><span className="gm-dom-dot" style={{ background: DOM_COLORS[5] }} />Others {othersDomPct.toFixed(1)}%</span>
         </div>
       </div>
     </>
@@ -633,20 +762,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
               {chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%
             </span>
           </div>
-          {altcoinStrengthPct !== null && (
-            <div className="gm-status-gauge">
-              <div className="gm-status-gauge-head">
-                <span className="gm-status-row-label">Altcoin Strength <em>(30D)</em></span>
-                <span className="gm-status-gauge-value">{altcoinStrengthPct}%</span>
-              </div>
-              <div className="gm-status-gauge-track">
-                <span
-                  className={`gm-status-gauge-fill${altcoinStrengthPct >= 75 ? " gm-status-gauge-fill--season" : ""}`}
-                  style={{ width: `${altcoinStrengthPct}%` }}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Trending Coins (compact) */}
@@ -708,6 +823,91 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
                 ))}
           </div>
         </div>
+        </div>
+      </div>
+
+      {/* ── Altcoin Season + Crypto Market Cap — pulled out as their own
+          standalone cards (not a bar tucked inside the hero, not a tab
+          buried in another chart) so they read the same way
+          CoinMarketCap's own dashboard presents them. ─────────────────── */}
+      <div className="gm-topcards-grid">
+        {altcoinStrengthPct !== null && (
+          <div className="gm-section gm-altseason-card">
+            <div className="gm-section-header">
+              <span className="gm-section-title">Altcoin Season <em>(30D)</em></span>
+            </div>
+            <div className="gm-altseason-value">{altcoinStrengthPct}<span className="gm-altseason-value-max">/100</span></div>
+            <div className="gm-altseason-track">
+              <span className="gm-altseason-dot" style={{ left: `${altcoinStrengthPct}%` }} />
+            </div>
+            <div className="gm-altseason-labels">
+              <span>Bitcoin Season</span>
+              <span>Altcoin Season</span>
+            </div>
+          </div>
+        )}
+
+        <div className="gm-section gm-mcap-card">
+          <div className="gm-section-header">
+            <span className="gm-section-title">Crypto Market Cap</span>
+            <div className="gm-period-tabs">
+              {MCAP_PERIODS.map(p => (
+                <button key={p.label}
+                  className={`gm-period-tab${mcapPeriod.label === p.label ? " gm-period-tab--active" : ""}`}
+                  onClick={() => setMcapPeriod(p)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="gm-mcap-stats">
+            <div className="gm-mcap-stat">
+              <span className="gm-mcap-stat-label">Market Cap</span>
+              <span className="gm-mcap-stat-value">{fmtBig(mcap)}</span>
+            </div>
+            <div className="gm-mcap-stat">
+              <span className="gm-mcap-stat-label">Volume</span>
+              <span className="gm-mcap-stat-value">{fmtBig(vol)}</span>
+            </div>
+          </div>
+          <div className="gm-chart-est-note">Line estimated from BTC market cap ÷ current BTC dominance — not an exact historical series</div>
+          <div className="gm-chart-wrap">
+            {mcapLoading && (
+              <div className="gm-chart-loading">
+                <div className="gm-chart-skel-bars">
+                  {Array.from({ length: 14 }).map((_, i) => (
+                    <span key={i} className="gm-chart-skel-bar" style={{ animationDelay: `${i * 70}ms`, height: `${30 + (i * 37) % 60}%` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {!mcapLoading && mcapSeries.length > 0 && (
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={mcapSeries} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gmMcapGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <XAxis dataKey="time" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} interval={Math.floor(mcapSeries.length / 6)} />
+                  <YAxis yAxisId="mcap" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} width={52}
+                    tickFormatter={v => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}T` : `${v.toFixed(0)}B`}`} />
+                  <YAxis yAxisId="vol" orientation="right" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                    tickLine={false} axisLine={false} width={48}
+                    tickFormatter={v => `$${v.toFixed(0)}B`} />
+                  <Tooltip content={<McapTooltip />} />
+                  <Bar yAxisId="vol" dataKey="vol" fill="var(--color-border)" radius={[2, 2, 0, 0]} isAnimationActive animationDuration={600} />
+                  <Area yAxisId="mcap" type="monotone" dataKey="mcap" stroke="#22c55e" strokeWidth={2}
+                    fill="url(#gmMcapGrad)" dot={false} activeDot={{ r: 4, fill: "#22c55e" }}
+                    isAnimationActive animationDuration={700} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
       </div>
 
@@ -806,6 +1006,69 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
+      {/* ── Open Interest + Implied Volatility — the two screenshot widgets
+          backed by a real, verified-working, free data source. See the
+          `oi`/`dvol` state comments above: OI is Binance's own BTC/ETH
+          perpetual OI via Coinalyze (explicitly NOT a market-wide total —
+          CoinGlass's own OI endpoints still reject with "Upgrade plan" on
+          the live key, re-verified), and DVOL is Deribit's own implied-
+          volatility index (a real substitute for "Volmex", different
+          provider, labeled as such). ─────────────────────────────────────── */}
+      <div className="gm-oivol-grid">
+        <div className="gm-section">
+          <div className="gm-section-header">
+            <span className="gm-section-title">{IC.vol} Open Interest</span>
+            <span className="gm-section-sub">Binance perps, via Coinalyze — not total market</span>
+          </div>
+          <div className="gm-activity-grid">
+            {oiStats ? (
+              <>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.btc}</span>
+                  <span className="gm-activity-tile-value">{fmtBig(oiStats.btcUsd)}</span>
+                  <span className="gm-activity-tile-label">BTC Open Interest</span>
+                </div>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.eth}</span>
+                  <span className="gm-activity-tile-value">{fmtBig(oiStats.ethUsd)}</span>
+                  <span className="gm-activity-tile-label">ETH Open Interest</span>
+                </div>
+              </>
+            ) : (
+              Array.from({ length: 2 }).map((_, i) => (
+                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="gm-section">
+          <div className="gm-section-header">
+            <span className="gm-section-title">{IC.cap} Implied Volatility</span>
+            <span className="gm-section-sub">DVOL (Deribit)</span>
+          </div>
+          <div className="gm-activity-grid">
+            {dvol ? (
+              <>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.btc}</span>
+                  <span className="gm-activity-tile-value">{dvol.btc.toFixed(1)}%</span>
+                  <span className="gm-activity-tile-label">BTC DVOL</span>
+                </div>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.eth}</span>
+                  <span className="gm-activity-tile-value">{dvol.eth.toFixed(1)}%</span>
+                  <span className="gm-activity-tile-label">ETH DVOL</span>
+                </div>
+              </>
+            ) : (
+              Array.from({ length: 2 }).map((_, i) => (
+                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* ── Dominance donut + Chart, side by side ───────────────────────────── */}
       <div className="gm-dom-chart-grid">
@@ -965,6 +1228,18 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
     <div className="gm-tooltip">
       <div className="gm-tooltip-label">{label}</div>
       <div className="gm-tooltip-value">{fmtBig(payload[0].payload.raw)}</div>
+    </div>
+  );
+}
+
+function McapTooltip({ active, payload, label }: { active?: boolean; payload?: { payload: { mcap: number; vol: number } }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="gm-tooltip">
+      <div className="gm-tooltip-label">{label}</div>
+      <div className="gm-tooltip-value">${d.mcap.toFixed(0)}B</div>
+      <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>Vol ${d.vol.toFixed(1)}B</div>
     </div>
   );
 }

@@ -341,23 +341,14 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   const [sheetState, setSheetState] = useState<SheetState>(initialState);
   // "page" variant only — how many of the 3 topic sections (Top Stories/
   // Markets & Economy/Geopolitics) render side by side vs. stacked.
-  // Purely width-driven, always — <=1600px (a Mac laptop's typical
-  // 1440/1512 logical-px default, where 3 real columns leaves each one
-  // too narrow to be worth it) is 2, above that is 3. No persisted
-  // override: an earlier version let a manual click "stick" across
-  // reloads regardless of which screen you were actually on next, which
-  // is exactly the opposite of what this is supposed to do — dragging
-  // the window between a wide external display and the laptop's own
-  // screen (or just resizing it) should always reflect whichever one
-  // it's actually on right now. The 1/2/3 buttons still work, just as a
-  // same-session override that the next resize or reload replaces.
-  const widthToCols = () => (window.innerWidth <= 1600 ? 2 : 3);
-  const [sectionCols, setSectionCols] = useState<1 | 2 | 3>(widthToCols);
-  useEffect(() => {
-    const onResize = () => setSectionCols(widthToCols());
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // Starts at 1 (single column) on every load/reload, regardless of
+  // screen width or any earlier session's choice — the 1/2/3 buttons
+  // below are the only way to widen it, and it's a plain in-session
+  // value (no persistence, no live width-triggered override): an earlier
+  // version auto-corrected this on every resize event, which fought a
+  // deliberate manual pick (or this new default) the moment the window
+  // moved by a pixel — not what either is for.
+  const [sectionCols, setSectionCols] = useState<1 | 2 | 3>(1);
   // Drives .chart-three-col-right's own width (App.css) — that's an
   // ancestor App.tsx renders, not this component, so a CSS custom
   // property on the document root is the simplest way to reach it

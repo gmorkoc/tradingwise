@@ -738,6 +738,139 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Bitcoin Dominance horizontal bar (companion to the donut above) ────── */
+.gm-dom-hbar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.gm-dom-hbar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.gm-dom-hbar-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.gm-dom-hbar-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.gm-dom-hbar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-input-bg);
+}
+.gm-dom-hbar-seg {
+  display: block;
+  height: 100%;
+  transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gm-dom-hbar-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gm-dom-hbar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── "Total Mkt Cap (est.)" chart-tab caption ────────────────────────────── */
+.gm-chart-est-note {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+  margin-top: -4px;
+}
+
+/* ── Open Interest / Implied Volatility cards ────────────────────────────── */
+.gm-oivol-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Altcoin Season + Crypto Market Cap standalone cards ─────────────────── */
+.gm-topcards-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+}
+.gm-altseason-card {
+  justify-content: center;
+}
+.gm-altseason-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+}
+.gm-altseason-value-max {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-left: 2px;
+}
+.gm-altseason-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  margin-top: 8px;
+  background: linear-gradient(90deg, #f7931a, #fde8cf 45%, #cdd9fb 55%, #3b82f6);
+}
+.gm-altseason-dot {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--color-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+  transition: left 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gm-altseason-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.gm-mcap-stats {
+  display: flex;
+  gap: 28px;
+}
+.gm-mcap-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gm-mcap-stat-label {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+.gm-mcap-stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
 /* ── Chart tabs / period tabs ──────────────────────────────────────────────── */
 .gm-chart-tabs,
 .gm-period-tabs {
@@ -1057,7 +1190,9 @@
 }
 @media (max-width: 900px) {
   .gm-dom-chart-grid,
-  .gm-movers-grid { grid-template-columns: 1fr; }
+  .gm-movers-grid,
+  .gm-oivol-grid,
+  .gm-topcards-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .gm-wrap { padding: 16px 0 36px; gap: 20px; }
