@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -229,7 +229,14 @@ function FearGreedGauge({ value, label, compact }: { value: number; label: strin
   }, [targetAngle]);
   const color = fngColor(value);
   return (
-    <div className={`gm-fng${compact ? " gm-fng--compact" : ""}`}>
+    <div
+      className={`gm-fng${compact ? " gm-fng--compact" : ""}`}
+      // CSS custom property, not read anywhere on desktop today — exists so
+      // the mobile-only glow behind this gauge (GlobalMarkets.css) can
+      // match the gauge's own live sentiment color without duplicating the
+      // fngColor() logic in CSS.
+      style={{ "--fng-color": color } as CSSProperties}
+    >
       <svg viewBox="0 0 200 118" className="gm-fng-svg">
         <defs>
           <linearGradient id="gmFngGrad" x1="0" y1="0" x2="1" y2="0">

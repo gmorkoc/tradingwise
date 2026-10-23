@@ -1206,8 +1206,53 @@
      hidden and the real card moves above the hero instead (flex order,
      not a JSX reorder — desktop keeps today's layout untouched). */
   .gm-status-mcap { display: none; }
-  .gm-topcards-grid { order: -1; }
-  .gm-hero { order: 0; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
+  /* Fear & Greed gauge — bigger and a bit more alive on mobile now that
+     .gm-status-mcap above is gone and it's the clear headline of this
+     card: a soft pulsing glow in the gauge's own live sentiment color
+     (--fng-color, set inline on .gm-fng by FearGreedGauge), a glowing
+     needle to match, and larger readout text. */
+  .gm-status-fng { display: flex; justify-content: center; margin: 6px 0 2px; }
+  .gm-fng--compact { width: 220px; position: relative; }
+  .gm-fng--compact::before {
+    content: "";
+    position: absolute;
+    inset: -12px -12px 32% -12px;
+    background: radial-gradient(circle at 50% 72%, color-mix(in srgb, var(--fng-color) 38%, transparent), transparent 70%);
+    filter: blur(10px);
+    z-index: -1;
+    animation: gm-fng-glow-pulse 3s ease-in-out infinite;
+  }
+  .gm-fng--compact .gm-fng-needle { filter: drop-shadow(0 0 5px var(--fng-color)); }
+  /* Scaled up from the base -36px to match this width jump (120px ->
+     220px) — that offset pulls the readout up into the gauge's own arc
+     and needs to grow with the SVG or the number ends up sitting too low. */
+  .gm-fng--compact .gm-fng-readout { margin-top: -66px; }
+  .gm-fng--compact .gm-fng-value { font-size: 2.6rem; }
+  .gm-fng--compact .gm-fng-label { font-size: 0.82rem; }
+  @keyframes gm-fng-glow-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gm-fng--compact::before { animation: none; }
+  }
+  /* Exact mobile order: banner, then Crypto Market Cap, then Market Status
+     (the hero), then Altcoin Season. display:contents removes the grid
+     wrapper's own box so its two cards (gm-mcap-card/gm-altseason-card)
+     become direct flex items of .gm-wrap itself, alongside .sec-banner and
+     .gm-hero — only then can `order` interleave them in a single sequence,
+     since `order` only reorders siblings sharing one parent, and these
+     four things started out three levels apart. The cards keep their own
+     box/padding (only the GRID's box disappears), so nothing inside them
+     loses hit-testing — unlike wrapping an interactive element itself in
+     display:contents (see the TradingAgent orb regression from earlier),
+     this is applied to a layout-only container with no listeners of its
+     own, and its children are untouched. */
+  .gm-topcards-grid { display: contents; }
+  .gm-wrap > .sec-banner { order: -3; }
+  .gm-mcap-card { order: -2; }
+  .gm-hero { order: -1; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
+  .gm-altseason-card { order: 0; }
   .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; row-gap: 14px; }
   .gm-status-col + .gm-status-col { border-left: none; padding-top: 14px; border-top: 1px solid var(--color-border); }
