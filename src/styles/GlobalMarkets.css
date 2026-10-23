@@ -122,21 +122,18 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  align-items: stretch;
 }
 .gm-status-col {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 14px 16px;
-  /* All 4 columns stretch to match the tallest one (grid's default
-     align-items:stretch) — capped + clipped to roughly Market Activity's
-     own natural height (the most compact column) instead of however
-     tall the biggest one's content happens to be, per request. Each
-     taller column's own internals are trimmed to actually fit inside
-     this instead of just clipping awkwardly (gauge/tile/chart sizes
-     below). */
-  max-height: 230px;
-  overflow: hidden;
+  /* No forced max-height — that was clipping real content (the Fear &
+     Greed badge, BTC Dominance tile). All 4 columns still stretch to
+     match the tallest one (grid's default align-items:stretch); each
+     column's own internals just stay reasonably compact on their own
+     merits instead of being force-capped. */
   background: var(--color-card-bg);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -208,7 +205,10 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 158px;
+  /* Trimmed to better match Market Activity's own natural height — still
+     a real scrollbar (overflow-y:auto), not a hard clip, so nothing
+     becomes unreachable, just scrolls into view. */
+  max-height: 142px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
@@ -425,7 +425,7 @@
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  height: 34px;
+  height: 26px;
 }
 .gm-derivatives-mini-chart span {
   flex: 1;
