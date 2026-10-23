@@ -340,6 +340,11 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // much to mount/animate at once, same reasoning any large data table
   // paginates instead of rendering everything up front.
   const [tablePage, setTablePage] = useState(1);
+  // Gainers/Losers banner — page 1 (index 0) is Gainers, page 2 (index 1)
+  // is Losers, with an auto-advancing progress bar (gm-mover-banner-
+  // progress-fill below) between them, same "1/2 pager + arrows" pattern
+  // as a reference screenshot of a trending-stocks widget.
+  const [moverPage, setMoverPage] = useState<0 | 1>(0);
   const [trending, setTrending]   = useState<TrendingCoin[]>([]);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
   // Full history for the mobile-only "Fear & Greed Index Chart" section
@@ -384,6 +389,13 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // to derive its estimated total-market-cap series (see its own comment).
   const btcDomPct = global?.market_cap_percentage?.btc ?? 0;
 
+  // Auto-advance the Gainers/Losers pager every 5s — restarts whenever
+  // the page changes, including a manual arrow click, so a user who just
+  // navigated isn't immediately bounced to the other page.
+  useEffect(() => {
+    const t = setTimeout(() => setMoverPage(p => (p === 0 ? 1 : 0)), 5000);
+    return () => clearTimeout(t);
+  }, [moverPage]);
 
   // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
@@ -1269,57 +1281,47 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
-      {/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" design (picked
-          from 5 sketch concepts): gainers on the left, losers on the
-          right, both visible at once (no switch), each coin a quiet
-          neutral row with a colored left stripe + inline sparkline. The
-          page's only Gainers/Losers UI now — the old plain two-column
-          lists were redundant with this. */}
-      {(gainers.length > 0 || losers.length > 0) && (
-        <div className="gm-mover-banner-grid">
-          <div className="gm-section gm-mover-banner gm-mover-banner--gainers">
+      {/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" rows (picked
+          from 5 sketch concepts), paged 1/2 (Gainers/Losers) with arrows
+          and an auto-advancing progress bar, matching a reference
+          screenshot's trending-widget pager pattern. */}
+      {(gainers.length > 0 || losers.length > 0) && (() => {
+        const list = moverPage === 0 ? gainers : losers;
+        const label = moverPage === 0 ? "▲ Top Gainers" : "▼ Top Losers";
+        return (
+          <div className={`gm-section gm-mover-banner gm-mover-banner--${moverPage === 0 ? "gainers" : "losers"}`}>
             <div className="gm-mover-banner-top">
-              <span className="gm-section-title gm-mover-banner-title--up">▲ Top Gainers</span>
-              <span className="gm-mover-banner-rank">24h</span>
+              <span className={`gm-section-title${moverPage === 0 ? " gm-mover-banner-title--up" : " gm-mover-banner-title--down"}`}>{label}</span>
+              <div className="gm-mover-banner-pager">
+                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
+                  onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>‹</button>
+                <span className="gm-mover-banner-pager-label">{moverPage + 1}/2</span>
+                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
+                  onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>›</button>
+              </div>
             </div>
             <div className="gm-mover-banner-list">
-              {gainers.map((c, i) => (
+              {list.map((c, i) => (
                 <button type="button" key={c.id} className="gm-mover-banner-card"
                   style={{ animationDelay: `${i * 45}ms` }}
                   onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
                   <div className="gm-mover-banner-id">
                     <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
                     <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
-                    <span className="gm-mover-banner-pct">▲ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
+                    <span className="gm-mover-banner-pct">
+                      {moverPage === 0 ? "▲" : "▼"} {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%
+                    </span>
                   </div>
-                  <Sparkline data={c.sparkline_in_7d?.price} color="#22c55e" width={56} height={40} />
+                  <Sparkline data={c.sparkline_in_7d?.price} color={moverPage === 0 ? "#22c55e" : "#fb7185"} width={56} height={40} />
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="gm-section gm-mover-banner gm-mover-banner--losers">
-            <div className="gm-mover-banner-top">
-              <span className="gm-section-title gm-mover-banner-title--down">▼ Top Losers</span>
-              <span className="gm-mover-banner-rank">24h</span>
-            </div>
-            <div className="gm-mover-banner-list">
-              {losers.map((c, i) => (
-                <button type="button" key={c.id} className="gm-mover-banner-card"
-                  style={{ animationDelay: `${i * 45}ms` }}
-                  onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  <div className="gm-mover-banner-id">
-                    <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
-                    <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
-                    <span className="gm-mover-banner-pct">▼ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
-                  </div>
-                  <Sparkline data={c.sparkline_in_7d?.price} color="#fb7185" width={56} height={40} />
-                </button>
-              ))}
+            <div className="gm-mover-banner-progress-track">
+              <span key={moverPage} className="gm-mover-banner-progress-fill" />
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Top coins table (paginated) ─────────────────────────────────────── */}
       <div className="gm-section gm-table-section">

@@ -823,7 +823,7 @@
   display: contents;
 }
 .gm-wrap > .sec-banner { order: -6; }
-.gm-mover-banner-grid { order: -5; }
+.gm-mover-banner { order: -5; }
 .gm-table-section { order: -4; }
 .gm-mcap-card { order: -3; }
 .gm-hero { order: -2; }
@@ -1037,23 +1037,11 @@
 
 /* ── Gainers / Losers ─────────────────────────────────────────────────────── */
 .gm-dom-chart-grid,
-/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" (picked from 5
-   sketch concepts): gainers left, losers right, both visible at once —
-   each row a quiet neutral card with a colored left stripe, not a loud
-   full-color tile. ────────────────────────────────────────────────────── */
-.gm-mover-banner-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
+/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" rows (picked from
+   5 sketch concepts), paged 1/2 (Gainers/Losers) with arrows and an
+   auto-advancing progress bar instead of a side-by-side split. ─────────── */
 .gm-mover-banner {
   gap: 12px;
-  /* Grid items default to min-width:auto (content's own intrinsic size),
-     not 0 — without this, this card grows to fit its horizontally-
-     scrolling list's full content width instead of staying inside its
-     1fr track, so the two columns stop actually sitting side by side and
-     the inner scroll never kicks in. */
-  min-width: 0;
 }
 .gm-mover-banner-top {
   display: flex;
@@ -1063,9 +1051,64 @@
 }
 .gm-mover-banner-title--up { color: var(--color-success); }
 .gm-mover-banner-title--down { color: var(--color-danger); }
-.gm-mover-banner-rank {
-  font-size: 0.72rem;
+.gm-mover-banner-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gm-mover-banner-pager-arrow {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-input-bg);
   color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gm-mover-banner-pager-arrow:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+.gm-mover-banner-pager-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: center;
+}
+.gm-mover-banner-progress-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.gm-mover-banner-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  width: 0%;
+  /* Matches the 5000ms setTimeout in GlobalMarkets.tsx exactly — this bar
+     IS the countdown to the next page, not just decoration. Remounts
+     (key={moverPage}) on every page change, manual or automatic, so it
+     always restarts from empty. */
+  animation: gm-mover-banner-progress 5s linear forwards;
+}
+.gm-mover-banner--gainers .gm-mover-banner-progress-fill { background: var(--color-success); }
+.gm-mover-banner--losers .gm-mover-banner-progress-fill { background: var(--color-danger); }
+@keyframes gm-mover-banner-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gm-mover-banner-progress-fill { animation: none; width: 100%; }
 }
 .gm-mover-banner-list {
   display: flex;
@@ -1289,7 +1332,6 @@
      (universal, see its base rule above), so grid-template-columns on it
      has no effect either way. */
   .gm-dom-chart-grid,
-  .gm-mover-banner-grid,
   .gm-oivol-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
