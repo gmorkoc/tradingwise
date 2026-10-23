@@ -571,7 +571,11 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const activeTab = CHART_TABS.find(t => t.key === chartKey)!;
 
   const mcap   = global?.total_market_cap?.usd ?? 0;
-  const mcapAnimated = useCountUp(mcap / 1e9, 1100); // in $B, animated
+  // Raw dollar value animated (not pre-divided into $B) — fmtBig below
+  // picks the right unit (T/B/M) itself, same as the Crypto Market Cap
+  // card's own stat does; this used to always divide by 1e9 and hardcode
+  // a "B" suffix, so a $2.75T cap displayed as the harder-to-read "$2752.6B".
+  const mcapAnimated = useCountUp(mcap, 1100);
 
   if (loading) return <GmSkeleton />;
   if (error) return (
@@ -791,7 +795,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
             </div>
           )}
           <div className={`gm-status-mcap${chg24h >= 0 ? " gm-status-mcap--up" : " gm-status-mcap--down"}`}>
-            <span className="gm-status-mcap-value">${mcapAnimated.toFixed(1)}B</span>
+            <span className="gm-status-mcap-value">{fmtBig(mcapAnimated)}</span>
             <span className={`gm-status-row-chg${chg24h >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
               {chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%
             </span>
