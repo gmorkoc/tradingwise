@@ -805,17 +805,21 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
             </div>
           </div>
           <div className="gm-status-list">
-            {(moverPage === 0 ? gainers : losers).slice(0, 5).map((c, i) => {
+            {(moverPage === 0 ? gainers : losers).slice(0, 5).map((c) => {
               const pct = Math.abs(c.price_change_percentage_24h ?? 0);
               return (
                 <button key={c.id} type="button" className="gm-status-list-row" onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  <span className={`gm-status-list-rank${i < 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][i]}` : ""}`}>{i + 1}</span>
-                  <img src={c.image} alt="" className="gm-status-list-img" loading="lazy" />
-                  <span className="gm-status-list-sym">{c.symbol.toUpperCase()}</span>
-                  <span className="gm-status-list-price">{fmtPrice(c.current_price)}</span>
-                  <span className={`gm-status-list-chg${moverPage === 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
-                    {moverPage === 0 ? "▲" : "▼"} {pct.toFixed(1)}%
+                  <span className="gm-status-list-main">
+                    <img src={c.image} alt="" className="gm-status-list-img" loading="lazy" />
+                    <span className="gm-status-list-info">
+                      <span className="gm-status-list-sym">{c.symbol.toUpperCase()}</span>
+                      <span className="gm-status-list-price">{fmtPrice(c.current_price)}</span>
+                      <span className={`gm-status-list-chg${moverPage === 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
+                        {moverPage === 0 ? "▲" : "▼"} {pct.toFixed(1)}%
+                      </span>
+                    </span>
                   </span>
+                  <Sparkline data={c.sparkline_in_7d?.price} color={moverPage === 0 ? "#22c55e" : "#fb7185"} width={56} height={32} />
                 </button>
               );
             })}

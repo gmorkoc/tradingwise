@@ -19,7 +19,8 @@ html[data-theme="light"] .gm-wrap {
 html[data-theme="light"] .gm-status-col {
   border-color: rgba(15, 23, 42, 0.06);
 }
-html[data-theme="light"] .gm-activity-tile {
+html[data-theme="light"] .gm-activity-tile,
+html[data-theme="light"] .gm-marketstatus-tile {
   background: rgba(15, 23, 42, 0.025);
 }
 
@@ -267,11 +268,11 @@ html[data-theme="light"] .gm-activity-tile {
   all: unset;
   box-sizing: border-box;
   flex-shrink: 0;
-  min-height: 24px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 3px 4px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -279,56 +280,37 @@ html[data-theme="light"] .gm-activity-tile {
 .gm-status-list-row:hover {
   background: var(--color-input-bg);
 }
-.gm-status-list-rank {
-  width: 14px;
-  flex-shrink: 0;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-}
-/* Top-3 trending rows get a little medal-colored circle instead of a
-   plain number. */
-.gm-status-list-rank--gold,
-.gm-status-list-rank--silver,
-.gm-status-list-rank--bronze {
-  box-sizing: border-box;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-  font-size: 0.6rem;
-}
-.gm-status-list-rank--gold { background: linear-gradient(135deg, #fde68a, #f59e0b); }
-.gm-status-list-rank--silver { background: linear-gradient(135deg, #e2e8f0, #94a3b8); }
-.gm-status-list-rank--bronze { background: linear-gradient(135deg, #fdba74, #b45309); color: #fff; }
 .gm-status-col-icon {
   display: flex;
   color: var(--color-primary);
 }
+.gm-status-list-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .gm-status-list-img {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.gm-status-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .gm-status-list-sym {
   font-size: 0.74rem;
   font-weight: 800;
   color: var(--color-text);
-  flex-shrink: 0;
 }
 .gm-status-list-price {
-  flex: 1;
-  min-width: 0;
-  text-align: right;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .gm-status-list-chg {
   font-size: 0.68rem;
@@ -369,6 +351,10 @@ html[data-theme="light"] .gm-activity-tile {
   display: flex;
   color: var(--color-primary);
   margin-bottom: 2px;
+}
+.gm-activity-tile-icon svg {
+  width: 26px;
+  height: 26px;
 }
 .gm-activity-tile-value {
   font-size: 0.86rem;
