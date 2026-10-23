@@ -1048,6 +1048,12 @@
 }
 .gm-mover-banner {
   gap: 12px;
+  /* Grid items default to min-width:auto (content's own intrinsic size),
+     not 0 — without this, this card grows to fit its horizontally-
+     scrolling list's full content width instead of staying inside its
+     1fr track, so the two columns stop actually sitting side by side and
+     the inner scroll never kicks in. */
+  min-width: 0;
 }
 .gm-mover-banner-top {
   display: flex;
