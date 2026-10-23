@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*'] };
 
 const ALLOWED_ORIGINS = ['https://www.coinhintz.io', 'https://coinhintz.io', 'http://localhost:5173', 'http://localhost:4173'];
 
@@ -40,6 +40,31 @@ export default async function middleware(req: Request): Promise<Response> {
     upstream.search = url.search;
     const response = await fetch(upstream.toString(), {
       headers: { accept: 'application/json', 'api_key': process.env.VITE_COINALYZE_API_KEY ?? '' },
+    });
+    const text = await response.text();
+    return new Response(text, {
+      status: response.status,
+      headers: { 'content-type': 'application/json', ...corsHeaders(req) },
+    });
+  }
+
+  // ── CoinGecko proxy ────────────────────────────────────────────────────────
+  // Free tier, no key/auth needed — this was missing from `matcher` above
+  // entirely, so every /gecko-api/* call (GlobalMarkets.tsx's historical
+  // chart series, MarketHeatmap.tsx, coinMeta.ts) silently 404'd on the
+  // production domain (and therefore in the native iOS app, which points
+  // at it) while working fine in dev only because vite.config.ts's own dev
+  // proxy has a matching rule — same class of bug as the api/ serverless-
+  // functions-unreachable-in-prod issue, just for middleware's matcher
+  // instead. The other CoinGecko calls in this app (global/coins/markets/
+  // trending/sentiment) go straight to api.coingecko.com directly instead
+  // of through this proxy — those never hit this gap.
+  if (url.pathname.startsWith('/gecko-api/')) {
+    const gkPath = url.pathname.replace(/^\/gecko-api\//, '');
+    const upstream = new URL(`https://api.coingecko.com/${gkPath}`);
+    upstream.search = url.search;
+    const response = await fetch(upstream.toString(), {
+      headers: { accept: 'application/json' },
     });
     const text = await response.text();
     return new Response(text, {
