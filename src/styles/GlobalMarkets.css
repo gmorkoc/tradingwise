@@ -527,15 +527,10 @@
   width: 150px;
 }
 .gm-fng--compact {
-  /* Width/readout-offset relationship left untouched — shrinking the
-     width and guessing a scaled-down offset broke the number/badge
-     position twice already. Instead: trim the real dead space that sits
-     below the needle pivot (see FearGreedGauge's own SVG — the viewBox
-     is taller than the visible arc/needle/readout content) with a
-     negative margin, pulling whatever comes after this tile closer
-     without touching the gauge's own internal layout at all. */
+  /* The -14px negative margin I tried here clipped the "Neutral" badge
+     (guessed without being able to see the actual render) — reverted.
+     120px, no margin hack: this is the proven-correct, un-broken size. */
   width: 120px;
-  margin-bottom: -14px;
 }
 .gm-fng-svg {
   width: 100%;
