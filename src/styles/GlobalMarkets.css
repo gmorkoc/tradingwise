@@ -1390,9 +1390,12 @@ html[data-theme="light"] .gm-marketstatus-tile {
      border and the tooltip border are untouched. */
   .gm-hero,
   .gm-section,
+  .gm-status-col,
   .gm-liq-stat-card,
   .gm-liq-events-card,
   .gm-liq-chart-card {
     border: none;
+    box-shadow: none;
+    background: transparent;
   }
 }
