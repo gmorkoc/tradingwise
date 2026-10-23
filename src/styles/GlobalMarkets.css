@@ -13,7 +13,14 @@
    on top (.gm-section/.gm-status-col, already var(--color-card-bg)) read
    as distinctly "lifted" surfaces rather than blending into the page. */
 html[data-theme="light"] .gm-wrap {
-  background: linear-gradient(180deg, #eef2f7 0%, #f7f9fc 55%, #eef1f6 100%);
+  /* Mostly white, just a whisper of gray — not a visible color tint. */
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 50%, #ffffff 100%);
+}
+html[data-theme="light"] .gm-status-col {
+  border-color: rgba(15, 23, 42, 0.06);
+}
+html[data-theme="light"] .gm-activity-tile {
+  background: rgba(15, 23, 42, 0.025);
 }
 
 /* The Markets page's SectionBanner is now GlobalMarkets' own first
@@ -164,11 +171,39 @@ html[data-theme="light"] .gm-wrap {
   align-items: center;
   gap: 6px;
 }
-.gm-trending-pager-dot {
-  width: 7px;
-  height: 7px;
+@property --gm-pager-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.gm-trending-pager-ring {
+  --gm-pager-angle: 0deg;
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--color-primary) var(--gm-pager-angle), var(--color-border) var(--gm-pager-angle));
+  animation: gm-pager-ring-fill 5s linear forwards;
+  flex-shrink: 0;
+}
+.gm-trending-pager-ring::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--color-card-bg);
+}
+.gm-trending-pager-ring-dot {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--color-primary);
+}
+@keyframes gm-pager-ring-fill {
+  to { --gm-pager-angle: 360deg; }
 }
 .gm-status-fng {
   display: flex;

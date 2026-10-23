@@ -796,7 +796,12 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
               <span className="gm-mover-banner-pager-label">{moverPage + 1}/2</span>
               <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
                 onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>›</button>
-              <span className="gm-trending-pager-dot" />
+              {/* Progress ring mirrors the 5s auto-advance timer above —
+                  key={moverPage} remounts (restarts) it on every page
+                  change, manual or automatic, so it's always in sync. */}
+              <span key={moverPage} className="gm-trending-pager-ring" aria-hidden="true">
+                <span className="gm-trending-pager-ring-dot" />
+              </span>
             </div>
           </div>
           <div className="gm-status-list">
