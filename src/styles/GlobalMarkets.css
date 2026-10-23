@@ -823,7 +823,7 @@
   display: contents;
 }
 .gm-wrap > .sec-banner { order: -6; }
-.gm-mover-banner { order: -5; }
+.gm-mover-banner-grid { order: -5; }
 .gm-table-section { order: -4; }
 .gm-mcap-card { order: -3; }
 .gm-hero { order: -2; }
@@ -1037,14 +1037,17 @@
 
 /* ── Gainers / Losers ─────────────────────────────────────────────────────── */
 .gm-dom-chart-grid,
-/* ── Gainers/Losers banner — a horizontal strip of cards, all of
-   moverList shown at once and scrollable (not a one-at-a-time rotator).
-   Same "ranked coins in a scrolling row" pattern TopMoversBanner.tsx/
-   .tmb-* already established elsewhere in the app, just using this
-   file's own --color-* tokens instead of --pc-* (TopMoversBanner lives
-   inside .chart-active, this page doesn't). ──────────────────────────── */
+/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" (picked from 5
+   sketch concepts): gainers left, losers right, both visible at once —
+   each row a quiet neutral card with a colored left stripe, not a loud
+   full-color tile. ────────────────────────────────────────────────────── */
+.gm-mover-banner-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
 .gm-mover-banner {
-  gap: 14px;
+  gap: 12px;
 }
 .gm-mover-banner-top {
   display: flex;
@@ -1052,126 +1055,70 @@
   justify-content: space-between;
   gap: 10px;
 }
-.gm-mover-banner-switch {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--color-input-bg);
-}
-.gm-mover-banner-switch-btn {
-  all: unset;
-  box-sizing: border-box;
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.gm-mover-banner-switch-btn--active-up {
-  background: var(--color-success);
-  color: #fff;
-}
-.gm-mover-banner-switch-btn--active-down {
-  background: var(--color-danger);
-  color: #fff;
-}
+.gm-mover-banner-title--up { color: var(--color-success); }
+.gm-mover-banner-title--down { color: var(--color-danger); }
 .gm-mover-banner-rank {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.72rem;
   color: var(--color-text-secondary);
 }
-.gm-mover-banner-scroll {
+.gm-mover-banner-list {
   display: flex;
-  gap: 10px;
+  flex-direction: row;
+  gap: 8px;
   overflow-x: auto;
-  padding: 3px 2px 6px;
+  padding: 2px 2px 6px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
-/* Bold stat cards — full saturated color (not a faint tint), the coin's
-   own 7d sparkline bled in as a translucent backdrop texture, big % front
-   and center. All text is white/near-white since the card itself IS the
-   color now, not a muted surface with colored accents. */
 .gm-mover-banner-card {
   all: unset;
   box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
   flex-shrink: 0;
-  width: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 14px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: transform 0.15s;
-  animation: gm-rise-in 0.35s ease both;
-}
-.gm-mover-banner-card:hover {
-  transform: translateY(-2px);
-}
-.gm-mover-banner--gainers .gm-mover-banner-card {
-  background: linear-gradient(135deg, #22c55e, #15803d);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-success) 35%, transparent);
-}
-.gm-mover-banner--losers .gm-mover-banner-card {
-  background: linear-gradient(135deg, #fb7185, #be123c);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-danger) 35%, transparent);
-}
-.gm-mover-banner-card-spark {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.22;
-  display: block;
-  line-height: 0;
-}
-.gm-mover-banner-card-spark svg {
-  width: 100%;
-  height: 100%;
-}
-.gm-mover-banner-card-top {
-  position: relative;
-  z-index: 1;
+  width: 168px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+  animation: gm-rise-in 0.3s ease both;
 }
-.gm-mover-banner-img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1.5px solid rgba(255, 255, 255, 0.7);
+.gm-mover-banner-card:hover {
+  background: var(--color-border);
+}
+.gm-mover-banner--gainers .gm-mover-banner-card {
+  border-left-color: var(--color-success);
+}
+.gm-mover-banner--losers .gm-mover-banner-card {
+  border-left-color: var(--color-danger);
+}
+.gm-mover-banner-id {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .gm-mover-banner-sym {
-  position: relative;
-  z-index: 1;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  color: #fff;
-}
-.gm-mover-banner-pct {
-  position: relative;
-  z-index: 1;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
-  white-space: nowrap;
+  color: var(--color-text);
 }
 .gm-mover-banner-price {
-  position: relative;
-  z-index: 1;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
+.gm-mover-banner-pct {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.gm-mover-banner--gainers .gm-mover-banner-pct { color: var(--color-success); }
+.gm-mover-banner--losers .gm-mover-banner-pct { color: var(--color-danger); }
 
 /* ── Top coins table ──────────────────────────────────────────────────────── */
 .gm-table-wrap {
@@ -1336,7 +1283,7 @@
      (universal, see its base rule above), so grid-template-columns on it
      has no effect either way. */
   .gm-dom-chart-grid,
-  .gm-movers-grid,
+  .gm-mover-banner-grid,
   .gm-oivol-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {

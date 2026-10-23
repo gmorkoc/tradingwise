@@ -340,10 +340,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // much to mount/animate at once, same reasoning any large data table
   // paginates instead of rendering everything up front.
   const [tablePage, setTablePage] = useState(1);
-  // Gainers/Losers switch for the horizontal card strip below — the
-  // page's only Gainers/Losers UI now (the old side-by-side lists were
-  // removed as redundant with this).
-  const [moverMode, setMoverMode] = useState<"gainers" | "losers">("gainers");
   const [trending, setTrending]   = useState<TrendingCoin[]>([]);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
   // Full history for the mobile-only "Fear & Greed Index Chart" section
@@ -610,7 +606,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // expand/collapse control now that the old full lists are gone.
   const gainers = [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, 10);
   const losers = [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, 10);
-  const moverList = moverMode === "gainers" ? gainers : losers;
 
   // "Market Pulse" stat card + movers list (see LIQ_RANGES comment above)
   const gainersCount = coins.filter(c => (c.price_change_percentage_24h ?? 0) >= 0).length;
@@ -1274,55 +1269,54 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
-      {/* ── Gainers/Losers banner — a horizontal strip of cards (all of
-          moverList shown at once, scrollable), same pattern
-          TopMoversBanner.tsx already established for "ranked coins in a
-          scrolling row" elsewhere in the app, not a one-at-a-time rotator.
-          The Gainers/Losers switch (moverMode) picks which 10-coin pool
-          fills the strip. The page's only Gainers/Losers UI now — the old
-          static side-by-side lists were redundant with this. */}
-      {moverList.length > 0 && (
-        <div className={`gm-section gm-mover-banner gm-mover-banner--${moverMode}`}>
-          <div className="gm-mover-banner-top">
-            <div className="gm-mover-banner-switch">
-              <button type="button"
-                className={`gm-mover-banner-switch-btn${moverMode === "gainers" ? " gm-mover-banner-switch-btn--active-up" : ""}`}
-                onClick={() => setMoverMode("gainers")}>
-                ▲ Gainers
-              </button>
-              <button type="button"
-                className={`gm-mover-banner-switch-btn${moverMode === "losers" ? " gm-mover-banner-switch-btn--active-down" : ""}`}
-                onClick={() => setMoverMode("losers")}>
-                ▼ Losers
-              </button>
+      {/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" design (picked
+          from 5 sketch concepts): gainers on the left, losers on the
+          right, both visible at once (no switch), each coin a quiet
+          neutral row with a colored left stripe + inline sparkline. The
+          page's only Gainers/Losers UI now — the old plain two-column
+          lists were redundant with this. */}
+      {(gainers.length > 0 || losers.length > 0) && (
+        <div className="gm-mover-banner-grid">
+          <div className="gm-section gm-mover-banner gm-mover-banner--gainers">
+            <div className="gm-mover-banner-top">
+              <span className="gm-section-title gm-mover-banner-title--up">▲ Top Gainers</span>
+              <span className="gm-mover-banner-rank">24h</span>
             </div>
-            <span className="gm-mover-banner-rank">24h</span>
-          </div>
-
-          <div className="gm-mover-banner-scroll">
-            {moverList.map((c, i) => {
-              const pct = Math.abs(c.price_change_percentage_24h ?? 0);
-              return (
+            <div className="gm-mover-banner-list">
+              {gainers.map((c, i) => (
                 <button type="button" key={c.id} className="gm-mover-banner-card"
                   style={{ animationDelay: `${i * 45}ms` }}
                   onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  {/* Full-card backdrop chart — purely decorative texture
-                      behind the real numbers, not a readable data viz at
-                      this size, so it's given no axes/labels of its own. */}
-                  <span className="gm-mover-banner-card-spark">
-                    <Sparkline data={c.sparkline_in_7d?.price} color="rgba(255,255,255,0.9)" width={168} height={116} />
-                  </span>
-                  <div className="gm-mover-banner-card-top">
-                    <img src={c.image} alt="" className="gm-mover-banner-img" loading="lazy" />
+                  <div className="gm-mover-banner-id">
                     <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
+                    <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
+                    <span className="gm-mover-banner-pct">▲ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
                   </div>
-                  <span className="gm-mover-banner-pct">
-                    {moverMode === "gainers" ? "▲" : "▼"} {pct.toFixed(1)}%
-                  </span>
-                  <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
+                  <Sparkline data={c.sparkline_in_7d?.price} color="#22c55e" width={56} height={40} />
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          <div className="gm-section gm-mover-banner gm-mover-banner--losers">
+            <div className="gm-mover-banner-top">
+              <span className="gm-section-title gm-mover-banner-title--down">▼ Top Losers</span>
+              <span className="gm-mover-banner-rank">24h</span>
+            </div>
+            <div className="gm-mover-banner-list">
+              {losers.map((c, i) => (
+                <button type="button" key={c.id} className="gm-mover-banner-card"
+                  style={{ animationDelay: `${i * 45}ms` }}
+                  onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                  <div className="gm-mover-banner-id">
+                    <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
+                    <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
+                    <span className="gm-mover-banner-pct">▼ {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%</span>
+                  </div>
+                  <Sparkline data={c.sparkline_in_7d?.price} color="#fb7185" width={56} height={40} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
