@@ -127,8 +127,8 @@
 .gm-status-col {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
+  gap: 4px;
+  padding: 8px 10px;
   /* No forced max-height — that was clipping real content (the Fear &
      Greed badge, BTC Dominance tile). All 4 columns still stretch to
      match the tallest one (grid's default align-items:stretch); each
@@ -223,11 +223,11 @@
   all: unset;
   box-sizing: border-box;
   flex-shrink: 0;
-  min-height: 30px;
+  min-height: 24px;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 4px;
+  padding: 3px 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -308,9 +308,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  gap: 3px;
-  padding: 10px 6px;
+  gap: 2px;
+  padding: 6px 6px;
   border-radius: 12px;
   background: var(--color-input-bg);
   animation: gm-rise-in 0.35s ease both;
@@ -351,7 +352,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 .gm-marketstatus-tile {
@@ -359,17 +360,17 @@
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 3px;
+  padding: 7px 10px;
   border-radius: 10px;
   background: var(--color-input-bg);
   animation: gm-rise-in 0.35s ease both;
 }
 .gm-marketstatus-tile-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 .gm-marketstatus-tile-label em {
   font-style: normal;
@@ -417,7 +418,7 @@
 /* ── Derivatives column's big chart tile (mini BTC daily-swing bars,
    real Market Pulse data reused — see the JSX comment for why) ────────── */
 .gm-derivatives-chart-tile {
-  gap: 6px;
+  gap: 4px;
 }
 .gm-derivatives-chart-stats {
   display: flex;
@@ -438,7 +439,7 @@
   flex: 1;
   align-items: flex-end;
   gap: 3px;
-  min-height: 44px;
+  min-height: 28px;
 }
 .gm-derivatives-mini-chart span {
   flex: 1;
