@@ -83,7 +83,7 @@ const LIQ_RANGES = [
   { label: "1Y", days: 365 },
 ] as const;
 
-const TABLE_PAGE_SIZE = 25;
+const TABLE_PAGE_SIZE = 15;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtBig(n: number): string {
