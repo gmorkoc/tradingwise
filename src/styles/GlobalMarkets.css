@@ -1195,7 +1195,7 @@
   .gm-topcards-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .gm-wrap { padding: 16px 0 36px; gap: 20px; }
+  .gm-wrap { padding: 16px 16px 36px; gap: 20px; }
   .gm-hero { padding-left: 0; padding-right: 0; }
   .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; }

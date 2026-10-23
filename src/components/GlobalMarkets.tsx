@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush,
@@ -134,8 +135,27 @@ function useCountUp(value: number, durationMs = 900): number {
 const cache: Record<string, { data: unknown; ts: number }> = {};
 const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000 };
 const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
+// Same gap BN_BASE (coinglass.ts) and API_BASE (openai.ts) already work
+// around: the native app loads its bundled web content from a local
+// capacitor:// origin, not https://www.coinhintz.io, so a relative
+// /coinalyze-api/* fetch resolves to nothing on-device — there's no
+// server there to proxy it. Unlike CoinGecko (open CORS, called directly
+// elsewhere in this file), Coinalyze's key is only added server-side by
+// middleware.ts, so native has to reach that middleware via the real
+// production domain instead of calling Coinalyze directly.
+const COINALYZE_BASE = Capacitor.isNativePlatform() ? "https://www.coinhintz.io/coinalyze-api" : "/coinalyze-api";
 
-async function cgFetch<T>(url: string, ttl: number): Promise<T> {
+// timeoutMs is opt-in (existing callers are unaffected) — added for the
+// market_chart calls specifically, which have been observed hanging
+// forever on-device (native fetch() never resolving OR rejecting, so
+// .then/.catch never fire and the loading skeleton is stuck permanently)
+// even though the identical request succeeds instantly from curl and from
+// this file's other CoinGecko calls (global/coins/markets/trending/
+// sentiment). Root cause unconfirmed (couldn't get live device console
+// access to see the actual native networking error) — this bounds the
+// damage regardless of cause: a hang becomes a clean, retriable failure
+// instead of an infinite stuck skeleton.
+async function cgFetch<T>(url: string, ttl: number, timeoutMs?: number): Promise<T> {
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
   // Key goes in the query string, not an x-cg-demo-api-key header — a
@@ -143,11 +163,17 @@ async function cgFetch<T>(url: string, ttl: number): Promise<T> {
   // Access-Control-Allow-Headers doesn't list, so the browser blocks the
   // real request before it goes out. The query param needs no preflight.
   const fetchUrl = CG_API_KEY ? `${url}${url.includes("?") ? "&" : "?"}x_cg_demo_api_key=${CG_API_KEY}` : url;
-  const res = await fetch(fetchUrl, { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  cache[url] = { data, ts: now };
-  return data as T;
+  const controller = timeoutMs ? new AbortController() : undefined;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+  try {
+    const res = await fetch(fetchUrl, { headers: { accept: "application/json" }, signal: controller?.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    cache[url] = { data, ts: now };
+    return data as T;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // Plain fetch (no CoinGecko key appended) for other public APIs sharing
@@ -439,7 +465,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // of the page.
   useEffect(() => {
     plainFetch<{ symbol: string; value: number }[]>(
-      "/coinalyze-api/v1/open-interest?symbols=BTCUSDT_PERP.A,ETHUSDT_PERP.A",
+      `${COINALYZE_BASE}/v1/open-interest?symbols=BTCUSDT_PERP.A,ETHUSDT_PERP.A`,
       TTL.oi
     )
       .then(rows => {
@@ -476,7 +502,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   useEffect(() => {
     setChartLoading(true);
     const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${period.days}`;
-    cgFetch<{ prices: [number, number][]; market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart)
+    cgFetch<{ prices: [number, number][]; market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart, 12_000)
       .then(d => {
         const raw = d[chartKey as keyof typeof d] ?? d.market_caps;
         const pts: ChartPoint[] = (raw as [number, number][]).map(([ts, val]) => ({
@@ -502,7 +528,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   useEffect(() => {
     setMcapLoading(true);
     const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${mcapPeriod.days}`;
-    cgFetch<{ market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart)
+    cgFetch<{ market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart, 12_000)
       .then(d => {
         const divisor = btcDomPct > 0 ? btcDomPct / 100 : 1;
         const vols = d.total_volumes ?? [];
@@ -524,7 +550,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   useEffect(() => {
     setLiqLoading(true);
     const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${liqRange.days}`;
-    cgFetch<{ prices: [number, number][] }>(url, TTL.chart)
+    cgFetch<{ prices: [number, number][] }>(url, TTL.chart, 12_000)
       .then(d => {
         const raw = d.prices ?? [];
         const isHourly = liqRange.days <= 90;
