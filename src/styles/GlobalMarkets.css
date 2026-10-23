@@ -1465,6 +1465,19 @@ html[data-theme="light"] .gm-marketstatus-tile {
      at common laptop/tablet viewports (1200–1512px included). */
   .gm-status-grid { grid-template-columns: repeat(2, 1fr); }
 }
+@media (min-width: 1513px) {
+  /* At this width each of the 4 columns has comfortable horizontal room —
+     use it to lay content out wider instead of taller. Market Activity's
+     2x2 tile grid becomes a single row of 4 (its biggest height saver);
+     everything else gets slightly tighter padding to match. The Fear &
+     Greed gauge itself is left alone — shrinking it has broken its
+     readout/badge position twice before (see .gm-fng--compact comment). */
+  .gm-status-col { padding: 7px 10px; gap: 3px; }
+  .gm-activity-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; }
+  .gm-activity-tile { padding: 8px 4px; }
+  .gm-marketstatus-tile { padding: 6px 9px; }
+  .gm-status-list-row { padding: 4px 4px; }
+}
 @media (max-width: 900px) {
   /* gm-topcards-grid dropped from this list — it's display:contents now
      (universal, see its base rule above), so grid-template-columns on it
