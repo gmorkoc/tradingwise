@@ -1303,7 +1303,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
 
         {/* ── Chart ────────────────────────────────────────────────────────── */}
-        <div className="gm-section">
+        <div className="gm-section gm-bigchart-card">
           {chartSectionBody}
         </div>
       </div>
