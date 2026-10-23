@@ -652,8 +652,6 @@
   font-weight: 700;
   color: var(--color-text);
 }
-.gm-movers-title--up { color: var(--color-success); }
-.gm-movers-title--down { color: var(--color-danger); }
 
 .gm-section-sub {
   font-size: 0.72rem;
@@ -824,7 +822,8 @@
 .gm-topcards-grid {
   display: contents;
 }
-.gm-wrap > .sec-banner { order: -5; }
+.gm-wrap > .sec-banner { order: -6; }
+.gm-mover-banner { order: -5; }
 .gm-table-section { order: -4; }
 .gm-mcap-card { order: -3; }
 .gm-hero { order: -2; }
@@ -1038,13 +1037,23 @@
 
 /* ── Gainers / Losers ─────────────────────────────────────────────────────── */
 .gm-dom-chart-grid,
-/* ── Rotating Gainers/Losers banner (one coin at a time) ──────────────────── */
+/* ── Gainers/Losers banner — a horizontal strip of cards, all of
+   moverList shown at once and scrollable (not a one-at-a-time rotator).
+   Same "ranked coins in a scrolling row" pattern TopMoversBanner.tsx/
+   .tmb-* already established elsewhere in the app, just using this
+   file's own --color-* tokens instead of --pc-* (TopMoversBanner lives
+   inside .chart-active, this page doesn't). ──────────────────────────── */
 .gm-mover-banner {
   gap: 14px;
 }
+.gm-mover-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 .gm-mover-banner-switch {
   display: flex;
-  align-self: center;
   gap: 4px;
   padding: 3px;
   border-radius: 999px;
@@ -1069,124 +1078,68 @@
   background: var(--color-danger);
   color: #fff;
 }
-.gm-mover-banner-item {
+.gm-mover-banner-rank {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+.gm-mover-banner-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 3px 2px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.gm-mover-banner-card {
   all: unset;
   box-sizing: border-box;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s;
-  /* Re-triggers on every rotation since React remounts this element
-     (keyed by the current coin's id) instead of patching it in place. */
-  animation: gm-rise-in 0.35s ease both;
+  transition: transform 0.15s, border-color 0.15s;
 }
-.gm-mover-banner-item:hover {
-  background: var(--color-input-bg);
+.gm-mover-banner-card:hover {
+  transform: translateY(-1px);
+}
+.gm-mover-banner--gainers .gm-mover-banner-card {
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 22%, transparent);
+}
+.gm-mover-banner--losers .gm-mover-banner-card {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-danger) 22%, transparent);
 }
 .gm-mover-banner-img {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 .gm-mover-banner-id {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 70px;
+  gap: 1px;
+  min-width: 58px;
 }
-.gm-mover-banner-name {
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
+.gm-mover-banner-sym {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-text);
 }
 .gm-mover-banner-price {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin-left: auto;
-}
-.gm-mover-banner-pct {
-  font-size: 0.9rem;
-  font-weight: 800;
-  min-width: 64px;
-  text-align: right;
-}
-.gm-mover-banner-dots {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-}
-.gm-mover-banner-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-border);
-  transition: background 0.2s, transform 0.2s;
-}
-.gm-mover-banner-dot--active {
-  background: var(--color-primary);
-  transform: scale(1.4);
-}
-
-.gm-movers-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.gm-movers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.gm-movers-toggle {
-  all: unset;
-  box-sizing: border-box;
-  align-self: center;
-  margin-top: 4px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--color-input-bg);
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.gm-movers-toggle:hover {
-  background: var(--color-border);
-  color: var(--color-text);
-}
-.gm-mover-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 4px;
-  border-radius: 10px;
-  transition: background 0.15s;
-  animation: gm-rise-in 0.3s ease both;
-  cursor: pointer;
-}
-.gm-mover-row:hover {
-  background: var(--color-input-bg);
-}
-.gm-mover-id {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 52px;
-}
-.gm-mover-price {
   font-size: 0.68rem;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
-.gm-mover-pct {
-  margin-left: auto;
-  font-size: 0.76rem;
-  font-weight: 700;
+.gm-mover-banner-pct {
+  font-size: 0.78rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
