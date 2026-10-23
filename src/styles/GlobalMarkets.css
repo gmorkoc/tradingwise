@@ -1199,7 +1199,15 @@
      is the scarce resource here, and that was a lot of dead space
      compounding across every one of this page's ~8 stacked sections. */
   .gm-wrap { padding: 12px 16px 28px; gap: 14px; }
-  .gm-hero { padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
+  /* Crypto Market Cap (gm-topcards-grid) already shows the exact same
+     market-cap number as the hero's own .gm-status-mcap line below, just
+     with real $T/$B formatting and a chart — redundant on a narrow screen
+     where every row of vertical space matters, so the hero's copy is
+     hidden and the real card moves above the hero instead (flex order,
+     not a JSX reorder — desktop keeps today's layout untouched). */
+  .gm-status-mcap { display: none; }
+  .gm-topcards-grid { order: -1; }
+  .gm-hero { order: 0; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
   .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; row-gap: 14px; }
   .gm-status-col + .gm-status-col { border-left: none; padding-top: 14px; border-top: 1px solid var(--color-border); }
