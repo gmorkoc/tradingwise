@@ -1381,6 +1381,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
      cascade at equal specificity regardless of media query — repeating it
      here, after that rule, actually takes effect on mobile. */
   .gm-fnghist-section { grid-template-columns: 1fr; }
+  .gm-status-col { padding-left: 0; padding-right: 0; }
   .gm-section { padding: 12px 0; gap: 12px; }
   .gm-section-header { gap: 8px; }
   .gm-liq-stat-card,
