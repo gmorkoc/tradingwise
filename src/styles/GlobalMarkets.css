@@ -823,8 +823,10 @@
   display: contents;
 }
 .gm-wrap > .sec-banner { order: -6; }
-.gm-mover-banner { order: -5; }
-.gm-table-section { order: -4; }
+/* .gm-mover-banner and .gm-table-section are both nested inside
+   .gm-table-movers-grid now (side by side), not direct .gm-wrap
+   children — order on the wrapper positions the pair as a unit. */
+.gm-table-movers-grid { order: -5; }
 .gm-mcap-card { order: -3; }
 .gm-hero { order: -2; }
 .gm-fnghist-section { order: -1; }
@@ -1037,9 +1039,19 @@
 
 /* ── Gainers / Losers ─────────────────────────────────────────────────────── */
 .gm-dom-chart-grid,
+/* ── Top Cryptocurrencies table + Gainers/Losers banner side by side —
+   table is the wide primary column, banner a narrower second column
+   (vertical list, smaller cards) next to it. ─────────────────────────── */
+.gm-table-movers-grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  align-items: start;
+}
 /* ── Gainers/Losers banner — "Minimal Accent-Bar Card" rows (picked from
    5 sketch concepts), paged 1/2 (Gainers/Losers) with arrows and an
-   auto-advancing progress bar instead of a side-by-side split. ─────────── */
+   auto-advancing progress bar instead of a side-by-side split. Vertical
+   list now (not a horizontal scroll row) since it's a narrow column. ──── */
 .gm-mover-banner {
   gap: 12px;
 }
@@ -1112,23 +1124,17 @@
 }
 .gm-mover-banner-list {
   display: flex;
-  flex-direction: row;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 2px 2px 6px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  flex-direction: column;
+  gap: 5px;
 }
 .gm-mover-banner-card {
   all: unset;
   box-sizing: border-box;
-  flex-shrink: 0;
-  width: 168px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
   background: var(--color-input-bg);
   border-left: 3px solid transparent;
   cursor: pointer;
@@ -1148,21 +1154,21 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 .gm-mover-banner-sym {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: var(--color-text);
 }
 .gm-mover-banner-price {
-  font-size: 0.7rem;
+  font-size: 0.64rem;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 .gm-mover-banner-pct {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -1332,6 +1338,7 @@
      (universal, see its base rule above), so grid-template-columns on it
      has no effect either way. */
   .gm-dom-chart-grid,
+  .gm-table-movers-grid,
   .gm-oivol-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
