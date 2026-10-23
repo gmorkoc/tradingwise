@@ -1376,6 +1376,11 @@ html[data-theme="light"] .gm-marketstatus-tile {
      divider-border/zeroed-padding hacks needed anymore (those were from
      the old single-shared-card hero architecture). */
   .gm-status-grid { grid-template-columns: 1fr; }
+  /* The 860px breakpoint above sets this to 1fr too, but its unconditional
+     desktop twin (300px 1fr) is defined later in the file and wins the
+     cascade at equal specificity regardless of media query — repeating it
+     here, after that rule, actually takes effect on mobile. */
+  .gm-fnghist-section { grid-template-columns: 1fr; }
   .gm-section { padding: 12px 0; gap: 12px; }
   .gm-section-header { gap: 8px; }
   .gm-liq-stat-card,
