@@ -1038,6 +1038,99 @@
 
 /* ── Gainers / Losers ─────────────────────────────────────────────────────── */
 .gm-dom-chart-grid,
+/* ── Rotating Gainers/Losers banner (one coin at a time) ──────────────────── */
+.gm-mover-banner {
+  gap: 14px;
+}
+.gm-mover-banner-switch {
+  display: flex;
+  align-self: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-input-bg);
+}
+.gm-mover-banner-switch-btn {
+  all: unset;
+  box-sizing: border-box;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.gm-mover-banner-switch-btn--active-up {
+  background: var(--color-success);
+  color: #fff;
+}
+.gm-mover-banner-switch-btn--active-down {
+  background: var(--color-danger);
+  color: #fff;
+}
+.gm-mover-banner-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  /* Re-triggers on every rotation since React remounts this element
+     (keyed by the current coin's id) instead of patching it in place. */
+  animation: gm-rise-in 0.35s ease both;
+}
+.gm-mover-banner-item:hover {
+  background: var(--color-input-bg);
+}
+.gm-mover-banner-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gm-mover-banner-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 70px;
+}
+.gm-mover-banner-name {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+.gm-mover-banner-price {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-left: auto;
+}
+.gm-mover-banner-pct {
+  font-size: 0.9rem;
+  font-weight: 800;
+  min-width: 64px;
+  text-align: right;
+}
+.gm-mover-banner-dots {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+.gm-mover-banner-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-border);
+  transition: background 0.2s, transform 0.2s;
+}
+.gm-mover-banner-dot--active {
+  background: var(--color-primary);
+  transform: scale(1.4);
+}
+
 .gm-movers-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

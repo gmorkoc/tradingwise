@@ -343,6 +343,11 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // Gainers/Losers default to 5 each, expandable independently up to 20.
   const [gainersExpanded, setGainersExpanded] = useState(false);
   const [losersExpanded, setLosersExpanded] = useState(false);
+  // Rotating one-at-a-time banner above the Gainers/Losers lists — same
+  // underlying gainers/losers arrays (whichever one is active via the
+  // switch), just one coin shown at a time, auto-advancing.
+  const [moverMode, setMoverMode] = useState<"gainers" | "losers">("gainers");
+  const [moverIdx, setMoverIdx] = useState(0);
   const [trending, setTrending]   = useState<TrendingCoin[]>([]);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
   // Full history for the mobile-only "Fear & Greed Index Chart" section
@@ -386,6 +391,21 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // Current BTC dominance fraction — needed by the mcap-card effect below
   // to derive its estimated total-market-cap series (see its own comment).
   const btcDomPct = global?.market_cap_percentage?.btc ?? 0;
+
+  // Rotating mover banner — just ticks a counter forever; which coin it
+  // points at (counter % list.length) is resolved at render time below,
+  // once the actual gainers/losers list length is known. Kept this simple
+  // so the interval itself never needs to know the list length or be
+  // re-created when gainers/losers change.
+  useEffect(() => {
+    const t = setInterval(() => setMoverIdx(i => i + 1), 3500);
+    return () => clearInterval(t);
+  }, []);
+  // Restart from the first coin whenever the switch flips — jumping into
+  // the middle of the other list on first render would be a jarring swap.
+  useEffect(() => {
+    setMoverIdx(0);
+  }, [moverMode]);
 
   // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
@@ -606,6 +626,8 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
 
   const gainers = [...coins].sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999)).slice(0, gainersExpanded ? 20 : 5);
   const losers = [...coins].sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999)).slice(0, losersExpanded ? 20 : 5);
+  const moverList = moverMode === "gainers" ? gainers : losers;
+  const moverCurrent = moverList.length > 0 ? moverList[moverIdx % moverList.length] : null;
 
   // "Market Pulse" stat card + movers list (see LIQ_RANGES comment above)
   const gainersCount = coins.filter(c => (c.price_change_percentage_24h ?? 0) >= 0).length;
@@ -1268,6 +1290,47 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
           {chartSectionBody}
         </div>
       </div>
+
+      {/* ── Rotating Gainers/Losers banner — one coin at a time, auto-advancing
+          every 3.5s, with a Gainers/Losers switch (moverMode) choosing which
+          list it cycles through. Sits above the full lists below rather than
+          replacing them. */}
+      {moverCurrent && (
+        <div className="gm-section gm-mover-banner">
+          <div className="gm-mover-banner-switch">
+            <button type="button"
+              className={`gm-mover-banner-switch-btn${moverMode === "gainers" ? " gm-mover-banner-switch-btn--active-up" : ""}`}
+              onClick={() => setMoverMode("gainers")}>
+              ▲ Gainers
+            </button>
+            <button type="button"
+              className={`gm-mover-banner-switch-btn${moverMode === "losers" ? " gm-mover-banner-switch-btn--active-down" : ""}`}
+              onClick={() => setMoverMode("losers")}>
+              ▼ Losers
+            </button>
+          </div>
+          <button type="button" key={moverCurrent.id} className="gm-mover-banner-item"
+            onClick={() => onSelectCoin?.(moverCurrent.symbol.toUpperCase())}>
+            <img src={moverCurrent.image} alt="" className="gm-mover-banner-img" loading="lazy" />
+            <div className="gm-mover-banner-id">
+              <span className="gm-coin-sym">{moverCurrent.symbol.toUpperCase()}</span>
+              <span className="gm-mover-banner-name">{moverCurrent.name}</span>
+            </div>
+            <Sparkline data={moverCurrent.sparkline_in_7d?.price} color={moverMode === "gainers" ? "#22c55e" : "#fb7185"} />
+            <span className="gm-mover-banner-price">{fmtPrice(moverCurrent.current_price)}</span>
+            <span className={`gm-mover-banner-pct${moverMode === "gainers" ? " gm-pct--pos" : " gm-pct--neg"}`}>
+              {moverMode === "gainers" ? "▲" : "▼"} {Math.abs(moverCurrent.price_change_percentage_24h ?? 0).toFixed(1)}%
+            </span>
+          </button>
+          {moverList.length > 1 && moverList.length <= 12 && (
+            <div className="gm-mover-banner-dots">
+              {moverList.map((c, i) => (
+                <span key={c.id} className={`gm-mover-banner-dot${i === moverIdx % moverList.length ? " gm-mover-banner-dot--active" : ""}`} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Gainers / Losers ──────────────────────────────────────────────────── */}
       <div className="gm-movers-grid">
