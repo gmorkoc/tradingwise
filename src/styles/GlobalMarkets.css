@@ -810,6 +810,12 @@
   grid-template-columns: 280px 1fr;
   gap: 16px;
 }
+/* Mobile-only fuller Fear & Greed treatment (gauge + historical values +
+   yearly high/low + a real history chart) — desktop keeps just the
+   hero's existing compact gauge, this doesn't render there at all. */
+.gm-fnghist-section {
+  display: none;
+}
 .gm-altseason-card {
   justify-content: center;
 }
@@ -1206,14 +1212,15 @@
      hidden and the real card moves above the hero instead (flex order,
      not a JSX reorder — desktop keeps today's layout untouched). */
   .gm-status-mcap { display: none; }
-  /* Fear & Greed gauge — bigger and a bit more alive on mobile now that
-     .gm-status-mcap above is gone and it's the clear headline of this
-     card: a soft pulsing glow in the gauge's own live sentiment color
-     (--fng-color, set inline on .gm-fng by FearGreedGauge), a glowing
-     needle to match, and larger readout text. */
-  .gm-status-fng { display: flex; justify-content: center; margin: 6px 0 2px; }
-  .gm-fng--compact { width: 220px; position: relative; }
-  .gm-fng--compact::before {
+  /* Fear & Greed gauge — bigger and a bit more alive on mobile, now living
+     in gm-fnghist-gauge-wrap (gm-fnghist-section below) instead of the
+     hero's old compact copy (hidden above, .gm-status-fng): a soft
+     pulsing glow in the gauge's own live sentiment color (--fng-color,
+     set inline on .gm-fng by FearGreedGauge), a glowing needle to match,
+     and larger readout text. */
+  .gm-fnghist-gauge-wrap { display: flex; justify-content: center; margin: 6px 0 10px; }
+  .gm-fnghist-gauge-wrap .gm-fng { width: 220px; position: relative; }
+  .gm-fnghist-gauge-wrap .gm-fng::before {
     content: "";
     position: absolute;
     inset: -12px -12px 32% -12px;
@@ -1222,20 +1229,26 @@
     z-index: -1;
     animation: gm-fng-glow-pulse 3s ease-in-out infinite;
   }
-  .gm-fng--compact .gm-fng-needle { filter: drop-shadow(0 0 5px var(--fng-color)); }
-  /* Scaled up from the base -36px to match this width jump (120px ->
+  .gm-fnghist-gauge-wrap .gm-fng-needle { filter: drop-shadow(0 0 5px var(--fng-color)); }
+  /* Scaled up from the base -36px to match this width jump (150px ->
      220px) — that offset pulls the readout up into the gauge's own arc
      and needs to grow with the SVG or the number ends up sitting too low. */
-  .gm-fng--compact .gm-fng-readout { margin-top: -66px; }
-  .gm-fng--compact .gm-fng-value { font-size: 2.6rem; }
-  .gm-fng--compact .gm-fng-label { font-size: 0.82rem; }
+  .gm-fnghist-gauge-wrap .gm-fng-readout { margin-top: -66px; }
+  .gm-fnghist-gauge-wrap .gm-fng-value { font-size: 2.6rem; }
+  .gm-fnghist-gauge-wrap .gm-fng-label { font-size: 0.82rem; }
   @keyframes gm-fng-glow-pulse {
     0%, 100% { opacity: 0.55; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.06); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .gm-fng--compact::before { animation: none; }
+    .gm-fnghist-gauge-wrap .gm-fng::before { animation: none; }
   }
+  /* ── Fear & Greed Index Chart (mobile-only, gm-fnghist-section) ───────── */
+  .gm-fnghist-section { display: flex; flex-direction: column; gap: 14px; }
+  .gm-fnghist-block { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--color-border); }
+  .gm-fnghist-block-title { font-size: 0.78rem; font-weight: 700; color: var(--color-text); }
+  .gm-fnghist-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-secondary); }
+  .gm-fnghist-pill { font-weight: 700; }
   /* Exact mobile order: banner, then Crypto Market Cap, then Market Status
      (the hero), then Altcoin Season. display:contents removes the grid
      wrapper's own box so its two cards (gm-mcap-card/gm-altseason-card)
@@ -1249,10 +1262,15 @@
      this is applied to a layout-only container with no listeners of its
      own, and its children are untouched. */
   .gm-topcards-grid { display: contents; }
-  .gm-wrap > .sec-banner { order: -3; }
-  .gm-mcap-card { order: -2; }
-  .gm-hero { order: -1; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
+  .gm-wrap > .sec-banner { order: -4; }
+  .gm-mcap-card { order: -3; }
+  .gm-hero { order: -2; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
+  .gm-fnghist-section { order: -1; }
   .gm-altseason-card { order: 0; }
+  /* The hero's own compact gauge is now redundant with the richer
+     gm-fnghist-section right below it (same reasoning .gm-status-mcap
+     was hidden above, once Crypto Market Cap covered the same number). */
+  .gm-status-fng { display: none; }
   .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; row-gap: 14px; }
   .gm-status-col + .gm-status-col { border-left: none; padding-top: 14px; border-top: 1px solid var(--color-border); }

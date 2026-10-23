@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, type CSSProperties } from "react";
 import { Capacitor } from "@capacitor/core";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush,
+  CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush, ReferenceArea,
 } from "recharts";
 import "../styles/GlobalMarkets.css";
 import { SectionBanner } from "./SectionBanner";
@@ -133,7 +133,17 @@ function useCountUp(value: number, durationMs = 900): number {
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
-const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000 };
+const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
+// alternative.me's full Fear & Greed history (back to Feb 2018) in one
+// request — limit=0 means "no limit", not "zero rows". Small per-row
+// (value/classification/timestamp only), so fetching everything once and
+// slicing client-side for the 30D/1Y/All tabs is simpler and more honest
+// than guessing a cutoff that might not actually cover "All".
+const FNG_PERIODS = [
+  { label: "30D", days: 30 },
+  { label: "1Y",  days: 365 },
+  { label: "All", days: Infinity },
+] as const;
 const CG_API_KEY = import.meta.env.VITE_COINGECKO_API_KEY as string | undefined;
 // Same gap BN_BASE (coinglass.ts) and API_BASE (openai.ts) already work
 // around: the native app loads its bundled web content from a local
@@ -360,6 +370,13 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const [losersExpanded, setLosersExpanded] = useState(false);
   const [trending, setTrending]   = useState<TrendingCoin[]>([]);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
+  // Full history for the mobile-only "Fear & Greed Index Chart" section
+  // (Historical Values / Yearly High-Low / the chart itself) — kept
+  // separate from `fng` above (which stays the cheap single-value fetch
+  // the existing hero gauge uses) so that gauge doesn't wait on this much
+  // bigger request.
+  const [fngHistory, setFngHistory] = useState<FearGreedPoint[]>([]);
+  const [fngPeriod, setFngPeriod] = useState<typeof FNG_PERIODS[number]>(FNG_PERIODS[0]);
   const [sentiment, setSentiment] = useState<SentimentCoin[]>([]);
   const [period, setPeriod]       = useState<{ label: string; days: number }>(PERIODS[1]);
   const [chartKey, setChartKey]   = useState<ChartKey>("market_caps");
@@ -437,6 +454,15 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   useEffect(() => {
     plainFetch<{ data: FearGreedPoint[] }>("https://api.alternative.me/fng/?limit=1&format=json", TTL.fng)
       .then(d => { if (mountedRef.current) setFng(d.data[0] ?? null); })
+      .catch(() => {});
+  }, []);
+
+  // Full Fear & Greed history — newest-first, same shape as the single-
+  // value fetch above. Independent fetch/failure, never blocks the rest
+  // of the page.
+  useEffect(() => {
+    plainFetch<{ data: FearGreedPoint[] }>("https://api.alternative.me/fng/?limit=0&format=json", TTL.fngHistory)
+      .then(d => { if (mountedRef.current) setFngHistory(d.data ?? []); })
       .catch(() => {});
   }, []);
 
@@ -620,6 +646,27 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     .slice(0, 3);
 
   const fngValue = fng ? Number(fng.value) : null;
+
+  // Mobile-only "Fear & Greed Index Chart" section — fngHistory[0] is
+  // today, so index N is N days ago (alternative.me updates once/day).
+  const fngYesterday = fngHistory[1] ?? null;
+  const fngLastWeek = fngHistory[7] ?? null;
+  const fngLastMonth = fngHistory[30] ?? null;
+  const fngLastYear = fngHistory.slice(0, 365);
+  const fngYearHigh = fngLastYear.length
+    ? fngLastYear.reduce((a, b) => (Number(b.value) > Number(a.value) ? b : a))
+    : null;
+  const fngYearLow = fngLastYear.length
+    ? fngLastYear.reduce((a, b) => (Number(b.value) < Number(a.value) ? b : a))
+    : null;
+  const fngChartData = (() => {
+    const n = fngPeriod.days === Infinity ? fngHistory.length : fngPeriod.days;
+    // Oldest-first for the chart (fngHistory itself is newest-first).
+    return fngHistory.slice(0, n).slice().reverse().map(h => ({
+      time: fmtDate(Number(h.timestamp) * 1000, Number.isFinite(fngPeriod.days) ? fngPeriod.days : 1825),
+      value: Number(h.value),
+    }));
+  })();
 
   const tableTotalPages = Math.max(1, Math.ceil(coins.length / TABLE_PAGE_SIZE));
   const pagedCoins = coins.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
@@ -870,6 +917,122 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
         </div>
       </div>
+
+      {/* ── Fear & Greed Index Chart — mobile-only (gm-fnghist-section is
+          display:none by default, see GlobalMarkets.css), a fuller
+          treatment of the same index the hero's own compact gauge above
+          already shows: historical values, yearly high/low, and a real
+          history chart, all from alternative.me's free full-history
+          endpoint (fngHistory, fetched once above). Desktop keeps just
+          the hero's existing compact gauge — this doesn't render there. */}
+      {fngValue !== null && (
+        <div className="gm-fnghist-section">
+          <div className="gm-section gm-fnghist-card">
+            <div className="gm-section-header">
+              <span className="gm-section-title">Fear &amp; Greed Index</span>
+            </div>
+            <div className="gm-fnghist-gauge-wrap">
+              <FearGreedGauge value={fngValue} label={fng!.value_classification} />
+            </div>
+            {(fngYesterday || fngLastWeek || fngLastMonth) && (
+              <div className="gm-fnghist-block">
+                <div className="gm-fnghist-block-title">Historical Values</div>
+                {fngYesterday && (
+                  <div className="gm-fnghist-row">
+                    <span>Yesterday</span>
+                    <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYesterday.value)) }}>
+                      {fngYesterday.value_classification} · {fngYesterday.value}
+                    </span>
+                  </div>
+                )}
+                {fngLastWeek && (
+                  <div className="gm-fnghist-row">
+                    <span>Last Week</span>
+                    <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngLastWeek.value)) }}>
+                      {fngLastWeek.value_classification} · {fngLastWeek.value}
+                    </span>
+                  </div>
+                )}
+                {fngLastMonth && (
+                  <div className="gm-fnghist-row">
+                    <span>Last Month</span>
+                    <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngLastMonth.value)) }}>
+                      {fngLastMonth.value_classification} · {fngLastMonth.value}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            {fngYearHigh && fngYearLow && (
+              <div className="gm-fnghist-block">
+                <div className="gm-fnghist-block-title">Yearly High &amp; Low</div>
+                <div className="gm-fnghist-row">
+                  <span>High ({new Date(Number(fngYearHigh.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })})</span>
+                  <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYearHigh.value)) }}>
+                    {fngYearHigh.value_classification} · {fngYearHigh.value}
+                  </span>
+                </div>
+                <div className="gm-fnghist-row">
+                  <span>Low ({new Date(Number(fngYearLow.timestamp) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })})</span>
+                  <span className="gm-fnghist-pill" style={{ color: fngColor(Number(fngYearLow.value)) }}>
+                    {fngYearLow.value_classification} · {fngYearLow.value}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="gm-section gm-fnghist-chart-card">
+            <div className="gm-section-header">
+              <span className="gm-section-title">Fear &amp; Greed Chart</span>
+              <div className="gm-period-tabs">
+                {FNG_PERIODS.map(p => (
+                  <button key={p.label}
+                    className={`gm-period-tab${fngPeriod.label === p.label ? " gm-period-tab--active" : ""}`}
+                    onClick={() => setFngPeriod(p)}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="gm-chart-wrap">
+              {fngChartData.length === 0 ? (
+                <div className="gm-chart-loading">
+                  <div className="gm-chart-skel-bars">
+                    {Array.from({ length: 14 }).map((_, i) => (
+                      <span key={i} className="gm-chart-skel-bar" style={{ animationDelay: `${i * 70}ms`, height: `${30 + (i * 37) % 60}%` }} />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={240}>
+                  <ComposedChart data={fngChartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gmFngLineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" />
+                        <stop offset="25%" stopColor="#84cc16" />
+                        <stop offset="50%" stopColor="#eab308" />
+                        <stop offset="75%" stopColor="#f97316" />
+                        <stop offset="100%" stopColor="#ef4444" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                    <ReferenceArea y1={75} y2={100} fill="#22c55e" fillOpacity={0.07} />
+                    <ReferenceArea y1={0} y2={25} fill="#ef4444" fillOpacity={0.07} />
+                    <XAxis dataKey="time" tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                      tickLine={false} axisLine={false} interval={Math.floor(fngChartData.length / 6)} />
+                    <YAxis domain={[0, 100]} tick={{ fill: "var(--color-text-secondary)", fontSize: 10 }}
+                      tickLine={false} axisLine={false} width={28} />
+                    <Tooltip content={<FngHistTooltip />} />
+                    <Line type="monotone" dataKey="value" stroke="url(#gmFngLineGrad)" strokeWidth={2}
+                      dot={false} isAnimationActive animationDuration={700} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Altcoin Season + Crypto Market Cap — pulled out as their own
           standalone cards (not a bar tucked inside the hero, not a tab
@@ -1273,6 +1436,17 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
     <div className="gm-tooltip">
       <div className="gm-tooltip-label">{label}</div>
       <div className="gm-tooltip-value">{fmtBig(payload[0].payload.raw)}</div>
+    </div>
+  );
+}
+
+function FngHistTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
+  if (!active || !payload?.length) return null;
+  const value = payload[0].value;
+  return (
+    <div className="gm-tooltip">
+      <div className="gm-tooltip-label">{label}</div>
+      <div className="gm-tooltip-value" style={{ color: fngColor(value) }}>{Math.round(value)}</div>
     </div>
   );
 }
