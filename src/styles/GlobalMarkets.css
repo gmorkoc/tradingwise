@@ -948,10 +948,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
    just shifted down a slot. */
 .gm-wrap > .sec-banner { order: -6; }
 .gm-hero { order: -5; }
-/* .gm-mover-banner and .gm-table-section are both nested inside
-   .gm-table-movers-grid now (side by side), not direct .gm-wrap
-   children — order on the wrapper positions the pair as a unit. */
-.gm-table-movers-grid { order: -4; }
+.gm-table-section { order: -4; }
 .gm-mcap-card { order: -3; }
 .gm-fnghist-section { order: -1; }
 .gm-altseason-card { order: 0; }
@@ -1168,35 +1165,9 @@ html[data-theme="light"] .gm-marketstatus-tile {
   gap: 16px;
 }
 
-/* ── Top Cryptocurrencies table + Gainers/Losers banner side by side —
-   table is the wide primary column, banner a narrower second column
-   (vertical list, smaller cards) next to it. ─────────────────────────── */
-.gm-table-movers-grid {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 16px;
-  align-items: start;
-}
-/* ── Gainers/Losers banner — "Minimal Accent-Bar Card" rows (picked from
-   5 sketch concepts), paged 1/2 (Gainers/Losers) with arrows and an
-   auto-advancing progress bar instead of a side-by-side split. Vertical
-   list now (not a horizontal scroll row) since it's a narrow column. ──── */
-.gm-mover-banner {
-  gap: 12px;
-}
-.gm-mover-banner-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.gm-mover-banner-title--up { color: var(--color-success); }
-.gm-mover-banner-title--down { color: var(--color-danger); }
-.gm-mover-banner-pager {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* .gm-mover-banner-pager-arrow/-label below are still used by the hero's
+   compact Top Gainers/Losers column pager (.gm-trending-pager) — the
+   standalone banner section next to the table itself was removed. */
 .gm-mover-banner-pager-arrow {
   all: unset;
   box-sizing: border-box;
@@ -1225,84 +1196,6 @@ html[data-theme="light"] .gm-marketstatus-tile {
   min-width: 22px;
   text-align: center;
 }
-.gm-mover-banner-progress-track {
-  height: 3px;
-  border-radius: 999px;
-  background: var(--color-border);
-  overflow: hidden;
-}
-.gm-mover-banner-progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  width: 0%;
-  /* Matches the 5000ms setTimeout in GlobalMarkets.tsx exactly — this bar
-     IS the countdown to the next page, not just decoration. Remounts
-     (key={moverPage}) on every page change, manual or automatic, so it
-     always restarts from empty. */
-  animation: gm-mover-banner-progress 5s linear forwards;
-}
-.gm-mover-banner--gainers .gm-mover-banner-progress-fill { background: var(--color-success); }
-.gm-mover-banner--losers .gm-mover-banner-progress-fill { background: var(--color-danger); }
-@keyframes gm-mover-banner-progress {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .gm-mover-banner-progress-fill { animation: none; width: 100%; }
-}
-/* Redesigned per feedback on the boxed/bordered version — a flat divided
-   list instead of a stack of individual bordered cards: no per-row box,
-   radius or background fill, just a hairline divider between rows and
-   the % text's own color doing the gainer/loser signaling. Noticeably
-   more compact too (more rows visible without scrolling). */
-.gm-mover-banner-list {
-  display: flex;
-  flex-direction: column;
-}
-.gm-mover-banner-card {
-  all: unset;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 2px;
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: background 0.15s;
-  animation: gm-rise-in 0.3s ease both;
-}
-.gm-mover-banner-card:last-child {
-  border-bottom: none;
-}
-.gm-mover-banner-card:hover {
-  background: var(--color-input-bg);
-}
-.gm-mover-banner-id {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.gm-mover-banner-sym {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--color-text);
-}
-.gm-mover-banner-price {
-  font-size: 0.64rem;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.gm-mover-banner-pct {
-  font-size: 0.7rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.gm-mover-banner--gainers .gm-mover-banner-pct { color: var(--color-success); }
-.gm-mover-banner--losers .gm-mover-banner-pct { color: var(--color-danger); }
-
 /* ── Top coins table ──────────────────────────────────────────────────────── */
 .gm-table-wrap {
   overflow-x: auto;
@@ -1471,8 +1364,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
   /* gm-topcards-grid dropped from this list — it's display:contents now
      (universal, see its base rule above), so grid-template-columns on it
      has no effect either way. */
-  .gm-dom-chart-grid,
-  .gm-table-movers-grid { grid-template-columns: 1fr; }
+  .gm-dom-chart-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   /* Tightened from 16px 16px 36px / gap 20px — narrow-screen real estate

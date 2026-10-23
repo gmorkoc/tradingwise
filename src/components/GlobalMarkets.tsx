@@ -1250,11 +1250,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
-      {/* ── Top Cryptocurrencies table + Gainers/Losers banner, side by
-          side: table is the wide primary column, banner a narrower
-          second column next to it (vertical list now, not a horizontal
-          scroll row — collapses to stacked below 900px). ──────────────── */}
-      <div className="gm-table-movers-grid">
       <div className="gm-section gm-table-section">
         <div className="gm-section-header">
           <span className="gm-section-title">Top Cryptocurrencies</span>
@@ -1335,45 +1330,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
             </button>
           </div>
         </div>
-      </div>
-
-      {(gainers.length > 0 || losers.length > 0) && (() => {
-        const list = moverPage === 0 ? gainers : losers;
-        const label = moverPage === 0 ? "▲ Top Gainers" : "▼ Top Losers";
-        return (
-          <div className={`gm-section gm-mover-banner gm-mover-banner--${moverPage === 0 ? "gainers" : "losers"}`}>
-            <div className="gm-mover-banner-top">
-              <span className={`gm-section-title${moverPage === 0 ? " gm-mover-banner-title--up" : " gm-mover-banner-title--down"}`}>{label}</span>
-              <div className="gm-mover-banner-pager">
-                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
-                  onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>‹</button>
-                <span className="gm-mover-banner-pager-label">{moverPage + 1}/2</span>
-                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
-                  onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>›</button>
-              </div>
-            </div>
-            <div className="gm-mover-banner-list">
-              {list.map((c, i) => (
-                <button type="button" key={c.id} className="gm-mover-banner-card"
-                  style={{ animationDelay: `${i * 45}ms` }}
-                  onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  <div className="gm-mover-banner-id">
-                    <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
-                    <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
-                    <span className="gm-mover-banner-pct">
-                      {moverPage === 0 ? "▲" : "▼"} {Math.abs(c.price_change_percentage_24h ?? 0).toFixed(1)}%
-                    </span>
-                  </div>
-                  <Sparkline data={c.sparkline_in_7d?.price} color={moverPage === 0 ? "#22c55e" : "#fb7185"} width={40} height={28} />
-                </button>
-              ))}
-            </div>
-            <div className="gm-mover-banner-progress-track">
-              <span key={moverPage} className="gm-mover-banner-progress-fill" />
-            </div>
-          </div>
-        );
-      })()}
       </div>
     </div>
   );
