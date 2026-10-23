@@ -29,6 +29,7 @@ interface CoinRow {
   price_change_percentage_24h: number;
   price_change_percentage_7d_in_currency: number;
   price_change_percentage_30d_in_currency?: number;
+  price_change_percentage_1y_in_currency?: number;
   market_cap: number; total_volume: number;
   sparkline_in_7d?: { price: number[] };
 }
@@ -57,6 +58,16 @@ const MCAP_PERIODS = [
   { label: "30D", days: 30 },
   { label: "1Y",  days: 365 },
   { label: "All", days: "max" as const },
+] as const;
+
+// Altcoin Season's own selectable window — real CoinGecko-sourced price
+// change fields (24h always present, 7d/30d/1y requested in the markets
+// fetch's price_change_percentage param above). Was hardcoded to 30D.
+const ALT_SEASON_PERIODS = [
+  { label: "24H", field: (c: CoinRow) => c.price_change_percentage_24h },
+  { label: "7D",  field: (c: CoinRow) => c.price_change_percentage_7d_in_currency },
+  { label: "30D", field: (c: CoinRow) => c.price_change_percentage_30d_in_currency },
+  { label: "1Y",  field: (c: CoinRow) => c.price_change_percentage_1y_in_currency },
 ] as const;
 
 // CoinGlass's own liquidation endpoints are all currently rejecting with
@@ -337,6 +348,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // (mcap + volume together, for the line+volume-bars combo chart), not
   // reusing the BTC chart's chartData/period above.
   const [mcapPeriod, setMcapPeriod] = useState<typeof MCAP_PERIODS[number]>(MCAP_PERIODS[0]);
+  const [altSeasonPeriod, setAltSeasonPeriod] = useState<typeof ALT_SEASON_PERIODS[number]>(ALT_SEASON_PERIODS[2]);
   const [mcapSeries, setMcapSeries] = useState<{ time: string; mcap: number; vol: number }[]>([]);
   const [mcapLoading, setMcapLoading] = useState(true);
   const mountedRef = useRef(true);
@@ -362,7 +374,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       // for more just gets silently clamped back to it) — the real "all
       // of them" within a single request.
       cgFetch<CoinRow[]>(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=7d,30d&sparkline=true",
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=7d,30d,1y&sparkline=true",
         TTL.coins
       ),
     ])
@@ -581,13 +593,14 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // JSON API for that exact index (checked), and the real methodology
   // uses a 90-day window CoinGecko's free tier doesn't offer (only
   // 1h/24h/7d/14d/30d/200d/1y) — so this is a genuinely real, from-real-
-  // data computation over a 30-day window instead, labeled as such rather
-  // than claiming parity with the original index's name/window.
+  // data computation over a user-selectable window instead (see
+  // ALT_SEASON_PERIODS), labeled as such rather than claiming parity with
+  // the original index's name/window.
   const btcRow = coins.find(c => c.id === "bitcoin");
   const ethRow = coins.find(c => c.id === "ethereum");
-  const btc30d = btcRow?.price_change_percentage_30d_in_currency ?? 0;
+  const btcAltPct = btcRow ? (altSeasonPeriod.field(btcRow) ?? 0) : 0;
   const altcoinBasket = coins.filter(c => c.id !== "bitcoin" && c.id !== "tether" && c.id !== "usd-coin").slice(0, 50);
-  const altcoinsBeatingBtc = altcoinBasket.filter(c => (c.price_change_percentage_30d_in_currency ?? -999) > btc30d).length;
+  const altcoinsBeatingBtc = altcoinBasket.filter(c => (altSeasonPeriod.field(c) ?? -999) > btcAltPct).length;
   const altcoinStrengthPct = altcoinBasket.length > 0 ? Math.round((altcoinsBeatingBtc / altcoinBasket.length) * 100) : null;
 
   // Open interest in USD — Coinalyze's base-asset-unit figures (see the `oi`
@@ -752,7 +765,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
               </div>
               {altcoinStrengthPct !== null && (
                 <div className="gm-marketstatus-tile">
-                  <span className="gm-marketstatus-tile-label">Altcoin Season <em>(30D)</em></span>
+                  <span className="gm-marketstatus-tile-label">Altcoin Season <em>({altSeasonPeriod.label})</em></span>
                   <div className="gm-marketstatus-altseason-value">{altcoinStrengthPct}</div>
                   <div className="gm-altseason-track gm-marketstatus-altseason-track">
                     <span className="gm-altseason-dot" style={{ left: `${altcoinStrengthPct}%` }} />
@@ -1040,7 +1053,16 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         {altcoinStrengthPct !== null && (
           <div className="gm-section gm-altseason-card">
             <div className="gm-section-header">
-              <span className="gm-section-title">Altcoin Season <em>(30D)</em></span>
+              <span className="gm-section-title">Altcoin Season</span>
+              <div className="gm-period-tabs">
+                {ALT_SEASON_PERIODS.map(p => (
+                  <button key={p.label}
+                    className={`gm-period-tab${altSeasonPeriod.label === p.label ? " gm-period-tab--active" : ""}`}
+                    onClick={() => setAltSeasonPeriod(p)}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="gm-altseason-value">{altcoinStrengthPct}<span className="gm-altseason-value-max">/100</span></div>
             <div className="gm-altseason-track">
