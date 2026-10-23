@@ -337,8 +337,9 @@
    reference screenshot's own two-column mini-card layout exactly. ────── */
 .gm-marketstatus-grid {
   display: flex;
+  width: 100%;
   gap: 8px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 .gm-marketstatus-col {
   flex: 1;
@@ -510,16 +511,11 @@
   width: 150px;
 }
 .gm-fng--compact {
-  width: 95px;
-}
-/* Scaled down from the base -36px to match this narrower width (was
-   120px) — that offset pulls the readout up into the gauge's own arc and
-   needs to shrink with the SVG or the number sits too low. */
-.gm-fng--compact .gm-fng-readout {
-  margin-top: -28px;
-}
-.gm-fng--compact .gm-fng-value {
-  font-size: 1.15rem;
+  /* Reverted to its original, already-correct 120px — shrinking it
+     further (and guessing a scaled-down readout offset to match) threw
+     off the number/badge position relative to the arc. Not worth
+     chasing more height savings here at the cost of a broken gauge. */
+  width: 120px;
 }
 .gm-fng-svg {
   width: 100%;
