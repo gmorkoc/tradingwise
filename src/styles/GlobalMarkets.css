@@ -144,7 +144,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
 .gm-status-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   padding: 10px;
   /* No forced max-height — that was clipping real content (the Fear &
      Greed badge, BTC Dominance tile). All 4 columns still stretch to
