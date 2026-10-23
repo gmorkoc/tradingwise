@@ -1,11 +1,22 @@
 export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*'] };
 
-const ALLOWED_ORIGINS = ['https://www.coinhintz.io', 'https://coinhintz.io', 'http://localhost:5173', 'http://localhost:4173'];
-
+// Reflects whatever Origin actually sent the request, instead of checking
+// it against a fixed web-origin allowlist — that allowlist never included
+// the native iOS/Android app's real origin (a capacitor:// scheme, not a
+// coinhintz.io URL), so every proxied request made FROM the app itself got
+// a mismatched Access-Control-Allow-Origin back and was silently blocked
+// by WebKit before the response ever reached the calling JS. That surfaced
+// as a permanently "stuck loading" UI (GlobalMarkets.tsx's Open Interest
+// tiles, in particular) rather than a visible error, since a blocked CORS
+// response rejects the fetch promise with no HTTP status to inspect, and
+// several callers' .catch() swallow that silently. Safe to do broadly
+// here: every route this proxies is a plain public-market-data GET with no
+// cookies/credentials involved, so there's no session to leak by not
+// pinning to a fixed origin list.
 function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
+  const origin = req.headers.get('origin');
   return {
-    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': origin || '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
