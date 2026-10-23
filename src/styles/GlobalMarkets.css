@@ -430,9 +430,14 @@
 }
 .gm-derivatives-mini-chart {
   display: flex;
+  flex: 1;
   align-items: flex-end;
   gap: 2px;
-  height: 26px;
+  min-height: 40px;
+  /* Thin baseline the bars sit on, matching a reference screenshot's own
+     dashed baseline under its liquidation bars. */
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 2px;
 }
 .gm-derivatives-mini-chart span {
   flex: 1;
