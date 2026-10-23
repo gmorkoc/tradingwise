@@ -1146,6 +1146,9 @@
   flex-direction: column;
   gap: 5px;
 }
+/* Clean and white — plain card on the section's own white surface, a
+   thin neutral border for definition instead of a gray-tinted fill, the
+   colored left stripe doing the only "gainer vs loser" signaling. */
 .gm-mover-banner-card {
   all: unset;
   box-sizing: border-box;
@@ -1154,14 +1157,15 @@
   gap: 8px;
   padding: 7px 9px;
   border-radius: 8px;
-  background: var(--color-input-bg);
+  background: transparent;
+  border: 1px solid var(--color-border);
   border-left: 3px solid transparent;
   cursor: pointer;
   transition: background 0.15s;
   animation: gm-rise-in 0.3s ease both;
 }
 .gm-mover-banner-card:hover {
-  background: var(--color-border);
+  background: var(--color-input-bg);
 }
 .gm-mover-banner--gainers .gm-mover-banner-card {
   border-left-color: var(--color-success);
