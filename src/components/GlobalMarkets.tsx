@@ -346,6 +346,9 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // as a reference screenshot of a trending-stocks widget.
   const [moverPage, setMoverPage] = useState<0 | 1>(0);
   const [trending, setTrending]   = useState<TrendingCoin[]>([]);
+  // Trending Coins pager — 5 per page, matching a reference screenshot of
+  // a trending-coins widget (pager arrows + "x/2" + an auto-advance dot).
+  const [trendingPage, setTrendingPage] = useState(0);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
   // Full history for the mobile-only "Fear & Greed Index Chart" section
   // (Historical Values / Yearly High-Low / the chart itself) — kept
@@ -396,6 +399,14 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     const t = setTimeout(() => setMoverPage(p => (p === 0 ? 1 : 0)), 5000);
     return () => clearTimeout(t);
   }, [moverPage]);
+
+  // Same auto-advance pattern for the Trending Coins pager (5/page).
+  const trendingPageCount = Math.max(1, Math.ceil(Math.min(trending.length, 10) / 5));
+  useEffect(() => {
+    if (trendingPageCount <= 1) return;
+    const t = setTimeout(() => setTrendingPage(p => (p + 1) % trendingPageCount), 5000);
+    return () => clearTimeout(t);
+  }, [trendingPage, trendingPageCount]);
 
   // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
@@ -831,19 +842,35 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       <div className="gm-hero">
         <span className="gm-hero-glow" />
         <div className="gm-status-grid">
-        {/* Trending Coins (compact) */}
+        {/* Trending Coins (compact) — paged 5/page, matching a reference
+            screenshot's trending-widget pager (arrows + "x/N" + an
+            auto-advance dot), same pattern as the Gainers/Losers banner's
+            own pager below. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.fire}</span>Trending Coins</div>
+          <div className="gm-status-col-head gm-status-col-head--trending">
+            <span><span className="gm-status-col-icon">{IC.fire}</span>Trending Coins</span>
+            {trendingPageCount > 1 && (
+              <div className="gm-trending-pager">
+                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
+                  onClick={() => setTrendingPage(p => (p - 1 + trendingPageCount) % trendingPageCount)}>‹</button>
+                <span className="gm-mover-banner-pager-label">{trendingPage + 1}/{trendingPageCount}</span>
+                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
+                  onClick={() => setTrendingPage(p => (p + 1) % trendingPageCount)}>›</button>
+                <span key={trendingPage} className="gm-trending-pager-dot" />
+              </div>
+            )}
+          </div>
           <div className="gm-status-list">
             {trending.length === 0
-              ? Array.from({ length: 10 }).map((_, i) => (
+              ? Array.from({ length: 5 }).map((_, i) => (
                   <span key={i} className="gm-skel gm-status-skel-row" style={{ animationDelay: `${i * 60}ms` }} />
                 ))
-              : trending.slice(0, 10).map((t, i) => {
+              : trending.slice(0, 10).slice(trendingPage * 5, trendingPage * 5 + 5).map((t, i) => {
+                  const rank = trendingPage * 5 + i + 1;
                   const tchg = t.data?.price_change_percentage_24h?.usd;
                   return (
                     <button key={t.id} type="button" className="gm-status-list-row" onClick={() => onSelectCoin?.(t.symbol.toUpperCase())}>
-                      <span className={`gm-status-list-rank${i < 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][i]}` : ""}`}>{i + 1}</span>
+                      <span className={`gm-status-list-rank${rank <= 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][rank - 1]}` : ""}`}>{rank}</span>
                       <img src={t.thumb} alt="" className="gm-status-list-img" loading="lazy" />
                       <span className="gm-status-list-sym">{t.symbol.toUpperCase()}</span>
                       <span className="gm-status-list-price">{t.data?.price != null ? fmtPrice(t.data.price) : "—"}</span>

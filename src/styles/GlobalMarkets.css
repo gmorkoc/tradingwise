@@ -160,6 +160,27 @@
   font-weight: 800;
   color: var(--color-text);
 }
+.gm-status-col-head--trending {
+  justify-content: space-between;
+}
+.gm-trending-pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Pulses once on every page change (key={trendingPage} remounts it),
+   same "auto-advance is live" cue a reference screenshot's blue dot gave. */
+.gm-trending-pager-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: gm-trending-pager-pulse 0.5s ease;
+}
+@keyframes gm-trending-pager-pulse {
+  0% { transform: scale(1.8); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
 .gm-status-fng {
   display: flex;
   justify-content: center;
