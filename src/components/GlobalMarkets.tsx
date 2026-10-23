@@ -685,34 +685,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     ? { btcUsd: oi.btcAmt * btcRow.current_price, ethUsd: oi.ethAmt * ethRow.current_price }
     : null;
 
-  // "Market Activity" — real CoinGecko-sourced volume figures, standing
-  // in for a Derivatives panel: CoinGlass's own derivatives endpoints
-  // (open interest, liquidations) are all currently rejecting every
-  // request with "Upgrade plan" (verified directly against the live
-  // proxy), so this uses only sources confirmed actually working instead
-  // of fabricating numbers for metrics that aren't reachable right now.
-  const marketActivity = [
-    { label: "Total 24h Volume", value: fmtBig(vol), icon: IC.vol },
-    { label: "BTC 24h Volume", value: btcRow ? fmtBig(btcRow.total_volume) : "—", icon: IC.btc },
-    { label: "Active Markets", value: g.markets?.toLocaleString() ?? "—", icon: IC.markets },
-    { label: "Active Cryptocurrencies", value: g.active_cryptocurrencies?.toLocaleString() ?? "—", icon: IC.coins },
-  ];
-
-  // New 4th hero column — real CoinGecko `global` fields that were already
-  // being fetched (part of the GlobalData type since this file's own
-  // GlobalData interface) but never actually rendered anywhere: DeFi
-  // market cap, 24h volume, and the defi_to_eth_ratio field CoinGecko
-  // itself publishes. DeFi Dominance is the one derived figure here (%
-  // of total market cap), same "real data, simple derivation" standard
-  // as altcoinStrengthPct/othersDomPct elsewhere in this file.
-  const defiMcap = Number(g.defi_market_cap) || 0;
-  const defiStats = [
-    { label: "DeFi Market Cap", value: fmtBig(defiMcap), icon: IC.cap },
-    { label: "DeFi 24h Volume", value: fmtBig(Number(g.defi_volume_24h) || 0), icon: IC.vol },
-    { label: "DeFi Dominance", value: mcap > 0 ? `${((defiMcap / mcap) * 100).toFixed(2)}%` : "—", icon: IC.markets },
-    { label: "DeFi / ETH Ratio", value: g.defi_to_eth_ratio ? `${Number(g.defi_to_eth_ratio).toFixed(2)}%` : "—", icon: IC.eth },
-  ];
-
   // Rendered twice (inline in the side-by-side grid, and again inside its
   // own portaled modal when expanded) — kept as one JSX value each so the
   // two copies can't drift apart from editing only one of them.
@@ -842,6 +814,42 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       <div className="gm-hero">
         <span className="gm-hero-glow" />
         <div className="gm-status-grid">
+        {/* Market Status — Fear & Greed gauge up top, then a row of real
+            stat tiles (Market Cap, Altcoin Strength, 24h Volume) below,
+            matching a reference screenshot's own "Market Status" column. */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>Market Status</div>
+          {fngValue !== null ? (
+            <div className="gm-status-fng">
+              <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
+            </div>
+          ) : (
+            <div className="gm-fng-skel">
+              <span className="gm-skel gm-fng-skel-arc" />
+              <span className="gm-skel gm-fng-skel-value" />
+            </div>
+          )}
+          <div className="gm-activity-grid">
+            <div className="gm-activity-tile">
+              <span className="gm-activity-tile-icon">{IC.cap}</span>
+              <span className="gm-activity-tile-value">{fmtBig(mcap)}</span>
+              <span className="gm-activity-tile-label">Market Cap</span>
+            </div>
+            {altcoinStrengthPct !== null && (
+              <div className="gm-activity-tile">
+                <span className="gm-activity-tile-icon">{IC.fire}</span>
+                <span className="gm-activity-tile-value">{altcoinStrengthPct}%</span>
+                <span className="gm-activity-tile-label">Altcoin Strength</span>
+              </div>
+            )}
+            <div className="gm-activity-tile">
+              <span className="gm-activity-tile-icon">{IC.vol}</span>
+              <span className="gm-activity-tile-value">{fmtBig(vol)}</span>
+              <span className="gm-activity-tile-label">24h Volume</span>
+            </div>
+          </div>
+        </div>
+
         {/* Trending Coins (compact) — paged 5/page, matching a reference
             screenshot's trending-widget pager (arrows + "x/N" + an
             auto-advance dot), same pattern as the Gainers/Losers banner's
@@ -885,20 +893,45 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
           </div>
         </div>
 
-        {/* Market Activity (stands in for Derivatives — see comment above
-            marketActivity: CoinGlass's own OI/liquidation endpoints are
-            all currently rejecting with "Upgrade plan" on the live key,
-            so this sticks to sources confirmed working instead). */}
+        {/* Derivatives — BTC/ETH Open Interest (Binance perps via
+            Coinalyze) + BTC/ETH DVOL (Deribit's implied-volatility index),
+            the same real data the old standalone Open Interest/Implied
+            Volatility section below the chart used to show separately —
+            consolidated into one column here instead, matching a
+            reference screenshot's own "Derivatives" box. Neither figure
+            is a market-wide total — see the `oi`/`dvol` state comments
+            above for exactly what each one is. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Market Activity</div>
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Derivatives</div>
           <div className="gm-activity-grid">
-            {marketActivity.map((m, i) => (
-              <div key={m.label} className="gm-activity-tile" style={{ animationDelay: `${i * 70}ms` }}>
-                <span className="gm-activity-tile-icon">{m.icon}</span>
-                <span className="gm-activity-tile-value">{m.value}</span>
-                <span className="gm-activity-tile-label">{m.label}</span>
-              </div>
-            ))}
+            {oiStats && dvol ? (
+              <>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.btc}</span>
+                  <span className="gm-activity-tile-value">{fmtBig(oiStats.btcUsd)}</span>
+                  <span className="gm-activity-tile-label">BTC Open Interest</span>
+                </div>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.eth}</span>
+                  <span className="gm-activity-tile-value">{fmtBig(oiStats.ethUsd)}</span>
+                  <span className="gm-activity-tile-label">ETH Open Interest</span>
+                </div>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.btc}</span>
+                  <span className="gm-activity-tile-value">{dvol.btc.toFixed(1)}%</span>
+                  <span className="gm-activity-tile-label">BTC DVOL</span>
+                </div>
+                <div className="gm-activity-tile">
+                  <span className="gm-activity-tile-icon">{IC.eth}</span>
+                  <span className="gm-activity-tile-value">{dvol.eth.toFixed(1)}%</span>
+                  <span className="gm-activity-tile-label">ETH DVOL</span>
+                </div>
+              </>
+            ) : (
+              Array.from({ length: 4 }).map((_, i) => (
+                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
+              ))
+            )}
           </div>
         </div>
 
@@ -915,21 +948,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
               : sentiment.map((s, i) => (
                   <SentimentGauge key={s.id} symbol={s.symbol.toUpperCase()} up={s.up} delay={i * 80} />
                 ))}
-          </div>
-        </div>
-
-        {/* DeFi — real CoinGecko `global` fields (defiStats above) that
-            were already fetched but never rendered anywhere on this page. */}
-        <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.cap}</span>DeFi</div>
-          <div className="gm-activity-grid">
-            {defiStats.map((m, i) => (
-              <div key={m.label} className="gm-activity-tile" style={{ animationDelay: `${i * 70}ms` }}>
-                <span className="gm-activity-tile-icon">{m.icon}</span>
-                <span className="gm-activity-tile-value">{m.value}</span>
-                <span className="gm-activity-tile-label">{m.label}</span>
-              </div>
-            ))}
           </div>
         </div>
         </div>
@@ -1229,69 +1247,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
-      {/* ── Open Interest + Implied Volatility — the two screenshot widgets
-          backed by a real, verified-working, free data source. See the
-          `oi`/`dvol` state comments above: OI is Binance's own BTC/ETH
-          perpetual OI via Coinalyze (explicitly NOT a market-wide total —
-          CoinGlass's own OI endpoints still reject with "Upgrade plan" on
-          the live key, re-verified), and DVOL is Deribit's own implied-
-          volatility index (a real substitute for "Volmex", different
-          provider, labeled as such). ─────────────────────────────────────── */}
-      <div className="gm-oivol-grid">
-        <div className="gm-section">
-          <div className="gm-section-header">
-            <span className="gm-section-title">{IC.vol} Open Interest</span>
-            <span className="gm-section-sub">Binance perps, via Coinalyze — not total market</span>
-          </div>
-          <div className="gm-activity-grid">
-            {oiStats ? (
-              <>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.btc}</span>
-                  <span className="gm-activity-tile-value">{fmtBig(oiStats.btcUsd)}</span>
-                  <span className="gm-activity-tile-label">BTC Open Interest</span>
-                </div>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.eth}</span>
-                  <span className="gm-activity-tile-value">{fmtBig(oiStats.ethUsd)}</span>
-                  <span className="gm-activity-tile-label">ETH Open Interest</span>
-                </div>
-              </>
-            ) : (
-              Array.from({ length: 2 }).map((_, i) => (
-                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="gm-section">
-          <div className="gm-section-header">
-            <span className="gm-section-title">{IC.cap} Implied Volatility</span>
-            <span className="gm-section-sub">DVOL (Deribit)</span>
-          </div>
-          <div className="gm-activity-grid">
-            {dvol ? (
-              <>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.btc}</span>
-                  <span className="gm-activity-tile-value">{dvol.btc.toFixed(1)}%</span>
-                  <span className="gm-activity-tile-label">BTC DVOL</span>
-                </div>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.eth}</span>
-                  <span className="gm-activity-tile-value">{dvol.eth.toFixed(1)}%</span>
-                  <span className="gm-activity-tile-label">ETH DVOL</span>
-                </div>
-              </>
-            ) : (
-              Array.from({ length: 2 }).map((_, i) => (
-                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
-              ))
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* ── Dominance donut + Chart, side by side ───────────────────────────── */}
       <div className="gm-dom-chart-grid">

@@ -821,13 +821,6 @@
   margin-top: -4px;
 }
 
-/* ── Open Interest / Implied Volatility cards ────────────────────────────── */
-.gm-oivol-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
 /* ── Altcoin Season + Crypto Market Cap standalone cards ─────────────────── */
 /* Same order/visibility on every screen size now (previously mobile-only):
    banner, Crypto Market Cap, Market Status (hero), Fear & Greed chart,
@@ -1372,8 +1365,7 @@
      (universal, see its base rule above), so grid-template-columns on it
      has no effect either way. */
   .gm-dom-chart-grid,
-  .gm-table-movers-grid,
-  .gm-oivol-grid { grid-template-columns: 1fr; }
+  .gm-table-movers-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   /* Tightened from 16px 16px 36px / gap 20px — narrow-screen real estate
