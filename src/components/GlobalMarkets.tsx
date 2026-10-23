@@ -1300,20 +1300,26 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
           </div>
 
           <div className="gm-mover-banner-scroll">
-            {moverList.map(c => {
+            {moverList.map((c, i) => {
               const pct = Math.abs(c.price_change_percentage_24h ?? 0);
               return (
                 <button type="button" key={c.id} className="gm-mover-banner-card"
+                  style={{ animationDelay: `${i * 45}ms` }}
                   onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  <img src={c.image} alt="" className="gm-mover-banner-img" loading="lazy" />
-                  <div className="gm-mover-banner-id">
+                  {/* Full-card backdrop chart — purely decorative texture
+                      behind the real numbers, not a readable data viz at
+                      this size, so it's given no axes/labels of its own. */}
+                  <span className="gm-mover-banner-card-spark">
+                    <Sparkline data={c.sparkline_in_7d?.price} color="rgba(255,255,255,0.9)" width={168} height={116} />
+                  </span>
+                  <div className="gm-mover-banner-card-top">
+                    <img src={c.image} alt="" className="gm-mover-banner-img" loading="lazy" />
                     <span className="gm-mover-banner-sym">{c.symbol.toUpperCase()}</span>
-                    <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
                   </div>
-                  <Sparkline data={c.sparkline_in_7d?.price} color={moverMode === "gainers" ? "#22c55e" : "#fb7185"} width={64} height={28} />
-                  <span className={`gm-mover-banner-pct${moverMode === "gainers" ? " gm-pct--pos" : " gm-pct--neg"}`}>
+                  <span className="gm-mover-banner-pct">
                     {moverMode === "gainers" ? "▲" : "▼"} {pct.toFixed(1)}%
                   </span>
+                  <span className="gm-mover-banner-price">{fmtPrice(c.current_price)}</span>
                 </button>
               );
             })}
