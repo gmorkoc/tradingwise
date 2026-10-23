@@ -6,6 +6,15 @@
   flex-direction: column;
   gap: 28px;
 }
+/* Icy glossy page backdrop — light theme only (the app is dark by
+   default; a light/icy wash reads wrong against the dark theme's own
+   near-black background, which is left untouched here). A subtle cool
+   blue-gray gradient instead of flat white, so the white cards floating
+   on top (.gm-section/.gm-status-col, already var(--color-card-bg)) read
+   as distinctly "lifted" surfaces rather than blending into the page. */
+html[data-theme="light"] .gm-wrap {
+  background: linear-gradient(180deg, #eef2f7 0%, #f7f9fc 55%, #eef1f6 100%);
+}
 
 /* The Markets page's SectionBanner is now GlobalMarkets' own first
    .gm-wrap child (not an external sibling) — SectionBanner.css's own
@@ -314,6 +323,7 @@
   padding: 6px 6px;
   border-radius: 12px;
   background: var(--color-input-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   animation: gm-rise-in 0.35s ease both;
   transition: transform 0.15s;
 }
@@ -364,6 +374,7 @@
   padding: 7px 10px;
   border-radius: 10px;
   background: var(--color-input-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   animation: gm-rise-in 0.35s ease both;
 }
 .gm-marketstatus-tile-label {
