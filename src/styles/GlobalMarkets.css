@@ -106,52 +106,41 @@
 /* ── Hero (the original single glowing card) now carrying the Market
    Status / Trending / Market Activity / Community columns instead of
    just the market-cap figure. ──────────────────────────────────────────── */
+/* .gm-hero is a plain layout wrapper now, no visual styling of its own —
+   each of the 4 widgets below is its own separate card (background,
+   border, radius, shadow), not one shared glowing outer card with
+   divider lines between columns. Matches a reference screenshot/markup
+   where "Market Status"/"Trending"/"Derivatives"/"Community" are each
+   their own independent <card-header>/<card-content> box. */
 .gm-hero {
-  position: relative;
-  padding: 22px 24px;
-  border-radius: 20px;
-  border: 1px solid var(--color-border);
-  background: var(--color-card-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
   animation: gm-rise-in 0.4s ease both;
 }
 .gm-hero-glow {
-  position: absolute;
-  top: -60px;
-  left: -40px;
-  width: 320px;
-  height: 240px;
-  background:
-    radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--color-primary) 30%, transparent), transparent 65%),
-    radial-gradient(circle at 70% 70%, color-mix(in srgb, var(--color-success) 22%, transparent), transparent 65%);
-  filter: blur(30px);
-  opacity: 0.7;
-  animation: gm-hero-glow-breathe 6s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes gm-hero-glow-breathe {
-  0%, 100% { opacity: 0.5; transform: scale(0.95); }
-  50% { opacity: 0.85; transform: scale(1.08); }
+  display: none;
 }
 .gm-status-grid {
-  position: relative;
-  z-index: 1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  gap: 16px;
 }
-/* Plain columns, no own border/background — one shared glowing card
-   (.gm-hero above) now, not four separate boxes. A divider line between
-   columns instead of each one's own border. */
 .gm-status-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 2px 22px;
-}
-.gm-status-col + .gm-status-col {
-  border-left: 1px solid var(--color-border);
+  gap: 8px;
+  padding: 14px 16px;
+  /* All 4 columns stretch to match the tallest one (grid's default
+     align-items:stretch) — capped + clipped to roughly Market Activity's
+     own natural height (the most compact column) instead of however
+     tall the biggest one's content happens to be, per request. Each
+     taller column's own internals are trimmed to actually fit inside
+     this instead of just clipping awkwardly (gauge/tile/chart sizes
+     below). */
+  max-height: 230px;
+  overflow: hidden;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 .gm-status-col-head {
   display: flex;
@@ -343,49 +332,109 @@
   line-height: 1.2;
 }
 
-/* ── Community sentiment gauges (radial rings, not flat bars) ──────────── */
-.gm-sentiment-grid {
+/* ── Market Status sub-tiles (Fear & Greed / Altcoin Season left column,
+   Market Cap / 24h Volume / BTC Dominance right column) — matches a
+   reference screenshot's own two-column mini-card layout exactly. ────── */
+.gm-marketstatus-grid {
   display: flex;
-  justify-content: space-around;
-  align-items: center;
-  flex: 1;
-  gap: 10px;
+  gap: 8px;
+  align-items: flex-start;
 }
-.gm-sentiment-gauge {
-  position: relative;
+.gm-marketstatus-col {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
 }
-.gm-sentiment-gauge-svg {
-  width: 84px;
-  height: 84px;
-}
-.gm-sentiment-gauge-center {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 84px;
-  height: 84px;
+.gm-marketstatus-tile {
   display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  animation: gm-rise-in 0.35s ease both;
+}
+.gm-marketstatus-tile-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+.gm-marketstatus-tile-label em {
+  font-style: normal;
+  opacity: 0.8;
+}
+.gm-marketstatus-tile--fng {
   align-items: center;
-  justify-content: center;
 }
-.gm-sentiment-gauge-pct {
-  font-size: 0.92rem;
+.gm-marketstatus-tile--fng .gm-fng {
+  width: 100%;
+}
+.gm-marketstatus-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.gm-marketstatus-stat strong {
+  font-size: 1rem;
   font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
 }
-.gm-sentiment-gauge-sym {
+.gm-marketstatus-stat span {
   font-size: 0.72rem;
   font-weight: 700;
+}
+.gm-marketstatus-altseason-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+}
+.gm-marketstatus-altseason-track {
+  margin-top: 10px;
+}
+.gm-marketstatus-stat span {
   color: var(--color-text-secondary);
+  font-weight: 600;
 }
-.gm-sentiment-skel {
-  width: 84px;
-  height: 104px;
-  border-radius: 12px;
+
+/* ── Derivatives column's big chart tile (mini BTC daily-swing bars,
+   real Market Pulse data reused — see the JSX comment for why) ────────── */
+.gm-derivatives-chart-tile {
+  gap: 6px;
 }
+.gm-derivatives-chart-stats {
+  display: flex;
+  gap: 16px;
+}
+.gm-derivatives-chart-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gm-derivatives-chart-stat strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.gm-derivatives-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 34px;
+}
+.gm-derivatives-mini-chart span {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  min-height: 3px;
+}
+.gm-derivatives-bar--up { background: var(--color-success); }
+.gm-derivatives-bar--down { background: var(--color-danger); }
+
 .gm-status-mcap {
   display: flex;
   align-items: baseline;
@@ -461,7 +510,16 @@
   width: 150px;
 }
 .gm-fng--compact {
-  width: 120px;
+  width: 95px;
+}
+/* Scaled down from the base -36px to match this narrower width (was
+   120px) — that offset pulls the readout up into the gauge's own arc and
+   needs to shrink with the SVG or the number sits too low. */
+.gm-fng--compact .gm-fng-readout {
+  margin-top: -28px;
+}
+.gm-fng--compact .gm-fng-value {
+  font-size: 1.15rem;
 }
 .gm-fng-svg {
   width: 100%;
@@ -1372,15 +1430,12 @@
      is the scarce resource here, and that was a lot of dead space
      compounding across every one of this page's ~8 stacked sections. */
   .gm-wrap { padding: 12px 16px 28px; gap: 14px; }
-  .gm-hero { padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
-  .gm-hero-glow { background: none; }
-  .gm-status-grid { grid-template-columns: 1fr; row-gap: 14px; }
-  .gm-status-col + .gm-status-col { border-left: none; padding-top: 14px; border-top: 1px solid var(--color-border); }
-  .gm-status-col { padding-left: 0; padding-right: 0; }
-  /* space-around leaves a half-gap at the first/last gauge vs. between
-     them — space-between puts the end gauges flush against the edges
-     instead, now that every ancestor is already edge-to-edge. */
-  .gm-sentiment-grid { justify-content: space-between; }
+  /* Each .gm-status-col is its own separate card now (own bg/border/
+     radius/shadow, same as every other section on this page) at every
+     width — just stacks to 1 column here, same as any other grid. No
+     divider-border/zeroed-padding hacks needed anymore (those were from
+     the old single-shared-card hero architecture). */
+  .gm-status-grid { grid-template-columns: 1fr; }
   .gm-section { padding: 12px 0; gap: 12px; }
   .gm-section-header { gap: 8px; }
   .gm-liq-stat-card,

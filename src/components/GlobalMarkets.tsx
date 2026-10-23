@@ -33,18 +33,6 @@ interface CoinRow {
   sparkline_in_7d?: { price: number[] };
 }
 
-interface TrendingCoin {
-  id: string; name: string; symbol: string; thumb: string;
-  market_cap_rank: number; price_btc: number; score: number;
-  // CoinGecko's trending response nests real USD price/24h change here —
-  // already present in the same response we already fetch, no extra
-  // request needed for the list to show real numbers instead of just
-  // rank/name.
-  data?: { price: number; price_change_percentage_24h?: { usd?: number } };
-}
-
-interface SentimentCoin { id: string; symbol: string; name: string; up: number; down: number; }
-
 interface FearGreedPoint { value: string; value_classification: string; timestamp: string; }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -246,37 +234,6 @@ function FearGreedGauge({ value, label, compact }: { value: number; label: strin
   );
 }
 
-// ── Sentiment gauge (Community column) — a small radial ring, same
-// "gauge" treatment as the Fear & Greed meter above, instead of a flat
-// bar: sweeps in from 0 on mount/value-change. ──────────────────────────
-function SentimentGauge({ symbol, up, delay }: { symbol: string; up: number; delay: number }) {
-  const R = 26;
-  const C = 2 * Math.PI * R;
-  const [pct, setPct] = useState(0);
-  useEffect(() => {
-    const t = setTimeout(() => setPct(up), 150 + delay);
-    return () => clearTimeout(t);
-  }, [up, delay]);
-  const color = pct >= 50 ? "var(--color-success)" : "var(--color-danger)";
-  return (
-    <div className="gm-sentiment-gauge">
-      <svg viewBox="0 0 64 64" className="gm-sentiment-gauge-svg">
-        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--color-border)" strokeWidth="6" />
-        <circle
-          cx="32" cy="32" r={R} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
-          strokeDasharray={C} strokeDashoffset={C - (pct / 100) * C}
-          transform="rotate(-90 32 32)"
-          style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1), stroke 0.3s" }}
-        />
-      </svg>
-      <div className="gm-sentiment-gauge-center">
-        <span className="gm-sentiment-gauge-pct" style={{ color }}>{Math.round(up)}%</span>
-      </div>
-      <span className="gm-sentiment-gauge-sym">{symbol}</span>
-    </div>
-  );
-}
-
 // ── Donut dominance chart ────────────────────────────────────────────────────────
 const DOM_COLORS = ["#f7931a", "#627eea", "#9945ff", "#00bcd4", "#f3ba2f", "#94a3b8", "#64748b"];
 function DomTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number }[] }) {
@@ -345,10 +302,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // progress-fill below) between them, same "1/2 pager + arrows" pattern
   // as a reference screenshot of a trending-stocks widget.
   const [moverPage, setMoverPage] = useState<0 | 1>(0);
-  const [trending, setTrending]   = useState<TrendingCoin[]>([]);
-  // Trending Coins pager — 5 per page, matching a reference screenshot of
-  // a trending-coins widget (pager arrows + "x/2" + an auto-advance dot).
-  const [trendingPage, setTrendingPage] = useState(0);
   const [fng, setFng]             = useState<FearGreedPoint | null>(null);
   // Full history for the mobile-only "Fear & Greed Index Chart" section
   // (Historical Values / Yearly High-Low / the chart itself) — kept
@@ -357,7 +310,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // bigger request.
   const [fngHistory, setFngHistory] = useState<FearGreedPoint[]>([]);
   const [fngPeriod, setFngPeriod] = useState<typeof FNG_PERIODS[number]>(FNG_PERIODS[0]);
-  const [sentiment, setSentiment] = useState<SentimentCoin[]>([]);
   const [period, setPeriod]       = useState<{ label: string; days: number }>(PERIODS[1]);
   const [chartKey, setChartKey]   = useState<ChartKey>("market_caps");
   const [loading, setLoading]     = useState(true);
@@ -400,14 +352,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     return () => clearTimeout(t);
   }, [moverPage]);
 
-  // Same auto-advance pattern for the Trending Coins pager (5/page).
-  const trendingPageCount = Math.max(1, Math.ceil(Math.min(trending.length, 10) / 5));
-  useEffect(() => {
-    if (trendingPageCount <= 1) return;
-    const t = setTimeout(() => setTrendingPage(p => (p + 1) % trendingPageCount), 5000);
-    return () => clearTimeout(t);
-  }, [trendingPage, trendingPageCount]);
-
   // Fetch global stats + top coins (sparkline enabled) on mount
   useEffect(() => {
     mountedRef.current = true;
@@ -437,15 +381,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Trending searched coins — its own independent fetch/failure, never
-  // blocks the rest of the page (a dead trending widget shouldn't take
-  // down everything else that already loaded fine).
-  useEffect(() => {
-    cgFetch<{ coins: { item: TrendingCoin }[] }>("https://api.coingecko.com/api/v3/search/trending", TTL.trending)
-      .then(d => { if (mountedRef.current) setTrending(d.coins.map(c => c.item)); })
-      .catch(() => {});
-  }, []);
-
   // Fear & Greed index — alternative.me's free public endpoint, no key.
   useEffect(() => {
     plainFetch<{ data: FearGreedPoint[] }>("https://api.alternative.me/fng/?limit=1&format=json", TTL.fng)
@@ -459,29 +394,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   useEffect(() => {
     plainFetch<{ data: FearGreedPoint[] }>("https://api.alternative.me/fng/?limit=0&format=json", TTL.fngHistory)
       .then(d => { if (mountedRef.current) setFngHistory(d.data ?? []); })
-      .catch(() => {});
-  }, []);
-
-  // Community sentiment — real CoinGecko field (sentiment_votes_up/down_
-  // percentage, the up/down vote widget shown on each coin's own CoinGecko
-  // page), for a couple of major coins. Independent fetch/failure, same
-  // reasoning as trending — never blocks the rest of the page.
-  useEffect(() => {
-    Promise.all(
-      ["bitcoin", "ethereum", "solana"].map(id =>
-        cgFetch<{
-          id: string; symbol: string; name: string;
-          sentiment_votes_up_percentage: number | null;
-          sentiment_votes_down_percentage: number | null;
-        }>(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false`, TTL.global)
-      )
-    )
-      .then(rows => {
-        if (!mountedRef.current) return;
-        setSentiment(rows
-          .filter(r => r.sentiment_votes_up_percentage != null)
-          .map(r => ({ id: r.id, symbol: r.symbol, name: r.name, up: r.sentiment_votes_up_percentage!, down: r.sentiment_votes_down_percentage ?? (100 - r.sentiment_votes_up_percentage!) })));
-      })
       .catch(() => {});
   }, []);
 
@@ -609,6 +521,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const g = global!;
   const vol    = g.total_volume?.usd ?? 0;
   const btcDom = g.market_cap_percentage?.btc ?? 0;
+  const chg24h = g.market_cap_change_percentage_24h_usd ?? 0;
   const ethDom = g.market_cap_percentage?.eth ?? 0;
 
   // Dominance — top 6 coins, donut chart
@@ -814,140 +727,183 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       <div className="gm-hero">
         <span className="gm-hero-glow" />
         <div className="gm-status-grid">
-        {/* Market Status — Fear & Greed gauge up top, then a row of real
-            stat tiles (Market Cap, Altcoin Strength, 24h Volume) below,
-            matching a reference screenshot's own "Market Status" column. */}
+        {/* Market Status — two sub-columns of mini tiles, matching a
+            reference screenshot exactly: left = Fear & Greed gauge +
+            Altcoin Season slider (stacked), right = Market Cap + 24h
+            Volume + BTC Dominance (stacked). The reference's own right
+            column is Market Cap/CMC20/ETF Flows — CMC20 (CoinMarketCap's
+            own proprietary index) and ETF Flows (no free data source)
+            aren't things we can show honestly, so Volume/BTC Dominance
+            (both real, already computed) fill those two slots instead. */}
         <div className="gm-status-col">
           <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>Market Status</div>
-          {fngValue !== null ? (
-            <div className="gm-status-fng">
-              <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
-            </div>
-          ) : (
-            <div className="gm-fng-skel">
-              <span className="gm-skel gm-fng-skel-arc" />
-              <span className="gm-skel gm-fng-skel-value" />
-            </div>
-          )}
-          <div className="gm-activity-grid">
-            <div className="gm-activity-tile">
-              <span className="gm-activity-tile-icon">{IC.cap}</span>
-              <span className="gm-activity-tile-value">{fmtBig(mcap)}</span>
-              <span className="gm-activity-tile-label">Market Cap</span>
-            </div>
-            {altcoinStrengthPct !== null && (
-              <div className="gm-activity-tile">
-                <span className="gm-activity-tile-icon">{IC.fire}</span>
-                <span className="gm-activity-tile-value">{altcoinStrengthPct}%</span>
-                <span className="gm-activity-tile-label">Altcoin Strength</span>
+          <div className="gm-marketstatus-grid">
+            <div className="gm-marketstatus-col">
+              <div className="gm-marketstatus-tile gm-marketstatus-tile--fng">
+                <span className="gm-marketstatus-tile-label">Fear &amp; Greed</span>
+                {fngValue !== null ? (
+                  <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
+                ) : (
+                  <div className="gm-fng-skel">
+                    <span className="gm-skel gm-fng-skel-arc" />
+                    <span className="gm-skel gm-fng-skel-value" />
+                  </div>
+                )}
               </div>
-            )}
+              {altcoinStrengthPct !== null && (
+                <div className="gm-marketstatus-tile">
+                  <span className="gm-marketstatus-tile-label">Altcoin Season <em>(30D)</em></span>
+                  <div className="gm-marketstatus-altseason-value">{altcoinStrengthPct}</div>
+                  <div className="gm-altseason-track gm-marketstatus-altseason-track">
+                    <span className="gm-altseason-dot" style={{ left: `${altcoinStrengthPct}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="gm-marketstatus-col">
+              <div className="gm-marketstatus-tile">
+                <span className="gm-marketstatus-tile-label">Market Cap</span>
+                <div className="gm-marketstatus-stat">
+                  <strong>{fmtBig(mcap)}</strong>
+                  <span className={chg24h >= 0 ? "gm-pct--pos" : "gm-pct--neg"}>
+                    {chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+              <div className="gm-marketstatus-tile">
+                <span className="gm-marketstatus-tile-label">24h Volume</span>
+                <div className="gm-marketstatus-stat"><strong>{fmtBig(vol)}</strong></div>
+              </div>
+              <div className="gm-marketstatus-tile">
+                <span className="gm-marketstatus-tile-label">BTC Dominance</span>
+                <div className="gm-marketstatus-stat"><strong>{btcDom.toFixed(1)}%</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Gainers/Losers (compact) — same gainers/losers/moverPage
+            state and 1/2 pager pattern the full banner next to the Top
+            Cryptocurrencies table uses, just 5 rows at a time in the
+            hero's own compact list style (matches Trending Coins' old
+            row treatment here). */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head gm-status-col-head--trending">
+            <span><span className="gm-status-col-icon">{moverPage === 0 ? "▲" : "▼"}</span>Top {moverPage === 0 ? "Gainers" : "Losers"}</span>
+            <div className="gm-trending-pager">
+              <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
+                onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>‹</button>
+              <span className="gm-mover-banner-pager-label">{moverPage + 1}/2</span>
+              <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
+                onClick={() => setMoverPage(p => (p === 0 ? 1 : 0))}>›</button>
+              <span className="gm-trending-pager-dot" />
+            </div>
+          </div>
+          <div className="gm-status-list">
+            {(moverPage === 0 ? gainers : losers).slice(0, 5).map((c, i) => {
+              const pct = Math.abs(c.price_change_percentage_24h ?? 0);
+              return (
+                <button key={c.id} type="button" className="gm-status-list-row" onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                  <span className={`gm-status-list-rank${i < 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][i]}` : ""}`}>{i + 1}</span>
+                  <img src={c.image} alt="" className="gm-status-list-img" loading="lazy" />
+                  <span className="gm-status-list-sym">{c.symbol.toUpperCase()}</span>
+                  <span className="gm-status-list-price">{fmtPrice(c.current_price)}</span>
+                  <span className={`gm-status-list-chg${moverPage === 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
+                    {moverPage === 0 ? "▲" : "▼"} {pct.toFixed(1)}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Market Activity — real CoinGecko-sourced volume figures. */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Market Activity</div>
+          <div className="gm-activity-grid">
             <div className="gm-activity-tile">
               <span className="gm-activity-tile-icon">{IC.vol}</span>
               <span className="gm-activity-tile-value">{fmtBig(vol)}</span>
-              <span className="gm-activity-tile-label">24h Volume</span>
+              <span className="gm-activity-tile-label">Total 24h Volume</span>
+            </div>
+            <div className="gm-activity-tile">
+              <span className="gm-activity-tile-icon">{IC.btc}</span>
+              <span className="gm-activity-tile-value">{btcRow ? fmtBig(btcRow.total_volume) : "—"}</span>
+              <span className="gm-activity-tile-label">BTC 24h Volume</span>
+            </div>
+            <div className="gm-activity-tile">
+              <span className="gm-activity-tile-icon">{IC.markets}</span>
+              <span className="gm-activity-tile-value">{g.markets?.toLocaleString() ?? "—"}</span>
+              <span className="gm-activity-tile-label">Active Markets</span>
+            </div>
+            <div className="gm-activity-tile">
+              <span className="gm-activity-tile-icon">{IC.coins}</span>
+              <span className="gm-activity-tile-value">{g.active_cryptocurrencies?.toLocaleString() ?? "—"}</span>
+              <span className="gm-activity-tile-label">Active Cryptocurrencies</span>
             </div>
           </div>
         </div>
 
-        {/* Trending Coins (compact) — paged 5/page, matching a reference
-            screenshot's trending-widget pager (arrows + "x/N" + an
-            auto-advance dot), same pattern as the Gainers/Losers banner's
-            own pager below. */}
+        {/* Derivatives — same nested-tile style as Market Status (one big
+            tile with a mini chart, then a row of smaller stat tiles), but
+            a reference screenshot's "All Liquidations" figure isn't real
+            data we have (CoinGlass's own liquidation endpoints still
+            reject with "Upgrade plan" — same reason Market Pulse below
+            exists as a substitute in the first place): the big tile here
+            reuses that same real BTC daily-swing series (liqData) instead
+            of fabricating liquidation numbers, with real Gainers/Losers
+            counts standing in for Long/Short. Open Interest/DVOL below
+            are the same real oi/dvol figures the old standalone section
+            used to show. */}
         <div className="gm-status-col">
-          <div className="gm-status-col-head gm-status-col-head--trending">
-            <span><span className="gm-status-col-icon">{IC.fire}</span>Trending Coins</span>
-            {trendingPageCount > 1 && (
-              <div className="gm-trending-pager">
-                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Previous"
-                  onClick={() => setTrendingPage(p => (p - 1 + trendingPageCount) % trendingPageCount)}>‹</button>
-                <span className="gm-mover-banner-pager-label">{trendingPage + 1}/{trendingPageCount}</span>
-                <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
-                  onClick={() => setTrendingPage(p => (p + 1) % trendingPageCount)}>›</button>
-                <span className="gm-trending-pager-dot" />
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Derivatives</div>
+          <div className="gm-marketstatus-tile gm-derivatives-chart-tile">
+            <div className="gm-derivatives-chart-stats">
+              <div className="gm-derivatives-chart-stat">
+                <span className="gm-marketstatus-tile-label">24h Volume</span>
+                <strong>{fmtBig(vol)}</strong>
+              </div>
+              <div className="gm-derivatives-chart-stat">
+                <span className="gm-marketstatus-tile-label">Gainers</span>
+                <strong className="gm-pct--pos">{gainersCount}</strong>
+              </div>
+              <div className="gm-derivatives-chart-stat">
+                <span className="gm-marketstatus-tile-label">Losers</span>
+                <strong className="gm-pct--neg">{losersCount}</strong>
+              </div>
+            </div>
+            {liqData.length > 0 && (
+              <div className="gm-derivatives-mini-chart">
+                {liqData.slice(-24).map((d, i) => {
+                  const h = Math.max(10, Math.min(100, Math.abs(d.ret) * 14));
+                  return <span key={i} className={d.ret >= 0 ? "gm-derivatives-bar--up" : "gm-derivatives-bar--down"} style={{ height: `${h}%` }} />;
+                })}
               </div>
             )}
           </div>
-          <div className="gm-status-list">
-            {trending.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className="gm-skel gm-status-skel-row" style={{ animationDelay: `${i * 60}ms` }} />
-                ))
-              : trending.slice(0, 10).slice(trendingPage * 5, trendingPage * 5 + 5).map((t, i) => {
-                  const rank = trendingPage * 5 + i + 1;
-                  const tchg = t.data?.price_change_percentage_24h?.usd;
-                  return (
-                    <button key={t.id} type="button" className="gm-status-list-row" onClick={() => onSelectCoin?.(t.symbol.toUpperCase())}>
-                      <span className={`gm-status-list-rank${rank <= 3 ? ` gm-status-list-rank--${["gold", "silver", "bronze"][rank - 1]}` : ""}`}>{rank}</span>
-                      <img src={t.thumb} alt="" className="gm-status-list-img" loading="lazy" />
-                      <span className="gm-status-list-sym">{t.symbol.toUpperCase()}</span>
-                      <span className="gm-status-list-price">{t.data?.price != null ? fmtPrice(t.data.price) : "—"}</span>
-                      {tchg != null && (
-                        <span className={`gm-status-list-chg${tchg >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
-                          {tchg >= 0 ? "▲" : "▼"} {Math.abs(tchg).toFixed(1)}%
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-          </div>
-        </div>
-
-        {/* Derivatives — BTC/ETH Open Interest (Binance perps via
-            Coinalyze) + BTC/ETH DVOL (Deribit's implied-volatility index),
-            the same real data the old standalone Open Interest/Implied
-            Volatility section below the chart used to show separately —
-            consolidated into one column here instead, matching a
-            reference screenshot's own "Derivatives" box. Neither figure
-            is a market-wide total — see the `oi`/`dvol` state comments
-            above for exactly what each one is. */}
-        <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.vol}</span>Derivatives</div>
-          <div className="gm-activity-grid">
-            {oiStats && dvol ? (
-              <>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.btc}</span>
-                  <span className="gm-activity-tile-value">{fmtBig(oiStats.btcUsd)}</span>
-                  <span className="gm-activity-tile-label">BTC Open Interest</span>
-                </div>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.eth}</span>
-                  <span className="gm-activity-tile-value">{fmtBig(oiStats.ethUsd)}</span>
-                  <span className="gm-activity-tile-label">ETH Open Interest</span>
-                </div>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.btc}</span>
-                  <span className="gm-activity-tile-value">{dvol.btc.toFixed(1)}%</span>
-                  <span className="gm-activity-tile-label">BTC DVOL</span>
-                </div>
-                <div className="gm-activity-tile">
-                  <span className="gm-activity-tile-icon">{IC.eth}</span>
-                  <span className="gm-activity-tile-value">{dvol.eth.toFixed(1)}%</span>
-                  <span className="gm-activity-tile-label">ETH DVOL</span>
-                </div>
-              </>
-            ) : (
-              Array.from({ length: 4 }).map((_, i) => (
-                <span key={i} className="gm-skel gm-skel-stat" style={{ animationDelay: `${i * 60}ms` }} />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Community (CoinGecko's own real up/down sentiment-vote field) —
-            radial gauges, not flat bars, same "gauge" treatment the Fear &
-            Greed meter above already uses. */}
-        <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.coins}</span>Community</div>
-          <div className="gm-sentiment-grid">
-            {sentiment.length === 0
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <span key={i} className="gm-skel gm-sentiment-skel" style={{ animationDelay: `${i * 60}ms` }} />
-                ))
-              : sentiment.map((s, i) => (
-                  <SentimentGauge key={s.id} symbol={s.symbol.toUpperCase()} up={s.up} delay={i * 80} />
-                ))}
+          <div className="gm-marketstatus-grid">
+            <div className="gm-marketstatus-tile">
+              <span className="gm-marketstatus-tile-label">Open Interest</span>
+              {oiStats ? (
+                <>
+                  <div className="gm-marketstatus-stat"><strong>{fmtBig(oiStats.btcUsd)}</strong><span>BTC</span></div>
+                  <div className="gm-marketstatus-stat"><strong>{fmtBig(oiStats.ethUsd)}</strong><span>ETH</span></div>
+                </>
+              ) : (
+                <span className="gm-skel gm-skel-stat" />
+              )}
+            </div>
+            <div className="gm-marketstatus-tile">
+              <span className="gm-marketstatus-tile-label">Implied Vol (DVOL)</span>
+              {dvol ? (
+                <>
+                  <div className="gm-marketstatus-stat"><strong>{dvol.btc.toFixed(1)}%</strong><span>BTC</span></div>
+                  <div className="gm-marketstatus-stat"><strong>{dvol.eth.toFixed(1)}%</strong><span>ETH</span></div>
+                </>
+              ) : (
+                <span className="gm-skel gm-skel-stat" />
+              )}
+            </div>
           </div>
         </div>
         </div>
