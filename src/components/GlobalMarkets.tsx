@@ -856,7 +856,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
                 <span className="gm-mover-banner-pager-label">{trendingPage + 1}/{trendingPageCount}</span>
                 <button type="button" className="gm-mover-banner-pager-arrow" aria-label="Next"
                   onClick={() => setTrendingPage(p => (p + 1) % trendingPageCount)}>›</button>
-                <span key={trendingPage} className="gm-trending-pager-dot" />
+                <span className="gm-trending-pager-dot" />
               </div>
             )}
           </div>
