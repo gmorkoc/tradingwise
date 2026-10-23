@@ -875,7 +875,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
             {liqData.length > 0 && (
               <div className="gm-derivatives-mini-chart">
                 {liqData.slice(-24).map((d, i) => {
-                  const h = Math.max(10, Math.min(100, Math.abs(d.ret) * 14));
+                  const h = Math.max(14, Math.min(100, Math.abs(d.ret) * 14));
                   return <span key={i} className={d.ret >= 0 ? "gm-derivatives-bar--up" : "gm-derivatives-bar--down"} style={{ height: `${h}%` }} />;
                 })}
               </div>

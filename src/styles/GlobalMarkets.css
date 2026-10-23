@@ -358,7 +358,9 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  padding: 8px 10px;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
   border-radius: 10px;
   background: var(--color-input-bg);
   animation: gm-rise-in 0.35s ease both;
@@ -386,10 +388,13 @@
   flex-wrap: wrap;
 }
 .gm-marketstatus-stat strong {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+}
+.gm-marketstatus-stat span {
+  font-size: 0.68rem;
 }
 .gm-marketstatus-stat span {
   font-size: 0.72rem;
@@ -432,17 +437,16 @@
   display: flex;
   flex: 1;
   align-items: flex-end;
-  gap: 2px;
-  min-height: 40px;
-  /* Thin baseline the bars sit on, matching a reference screenshot's own
-     dashed baseline under its liquidation bars. */
-  border-bottom: 1px dashed var(--color-border);
-  padding-bottom: 2px;
+  gap: 3px;
+  min-height: 44px;
 }
 .gm-derivatives-mini-chart span {
   flex: 1;
-  border-radius: 2px 2px 0 0;
-  min-height: 3px;
+  /* Fully rounded (pill-shaped) ends, not just a rounded top — matches
+     the reference's own capsule-shaped bars, including the short ones on
+     down days reading as little rounded nubs rather than flat blocks. */
+  border-radius: 999px;
+  min-height: 7px;
 }
 .gm-derivatives-bar--up { background: var(--color-success); }
 .gm-derivatives-bar--down { background: var(--color-danger); }
