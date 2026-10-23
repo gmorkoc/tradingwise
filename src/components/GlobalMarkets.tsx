@@ -465,9 +465,17 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   }, []);
 
   // Fetch chart data when period or chartKey changes (free-tier BTC market chart)
+  // Straight to CoinGecko, not through /gecko-api — same reasoning
+  // coinMeta.ts/MarketHeatmap.tsx already documented: CoinGecko 403s some
+  // endpoints when hit through Vercel's outbound IP but allows the
+  // identical request from a real browser/device origin. Also sidesteps
+  // the native-app issue the rest of this file's direct CoinGecko calls
+  // (global/coins/markets/trending/sentiment) already avoid by not going
+  // through a relative proxy path at all (BN_BASE in coinglass.ts documents
+  // why a relative path resolves to nothing on native).
   useEffect(() => {
     setChartLoading(true);
-    const url = `/gecko-api/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${period.days}`;
+    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${period.days}`;
     cgFetch<{ prices: [number, number][]; market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart)
       .then(d => {
         const raw = d[chartKey as keyof typeof d] ?? d.market_caps;
@@ -493,7 +501,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // altcoinStrengthPct/marketActivity elsewhere in this file.
   useEffect(() => {
     setMcapLoading(true);
-    const url = `/gecko-api/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${mcapPeriod.days}`;
+    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${mcapPeriod.days}`;
     cgFetch<{ market_caps: [number, number][]; total_volumes: [number, number][] }>(url, TTL.chart)
       .then(d => {
         const divisor = btcDomPct > 0 ? btcDomPct / 100 : 1;
@@ -515,7 +523,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   // CoinGlass's actual long/short liquidation volume (unavailable).
   useEffect(() => {
     setLiqLoading(true);
-    const url = `/gecko-api/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${liqRange.days}`;
+    const url = `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${liqRange.days}`;
     cgFetch<{ prices: [number, number][] }>(url, TTL.chart)
       .then(d => {
         const raw = d.prices ?? [];
