@@ -106,31 +106,6 @@ function fmtDate(ts: number, days: number): string {
   return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
-// Counts up from 0 to `value` over a short burst on mount/value-change —
-// same "number feels alive" cue a lot of fancy dashboards use for a
-// headline stat, instead of the figure just silently appearing.
-function useCountUp(value: number, durationMs = 900): number {
-  const [display, setDisplay] = useState(0);
-  const fromRef = useRef(0);
-  useEffect(() => {
-    if (!Number.isFinite(value)) return;
-    const from = fromRef.current;
-    const start = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(from + (value - from) * eased);
-      if (t < 1) raf = requestAnimationFrame(tick);
-      else fromRef.current = value;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-  return display;
-}
-
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
 const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
@@ -604,11 +579,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const activeTab = CHART_TABS.find(t => t.key === chartKey)!;
 
   const mcap   = global?.total_market_cap?.usd ?? 0;
-  // Raw dollar value animated (not pre-divided into $B) — fmtBig below
-  // picks the right unit (T/B/M) itself, same as the Crypto Market Cap
-  // card's own stat does; this used to always divide by 1e9 and hardcode
-  // a "B" suffix, so a $2.75T cap displayed as the harder-to-read "$2752.6B".
-  const mcapAnimated = useCountUp(mcap, 1100);
 
   if (loading) return <GmSkeleton />;
   if (error) return (
@@ -619,7 +589,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const vol    = g.total_volume?.usd ?? 0;
   const btcDom = g.market_cap_percentage?.btc ?? 0;
   const ethDom = g.market_cap_percentage?.eth ?? 0;
-  const chg24h = g.market_cap_change_percentage_24h_usd ?? 0;
 
   // Dominance — top 6 coins, donut chart
   const domEntries = Object.entries(g.market_cap_percentage ?? {})
@@ -704,6 +673,21 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     { label: "BTC 24h Volume", value: btcRow ? fmtBig(btcRow.total_volume) : "—", icon: IC.btc },
     { label: "Active Markets", value: g.markets?.toLocaleString() ?? "—", icon: IC.markets },
     { label: "Active Cryptocurrencies", value: g.active_cryptocurrencies?.toLocaleString() ?? "—", icon: IC.coins },
+  ];
+
+  // New 4th hero column — real CoinGecko `global` fields that were already
+  // being fetched (part of the GlobalData type since this file's own
+  // GlobalData interface) but never actually rendered anywhere: DeFi
+  // market cap, 24h volume, and the defi_to_eth_ratio field CoinGecko
+  // itself publishes. DeFi Dominance is the one derived figure here (%
+  // of total market cap), same "real data, simple derivation" standard
+  // as altcoinStrengthPct/othersDomPct elsewhere in this file.
+  const defiMcap = Number(g.defi_market_cap) || 0;
+  const defiStats = [
+    { label: "DeFi Market Cap", value: fmtBig(defiMcap), icon: IC.cap },
+    { label: "DeFi 24h Volume", value: fmtBig(Number(g.defi_volume_24h) || 0), icon: IC.vol },
+    { label: "DeFi Dominance", value: mcap > 0 ? `${((defiMcap / mcap) * 100).toFixed(2)}%` : "—", icon: IC.markets },
+    { label: "DeFi / ETH Ratio", value: g.defi_to_eth_ratio ? `${Number(g.defi_to_eth_ratio).toFixed(2)}%` : "—", icon: IC.eth },
   ];
 
   // Rendered twice (inline in the side-by-side grid, and again inside its
@@ -835,27 +819,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       <div className="gm-hero">
         <span className="gm-hero-glow" />
         <div className="gm-status-grid">
-        {/* Market Status */}
-        <div className="gm-status-col">
-          <div className="gm-status-col-head"><span className="gm-status-col-icon gm-status-col-icon--fng">{IC.cap}</span>Market Status</div>
-          {fngValue !== null ? (
-            <div className="gm-status-fng">
-              <FearGreedGauge value={fngValue} label={fng!.value_classification} compact />
-            </div>
-          ) : (
-            <div className="gm-fng-skel">
-              <span className="gm-skel gm-fng-skel-arc" />
-              <span className="gm-skel gm-fng-skel-value" />
-            </div>
-          )}
-          <div className={`gm-status-mcap${chg24h >= 0 ? " gm-status-mcap--up" : " gm-status-mcap--down"}`}>
-            <span className="gm-status-mcap-value">{fmtBig(mcapAnimated)}</span>
-            <span className={`gm-status-row-chg${chg24h >= 0 ? " gm-pct--pos" : " gm-pct--neg"}`}>
-              {chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%
-            </span>
-          </div>
-        </div>
-
         {/* Trending Coins (compact) */}
         <div className="gm-status-col">
           <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.fire}</span>Trending Coins</div>
@@ -915,16 +878,29 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
                 ))}
           </div>
         </div>
+
+        {/* DeFi — real CoinGecko `global` fields (defiStats above) that
+            were already fetched but never rendered anywhere on this page. */}
+        <div className="gm-status-col">
+          <div className="gm-status-col-head"><span className="gm-status-col-icon">{IC.cap}</span>DeFi</div>
+          <div className="gm-activity-grid">
+            {defiStats.map((m, i) => (
+              <div key={m.label} className="gm-activity-tile" style={{ animationDelay: `${i * 70}ms` }}>
+                <span className="gm-activity-tile-icon">{m.icon}</span>
+                <span className="gm-activity-tile-value">{m.value}</span>
+                <span className="gm-activity-tile-label">{m.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         </div>
       </div>
 
-      {/* ── Fear & Greed Index Chart — mobile-only (gm-fnghist-section is
-          display:none by default, see GlobalMarkets.css), a fuller
-          treatment of the same index the hero's own compact gauge above
-          already shows: historical values, yearly high/low, and a real
-          history chart, all from alternative.me's free full-history
-          endpoint (fngHistory, fetched once above). Desktop keeps just
-          the hero's existing compact gauge — this doesn't render there. */}
+      {/* ── Fear & Greed Index Chart — a fuller treatment of the same index
+          the hero's own compact gauge used to show (now hidden, see
+          .gm-status-fng in GlobalMarkets.css): historical values, yearly
+          high/low, and a real history chart, all from alternative.me's
+          free full-history endpoint (fngHistory, fetched once above). */}
       {fngValue !== null && (
         <div className="gm-fnghist-section">
           <div className="gm-section gm-fnghist-card">
@@ -1344,7 +1320,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       </div>
 
       {/* ── Top coins table (paginated) ─────────────────────────────────────── */}
-      <div className="gm-section">
+      <div className="gm-section gm-table-section">
         <div className="gm-section-header">
           <span className="gm-section-title">Top Cryptocurrencies</span>
           <span className="gm-section-sub">{coins.length.toLocaleString()} coins by market capitalization</span>

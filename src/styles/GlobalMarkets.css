@@ -483,7 +483,8 @@
   align-items: stretch;
 }
 @media (max-width: 860px) {
-  .gm-liq-grid { grid-template-columns: 1fr; }
+  .gm-liq-grid,
+  .gm-fnghist-section { grid-template-columns: 1fr; }
 }
 
 .gm-liq-side {
@@ -805,16 +806,77 @@
 }
 
 /* ── Altcoin Season + Crypto Market Cap standalone cards ─────────────────── */
+/* Same order/visibility on every screen size now (previously mobile-only):
+   banner, Crypto Market Cap, Market Status (hero), Fear & Greed chart,
+   Altcoin Season, then the rest of the page unchanged. display:contents
+   removes gm-topcards-grid's own box so its two cards (gm-mcap-card/
+   gm-altseason-card) become direct flex items of .gm-wrap itself,
+   alongside .sec-banner/.gm-hero/.gm-fnghist-section — only then can
+   `order` interleave them in one sequence, since `order` only reorders
+   siblings sharing a parent and these started out three levels apart.
+   The cards keep their own box/padding (only the GRID's box disappears),
+   so nothing inside them loses hit-testing — unlike wrapping an
+   interactive element itself in display:contents (see the TradingAgent
+   orb regression from earlier), this is a layout-only container with no
+   listeners of its own, and its children are untouched. The side effect:
+   Altcoin Season and Crypto Market Cap no longer sit side by side even on
+   wide screens, since they're no longer adjacent in the sequence. */
 .gm-topcards-grid {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 16px;
+  display: contents;
 }
-/* Mobile-only fuller Fear & Greed treatment (gauge + historical values +
-   yearly high/low + a real history chart) — desktop keeps just the
-   hero's existing compact gauge, this doesn't render there at all. */
+.gm-wrap > .sec-banner { order: -5; }
+.gm-table-section { order: -4; }
+.gm-mcap-card { order: -3; }
+.gm-hero { order: -2; }
+.gm-fnghist-section { order: -1; }
+.gm-altseason-card { order: 0; }
+/* Both now redundant with their richer standalone replacements above
+   (Crypto Market Cap card / Fear & Greed chart section) showing the exact
+   same numbers with better formatting/more context. */
+.gm-status-mcap { display: none; }
+.gm-status-fng { display: none; }
+/* Side by side on wide screens (same 300px/1fr card+chart split
+   .gm-liq-grid already uses just above) — stacked full-width cards here
+   wasted a lot of horizontal space on desktop. Collapses to stacked in
+   the shared 860px breakpoint below. */
 .gm-fnghist-section {
-  display: none;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+.gm-fnghist-block { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--color-border); }
+.gm-fnghist-block-title { font-size: 0.78rem; font-weight: 700; color: var(--color-text); }
+.gm-fnghist-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-secondary); }
+.gm-fnghist-pill { font-weight: 700; }
+/* Fear & Greed gauge inside gm-fnghist-section — bigger and a bit more
+   alive than the old hero copy (now hidden above): a soft pulsing glow in
+   the gauge's own live sentiment color (--fng-color, set inline on
+   .gm-fng by FearGreedGauge), a glowing needle to match, larger readout. */
+.gm-fnghist-gauge-wrap { display: flex; justify-content: center; margin: 6px 0 10px; }
+.gm-fnghist-gauge-wrap .gm-fng { width: 220px; position: relative; }
+.gm-fnghist-gauge-wrap .gm-fng::before {
+  content: "";
+  position: absolute;
+  inset: -12px -12px 32% -12px;
+  background: radial-gradient(circle at 50% 72%, color-mix(in srgb, var(--fng-color) 38%, transparent), transparent 70%);
+  filter: blur(10px);
+  z-index: -1;
+  animation: gm-fng-glow-pulse 3s ease-in-out infinite;
+}
+.gm-fnghist-gauge-wrap .gm-fng-needle { filter: drop-shadow(0 0 5px var(--fng-color)); }
+/* Scaled up from the base -36px to match this width jump (150px -> 220px)
+   — that offset pulls the readout up into the gauge's own arc and needs
+   to grow with the SVG or the number ends up sitting too low. */
+.gm-fnghist-gauge-wrap .gm-fng-readout { margin-top: -66px; }
+.gm-fnghist-gauge-wrap .gm-fng-value { font-size: 2.6rem; }
+.gm-fnghist-gauge-wrap .gm-fng-label { font-size: 0.82rem; }
+@keyframes gm-fng-glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gm-fnghist-gauge-wrap .gm-fng::before { animation: none; }
 }
 .gm-altseason-card {
   justify-content: center;
@@ -1195,82 +1257,19 @@
   .gm-status-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 900px) {
+  /* gm-topcards-grid dropped from this list — it's display:contents now
+     (universal, see its base rule above), so grid-template-columns on it
+     has no effect either way. */
   .gm-dom-chart-grid,
   .gm-movers-grid,
-  .gm-oivol-grid,
-  .gm-topcards-grid { grid-template-columns: 1fr; }
+  .gm-oivol-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   /* Tightened from 16px 16px 36px / gap 20px — narrow-screen real estate
      is the scarce resource here, and that was a lot of dead space
      compounding across every one of this page's ~8 stacked sections. */
   .gm-wrap { padding: 12px 16px 28px; gap: 14px; }
-  /* Crypto Market Cap (gm-topcards-grid) already shows the exact same
-     market-cap number as the hero's own .gm-status-mcap line below, just
-     with real $T/$B formatting and a chart — redundant on a narrow screen
-     where every row of vertical space matters, so the hero's copy is
-     hidden and the real card moves above the hero instead (flex order,
-     not a JSX reorder — desktop keeps today's layout untouched). */
-  .gm-status-mcap { display: none; }
-  /* Fear & Greed gauge — bigger and a bit more alive on mobile, now living
-     in gm-fnghist-gauge-wrap (gm-fnghist-section below) instead of the
-     hero's old compact copy (hidden above, .gm-status-fng): a soft
-     pulsing glow in the gauge's own live sentiment color (--fng-color,
-     set inline on .gm-fng by FearGreedGauge), a glowing needle to match,
-     and larger readout text. */
-  .gm-fnghist-gauge-wrap { display: flex; justify-content: center; margin: 6px 0 10px; }
-  .gm-fnghist-gauge-wrap .gm-fng { width: 220px; position: relative; }
-  .gm-fnghist-gauge-wrap .gm-fng::before {
-    content: "";
-    position: absolute;
-    inset: -12px -12px 32% -12px;
-    background: radial-gradient(circle at 50% 72%, color-mix(in srgb, var(--fng-color) 38%, transparent), transparent 70%);
-    filter: blur(10px);
-    z-index: -1;
-    animation: gm-fng-glow-pulse 3s ease-in-out infinite;
-  }
-  .gm-fnghist-gauge-wrap .gm-fng-needle { filter: drop-shadow(0 0 5px var(--fng-color)); }
-  /* Scaled up from the base -36px to match this width jump (150px ->
-     220px) — that offset pulls the readout up into the gauge's own arc
-     and needs to grow with the SVG or the number ends up sitting too low. */
-  .gm-fnghist-gauge-wrap .gm-fng-readout { margin-top: -66px; }
-  .gm-fnghist-gauge-wrap .gm-fng-value { font-size: 2.6rem; }
-  .gm-fnghist-gauge-wrap .gm-fng-label { font-size: 0.82rem; }
-  @keyframes gm-fng-glow-pulse {
-    0%, 100% { opacity: 0.55; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.06); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .gm-fnghist-gauge-wrap .gm-fng::before { animation: none; }
-  }
-  /* ── Fear & Greed Index Chart (mobile-only, gm-fnghist-section) ───────── */
-  .gm-fnghist-section { display: flex; flex-direction: column; gap: 14px; }
-  .gm-fnghist-block { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--color-border); }
-  .gm-fnghist-block-title { font-size: 0.78rem; font-weight: 700; color: var(--color-text); }
-  .gm-fnghist-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--color-text-secondary); }
-  .gm-fnghist-pill { font-weight: 700; }
-  /* Exact mobile order: banner, then Crypto Market Cap, then Market Status
-     (the hero), then Altcoin Season. display:contents removes the grid
-     wrapper's own box so its two cards (gm-mcap-card/gm-altseason-card)
-     become direct flex items of .gm-wrap itself, alongside .sec-banner and
-     .gm-hero — only then can `order` interleave them in a single sequence,
-     since `order` only reorders siblings sharing one parent, and these
-     four things started out three levels apart. The cards keep their own
-     box/padding (only the GRID's box disappears), so nothing inside them
-     loses hit-testing — unlike wrapping an interactive element itself in
-     display:contents (see the TradingAgent orb regression from earlier),
-     this is applied to a layout-only container with no listeners of its
-     own, and its children are untouched. */
-  .gm-topcards-grid { display: contents; }
-  .gm-wrap > .sec-banner { order: -4; }
-  .gm-mcap-card { order: -3; }
-  .gm-hero { order: -2; padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
-  .gm-fnghist-section { order: -1; }
-  .gm-altseason-card { order: 0; }
-  /* The hero's own compact gauge is now redundant with the richer
-     gm-fnghist-section right below it (same reasoning .gm-status-mcap
-     was hidden above, once Crypto Market Cap covered the same number). */
-  .gm-status-fng { display: none; }
+  .gm-hero { padding-top: 16px; padding-bottom: 16px; padding-left: 0; padding-right: 0; }
   .gm-hero-glow { background: none; }
   .gm-status-grid { grid-template-columns: 1fr; row-gap: 14px; }
   .gm-status-col + .gm-status-col { border-left: none; padding-top: 14px; border-top: 1px solid var(--color-border); }
