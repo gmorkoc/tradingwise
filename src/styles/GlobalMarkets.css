@@ -1462,24 +1462,13 @@ html[data-theme="light"] .gm-marketstatus-tile {
   .gm-status-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 2001px) {
-  /* Padding/gap stay exactly as set above (10px everywhere) — this only
-     shrinks the content itself (font sizes, icon/avatar sizes) so the
-     hero reads shorter on very wide screens. The Fear & Greed gauge is
-     left alone, as always — resizing it has broken its readout/badge
-     position twice before. */
-  .gm-status-col-head { font-size: 0.68rem; }
-  .gm-marketstatus-tile-label { font-size: 0.58rem; margin-bottom: 1px; }
-  .gm-marketstatus-stat strong { font-size: 0.85rem; }
-  .gm-marketstatus-altseason-value { font-size: 1rem; }
-  .gm-activity-tile-value { font-size: 0.72rem; }
-  .gm-activity-tile-label { font-size: 0.52rem; }
-  .gm-activity-tile-icon svg { width: 16px; height: 16px; }
-  .gm-status-list-img { width: 16px; height: 16px; }
-  .gm-status-list-sym { font-size: 0.64rem; }
-  .gm-status-list-price,
-  .gm-status-list-chg { font-size: 0.58rem; }
-  .gm-derivatives-chart-stat strong { font-size: 0.74rem; }
-  .gm-derivatives-mini-chart { min-height: 12px; }
+  /* Padding/gap stay at 10px (set above), text stays full size — this
+     only re-shapes the inner boxes themselves. Market Activity's 2x2
+     tile grid becomes a single row of 4 (its biggest height driver, and
+     there's plenty of width to spare at this size); the mini-chart gets
+     a touch shorter. Fear & Greed gauge is left alone, as always. */
+  .gm-activity-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; }
+  .gm-derivatives-mini-chart { min-height: 14px; }
 }
 @media (max-width: 900px) {
   /* gm-topcards-grid dropped from this list — it's display:contents now
