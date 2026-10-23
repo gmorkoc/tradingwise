@@ -1458,15 +1458,12 @@ html[data-theme="light"] .gm-marketstatus-tile {
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 1512px) {
-  /* Below this, 4 equal columns squeeze each one too narrow — the content
-     (gauge, list rows, mini-chart) ends up stacking tall/cramped instead
-     of reading as a clean card. 2 columns gives each card enough width
-     at common laptop/tablet viewports (1200–1512px included). */
+@media (max-width: 1100px) {
   .gm-status-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 2001px) {
-  .gm-status-col { padding: 6px 10px; gap: 3px; }
+  /* Box height only — top/bottom padding, not the gap between items. */
+  .gm-status-col { padding: 3px 10px; }
 }
 @media (max-width: 900px) {
   /* gm-topcards-grid dropped from this list — it's display:contents now
