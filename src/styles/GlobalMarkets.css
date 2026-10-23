@@ -1141,37 +1141,32 @@
 @media (prefers-reduced-motion: reduce) {
   .gm-mover-banner-progress-fill { animation: none; width: 100%; }
 }
+/* Redesigned per feedback on the boxed/bordered version — a flat divided
+   list instead of a stack of individual bordered cards: no per-row box,
+   radius or background fill, just a hairline divider between rows and
+   the % text's own color doing the gainer/loser signaling. Noticeably
+   more compact too (more rows visible without scrolling). */
 .gm-mover-banner-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
 }
-/* Clean and white — plain card on the section's own white surface, a
-   thin neutral border for definition instead of a gray-tinted fill, the
-   colored left stripe doing the only "gainer vs loser" signaling. */
 .gm-mover-banner-card {
   all: unset;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-left: 3px solid transparent;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   transition: background 0.15s;
   animation: gm-rise-in 0.3s ease both;
 }
+.gm-mover-banner-card:last-child {
+  border-bottom: none;
+}
 .gm-mover-banner-card:hover {
   background: var(--color-input-bg);
-}
-.gm-mover-banner--gainers .gm-mover-banner-card {
-  border-left-color: var(--color-success);
-}
-.gm-mover-banner--losers .gm-mover-banner-card {
-  border-left-color: var(--color-danger);
 }
 .gm-mover-banner-id {
   flex: 1;
