@@ -55,7 +55,7 @@ public class LiquidGlassNavPlugin: CAPPlugin, CAPBridgedPlugin {
                     bar.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor, constant: 16),
                     bar.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor, constant: -16),
                     bar.bottomAnchor.constraint(equalTo: vc.view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-                    bar.heightAnchor.constraint(equalToConstant: 64)
+                    bar.heightAnchor.constraint(equalToConstant: 76)
                 ])
                 self.barView = bar
             }
@@ -127,6 +127,7 @@ private final class GlassNavBarView: UIView {
     private var agentBadge = UIView()
     private var currentActive: String?
     private var currentTheme = "dark"
+    private var didInitialIndicatorLayout = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -139,13 +140,13 @@ private final class GlassNavBarView: UIView {
             let effect = UIVisualEffectView(effect: UIGlassEffect())
             effect.frame = bounds
             effect.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            effect.layer.cornerRadius = 32
+            effect.layer.cornerRadius = 38
             effect.layer.cornerCurve = .continuous
             effect.clipsToBounds = true
             addSubview(effect)
             effectView = effect
         }
-        layer.cornerRadius = 32
+        layer.cornerRadius = 38
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowOpacity = 0.35
         layer.shadowRadius = 14
@@ -170,7 +171,7 @@ private final class GlassNavBarView: UIView {
             tintOverlay.bottomAnchor.constraint(equalTo: content.bottomAnchor)
         ])
 
-        indicator.layer.cornerRadius = 26
+        indicator.layer.cornerRadius = 30
         indicator.isUserInteractionEnabled = false
         content.addSubview(indicator)
 
@@ -203,27 +204,27 @@ private final class GlassNavBarView: UIView {
 
         let imageView = UIImageView(image: UIImage(systemName: item.symbol))
         imageView.contentMode = .scaleAspectFit
-        imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        imageView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         imageView.isUserInteractionEnabled = false
 
         let label = UILabel()
         label.text = item.label
-        label.font = .systemFont(ofSize: 9.5, weight: .semibold)
+        label.font = .systemFont(ofSize: 10.5, weight: .semibold)
         label.textAlignment = .center
         label.isUserInteractionEnabled = false
 
         let stack = UIStackView(arrangedSubviews: [imageView, label])
         stack.axis = .vertical
         stack.alignment = .center
-        stack.spacing = 3
+        stack.spacing = 5
         stack.isUserInteractionEnabled = false
         stack.translatesAutoresizingMaskIntoConstraints = false
         button.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.centerXAnchor.constraint(equalTo: button.centerXAnchor),
             stack.centerYAnchor.constraint(equalTo: button.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 22),
-            imageView.heightAnchor.constraint(equalToConstant: 22)
+            imageView.widthAnchor.constraint(equalToConstant: 26),
+            imageView.heightAnchor.constraint(equalToConstant: 26)
         ])
 
         // Agent is the only item with an unread badge — a small dot
@@ -258,6 +259,17 @@ private final class GlassNavBarView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // Only the very first layout pass, before apply() has ever run —
+        // layoutSubviews() fires for all sorts of unrelated reasons (any
+        // Auto Layout pass elsewhere in the window can trigger it), and
+        // calling positionIndicator(animated: false) unconditionally here
+        // was silently snapping the indicator to its final frame on every
+        // one of those passes, cancelling the real wobble animation
+        // apply() had just started — it never looked "wrong" in a static
+        // screenshot because the snap landed on the same correct final
+        // frame, it just never visibly animated getting there.
+        guard !didInitialIndicatorLayout else { return }
+        didInitialIndicatorLayout = true
         positionIndicator(animated: false)
     }
 
@@ -332,20 +344,25 @@ private final class GlassNavBarView: UIView {
         }
         indicator.alpha = 1
         indicator.frame.size.height = target.height
-        // Liquid "wave/splash" stretch — position and width animate on
-        // separate timings (position settles fast, width lags and
-        // overshoots via the spring) instead of one uniform move, so mid-
-        // transition the pill's leading edge has already arrived at the
-        // new item while the trailing edge is still stretching/catching
-        // up, same idea as the CSS bar's own transform/width duration
-        // mismatch. Two independent animation blocks on the frame's
-        // origin/size fields (not one combined block) so each can run its
-        // own curve without fighting the other.
-        UIView.animate(withDuration: 0.22, delay: 0, options: [.curveEaseOut], animations: {
-            self.indicator.frame.origin.x = target.origin.x
-        })
-        UIView.animate(withDuration: 0.45, delay: 0, usingSpringWithDamping: 0.55, initialSpringVelocity: 0.6, options: [], animations: {
-            self.indicator.frame.size.width = target.width
+
+        // Liquid "wave/splash" wobble — a real overshoot-then-settle.
+        // Phase 1: the pill races to the new item and stretches WIDER
+        // than its final size, like a drop of liquid overshooting before
+        // surface tension pulls it back. Phase 2: it contracts back down
+        // to the item's actual width, settling. Both phases keep the pill
+        // centered on the new item's midpoint so the overshoot grows
+        // symmetrically instead of drifting sideways.
+        let midX = target.midX
+        let overshootWidth = target.width * 1.35
+        let overshootFrame = CGRect(x: midX - overshootWidth / 2, y: target.origin.y, width: overshootWidth, height: target.height)
+
+        UIView.animateKeyframes(withDuration: 0.5, delay: 0, options: [.calculationModeCubic], animations: {
+            UIView.addKeyframe(withRelativeStartTime: 0, relativeDuration: 0.4) {
+                self.indicator.frame = overshootFrame
+            }
+            UIView.addKeyframe(withRelativeStartTime: 0.4, relativeDuration: 0.6) {
+                self.indicator.frame = target
+            }
         })
     }
 }
