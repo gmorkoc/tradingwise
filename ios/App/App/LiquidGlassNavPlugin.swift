@@ -264,7 +264,15 @@ private final class GlassNavBarView: UIView {
     func apply(active: String?, theme: String, raised: Bool, agentUnread: Bool, agentLocked: Bool, showcase: Bool) {
         currentActive = active
         currentTheme = theme
-        isHidden = raised
+        // `raised` doesn't hide this bar — that was carried over from the
+        // CSS fallback bar, where it was needed to win a z-index fight
+        // against a panel's own full-screen dimming backdrop (both live
+        // in the same webview stacking context there). This native bar is
+        // always rendered above the entire WKWebView regardless, so it
+        // can never lose that fight in the first place; hiding it here
+        // just made the bar vanish instead of staying visible like the
+        // original design intended (panels are meant to float above it,
+        // not replace it).
 
         // Much lighter than before — the earlier 0.14-0.16 alpha was added
         // while mistakenly debugging a registration bug that made the
