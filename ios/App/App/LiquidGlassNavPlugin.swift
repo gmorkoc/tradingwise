@@ -97,12 +97,22 @@ public class LiquidGlassNavPlugin: CAPPlugin, CAPBridgedPlugin {
 // reference exactly — no raised/colored exception for Agent anymore; the
 // CSS fallback bar keeps its own distinct orb branding, this native bar
 // doesn't).
+// Base (unselected) symbol — outline style, matching the reference's own
+// outline icons. A few have a distinct filled variant swapped in only
+// when active (see activeSymbols below); chart.line/sparkles/
+// magnifyingglass don't have a meaningfully different filled counterpart,
+// same as the reference's own Trade/Predict icons staying outline even
+// when you'd expect a filled state.
 private let navItems: [(label: String, symbol: String)] = [
-    ("Home", "house.fill"),
+    ("Home", "house"),
     ("Signals", "chart.line.uptrend.xyaxis"),
     ("Agent", "sparkles"),
     ("Search", "magnifyingglass"),
-    ("News", "newspaper.fill")
+    ("News", "newspaper")
+]
+private let activeSymbols: [String: String] = [
+    "Home": "house.fill",
+    "News": "newspaper.fill"
 ]
 
 private final class GlassNavBarView: UIView {
@@ -256,9 +266,14 @@ private final class GlassNavBarView: UIView {
         currentTheme = theme
         isHidden = raised
 
+        // Much lighter than before — the earlier 0.14-0.16 alpha was added
+        // while mistakenly debugging a registration bug that made the
+        // whole native path a no-op, so it was never actually validated
+        // against the real material. Full-strength tint washes out the
+        // genuine blur/refraction that makes this read as glass at all.
         tintOverlay.backgroundColor = theme == "light"
-            ? UIColor(white: 0, alpha: 0.14)
-            : UIColor(white: 1, alpha: 0.16)
+            ? UIColor(white: 0, alpha: 0.04)
+            : UIColor(white: 1, alpha: 0.05)
 
         let inactiveColor: UIColor = theme == "light"
             ? UIColor(red: 0.235, green: 0.235, blue: 0.263, alpha: 1)
@@ -271,9 +286,11 @@ private final class GlassNavBarView: UIView {
             : UIColor(white: 1, alpha: 0.22)
 
         for (label, imageView) in buttonImageViews {
-            let color = label == active ? activeColor : inactiveColor
-            imageView.tintColor = color
-            buttonLabels[label]?.textColor = color
+            let isActive = label == active
+            imageView.tintColor = isActive ? activeColor : inactiveColor
+            buttonLabels[label]?.textColor = isActive ? activeColor : inactiveColor
+            let symbol = (isActive ? activeSymbols[label] : nil) ?? navItems.first { $0.label == label }?.symbol
+            if let symbol = symbol { imageView.image = UIImage(systemName: symbol) }
         }
         buttons["Agent"]?.alpha = agentLocked ? 0.55 : 1
         agentBadge.isHidden = !agentUnread
