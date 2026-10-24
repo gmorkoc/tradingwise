@@ -3847,16 +3847,18 @@ function AppDashboard({
           onGoHome={() => {
             // Closes whichever of the four mutually-exclusive panels is
             // currently open (each a no-op if it's already closed) and
-            // drops back to the chart page — Home's own "you're at rest"
-            // state, not a fifth panel of its own.
+            // drops back to the Markets page — Home's own "you're at rest"
+            // state, not a fifth panel of its own. Matches the app's own
+            // default landing section (see activeSection's initializer
+            // above) rather than the chart.
             if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
             setAssetPanelOpen(false);
             setProfileOpen(false);
             setGlobalSearch(false);
             setDailyBriefPanelOpen(false);
-            setActiveSection("chart");
+            setActiveSection("markets");
           }}
-          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
+          homeActive={activeSection === "markets" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
           showAgentShowcase={showAgentShowcase}
         />
       )}
