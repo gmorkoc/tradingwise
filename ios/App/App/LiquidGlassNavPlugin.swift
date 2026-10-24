@@ -72,6 +72,7 @@ public class LiquidGlassNavPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async { [weak self] in
             self?.shell?.apply(
                 active: call.getString("active"),
+                theme: call.getString("theme") ?? "dark",
                 agentUnread: call.getBool("agentUnread") ?? false,
                 agentLocked: call.getBool("agentLocked") ?? false
             )
@@ -154,12 +155,20 @@ final class NativeTabBarShell: UITabBarController, UITabBarControllerDelegate {
     // Home button's own "go home" logic, not a direct tab tap). Uses the
     // legal selectedIndex setter; suppressed so that assignment doesn't
     // loop back through the delegate as if the user had tapped it again.
-    func apply(active: String?, agentUnread: Bool, agentLocked: Bool) {
+    func apply(active: String?, theme: String, agentUnread: Bool, agentLocked: Bool) {
         if let index = nativeTabItems.firstIndex(where: { $0.label == active }), selectedIndex != index {
             suppressDelegateCallback = true
             selectedIndex = index
             suppressDelegateCallback = false
         }
+        // Matches the hand-rolled bar's own color choices (and the app's
+        // general light/dark palette) instead of the system default blue.
+        tabBar.tintColor = theme == "light"
+            ? UIColor(red: 0.118, green: 0.106, blue: 0.180, alpha: 1)
+            : .white
+        tabBar.unselectedItemTintColor = theme == "light"
+            ? UIColor(red: 0.235, green: 0.235, blue: 0.263, alpha: 1)
+            : UIColor(red: 0.847, green: 0.859, blue: 0.894, alpha: 1)
         if let agentItem = tabBar.items?.first(where: { $0.title == "Agent" }) {
             agentItem.badgeValue = agentUnread ? "" : nil
             agentItem.isEnabled = !agentLocked
