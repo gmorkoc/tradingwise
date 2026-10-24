@@ -42,14 +42,18 @@ public class LiquidGlassNavPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // The shell already exists by now — AppDelegate builds it at launch,
     // wrapping the real CAPBridgeViewController as its content tab. This
-    // just locates it (via the standard UIKit parent-chain property) and
-    // wires up the tap callback; there's no view to create here.
+    // just locates it and wires up the tap callback; there's no view to
+    // create here. Located via NativeTabBarShell.current (a static ref set
+    // in its own init), NOT mainVC.tabBarController — that property walks
+    // real UIViewController containment (.parent), and mainVC is
+    // deliberately never added as an actual child of the shell (only its
+    // .view gets reparented between tabs), so .tabBarController always
+    // returned nil and this lookup silently failed every time, meaning
+    // onTap was never wired and every tap did nothing.
     @objc func show(_ call: CAPPluginCall) {
         guard #available(iOS 26.0, *) else { call.resolve(); return }
         DispatchQueue.main.async { [weak self] in
-            guard let self = self,
-                  let mainVC = self.bridge?.viewController,
-                  let shell = mainVC.tabBarController as? NativeTabBarShell else {
+            guard let self = self, let shell = NativeTabBarShell.current else {
                 call.resolve(); return
             }
             shell.onTap = { [weak self] label in
@@ -115,6 +119,11 @@ final class NativeContentHostViewController: UIViewController {
 }
 
 final class NativeTabBarShell: UITabBarController, UITabBarControllerDelegate {
+    // The plugin locates this instance through here, not through UIKit's
+    // own VC-containment lookups (mainVC.tabBarController) — see show()'s
+    // own comment for why that doesn't work in this architecture.
+    static weak var current: NativeTabBarShell?
+
     var onTap: ((String) -> Void)?
     private var suppressDelegateCallback = false
 
@@ -140,6 +149,7 @@ final class NativeTabBarShell: UITabBarController, UITabBarControllerDelegate {
         }
         viewControllers = hosts
         delegate = self
+        NativeTabBarShell.current = self
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
 
