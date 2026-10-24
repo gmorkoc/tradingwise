@@ -7,7 +7,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // This app has no SceneDelegate (legacy, non-scene lifecycle), so by
+        // the time this method runs, UIKit has already built `window` and
+        // set its rootViewController from Main.storyboard (MainViewController,
+        // the Capacitor bridge/webview). Swapping in NativeTabBarShell here,
+        // wrapping that same already-initialized instance as its one real
+        // content tab, is what makes the floating glass tab bar genuinely
+        // the app's root chrome on iOS 26 — see LiquidGlassNavPlugin.swift's
+        // own comment for why that's required for the automatic system
+        // treatment to actually apply. Pre-26 devices are untouched; the
+        // CSS fallback bar keeps working exactly as before.
+        if #available(iOS 26.0, *), let mainVC = window?.rootViewController {
+            window?.rootViewController = NativeTabBarShell(contentViewController: mainVC)
+        }
         return true
     }
 
