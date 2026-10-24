@@ -27,12 +27,20 @@
   justify-content: space-between;
   padding: 6px;
   border-radius: 999px;
-  /* Dark theme: flat surface, no glass (light theme below keeps its own
-     "Liquid Glass" translucency/specular treatment — only dark was
-     asked to be pulled back to the app's normal flat-surface look). */
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  /* Apple "Liquid Glass" treatment, take two — dark was previously pulled
+     back to a flat surface (see light theme's own override below, which
+     kept it), trying it again here: translucent dark glass with blur +
+     saturate and faint inset edge highlights, same structure as light
+     theme's version just re-tinted dark instead of a from-scratch design. */
+  background: rgba(20, 22, 30, 0.55);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset -1px 0 0 rgba(255, 255, 255, 0.05);
   transform-origin: bottom center;
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.22s ease;
 }
