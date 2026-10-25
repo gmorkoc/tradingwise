@@ -1280,7 +1280,8 @@ function AppDashboard({
   // treatment it always had).
   const onChartPage = activeSection === "chart";
   const chartModeToggle = (
-    <div className="chart-mobile-tabs">
+    <div className="chart-mobile-tabs" data-active={mobileChartTab}>
+      <span className="chart-mobile-indicator" aria-hidden="true" />
       <button
         type="button"
         className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}

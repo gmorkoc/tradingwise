@@ -5811,6 +5811,7 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
      to nothing, rendering a white icon on a transparent/white backdrop:
      technically present, just invisible). */
   .chart-mobile-tabs {
+    position: relative;
     display: flex;
     gap: 6px;
     margin: 8px 6px 6px 4px;
@@ -5818,7 +5819,34 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     background: var(--color-surface-alt);
     border-radius: 999px;
   }
+  /* Slide — one shared white pill behind the icons, translated to
+     whichever is active instead of each icon getting its own background.
+     Position (not left/right) is exact since both tabs are a fixed 32px
+     with a fixed 6px gap between them. */
+  .chart-mobile-indicator {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.32s cubic-bezier(0.34, 1.1, 0.4, 1);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .chart-mobile-tabs[data-active="orderbook"] .chart-mobile-indicator {
+    transform: translateX(38px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chart-mobile-indicator {
+      transition: none;
+    }
+  }
   .chart-mobile-tab {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5836,13 +5864,11 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     color: var(--color-text-muted);
     cursor: pointer;
     opacity: 0.55;
-    transition: opacity 0.25s ease, background 0.25s ease, color 0.2s ease;
+    transition: opacity 0.25s ease, color 0.2s ease;
   }
   .chart-mobile-tab.active {
     opacity: 1;
     color: #0f172a;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   }
   .chart-mobile-tab svg {
     width: 16px;
