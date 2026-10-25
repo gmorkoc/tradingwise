@@ -4182,6 +4182,16 @@ html[data-theme="light"] .main-coin-header {
   flex-shrink: 0;
 }
 
+/* Real native UIGlassEffect (HeaderGlassPlugin.swift) takes over these 3
+   button groups on iOS 26 — visibility:hidden (not display:none) so they
+   keep reserving their layout space, keeping the "coinhintz" logo and
+   overall header flex layout exactly where it already was. */
+.main-coin-header[data-native-glass="true"] .mch-menu-btn,
+.main-coin-header[data-native-glass="true"] .chart-mobile-tabs,
+.main-coin-header[data-native-glass="true"] .mch-notif-feed-btn {
+  visibility: hidden;
+}
+
 .mch-menu-btn {
   display: none;
   align-items: center;

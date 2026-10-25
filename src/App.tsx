@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, laz
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { HeaderGlass } from "./services/headerGlass";
 import { Keyboard } from "@capacitor/keyboard";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
@@ -1313,6 +1314,51 @@ function AppDashboard({
       </button>
     </div>
   );
+
+  // ── Real native header glass (menu / chart-toggle / notifications) ──────
+  // Same pattern as FloatingNavBar.tsx's own native-glass integration:
+  // feature-detect, mount once, hide the CSS buttons and drive taps/state
+  // through the native plugin instead when available.
+  const [nativeHeaderGlass, setNativeHeaderGlass] = useState(false);
+  const menuOpenRef = useRef(mobileNavOpen);
+  menuOpenRef.current = mobileNavOpen;
+  const onChartPageRef = useRef(onChartPage);
+  onChartPageRef.current = onChartPage;
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    let removeListener: (() => void) | undefined;
+    HeaderGlass.isAvailable().then(({ available }) => {
+      if (cancelled || !available) return;
+      HeaderGlass.show();
+      setNativeHeaderGlass(true);
+      HeaderGlass.addListener("tap", ({ label }) => {
+        if (label === "Menu") {
+          if (!menuOpenRef.current) hapticTap();
+          setMobileNavOpen((v) => !v);
+        } else if (label === "Chart") {
+          setMobileChartTab("chart");
+          if (onChartPageRef.current) setChartTabSpinKey((k) => k + 1);
+        } else if (label === "OrderBook") {
+          setMobileChartTab("orderbook");
+        } else if (label === "Notifications") {
+          setNotificationsCenterOpen(true);
+        }
+      }).then((h) => { removeListener = h.remove; });
+    });
+    return () => {
+      cancelled = true;
+      removeListener?.();
+      HeaderGlass.hide();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!nativeHeaderGlass) return;
+    HeaderGlass.update({ mode: mobileChartTab, unreadCount: unreadNotifCount });
+  }, [nativeHeaderGlass, mobileChartTab, unreadNotifCount]);
+
   const [obSize, setObSize] = useState({ h: 380, w: 135 });
   const [obResizeIntro, setObResizeIntro] = useState(false);
   const chartWrapRef = useRef<HTMLDivElement>(null);
@@ -2833,7 +2879,7 @@ function AppDashboard({
               real thing: the hamburger, mch-right's fallback icons, and
               the coin button are all still needed there. */}
           {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
-          <div className="main-coin-header">
+          <div className="main-coin-header" data-native-glass={nativeHeaderGlass || undefined}>
             <div className="mch-left">
               <button
                 className="mch-menu-btn"
