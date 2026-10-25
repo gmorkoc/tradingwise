@@ -4539,13 +4539,19 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 40px;
   height: 40px;
   padding: 0;
-  background: var(--color-input-bg);
+  background: var(--color-surface-alt);
   border: none;
   border-radius: 12px;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
+}
+/* --color-surface-alt (#f8fafc) is barely distinguishable from the
+   header's own white background (--color-surface, #ffffff) in light
+   theme — an explicit, clearly visible tint instead. */
+html[data-theme="light"] .mch-search-btn {
+  background: rgba(15, 23, 42, 0.05);
 }
 .mch-search-btn:hover {
   background: var(--color-border);
@@ -5818,6 +5824,17 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     padding: 3px 5px;
     background: var(--color-surface-alt);
     border-radius: 999px;
+  }
+  /* Dark theme's --color-surface-alt (#111827) is nearly the same navy as
+     the header's own background (--color-surface, #0f172a) — same issue
+     .mch-search-btn's own dark override exists for, same fix. */
+  html:not([data-theme="light"]) .chart-mobile-tabs {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  /* Same issue in light theme too — --color-surface-alt (#f8fafc) is
+     barely distinguishable from the header's white background. */
+  html[data-theme="light"] .chart-mobile-tabs {
+    background: rgba(15, 23, 42, 0.05);
   }
   /* Slide — one shared white pill behind the icons, translated to
      whichever is active instead of each icon getting its own background.
