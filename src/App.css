@@ -4188,11 +4188,11 @@ html[data-theme="light"] .main-coin-header {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   color: var(--color-text);
   cursor: pointer;
   border-radius: 999px;
@@ -4547,11 +4547,11 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 40px;
   height: 40px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -5823,11 +5823,11 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     gap: 6px;
     margin: 8px 6px 6px 4px;
     padding: 3px 5px;
-    background: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.18);
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     border-radius: 999px;
   }
   html:not([data-theme="light"]) .chart-mobile-tabs {
