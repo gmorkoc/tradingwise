@@ -138,12 +138,13 @@ final class NativeTabBarShell: UITabBarController, UITabBarControllerDelegate {
         super.init(nibName: nil, bundle: nil)
 
         NativeContentHostViewController.sharedContentView = contentViewController.view
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .regular)
         let hosts = nativeTabItems.map { item -> NativeContentHostViewController in
             let vc = NativeContentHostViewController()
             vc.tabBarItem = UITabBarItem(
                 title: item.label,
-                image: UIImage(systemName: item.symbol),
-                selectedImage: UIImage(systemName: item.selectedSymbol)
+                image: UIImage(systemName: item.symbol)?.withConfiguration(symbolConfig),
+                selectedImage: UIImage(systemName: item.selectedSymbol)?.withConfiguration(symbolConfig)
             )
             return vc
         }
@@ -152,6 +153,20 @@ final class NativeTabBarShell: UITabBarController, UITabBarControllerDelegate {
         NativeTabBarShell.current = self
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) not used") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // .fill (the default) stretches items evenly across the bar's
+        // full width; .centered + explicit itemWidth/itemSpacing is what
+        // actually lets the items sit closer together with real gaps
+        // between them, matching the reference's tighter, deliberately-
+        // spaced layout instead of auto-stretching to fill a wide pill.
+        // Set here, not init — had no visible effect set before the tab
+        // bar's own view was actually loaded.
+        tabBar.itemPositioning = .centered
+        tabBar.itemWidth = 40
+        tabBar.itemSpacing = 24
+    }
 
     func tabBarController(_ tabBarController: UITabBarController, shouldSelect viewController: UIViewController) -> Bool {
         guard !suppressDelegateCallback, let label = viewController.tabBarItem.title else { return true }
