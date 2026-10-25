@@ -4539,7 +4539,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 40px;
   height: 40px;
   padding: 0;
-  background: var(--color-surface-alt);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   border-radius: 12px;
   color: var(--color-text-secondary);
@@ -4558,14 +4558,8 @@ html[data-theme="light"] .mch-search-btn {
   color: var(--color-text);
 }
 
-/* Dark mode's --color-input-bg (rgba(15,23,42,0.8)) is nearly the same
-   navy as the bar it sits on, so the button reads as background-less
-   until hovered — a flat white tint shows up against that dark surface
-   without needing hover, same as the hover state already provides
-   contrast via --color-border. */
-html:not([data-theme="light"]) .mch-search-btn {
-  background: rgba(255, 255, 255, 0.08);
-}
+/* Base rule above already is rgba(255, 255, 255, 0.08) — correct as-is
+   for dark theme unprefixed; this just keeps the matching hover state. */
 html:not([data-theme="light"]) .mch-search-btn:hover {
   background: rgba(255, 255, 255, 0.14);
 }

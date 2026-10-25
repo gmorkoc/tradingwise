@@ -1,13 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
-import { LiquidGlassNav } from "../services/liquidGlassNav";
 import "../styles/FloatingNavBar.css";
 
 interface Props {
-  // Drives the native glass bar's own colors (it can't read CSS custom
-  // properties/data-theme like the fallback DOM version does) — see the
-  // native-glass effect below.
-  theme: "dark" | "light";
   signalsOpen: boolean;
   onSearch: () => void;
   searchOpen: boolean;
@@ -65,7 +59,7 @@ interface Props {
 // "return to the chart, close whatever's open" action.
 function useItems({
   signalsOpen, onOpenDailyBrief, dailyBriefOpen, onSearch, searchOpen, onGoHome, homeActive,
-}: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked" | "profileOpen" | "theme">) {
+}: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked" | "profileOpen">) {
   return [
     {
       label: "Home",
@@ -121,7 +115,7 @@ function useItems({
 }
 
 export function FloatingNavBar({
-  theme, signalsOpen, onSearch, searchOpen,
+  signalsOpen, onSearch, searchOpen,
   profileOpen, agentUnread, onOpenDailyBrief, dailyBriefOpen,
   agentLocked, onAgentLocked, onGoHome, homeActive, showAgentShowcase,
 }: Props) {
@@ -135,69 +129,18 @@ export function FloatingNavBar({
     return () => window.clearTimeout(id);
   }, [showAgentShowcase]);
   const items = useItems({ signalsOpen, onSearch, searchOpen, onGoHome, homeActive, onOpenDailyBrief, dailyBriefOpen });
-
-  // Agent button's tap logic, shared between the CSS fallback button below
-  // and the native-glass tap listener (which can't run inline JSX).
-  const onAgentTap = () => {
-    if (agentLocked) { onAgentLocked(); return; }
-    setShowcasePlaying(false);
-    window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
-  };
-
-  // ── Real native "Liquid Glass" (UIGlassEffect, iOS 26+) ─────────────────
-  // CSS backdrop-filter is an approximation; this is the genuine system
-  // material, rendered as a native UIView above the WKWebView with native
-  // buttons inside it (see LiquidGlassNavPlugin.swift's own comment for why
-  // taps have to be native too). null is returned instead of the normal
-  // <nav> below once this is confirmed active, so only one bar ever shows.
-  const [nativeGlass, setNativeGlass] = useState(false);
-  const activeLabel = items.find((i) => i.isActive)?.label ?? null;
-  const raised = signalsOpen || searchOpen || profileOpen || dailyBriefOpen;
-
-  // items/onAgentTap are plain values rebuilt every render (closing over
-  // that render's props, e.g. onGoHome's own read of signalsOpen) — the
-  // tap listener below is only registered once on mount, so it reads these
-  // through a ref (always current) rather than closing over the stale
-  // mount-time versions directly.
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
-  const onAgentTapRef = useRef(onAgentTap);
-  onAgentTapRef.current = onAgentTap;
-
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    let cancelled = false;
-    let removeListener: (() => void) | undefined;
-    LiquidGlassNav.isAvailable().then(({ available }) => {
-      if (cancelled || !available) return;
-      LiquidGlassNav.show();
-      setNativeGlass(true);
-      LiquidGlassNav.addListener("tap", ({ label }) => {
-        if (label === "Agent") { onAgentTapRef.current(); return; }
-        const item = itemsRef.current.find((i) => i.label === label);
-        item?.action();
-      }).then((h) => { removeListener = h.remove; });
-    });
-    return () => {
-      cancelled = true;
-      removeListener?.();
-      LiquidGlassNav.hide();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!nativeGlass) return;
-    LiquidGlassNav.update({
-      active: activeLabel,
-      theme,
-      raised,
-      agentUnread,
-      agentLocked,
-      showcase: showcasePlaying,
-    });
-  }, [nativeGlass, activeLabel, theme, raised, agentUnread, agentLocked, showcasePlaying]);
   const leftItems = items.slice(0, 2);
   const rightItems = items.slice(2);
+
+  // These four panels' own backdrops sit at a much higher z-index than
+  // this bar's normal resting value (60) — tall enough to dim the whole
+  // screen, including this bar, even though each one is specifically
+  // positioned to float just above it (see .gs-docked's own comment).
+  // Bumping only while one of them is actually open (rather than raising
+  // the bar's z-index globally) keeps it below every OTHER overlay in the
+  // app that was never asked to show it underneath — AuthModal, the
+  // upgrade/paywall modals, etc.
+  const raised = signalsOpen || searchOpen || profileOpen || dailyBriefOpen;
 
   // Sliding highlight (a single shared pill, not a per-button background)
   // that animates from the previously active item to the newly active one
@@ -207,6 +150,7 @@ export function FloatingNavBar({
   const barRef = useRef<HTMLElement>(null);
   const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  const activeLabel = items.find((i) => i.isActive)?.label ?? null;
 
   useLayoutEffect(() => {
     const bar = barRef.current;
@@ -256,11 +200,6 @@ export function FloatingNavBar({
     </button>
   );
 
-  // Real native glass bar (see above) renders everything itself — this
-  // component just stays mounted to keep driving it via the two effects
-  // above (tap listener, state sync) without rendering any DOM of its own.
-  if (nativeGlass) return null;
-
   // Comparison variant — Agent sits flush in the row as a plain 5th icon
   // (same height/sizing as the other four), not raised above the bar.
   // Swap target if this reads better than the raised-notch version.
@@ -283,7 +222,11 @@ export function FloatingNavBar({
       <button
         type="button"
         className={`fnb-item fnb-agent-item${showcasePlaying ? " fnb-agent-item--showcase" : ""}`}
-        onClick={onAgentTap}
+        onClick={() => {
+          if (agentLocked) { onAgentLocked(); return; }
+          setShowcasePlaying(false);
+          window.dispatchEvent(new CustomEvent("toggle-trading-agent"));
+        }}
         aria-label="Trading Agent"
       >
         <span className="fnb-item-icon-wrap">

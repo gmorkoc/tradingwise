@@ -3836,7 +3836,6 @@ function AppDashboard({
           desktop at all. */}
       {!isWideDesktop && !distractionFree && !chartFullscreen && (
         <FloatingNavBar
-          theme={theme}
           signalsOpen={signalsOpen}
           onSearch={() => setGlobalSearch(true)}
           searchOpen={globalSearch}
