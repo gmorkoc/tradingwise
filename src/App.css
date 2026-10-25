@@ -4182,38 +4182,20 @@ html[data-theme="light"] .main-coin-header {
   flex-shrink: 0;
 }
 
-/* Real native UIGlassEffect (HeaderGlassPlugin.swift) takes over these 3
-   button groups on iOS 26 — visibility:hidden (not display:none) so they
-   keep reserving their layout space, keeping the "coinhintz" logo and
-   overall header flex layout exactly where it already was. */
-.main-coin-header[data-native-glass="true"] .mch-menu-btn,
-.main-coin-header[data-native-glass="true"] .chart-mobile-tabs,
-.main-coin-header[data-native-glass="true"] .mch-notif-feed-btn {
-  visibility: hidden;
-}
-
 .mch-menu-btn {
   display: none;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  box-shadow: none;
+  border: none;
+  background: transparent;
   color: var(--color-text);
   cursor: pointer;
-  border-radius: 999px;
+  border-radius: 8px;
   flex-shrink: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
-}
-html:not([data-theme="light"]) .mch-menu-btn {
-  background: rgba(20, 22, 30, 0.55);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .mch-coin-btn {
@@ -4557,11 +4539,8 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   width: 40px;
   height: 40px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: none;
+  background: var(--color-input-bg);
+  border: none;
   border-radius: 12px;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -4569,14 +4548,17 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   flex-shrink: 0;
 }
 .mch-search-btn:hover {
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--color-border);
   color: var(--color-text);
 }
 
+/* Dark mode's --color-input-bg (rgba(15,23,42,0.8)) is nearly the same
+   navy as the bar it sits on, so the button reads as background-less
+   until hovered — a flat white tint shows up against that dark surface
+   without needing hover, same as the hover state already provides
+   contrast via --color-border. */
 html:not([data-theme="light"]) .mch-search-btn {
-  background: rgba(20, 22, 30, 0.55);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 html:not([data-theme="light"]) .mch-search-btn:hover {
   background: rgba(255, 255, 255, 0.14);
@@ -5833,17 +5815,8 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     gap: 6px;
     margin: 8px 6px 6px 4px;
     padding: 3px 5px;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: none;
+    background: var(--color-surface-alt);
     border-radius: 999px;
-  }
-  html:not([data-theme="light"]) .chart-mobile-tabs {
-    background: rgba(20, 22, 30, 0.55);
-    border-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .chart-mobile-tab {
     display: flex;

@@ -25,7 +25,6 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NotificationAuthPlugin())
         bridge?.registerPluginInstance(LiquidGlassNavPlugin())
-        bridge?.registerPluginInstance(HeaderGlassPlugin())
     }
 
     override func viewDidLoad() {
