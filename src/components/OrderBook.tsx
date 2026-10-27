@@ -23,6 +23,10 @@ interface OrderBookProps {
   // chart) in favor of a plain flex column that fills whatever bounded
   // height its new parent gives it.
   embedded?: boolean;
+  // Controlled view (mobile chart's Chart / Order Book / Trades tabs):
+  // shows that view and hides this component's own Order book / Recent
+  // trades tab row, since the parent's tabs already pick it.
+  view?: "orderbook" | "trades";
 }
 
 interface Level {
@@ -275,9 +279,10 @@ interface Trade {
   side: "buy" | "sell";
 }
 
-export function OrderBook({ coin, onHide, embedded }: OrderBookProps) {
+export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
+  const [ownTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
+  const activeTab = view ?? ownTab;
   const [exchange, setExchange] = useState<Exchange>("Binance");
   const [precision, setPrecision] = useState<number | null>(null);
   const [bids, setBids] = useState<Level[]>([]);
@@ -420,7 +425,7 @@ export function OrderBook({ coin, onHide, embedded }: OrderBookProps) {
         </button>
       )}
 
-      <div className="ob-tabs">
+      <div className="ob-tabs" style={view ? { display: "none" } : undefined}>
         <button
           type="button"
           className={`ob-tab${activeTab === "orderbook" ? " ob-tab--active" : ""}`}

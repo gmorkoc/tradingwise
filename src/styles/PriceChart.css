@@ -4276,7 +4276,7 @@ html[data-theme="light"] .cap-overlay-feature {
   background: var(--color-surface);
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
-  padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  padding-bottom: 8px;
 }
 
 .interval-sheet-header {
@@ -5210,7 +5210,7 @@ html[data-theme="light"] .chart-fullscreen-btn {
   background: var(--color-surface);
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
-  padding-bottom: max(8px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  padding-bottom: 8px;
 }
 
 /* Fixed height, not max-height — .indicators-sheet only caps height, so
@@ -6743,4 +6743,458 @@ html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar .interval-pill.inter
 .cgt-btn.cgt-btn--primary:hover {
   background: var(--action-green-hover) !important;
   opacity: 1;
+}
+
+/* ══ Mobile chart = desktop layout (reference: Hyperliquid mobile) ═══════
+   Header bar → Chart / Order Book / Trades tabs → interval toolbar →
+   chart → Date Range · clock · % log auto. */
+.chart-mview-tabs {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--pc-border, var(--color-border));
+  margin: 0 -16px;
+}
+.chart-mview-tab {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 11px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+.chart-mview-tab.active { color: var(--action-green); }
+.chart-mview-tabs-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: calc(100% / 3);
+  height: 2px;
+  background: var(--action-green);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chart-mview-tabs--orderbook .chart-mview-tabs-bar { transform: translateX(100%); }
+.chart-mview-tabs--trades .chart-mview-tabs-bar { transform: translateX(200%); }
+
+/* Order Book / Trades view: takes the chart's place; chart, its toolbar
+   and the indicator sub-charts are hidden (still mounted). */
+.chart-mview-book {
+  height: 460px;
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+.chart-mview-book .ob-embedded { flex: 1; min-height: 0; }
+.price-chart-container--mview-book .chart-bar-toolbar,
+.price-chart-container--mview-book .chart-dblclick-wrap,
+.price-chart-container--mview-book .sub-charts {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  /* Header bar: coin block + picker, then the stats row scrolls sideways. */
+  .chart-bar-header {
+    gap: 12px;
+    padding: 8px 0 10px;
+  }
+  .chart-bar-stats { gap: 0; }
+  /* Toolbar: intervals + chart tools in one row that scrolls if needed. */
+  .chart-bar-toolbar {
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 6px 0;
+  }
+  .chart-bar-toolbar::-webkit-scrollbar { display: none; }
+  .chart-bar-toolbar .chart-quick-interval-pills { flex-shrink: 0; }
+  .chart-bar-toolbar-spacer { min-width: 8px; }
+}
+
+/* Bottom bar on mobile: Date Range dropdown · clock · % log auto. */
+.chart-range-bar--mobile { gap: 4px; }
+.chart-range-bar--mobile > .chart-range-btn--icon,
+.chart-range-bar--mobile > .chart-range-divider:first-of-type {
+  display: none;
+}
+.chart-range-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.chart-range-select select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+  font-size: 16px; /* no iOS zoom-on-focus */
+}
+@media (max-width: 640px) {
+  .chart-range-clock { font-size: 0.75rem; }
+}
+/* Mobile: whole coin block is the coin picker. */
+.chart-bar-coin--tap {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 10px;
+  transition: opacity 0.15s ease;
+}
+.chart-bar-coin--tap:active { opacity: 0.6; }
+.chart-bar-coin-caret {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border-radius: 6px;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+/* Date Range trigger is a plain button now (opens a sheet). */
+button.chart-range-select {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Mobile-web Date Range bottom sheet rows. */
+.date-range-sheet-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 12px;
+}
+.date-range-sheet-item {
+  all: unset;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+.date-range-sheet-item:first-child { border-top: none; }
+.date-range-sheet-item:active { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.date-range-sheet-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.date-range-sheet-sub {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.date-range-sheet-item.active .date-range-sheet-label { color: var(--action-green); }
+
+/* ── Mobile header row (reference: Hyperliquid mobile) ───────────────────
+   The whole row — coin block + stats — scrolls sideways; a thin
+   always-visible indicator sits under it; ⋮ stays pinned at the right. */
+.chart-bar-header-wrap { position: relative; }
+.chart-bar-header-wrap--mobile {
+  margin-left: -16px;
+  margin-right: -16px;
+}
+.chart-bar-header-wrap--mobile .chart-bar-header {
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 8px 56px 10px 16px;
+  border-bottom: 1px solid var(--pc-border, var(--color-border));
+}
+.chart-bar-header-wrap--mobile .chart-bar-header::-webkit-scrollbar { display: none; }
+.chart-bar-header-wrap--mobile .chart-bar-stats { overflow: visible; }
+.chart-bar-header-wrap--mobile .chart-bar-id { flex-shrink: 0; }
+.chart-bar-more {
+  all: unset;
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-60%);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 8%, var(--pc-bg, #fff));
+  box-shadow: -14px 0 14px 2px var(--pc-bg, #fff);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .chart-bar-more {
+  box-shadow: -14px 0 14px 2px var(--color-background, #0b0e14);
+}
+.chart-bar-scrollbar {
+  display: none;
+  position: relative;
+  height: 3px;
+  margin: -4px 0 6px;
+  background: transparent;
+}
+.chart-bar-scrollbar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text) 30%, transparent);
+  transition: left 0.08s linear;
+}
+/* ⋮ sheet: all stats as a 2-column grid. */
+.chart-stats-sheet.chart-bar-stats {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 12px;
+  padding: 16px 20px 20px;
+  overflow: visible;
+}
+.chart-stats-sheet .chart-bar-stat,
+.chart-stats-sheet .mch-stat {
+  border-left: none !important;
+  padding: 0 !important;
+}
+/* Interval menus (desktop dropdown / fullscreen): "1W  Last 52 weeks". */
+.interval-menu-short { font-weight: 700; min-width: 34px; display: inline-block; }
+.interval-menu-desc { margin-left: 8px; color: var(--color-text-muted); font-weight: 500; }
+/* Interval sheet rows use the Date range row layout; keep the trend arrow
+   tight to the label. */
+.date-range-sheet-label .interval-pill-trend { margin-left: 3px; }
+.date-range-sheet-item.active .chart-style-check { color: var(--action-green); }
+.interval-pill-more-caret { margin-left: 2px; vertical-align: middle; }
+@media (max-width: 640px) {
+  /* Toolbar divider edge to edge, like the header and tabs. */
+  .chart-bar-toolbar {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Mobile toolbar: every chart tool is an outlined labeled button
+   (reference: Hyperliquid's "Show Tools ›"), and the row scrolls
+   sideways when they don't all fit. */
+@media (max-width: 640px) {
+  .chart-bar-toolbar { gap: 8px; }
+  .chart-bar-toolbar .chart-bar-toolbar-spacer { flex: 0 0 4px; }
+  .chart-bar-toolbar .chart-hero-icon-row {
+    flex-shrink: 0;
+    gap: 6px !important;
+  }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-hero-icon-row .chart-depth-btn {
+    width: auto !important;
+    height: 30px !important;
+    padding: 0 10px !important;
+    gap: 6px;
+    display: inline-flex !important;
+    align-items: center;
+    flex-shrink: 0;
+    border-radius: 4px !important;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+    background: transparent !important;
+    color: color-mix(in srgb, var(--color-text) 65%, transparent) !important;
+    white-space: nowrap;
+  }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-hero-icon-row .chart-depth-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-hero-icon-row .chart-icon-label,
+  .chart-tool-label {
+    display: inline !important;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: inherit;
+  }
+}
+@media (max-width: 640px) {
+  /* Toolbar row itself doesn't scroll: intervals (left) · tool buttons
+     (middle, scrolls on its own) · Fullscreen (pinned right). */
+  .chart-bar-toolbar {
+    overflow: hidden !important;
+  }
+  .chart-bar-toolbar .chart-bar-toolbar-spacer {
+    flex: 0 0 1px;
+    min-width: 1px;
+    align-self: center;
+    height: 18px;
+    margin: 0 2px 0 -10px;
+    background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  }
+  .chart-bar-toolbar .chart-hero-icon-row {
+    flex: 1 1 auto !important;
+    min-width: 0;
+    /* Base .chart-hero-icon-row is flex-end; in a scroller that pushes the
+       overflow off the left edge where it can't be scrolled to (hid Candle). */
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    /* pan-x alone stalled on iOS whenever a swipe started slightly
+       diagonal; let WebKit pick the axis like any native scroller. */
+    touch-action: pan-x pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    padding-right: 4px;
+  }
+  /* Right-edge fade as an overlay on the pinned Fullscreen side (a mask on
+     the scroller itself blocks touch scrolling in iOS WebKit). */
+  .chart-tool-pinned { position: relative; }
+  .chart-tool-pinned::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -18px;
+    width: 18px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--pc-bg, var(--color-surface, #fff)));
+  }
+  .chart-bar-toolbar .chart-hero-icon-row::-webkit-scrollbar { display: none; }
+  .chart-tool-pinned { flex-shrink: 0; display: flex; }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn {
+    width: auto !important;
+    height: 34px !important;
+    padding: 0 10px !important;
+    gap: 6px;
+    display: inline-flex !important;
+    align-items: center;
+    border-radius: 6px !important;
+    border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+    background: transparent !important;
+    color: color-mix(in srgb, var(--color-text) 65%, transparent) !important;
+    white-space: nowrap;
+  }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn svg { width: 14px !important; height: 14px !important; }
+  /* Pinned Fullscreen: icon only, to leave room for the scrolling tools. */
+  .chart-tool-pinned:not(.chart-tool-pinned--save) .chart-tool-label { display: none !important; }
+  .chart-tool-pinned--save::before { display: none; }
+}
+@media (max-width: 640px) {
+  /* Tool buttons (and the style picker's wrapper) keep their natural
+     width so the middle area overflows and scrolls instead of squeezing. */
+  .chart-bar-toolbar .chart-hero-icon-row > *,
+  .chart-bar-toolbar .chart-hero-icon-row .chart-grid-style-row,
+  .chart-bar-toolbar .chart-hero-icon-row .indicators-menu-wrapper {
+    flex-shrink: 0 !important;
+    flex-wrap: nowrap !important;
+  }
+}
+
+/* ── Mobile "Show Tools" sheet (toolsSheetPortal in PriceChart.tsx) ──── */
+.cts-section-label {
+  padding: 12px 20px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.cts-styles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 0 20px 14px;
+}
+.cts-style {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 4px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cts-style svg { width: 20px; height: 20px; }
+.cts-style.active {
+  border-color: var(--action-green);
+  color: var(--action-green);
+  background: color-mix(in srgb, var(--action-green) 8%, transparent);
+}
+.date-range-sheet-item.cts-row {
+  grid-template-columns: 36px 1fr auto;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.cts-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+}
+.cts-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cts-row .interval-sheet-item-pro { margin-left: 6px; vertical-align: middle; }
+.cts-switch {
+  position: relative;
+  width: 42px;
+  height: 25px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--color-text) 15%, transparent);
+  transition: background 0.18s;
+}
+.cts-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s;
+}
+.cts-switch--on { background: var(--action-green); }
+.cts-switch--on i { transform: translateX(17px); }
+
+/* Mobile toolbar: Show Tools + Save, borderless, side by side on the right. */
+@media (max-width: 640px) {
+  .chart-bar-toolbar .chart-hero-icon-row {
+    justify-content: flex-end !important;
+    padding-right: 0;
+  }
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-hero-icon-row .chart-depth-btn,
+  html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn {
+    border: none !important;
+    padding: 0 6px !important;
+  }
+}
+.cts-row-chev {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-muted);
 }

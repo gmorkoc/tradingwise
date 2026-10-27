@@ -145,3 +145,181 @@
   background: var(--color-primary);
   transform: scale(1.3);
 }
+
+/* ══ Event strips (EventCard) — compact "live activity" style ═══════════
+   One slim white pill per event (~60px tall): direction badge, headline +
+   price over a one-line summary, LIVE / time on the right. Super light
+   gray only on the badge; colour only in the arrow and LIVE dot. */
+.chart-event-cards { margin-top: 14px; margin-bottom: 4px; padding: 2px 2px 10px; }
+.chart-event-card.cec {
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #eef0f3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px -14px rgba(15, 23, 42, 0.25);
+  animation: cec-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html:not([data-theme="light"]) .chart-event-card.cec {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
+  box-shadow: none;
+}
+@keyframes cec-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.cec-badge {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7f8fa;
+  border: 1px solid #eef0f3;
+  color: #16a34a;
+}
+.cec--bearish .cec-badge { color: #e11d48; }
+html:not([data-theme="light"]) .cec-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.cec-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cec-line1 {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 0.82rem;
+  color: var(--color-text);
+}
+.cec-line1 b { font-weight: 700; }
+.cec-sep { color: var(--color-text-muted); }
+.cec-price { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cec-line2 {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cec-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.cec-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ef4444;
+}
+.cec-live i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: cec-ping 1.8s ease-out infinite;
+}
+@keyframes cec-ping {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  100% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+}
+.cec-time {
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+/* Pager: tighter, active dot stretches into a pill. */
+.chart-event-dots-pager { margin-top: 2px; margin-bottom: 14px; }
+.chart-event-pager-dot::before { transition: width 0.25s ease, background 0.2s ease; }
+.chart-event-pager-dot--active::before {
+  width: 16px;
+  border-radius: 99px;
+  transform: none;
+  background: var(--color-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-event-card.cec, .cec-live i { animation: none; }
+}
+/* Keep each strip exactly one container wide — the one-line summary's
+   long text must truncate, not widen the card (flex min-width:auto). */
+.chart-event-card.cec { min-width: 0; max-width: 100%; overflow: hidden; }
+
+/* Tap → full event in a bottom sheet (shares .interval-sheet chrome). */
+.chart-event-card.cec { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.chart-event-card.cec:active { transform: scale(0.99); }
+.cec-sheet-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.cec-sheet-body {
+  padding: 18px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cec-sheet-row { display: flex; align-items: center; gap: 12px; }
+.cec-sheet-headline { font-size: 1.1rem; font-weight: 700; color: var(--color-text); }
+.cec-sheet-price {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.cec-sheet-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+.cec-sheet-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fafbfc;
+  border: 1px solid #f1f3f5;
+}
+html:not([data-theme="light"]) .cec-sheet-meta {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.cec-sheet-tone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.cec-sheet-tone i { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
+.cec--bearish .cec-sheet-tone i { background: #e11d48; }

@@ -73,7 +73,7 @@ export function TopCryptoFilter({ filter, onChange, count }: { filter: Filter; o
     <div className="tct-filter" ref={ref}>
       <button type="button" className="tct-filter-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
         <span className="tct-filter-icon">{active.icon}</span>
-        {active.label}
+        <span className="tct-filter-label">{active.label}</span>
         {count !== undefined && <span className="tct-filter-count">{count}</span>}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
       </button>
@@ -235,8 +235,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
               switching filters never re-flows the columns. */}
           {filterable && (
             <colgroup>
-              <col style={{ width: 36 }} />
-              <col style={{ width: 44 }} />
+              <col style={{ width: 56 }} />
               <col />
               <col style={{ width: "11%" }} />
               <col style={{ width: "10%" }} />
@@ -248,8 +247,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
           )}
           <thead>
             <tr>
-              {filterable && <th className="gm-th tct-th-star" aria-label="Watchlist" />}
-              <SortTh className="gm-th gm-th--rank" label="#" k="rank" sort={sort} />
+              <SortTh className="gm-th gm-th--rank" label="Rank" k="rank" sort={sort} />
               <SortTh label="Name" k="name" sort={sort} />
               <SortTh className="gm-th gm-th--r" label="Price" k="price" sort={sort} />
               <SortTh className="gm-th gm-th--r" label="24h %" k="chg24" sort={sort} />
@@ -266,8 +264,13 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
               return (
                 <tr key={c.id} className="gm-tr" style={{ animationDelay: `${Math.min(i, 20) * 20}ms` }}
                   onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                  {filterable && (
-                    <td className="gm-td tct-td-star">
+                  <td className="gm-td gm-td--rank">{c.market_cap_rank}</td>
+                  <td className="gm-td gm-td--name">
+                    <img src={c.image} alt={c.name} className="gm-coin-img" loading="lazy" />
+                    <span className="gm-coin-name">{c.name}</span>
+                    <span className="gm-coin-sym">{c.symbol.toUpperCase()}</span>
+                    {/* Watchlist star, right after the coin. */}
+                    {filterable && (
                       <button
                         type="button"
                         className={`tct-star${watched.includes(c.id) ? " on" : ""}`}
@@ -276,13 +279,7 @@ export function TopCryptoTable({ coins: coinsProp, onSelectCoin, filterable = fa
                       >
                         {watched.includes(c.id) ? "★" : "☆"}
                       </button>
-                    </td>
-                  )}
-                  <td className="gm-td gm-td--rank">{c.market_cap_rank}</td>
-                  <td className="gm-td gm-td--name">
-                    <img src={c.image} alt={c.name} className="gm-coin-img" loading="lazy" />
-                    <span className="gm-coin-name">{c.name}</span>
-                    <span className="gm-coin-sym">{c.symbol.toUpperCase()}</span>
+                    )}
                   </td>
                   <td className="gm-td gm-td--r">{fmtPrice(c.current_price)}</td>
                   <td className={`gm-td gm-td--r gm-pct${chg24 >= 0 ? "--pos" : "--neg"}`}>

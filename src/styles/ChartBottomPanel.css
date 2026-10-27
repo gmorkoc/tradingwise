@@ -170,3 +170,88 @@
 /* Keep the first child's top margin inside the panel (no margin
    collapse), so the panel's own box never moves either. */
 .cbp-body { display: flow-root; }
+
+/* Tabs strip (scrolls sideways on narrow screens; desktop unchanged). */
+.cbp-tabs-scroll-wrap {
+  position: relative;
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+.cbp-tabs-scroll {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 24px;
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* A tab scrolled into view lands clear of the right-edge fade. */
+  scroll-padding-inline: 0 32px;
+}
+/* Right-edge fade while more tabs are off-screen (an overlay: a mask on
+   the scroller itself blocks touch scrolling in iOS WebKit). */
+.cbp-tabs-scroll-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: linear-gradient(90deg, transparent, var(--pc-bg, var(--color-surface, #fff)));
+}
+.cbp-tabs-scroll-wrap--more::after { opacity: 1; }
+.cbp-tabs-scroll::-webkit-scrollbar { display: none; }
+
+@media (max-width: 960px) {
+  /* One row: tabs scroll sideways, filter pinned at the right. */
+  .cbp-tabs {
+    height: auto;
+    min-height: 0;
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .cbp-tabs-scroll-wrap { flex: 1 1 auto; }
+  .cbp-tabs-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+  .cbp-tabs-right {
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+  /* Compact filter: icon + arrow only (full names stay in its menu). */
+  .cbp .tct-filter-label,
+  .cbp .tct-filter-count { display: none; }
+  .cbp-tt-filter { padding: 6px 26px 6px 10px; }
+  /* Tables keep their desktop column widths and scroll sideways instead
+     of squashing; the panel keeps a steady height. */
+  .cbp .gm-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cbp .gm-table {
+    min-width: 760px;
+  }
+  .cbp .ttt-table { min-width: 900px; }
+  .cbp-stats { row-gap: 14px; }
+  .cbp-stat { padding: 0 16px; }
+  .gm-pagination { flex-wrap: wrap; gap: 8px; }
+}
+/* The Markets page hides the 7-day sparkline column on phones; in this
+   panel the table scrolls sideways instead, so keep every column (hiding
+   it left its fixed-width slot as blank space at the end). */
+.cbp .gm-td--c,
+.cbp .gm-th--c {
+  display: table-cell;
+}

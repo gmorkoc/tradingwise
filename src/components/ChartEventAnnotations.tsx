@@ -37,6 +37,97 @@ export function formatRelativeTime(unixSeconds: number): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
+// Card mood: green for bullish setups, red for bearish ones.
+function eventTone(ev: ChartEvent): "bullish" | "bearish" {
+  if (ev.id === "current") return /oversold/i.test(ev.body) ? "bullish" : "bearish";
+  if (ev.id === "resistance-breakout" || ev.id === "support-bounce" || ev.id === "at-support") return "bullish";
+  return "bearish";
+}
+
+// Short headline per event kind (the card's big line).
+function eventHeadline(ev: ChartEvent): string {
+  switch (ev.id) {
+    case "current": return /oversold/i.test(ev.body) ? "Oversold zone" : "Overbought zone";
+    case "support-break": return "Broke below support";
+    case "resistance-reject": return "Rejected at resistance";
+    case "resistance-breakout": return "Broke above resistance";
+    case "support-bounce": return "Bounced off support";
+    case "at-support": return "Testing support";
+    case "at-resistance": return "Testing resistance";
+    default: return ev.title;
+  }
+}
+
+// Compact "live activity" strip: direction badge · headline + price over a
+// one-line summary · LIVE / time. Mostly white, very small footprint.
+function EventCard({ ev, onOpen }: { ev: ChartEvent; onOpen: () => void }) {
+  const tone = eventTone(ev);
+  const live = ev.id === "current";
+  return (
+    <div
+      className={`chart-event-card cec cec--${tone}`}
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(); }}
+    >
+      <span className="cec-badge" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          {tone === "bullish" ? <path d="M7 17L17 7M9 7h8v8" /> : <path d="M7 7l10 10M17 9v8H9" />}
+        </svg>
+      </span>
+      <span className="cec-main">
+        <span className="cec-line1">
+          <b>{eventHeadline(ev)}</b>
+          <span className="cec-sep">·</span>
+          <span className="cec-price">${ev.price.toLocaleString(undefined, { maximumFractionDigits: ev.price >= 100 ? 2 : 6 })}</span>
+        </span>
+        <span className="cec-line2">{ev.body}</span>
+      </span>
+      <span className="cec-side">
+        {live ? <span className="cec-live"><i />LIVE</span> : null}
+        <span className="cec-time">{formatRelativeTime(ev.time)}</span>
+      </span>
+    </div>
+  );
+}
+
+// Full view of one event, in the app's bottom-sheet style.
+function EventSheet({ ev, onClose }: { ev: ChartEvent; onClose: () => void }) {
+  const tone = eventTone(ev);
+  const live = ev.id === "current";
+  return (
+    <>
+      <div className="interval-sheet-backdrop" onClick={onClose} />
+      <div className={`interval-sheet cec-sheet cec--${tone}`} role="dialog" aria-label={eventHeadline(ev)}>
+        <div className="interval-sheet-header">
+          <span className="cec-sheet-label">
+            {ev.title}
+            {live && <span className="cec-live"><i />LIVE</span>}
+          </span>
+          <button type="button" className="interval-sheet-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="cec-sheet-body">
+          <div className="cec-sheet-row">
+            <span className="cec-badge" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                {tone === "bullish" ? <path d="M7 17L17 7M9 7h8v8" /> : <path d="M7 7l10 10M17 9v8H9" />}
+              </svg>
+            </span>
+            <span className="cec-sheet-headline">{eventHeadline(ev)}</span>
+          </div>
+          <div className="cec-sheet-price">${ev.price.toLocaleString(undefined, { maximumFractionDigits: ev.price >= 100 ? 2 : 6 })}</div>
+          <p className="cec-sheet-text">{ev.body}</p>
+          <div className="cec-sheet-meta">
+            <span className="cec-sheet-tone"><i />{tone === "bullish" ? "Bullish setup" : "Bearish setup"}</span>
+            <span className="cec-time">{formatRelativeTime(ev.time)}</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export interface ChartEvent {
   id: string;
   time: number;
@@ -372,6 +463,8 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     if (ev && ev.id !== selectedId) setSelectedId(ev.id);
   }, [events, selectedId, cardStep]);
 
+  // Tapped strip → its full details in a bottom sheet.
+  const [sheetEvent, setSheetEvent] = useState<ChartEvent | null>(null);
   if (!visible || events.length === 0) return null;
 
   const selected = events.find((e) => e.id === selectedId) ?? events[0];
@@ -399,11 +492,7 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     <>
       <div ref={cardsRef} className="chart-event-cards" onScroll={handleCardsScroll}>
         {events.map((ev) => (
-          <div key={ev.id} className="chart-event-card">
-            <span className="chart-event-card-title">{ev.title}</span>
-            <p className="chart-event-card-body">{ev.body}</p>
-            <span className="chart-event-card-time">{formatRelativeTime(ev.time)}</span>
-          </div>
+          <EventCard key={ev.id} ev={ev} onOpen={() => setSheetEvent(ev)} />
         ))}
       </div>
       {events.length > 1 && (
@@ -426,6 +515,10 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     <>
       {dotsLayer}
       {cardsSlotEl ? createPortal(cardsAndPager, cardsSlotEl) : null}
+      {sheetEvent && createPortal(
+        <EventSheet ev={sheetEvent} onClose={() => setSheetEvent(null)} />,
+        document.body,
+      )}
     </>
   );
 }

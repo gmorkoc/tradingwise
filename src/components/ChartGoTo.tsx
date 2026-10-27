@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import "../styles/ChartGoTo.css";
 
 // "Go to" popover for the chart's range bar (calendar button). Two tabs:
@@ -68,6 +69,9 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
   const [view, setView] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Phones: centered on screen over a dim backdrop (portaled to <body>);
+  // desktop keeps the popover anchored above the range bar.
+  const [centered] = useState(() => window.matchMedia("(max-width: 640px)").matches);
 
   // Close on Escape / click outside.
   useEffect(() => {
@@ -163,8 +167,8 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
     </label>
   );
 
-  return (
-    <div className="cgt" ref={rootRef} role="dialog" aria-label="Go to">
+  const dialog = (
+    <div className={`cgt${centered ? " cgt--centered" : ""}`} ref={rootRef} role="dialog" aria-label="Go to">
       <div className="cgt-head">
         <span className="cgt-title">Go to</span>
         <button type="button" className="cgt-close" onClick={onClose} aria-label="Close">
@@ -240,5 +244,13 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
         <button type="button" className="cgt-btn cgt-btn--primary" onClick={submit}>Go to</button>
       </div>
     </div>
+  );
+  if (!centered) return dialog;
+  return createPortal(
+    <>
+      <div className="cgt-backdrop" />
+      {dialog}
+    </>,
+    document.body,
   );
 }

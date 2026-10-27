@@ -224,3 +224,50 @@
   color: #fff;
 }
 .cgt-btn--primary:hover { opacity: 0.9; }
+
+/* Phones: a bottom sheet (full width, slides up) over a dim backdrop,
+   same feel as the Date Range sheet. */
+.cgt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1999;
+  background: rgba(0, 0, 0, 0.45);
+  animation: cgt-fade 0.18s ease;
+}
+@keyframes cgt-fade { from { opacity: 0; } to { opacity: 1; } }
+.cgt.cgt--centered {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  z-index: 2000;
+  width: auto;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: 18px 18px 0 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  padding: 18px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -12px 40px -12px rgba(0, 0, 0, 0.35);
+  transform: none;
+  animation: cgt-sheet-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cgt.cgt--centered::before {
+  /* grab handle */
+  content: "";
+  display: block;
+  width: 38px;
+  height: 4px;
+  margin: -6px auto 12px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text) 20%, transparent);
+}
+@keyframes cgt-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.cgt.cgt--centered .cgt-day { height: 40px; }
+.cgt.cgt--centered .cgt-foot { margin: 16px -20px 0; padding: 14px 20px 0; }
+.cgt.cgt--centered .cgt-btn { flex: 1; text-align: center; padding: 11px 14px; }

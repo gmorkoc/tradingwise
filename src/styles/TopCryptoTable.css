@@ -133,3 +133,8 @@
 .tct-filter-btn .tct-filter-count {
   color: rgba(255, 255, 255, 0.8);
 }
+/* Star now sits inline right after the coin's symbol. */
+.gm-td--name .tct-star {
+  margin-left: 8px;
+  vertical-align: middle;
+}

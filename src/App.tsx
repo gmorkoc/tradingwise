@@ -47,8 +47,6 @@ import { CoinChat } from "./components/CoinChat";
 import { TradingAgent } from "./components/TradingAgent";
 import { AgentIntroShowcase } from "./components/AgentIntroShowcase";
 import { Avatar } from "./components/Avatar";
-import { Watchlist } from "./components/Watchlist";
-import { TopMoversCarousel } from "./components/TopMoversCarousel";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 // import { WhatsNewModal } from "./components/WhatsNewModal"; — paused, see its commented render block below
 import { DailyBrief } from "./components/DailyBrief";
@@ -3415,6 +3413,10 @@ function AppDashboard({
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                         headerStats={mchBodyEl}
+                        onOpenDrawingTools={() => {
+                          advanceChartPushedRef.current = true;
+                          setActiveSection("advance-chart");
+                        }}
                         onNavigateToPage={() => {
                           if (!isDesktopWidth) {
                             setMobileAdvanceChartOpen(true);
@@ -3433,7 +3435,10 @@ function AppDashboard({
                             dropdown (All / Watchlist / Winners / Losers /
                             Trending). Narrower widths keep the plain stacked
                             Watchlist + Trending as before. */}
-                        {!distractionFree && isWideDesktop ? (
+                        {/* Every screen size now (mobile included) — the
+                            old Watchlist + Trending lists are replaced by the
+                            same panel; Watchlist lives in its filter. */}
+                        {!distractionFree ? (
                           <div className="chart-below-full">
                             <ChartBottomPanel
                               coin={coin}
@@ -3445,22 +3450,7 @@ function AppDashboard({
                               onOpenPaperTrading={() => setActiveSection("riskcalc")}
                             />
                           </div>
-                        ) : !distractionFree && (
-                          <>
-                            <Watchlist
-                              onSelectCoin={(symbol) => {
-                                setCoin(symbol as CoinSymbol);
-                                clearCandleCache();
-                              }}
-                            />
-                            <TopMoversCarousel
-                              onSelectCoin={(symbol) => {
-                                setCoin(symbol as CoinSymbol);
-                                clearCandleCache();
-                              }}
-                            />
-                          </>
-                        )}
+                        ) : null}
                       </PriceChart>
                       <div
                         className="chart-resize-handle"

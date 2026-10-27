@@ -18,6 +18,7 @@
     "@capacitor-community/speech-recognition": "^6.0.1",
     "@capacitor-community/text-to-speech": "^5.1.0",
     "@capacitor-firebase/messaging": "^6.3.1",
+    "@capacitor/action-sheet": "^6.0.3",
     "@capacitor/android": "6.2.1",
     "@capacitor/app": "^6.0.3",
     "@capacitor/browser": "^6.0.6",

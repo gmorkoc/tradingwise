@@ -20,7 +20,7 @@ import { useSort, SortTh } from "./SortableTh";
 
 type Tab = "markets" | "toptraders" | "positions" | "history" | "balance" | "performance";
 const MARKET_TABS: { key: Tab; label: string }[] = [
-  { key: "markets", label: "Top Cryptocurrencies" },
+  { key: "markets", label: "Cryptocurrencies" },
   { key: "toptraders", label: "Top Traders" },
 ];
 const ACCOUNT_TABS: { key: Tab; label: string }[] = [
@@ -67,6 +67,21 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
   // Other parts of the Chart page (Paper Trading card's "View all closed
   // positions") can open a tab here and bring the panel into view.
   const rootRef = useRef<HTMLDivElement>(null);
+  // Tabs strip: right-edge fade only while there are more tabs to scroll to.
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [tabsMore, setTabsMore] = useState(false);
+  const updateTabsMore = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (el) setTabsMore(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    updateTabsMore();
+    const ro = new ResizeObserver(updateTabsMore);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tab, updateTabsMore]);
   useEffect(() => {
     const onOpenTab = (e: Event) => {
       const t = (e as CustomEvent<{ tab?: Tab }>).detail?.tab;
@@ -95,7 +110,6 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
     } catch { return "all"; }
   });
   useEffect(() => { try { localStorage.setItem("topCryptoFilter", filter); } catch { /* ignore */ } }, [filter]);
-  const [coinCount, setCoinCount] = useState<number | undefined>(undefined);
   const [ttFilter, setTtFilter] = useState<TopTradersFilter>("winners");
 
   const [portfolio, setPortfolio] = useState<PaperPortfolio | null>(null);
@@ -331,7 +345,11 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
       role="tab"
       aria-selected={tab === t.key}
       className={`cbp-tab${tab === t.key ? " active" : ""}`}
-      onClick={() => setTab(t.key)}
+      onClick={(e) => {
+        setTab(t.key);
+        // Slide a half-hidden tab fully into view.
+        e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+      }}
     >
       {t.label}
       {t.key === "positions" && positions.length > 0 && <span className="cbp-tab-count">{positions.length}</span>}
@@ -341,6 +359,10 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
   return (
     <div className="cbp" ref={rootRef}>
       <div className="cbp-tabs" role="tablist">
+        {/* Tabs in their own strip so they can scroll sideways on phones
+            while the filter (right) stays put. */}
+        <div className={`cbp-tabs-scroll-wrap${tabsMore ? " cbp-tabs-scroll-wrap--more" : ""}`}>
+        <div className="cbp-tabs-scroll" ref={tabsScrollRef} onScroll={updateTabsMore}>
         {/* Divider between every market tab, and before the account tabs. */}
         {MARKET_TABS.map((t, i) => (
           <span key={t.key} style={{ display: "contents" }}>
@@ -350,9 +372,11 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         ))}
         <span className="cbp-tabs-divider" />
         {ACCOUNT_TABS.map(tabBtn)}
+        </div>
+        </div>
         {tab === "markets" && (
           <div className="cbp-tabs-right">
-            <TopCryptoFilter filter={filter} onChange={setFilter} count={coinCount} />
+            <TopCryptoFilter filter={filter} onChange={setFilter} />
           </div>
         )}
         {tab === "toptraders" && user && (
@@ -371,7 +395,7 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         )}
       </div>
       <div className="cbp-body">
-        {tab === "markets" && <TopCryptoTable filterable filter={filter} onCountChange={setCoinCount} onSelectCoin={onSelectCoin} />}
+        {tab === "markets" && <TopCryptoTable filterable filter={filter} onSelectCoin={onSelectCoin} />}
         {tab === "toptraders" && (user ? <TopTradersTable coin={coin} filter={ttFilter} /> : (
           // Top Traders needs an account (free).
           <div className="cbp-gate">

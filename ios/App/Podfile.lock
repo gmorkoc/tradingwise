@@ -1,6 +1,8 @@
 PODS:
   - Capacitor (6.2.1):
     - CapacitorCordova
+  - CapacitorActionSheet (6.0.3):
+    - Capacitor
   - CapacitorApp (6.0.3):
     - Capacitor
   - CapacitorBrowser (6.0.6):
@@ -89,6 +91,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorActionSheet (from `../../node_modules/@capacitor/action-sheet`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
@@ -120,6 +123,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorActionSheet:
+    :path: "../../node_modules/@capacitor/action-sheet"
   CapacitorApp:
     :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
@@ -151,6 +156,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
+  CapacitorActionSheet: d1655abbbd3a57b86a7868269e8114848b5dac3e
   CapacitorApp: a19ccb4f5f32d2534be5c6f524d5a9b614a1e8a7
   CapacitorBrowser: 825163a1d6adce944ac7b9e3cab101146b5a9df8
   CapacitorCamera: 5ba135b0cb55a788758139fa2404d726bf60f0f3
@@ -176,6 +182,6 @@ SPEC CHECKSUMS:
   RevenueCat: e47ff90dfd271fde155a4befe48e8fc02e8281e4
   RevenuecatPurchasesCapacitor: 6727a4dc1455bdf2374259420719ce5dfbe957fa
 
-PODFILE CHECKSUM: 7bf6cd3ed8a0fffe513d24d2fe967f01c880b80e
+PODFILE CHECKSUM: 838c7877d53dfe781274810bab3ab6ab02d6c4e0
 
 COCOAPODS: 1.17.0
