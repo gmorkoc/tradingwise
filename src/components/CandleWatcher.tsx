@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } fr
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
-import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp } from "lightweight-charts";
-import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn, Ticker24h } from "../services/coinglass";
+import { createChart, IChartApi, ISeriesApi, IPriceLine, CandlestickData, ColorType, LineStyle, CandlestickSeries, HistogramSeries, LineSeries, createSeriesMarkers, ISeriesMarkersPluginApi, SeriesMarker, UTCTimestamp, PriceScaleMode } from "lightweight-charts";
+import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextData, fetchBn, Ticker24h, COINS, MAX_RANGE_CANDLES } from "../services/coinglass";
 import { calcEMA, calcRSI, calcRSIArray, calcMACD, calcTEMA, calcBB, calcATR, calcVolRatio } from "../services/indicators";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
@@ -12,7 +12,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import { MMNarrationFeed, MMFeedEntry } from "./MMNarrationFeed";
 import { COIN_COLORS, COIN_GLYPHS } from "./PriceChart";
+import { BottomSheet } from "./BottomSheet";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
+import { ChartDrawingTools, Drawing } from "./ChartDrawingTools";
 import "../styles/CandleWatcher.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -86,6 +88,9 @@ interface AIRead {
 }
 
 // ── Intervals ─────────────────────────────────────────────────────────────────
+// Structure analysis + AI inputs use at most this many recent candles, even
+// when a date range loads more history for the chart.
+const CW_ANALYSIS_WINDOW = 300;
 
 const INTERVALS: Interval[] = [
   { label: "15m", value: "15m", refresh: 60_000,   limit: 100, durationSec: 900     },
@@ -1943,7 +1948,31 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const onReadyFiredRef = useRef(false);
   const [aiRead, setAiRead] = useState<AIRead | null>(null);
   const [mmFeed, setMmFeed] = useState<MMFeedEntry[]>([]);
-  const [rightTab, setRightTab] = useState<"wave" | "narration" | "read" | "plan" | "fractal">("read");
+  // Desktop (≥901px): one-screen terminal layout — signal cards and the
+  // live tape move into the right panel as tabs (see signalCardsEl /
+  // liveTapeEl). Mobile keeps its stacked layout untouched.
+  const [cwDesktop, setCwDesktop] = useState(() => window.matchMedia("(min-width: 901px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 901px)");
+    const on = () => setCwDesktop(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  // Desktop "AI" tab remembers which of Read / Plan / Narration was open.
+  const lastAiTabRef = useRef<"read" | "plan" | "narration">("read");
+  const cwDesktopRef = useRef(cwDesktop);
+  cwDesktopRef.current = cwDesktop;
+  const [rightTab, setRightTab] = useState<"signals" | "wave" | "narration" | "read" | "plan" | "fractal" | "tape">(
+    () => "signals",
+  );
+  useEffect(() => {
+    if (rightTab === "read" || rightTab === "plan" || rightTab === "narration") lastAiTabRef.current = rightTab;
+  }, [rightTab]);
+  // Back on mobile, the desktop-only tabs don't exist — fall back.
+  useEffect(() => {
+    // Desktop folds Monthly into Overview.
+    if (rightTab === "fractal") setRightTab("signals");
+  }, [rightTab]);
   const [aiLoading, setAiLoading] = useState(false);
   const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
@@ -2011,12 +2040,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const saved = Number(localStorage.getItem("cwSidebarWidth"));
     return saved >= 300 && saved <= 720 ? saved : 440;
   });
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(
-    () => localStorage.getItem("cwRightPanelCollapsed") === "1"
-  );
+  // Desktop starts with the panel hidden (icon rail) — new key so everyone
+  // gets that default once; mobile keeps its old saved state.
+  const cwPanelKey = window.matchMedia("(min-width: 901px)").matches ? "cwRightPanelCollapsedV2" : "cwRightPanelCollapsed";
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
+    const saved = localStorage.getItem(cwPanelKey);
+    return saved === null ? cwPanelKey === "cwRightPanelCollapsedV2" : saved === "1";
+  });
   useEffect(() => {
-    localStorage.setItem("cwRightPanelCollapsed", rightPanelCollapsed ? "1" : "0");
-  }, [rightPanelCollapsed]);
+    localStorage.setItem(cwPanelKey, rightPanelCollapsed ? "1" : "0");
+  }, [rightPanelCollapsed, cwPanelKey]);
   const [feedCollapsed, setFeedCollapsed] = useState(
     () => localStorage.getItem("cwFeedCollapsed") === "1"
   );
@@ -2041,6 +2074,40 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const elliottPriceLinesRef = useRef<IPriceLine[]>([]);
   const elliottResultRef     = useRef<EWResult | null>(null);
   const showElliottRef       = useRef(false);
+  // Chart toolbar (desktop): style, grid, layers, scale — remembered.
+  type CwStyle = "candle" | "hollow" | "line" | "heikinAshi";
+  type CwLayers = { ema: boolean; bb: boolean; volume: boolean; ict: boolean; retests: boolean; patterns: boolean; divergence: boolean };
+  const CW_LAYERS_ALL_ON: CwLayers = { ema: true, bb: true, volume: true, ict: true, retests: true, patterns: true, divergence: true };
+  const [cwPrefs, setCwPrefs] = useState<{ style: CwStyle; grid: boolean; layers: CwLayers; scale: "normal" | "percent" | "log"; autoScale: boolean }>(() => {
+    const def = { style: "candle" as CwStyle, grid: true, layers: CW_LAYERS_ALL_ON, scale: "normal" as const, autoScale: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem("cwChartPrefsV1") ?? "null");
+      return saved ? { ...def, ...saved, layers: { ...CW_LAYERS_ALL_ON, ...(saved.layers ?? {}) } } : def;
+    } catch { return def; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("cwChartPrefsV1", JSON.stringify(cwPrefs)); } catch { /* ignore */ }
+  }, [cwPrefs]);
+  const cwLayersRef = useRef(cwPrefs.layers);
+  cwLayersRef.current = cwPrefs.layers;
+  const [cwMenu, setCwMenu] = useState<null | "interval" | "style" | "layers" | "range">(null);
+  const [cwDrawOn, setCwDrawOn] = useState(false);
+  // Date range (desktop toolbar): kept across interval changes while it
+  // fits that candle size; loads as much history as it needs.
+  const [cwRange, setCwRange] = useState<{ label: string; secs: number } | null>(null);
+  const cwRangeRef = useRef(cwRange);
+  cwRangeRef.current = cwRange;
+  const cwRangeFits = (secs: number, iv: Interval) => {
+    const n = secs / iv.durationSec;
+    return n >= 3 && n <= MAX_RANGE_CANDLES;
+  };
+  const cwLimitFor = (iv: Interval) => {
+    const rg = cwRangeRef.current;
+    if (!rg || !cwRangeFits(rg.secs, iv)) return iv.limit;
+    return Math.min(MAX_RANGE_CANDLES, Math.max(iv.limit, Math.ceil(rg.secs / iv.durationSec) + 10));
+  };
+  const cwDrawingsRef = useRef<Drawing[]>([]);
+  const cwLineSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [showElliott, setShowElliott] = useState(false);
   const [elliottResult, setElliottResult] = useState<EWResult | null>(null);
   const showVolProfileRef    = useRef(false);
@@ -2075,7 +2142,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       },
       crosshair: { mode: 1 },
       rightPriceScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0" },
-      timeScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0", timeVisible: true, secondsVisible: false },
+      // lockVisibleTimeRangeOnResize: hiding/showing the side panel stretches
+      // the same candles to the new width instead of revealing empty space.
+      timeScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0", timeVisible: true, secondsVisible: false, lockVisibleTimeRangeOnResize: true },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
       width:  chartContainerRef.current.clientWidth,
@@ -2104,6 +2173,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const bbLower  = chart.addSeries(LineSeries, { color: "rgba(99,102,241,0.5)", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false });
     const ema20    = chart.addSeries(LineSeries, { color: "#38bdf8", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
     const ema50    = chart.addSeries(LineSeries, { color: "#f59e0b", lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    // "Line" chart style: close-price line, only visible in that style.
+    cwLineSeriesRef.current = chart.addSeries(LineSeries, { color: "#6366f1", lineWidth: 2, priceLineVisible: false, lastValueVisible: false, visible: false });
     const elliott      = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 4, lineStyle: 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
     const elliottProj  = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 3, lineStyle: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
 
@@ -2142,7 +2213,18 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     });
 
     const ro = new ResizeObserver(() => {
-      if (chartContainerRef.current) chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      const el = chartContainerRef.current;
+      if (!el) return;
+      // Desktop terminal layout: the chart fills its (flex) container's
+      // height too. Mobile keeps the fixed 460 set at creation.
+      if (cwDesktopRef.current && !el.closest(".cw-chart-dblclick-wrap--fullscreen") && el.clientHeight > 0) {
+        chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
+      } else {
+        chart.applyOptions({ width: el.clientWidth });
+      }
+      // The rounded-candle painter redraws on visible-range changes only;
+      // a resize with the time range locked doesn't fire one — nudge it.
+      requestAnimationFrame(() => setChartGeneration((g) => g + 1));
     });
     ro.observe(chartContainerRef.current);
 
@@ -2167,10 +2249,88 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   // chart.applyOptions({height}) call instead of relying on that observer.
   useEffect(() => {
     if (!chartRef.current) return;
+    const h = chartContainerRef.current?.clientHeight ?? 0;
     chartRef.current.applyOptions({
-      height: isChartFullscreen ? window.innerHeight - 64 : 460,
+      height: isChartFullscreen ? window.innerHeight - 64 : (cwDesktop && h > 0 ? h : 460),
     });
-  }, [isChartFullscreen]);
+  }, [isChartFullscreen, cwDesktop]);
+
+  // ── Chart toolbar effects (style / grid / layers / scale) ──────────────
+  useEffect(() => {
+    const isLine = cwPrefs.style === "line";
+    cwLineSeriesRef.current?.applyOptions({ visible: isLine });
+    const L = cwPrefs.layers;
+    ema20Ref.current?.applyOptions({ visible: L.ema });
+    ema50Ref.current?.applyOptions({ visible: L.ema });
+    bbUpperRef.current?.applyOptions({ visible: L.bb });
+    bbMiddleRef.current?.applyOptions({ visible: L.bb });
+    bbLowerRef.current?.applyOptions({ visible: L.bb });
+    volSeriesRef.current?.applyOptions({ visible: L.volume });
+    const gridColor = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.05)";
+    chartRef.current?.applyOptions({
+      grid: {
+        vertLines: { color: cwPrefs.grid ? gridColor : "transparent" },
+        horzLines: { color: cwPrefs.grid ? gridColor : "transparent" },
+      },
+    });
+    chartRef.current?.priceScale("right").applyOptions({
+      mode: cwPrefs.scale === "log" ? PriceScaleMode.Logarithmic : cwPrefs.scale === "percent" ? PriceScaleMode.Percentage : PriceScaleMode.Normal,
+      autoScale: cwPrefs.autoScale,
+    });
+  }, [cwPrefs, isDark, chartGeneration]);
+  // Layer changes redraw the price lines + markers (both built in feedChart).
+  const cwLayersKey = JSON.stringify(cwPrefs.layers);
+  const cwLayersFirstRef = useRef(true);
+  useEffect(() => {
+    if (cwLayersFirstRef.current) { cwLayersFirstRef.current = false; return; }
+    if (candlesRef.current.length) feedChart(candlesRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cwLayersKey]);
+  // Toolbar menus: a dropdown on desktop; on phones the app's standard
+  // bottom sheet (backdrop + title + ✕), above the floating nav.
+  const cwMenuWrap = (title: string, cls: string, items: React.ReactNode) =>
+    cwDesktop ? (
+      <div className={cls}>{items}</div>
+    ) : (
+      <BottomSheet open onClose={() => setCwMenu(null)} title={<>{title}</>} className="cw-tb-sheet" ariaLabel={title}>
+          <div className="interval-sheet-list cw-tb-sheet-list">{items}</div>
+      </BottomSheet>
+    );
+  // Close any open toolbar menu on an outside click.
+  useEffect(() => {
+    if (!cwMenu) return;
+    const close = (e: MouseEvent) => {
+      if (!(e.target as Element).closest?.(".cw-tb-menu-wrap, .cw-tb-sheet")) setCwMenu(null);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [cwMenu]);
+  // Date range presets: zoom to that span, loading more history first if
+  // the loaded candles don't reach back far enough.
+  const cwApplyRange = (label: string, secs: number | null) => {
+    const ts = chartRef.current?.timeScale();
+    if (!ts) return;
+    const zoom = (data: CandleDataPoint[], span: number) => {
+      const last = data[data.length - 1].time as number;
+      ts.setVisibleRange({ from: Math.max(data[0].time as number, last - span) as UTCTimestamp, to: last as UTCTimestamp });
+    };
+    if (secs === null) { setCwRange(null); cwRangeRef.current = null; ts.fitContent(); return; }
+    const rg = { label, secs };
+    setCwRange(rg);
+    cwRangeRef.current = rg;
+    const data = candlesRef.current;
+    const covered = data.length > 0 && (data[data.length - 1].time as number) - (data[0].time as number) >= secs;
+    if (covered) { zoom(data, secs); return; }
+    const forCoin = coin;
+    const forIv = interval;
+    coinglass.getCandles(coin, interval.value, cwLimitFor(interval)).then((more) => {
+      if (!more.length || forCoin !== coin || forIv !== interval) return;
+      setCandles(more);
+      candlesRef.current = more;
+      feedChart(more);
+      requestAnimationFrame(() => zoom(more, secs));
+    });
+  };
 
   // Double-click (mouse) / double-tap (touch, including Chrome's own
   // mobile device emulation — real touch-capable contexts don't reliably
@@ -2260,6 +2420,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       open: c.open, high: c.high, low: c.low, close: c.close,
     }));
     candleSeriesRef.current.setData(cdl);
+    cwLineSeriesRef.current?.setData(data.map(c => ({ time: c.time as any, value: c.close })));
     setChartGeneration(g => g + 1);
 
     if (volSeriesRef.current) {
@@ -2299,7 +2460,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }
 
     // Pattern risk markers — buyer/seller commentary at S/R only
-    const { supports, resistances } = findSRLevels(data);
+    // Structure analysis (S/R, patterns, Wyckoff, Smart Money, retests,
+    // divergences, Elliott) runs on the most recent candles only — a kept
+    // date range can load thousands, and detecting levels across all of
+    // them would bury the chart and change their meaning. Lines/EMAs/BB
+    // above still use the full history.
+    const aData = data.length > CW_ANALYSIS_WINDOW ? data.slice(-CW_ANALYSIS_WINDOW) : data;
+    const { supports, resistances } = findSRLevels(aData);
     const PATTERN_COMMENTS: Record<string, string> = {
       "Bullish Engulfing":    "Buyers overwhelmed sellers",
       "Bearish Engulfing":    "Sellers took full control",
@@ -2316,14 +2483,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     };
     const newMap = new Map<number, { comment: string; type: string }>();
     const patternMarkers: SeriesMarker<UTCTimestamp>[] = [];
-    for (let i = 2; i < data.length; i++) {
-      const pat = detectPattern(data.slice(i - 2, i + 1));
+    for (let i = 2; i < aData.length; i++) {
+      const pat = detectPattern(aData.slice(i - 2, i + 1));
       const comment = PATTERN_COMMENTS[pat.name];
       if (!comment) continue;
-      if (!nearSR(data[i], supports, resistances)) continue;
-      newMap.set(data[i].time, { comment, type: pat.type });
+      if (!nearSR(aData[i], supports, resistances)) continue;
+      newMap.set(aData[i].time, { comment, type: pat.type });
       patternMarkers.push({
-        time:     data[i].time as UTCTimestamp,
+        time:     aData[i].time as UTCTimestamp,
         position: pat.type === "bearish" ? "aboveBar" : "belowBar",
         color:    pat.type === "bullish" ? "#22c55e" : "#ef4444",
         shape:    pat.type === "bullish" ? "arrowUp" : "arrowDown",
@@ -2333,7 +2500,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     patternMapRef.current = newMap;
 
     // Wyckoff phase + Spring/Upthrust markers
-    const wyk = detectWyckoff(data);
+    const wyk = detectWyckoff(aData);
     setWyckoff(wyk);
 
     const springMarkers: SeriesMarker<UTCTimestamp>[] = wyk.springs.map(t => {
@@ -2350,11 +2517,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     ictPriceLinesRef.current = [];
     ictLevelDescriptionsRef.current = [];
 
-    const ict = detectICT(data);
+    const ict = detectICT(aData);
     const ictMarkers: SeriesMarker<UTCTimestamp>[] = [];
 
     // Retest markers
-    const retestEvents = detectRetests(data, ict);
+    const retestEvents = detectRetests(aData, ict);
     const retestMarkers: SeriesMarker<UTCTimestamp>[] = retestEvents.map(r => {
       newMap.set(r.time, {
         comment: r.type === "bearish"
@@ -2378,6 +2545,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         width: 1|2 = 1, style: LineStyle = LineStyle.Dashed,
         tooltipTitle?: string, desc?: string, descType?: string
       ) => {
+        // Smart Money layer off: no OB/FVG/liquidity/EQ/OTE lines.
+        if (!cwLayersRef.current.ict) return;
         const pl = candleSeriesRef.current!.createPriceLine({
           price, color, lineWidth: width, lineStyle: style,
           axisLabelVisible: !!lineTitle, title: lineTitle,
@@ -2508,7 +2677,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     }
 
     // Elliott Wave detection & chart overlay
-    const ew = detectElliottWaves(data);
+    const ew = detectElliottWaves(aData);
     setElliottResult(ew);
     elliottResultRef.current = ew;
     const ewVisible = showElliottRef.current;
@@ -2564,7 +2733,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
     // Divergence + Elliott markers — all merged and sorted by time
     if (divMarkersRef.current) {
-      const divs = detectRSIDivergences(data);
+      const divs = detectRSIDivergences(aData);
       const divMarkers: SeriesMarker<UTCTimestamp>[] = divs.map(d => ({
         time: d.time as UTCTimestamp,
         position: d.type === "bull" ? "belowBar" : "aboveBar",
@@ -2587,7 +2756,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             size: 2,
           }))
         : [];
-      const allMarkers = [...patternMarkers, ...divMarkers, ...springMarkers, ...upthrustMarkers, ...ictMarkers, ...retestMarkers, ...ewMarkers]
+      const L = cwLayersRef.current;
+      const allMarkers = [
+        ...(L.patterns ? [...patternMarkers, ...springMarkers, ...upthrustMarkers] : []),
+        ...(L.divergence ? divMarkers : []),
+        ...(L.ict ? ictMarkers : []),
+        ...(L.retests ? retestMarkers : []),
+        ...ewMarkers,
+      ]
         .sort((a, b) => (a.time as number) - (b.time as number));
       divMarkersRef.current.setMarkers(allMarkers);
     }
@@ -2903,7 +3079,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   };
 
   const fetchCandles = useCallback(async (triggerAnalysis = false) => {
-    const data = await coinglass.getCandles(coin, interval.value, interval.limit);
+    const data = await coinglass.getCandles(coin, interval.value, cwLimitFor(interval));
     if (!data.length) return;
     setCandles(data);
     candlesRef.current = data;
@@ -2951,7 +3127,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     setMmFeed([]);
     setLastCandleTime(null);
 
-    coinglass.getCandles(coin, interval.value, interval.limit)
+    // A kept date range that doesn't fit the new interval is dropped.
+    if (cwRangeRef.current && !cwRangeFits(cwRangeRef.current.secs, interval)) {
+      cwRangeRef.current = null;
+      setCwRange(null);
+    }
+    coinglass.getCandles(coin, interval.value, cwLimitFor(interval))
       .then(data => {
         if (cancelled) return;
         if (!data.length) {
@@ -2962,6 +3143,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         setCandles(data);
         candlesRef.current = data;
         feedChart(data);
+        // Kept date range: show that span on the new interval.
+        if (cwRangeRef.current) {
+          const secs = cwRangeRef.current.secs;
+          requestAnimationFrame(() => {
+            const last = data[data.length - 1].time as number;
+            chartRef.current?.timeScale().setVisibleRange({ from: Math.max(data[0].time as number, last - secs) as UTCTimestamp, to: last as UTCTimestamp });
+          });
+        }
         setRefreshedAt(new Date());
         setLastCandleTime(data[data.length - 1].time);
         setLoading(false);
@@ -3001,8 +3190,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     requestAnimationFrame(() => {
       if (!chartRef.current || !chartContainerRef.current) return;
       const w = chartContainerRef.current.clientWidth;
+      const h = chartContainerRef.current.clientHeight;
       if (w > 0) {
-        chartRef.current.resize(w, 460);
+        chartRef.current.resize(w, cwDesktopRef.current && h > 0 ? h : 460);
         chartRef.current.timeScale().fitContent();
       }
     });
@@ -3167,10 +3357,13 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     if (!isPaid || !triggerAI.current || candles.length < 20) return;
     triggerAI.current = false;
 
-    const ind     = buildIndicators(candles);
-    const pattern = detectPattern(candles);
+    // Same recent window as the chart's structure analysis (a kept date
+    // range can load far more history than the AI read should look at).
+    const aiCandles = candles.length > CW_ANALYSIS_WINDOW ? candles.slice(-CW_ANALYSIS_WINDOW) : candles;
+    const ind     = buildIndicators(aiCandles);
+    const pattern = detectPattern(aiCandles);
 
-    const ict = detectICT(candles);
+    const ict = detectICT(aiCandles);
     aiScanIctRef.current = ict;
     aiCancelledRef.current = false;
 
@@ -3211,7 +3404,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       : inCooldown ? Promise.resolve<AIRead | null>(null)
       : (lastAiCallAtRef.current.set(throttleKey, Date.now()),
          persistAiCooldown(),
-         getMMAnalysis(coin as string, interval.label, candles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current));
+         getMMAnalysis(coin as string, interval.label, aiCandles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current));
 
     Promise.all([
       mmPromise,
@@ -3336,6 +3529,296 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   useEffect(() => { prevFeedLen.current = feedCandles.length; }, [feedCandles.length]);
 
   const secondsAgo = refreshedAt ? Math.floor((Date.now() - refreshedAt.getTime()) / 1000) : null;
+
+  // Desktop right-panel tabs — shared by the tab row and, when the panel
+  // is hidden, the slim icon rail.
+  const cwPanelTabs = ([
+
+                    { key: "signals", label: "Overview", active: rightTab === "signals" || rightTab === "fractal",
+                      icon: <path d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
+                    { key: "read", label: "AI", active: rightTab === "read" || rightTab === "plan" || rightTab === "narration",
+                      icon: <path d="M12 3v7M12 14v7M3 12h7M14 12h7" /> },
+                    { key: "wave", label: "Elliott", active: rightTab === "wave",
+                      icon: <path d="M2 17l4-8 4 6 4-10 4 7 4-5" /> },
+                    { key: "tape", label: "Live Tape", active: rightTab === "tape",
+                      icon: <><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></> },
+  ] as const);
+
+  // Desktop "AI" tab: Read, Trade plan and MM narration stacked in one
+  // scroll (no sub-switch), separated by thin dividers.
+  const aiGroup = rightTab === "read" || rightTab === "plan" || rightTab === "narration";
+  // Phones: the side panel sits under the chart and can't be hidden.
+  const panelHidden = cwDesktop && rightPanelCollapsed;
+  const aiSec = (key: string, label: string, content: React.ReactNode) =>
+    aiGroup ? (
+      <section className={`cw-ai-sec cw-ai-sec--${key}`} aria-label={label}>
+        {content}
+      </section>
+    ) : content;
+
+  // Desktop terminal layout: signal cards and the live tape live in the
+  // right panel (as tabs) instead of stacking above/below the chart.
+  const signalCardsEl = (
+    <>
+      <div className="cw-signal-cards-head">
+        <span className="cw-feed-live-dot" />
+        <span className="cw-signal-cards-title">Live Signals</span>
+      </div>
+      <div className="cw-signal-cards">
+        <div className="cw-signal-card">
+          <span className="cw-signal-card-label">Elliott Wave</span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : elliottResult && elliottResult.pattern !== "none" ? (
+            <>
+              <div className="cw-signal-card-main">
+                <svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true">
+                  <polyline className="cw-signal-wave-line" points="2,22 10,6 14,13 22,2 27,11 38,4" fill="none"
+                    stroke={elliottResult.direction === "bullish" ? "#22c55e" : elliottResult.direction === "bearish" ? "#ef4444" : "var(--color-text-muted)"}
+                    strokeWidth="2" />
+                </svg>
+                <div>
+                  <div className="cw-signal-card-value">
+                    {elliottResult.pattern === "impulse" ? "Wave" : "Corr."} {elliottResult.currentWave}
+                  </div>
+                  <div className={`cw-signal-card-tag cw-signal-card-tag--${elliottResult.direction === "bullish" ? "up" : elliottResult.direction === "bearish" ? "down" : "neutral"}`}>
+                    {elliottResult.direction === "bullish" ? "Bullish" : elliottResult.direction === "bearish" ? "Bearish" : "Neutral"}
+                  </div>
+                </div>
+              </div>
+              <p className="cw-signal-card-note">{elliottResult.description}</p>
+            </>
+          ) : (
+            <p className="cw-signal-card-note">No clear wave count on this interval yet.</p>
+          )}
+        </div>
+
+        <div className="cw-signal-card">
+          <span className="cw-signal-card-label">Fractal Match</span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : (
+            <>
+              {fractalLoading && (
+                <div className="cw-signal-loading">
+                  <span className="cw-ai-spinner" />
+                  <span>Searching daily history…</span>
+                </div>
+              )}
+              {!fractalLoading && isPaid && fractalAnalogs && fractalAnalogs.matches.length > 0 && (
+                <>
+                  <div className="cw-signal-card-value">
+                    {fractalAnalogs.upCount}/{fractalAnalogs.matches.length} rose
+                  </div>
+                  <p className="cw-signal-card-note">
+                    Avg forward return {fractalAnalogs.avgForwardReturn >= 0 ? "+" : ""}{fractalAnalogs.avgForwardReturn.toFixed(2)}% over the next {fractalAnalogs.forwardHorizon} days.
+                  </p>
+                </>
+              )}
+              {!fractalLoading && (!isPaid || !fractalAnalogs || fractalAnalogs.matches.length === 0) && (
+                <p className="cw-signal-card-note">Not enough daily history yet to search for monthly analogs.</p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="cw-signal-card">
+          <span className="cw-signal-card-label">Support / Resistance</span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : ind && ind.support[0] !== undefined && ind.resistance[0] !== undefined ? (() => {
+            const sup = ind.support[0];
+            const res = ind.resistance[0];
+            const pct = heroPrice ? Math.min(100, Math.max(0, ((heroPrice - sup) / (res - sup)) * 100)) : 50;
+            return (
+              <>
+                <div className="cw-signal-range">
+                  <div className="cw-signal-range-track">
+                    <div className="cw-signal-range-marker-wrap" style={{ left: `${pct}%` }}>
+                      <span className="cw-signal-range-ping" />
+                      <span className="cw-signal-range-marker" />
+                    </div>
+                  </div>
+                </div>
+                <div className="cw-signal-range-labels">
+                  <span className="cw-signal-card-tag cw-signal-card-tag--up">${sup.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                  <span className="cw-signal-card-tag cw-signal-card-tag--down">${res.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                </div>
+              </>
+            );
+          })() : (
+            <p className="cw-signal-card-note">Not enough candles yet to map nearby levels.</p>
+          )}
+        </div>
+
+        <div className="cw-signal-card">
+          <span className="cw-signal-card-label">Daily Close</span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : (
+            <>
+              <div className="cw-signal-card-value cw-signal-card-value--mono cw-signal-countdown">{dailyCountdown || "—"}</div>
+              {ticker && (
+                <p className="cw-signal-card-note">
+                  H <strong className="cw-signal-card-tag--up">${ticker.high.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
+                  {" · "}
+                  L <strong className="cw-signal-card-tag--down">${ticker.low.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="cw-signal-card">
+          <span className="cw-signal-card-label">Momentum</span>
+          {loading ? (
+            <div className="cw-signal-skeleton">
+              <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
+              <span className="cw-signal-skeleton-line" />
+            </div>
+          ) : ind && ind.rsi !== null ? (
+            <>
+              <div className="cw-signal-card-main">
+                <div className="cw-signal-bar-track">
+                  <div className={`cw-signal-bar-fill cw-signal-bar-fill--${rsiStatus()}`} style={{ width: `${Math.min(100, Math.max(0, ind.rsi))}%` }} />
+                </div>
+                <span className="cw-signal-card-value">RSI {ind.rsi.toFixed(0)}</span>
+              </div>
+              {ind.volRatio !== null && (
+                <p className="cw-signal-card-note">Volume {ind.volRatio.toFixed(2)}× the 20-period average.</p>
+              )}
+            </>
+          ) : (
+            <p className="cw-signal-card-note">Not enough candles yet to read momentum.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+  const pillsEl = (
+    <>
+      {ind && (
+        <div className="cw-pills">
+          <IndicatorPill
+            label="RSI"
+            value={ind.rsi != null ? ind.rsi.toFixed(1) : "—"}
+            status={rsiStatus()}
+          />
+          <IndicatorPill
+            label="MACD"
+            value={ind.macdHist != null ? (ind.macdHist > 0 ? "+" : "") + ind.macdHist.toFixed(3) : "—"}
+            status={macdStatus()}
+          />
+          <IndicatorPill
+            label="BB%"
+            value={ind.bbPct != null ? (ind.bbPct * 100).toFixed(0) + "%" : "—"}
+            status={bbStatus()}
+          />
+          <IndicatorPill
+            label="VOL"
+            value={ind.volRatio != null ? ind.volRatio.toFixed(2) + "×" : "—"}
+            status={volStatus()}
+          />
+          <IndicatorPill
+            label="EMA20"
+            value={ind.ema20 != null && lastPrice != null
+              ? lastPrice > ind.ema20 ? "↑ Above" : "↓ Below"
+              : "—"}
+            status={ind.ema20 != null && lastPrice != null ? (lastPrice > ind.ema20 ? "bull" : "bear") : "neutral"}
+          />
+          <IndicatorPill
+            label="EMA50"
+            value={ind.ema50 != null && lastPrice != null
+              ? lastPrice > ind.ema50 ? "↑ Above" : "↓ Below"
+              : "—"}
+            status={ind.ema50 != null && lastPrice != null ? (lastPrice > ind.ema50 ? "bull" : "bear") : "neutral"}
+          />
+          <IndicatorPill
+            label="ATR"
+            value={ind.atr != null ? "$" + ind.atr.toFixed(0) : "—"}
+            status="neutral"
+          />
+          {wyckoff && (
+            <IndicatorPill
+              label="Wyckoff"
+              value={wyckoff.phase}
+              status={
+                wyckoff.phase === "Accumulation" || wyckoff.phase === "Re-Accumulation" || wyckoff.phase === "Markup" ? "bull" :
+                wyckoff.phase === "Distribution" || wyckoff.phase === "Markdown" ? "bear" : "neutral"
+              }
+            />
+          )}
+          {elliottResult && elliottResult.pattern !== "none" && (
+            <IndicatorPill
+              label="Elliott"
+              value={`${elliottResult.pattern === "impulse" ? "W" : "Corr"} ${elliottResult.currentWave}`}
+              status={elliottResult.direction === "bullish" ? "bull" : elliottResult.direction === "bearish" ? "bear" : "neutral"}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+  const liveTapeEl = (
+    <>
+      {feedCandles.length >= 3 && (
+        <div className={`cw-feed${feedCollapsed ? " cw-feed--collapsed" : ""}`}>
+          <button
+            type="button"
+            className="cw-feed-header"
+            onClick={() => setFeedCollapsed(v => !v)}
+            aria-expanded={!feedCollapsed}
+            title={feedCollapsed ? "Expand Live Tape" : "Collapse Live Tape"}
+          >
+            <span className="cw-feed-label">
+              <span className="cw-feed-live-dot" />
+              Live Tape
+            </span>
+            <div className="cw-feed-header-right">
+              <span className="cw-feed-sub">{feedCandles.length} candles</span>
+              {candleCountdown && (
+                <div className="cw-feed-candle-close">
+                  <span className="cw-feed-candle-close-label">closes in</span>
+                  <span className="cw-feed-candle-close-value">{candleCountdown}</span>
+                </div>
+              )}
+              <span className="cw-feed-collapse-label">{feedCollapsed ? "Expand" : "Collapse"}</span>
+              <span className="cw-feed-collapse-tri" />
+            </div>
+          </button>
+          {!feedCollapsed && (
+            <div className="cw-tape">
+              {[...feedCandles].reverse().map((c, i) => {
+                const origIdx = feedCandles.length - 1 - i;
+                return (
+                  <CandleTapeRow
+                    key={c.time}
+                    candle={c}
+                    prev1={feedCandles[Math.max(0, origIdx - 1)]}
+                    prev2={feedCandles[Math.max(0, origIdx - 2)]}
+                    isLast={origIdx === feedCandles.length - 1}
+                    isNew={isNewRow(origIdx)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <BlurGate requiredTier="pro" featureName="Inside the Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
@@ -3761,155 +4244,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             this component (elliottResult, fractalAnalogs,
             ind.support/resistance/rsi/volRatio) rather than duplicating
             any of that logic. */}
-        <div className="cw-signal-cards-head">
-          <span className="cw-feed-live-dot" />
-          <span className="cw-signal-cards-title">Live Signals</span>
-        </div>
-        <div className="cw-signal-cards">
-          <div className="cw-signal-card">
-            <span className="cw-signal-card-label">Elliott Wave</span>
-            {loading ? (
-              <div className="cw-signal-skeleton">
-                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
-                <span className="cw-signal-skeleton-line" />
-              </div>
-            ) : elliottResult && elliottResult.pattern !== "none" ? (
-              <>
-                <div className="cw-signal-card-main">
-                  <svg width="40" height="26" viewBox="0 0 40 26" aria-hidden="true">
-                    <polyline className="cw-signal-wave-line" points="2,22 10,6 14,13 22,2 27,11 38,4" fill="none"
-                      stroke={elliottResult.direction === "bullish" ? "#22c55e" : elliottResult.direction === "bearish" ? "#ef4444" : "var(--color-text-muted)"}
-                      strokeWidth="2" />
-                  </svg>
-                  <div>
-                    <div className="cw-signal-card-value">
-                      {elliottResult.pattern === "impulse" ? "Wave" : "Corr."} {elliottResult.currentWave}
-                    </div>
-                    <div className={`cw-signal-card-tag cw-signal-card-tag--${elliottResult.direction === "bullish" ? "up" : elliottResult.direction === "bearish" ? "down" : "neutral"}`}>
-                      {elliottResult.direction === "bullish" ? "Bullish" : elliottResult.direction === "bearish" ? "Bearish" : "Neutral"}
-                    </div>
-                  </div>
-                </div>
-                <p className="cw-signal-card-note">{elliottResult.description}</p>
-              </>
-            ) : (
-              <p className="cw-signal-card-note">No clear wave count on this interval yet.</p>
-            )}
-          </div>
-
-          <div className="cw-signal-card">
-            <span className="cw-signal-card-label">Fractal Match</span>
-            {loading ? (
-              <div className="cw-signal-skeleton">
-                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
-                <span className="cw-signal-skeleton-line" />
-              </div>
-            ) : (
-              <>
-                {fractalLoading && (
-                  <div className="cw-signal-loading">
-                    <span className="cw-ai-spinner" />
-                    <span>Searching daily history…</span>
-                  </div>
-                )}
-                {!fractalLoading && isPaid && fractalAnalogs && fractalAnalogs.matches.length > 0 && (
-                  <>
-                    <div className="cw-signal-card-value">
-                      {fractalAnalogs.upCount}/{fractalAnalogs.matches.length} rose
-                    </div>
-                    <p className="cw-signal-card-note">
-                      Avg forward return {fractalAnalogs.avgForwardReturn >= 0 ? "+" : ""}{fractalAnalogs.avgForwardReturn.toFixed(2)}% over the next {fractalAnalogs.forwardHorizon} days.
-                    </p>
-                  </>
-                )}
-                {!fractalLoading && (!isPaid || !fractalAnalogs || fractalAnalogs.matches.length === 0) && (
-                  <p className="cw-signal-card-note">Not enough daily history yet to search for monthly analogs.</p>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="cw-signal-card">
-            <span className="cw-signal-card-label">Support / Resistance</span>
-            {loading ? (
-              <div className="cw-signal-skeleton">
-                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
-                <span className="cw-signal-skeleton-line" />
-              </div>
-            ) : ind && ind.support[0] !== undefined && ind.resistance[0] !== undefined ? (() => {
-              const sup = ind.support[0];
-              const res = ind.resistance[0];
-              const pct = heroPrice ? Math.min(100, Math.max(0, ((heroPrice - sup) / (res - sup)) * 100)) : 50;
-              return (
-                <>
-                  <div className="cw-signal-range">
-                    <div className="cw-signal-range-track">
-                      <div className="cw-signal-range-marker-wrap" style={{ left: `${pct}%` }}>
-                        <span className="cw-signal-range-ping" />
-                        <span className="cw-signal-range-marker" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="cw-signal-range-labels">
-                    <span className="cw-signal-card-tag cw-signal-card-tag--up">${sup.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                    <span className="cw-signal-card-tag cw-signal-card-tag--down">${res.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                  </div>
-                </>
-              );
-            })() : (
-              <p className="cw-signal-card-note">Not enough candles yet to map nearby levels.</p>
-            )}
-          </div>
-
-          <div className="cw-signal-card">
-            <span className="cw-signal-card-label">Daily Close</span>
-            {loading ? (
-              <div className="cw-signal-skeleton">
-                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--wide" />
-                <span className="cw-signal-skeleton-line" />
-              </div>
-            ) : (
-              <>
-                <div className="cw-signal-card-value cw-signal-card-value--mono cw-signal-countdown">{dailyCountdown || "—"}</div>
-                {ticker && (
-                  <p className="cw-signal-card-note">
-                    H <strong className="cw-signal-card-tag--up">${ticker.high.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
-                    {" · "}
-                    L <strong className="cw-signal-card-tag--down">${ticker.low.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong>
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="cw-signal-card">
-            <span className="cw-signal-card-label">Momentum</span>
-            {loading ? (
-              <div className="cw-signal-skeleton">
-                <span className="cw-signal-skeleton-line cw-signal-skeleton-line--bar" />
-                <span className="cw-signal-skeleton-line" />
-              </div>
-            ) : ind && ind.rsi !== null ? (
-              <>
-                <div className="cw-signal-card-main">
-                  <div className="cw-signal-bar-track">
-                    <div className={`cw-signal-bar-fill cw-signal-bar-fill--${rsiStatus()}`} style={{ width: `${Math.min(100, Math.max(0, ind.rsi))}%` }} />
-                  </div>
-                  <span className="cw-signal-card-value">RSI {ind.rsi.toFixed(0)}</span>
-                </div>
-                {ind.volRatio !== null && (
-                  <p className="cw-signal-card-note">Volume {ind.volRatio.toFixed(2)}× the 20-period average.</p>
-                )}
-              </>
-            ) : (
-              <p className="cw-signal-card-note">Not enough candles yet to read momentum.</p>
-            )}
-          </div>
-        </div>
+        {/* Mobile: signal cards above the grid. Desktop: a right-panel tab. */}
 
         {/* ── Main grid ── */}
         <div
-          className={`cw-grid${rightPanelCollapsed ? " cw-grid--panel-collapsed" : ""}`}
+          className={`cw-grid${panelHidden ? " cw-grid--panel-collapsed" : ""}`}
           style={{ "--cw-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}
         >
 
@@ -3981,6 +4320,116 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 ))}
               </div>
 
+              {/* Desktop chart toolbar (TradingView-style): range, style,
+                  grid, layers, drawing, price scale, save/reset/fullscreen. */}
+              {(
+                <div className="cw-tb">
+                  {/* Interval (the big pill track is hidden on desktop). */}
+                  <div className="cw-tb-menu-wrap">
+                    <button type="button" className={`cw-tb-btn cw-tb-txt cw-tb-iv${cwMenu === "interval" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwMenu(cwMenu === "interval" ? null : "interval")} title="Interval">
+                      {INTERVALS[intervalIdx]?.label}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    </button>
+                    {cwMenu === "interval" && cwMenuWrap("Interval", "cw-tb-menu", (<>
+                        {INTERVALS.map((iv, i) => (
+                          <button key={iv.label} type="button" className={`cw-tb-menu-item${i === intervalIdx ? " active" : ""}`} onClick={() => { setIntervalIdx(i); setCwMenu(null); }}>
+                            <b className="cw-tb-iv-label">{iv.label}</b>
+                            {intervalCountdowns[i] && <span className="cw-tb-iv-countdown">closes in {intervalCountdowns[i]}</span>}
+                            {i === intervalIdx && <span className="cw-tb-check">✓</span>}
+                          </button>
+                        ))}
+                      </>))}
+                  </div>
+                  <span className="cw-tb-sep" />
+                  <div className="cw-tb-menu-wrap">
+                    <button type="button" className={`cw-tb-btn${cwMenu === "range" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwMenu(cwMenu === "range" ? null : "range")} title="Date range">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                      {cwRange && <span className="cw-tb-range-label">{cwRange.label}</span>}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    </button>
+                    {cwMenu === "range" && cwMenuWrap("Date range", "cw-tb-menu", (<>
+                        {([["1D", "1 day", 86400], ["1W", "1 week", 7 * 86400], ["1M", "1 month", 30 * 86400], ["3M", "3 months", 90 * 86400], ["1Y", "1 year", 365 * 86400], [null, "Default view", null]] as const).map(([short, l, secs]) => {
+                          const fits = secs === null || cwRangeFits(secs, interval);
+                          const on = secs === null ? !cwRange : cwRange?.secs === secs;
+                          return (
+                            <button
+                              key={l}
+                              type="button"
+                              className={`cw-tb-menu-item${on ? " active" : ""}${fits ? "" : " cw-tb-menu-item--off"}`}
+                              disabled={!fits}
+                              title={fits ? undefined : `Too many ${interval.label} candles for ${l} — pick a bigger interval`}
+                              onClick={() => { cwApplyRange(short ?? "", secs); setCwMenu(null); }}
+                            >
+                              {l}
+                              {on && <span className="cw-tb-check">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </>))}
+                  </div>
+                  <span className="cw-tb-sep" />
+                  <div className="cw-tb-menu-wrap">
+                    <button type="button" className={`cw-tb-btn${cwMenu === "style" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwMenu(cwMenu === "style" ? null : "style")} title="Chart style">
+                      {cwPrefs.style === "line" ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="7" y1="3" x2="7" y2="8" /><rect x="4" y="8" width="6" height="8" fill={cwPrefs.style === "hollow" ? "none" : "currentColor"} /><line x1="7" y1="16" x2="7" y2="21" /><line x1="17" y1="5" x2="17" y2="10" /><rect x="14" y="10" width="6" height="6" fill={cwPrefs.style === "hollow" ? "none" : "currentColor"} /><line x1="17" y1="16" x2="17" y2="19" /></svg>
+                      )}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    </button>
+                    {cwMenu === "style" && cwMenuWrap("Chart style", "cw-tb-menu", (<>
+                        {([["candle", "Candle"], ["hollow", "Hollow candle"], ["line", "Line"], ["heikinAshi", "Heikin Ashi"]] as const).map(([k, l]) => (
+                          <button key={k} type="button" className={`cw-tb-menu-item${cwPrefs.style === k ? " active" : ""}`} onClick={() => { setCwPrefs((p) => ({ ...p, style: k })); setCwMenu(null); }}>
+                            {l}{cwPrefs.style === k && <span className="cw-tb-check">✓</span>}
+                          </button>
+                        ))}
+                      </>))}
+                  </div>
+                  <button type="button" className={`cw-tb-btn${cwPrefs.grid ? " cw-tb-btn--on" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, grid: !p.grid }))} title="Grid" aria-pressed={cwPrefs.grid}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
+                  </button>
+                  <div className="cw-tb-menu-wrap">
+                    <button type="button" className={`cw-tb-btn cw-tb-fx${cwMenu === "layers" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwMenu(cwMenu === "layers" ? null : "layers")} title="Indicators & layers">
+                      <span>ƒx</span>
+                    </button>
+                    {cwMenu === "layers" && cwMenuWrap("Indicators & layers", "cw-tb-menu cw-tb-menu--layers", (<>
+                        {([
+                          ["ema", "EMA 20 / 50", "#38bdf8"],
+                          ["bb", "Bollinger Bands", "#6366f1"],
+                          ["volume", "Volume", "#94a3b8"],
+                          ["ict", "Smart Money levels (OB, FVG, BOS)", "#ef4444"],
+                          ["retests", "Retests", "#22c55e"],
+                          ["patterns", "Candle patterns & Wyckoff", "#f59e0b"],
+                          ["divergence", "RSI divergences", "#a855f7"],
+                        ] as const).map(([k, l, c]) => (
+                          <button key={k} type="button" className={`cw-tb-menu-item cw-tb-layer${cwPrefs.layers[k] ? " active" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, layers: { ...p.layers, [k]: !p.layers[k] } }))}>
+                            <span className="cw-tb-layer-dot" style={{ background: c }} />
+                            {l}
+                            <span className={`cw-tb-switch${cwPrefs.layers[k] ? " on" : ""}`}><i /></span>
+                          </button>
+                        ))}
+                      </>))}
+                  </div>
+                  <button type="button" className={`cw-tb-btn${cwDrawOn ? " cw-tb-btn--on" : ""}`} onClick={() => setCwDrawOn((v) => !v)} title="Drawing tools" aria-pressed={cwDrawOn}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
+                  </button>
+                  <span className="cw-tb-sep" />
+                  <button type="button" className={`cw-tb-btn cw-tb-txt${cwPrefs.scale === "percent" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, scale: p.scale === "percent" ? "normal" : "percent" }))} title="Percentage scale">%</button>
+                  <button type="button" className={`cw-tb-btn cw-tb-txt${cwPrefs.scale === "log" ? " cw-tb-btn--on" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, scale: p.scale === "log" ? "normal" : "log" }))} title="Logarithmic scale">log</button>
+                  <button type="button" className={`cw-tb-btn cw-tb-txt${cwPrefs.autoScale ? " cw-tb-btn--on" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, autoScale: !p.autoScale }))} title="Auto-fit price axis">auto</button>
+                  <span className="cw-tb-sep" />
+                  <button type="button" className={`cw-tb-btn${justSaved ? " cw-tb-btn--on" : ""}`} onClick={saveChart} title="Save chart as PNG">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                  </button>
+                  <button type="button" className="cw-tb-btn" onClick={() => { chartRef.current?.timeScale().fitContent(); setCwPrefs((p) => ({ ...p, autoScale: true })); }} title="Reset view">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                  </button>
+                  <button type="button" className="cw-tb-btn" onClick={toggleChartFullscreen} title="Fullscreen">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                  </button>
+                </div>
+              )}
+              {cwDesktop && pillsEl}
               {/* Chevron, not an icon-button or switch — sits right after
                   the interval pills instead of floating alone in its own
                   row above the grid. Always rendered (unlike .cw-right,
@@ -3988,18 +4437,6 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   only way back in once it's hidden. Points away from the
                   panel it reveals/hides, same direction convention as a
                   splitter's own collapse arrow. */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={!rightPanelCollapsed}
-                className="cw-panel-toggle-btn"
-                onClick={() => setRightPanelCollapsed(v => !v)}
-                title={rightPanelCollapsed ? "Show Elliott Wave / AI panel" : "Hide panel — full-width chart"}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: rightPanelCollapsed ? "rotate(180deg)" : "none" }}>
-                  <polyline points="9 6 15 12 9 18" />
-                </svg>
-              </button>
             </div>
 
             {/* 24h High/Low/Vol — real ticker data (App.tsx's coinTickers Map,
@@ -4038,22 +4475,76 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 type="button"
                 className="cw-chart-fullscreen-exit"
                 onClick={() => setIsChartFullscreen(false)}
-                aria-label="Exit fullscreen"
-                title="Exit fullscreen (Esc)"
+                aria-label="Close fullscreen"
+                title="Close fullscreen (Esc)"
               >
-                ✕
+                Close
               </button>
             )}
-            <div className="cw-chart-wrap" ref={chartContainerRef}>
+            <div className={`cw-chart-wrap${cwDrawOn ? " cw-chart-wrap--draw" : ""}`} ref={chartContainerRef}>
+              {/* Desktop: coin / OHLC / sell–buy overlay on the chart itself
+                  (same design as the Trade page's full chart), replacing
+                  the header block above it. */}
+              {candles.length > 0 && heroPrice != null && (() => {
+                const last = candles[candles.length - 1];
+                const up = (absChange ?? 0) >= 0;
+                const fmt = (v: number) => "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: v < 1 ? 6 : 2 });
+                const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
+                return (
+                  <div className="chart-tv-ohlc-overlay cw-ohlc-overlay">
+                    <div className="chart-tv-ohlc-row">
+                      <span className="chart-tv-ohlc-icon" style={{ background: COIN_COLORS[coin as string] ?? "var(--color-primary)" }}>
+                        {COIN_GLYPHS[coin as string] ?? (coin as string)[0]}
+                      </span>
+                      <span className="chart-tv-ohlc-title">
+                        {name} / U.S. Dollar · {interval.label.toUpperCase()} · CRYPTO
+                      </span>
+                      <span className={`chart-tv-ohlc-dot${up ? " up" : " down"}`} />
+                      <span className="chart-tv-ohlc-values">
+                        O<b>{fmt(last.open)}</b>{" "}
+                        H<b>{fmt(last.high)}</b>{" "}
+                        L<b>{fmt(last.low)}</b>{" "}
+                        <span className={up ? "chart-tv-ohlc-up" : "chart-tv-ohlc-down"}>
+                          C<b>{fmt(heroPrice)}</b>{" "}
+                          {absChange !== null && pctChange !== null && (
+                            <>{up ? "+" : ""}{absChange.toFixed(2)} ({up ? "+" : ""}{pctChange.toFixed(2)}%)</>
+                          )}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="chart-tv-ticket-row">
+                      <button type="button" className="chart-tv-sell-box" onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}>
+                        <span className="chart-tv-ticket-price">{fmt(heroPrice)}</span>
+                        <span className="chart-tv-ticket-label">SELL</span>
+                      </button>
+                      <span className="chart-tv-ticket-mid">0.00</span>
+                      <button type="button" className="chart-tv-buy-box" onClick={() => document.querySelector<HTMLButtonElement>(".ta-trigger")?.click()}>
+                        <span className="chart-tv-ticket-price">{fmt(heroPrice)}</span>
+                        <span className="chart-tv-ticket-label">BUY</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
               <RoundedCandleOverlay
                 chartRef={chartRef}
                 seriesRef={candleSeriesRef}
                 candlesRef={candlesRef}
                 upColor="#22c55e"
                 downColor="#ef4444"
-                style="candle"
+                style={cwPrefs.style === "hollow" ? "hollow" : cwPrefs.style === "heikinAshi" ? "heikinAshi" : "candle"}
                 generation={chartGeneration}
-                visible={true}
+                visible={cwPrefs.style !== "line"}
+              />
+              {/* Drawing tools (same rail as the Trade chart), desktop. */}
+              <ChartDrawingTools
+                chartRef={chartRef}
+                seriesRef={candleSeriesRef}
+                containerRef={chartContainerRef}
+                candlesRef={candlesRef}
+                visible={cwDrawOn && !isChartFullscreen}
+                persistRef={cwDrawingsRef}
+                topOffset={86}
               />
               <RoundedCandleOverlay
                 chartRef={chartRef}
@@ -4124,119 +4615,38 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             </div>
             </div>
 
-            {/* Indicator pills */}
-            {ind && (
-              <div className="cw-pills">
-                <IndicatorPill
-                  label="RSI"
-                  value={ind.rsi != null ? ind.rsi.toFixed(1) : "—"}
-                  status={rsiStatus()}
-                />
-                <IndicatorPill
-                  label="MACD"
-                  value={ind.macdHist != null ? (ind.macdHist > 0 ? "+" : "") + ind.macdHist.toFixed(3) : "—"}
-                  status={macdStatus()}
-                />
-                <IndicatorPill
-                  label="BB%"
-                  value={ind.bbPct != null ? (ind.bbPct * 100).toFixed(0) + "%" : "—"}
-                  status={bbStatus()}
-                />
-                <IndicatorPill
-                  label="VOL"
-                  value={ind.volRatio != null ? ind.volRatio.toFixed(2) + "×" : "—"}
-                  status={volStatus()}
-                />
-                <IndicatorPill
-                  label="EMA20"
-                  value={ind.ema20 != null && lastPrice != null
-                    ? lastPrice > ind.ema20 ? "↑ Above" : "↓ Below"
-                    : "—"}
-                  status={ind.ema20 != null && lastPrice != null ? (lastPrice > ind.ema20 ? "bull" : "bear") : "neutral"}
-                />
-                <IndicatorPill
-                  label="EMA50"
-                  value={ind.ema50 != null && lastPrice != null
-                    ? lastPrice > ind.ema50 ? "↑ Above" : "↓ Below"
-                    : "—"}
-                  status={ind.ema50 != null && lastPrice != null ? (lastPrice > ind.ema50 ? "bull" : "bear") : "neutral"}
-                />
-                <IndicatorPill
-                  label="ATR"
-                  value={ind.atr != null ? "$" + ind.atr.toFixed(0) : "—"}
-                  status="neutral"
-                />
-                {wyckoff && (
-                  <IndicatorPill
-                    label="Wyckoff"
-                    value={wyckoff.phase}
-                    status={
-                      wyckoff.phase === "Accumulation" || wyckoff.phase === "Re-Accumulation" || wyckoff.phase === "Markup" ? "bull" :
-                      wyckoff.phase === "Distribution" || wyckoff.phase === "Markdown" ? "bear" : "neutral"
-                    }
-                  />
-                )}
-                {elliottResult && elliottResult.pattern !== "none" && (
-                  <IndicatorPill
-                    label="Elliott"
-                    value={`${elliottResult.pattern === "impulse" ? "W" : "Corr"} ${elliottResult.currentWave}`}
-                    status={elliottResult.direction === "bullish" ? "bull" : elliottResult.direction === "bearish" ? "bear" : "neutral"}
-                  />
-                )}
-              </div>
-            )}
+            {/* Indicator pills — mobile: under the chart; desktop: in the toolbar row. */}
+            {!cwDesktop && pillsEl}
 
-            {/* Live candle tape — same width as chart */}
-            {feedCandles.length >= 3 && (
-              <div className={`cw-feed${feedCollapsed ? " cw-feed--collapsed" : ""}`}>
-                <button
-                  type="button"
-                  className="cw-feed-header"
-                  onClick={() => setFeedCollapsed(v => !v)}
-                  aria-expanded={!feedCollapsed}
-                  title={feedCollapsed ? "Expand Live Tape" : "Collapse Live Tape"}
-                >
-                  <span className="cw-feed-label">
-                    <span className="cw-feed-live-dot" />
-                    Live Tape
-                  </span>
-                  <div className="cw-feed-header-right">
-                    <span className="cw-feed-sub">{feedCandles.length} candles</span>
-                    {candleCountdown && (
-                      <div className="cw-feed-candle-close">
-                        <span className="cw-feed-candle-close-label">closes in</span>
-                        <span className="cw-feed-candle-close-value">{candleCountdown}</span>
-                      </div>
-                    )}
-                    <span className="cw-feed-collapse-label">{feedCollapsed ? "Expand" : "Collapse"}</span>
-                    <span className="cw-feed-collapse-tri" />
-                  </div>
-                </button>
-                {!feedCollapsed && (
-                  <div className="cw-tape">
-                    {[...feedCandles].reverse().map((c, i) => {
-                      const origIdx = feedCandles.length - 1 - i;
-                      return (
-                        <CandleTapeRow
-                          key={c.time}
-                          candle={c}
-                          prev1={feedCandles[Math.max(0, origIdx - 1)]}
-                          prev2={feedCandles[Math.max(0, origIdx - 2)]}
-                          isLast={origIdx === feedCandles.length - 1}
-                          isNew={isNewRow(origIdx)}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Mobile: live tape under the chart. Desktop: a right-panel tab. */}
           </div>
 
           {/* Fully hidden when collapsed — the header's toggle button
               (cw-panel-toggle-btn) is the only way back in, since nothing
               of the panel remains in the grid to click. */}
-          {!rightPanelCollapsed && (
+          {/* Desktop, panel hidden: slim icon rail — click an icon to reopen
+              straight on that tab. */}
+          {panelHidden && (
+            <div className="cw-rail" role="toolbar" aria-label="Open panel">
+              {cwPanelTabs.map((tb) => (
+                <button
+                  key={tb.key}
+                  type="button"
+                  className={`cw-rail-btn${tb.active ? " cw-rail-btn--active" : ""}`}
+                  onClick={() => {
+                    setRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
+                    setRightPanelCollapsed(false);
+                  }}
+                  title={tb.label}
+                  aria-label={tb.label}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{tb.icon}</svg>
+                  <span className="cw-rail-label">{tb.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!panelHidden && (
             <>
           {/* Drag handle to resize the sidebar */}
           <div
@@ -4252,61 +4662,33 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
           {/* Right: AI analysis */}
           <div className="cw-right">
-          <div className="cw-right-panel">
+          <div className={`cw-right-panel${aiGroup && !aiRead && !aiLoading ? " cw-right-panel--ai-hero" : ""}`}>
             <div className="cw-right-tabs">
-              <button
-                className={`cw-right-tab cw-right-tab--wave${rightTab === "wave" ? " cw-right-tab--active" : ""}`}
-                onClick={() => setRightTab("wave")}
-                title="Elliott Wave"
-              >
-                <span className="cw-right-tab-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17l4-8 4 6 4-10 4 7 4-5" /></svg>
-                </span>
-                <span>Elliott Wave</span>
-              </button>
-              <button
-                className={`cw-right-tab cw-right-tab--narration${rightTab === "narration" ? " cw-right-tab--active" : ""}`}
-                onClick={() => setRightTab("narration")}
-                title="MM Narration"
-              >
-                <span className="cw-right-tab-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                </span>
-                <span>MM Narration</span>
-              </button>
-              <button
-                className={`cw-right-tab cw-right-tab--read${rightTab === "read" ? " cw-right-tab--active" : ""}`}
-                onClick={() => setRightTab("read")}
-                title="AI Read"
-              >
-                <span className="cw-right-tab-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v7M12 14v7M3 12h7M14 12h7" /></svg>
-                </span>
-                <span>AI Read</span>
-              </button>
-              <button
-                className={`cw-right-tab cw-right-tab--plan${rightTab === "plan" ? " cw-right-tab--active" : ""}`}
-                onClick={() => setRightTab("plan")}
-                title="Trade Plan"
-              >
-                <span className="cw-right-tab-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h10" /></svg>
-                </span>
-                <span>Trade Plan</span>
-              </button>
-              <button
-                className={`cw-right-tab cw-right-tab--fractal${rightTab === "fractal" ? " cw-right-tab--active" : ""}`}
-                onClick={() => setRightTab("fractal")}
-                title="Monthly Fractals"
-              >
-                <span className="cw-right-tab-icon">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg>
-                </span>
-                <span>Monthly</span>
-              </button>
+                <>
+                  {cwPanelTabs.map((tb) => (
+                    <button
+                      key={tb.key}
+                      className={`cw-right-tab${tb.active ? " cw-right-tab--active" : ""}`}
+                      onClick={() => {
+                        // Clicking the open tab hides the panel (to the icon rail).
+                        if (tb.active) { if (cwDesktop) setRightPanelCollapsed(true); return; }
+                        // AI keeps whichever of Read/Plan/Narration was last open.
+                        setRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
+                      }}
+                      title={tb.active && cwDesktop ? `Hide panel` : tb.label}
+                    >
+                      <span className="cw-right-tab-icon">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{tb.icon}</svg>
+                      </span>
+                      <span>{tb.label}</span>
+                    </button>
+                  ))}
+                </>
             </div>
 
             <div className="cw-right-panel-body">
+            {rightTab === "signals" && <div className="cw-panel-signals">{signalCardsEl}</div>}
+            {rightTab === "tape" && <div className="cw-panel-tape">{liveTapeEl}</div>}
 
             {rightTab === "wave" && (
               <>
@@ -4688,14 +5070,15 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               </>
             )}
 
-            {rightTab === "narration" && (
-              <MMNarrationFeed entries={mmFeed} loading={aiLoading} />
-            )}
+            {(rightTab === "narration" || aiGroup) && aiSec("narr", "MM narration", <MMNarrationFeed entries={mmFeed} loading={aiLoading} />)}
 
-            {rightTab === "read" && (
+            {(rightTab === "read" || aiGroup) && aiSec("read", "AI read", (
             <div className="cw-ai-card">
+              {/* Desktop: no header until there's a read (the Read switch
+                  above already names the view; the timer tracks chart data,
+                  not the AI, so it misled next to an empty state). */}
+              {(aiRead || aiLoading) && (
               <div className="cw-ai-header">
-                <span className="cw-ai-badge">✦ AI READ</span>
                 {pattern && pattern.type !== "neutral" && (
                   <span className={`cw-pattern-tag cw-pattern-tag--${pattern.type}`}>
                     {pattern.emoji} {pattern.name}
@@ -4714,6 +5097,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   </button>
                 </div>
               </div>
+              )}
 
               {!aiLoading && aiRead && (
                 <button
@@ -4906,14 +5290,41 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
               )}
 
               {!aiLoading && !aiRead && !loading && (
-                <div className="cw-ai-empty">
-                  <p>Click ↻ to run AI analysis</p>
+                <div className="cw-ai-start">
+                  <span className="cw-ai-start-orb" aria-hidden="true"><span>✦</span></span>
+                  <div className="cw-ai-start-title">AI read · {coin} {interval.label}</div>
+                  <p className="cw-ai-start-text">
+                    One analysis of this chart's price action, candle patterns and momentum gives you:
+                  </p>
+                  <div className="cw-ai-start-grid" aria-hidden="true">
+                    {([
+                      ["Bias & confidence", <path key="a" d="M3 17l6-6 4 4 8-8M15 7h6v6" />],
+                      ["Key levels", <path key="b" d="M3 6h18M3 12h18M3 18h18" />],
+                      ["Next move", <path key="c" d="M5 12h14M13 6l6 6-6 6" />],
+                      ["Trade plan", <path key="d" d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />],
+                    ] as const).map(([label, icon]) => (
+                      <div className="cw-ai-start-tile" key={label}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+                        <span className="cw-ai-start-tile-label">{label}</span>
+                        <span className="cw-ai-start-tile-skel" />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className={`cw-ai-start-btn${refreshSpinning ? " cw-ai-start-btn--busy" : ""}`}
+                    onClick={handleManualRefresh}
+                    disabled={refreshSpinning}
+                  >
+                    {refreshSpinning ? "Starting…" : "✦ Run AI analysis"}
+                  </button>
+                  <span className="cw-ai-start-note">Uses up to 1 AI request</span>
                 </div>
               )}
             </div>
-            )}
+            ))}
 
-            {rightTab === "plan" && (
+            {(rightTab === "plan" || (aiGroup && (aiRead || aiLoading))) && aiSec("plan", "Trade plan", (
             <div className="cw-ai-card">
               {aiLoading && (
                 <div className="cw-ai-loading">
@@ -5159,9 +5570,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </div>
               )}
             </div>
-            )}
+            ))}
 
-            {rightTab === "fractal" && (() => {
+            {(rightTab === "fractal" || rightTab === "signals") && (() => {
               const fa = fractalAnalogs;
               const activeIdx = fa ? Math.min(selectedFractalIdx, fa.matches.length - 1) : 0;
               const active = fa?.matches[activeIdx];

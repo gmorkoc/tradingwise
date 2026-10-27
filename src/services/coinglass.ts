@@ -434,6 +434,8 @@ export type CoinSymbol = typeof COINS[number]['symbol'];
 
 // HOBBYIST plan supports: 4h, 6h, 8h, 12h, 1d, 1w — 1min/1h use CryptoCompare, 1sec uses OKX public API
 type TimeInterval = '1sec' | '1min' | '5min' | '15min' | '1h' | '4h' | '6h' | '1day' | '1week' | '1month' | 'all';
+/** Most candles one chart load will fetch for a kept date range. */
+export const MAX_RANGE_CANDLES = 3000;
 
 export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m' | '3m';
 
@@ -906,19 +908,28 @@ export const coinglass = {
     }
   },
 
-  getHistoricalCandles: async (interval: TimeInterval, coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint[]> => {
-    if (interval === '1sec')  return fetchBinanceKlines(coin, '1s',  1800);
-    if (interval === '1min')  return fetchBinanceKlines(coin, '1m',  60);
-    if (interval === '5min')  return fetchBinanceKlines(coin, '5m',  288);
-    if (interval === '15min') return fetchBinanceKlines(coin, '15m', 192);
-    if (interval === '1h')    return fetchBinanceKlines(coin, '1h',  168);
-    if (interval === '4h')    return fetchBinanceKlines(coin, '4h',  168);
-    if (interval === '6h')    return fetchBinanceKlines(coin, '6h',  60);
-    if (interval === '1day')  return fetchBinanceKlines(coin, '1d',  90);
-    if (interval === '1week') return fetchBinanceKlines(coin, '1w',  52);
-    if (interval === '1month') return fetchBinanceKlines(coin, '1M', 24);
-    if (interval === 'all')   return fetchAllTimeCandles(coin);
-    return fetchBinanceKlines(coin, '4h', 168);
+  // minSpanSec: load enough candles to cover at least this much history
+  // (a date range kept across interval changes, e.g. 1 year of 4H candles),
+  // capped at MAX_RANGE_CANDLES (fetched in 1000-candle pages).
+  getHistoricalCandles: async (interval: TimeInterval, coin: CoinSymbol | string = 'BTC', minSpanSec?: number): Promise<CandleDataPoint[]> => {
+    if (interval === 'all') return fetchAllTimeCandles(coin);
+    const spec: Record<Exclude<TimeInterval, 'all'>, [string, number, number]> = {
+      // [binance interval, default count, seconds per candle]
+      '1sec':   ['1s',  1800, 1],
+      '1min':   ['1m',  60,   60],
+      '5min':   ['5m',  288,  300],
+      '15min':  ['15m', 192,  900],
+      '1h':     ['1h',  168,  3600],
+      '4h':     ['4h',  168,  14400],
+      '6h':     ['6h',  60,   21600],
+      '1day':   ['1d',  90,   86400],
+      '1week':  ['1w',  52,   604800],
+      '1month': ['1M',  24,   2592000],
+    };
+    const [bn, def, secs] = spec[interval] ?? ['4h', 168, 14400];
+    const need = minSpanSec ? Math.ceil(minSpanSec / secs) + 10 : 0;
+    const limit = Math.min(Math.max(def, need), MAX_RANGE_CANDLES);
+    return fetchBinanceKlines(coin, bn, limit);
   },
 
   get24hMinuteCandles: async (coin: CoinSymbol | string = 'BTC', limit = 1440): Promise<CandleDataPoint[]> => {

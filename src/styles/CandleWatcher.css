@@ -3525,7 +3525,7 @@ body.cw-chart-fullscreen-active .fnb-bar {
 }
 
 @media (max-width: 600px) {
-  .cw-page { padding: 0 8px 16px; }
+  .cw-page { padding: 0; }
   .cw-header { gap: 8px; }
   .cw-price { font-size: 1.1rem; }
   .cw-chart-wrap { height: 320px; }
@@ -3558,4 +3558,1007 @@ body.cw-chart-fullscreen-active .fnb-bar {
   .cw-tape-emoji {
     font-size: 0.88rem;
   }
+}
+
+/* ── Desktop terminal layout (≥901px) ───────────────────────────────────────
+   One screen, no page scroll: compact header row, chart fills the height,
+   slim indicator strip under it; full-height right panel whose tabs (now
+   incl. Signals + Tape, CandleWatcher.tsx) wrap onto two rows with
+   readable labels, and whose body scrolls on its own. Mobile untouched. */
+@media (min-width: 901px) {
+  .cw-page {
+    height: calc(100dvh - 64px - var(--native-safe-area-top, 0px));
+    padding: 10px 12px 12px;
+    overflow: hidden;
+  }
+  .cw-grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .cw-left {
+    min-height: 0;
+    gap: 8px;
+  }
+  /* Compact header: price smaller, everything on one tight row. */
+  .cw-left-top-row { align-items: center; gap: 12px; }
+  .cw-price { font-size: 1.5rem; }
+  .cw-header-left { gap: 2px; }
+  .cw-ticker-stats { margin: 0; font-size: 0.8rem; }
+  /* Chart takes whatever height is left. */
+  .cw-chart-wrap {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 320px;
+    border-radius: 10px;
+  }
+  /* Indicator chips: one slim strip under the chart. */
+  .cw-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .cw-pills::-webkit-scrollbar { display: none; }
+  .cw-pill { flex-shrink: 0; padding: 4px 10px; }
+
+  /* Right panel: full height, own scroll. */
+  .cw-right { min-height: 0; height: 100%; }
+  .cw-right-panel { flex: 1 1 auto; min-height: 0; border-radius: 10px; }
+  .cw-right-panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .cw-right-tabs {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    column-gap: 4px;
+    padding: 8px 10px 0;
+  }
+  .cw-right-tab {
+    flex: 1 0 22%;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px 6px 8px;
+    font-size: 0.68rem;
+  }
+  .cw-right-tab span { overflow: visible; text-overflow: clip; }
+
+  /* Signals tab: the cards as a dense vertical list. */
+  .cw-panel-signals .cw-signal-cards-head { margin-bottom: 4px; }
+  .cw-panel-signals .cw-signal-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+  .cw-panel-signals .cw-signal-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+    gap: 4px;
+  }
+  .cw-panel-signals .cw-signal-card:hover { transform: none; }
+  /* Tape tab: the feed fills the panel, no extra card chrome. */
+  .cw-panel-tape .cw-feed { margin: 0; border: none; background: transparent; padding: 0; }
+}
+@media (min-width: 901px) {
+  /* The chart's double-click wrapper sits between .cw-left and the chart
+     — it must stretch too, or the chart can't fill the height. */
+  .cw-chart-dblclick-wrap:not(.cw-chart-dblclick-wrap--fullscreen) {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Tabs: a tidy 4-column grid (two rows), labels never overlapping. */
+  .cw-right-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 2px;
+  }
+  .cw-right-tab {
+    justify-content: center;
+    gap: 5px;
+    font-size: 0.62rem;
+    letter-spacing: 0.03em;
+    padding: 7px 2px 8px;
+  }
+  .cw-right-tab-icon { flex-shrink: 0; }
+}
+@media (min-width: 901px) {
+  /* Desktop: four tabs on one row (Overview · AI · Elliott · Tape). */
+  .cw-right-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 10px 0; }
+  .cw-right-tab { font-size: 0.7rem; padding: 8px 4px 9px; }
+  /* AI tab: Read | Plan | Narration switch. */
+  .cw-ai-switch {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    flex-shrink: 0;
+  }
+  .cw-ai-switch-btn {
+    all: unset;
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+  .cw-ai-switch-btn.active {
+    background: var(--color-card-bg);
+    color: var(--color-text);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+  /* Overview: Monthly fractals sit under the signal cards. */
+  .cw-panel-signals + * { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+}
+/* Desktop AI Read empty state — a real call to action instead of a hint. */
+.cw-ai-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  padding: 26px 20px 22px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 70%),
+    var(--color-card-bg);
+}
+.cw-ai-start-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary);
+  font-size: 18px;
+}
+.cw-ai-start-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+.cw-ai-start-text {
+  margin: 0;
+  max-width: 300px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+.cw-ai-start-btn {
+  all: unset;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.cw-ai-start-btn:hover { filter: brightness(1.08); }
+.cw-ai-start-btn:active { transform: scale(0.98); }
+.cw-ai-start-btn--busy { opacity: 0.7; cursor: default; }
+.cw-ai-start-note {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+/* Desktop AI tab: Read → Trade plan → MM narration, stacked. */
+@media (min-width: 901px) {
+  .cw-ai-sec { display: flex; flex-direction: column; gap: 8px; }
+  .cw-ai-sec--read { order: 1; }
+  .cw-ai-sec--plan { order: 2; }
+  .cw-ai-sec--narr { order: 3; }
+  .cw-ai-sec + .cw-ai-sec,
+  .cw-ai-sec--plan,
+  .cw-ai-sec--narr {
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border);
+  }
+  .cw-ai-sec--read { border-top: none; padding-top: 0; }
+  .cw-ai-sec .cw-ai-start { margin-top: 2px; }
+}
+@media (min-width: 901px) {
+  /* Read comes first visually (order: 1) but not in the DOM — no divider on it. */
+  .cw-ai-sec.cw-ai-sec--read { border-top: none !important; padding-top: 0 !important; }
+}
+
+/* ── AI Read hero (desktop empty state, fancier) ─────────────────────────── */
+@property --cw-ai-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.cw-ai-start {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  gap: 10px;
+  padding: 28px 18px 20px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background:
+    radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, #6366f1 16%, transparent), transparent 70%) padding-box,
+    linear-gradient(var(--color-card-bg), var(--color-card-bg)) padding-box,
+    conic-gradient(from var(--cw-ai-angle), #6366f1, #22d3ee, #a855f7, #6366f1) border-box;
+  animation: cw-ai-border-spin 6s linear infinite;
+}
+@keyframes cw-ai-border-spin { to { --cw-ai-angle: 360deg; } }
+/* Glowing orb */
+.cw-ai-start-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c7d2fe, #6366f1 55%, #312e81);
+  box-shadow: 0 0 0 6px color-mix(in srgb, #6366f1 12%, transparent), 0 8px 28px color-mix(in srgb, #6366f1 45%, transparent);
+  animation: cw-ai-orb-pulse 2.8s ease-in-out infinite;
+}
+.cw-ai-start-orb span { color: #fff; font-size: 20px; text-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
+@keyframes cw-ai-orb-pulse {
+  0%, 100% { box-shadow: 0 0 0 6px color-mix(in srgb, #6366f1 12%, transparent), 0 8px 28px color-mix(in srgb, #6366f1 45%, transparent); }
+  50%      { box-shadow: 0 0 0 10px color-mix(in srgb, #6366f1 6%, transparent), 0 10px 36px color-mix(in srgb, #22d3ee 45%, transparent); }
+}
+.cw-ai-start-title { font-size: 1.02rem; letter-spacing: -0.01em; }
+/* What you get: 2×2 preview tiles with shimmering placeholders */
+.cw-ai-start-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+.cw-ai-start-tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 7px;
+  row-gap: 7px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  color: #6366f1;
+}
+.cw-ai-start-tile-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.cw-ai-start-tile-skel {
+  grid-column: 1 / -1;
+  height: 7px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 0%,
+    color-mix(in srgb, var(--color-text) 15%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 100%);
+  background-size: 200% 100%;
+  animation: cw-ai-shimmer 1.8s linear infinite;
+}
+.cw-ai-start-tile:nth-child(2) .cw-ai-start-tile-skel { width: 80%; animation-delay: 0.2s; }
+.cw-ai-start-tile:nth-child(3) .cw-ai-start-tile-skel { width: 65%; animation-delay: 0.4s; }
+.cw-ai-start-tile:nth-child(4) .cw-ai-start-tile-skel { width: 90%; animation-delay: 0.6s; }
+@keyframes cw-ai-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+/* Gradient CTA with a sheen */
+.cw-ai-start-btn {
+  position: relative;
+  overflow: hidden;
+  margin-top: 8px;
+  padding: 11px 26px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #3b82f6 55%, #22d3ee);
+  box-shadow: 0 6px 20px color-mix(in srgb, #6366f1 40%, transparent);
+}
+.cw-ai-start-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: cw-ai-sheen 3.2s ease-in-out infinite;
+}
+@keyframes cw-ai-sheen { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) {
+  .cw-ai-start, .cw-ai-start-orb, .cw-ai-start-tile-skel, .cw-ai-start-btn::after { animation: none; }
+}
+
+/* AI tab empty state: the hero's soft gradient fills the whole right
+   column (tabs included) instead of sitting in a bordered card. */
+@media (min-width: 901px) {
+  .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(120% 55% at 50% 0%, color-mix(in srgb, #6366f1 14%, transparent), transparent 70%),
+      radial-gradient(120% 60% at 50% 100%, color-mix(in srgb, #22d3ee 12%, transparent), transparent 70%),
+      var(--color-card-bg);
+  }
+  .cw-right-panel--ai-hero .cw-right-tabs { background: transparent; }
+  .cw-right-panel--ai-hero .cw-ai-start {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    animation: none;
+    margin: 0;
+    padding: 18px 4px 22px;
+  }
+  /* Tiles a touch more glassy on the gradient. */
+  .cw-right-panel--ai-hero .cw-ai-start-tile {
+    background: color-mix(in srgb, var(--color-card-bg) 55%, transparent);
+    border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+  .cw-right-panel--ai-hero .cw-ai-sec + .cw-ai-sec,
+  .cw-right-panel--ai-hero .cw-ai-sec--narr { border-top-color: color-mix(in srgb, var(--color-text) 8%, transparent); }
+}
+@media (min-width: 901px) {
+  /* Header block (coin/price/change + 24H stats) now lives on the chart as
+     the OHLC overlay — hide it; the interval pills keep their row. */
+  .cw-left-top-row .cw-header,
+  .cw-ticker-stats { display: none !important; }
+  .cw-left-top-row { justify-content: flex-start; }
+  /* No drawing rail on this chart — overlay sits at the left edge. Lets
+     chart drags pass through except on the sell/buy boxes. */
+  .cw-chart-wrap .cw-ohlc-overlay { left: 12px; top: 10px; pointer-events: none; }
+  .cw-chart-wrap .cw-ohlc-overlay button { pointer-events: auto; }
+}
+@media (min-width: 901px) {
+  /* Stop short of the Save/Reset buttons + price axis (top-right) and wrap
+     the OHLC values onto a second line instead of running under them. */
+  .cw-chart-wrap .cw-ohlc-overlay { max-width: calc(100% - 260px); }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ohlc-row { flex-wrap: wrap; row-gap: 2px; }
+}
+@media (min-width: 901px) {
+  .cw-chart-wrap .cw-ohlc-overlay { max-width: calc(100% - 290px); }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ohlc-values { white-space: normal; }
+}
+
+/* ── Desktop chart toolbar (CandleWatcher.tsx .cw-tb) ───────────────────── */
+@media (min-width: 901px) {
+  .cw-left-top-row { flex-wrap: nowrap; }
+  .cw-tb {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .cw-tb-sep {
+    width: 1px;
+    height: 20px;
+    margin: 0 6px;
+    background: var(--color-border);
+    flex-shrink: 0;
+  }
+  .cw-tb-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0 8px;
+    border-radius: 8px;
+    color: var(--color-text-secondary, var(--color-text));
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-tb-btn:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); }
+  .cw-tb-btn--on { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 10%, transparent); }
+  .cw-tb-txt { font-size: 0.8rem; font-weight: 700; }
+  .cw-tb-fx span { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 800; font-size: 16px; line-height: 1; }
+  .cw-tb-menu-wrap { position: relative; flex-shrink: 0; }
+  .cw-tb-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 60;
+    min-width: 170px;
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .cw-tb-menu--layers { min-width: 290px; }
+  .cw-tb-menu-item {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .cw-tb-menu-item:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+  .cw-tb-menu-item.active:not(.cw-tb-layer) { color: var(--color-primary); }
+  .cw-tb-check { margin-left: auto; color: var(--color-primary); }
+  .cw-tb-layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .cw-tb-switch {
+    margin-left: auto;
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--color-text) 16%, transparent);
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+  .cw-tb-switch i {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+  }
+  .cw-tb-switch.on { background: var(--action-green, #16a34a); }
+  .cw-tb-switch.on i { transform: translateX(14px); }
+
+  /* Save / Reset now live in the toolbar. */
+  .cw-chart-wrap .cw-save-btn,
+  .cw-chart-wrap .cw-reset-view-btn { display: none !important; }
+  /* Overlay clears the drawing rail while drawing tools are on. */
+  .cw-chart-wrap--draw .cw-ohlc-overlay { left: 64px; }
+  /* Indicator chips above the chart (toolbar row → chips → chart). */
+  .cw-left-top-row { order: 0; }
+  .cw-pills { order: 1; }
+  .cw-chart-dblclick-wrap { order: 2; }
+  /* Overlay no longer has Save/Reset to dodge at the top-right. */
+  .cw-chart-wrap .cw-ohlc-overlay { max-width: calc(100% - 110px); }
+}
+@media (min-width: 901px) {
+  /* Interval lives in the toolbar's dropdown on desktop. */
+  .cw-left-top-row .cw-interval-tabs { display: none; }
+  .cw-tb-iv { font-size: 0.9rem; font-weight: 800; color: var(--color-text); padding: 0 10px; }
+  .cw-tb-iv-label { min-width: 34px; }
+  .cw-tb-iv-countdown { font-size: 0.72rem; font-weight: 500; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .cw-tb-menu { min-width: 200px; }
+  /* Narrow desktops: toolbar scrolls sideways instead of spilling under
+     the right panel (menus are positioned outside the scroll area). */
+  .cw-tb { overflow-x: auto; overflow-y: visible; scrollbar-width: none; }
+  .cw-tb::-webkit-scrollbar { display: none; }
+  .cw-panel-toggle-btn { flex-shrink: 0; margin-left: auto; }
+}
+@media (min-width: 901px) {
+  /* Scrolling clipped the dropdown menus — wrap to a second line instead. */
+  .cw-tb { overflow: visible; flex-wrap: wrap; row-gap: 4px; }
+}
+
+/* Desktop: one slim row — tools, then compact indicator chips filling the
+   rest; chips drop to their own line only when there isn't room. Panel
+   arrow pinned top-right. */
+@media (min-width: 901px) {
+  .cw-left-top-row {
+    position: relative;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 10px;
+    padding-right: 44px;
+    margin-bottom: 0;
+  }
+  .cw-left-top-row .cw-panel-toggle-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+  }
+  .cw-tb { flex: 0 1 auto; }
+  .cw-left-top-row .cw-pills {
+    order: 0;
+    flex: 1 1 360px;
+    min-width: 0;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    align-self: center;
+  }
+  .cw-left-top-row .cw-pill {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 9px;
+    border-radius: 7px;
+  }
+  .cw-left-top-row .cw-pill-label { font-size: 0.6rem; letter-spacing: 0.04em; }
+  .cw-left-top-row .cw-pill-value { font-size: 0.74rem; white-space: nowrap; }
+}
+@media (min-width: 901px) {
+  /* Switched sides: indicator chips on the left, tools on the right (next
+     to the panel arrow). Chips start from the left and scroll sideways
+     when they don't fit (flex-end + overflow clipped the first ones). */
+  .cw-left-top-row .cw-pills {
+    order: -1;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+  .cw-left-top-row .cw-pills::-webkit-scrollbar { display: none; }
+  .cw-tb { order: 1; margin-left: auto; justify-content: flex-end; }
+}
+@media (min-width: 901px) {
+  /* Live Tape tab: use the panel's full height (the panel body scrolls) —
+     no 480px cap with its own nested scroll. */
+  .cw-panel-tape .cw-tape { max-height: none; overflow: visible; }
+}
+/* Fullscreen exit reads "Close" (text pill, not a ✕ circle). */
+.cw-chart-fullscreen-exit {
+  width: auto !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700;
+}
+/* AI tab empty state: glossy white → light grey (no lavender/cyan tint). */
+@media (min-width: 901px) {
+  .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(140% 45% at 50% 0%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #ffffff 0%, #f7f8fa 45%, #eef0f3 100%);
+  }
+  .cw-right-panel--ai-hero .cw-ai-start-tile {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 251, 0.85));
+    border-color: rgba(15, 23, 42, 0.07);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  html:not([data-theme="light"]) .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(140% 45% at 50% 0%, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #161b24 0%, #12161e 50%, #0e1218 100%);
+  }
+  html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* ── Desktop: hidden panel → slim icon rail ──────────────────────────────── */
+@media (min-width: 901px) {
+  .cw-grid.cw-grid--panel-collapsed { grid-template-columns: 1fr 58px; }
+  .cw-left-top-row { padding-right: 0; }
+  .cw-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-card-bg);
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .cw-rail-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 9px 2px 7px;
+    border-radius: 8px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .cw-rail-btn:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); }
+  .cw-rail-btn--active { color: var(--color-primary); }
+  .cw-rail-label {
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.15;
+  }
+}
+@media (min-width: 901px) {
+  .cw-grid.cw-grid--panel-collapsed { grid-template-columns: 1fr 72px; }
+  .cw-rail-btn { padding: 10px 4px 8px; }
+  .cw-rail-label { font-size: 0.6rem; }
+}
+@media (min-width: 901px) {
+  /* "Live Tape" on one line in the rail. */
+  .cw-rail { padding: 6px 4px; }
+  .cw-rail-btn { padding: 10px 0 8px; }
+  .cw-rail-label { white-space: nowrap; letter-spacing: 0; font-size: 0.58rem; }
+}
+
+/* ── Desktop: animated rail ⇄ panel ─────────────────────────────────────────
+   Same 3 column tracks in both states so the browser can animate between
+   them: [chart | handle | side]. Hidden: handle 0, side = 72px rail. Open:
+   handle 6px, side = panel width. The toolbar row stretches over the rail
+   while hidden (its last icon sits above the rail) and glides back left as
+   the panel opens. */
+@media (min-width: 901px) {
+  .cw-grid {
+    grid-template-columns: minmax(0, 1fr) 6px var(--cw-sidebar-w, 440px);
+    transition: grid-template-columns 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cw-grid.cw-grid--panel-collapsed {
+    grid-template-columns: minmax(0, 1fr) 0px 72px;
+  }
+  .cw-grid > .cw-left { grid-column: 1; grid-row: 1; }
+  .cw-grid > .cw-resize-handle { grid-column: 2; grid-row: 1; }
+  .cw-grid > .cw-right,
+  .cw-grid > .cw-rail { grid-column: 3; grid-row: 1; }
+
+  .cw-left-top-row { transition: margin-right 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+  .cw-grid--panel-collapsed .cw-left-top-row {
+    /* rail (72) + the two column gaps around the 0px handle track */
+    margin-right: calc(-72px - 20px);
+  }
+  /* Rail starts at the chart's top, under the toolbar's last icon. */
+  .cw-rail { margin-top: 46px; height: auto; animation: cw-side-in 0.3s ease both; }
+  .cw-right { animation: cw-side-in 0.42s ease both; }
+  .cw-right-panel { overflow: hidden; }
+  @keyframes cw-side-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+@media (min-width: 901px) and (prefers-reduced-motion: reduce) {
+  .cw-grid, .cw-left-top-row { transition: none; }
+  .cw-rail, .cw-right { animation: none; }
+}
+/* Lighter grey at the bottom of the AI panel's glossy gradient. */
+@media (min-width: 901px) {
+  html[data-theme="light"] .cw-right-panel--ai-hero,
+  :root:not([data-theme]) .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(140% 45% at 50% 0%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #ffffff 0%, #fbfbfc 50%, #f5f6f8 100%);
+  }
+}
+@media (min-width: 901px) {
+  /* Date range menu: active range on the button; ranges too fine/coarse
+     for the current interval are greyed out. */
+  .cw-tb-range-label { font-size: 0.78rem; font-weight: 800; color: var(--color-text); }
+  .cw-tb-menu-item--off { opacity: 0.4; cursor: not-allowed; }
+  .cw-tb-menu-item--off:hover { background: none; }
+  /* Chips row scrolls when it doesn't fit — fade its right edge so it
+     reads as "more →" instead of a chip chopped in half. */
+  .cw-left-top-row .cw-pills {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    padding-right: 24px;
+  }
+}
+
+/* ══ Phones / iOS (≤900px): the desktop terminal pieces, stacked ══════════
+   chips (swipe) → toolbar (wraps) → chart with price overlay → 4 tabs
+   (Overview · AI · Elliott · Live Tape) whose content scrolls with the page. */
+@media (max-width: 900px) {
+  /* Old header block + big interval pill track: replaced by the overlay and
+     the toolbar's interval menu. Save/Reset on the chart: in the toolbar. */
+  .cw-left-top-row .cw-header,
+  .cw-left-top-row .cw-interval-tabs,
+  .cw-ticker-stats,
+  .cw-chart-wrap .cw-save-btn,
+  .cw-chart-wrap .cw-reset-view-btn { display: none !important; }
+
+  .cw-left-top-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 0;
+    margin-bottom: 2px;
+  }
+  /* Chips: compact single-line, swipeable, first row. */
+  .cw-left-top-row .cw-pills {
+    order: -1;
+    flex: 1 1 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+    padding-right: 20px;
+  }
+  .cw-left-top-row .cw-pills::-webkit-scrollbar { display: none; }
+  .cw-left-top-row .cw-pill {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 9px;
+    border-radius: 7px;
+  }
+  .cw-left-top-row .cw-pill-label { font-size: 0.6rem; letter-spacing: 0.04em; }
+  .cw-left-top-row .cw-pill-value { font-size: 0.74rem; white-space: nowrap; }
+
+  /* Toolbar: wraps (no clipped menus). */
+  .cw-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; flex: 1 1 100%; }
+  .cw-tb-sep { width: 1px; height: 18px; margin: 0 3px; background: var(--color-border); flex-shrink: 0; }
+  .cw-tb-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 34px;
+    min-width: 32px;
+    padding: 0 6px;
+    border-radius: 8px;
+    color: var(--color-text-secondary, var(--color-text));
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .cw-tb-btn--on { color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 10%, transparent); }
+  .cw-tb-txt { font-size: 0.8rem; font-weight: 700; }
+  .cw-tb-iv { font-size: 0.9rem; font-weight: 800; color: var(--color-text); padding: 0 8px; }
+  .cw-tb-fx span { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 800; font-size: 16px; line-height: 1; }
+  .cw-tb-range-label { font-size: 0.78rem; font-weight: 800; color: var(--color-text); }
+  .cw-tb-menu-wrap { position: static; flex-shrink: 0; }
+  /* Menus open as a sheet above the bottom nav — never off-screen. */
+  .cw-tb-menu {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(96px + var(--native-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+    z-index: 2000;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 8px;
+    border-radius: 16px;
+    border: 1px solid var(--color-border);
+    background: var(--color-card-bg);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .cw-tb-menu-item {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--color-text);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cw-tb-menu-item:active { background: color-mix(in srgb, var(--color-text) 6%, transparent); }
+  .cw-tb-menu-item.active:not(.cw-tb-layer) { color: var(--color-primary); }
+  .cw-tb-menu-item--off { opacity: 0.4; }
+  .cw-tb-check { margin-left: auto; color: var(--color-primary); }
+  .cw-tb-iv-label { min-width: 34px; }
+  .cw-tb-iv-countdown { font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); }
+  .cw-tb-layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .cw-tb-switch { margin-left: auto; position: relative; width: 36px; height: 21px; border-radius: 99px; background: color-mix(in srgb, var(--color-text) 16%, transparent); flex-shrink: 0; }
+  .cw-tb-switch i { position: absolute; top: 2px; left: 2px; width: 17px; height: 17px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: transform 0.15s ease; }
+  .cw-tb-switch.on { background: var(--action-green, #16a34a); }
+  .cw-tb-switch.on i { transform: translateX(15px); }
+
+  /* Price overlay on the chart: compact. */
+  .cw-chart-wrap .cw-ohlc-overlay {
+    left: 10px;
+    top: 8px;
+    max-width: calc(100% - 80px);
+    pointer-events: none;
+  }
+  .cw-chart-wrap .cw-ohlc-overlay button { pointer-events: auto; }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ohlc-row { flex-wrap: wrap; row-gap: 1px; }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ohlc-title { font-size: 0.72rem; }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ohlc-values { font-size: 0.68rem; white-space: normal; }
+  .cw-chart-wrap .cw-ohlc-overlay .chart-tv-ticket-row { display: none; }
+  .cw-chart-wrap--draw .cw-ohlc-overlay { left: 58px; }
+
+  /* Tabs: one row of four. */
+  .cw-right-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    padding: 6px 6px 0;
+  }
+  .cw-right-tab { justify-content: center; gap: 5px; padding: 8px 2px 9px; font-size: 0.66rem; letter-spacing: 0.02em; }
+  .cw-right-tab span { overflow: visible; text-overflow: clip; }
+
+  /* Overview: signal cards as a list, fractals under them. */
+  .cw-panel-signals .cw-signal-cards-head { margin-bottom: 4px; }
+  .cw-panel-signals .cw-signal-cards { grid-template-columns: 1fr; gap: 8px; margin-bottom: 0; }
+  .cw-panel-signals .cw-signal-card { padding: 10px 12px; border-radius: 10px; gap: 4px; }
+  .cw-panel-signals + * { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+  /* Live Tape: no inner 480px scroll — the page scrolls. */
+  .cw-panel-tape .cw-feed { margin: 0; border: none; background: transparent; padding: 0; }
+  .cw-panel-tape .cw-tape { max-height: none; overflow: visible; }
+
+  /* AI: Read → Trade plan → MM narration stacked. */
+  .cw-ai-sec { display: flex; flex-direction: column; gap: 8px; }
+  .cw-ai-sec--read { order: 1; }
+  .cw-ai-sec--plan { order: 2; padding-top: 14px; border-top: 1px solid var(--color-border); }
+  .cw-ai-sec--narr { order: 3; padding-top: 14px; border-top: 1px solid var(--color-border); }
+  .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(140% 45% at 50% 0%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #ffffff 0%, #fbfbfc 50%, #f5f6f8 100%);
+  }
+  html:not([data-theme="light"]) .cw-right-panel--ai-hero {
+    background:
+      radial-gradient(140% 45% at 50% 0%, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, #161b24 0%, #12161e 50%, #0e1218 100%);
+  }
+  .cw-right-panel--ai-hero .cw-ai-start {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    animation: none;
+    margin: 0;
+    padding: 14px 0 18px;
+  }
+  .cw-right-panel--ai-hero .cw-ai-start-tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,249,251,0.85));
+    border-color: rgba(15, 23, 42, 0.07);
+  }
+  html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile {
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-color: rgba(255,255,255,0.07);
+  }
+}
+@media (max-width: 900px) {
+  /* One-line toolbar, swipe for the rest (menus are fixed sheets, so the
+     scroll container can't clip them). */
+  .cw-tb {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+    padding-right: 20px;
+  }
+  .cw-tb::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 900px) {
+  /* A mask on the toolbar also clips its fixed menu sheets — no fade here. */
+  .cw-tb { -webkit-mask-image: none; mask-image: none; padding-right: 4px; }
+}
+@media (max-width: 900px) {
+  /* Indicator chips under the chart: compact, single swipeable line. */
+  .cw-left > .cw-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    scrollbar-width: none;
+    padding-right: 20px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  }
+  .cw-left > .cw-pills::-webkit-scrollbar { display: none; }
+  .cw-left > .cw-pills .cw-pill {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 4px 9px;
+    border-radius: 7px;
+  }
+  .cw-left > .cw-pills .cw-pill-label { font-size: 0.6rem; letter-spacing: 0.04em; }
+  .cw-left > .cw-pills .cw-pill-value { font-size: 0.74rem; white-space: nowrap; }
+}
+
+/* Phones: Monthly Fractal match cards read top-to-bottom —
+   [date range ......... 84% match] / [▲ result, full width] / [ago · #n]. */
+@media (max-width: 900px) {
+  .cw-fractal-match {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "range sim"
+      "ret   ret"
+      "ago   ago";
+    column-gap: 10px;
+    row-gap: 4px;
+    align-items: baseline;
+    padding: 10px 12px !important;
+    text-align: left;
+  }
+  .cw-fractal-match-main,
+  .cw-fractal-match-side { display: contents !important; }
+  .cw-fractal-match-range {
+    grid-area: range;
+    font-size: 0.82rem !important;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cw-fractal-match-len { font-weight: 500; }
+  .cw-fractal-match-sim { grid-area: sim; font-size: 0.72rem !important; white-space: nowrap; }
+  .cw-fractal-match-ret {
+    grid-area: ret;
+    font-size: 0.78rem !important;
+    text-align: left !important;
+    line-height: 1.35;
+  }
+  .cw-fractal-match-ago { grid-area: ago; font-size: 0.68rem !important; }
+}
+
+/* Phones: the chart runs edge to edge — no border, no radius, no side
+   gutter (just the chart; everything else keeps its spacing). */
+@media (max-width: 640px) {
+  .cw-chart-dblclick-wrap:not(.cw-chart-dblclick-wrap--fullscreen) {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+  .cw-chart-dblclick-wrap:not(.cw-chart-dblclick-wrap--fullscreen) .cw-chart-wrap {
+    border: none !important;
+    border-radius: 0 !important;
+  }
+}
+/* Phones: the tab panel also runs edge to edge — no border, no radius. */
+@media (max-width: 640px) {
+  .cw-right {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+  .cw-right-panel {
+    border: none !important;
+    border-radius: 0 !important;
+  }
+}
+@media (max-width: 900px) {
+  /* Toolbar menus sit right on top of the floating nav (.fnb-bar: fixed,
+     bottom 16px, 64px tall — no safe-area offset of its own). */
+  .cw-tb-menu { bottom: 86px; }
+}
+@media (max-width: 900px) {
+  /* Flush on top of the floating nav (16px + 64px), no gap. */
+  .cw-tb-menu { bottom: 80px; }
+}
+/* Phone toolbar menus as the app's bottom sheet. */
+.cw-tb-sheet-list { padding: 6px 10px 12px; }
+.cw-tb-sheet .cw-tb-menu-item { padding: 13px 10px; }
+/* Sheet rows span the full width so ✓ / switches sit at the right edge. */
+.cw-tb-sheet .cw-tb-menu-item { display: flex; width: 100%; box-sizing: border-box; }
+.cw-tb-sheet .cw-tb-check,
+.cw-tb-sheet .cw-tb-switch { margin-left: auto; }
+@media (max-width: 900px) {
+  /* Toolbar + chips start on the page's 16px edge (same as the ☰ menu). */
+  .cw-left-top-row { padding-left: 16px; padding-right: 0; }
+  .cw-tb .cw-tb-iv { padding-left: 0; }
+  .cw-left > .cw-pills { padding-left: 16px; }
+  /* Fade the toolbar's end: more tools → swipe. Safe now that its menus
+     are portaled BottomSheets (a mask can't clip them). */
+  .cw-tb {
+    padding-right: 28px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  }
+}
+@media (max-width: 900px) {
+  /* The page container already supplies the 16px edge. */
+  .cw-left-top-row { padding-left: 0; }
+  .cw-left > .cw-pills { padding-left: 0; }
 }

@@ -1307,6 +1307,7 @@ function AppDashboard({
   // logo — used as a `key` so the spin keyframe (.chart-tab-logo-spin)
   // remounts and replays each time, instead of only firing once on mount.
   const [chartTabSpinKey, setChartTabSpinKey] = useState(0);
+  const [paperTabSpinKey, setPaperTabSpinKey] = useState(0);
   // Simple two-icon segmented switch, mounted once in the top bar
   // (.mch-right) at every width. First icon always represents — and
   // returns to — whatever page is actually active (its own NAV_ITEMS
@@ -1337,14 +1338,20 @@ function AppDashboard({
         type="button"
         className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
         title={t("orderBook.title")}
-        onClick={() => setMobileChartTab("orderbook")}
+        onClick={() => {
+          setMobileChartTab("orderbook");
+          setPaperTabSpinKey((k) => k + 1);
+        }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="6" />
-          <line x1="21" y1="11" x2="6" y2="11" />
-          <line x1="15" y1="16" x2="6" y2="16" />
-          <line x1="12" y1="21" x2="6" y2="21" />
-        </svg>
+        {/* "P" — plain when not selected; selected gets the C's black
+            circle + white letter and the same spin on tap. */}
+        <span
+          key={paperTabSpinKey}
+          className={`${paperTabSpinKey > 0 ? "chart-tab-logo-spin " : ""}chart-mobile-tab-p`}
+          aria-hidden="true"
+        >
+          P
+        </span>
         {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
       </button>
     </div>

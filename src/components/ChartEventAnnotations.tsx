@@ -4,6 +4,7 @@ import { IChartApi, Time } from "lightweight-charts";
 import { CandleDataPoint, COINS, CoinSymbol } from "../services/coinglass";
 import { ZoneResult } from "./PriceChart.types";
 import "../styles/ChartEventAnnotations.css";
+import { BottomSheet } from "./BottomSheet";
 
 const COIN_NAME: Record<string, string> = Object.fromEntries(
   COINS.map((c) => [c.symbol, c.name]),
@@ -97,16 +98,18 @@ function EventSheet({ ev, onClose }: { ev: ChartEvent; onClose: () => void }) {
   const tone = eventTone(ev);
   const live = ev.id === "current";
   return (
-    <>
-      <div className="interval-sheet-backdrop" onClick={onClose} />
-      <div className={`interval-sheet cec-sheet cec--${tone}`} role="dialog" aria-label={eventHeadline(ev)}>
-        <div className="interval-sheet-header">
-          <span className="cec-sheet-label">
-            {ev.title}
-            {live && <span className="cec-live"><i />LIVE</span>}
-          </span>
-          <button type="button" className="interval-sheet-close" onClick={onClose}>✕</button>
-        </div>
+    <BottomSheet
+      open
+      onClose={onClose}
+      className={`cec-sheet cec--${tone}`}
+      ariaLabel={eventHeadline(ev)}
+      title={
+        <span className="cec-sheet-label">
+          {ev.title}
+          {live && <span className="cec-live"><i />LIVE</span>}
+        </span>
+      }
+    >
         <div className="cec-sheet-body">
           <div className="cec-sheet-row">
             <span className="cec-badge" aria-hidden="true">
@@ -123,8 +126,7 @@ function EventSheet({ ev, onClose }: { ev: ChartEvent; onClose: () => void }) {
             <span className="cec-time">{formatRelativeTime(ev.time)}</span>
           </div>
         </div>
-      </div>
-    </>
+    </BottomSheet>
   );
 }
 
@@ -515,10 +517,7 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
     <>
       {dotsLayer}
       {cardsSlotEl ? createPortal(cardsAndPager, cardsSlotEl) : null}
-      {sheetEvent && createPortal(
-        <EventSheet ev={sheetEvent} onClose={() => setSheetEvent(null)} />,
-        document.body,
-      )}
+      {sheetEvent && <EventSheet ev={sheetEvent} onClose={() => setSheetEvent(null)} />}
     </>
   );
 }

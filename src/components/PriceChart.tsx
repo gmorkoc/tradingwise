@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
+import { BottomSheet } from "./BottomSheet";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
@@ -19,7 +20,7 @@ import {
   LineStyle,
   PriceScaleMode,
 } from "lightweight-charts";
-import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot } from "../services/coinglass";
+import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot, MAX_RANGE_CANDLES } from "../services/coinglass";
 import { fetchCoinMeta, fetchOpenInterestCoins, CoinMeta } from "../services/coinMeta";
 import { ZoneResult, ZoneSignal } from "./PriceChart.types";
 import SignalIndicator from "./SignalIndicator";
@@ -291,6 +292,17 @@ const RANGE_PRESETS: { key: string; label: string; interval: TimeInterval; secon
   { key: "1m", label: "1m", interval: "1day", seconds: 30 * 24 * 60 * 60, tip: "1 month in 1 day intervals" },
   { key: "1y", label: "1y", interval: "1week", seconds: 365 * 24 * 60 * 60, tip: "1 year in 1 week intervals" },
 ];
+const INTERVAL_SECONDS: Record<TimeInterval, number> = {
+  "1sec": 1, "1min": 60, "5min": 300, "15min": 900, "1h": 3600, "4h": 14400,
+  "6h": 21600, "1day": 86400, "1week": 604800, "1month": 2592000, "all": Infinity,
+};
+// A date range stays active across interval changes (1y then 4H = a year
+// of 4H candles) as long as it makes sense for that candle size: at
+// least 3 candles, and no more than one chart load can fetch.
+const rangeFitsInterval = (seconds: number, iv: TimeInterval) => {
+  const n = seconds / INTERVAL_SECONDS[iv];
+  return n >= 3 && n <= MAX_RANGE_CANDLES;
+};
 
 // Full coin name for the chart title ("Bitcoin" rather than "BTC") — COINS
 // already carries this (services/coinglass.ts), just keyed by symbol here
@@ -1517,9 +1529,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // is still on that preset's interval — picking another interval anywhere
   // else silently drops it back to that interval's normal default window.
   const [rangePreset, setRangePreset] = useState<string | null>(null);
-  const activeRangePreset = RANGE_PRESETS.find((p) => p.key === rangePreset && p.interval === interval) ?? null;
+  // Stays active across interval changes while it fits that candle size
+  // (rangeFitsInterval); otherwise the interval's own default window.
+  const activeRangePreset = RANGE_PRESETS.find((p) => p.key === rangePreset && rangeFitsInterval(p.seconds, interval)) ?? null;
   const rangeSecondsRef = useRef<{ interval: TimeInterval; seconds: number } | null>(null);
-  rangeSecondsRef.current = activeRangePreset ? { interval: activeRangePreset.interval, seconds: activeRangePreset.seconds } : null;
+  rangeSecondsRef.current = activeRangePreset ? { interval, seconds: activeRangePreset.seconds } : null;
+  // A range that doesn't fit the newly picked interval is dropped for good
+  // (not silently revived if the user later switches back).
+  useEffect(() => {
+    if (rangePreset && !activeRangePreset) setRangePreset(null);
+  }, [rangePreset, activeRangePreset]);
+  // "1 year in 4H candles" — the preset's own tip only matches its own
+  // default interval.
+  const activeRangeDesc = activeRangePreset
+    ? (activeRangePreset.interval === interval ? activeRangePreset.tip : `${activeRangePreset.label} in ${INTERVAL_SHORT[interval]} candles`)
+    : null;
   // Visible window for a fresh view: the active preset's span if any,
   // otherwise the interval's own default.
   const viewWindowFor = (iv: TimeInterval) =>
@@ -1887,9 +1911,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Advance chart, mobile: the dock sheet shows every section at once in
   // the Chart tools layout (section labels, rows, chips) — no accordion.
   const fsDockFlat = !!pageMode && !isDesktopWidth;
-  const fsFlatSheetRef = useRef<HTMLDivElement>(null);
-  const fsFlatScrollRef = useRef<HTMLDivElement>(null);
-  const fsFlatDragRef = useRef<{ startY: number } | null>(null);
+  // Advance chart bottom bar: ƒx opens its own Indicators menu.
+  const [indSheetOpen, setIndSheetOpen] = useState(false);
+  // Custom date range picker sits below the sheet — close the sheet so
+  // it's visible when picked from the sheet's Date range row.
+  useEffect(() => {
+    if (fsDockFlat && goToOpen) setFsSheetExpanded(false);
+  }, [fsDockFlat, goToOpen]);
   // Advance chart (mobile): iOS-style swipe from the left screen edge to go
   // back. Page (and its docked bottom panel) follow the finger; past ~30%
   // of the width or a quick flick it slides off and leaves the page.
@@ -1913,7 +1941,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       const t = e.touches[0];
       if (t.clientX > 18) return;
       // Not from the drawing rail or from inside an open sheet.
-      if ((e.target as Element | null)?.closest?.(".cdt-toolbar, .mss-backdrop, .interval-sheet")) return;
+      if ((e.target as Element | null)?.closest?.(".cdt-toolbar, .mss-backdrop, .bs-backdrop, .interval-sheet")) return;
       st = { x: t.clientX, y: t.clientY, t: Date.now(), decided: false, active: false };
     };
     const onMove = (e: TouchEvent) => {
@@ -2440,6 +2468,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           // blank canvas on one side instead of stretching the existing
           // candles to fill it.
           lockVisibleTimeRangeOnResize: true,
+          // Default min (0.5px per candle) caps a phone-width chart at
+          // ~600 candles — too few for a kept date range like a year of
+          // 4H candles (~2,200). Thin enough to fit MAX_RANGE_CANDLES.
+          minBarSpacing: 0.05,
         },
         // Matches the theme-sync effect — starts display-only (isFullscreen
         // is false on first mount) so the page scrolls past the chart
@@ -2531,7 +2563,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // volume bars entirely (bottom:0 ran them right to the canvas
         // edge); a bottom margin lifts them clear of it. Desktop
         // fullscreen and compact (no dock overlay) keep bottom:0.
-        .applyOptions({ scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth ? 0.14 : 0 } });
+        .applyOptions({ scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth && !pageMode ? 0.14 : 0 } });
 
       bbUpperRef.current = chart.addSeries(LineSeries, {
         ...bbOpts,
@@ -2750,7 +2782,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // bars clear of the mobile fullscreen dock when just entering/
     // exiting fullscreen without a theme change alongside it.
     chart?.priceScale("volume").applyOptions({
-      scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth ? 0.14 : 0 },
+      scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth && !pageMode ? 0.14 : 0 },
     });
 
     // THIS is the effect that actually fires on a fullscreen toggle — the
@@ -2838,7 +2870,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         }
       }
       try {
-        const fresh = await coinglass.getHistoricalCandles(interval, coin);
+        // Kept date range: load enough candles to cover it (capped).
+        const rangeSpan = rangeSecondsRef.current?.interval === interval ? rangeSecondsRef.current.seconds : undefined;
+        const fresh = await coinglass.getHistoricalCandles(interval, coin, rangeSpan);
         if (cancelled) return;
         const data = fresh.length > 0 ? fresh : lastCandlesRef.current;
         if (data.length === 0) {
@@ -4157,18 +4191,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </>,
           document.body,
         )
-      ) : ReactDOM.createPortal(
-        <>
-          <div className="indicators-sheet-backdrop" onClick={() => setMenuOpen(false)} />
-          <div className="indicators-sheet">
-            <div className="indicators-sheet-header">
-              <span className="indicators-sheet-title">{t("chart.indicators")}</span>
-              <button type="button" className="indicators-sheet-close" onClick={() => setMenuOpen(false)}>✕</button>
-            </div>
+      ) : (
+        <BottomSheet open onClose={() => setMenuOpen(false)} title={<>{t("chart.indicators")}</>}>
             <div className="indicators-menu indicators-menu--sheet">{indicatorsList}</div>
-          </div>
-        </>,
-        document.body,
+        </BottomSheet>
       ))}
     </div>
   );
@@ -4177,14 +4203,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // (below), now the only interval control on every platform/width.
   // Rendered unconditionally (not tied to any one trigger button's own
   // mount state) further down in the main return.
-  const intervalSheetPortal = intervalSheetOpen && ReactDOM.createPortal(
-    <>
-      <div className="interval-sheet-backdrop" onClick={() => setIntervalSheetOpen(false)} />
-      <div className="interval-sheet">
-        <div className="interval-sheet-header">
-          <span className="interval-sheet-title">{t("chart.selectInterval", "Select Interval")}</span>
-          <button type="button" className="interval-sheet-close" onClick={() => setIntervalSheetOpen(false)}>✕</button>
-        </div>
+  const intervalSheetPortal = intervalSheetOpen && (
+    <BottomSheet open onClose={() => setIntervalSheetOpen(false)} title={<>{t("chart.selectInterval", "Select Interval")}</>}>
         <div className="interval-sheet-list date-range-sheet-list">
           {INTERVALS.map((opt) => {
             const needsPro = PRO_INTERVALS.has(opt);
@@ -4215,9 +4235,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             );
           })}
         </div>
-      </div>
-    </>,
-    document.body,
+    </BottomSheet>
   );
 
   // Grid toggle + chart-style picker — shown both in the compact view's
@@ -4344,14 +4362,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </>,
             document.body,
           )
-        ) : ReactDOM.createPortal(
-          <>
-            <div className="indicators-sheet-backdrop" onClick={() => setStyleMenuOpen(false)} />
-            <div className="indicators-sheet">
-              <div className="indicators-sheet-header">
-                <span className="indicators-sheet-title">Chart style</span>
-                <button type="button" className="indicators-sheet-close" onClick={() => setStyleMenuOpen(false)}>✕</button>
-              </div>
+        ) : (
+          <BottomSheet open onClose={() => setStyleMenuOpen(false)} title={<>Chart style</>}>
               <div className="indicators-menu indicators-menu--sheet">
                 {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
                   <div
@@ -4367,9 +4379,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
-          </>,
-          document.body,
+          </BottomSheet>
         ))}
       </div>
     </div>
@@ -4703,14 +4713,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     </div>
   );
   const toolsSwitch = (on: boolean) => <span className={`cts-switch${on ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>;
-  const toolsSheetPortal = toolsSheetOpen && ReactDOM.createPortal(
-    <>
-      <div className="interval-sheet-backdrop" onClick={() => setToolsSheetOpen(false)} />
-      <div className="interval-sheet cts-sheet" role="dialog" aria-label="Chart tools">
-        <div className="interval-sheet-header">
-          <span className="interval-sheet-title">Chart tools</span>
-          <button type="button" className="interval-sheet-close" onClick={() => setToolsSheetOpen(false)}>✕</button>
-        </div>
+  const toolsSheetPortal = toolsSheetOpen && (
+    <BottomSheet open onClose={() => setToolsSheetOpen(false)} title={<>Chart tools</>} className="cts-sheet" ariaLabel="Chart tools">
         <div className="interval-sheet-list date-range-sheet-list">
           {onOpenPaperTrade && (
             <button
@@ -4795,6 +4799,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             {toolsSwitch(showGrid)}
           </button>
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            role="switch"
+            aria-checked={showCompactView}
+            onClick={() => {
+              if (showCompactView) { setShowCompactView(false); return; }
+              setToolsSheetOpen(false);
+              if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+              setShowCompactView(true);
+            }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="10" x2="9" y2="20" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Compact view{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
+              <span className="date-range-sheet-sub">Simple live price line, no indicators</span>
+            </span>
+            {toolsSwitch(showCompactView)}
+          </button>
           {onOpenDrawingTools && (
             <button
               type="button"
@@ -4845,9 +4870,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <span />
           </button>
         </div>
-      </div>
-    </>,
-    document.body,
+    </BottomSheet>
   );
   const fsSignalBucket = zone
     ? (zone.signal === "oversold" || zone.signal === "buy" || zone.signal === "strong-buy"
@@ -5200,7 +5223,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <path d="M12 7v5l3.5 2" />
             </svg>
           </span>
-          <span className="fs-dock-category-label">{t("chart.interval", "Interval")}</span>
+          <span className="fs-dock-category-label">{fsDockFlat ? "Timeframe & scale" : t("chart.interval", "Interval")}</span>
           <svg className={`fs-dock-category-chevron${fsOpenCategories.interval ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -5208,41 +5231,61 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {(fsDockFlat || fsOpenCategories.interval) && (
           <div className="fs-dock-category-body">
             {fsDockFlat && (
-              <div
-                className="cts-intervals"
-                ref={(el) => {
-                  // Keep the selected interval in view in the strip.
-                  const a = el?.querySelector<HTMLElement>(".cts-interval.active");
-                  if (el && a) el.scrollLeft = a.offsetLeft - el.clientWidth / 2 + a.offsetWidth / 2;
-                }}
+              <button
+                type="button"
+                className="date-range-sheet-item cts-row cts-select"
+                onClick={() => { hapticTap(); setIntervalSheetOpen(true); }}
               >
-                {INTERVALS.map((opt) => {
-                  const locked = PRO_INTERVALS.has(opt) && !isPaid;
-                  const trend = trends[opt];
-                  return (
-                    <button
-                      type="button"
-                      key={opt}
-                      className={`cts-interval${interval === opt ? " active" : ""}${locked ? " cts-interval--locked" : ""}`}
-                      onClick={() => {
-                        if (locked) { onOpenUpgrade?.("pro"); return; }
-                        hapticTap();
-                        setInterval(opt);
-                      }}
-                    >
-                      <span className="cts-interval-short">
-                        {INTERVAL_SHORT[opt]}
-                        {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                          : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                          : null}
-                      </span>
-                      {locked && (
-                        <svg className="cts-interval-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="PRO"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                <span className="cts-row-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                </span>
+                <span className="cts-row-text">
+                  <span className="date-range-sheet-label">Interval</span>
+                  <span className="date-range-sheet-sub">{INTERVAL_DESC[interval]}</span>
+                </span>
+                <span className="cts-select-value">
+                  {INTERVAL_SHORT[interval]}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </span>
+              </button>
+            )}
+            {fsDockFlat && (
+              <>
+                <button
+                  type="button"
+                  className="date-range-sheet-item cts-row cts-select"
+                  onClick={() => { hapticTap(); openDateRangeSheet(); }}
+                >
+                  <span className="cts-row-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  </span>
+                  <span className="cts-row-text">
+                    <span className="date-range-sheet-label">Date range</span>
+                    <span className="date-range-sheet-sub">{activeRangeDesc ?? "Preset span or a custom range"}</span>
+                  </span>
+                  <span className="cts-select-value">
+                    {activeRangePreset ? activeRangePreset.label : "Default"}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  </span>
+                </button>
+                <div className="date-range-sheet-item cts-row">
+                  <span className="cts-row-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="4" y2="4" /><path d="M8 16l4-5 3 3 5-7" /></svg>
+                  </span>
+                  <span className="cts-row-text">
+                    <span className="date-range-sheet-label">Price scale</span>
+                    <span className="date-range-sheet-sub">Percent, log, auto-fit</span>
+                  </span>
+                  <span className="cts-seg">
+                    <button type="button" className={`cts-seg-btn${scaleMode === "percent" ? " active" : ""}`} aria-pressed={scaleMode === "percent"}
+                      onClick={() => { hapticTap(); setScaleMode((m) => (m === "percent" ? "normal" : "percent")); }}>%</button>
+                    <button type="button" className={`cts-seg-btn${scaleMode === "log" ? " active" : ""}`} aria-pressed={scaleMode === "log"}
+                      onClick={() => { hapticTap(); setScaleMode((m) => (m === "log" ? "normal" : "log")); }}>log</button>
+                    <button type="button" className={`cts-seg-btn${autoScale ? " active" : ""}`} aria-pressed={autoScale}
+                      onClick={() => { hapticTap(); setAutoScale((a) => !a); }}>auto</button>
+                  </span>
+                </div>
+              </>
             )}
             {!fsDockFlat && (
             <div className="interval-sheet-list">
@@ -5662,57 +5705,118 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // exact behavior of MobileSymbolSheet (.mss-* — dimmed backdrop, slide
   // up, sticky header with handle + ✕, drag the header down to dismiss)
   // instead of growing the dock in place.
-  const fsFlatSheet = fsDockFlat && fsSheetExpanded && ReactDOM.createPortal(
-    <div className="mss-backdrop fs-flat-backdrop" onClick={() => setFsSheetExpanded(false)}>
-      <div className="mss-sheet fs-flat-sheet" ref={fsFlatSheetRef} onClick={(e) => e.stopPropagation()}>
-        <div className="mss-scroll" ref={fsFlatScrollRef}>
-          <div
-            className="mss-header"
-            onTouchStart={(e) => {
-              fsFlatDragRef.current = { startY: e.touches[0].clientY };
-              const sheet = fsFlatSheetRef.current;
-              if (sheet) sheet.style.transition = "none";
-            }}
-            onTouchMove={(e) => {
-              const drag = fsFlatDragRef.current;
-              const sheet = fsFlatSheetRef.current;
-              if (!drag || !sheet) return;
-              const dy = e.touches[0].clientY - drag.startY;
-              // Only once the content is scrolled to the top — otherwise
-              // the gesture belongs to the content's own scroll.
-              if (dy > 0 && (fsFlatScrollRef.current?.scrollTop ?? 0) > 0) return;
-              sheet.style.transform = `translateY(${dy > 0 ? dy : Math.max(dy / 3, -40)}px)`;
-            }}
-            onTouchEnd={(e) => {
-              const drag = fsFlatDragRef.current;
-              fsFlatDragRef.current = null;
-              const sheet = fsFlatSheetRef.current;
-              if (!drag || !sheet) return;
-              const dy = e.changedTouches[0].clientY - drag.startY;
-              sheet.style.transition = "";
-              sheet.style.transform = "";
-              if (dy > 90) { hapticTap(); setFsSheetExpanded(false); }
-            }}
-          >
-            <span className="mss-handle" aria-hidden="true" />
-            <div className="mss-header-row">
-              <span className="fs-flat-title">{coin} chart</span>
-              <button type="button" className="mss-close" onClick={() => setFsSheetExpanded(false)} aria-label={t("chart.close", "Close")}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-          </div>
-          {fsDockInner}
-        </div>
-      </div>
-    </div>,
-    document.body,
+  const fsFlatSheet = fsDockFlat && (
+    <BottomSheet open={fsSheetExpanded} onClose={() => setFsSheetExpanded(false)} title={`${coin} chart`} className="fs-flat-sheet">
+      {fsDockInner}
+    </BottomSheet>
   );
   const fsDockSheet = isFullscreen && !isDesktopWidth && ReactDOM.createPortal(
-    <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}`}>
+    <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}${fsDockFlat ? " fs-dock--flat" : ""}`}>
+      {fsDockFlat ? (
+        // TradingView-style slim bar: one flat row, same background as the
+        // chart. Tap or swipe up anywhere on it opens the full sheet; its
+        // own buttons do their own thing.
+        <div
+          className="fs-bar"
+          onClick={() => { hapticTap(); setFsSheetExpanded(true); }}
+          onTouchStart={(e) => { fsDockDragRef.current = { startY: e.touches[0].clientY, startH: 0 }; }}
+          onTouchEnd={(e) => {
+            const drag = fsDockDragRef.current;
+            fsDockDragRef.current = null;
+            if (drag && e.changedTouches[0].clientY - drag.startY < -20) { hapticTap(); setFsSheetExpanded(true); }
+          }}
+        >
+          <div className="fs-bar-scroll">
+            <button
+              type="button"
+              className="fs-bar-btn fs-bar-interval"
+              onClick={(e) => { e.stopPropagation(); hapticTap(); setIntervalSheetOpen(true); }}
+              aria-label={t("chart.interval", "Interval")}
+            >
+              {INTERVAL_SHORT[interval]}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            <button
+              type="button"
+              className="fs-bar-btn fs-bar-interval"
+              onClick={(e) => { e.stopPropagation(); hapticTap(); openDateRangeSheet(); }}
+              aria-label="Date range"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              {activeRangePreset && <span>{activeRangePreset.label}</span>}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            <span className="fs-bar-sep" />
+            <button
+              type="button"
+              className="fs-bar-btn fs-bar-icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                hapticTap();
+                const keys = Object.keys(CHART_STYLE_LABELS) as ChartStyle[];
+                setChartStyle(keys[(keys.indexOf(chartStyle) + 1) % keys.length]);
+              }}
+              aria-label={`Chart style: ${CHART_STYLE_LABELS[chartStyle]}`}
+              title={CHART_STYLE_LABELS[chartStyle]}
+            >
+              {CHART_STYLE_ICONS[chartStyle]}
+            </button>
+            <button
+              type="button"
+              className={`fs-bar-btn fs-bar-icon${showGrid ? " fs-bar-btn--on" : ""}`}
+              onClick={(e) => { e.stopPropagation(); hapticTap(); setShowGrid((v) => !v); }}
+              aria-label="Grid"
+              aria-pressed={showGrid}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
+            </button>
+            <button
+              type="button"
+              className={`fs-bar-btn fs-bar-icon${fsQuickIndicators.some((i) => i.checked) ? " fs-bar-btn--on" : ""}`}
+              onClick={(e) => { e.stopPropagation(); hapticTap(); setIndSheetOpen(true); }}
+              aria-label={t("chart.indicators", "Indicators")}
+            >
+              <span className="fs-bar-fx">ƒx</span>
+              {fsQuickIndicators.filter((i) => i.checked).length > 0 && (
+                <span className="fs-bar-count">{fsQuickIndicators.filter((i) => i.checked).length}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={`fs-bar-btn fs-bar-icon${fsDrawPanelOpen ? " fs-bar-btn--on" : ""}`}
+              onClick={(e) => { e.stopPropagation(); hapticTap(); setFsDrawPanelOpen((v) => !v); }}
+              aria-label={t("chart.toolbox", "Drawing tools")}
+              aria-pressed={fsDrawPanelOpen}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
+            </button>
+            <button
+              type="button"
+              className="fs-bar-btn fs-bar-icon"
+              onClick={(e) => { e.stopPropagation(); hapticTap(); handleScreenshot(); }}
+              aria-label={t("chart.save", "Save")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+            </button>
+            <button
+              type="button"
+              className="fs-bar-btn fs-bar-icon"
+              onClick={(e) => { e.stopPropagation(); hapticTap(); toggleFullscreen(); }}
+              aria-label="Exit fullscreen"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            className="fs-bar-btn fs-bar-icon fs-bar-more"
+            onClick={(e) => { e.stopPropagation(); hapticTap(); setFsSheetExpanded(true); }}
+            aria-label="More"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+          </button>
+        </div>
+      ) : (
       <div className="fs-dock-peek">
         <button
           type="button"
@@ -5836,6 +5940,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {!fsDockFlat && (
       <div
@@ -6668,16 +6773,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </>
         )}
 
-        {patternInsightSheetOpen && displayBanner && ReactDOM.createPortal(
-          <>
-            <div className="interval-sheet-backdrop" onClick={() => setPatternInsightSheetOpen(false)} />
-            <div className="interval-sheet pattern-insight-sheet">
-              <div className="interval-sheet-header">
-                <span className={`interval-sheet-title pattern-insight-sheet-title pattern-insight-sheet-title--${displayBanner.sentiment}`}>
+        {patternInsightSheetOpen && displayBanner && (
+          <BottomSheet open onClose={() => setPatternInsightSheetOpen(false)} title={<><span className={`interval-sheet-title pattern-insight-sheet-title pattern-insight-sheet-title--${displayBanner.sentiment}`}>
                   {displayBanner.title}
-                </span>
-                <button type="button" className="interval-sheet-close" onClick={() => setPatternInsightSheetOpen(false)}>✕</button>
-              </div>
+                </span></>} className="pattern-insight-sheet">
               <div className="pattern-insight-sheet-meta">
                 {bannerAt !== null && (
                   <span className="pattern-insight-updated">
@@ -6688,9 +6787,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">{t("chart.aiPowered")}</span>
               </div>
               <p className="pattern-insight-sheet-body">{displayBanner.body}</p>
-            </div>
-          </>,
-          document.body,
+          </BottomSheet>
         )}
 
         {/* Free-user AI upsell: one combined banner, under the chart
@@ -7212,13 +7309,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             visible={pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen}
             persistRef={drawingsPersistRef}
             onZoneComplete={handleZoneComplete}
-            onSave={pageMode && !isDesktopWidth ? handleScreenshot : undefined}
-            // Desktop pageMode's own Reset moved next to Save in the top
-            // toolbar (.chart-tv-toolbar-right) instead of living here —
-            // mobile keeps it in this rail, unchanged.
-            onReset={pageMode && !isDesktopWidth ? handleResetView : undefined}
+            // No Save/Reset in the rail: Save is in the mobile bottom bar
+            // (desktop: top toolbar), Reset is top-right on the chart.
             fullHeightRail={pageMode && isDesktopWidth}
-            // Mobile: start below the Back / coin name / price block.
+            // Mobile: start below the coin name / price block.
             topOffset={pageMode && !isDesktopWidth ? 80 : undefined}
           />
           <button
@@ -7317,6 +7411,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && (
           <button type="button" className="chart-trade-cta" onClick={onOpenPaperTrade}>
             Trade {coin}
+            <span className="chart-trade-cta-p" aria-hidden="true">P</span>
           </button>
         )}
 
@@ -7324,16 +7419,35 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {fsDockSheet}
         {fsFlatSheet}
+        {indSheetOpen && (
+          <BottomSheet open onClose={() => setIndSheetOpen(false)} title={<>{t("chart.indicators", "Indicators")}</>} ariaLabel={t("chart.indicators", "Indicators")}>
+              <div className="interval-sheet-list">
+                <div className="cts-chips cts-chips--menu">
+                  {fsQuickIndicators.map((ind) => (
+                    <button
+                      type="button"
+                      key={ind.key}
+                      className={`cts-chip${ind.checked ? " active" : ""}`}
+                      onClick={() => { hapticTap(); ind.onToggle(); }}
+                    >
+                      <span className="cts-chip-dot" style={{ background: ind.color }} />
+                      {ind.label}
+                      {ind.pro && !isPaid && <span className="interval-sheet-item-pro">PRO</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+          </BottomSheet>
+        )}
+        {/* Advance chart (mobile): the range bar (which normally hosts this)
+            isn't rendered here, so the custom range picker mounts itself. */}
+        {fsDockFlat && goToOpen && (
+          <ChartGoTo onClose={() => setGoToOpen(false)} onGoToDate={goToDate} onGoToRange={goToRange} />
+        )}
         {intervalSheetPortal}
         {toolsSheetPortal}
-        {statsSheetOpen && ReactDOM.createPortal(
-          <>
-            <div className="interval-sheet-backdrop" onClick={() => setStatsSheetOpen(false)} />
-            <div className="interval-sheet" role="dialog" aria-label={`${coin} stats`}>
-              <div className="interval-sheet-header">
-                <span className="interval-sheet-title">{coin} stats</span>
-                <button type="button" className="interval-sheet-close" onClick={() => setStatsSheetOpen(false)}>✕</button>
-              </div>
+        {statsSheetOpen && (
+          <BottomSheet open onClose={() => setStatsSheetOpen(false)} title={<>{coin} stats</>} ariaLabel={`${coin} stats`}>
               <div className="chart-stats-sheet chart-bar-stats">
                 <div className="chart-bar-stat">
                   <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Change</span>
@@ -7359,18 +7473,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 )}
                 {headerStats}
               </div>
-            </div>
-          </>,
-          document.body,
+          </BottomSheet>
         )}
-        {dateRangeSheetOpen && ReactDOM.createPortal(
-          <>
-            <div className="interval-sheet-backdrop" onClick={() => setDateRangeSheetOpen(false)} />
-            <div className="interval-sheet" role="dialog" aria-label="Date range">
-              <div className="interval-sheet-header">
-                <span className="interval-sheet-title">Date range</span>
-                <button type="button" className="interval-sheet-close" onClick={() => setDateRangeSheetOpen(false)}>✕</button>
-              </div>
+        {dateRangeSheetOpen && (
+          <BottomSheet open onClose={() => setDateRangeSheetOpen(false)} title={<>Date range</>} ariaLabel="Date range">
               <div className="date-range-sheet-list">
                 {RANGE_PRESETS.map((x) => (
                   <button
@@ -7393,9 +7499,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="date-range-sheet-sub">Pick a date or a custom range</span>
                 </button>
               </div>
-            </div>
-          </>,
-          document.body,
+          </BottomSheet>
         )}
 
         {showDepthProfile && (

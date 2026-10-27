@@ -7353,41 +7353,36 @@ html[data-theme="light"] .chart-trade-cta {
   font-weight: 800;
   color: var(--color-text);
 }
-/* Advance chart dock: Interval as one sideways-scrolling pill strip
-   (was 11 tall rows). */
+/* Advance chart sheet: Interval as wrapping chips — same layout as the
+   Indicators chips above it, every option visible, no sideways scroll. */
 .cts-intervals {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 0 20px 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
 }
-.cts-intervals::-webkit-scrollbar { display: none; }
 .cts-interval {
   all: unset;
   box-sizing: border-box;
-  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  padding: 7px 12px;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
   color: color-mix(in srgb, var(--color-text) 75%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .cts-interval.active {
-  background: var(--action-green);
-  color: #fff;
+  border-color: var(--action-green);
+  color: var(--action-green);
+  background: color-mix(in srgb, var(--action-green) 8%, transparent);
 }
-.cts-interval.active .interval-pill-trend { color: inherit; }
 .cts-interval--locked { opacity: 0.55; }
 .cts-interval-short {
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -7455,3 +7450,229 @@ html[data-theme="light"] .chart-trade-cta {
    #070c18 = --color-background dark fullscreen). */
 html[data-theme="light"] .chart-mobile-top-reset { background: #ffffff; }
 html:not([data-theme="light"]) .chart-mobile-top-reset { background: var(--color-background, #070c18); }
+/* Plain "P" mark (no circle) before the label, in the button's text color. */
+.chart-trade-cta { gap: 6px; }
+.chart-trade-cta-p {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+/* Sheet selector row (e.g. Interval): current value + chevron on the right. */
+.cts-select-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 78px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+/* Sheet: small segmented toggles (Price scale: % / log / auto). */
+.cts-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.cts-seg-btn {
+  all: unset;
+  box-sizing: border-box;
+  min-width: 34px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cts-seg-btn.active {
+  background: var(--color-surface);
+  color: var(--action-green);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Advance chart (mobile): TradingView-style slim bottom bar — flat, same
+   background as the chart canvas (PriceChart bgColor: #fff / #070c18),
+   hairline divider, no radius/shadow/handle, no slide-in on load. */
+.fs-dock.fs-dock--flat {
+  border: none !important;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation: none !important;
+  background: #ffffff;
+}
+html:not([data-theme="light"]) .fs-dock.fs-dock--flat { background: var(--color-background, #070c18); }
+.fs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 8px 0 10px;
+  touch-action: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fs-bar-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fs-bar-btn:active { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+.fs-bar-icon svg { width: 18px; height: 18px; }
+.fs-bar-btn--on { color: var(--action-green); background: color-mix(in srgb, var(--action-green) 10%, transparent); }
+.fs-bar-status {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fs-bar-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+/* Bar contents scroll sideways (TradingView-style); ••• stays pinned. */
+.fs-bar-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 12px;
+}
+.fs-bar-scroll::-webkit-scrollbar { display: none; }
+.fs-bar-scroll > * { flex-shrink: 0; }
+.fs-bar .fs-bar-status { flex: 0 0 auto; justify-content: flex-start; padding: 0 6px; }
+.fs-bar-sep {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.fs-bar-icon { position: relative; }
+.fs-bar-count {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--action-green);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+}
+.fs-bar-more {
+  flex-shrink: 0;
+  position: relative;
+}
+/* Soft fade before the pinned ••• hints the row scrolls. */
+.fs-bar-more::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, #fff);
+}
+html:not([data-theme="light"]) .fs-bar-more::before { background: linear-gradient(90deg, transparent, var(--color-background, #070c18)); }
+/* Bottom bar indicator chips (tap to toggle). */
+.fs-bar-chip {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  margin: 0 2px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: color-mix(in srgb, var(--color-text) 75%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fs-bar-chip--on {
+  border-color: var(--action-green);
+  color: var(--action-green);
+  background: color-mix(in srgb, var(--action-green) 8%, transparent);
+}
+.fs-bar-chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+/* Bottom bar: "ƒx Indicators" tool button. */
+.fs-bar-ind { gap: 5px; font-size: 13px; font-weight: 700; }
+.fs-bar-fx { font-style: italic; font-weight: 800; font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
+.fs-bar-ind-count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--action-green);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+.cts-chips--menu { padding: 14px 16px 18px; }
+/* Bottom bar: tools spread evenly, all vertically centered. */
+.fs-bar { gap: 6px; padding: 0 10px; }
+.fs-bar-scroll { justify-content: space-between; gap: 6px; padding-right: 6px; }
+.fs-bar-btn { height: 38px; min-width: 38px; padding: 0 9px; line-height: 1; }
+.fs-bar-btn svg { display: block; }
+.fs-bar-fx {
+  display: block;
+  line-height: 1;
+  font-size: 16px;
+  transform: translateY(-1px);
+}
+.fs-bar-sep { align-self: center; margin: 0 2px; }
+/* Nine tools on one phone-width row: tighter buttons, even spread. */
+.fs-bar { gap: 2px; padding: 0 6px; }
+.fs-bar-scroll { gap: 2px; padding-right: 0; }
+.fs-bar-btn { min-width: 34px; padding: 0 7px; }
+.fs-bar-interval { padding: 0 6px; }
+.fs-bar-sep { margin: 0 1px; }
+.fs-bar-more::before { display: none; }
+/* Pull the icons either side of the divider a bit closer to it. */
+.fs-bar-sep { margin: 0 -5px; }
+/* A bit of breathing room between the divider line and the icons. */
+.fs-bar { height: 56px; padding-top: 8px; box-sizing: border-box; }
