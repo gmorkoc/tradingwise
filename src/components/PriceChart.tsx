@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -140,6 +140,8 @@ interface PriceChartProps {
   pageMode?: boolean;
   onNavigateToPage?: () => void;
   /** Mobile Tools sheet → full chart page with the drawing panel open. */
+  /** Mobile Tools sheet → the Trade page's Paper Trade view. */
+  onOpenPaperTrade?: () => void;
   onOpenDrawingTools?: () => void;
   onNavigateBack?: () => void;
   // MobileSymbolSheet.tsx — lets an external interval row (built outside
@@ -1446,81 +1448,6 @@ function makeFakeFirstLoadCandles(): CandleDataPoint[] {
   });
 }
 
-// Advance Price Chart page, mobile dock — "Option A: sliding highlight"
-// (user-approved sketch) for a single-select picker expanded inline in its
-// own quick-row button: one continuous track, no per-chip border/fill —
-// a single rounded highlight slides to sit behind whichever option is
-// active. Only fits single-select (Interval, Style); Indicators is
-// multi-select and keeps its own per-chip highlighted-dot style instead,
-// since there's no one position a single highlight could represent.
-function FsSlidingOptions({
-  options,
-}: {
-  options: Array<{ key: string; label: React.ReactNode; active: boolean; locked?: boolean; ariaLabel?: string; onClick: () => void }>;
-}) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
-  const activeKey = options.find((o) => o.active)?.key;
-
-  const measure = useCallback(() => {
-    const el = activeKey != null ? itemRefs.current[activeKey] : null;
-    const track = trackRef.current;
-    if (!el) { setHighlight(null); return; }
-    setHighlight({ left: el.offsetLeft, width: el.offsetWidth });
-    // scrollIntoView's own inline:"center" is unreliable in WKWebView —
-    // compute the centered scrollLeft by hand instead, same math.
-    if (track) {
-      track.scrollLeft = el.offsetLeft - (track.clientWidth - el.offsetWidth) / 2;
-    }
-  }, [activeKey]);
-
-  useLayoutEffect(() => {
-    measure();
-  }, [measure, options.length]);
-
-  // The track sits inside the quick-row button that's mid flex-grow
-  // transition (34px -> full width) the first time this item is the
-  // default-expanded one on page load — measuring once on mount can
-  // catch it before that animation settles, landing the highlight at a
-  // stale/incorrect position. A ResizeObserver re-measures on every
-  // frame the track's own box actually changes size, so it always
-  // converges on the correct final position once the transition ends.
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    // Re-center too, not just re-highlight — ResizeObserver only ever
-    // fires from the track's own box actually changing size (the open
-    // animation finishing, an orientation change), never from scrolling
-    // it, so this can't fight a user's own horizontal swipe.
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(track);
-    return () => ro.disconnect();
-  }, [measure]);
-
-  return (
-    <div className="fs-dock-slide-track" ref={trackRef}>
-      {highlight && (
-        <span
-          className="fs-dock-slide-highlight"
-          style={{ transform: `translateX(${highlight.left}px)`, width: highlight.width }}
-        />
-      )}
-      {options.map((opt) => (
-        <button
-          type="button"
-          key={opt.key}
-          ref={(el) => { itemRefs.current[opt.key] = el; }}
-          className={`fs-dock-slide-item${opt.active ? " fs-dock-slide-item--active" : ""}${opt.locked ? " fs-dock-slide-item--locked" : ""}`}
-          onClick={opt.onClick}
-          aria-label={opt.ariaLabel}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -1539,6 +1466,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   pageMode,
   onNavigateToPage,
   onOpenDrawingTools,
+  onOpenPaperTrade,
   onNavigateBack,
   requestInterval,
   onIntervalChange,
@@ -1956,6 +1884,79 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     return () => window.removeEventListener("pc-open-draw-panel", open);
   }, [pageMode]);
   const [fsOpenCategories, setFsOpenCategories] = useState<Record<string, boolean>>({ overview: true });
+  // Advance chart, mobile: the dock sheet shows every section at once in
+  // the Chart tools layout (section labels, rows, chips) — no accordion.
+  const fsDockFlat = !!pageMode && !isDesktopWidth;
+  const fsFlatSheetRef = useRef<HTMLDivElement>(null);
+  const fsFlatScrollRef = useRef<HTMLDivElement>(null);
+  const fsFlatDragRef = useRef<{ startY: number } | null>(null);
+  // Advance chart (mobile): iOS-style swipe from the left screen edge to go
+  // back. Page (and its docked bottom panel) follow the finger; past ~30%
+  // of the width or a quick flick it slides off and leaves the page.
+  const edgeBackRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (!(pageMode && !isDesktopWidth)) return;
+    let st: { x: number; y: number; t: number; decided: boolean; active: boolean } | null = null;
+    const els = () => [chartSectionRef.current, fsDockRef.current].filter(Boolean) as HTMLElement[];
+    const settle = (go: boolean) => {
+      els().forEach((el) => {
+        el.style.transition = "transform 0.22s ease";
+        el.style.transform = go ? `translateX(${window.innerWidth}px)` : "";
+      });
+      window.setTimeout(() => {
+        els().forEach((el) => { el.style.transition = ""; el.style.transform = ""; el.style.boxShadow = ""; });
+        if (go) edgeBackRef.current();
+      }, go ? 200 : 230);
+    };
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      if (t.clientX > 18) return;
+      // Not from the drawing rail or from inside an open sheet.
+      if ((e.target as Element | null)?.closest?.(".cdt-toolbar, .mss-backdrop, .interval-sheet")) return;
+      st = { x: t.clientX, y: t.clientY, t: Date.now(), decided: false, active: false };
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!st) return;
+      const t = e.touches[0];
+      const dx = t.clientX - st.x;
+      const dy = t.clientY - st.y;
+      if (!st.decided) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        st.decided = true;
+        st.active = dx > 0 && Math.abs(dx) > Math.abs(dy);
+        if (!st.active) { st = null; return; }
+        els().forEach((el) => { el.style.transition = "none"; el.style.boxShadow = "-12px 0 28px rgba(0,0,0,0.25)"; });
+      }
+      // Ours now — keep the chart from panning under the gesture.
+      e.preventDefault();
+      e.stopPropagation();
+      const x = Math.max(0, dx);
+      els().forEach((el) => { el.style.transform = `translateX(${x}px)`; });
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!st) return;
+      const s = st;
+      st = null;
+      if (!s.active) return;
+      const t = e.changedTouches[0];
+      const dx = t ? t.clientX - s.x : 0;
+      const v = dx / Math.max(1, Date.now() - s.t);
+      const go = dx > window.innerWidth * 0.3 || (v > 0.6 && dx > 40);
+      if (go) hapticTap();
+      settle(go);
+    };
+    document.addEventListener("touchstart", onStart, { capture: true, passive: true });
+    document.addEventListener("touchmove", onMove, { capture: true, passive: false });
+    document.addEventListener("touchend", onEnd, { capture: true });
+    document.addEventListener("touchcancel", onEnd, { capture: true });
+    return () => {
+      document.removeEventListener("touchstart", onStart, { capture: true } as EventListenerOptions);
+      document.removeEventListener("touchmove", onMove, { capture: true } as EventListenerOptions);
+      document.removeEventListener("touchend", onEnd, { capture: true } as EventListenerOptions);
+      document.removeEventListener("touchcancel", onEnd, { capture: true } as EventListenerOptions);
+    };
+  }, [pageMode, isDesktopWidth]);
   // Accordion — only one category open at a time; expanding one collapses
   // whichever other was open instead of stacking them all open at once.
   const toggleFsCategory = useCallback((key: string) => {
@@ -1984,15 +1985,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const fsDockBodyInnerRef = useRef<HTMLDivElement>(null);
   const [fsDockBodyH, setFsDockBodyH] = useState(0);
   const fsDockDragRef = useRef<{ startY: number; startH: number } | null>(null);
-  // Same dot-pagination logic/UI as the hero card's own dots, applied to
-  // the action strip below it: whichever item is expanded — Interval/
-  // Indicators/Style show their own picker INSIDE that same button
-  // (horizontally scrollable if it overflows) instead of anywhere else;
-  // Toolbox/Alerts just show as a wide pill since they have nothing to
-  // pick. -1 = nothing expanded, every item collapsed to a small dot.
-  // Index into [interval, indicators, style, toolbox, alerts], defaults
-  // to Interval expanded.
-  const [fsActionIndex, setFsActionIndex] = useState(0);
   const fsDockRef = useRef<HTMLDivElement>(null);
   // Reference-match (TradingView mobile "symbol info" sheet) — Overview/
   // Key stats/About need real fundamentals (ATH, supply, market cap,
@@ -2058,17 +2050,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       setFsSheetExpanded(false);
       setFsOpenCategories({ style: true });
       setFsFocusedCategory(null);
-      // Interval is always the default-expanded quick-row item — reset
-      // back to it (not whatever the user last had open/collapsed)
-      // every time the page is left and reopened.
-      setFsActionIndex(0);
     }
   }, [isFullscreen]);
   // Tapping anywhere outside the docked sheet collapses it back to peek,
   // same as tapping its own peek bar would — only listens while it's
   // actually expanded, so it never intercepts normal chart taps.
   useEffect(() => {
-    if (!fsSheetExpanded) return;
+    if (!fsSheetExpanded || fsDockFlat) return;
     const onPointerDown = (e: PointerEvent) => {
       if (fsDockRef.current && !fsDockRef.current.contains(e.target as Node)) {
         setFsSheetExpanded(false);
@@ -2077,7 +2065,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [fsSheetExpanded]);
+  }, [fsSheetExpanded, fsDockFlat]);
   // Lets the fullscreen-toggle effect (further down) tell a genuine
   // isFullscreen transition apart from this same effect re-firing for an
   // unrelated reason (grid/theme change) — only a real transition should
@@ -2139,6 +2127,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     cssFsRef.current = true;
     setIsFullscreen(true);
   }, [pageMode, isFullscreen, onNavigateToPage, onNavigateBack]);
+  edgeBackRef.current = toggleFullscreen;
 
   const fsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -2182,48 +2171,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Double-tap anywhere on the chart toggles fullscreen. React touch
   // props (not a one-time addEventListener on the ref) so it keeps working
   // when the wrapper element gets re-mounted. Passive: never blocks scroll.
-  // Fires on the SECOND tap's touch-down (not its lift): iOS sometimes
-  // cancels the lift instead of delivering it, which made a lift-based
-  // detector miss double-taps at random.
-  const dblTapRef = useRef({ x: 0, y: 0, moved: false, lastTapStart: 0, firedTouch: false, toggledAt: 0 });
-  const isControl = (t: EventTarget | null) =>
-    t instanceof Element && !!t.closest("button, a, input, select, label, [role='button']");
-  const onChartTouchStart = (e: React.TouchEvent) => {
-    const d = dblTapRef.current;
-    if (e.touches.length !== 1 || isControl(e.target)) { d.lastTapStart = 0; return; }
-    const now = Date.now();
-    const p0 = e.touches[0];
-    if (d.lastTapStart > 0 && now - d.lastTapStart < 500 && Math.hypot(p0.clientX - d.x, p0.clientY - d.y) < 120) {
-      d.lastTapStart = 0;
-      d.firedTouch = true;
-      d.toggledAt = now;
-      toggleFullscreen();
-      return;
-    }
-    d.x = p0.clientX;
-    d.y = p0.clientY;
-    d.moved = false;
-    d.firedTouch = false;
-    d.lastTapStart = now;
-  };
-  const onChartTouchMove = (e: React.TouchEvent) => {
-    const d = dblTapRef.current;
-    const p0 = e.touches[0];
-    // A drag/scroll, not a tap — don't let it count as the first tap.
-    if (p0 && Math.hypot(p0.clientX - d.x, p0.clientY - d.y) > 12) { d.moved = true; d.lastTapStart = 0; }
-  };
-  const onChartTouchEnd = (e: React.TouchEvent) => {
-    const d = dblTapRef.current;
-    if (d.firedTouch) {
-      d.firedTouch = false;
-      // Cancel the click synthesized from this tap — it would land on the
-      // just-opened sheet's backdrop and close it instantly.
-      if (e.cancelable) e.preventDefault();
-      return;
-    }
-    // Held too long to be a tap (long-press) — doesn't count.
-    if (d.lastTapStart > 0 && Date.now() - d.lastTapStart > 350) d.lastTapStart = 0;
-  };
 
   // Main chart refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -4765,6 +4712,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <button type="button" className="interval-sheet-close" onClick={() => setToolsSheetOpen(false)}>✕</button>
         </div>
         <div className="interval-sheet-list date-range-sheet-list">
+          {onOpenPaperTrade && (
+            <button
+              type="button"
+              className="date-range-sheet-item cts-row cts-row--paper"
+              onClick={() => { setToolsSheetOpen(false); onOpenPaperTrade(); }}
+            >
+              <span className="cts-row-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
+              </span>
+              <span className="cts-row-text">
+                <span className="date-range-sheet-label">Paper trade {coin}</span>
+                <span className="date-range-sheet-sub">Practice with $100k virtual cash, zero risk</span>
+              </span>
+              <span className="cts-row-chev">›</span>
+            </button>
+          )}
           <div className="cts-section-label">Chart style</div>
           <div className="cts-styles">
             {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
@@ -5096,6 +5059,658 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     }
   };
 
+  const fsDockInner = (
+    <div ref={fsDockBodyInnerRef} className={`fs-dock-body-inner${fsDockFlat ? " fs-dock-body-inner--flat" : ""}`}>
+
+      {(!fsFocusedCategory || fsFocusedCategory === "style") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("style"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--style">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.style", "Style")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.style ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.style) && (
+          fsDockFlat ? (
+          <div className="fs-dock-category-body">
+            <div className="cts-styles">
+              {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  className={`cts-style${chartStyle === s ? " active" : ""}`}
+                  onClick={() => { hapticTap(); setChartStyle(s); }}
+                >
+                  {CHART_STYLE_ICONS[s]}
+                  <span>{CHART_STYLE_LABELS[s]}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="date-range-sheet-item cts-row"
+              role="switch"
+              aria-checked={showGrid}
+              onClick={() => setShowGrid((v) => !v)}
+            >
+              <span className="cts-row-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
+              </span>
+              <span className="cts-row-text">
+                <span className="date-range-sheet-label">Grid</span>
+                <span className="date-range-sheet-sub">Background grid lines on the chart</span>
+              </span>
+              <span className={`cts-switch${showGrid ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
+            </button>
+          </div>
+          ) : (
+          <div className="fs-dock-category-body">
+            <button
+              type="button"
+              className={`fs-controls-row-toggle${showGrid ? " fs-controls-row-toggle--on" : ""}`}
+              onClick={() => setShowGrid((v) => !v)}
+            >
+              <span>{t("chart.grid", "Grid")}</span>
+              <span className="fs-controls-switch" />
+            </button>
+            <div className="fs-controls-style-grid">
+              {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                <button
+                  type="button"
+                  key={s}
+                  className={`fs-controls-chip${chartStyle === s ? " fs-controls-chip--active" : ""}`}
+                  onClick={() => setChartStyle(s)}
+                >
+                  <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
+                  {CHART_STYLE_LABELS[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          )
+        )}
+      </div>
+      )}
+
+      {(!fsFocusedCategory || fsFocusedCategory === "indicators") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("indicators"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--indicators">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="M7 16l4-5 3 3 5-7" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.indicators")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.indicators ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.indicators) && (
+          <div className="fs-dock-category-body">
+            {/* onChangeCapture delegates one haptic call to every
+                indicator checkbox inside indicatorsList (15+ of them)
+                without touching each one's own onChange — this is the
+                Advance Price Chart page's dock only, so it doesn't
+                affect the same indicatorsList embedded elsewhere
+                (compact view / desktop fullscreen dropdowns). */}
+            {fsDockFlat ? (
+              <div className="cts-chips">
+                {fsQuickIndicators.map((ind) => (
+                  <button
+                    type="button"
+                    key={ind.key}
+                    className={`cts-chip${ind.checked ? " active" : ""}`}
+                    onClick={() => { hapticTap(); ind.onToggle(); }}
+                  >
+                    <span className="cts-chip-dot" style={{ background: ind.color }} />
+                    {ind.label}
+                    {ind.pro && !isPaid && <span className="interval-sheet-item-pro">PRO</span>}
+                  </button>
+                ))}
+              </div>
+            ) : (
+            <div
+              className="indicators-menu indicators-menu--sheet"
+              onChangeCapture={() => { if (pageMode) hapticTap(); }}
+            >
+              {indicatorsList}
+            </div>
+            )}
+          </div>
+        )}
+      </div>
+      )}
+
+      {(!fsFocusedCategory || fsFocusedCategory === "interval") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("interval"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--interval">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3.5 2" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.interval", "Interval")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.interval ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.interval) && (
+          <div className="fs-dock-category-body">
+            {fsDockFlat && (
+              <div
+                className="cts-intervals"
+                ref={(el) => {
+                  // Keep the selected interval in view in the strip.
+                  const a = el?.querySelector<HTMLElement>(".cts-interval.active");
+                  if (el && a) el.scrollLeft = a.offsetLeft - el.clientWidth / 2 + a.offsetWidth / 2;
+                }}
+              >
+                {INTERVALS.map((opt) => {
+                  const locked = PRO_INTERVALS.has(opt) && !isPaid;
+                  const trend = trends[opt];
+                  return (
+                    <button
+                      type="button"
+                      key={opt}
+                      className={`cts-interval${interval === opt ? " active" : ""}${locked ? " cts-interval--locked" : ""}`}
+                      onClick={() => {
+                        if (locked) { onOpenUpgrade?.("pro"); return; }
+                        hapticTap();
+                        setInterval(opt);
+                      }}
+                    >
+                      <span className="cts-interval-short">
+                        {INTERVAL_SHORT[opt]}
+                        {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                          : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                          : null}
+                      </span>
+                      {locked && (
+                        <svg className="cts-interval-lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="PRO"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {!fsDockFlat && (
+            <div className="interval-sheet-list">
+              {INTERVALS.map((opt) => {
+                const needsPro = PRO_INTERVALS.has(opt);
+                const locked = needsPro && !isPaid;
+                const trend = trends[opt];
+                return (
+                  <button
+                    type="button"
+                    key={opt}
+                    className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
+                    onClick={() => {
+                      if (locked) { onOpenUpgrade?.("pro"); return; }
+                      setInterval(opt);
+                    }}
+                  >
+                    <span className="interval-sheet-item-label">
+                      <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
+                      <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
+                      {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
+                        : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
+                        : null}
+                    </span>
+                    {locked ? <span className="interval-sheet-item-pro">PRO</span>
+                      : interval === opt ? <span className="interval-sheet-item-check">✓</span>
+                      : null}
+                  </button>
+                );
+              })}
+            </div>
+            )}
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* Tools — the Chart tools sheet's action rows, right in this sheet. */}
+      {fsDockFlat && (
+      <div className="fs-dock-category">
+        <div className="fs-dock-category-header">
+          <span className="fs-dock-category-label">Tools</span>
+        </div>
+        <div className="fs-dock-category-body">
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            role="switch"
+            aria-checked={showDepthProfile}
+            onClick={() => { hapticTap(); setShowDepthProfile((v) => !v); }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="6" /><line x1="21" y1="10" x2="6" y2="10" /><line x1="15" y1="14" x2="6" y2="14" /><line x1="12" y1="18" x2="6" y2="18" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Depth profile</span>
+              <span className="date-range-sheet-sub">Order book depth beside the price axis</span>
+            </span>
+            <span className={`cts-switch${showDepthProfile ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
+          </button>
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            role="switch"
+            aria-checked={fsDrawPanelOpen}
+            onClick={() => {
+              hapticTap();
+              const next = !fsDrawPanelOpen;
+              setFsDrawPanelOpen(next);
+              // Opening: collapse the sheet so the drawing rail is usable.
+              if (next) setFsSheetExpanded(false);
+            }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Drawing tools</span>
+              <span className="date-range-sheet-sub">Trend lines, Fibonacci, zones, brush & more</span>
+            </span>
+            <span className={`cts-switch${fsDrawPanelOpen ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
+          </button>
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            onClick={() => {
+              hapticTap();
+              setFsSheetExpanded(false);
+              // PriceAlerts (App.tsx root, always mounted) owns its own
+              // open state — click its real bell button.
+              document.querySelector<HTMLButtonElement>(".alerts-bell")?.click();
+            }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Price alert</span>
+              <span className="date-range-sheet-sub">Get notified when {coin} hits a price</span>
+            </span>
+            <span className="cts-row-chev">›</span>
+          </button>
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            onClick={() => { hapticTap(); setFsSheetExpanded(false); handleScreenshot(); }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Save image</span>
+              <span className="date-range-sheet-sub">Screenshot of the current chart</span>
+            </span>
+            <span />
+          </button>
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            onClick={() => { hapticTap(); toggleFullscreen(); }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Exit fullscreen</span>
+              <span className="date-range-sheet-sub">Back to the Trade page</span>
+            </span>
+            <span />
+          </button>
+        </div>
+      </div>
+      )}
+
+      {/* Market data group: Overview / Technicals / Key stats / About /
+          Stats, under the chart controls. */}
+      {fsDockFlat && <div className="fs-dock-group-title">Market data</div>}
+
+      {/* Reference-match (TradingView mobile "symbol info" sheet) —
+          Overview/Technicals/Key stats/About, Advance Chart page only
+          (same pageMode scoping the existing Stats category below
+          already uses) — the regular compact-chart mobile fullscreen
+          doesn't grow this extra content unexpectedly. */}
+      {pageMode && (!fsFocusedCategory || fsFocusedCategory === "overview") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("overview"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--overview">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.overview", "Overview")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.overview ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.overview) && (
+          <div className="fs-dock-category-body">
+            <div className="fs-info-list">
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
+                <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
+              </div>
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
+                <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
+              </div>
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
+                <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
+              </div>
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
+                <span className="fs-info-value">{oiCoins != null && currentPrice != null ? formatCompactVolume(oiCoins * currentPrice) : "—"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      {pageMode && zone && (!fsFocusedCategory || fsFocusedCategory === "technicals") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("technicals"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--technicals">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a10 10 0 1 0 10 10" />
+              <path d="M12 12l5-5" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.technicals", "Technicals")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.technicals ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.technicals) && (() => {
+          const pct = fsTechnicalsPct[zone.signal];
+          const theta = (180 - pct * 1.8) * (Math.PI / 180);
+          const needleX = 80 + 52 * Math.cos(theta);
+          const needleY = 86 - 52 * Math.sin(theta);
+          return (
+            <div className="fs-dock-category-body">
+              <div className="fs-gauge">
+                <svg width="160" height="92" viewBox="0 0 160 92">
+                  <path d="M10,86 A70,70 0 0 1 23.4,44.8" fill="none" stroke="#ef4444" strokeWidth="14" strokeLinecap="round" />
+                  <path d="M23.4,44.8 A70,70 0 0 1 58.4,19.4" fill="none" stroke="#f97316" strokeWidth="14" />
+                  <path d="M58.4,19.4 A70,70 0 0 1 101.6,19.4" fill="none" stroke="#9ca3af" strokeWidth="14" />
+                  <path d="M101.6,19.4 A70,70 0 0 1 136.6,44.8" fill="none" stroke="#4ade80" strokeWidth="14" />
+                  <path d="M136.6,44.8 A70,70 0 0 1 150,86" fill="none" stroke="#16a34a" strokeWidth="14" strokeLinecap="round" />
+                  <line x1="80" y1="86" x2={needleX} y2={needleY} stroke="var(--color-text)" strokeWidth="2.4" strokeLinecap="round" />
+                  <circle cx="80" cy="86" r="4.5" fill="var(--color-text)" />
+                </svg>
+                <div className="fs-gauge-labels">
+                  <span>{t("chart.strongSell")}</span>
+                  <span>{t("chart.sell")}</span>
+                  <span>{t("chart.neutralZone")}</span>
+                  <span>{t("chart.buy")}</span>
+                  <span>{t("chart.strongBuy")}</span>
+                </div>
+                <div className={`fs-gauge-value fs-gauge-value--${zone.signal}`}>{fsTechnicalsLabel[zone.signal]}</div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+      )}
+
+      {pageMode && (!fsFocusedCategory || fsFocusedCategory === "keystats") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("keystats"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--keystats">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.keyStats", "Key stats")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.keystats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.keystats) && (
+          <div className="fs-dock-category-body">
+            <div className="fs-info-list">
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.tradingVolume24h", "Trading volume 24h")}</span>
+                <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
+              </div>
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.marketCap", "Market capitalization")}</span>
+                <span className="fs-info-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</span>
+              </div>
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.fdv", "Fully diluted market cap")}</span>
+                <span className="fs-info-value">{coinMeta?.fdvUSD != null ? formatCompactVolume(coinMeta.fdvUSD) : "—"}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      {pageMode && (!fsFocusedCategory || fsFocusedCategory === "about") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("about"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--about">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.about", "About")}</span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.about ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.about) && (
+          <div className="fs-dock-category-body">
+            <div className="fs-info-list">
+              <div className="fs-info-row">
+                <span className="fs-info-label">{t("chart.category", "Category")}</span>
+                <span className="fs-info-value">{coinMeta?.category ?? "—"}</span>
+              </div>
+              {([
+                ["chart.website", "Website", coinMeta?.homepage],
+                ["chart.sourceCode", "Source Code", coinMeta?.sourceCode],
+                ["chart.explorers", "Explorers", coinMeta?.explorer],
+                ["chart.whitepaper", "Whitepaper", coinMeta?.whitepaper],
+                ["chart.community", "Community", coinMeta?.subreddit],
+              ] as const).map(([key, fallback, url]) => (
+                <div className="fs-info-row" key={key}>
+                  <span className="fs-info-label">{t(key, fallback)}</span>
+                  {url ? (
+                    <a className="fs-info-link" href={url} target="_blank" rel="noopener noreferrer">
+                      {url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                    </a>
+                  ) : (
+                    <span className="fs-info-value">—</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* Advance Price Chart page only — High/Low/Vol/Bid/Ask/Vol-coin/
+          Signal/Divergence, the same content the header's expandable
+          stats strip shows elsewhere, just relocated here since the
+          header on this page is trimmed down to coin/price/change. */}
+      {pageMode && (!fsFocusedCategory || fsFocusedCategory === "stats") && (
+      <div className="fs-dock-category">
+        <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("stats"); }}>
+          <span className="fs-dock-category-icon fs-dock-category-icon--stats">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="M7 16l4-5 3 3 5-7" />
+            </svg>
+          </span>
+          <span className="fs-dock-category-label">{t("chart.stats", "Stats")}</span>
+          <span className="chart-fs-strip-item" style={{ marginLeft: 6 }}>{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
+          <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
+          <svg className={`fs-dock-category-chevron${fsOpenCategories.stats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {(fsDockFlat || fsOpenCategories.stats) && (
+          <div className="fs-dock-category-body">
+            <div className="chart-fs-stats-grid">
+              <div className="chart-fs-stat-col">
+                <div className="chart-fs-stat-row">
+                  <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
+                  <span className="chart-fs-stat-value">
+                    {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
+                  </span>
+                </div>
+                <div className="chart-fs-stat-row">
+                  <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
+                  <span className="chart-fs-stat-value chart-fs-stat-value--up">
+                    {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
+                  </span>
+                </div>
+                <div className="chart-fs-stat-row">
+                  <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
+                  <span className="chart-fs-stat-value chart-fs-stat-value--down">
+                    {askPrice !== null ? formatLivePrice(askPrice) : "—"}
+                  </span>
+                </div>
+              </div>
+              <div className="chart-fs-stat-col chart-fs-stat-col--right">
+                <div className="chart-fs-stat-row">
+                  <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
+                  <span className="chart-fs-stat-value">
+                    {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {zone && isPaid && fsSignalBucket && (
+              <div className="chart-fs-meter">
+                <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
+                <div className="chart-fs-meter-row">
+                  <span className="chart-fs-meter-track">
+                    <span
+                      className={`chart-fs-meter-dot chart-fs-meter-dot--${fsSignalBucket}`}
+                      style={{ left: `${fsSignalPct}%` }}
+                    />
+                  </span>
+                  <span className={`chart-fs-meter-value chart-fs-meter-value--${fsSignalBucket}`}>{fsSignalLabel}</span>
+                </div>
+              </div>
+            )}
+            {!isPaid && (
+              <button
+                className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
+                onClick={() => onOpenUpgrade?.("pro")}
+              >
+                <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
+                Unlock Status
+              </button>
+            )}
+            {isPaid && (
+              <div className="chart-fs-meter">
+                <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
+                <div className="chart-fs-meter-row">
+                  <span className="chart-fs-meter-track chart-fs-meter-track--rev">
+                    <span
+                      className={`chart-fs-meter-dot chart-fs-meter-dot--${fsDivDotBucket}`}
+                      style={{ left: `${fsDivPct}%` }}
+                    />
+                  </span>
+                  <span className={`chart-fs-meter-value chart-fs-meter-value--${fsDivDotBucket}`}>{fsDivLabel}</span>
+                </div>
+              </div>
+            )}
+            {!isPaid && (
+              <button
+                className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
+                onClick={() => onOpenUpgrade?.("pro")}
+              >
+                <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
+                Unlock Divergence
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      )}
+
+    </div>
+  );
+  // Advance chart (mobile): the sheet opens as a full-height sheet with the
+  // exact behavior of MobileSymbolSheet (.mss-* — dimmed backdrop, slide
+  // up, sticky header with handle + ✕, drag the header down to dismiss)
+  // instead of growing the dock in place.
+  const fsFlatSheet = fsDockFlat && fsSheetExpanded && ReactDOM.createPortal(
+    <div className="mss-backdrop fs-flat-backdrop" onClick={() => setFsSheetExpanded(false)}>
+      <div className="mss-sheet fs-flat-sheet" ref={fsFlatSheetRef} onClick={(e) => e.stopPropagation()}>
+        <div className="mss-scroll" ref={fsFlatScrollRef}>
+          <div
+            className="mss-header"
+            onTouchStart={(e) => {
+              fsFlatDragRef.current = { startY: e.touches[0].clientY };
+              const sheet = fsFlatSheetRef.current;
+              if (sheet) sheet.style.transition = "none";
+            }}
+            onTouchMove={(e) => {
+              const drag = fsFlatDragRef.current;
+              const sheet = fsFlatSheetRef.current;
+              if (!drag || !sheet) return;
+              const dy = e.touches[0].clientY - drag.startY;
+              // Only once the content is scrolled to the top — otherwise
+              // the gesture belongs to the content's own scroll.
+              if (dy > 0 && (fsFlatScrollRef.current?.scrollTop ?? 0) > 0) return;
+              sheet.style.transform = `translateY(${dy > 0 ? dy : Math.max(dy / 3, -40)}px)`;
+            }}
+            onTouchEnd={(e) => {
+              const drag = fsFlatDragRef.current;
+              fsFlatDragRef.current = null;
+              const sheet = fsFlatSheetRef.current;
+              if (!drag || !sheet) return;
+              const dy = e.changedTouches[0].clientY - drag.startY;
+              sheet.style.transition = "";
+              sheet.style.transform = "";
+              if (dy > 90) { hapticTap(); setFsSheetExpanded(false); }
+            }}
+          >
+            <span className="mss-handle" aria-hidden="true" />
+            <div className="mss-header-row">
+              <span className="fs-flat-title">{coin} chart</span>
+              <button type="button" className="mss-close" onClick={() => setFsSheetExpanded(false)} aria-label={t("chart.close", "Close")}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          {fsDockInner}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
   const fsDockSheet = isFullscreen && !isDesktopWidth && ReactDOM.createPortal(
     <div ref={fsDockRef} className={`fs-dock${fsSheetExpanded ? " fs-dock--expanded" : ""}`}>
       <div className="fs-dock-peek">
@@ -5109,12 +5724,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }}
           onTouchStart={(e) => {
             fsDockDragRef.current = { startY: e.touches[0].clientY, startH: fsSheetExpanded ? fsDockBodyH : 0 };
+            if (fsDockFlat && fsDockRef.current) fsDockRef.current.style.transition = "none";
             const body = fsDockBodyRef.current;
             // No transition while actively dragging — it has to follow
             // the finger with zero lag, not ease toward it.
             if (body) body.style.transition = "none";
           }}
           onTouchMove={(e) => {
+            if (fsDockFlat) {
+              // The dock follows the finger upward as a small rubber-band
+              // stretch toward opening the sheet.
+              const drag = fsDockDragRef.current;
+              const dock = fsDockRef.current;
+              if (!drag || !dock) return;
+              const dy = e.touches[0].clientY - drag.startY;
+              const y = dy > 0 ? 0 : Math.max(dy / 3, -40);
+              dock.style.transform = `translateY(${y}px)`;
+              return;
+            }
             const drag = fsDockDragRef.current;
             const body = fsDockBodyRef.current;
             if (!drag || !body || fsDockBodyH <= 0) return;
@@ -5128,6 +5755,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           onTouchEnd={(e) => {
             const drag = fsDockDragRef.current;
             fsDockDragRef.current = null;
+            if (fsDockFlat) {
+              // Swipe up on the handle opens the sheet (a tap is onClick).
+              const dock = fsDockRef.current;
+              if (dock) { dock.style.transition = ""; dock.style.transform = ""; }
+              const dy = drag ? e.changedTouches[0].clientY - drag.startY : 0;
+              if (dy < -20) { hapticTap(); setFsSheetExpanded(true); }
+              return;
+            }
             const body = fsDockBodyRef.current;
             if (body) body.style.transition = "";
             if (!drag || !body) return;
@@ -5141,6 +5776,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             if (pageMode) hapticTap();
             setFsFocusedCategory(null);
             setFsSheetExpanded(settled > 0.35);
+          }}
+          onTouchCancel={(e) => {
+            // iOS can cancel instead of ending a swipe — settle it the same way.
+            if (!fsDockFlat) return;
+            const drag = fsDockDragRef.current;
+            fsDockDragRef.current = null;
+            const dock = fsDockRef.current;
+            if (dock) { dock.style.transition = ""; dock.style.transform = ""; }
+            const t0 = e.changedTouches[0];
+            const dy = drag && t0 ? t0.clientY - drag.startY : 0;
+            if (dy < -20) { hapticTap(); setFsSheetExpanded(true); }
           }}
         >
           <span className="fs-dock-handle" />
@@ -5189,628 +5835,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
           </div>
         )}
-        {/* Slim fixed action strip — Interval/Indicators/Style expand
-            INSIDE their own button when tapped (horizontally scrollable
-            if the options overflow), instead of showing anywhere else;
-            Toolbox/Alerts stay direct actions with nothing to pick. */}
-        {pageMode && !isDesktopWidth && (
-          <div className={`fs-dock-quick-row${fsActionIndex !== -1 ? " fs-dock-quick-row--expanded" : ""}`}>
-            {fsActionIndex === 0 ? (
-              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
-                <button
-                  type="button"
-                  className="fs-dock-quick-collapse"
-                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
-                  aria-label={t("chart.interval", "Interval")}
-                  title={t("chart.interval", "Interval")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3.5 2" />
-                  </svg>
-                </button>
-                <FsSlidingOptions
-                  options={INTERVALS.map((opt) => {
-                    const needsPro = PRO_INTERVALS.has(opt);
-                    const locked = needsPro && !isPaid;
-                    const trend = trends[opt];
-                    return {
-                      key: opt,
-                      active: interval === opt,
-                      locked,
-                      ariaLabel: `${INTERVAL_SHORT[opt]}, ${INTERVAL_DESC[opt]}`,
-                      onClick: () => {
-                        hapticTap();
-                        if (locked) { onOpenUpgrade?.("pro"); return; }
-                        setInterval(opt);
-                      },
-                      label: (
-                        <>
-                          <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
-                          <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
-                          {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                            : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                            : null}
-                          {locked && <span className="interval-sheet-item-pro">PRO</span>}
-                        </>
-                      ),
-                    };
-                  })}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="fs-dock-quick-btn"
-                onClick={() => { setFsActionIndex(0); hapticTap(); }}
-                aria-label={t("chart.interval", "Interval")}
-                title={t("chart.interval", "Interval")}
-              >
-                <span className="fs-dock-quick-icon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3.5 2" />
-                  </svg>
-                </span>
-                <span className="fs-dock-quick-label">{INTERVAL_SHORT[interval]}</span>
-              </button>
-            )}
-            {fsActionIndex === 1 ? (
-              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
-                <button
-                  type="button"
-                  className="fs-dock-quick-collapse"
-                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
-                  aria-label={t("chart.indicators")}
-                  title={t("chart.indicators")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 3v18h18" />
-                    <path d="M7 16l4-5 3 3 5-7" />
-                  </svg>
-                </button>
-                <div className="fs-dock-quick-options">
-                  {fsQuickIndicators.map((ind) => (
-                    <button
-                      type="button"
-                      key={ind.key}
-                      className={`fs-dock-quick-option${ind.checked ? " fs-dock-quick-option--active" : ""}`}
-                      onClick={() => { hapticTap(); ind.onToggle(); }}
-                    >
-                      <span className="fs-dock-quick-option-dot" style={{ background: ind.color }} />
-                      {ind.label}
-                      {ind.pro && !isPaid && <span className="tier-badge tier-badge--pro">P</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="fs-dock-quick-btn"
-                onClick={() => { setFsActionIndex(1); hapticTap(); }}
-                aria-label={t("chart.indicators")}
-                title={t("chart.indicators")}
-              >
-                <span className="fs-dock-quick-icon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 3v18h18" />
-                    <path d="M7 16l4-5 3 3 5-7" />
-                  </svg>
-                </span>
-                <span className="fs-dock-quick-label">
-                  {[showBB, showRSI, showMACD, showEMA20, showEMA50, showEMA200, showMA20, showMA50, showMA200, showFib, showSR].filter(Boolean).length || t("chart.indicators")}
-                </span>
-              </button>
-            )}
-            {fsActionIndex === 2 ? (
-              <div className="fs-dock-quick-btn fs-dock-quick-btn--active fs-dock-quick-btn--picker">
-                <button
-                  type="button"
-                  className="fs-dock-quick-collapse"
-                  onClick={() => { hapticTap(); setFsActionIndex(-1); }}
-                  aria-label={t("chart.style", "Style")}
-                  title={t("chart.style", "Style")}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
-                  </svg>
-                </button>
-                <FsSlidingOptions
-                  options={(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => ({
-                    key: s,
-                    active: chartStyle === s,
-                    ariaLabel: CHART_STYLE_LABELS[s],
-                    onClick: () => { hapticTap(); setChartStyle(s); },
-                    label: (
-                      <>
-                        <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
-                        {CHART_STYLE_LABELS[s]}
-                      </>
-                    ),
-                  }))}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="fs-dock-quick-btn"
-                onClick={() => { setFsActionIndex(2); hapticTap(); }}
-                aria-label={t("chart.style", "Style")}
-                title={t("chart.style", "Style")}
-              >
-                <span className="fs-dock-quick-icon">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
-                  </svg>
-                </span>
-                <span className="fs-dock-quick-label">{CHART_STYLE_LABELS[chartStyle]}</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className={`fs-dock-quick-btn${fsActionIndex === 3 ? " fs-dock-quick-btn--active" : fsDrawPanelOpen ? " fs-dock-quick-btn--on" : ""}`}
-              onClick={() => { setFsActionIndex(3); hapticTap(); setFsDrawPanelOpen((v) => !v); }}
-              aria-label={t("chart.toolbox", "Toolbox")}
-              title={t("chart.toolbox", "Toolbox")}
-            >
-              <span className="fs-dock-quick-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                  <path d="M2 2l7.586 7.586" />
-                  <circle cx="11" cy="11" r="2" />
-                </svg>
-              </span>
-              <span className="fs-dock-quick-label">{t("chart.toolbox", "Toolbox")}</span>
-            </button>
-            <button
-              type="button"
-              className={`fs-dock-quick-btn${fsActionIndex === 4 ? " fs-dock-quick-btn--active" : ""}`}
-              onClick={() => {
-                setFsActionIndex(4);
-                hapticTap();
-                // PriceAlerts (App.tsx root, always mounted) owns its own
-                // open state internally too — same click-through reuse as
-                // the desktop toolbar's own Alert button, via its real
-                // bell button (.alerts-bell) instead of a new prop here.
-                document.querySelector<HTMLButtonElement>(".alerts-bell")?.click();
-              }}
-              aria-label={t("priceAlerts.title", "Alert")}
-              title={t("priceAlerts.title", "Alert")}
-            >
-              <span className="fs-dock-quick-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23" />
-                  <path d="M17 5.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-              </span>
-              <span className="fs-dock-quick-label">{t("priceAlerts.title", "Alert")}</span>
-            </button>
-          </div>
-        )}
       </div>
 
+      {!fsDockFlat && (
       <div
         ref={fsDockBodyRef}
         className="fs-dock-body"
         style={{ maxHeight: fsSheetExpanded ? fsDockBodyH : 0 }}
       >
-        <div ref={fsDockBodyInnerRef} className="fs-dock-body-inner">
-
-          {/* Reference-match (TradingView mobile "symbol info" sheet) —
-              Overview/Technicals/Key stats/About, Advance Chart page only
-              (same pageMode scoping the existing Stats category below
-              already uses) — the regular compact-chart mobile fullscreen
-              doesn't grow this extra content unexpectedly. */}
-          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "overview") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("overview")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--overview">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="16" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.overview", "Overview")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.overview ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.overview && (
-              <div className="fs-dock-category-body">
-                <div className="fs-info-list">
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.allTimeHigh", "All time high")}</span>
-                    <span className="fs-info-value">{coinMeta?.athUSD != null ? formatLivePrice(coinMeta.athUSD) : "—"}</span>
-                  </div>
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.circulatingSupply", "Circulating supply")}</span>
-                    <span className="fs-info-value">{coinMeta?.circulatingSupply != null ? `${formatCompactNumber(coinMeta.circulatingSupply)} ${coin}` : "—"}</span>
-                  </div>
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.totalSupply", "Total supply")}</span>
-                    <span className="fs-info-value">{coinMeta?.totalSupply != null ? `${formatCompactNumber(coinMeta.totalSupply)} ${coin}` : "—"}</span>
-                  </div>
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.openInterest", "Open interest")}</span>
-                    <span className="fs-info-value">{oiCoins != null && currentPrice != null ? formatCompactVolume(oiCoins * currentPrice) : "—"}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {pageMode && zone && (!fsFocusedCategory || fsFocusedCategory === "technicals") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("technicals")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--technicals">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2a10 10 0 1 0 10 10" />
-                  <path d="M12 12l5-5" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.technicals", "Technicals")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.technicals ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.technicals && (() => {
-              const pct = fsTechnicalsPct[zone.signal];
-              const theta = (180 - pct * 1.8) * (Math.PI / 180);
-              const needleX = 80 + 52 * Math.cos(theta);
-              const needleY = 86 - 52 * Math.sin(theta);
-              return (
-                <div className="fs-dock-category-body">
-                  <div className="fs-gauge">
-                    <svg width="160" height="92" viewBox="0 0 160 92">
-                      <path d="M10,86 A70,70 0 0 1 23.4,44.8" fill="none" stroke="#ef4444" strokeWidth="14" strokeLinecap="round" />
-                      <path d="M23.4,44.8 A70,70 0 0 1 58.4,19.4" fill="none" stroke="#f97316" strokeWidth="14" />
-                      <path d="M58.4,19.4 A70,70 0 0 1 101.6,19.4" fill="none" stroke="#9ca3af" strokeWidth="14" />
-                      <path d="M101.6,19.4 A70,70 0 0 1 136.6,44.8" fill="none" stroke="#4ade80" strokeWidth="14" />
-                      <path d="M136.6,44.8 A70,70 0 0 1 150,86" fill="none" stroke="#16a34a" strokeWidth="14" strokeLinecap="round" />
-                      <line x1="80" y1="86" x2={needleX} y2={needleY} stroke="var(--color-text)" strokeWidth="2.4" strokeLinecap="round" />
-                      <circle cx="80" cy="86" r="4.5" fill="var(--color-text)" />
-                    </svg>
-                    <div className="fs-gauge-labels">
-                      <span>{t("chart.strongSell")}</span>
-                      <span>{t("chart.sell")}</span>
-                      <span>{t("chart.neutralZone")}</span>
-                      <span>{t("chart.buy")}</span>
-                      <span>{t("chart.strongBuy")}</span>
-                    </div>
-                    <div className={`fs-gauge-value fs-gauge-value--${zone.signal}`}>{fsTechnicalsLabel[zone.signal]}</div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-          )}
-
-          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "keystats") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("keystats")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--keystats">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.keyStats", "Key stats")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.keystats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.keystats && (
-              <div className="fs-dock-category-body">
-                <div className="fs-info-list">
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.tradingVolume24h", "Trading volume 24h")}</span>
-                    <span className="fs-info-value">{quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}</span>
-                  </div>
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.marketCap", "Market capitalization")}</span>
-                    <span className="fs-info-value">{coinMeta?.marketCapUSD != null ? formatCompactVolume(coinMeta.marketCapUSD) : "—"}</span>
-                  </div>
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.fdv", "Fully diluted market cap")}</span>
-                    <span className="fs-info-value">{coinMeta?.fdvUSD != null ? formatCompactVolume(coinMeta.fdvUSD) : "—"}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "about") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("about")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--about">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.about", "About")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.about ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.about && (
-              <div className="fs-dock-category-body">
-                <div className="fs-info-list">
-                  <div className="fs-info-row">
-                    <span className="fs-info-label">{t("chart.category", "Category")}</span>
-                    <span className="fs-info-value">{coinMeta?.category ?? "—"}</span>
-                  </div>
-                  {([
-                    ["chart.website", "Website", coinMeta?.homepage],
-                    ["chart.sourceCode", "Source Code", coinMeta?.sourceCode],
-                    ["chart.explorers", "Explorers", coinMeta?.explorer],
-                    ["chart.whitepaper", "Whitepaper", coinMeta?.whitepaper],
-                    ["chart.community", "Community", coinMeta?.subreddit],
-                  ] as const).map(([key, fallback, url]) => (
-                    <div className="fs-info-row" key={key}>
-                      <span className="fs-info-label">{t(key, fallback)}</span>
-                      {url ? (
-                        <a className="fs-info-link" href={url} target="_blank" rel="noopener noreferrer">
-                          {url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
-                        </a>
-                      ) : (
-                        <span className="fs-info-value">—</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {(!fsFocusedCategory || fsFocusedCategory === "style") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("style")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--style">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                  <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                  <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                  <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-4.4-4-8.9-10-8.9z" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.style", "Style")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.style ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.style && (
-              <div className="fs-dock-category-body">
-                <button
-                  type="button"
-                  className={`fs-controls-row-toggle${showGrid ? " fs-controls-row-toggle--on" : ""}`}
-                  onClick={() => setShowGrid((v) => !v)}
-                >
-                  <span>{t("chart.grid", "Grid")}</span>
-                  <span className="fs-controls-switch" />
-                </button>
-                <div className="fs-controls-style-grid">
-                  {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
-                    <button
-                      type="button"
-                      key={s}
-                      className={`fs-controls-chip${chartStyle === s ? " fs-controls-chip--active" : ""}`}
-                      onClick={() => setChartStyle(s)}
-                    >
-                      <span className="fs-controls-chip-icon">{CHART_STYLE_ICONS[s]}</span>
-                      {CHART_STYLE_LABELS[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {(!fsFocusedCategory || fsFocusedCategory === "indicators") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("indicators")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--indicators">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 3v18h18" />
-                  <path d="M7 16l4-5 3 3 5-7" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.indicators")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.indicators ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.indicators && (
-              <div className="fs-dock-category-body">
-                {/* onChangeCapture delegates one haptic call to every
-                    indicator checkbox inside indicatorsList (15+ of them)
-                    without touching each one's own onChange — this is the
-                    Advance Price Chart page's dock only, so it doesn't
-                    affect the same indicatorsList embedded elsewhere
-                    (compact view / desktop fullscreen dropdowns). */}
-                <div
-                  className="indicators-menu indicators-menu--sheet"
-                  onChangeCapture={() => { if (pageMode) hapticTap(); }}
-                >
-                  {indicatorsList}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {(!fsFocusedCategory || fsFocusedCategory === "interval") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("interval")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--interval">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3.5 2" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.interval", "Interval")}</span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.interval ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.interval && (
-              <div className="fs-dock-category-body">
-                <div className="interval-sheet-list">
-                  {INTERVALS.map((opt) => {
-                    const needsPro = PRO_INTERVALS.has(opt);
-                    const locked = needsPro && !isPaid;
-                    const trend = trends[opt];
-                    return (
-                      <button
-                        type="button"
-                        key={opt}
-                        className={`interval-sheet-item${interval === opt ? " interval-sheet-item--active" : ""}${locked ? " interval-sheet-item--locked" : ""}`}
-                        onClick={() => {
-                          if (locked) { onOpenUpgrade?.("pro"); return; }
-                          setInterval(opt);
-                        }}
-                      >
-                        <span className="interval-sheet-item-label">
-                          <b className="interval-menu-short">{INTERVAL_SHORT[opt]}</b>
-                          <span className="interval-menu-desc">{INTERVAL_DESC[opt]}</span>
-                          {trend === "bullish" ? <span className="interval-pill-trend interval-pill-trend--up">↑</span>
-                            : trend === "bearish" ? <span className="interval-pill-trend interval-pill-trend--down">↓</span>
-                            : null}
-                        </span>
-                        {locked ? <span className="interval-sheet-item-pro">PRO</span>
-                          : interval === opt ? <span className="interval-sheet-item-check">✓</span>
-                          : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* Advance Price Chart page only — High/Low/Vol/Bid/Ask/Vol-coin/
-              Signal/Divergence, the same content the header's expandable
-              stats strip shows elsewhere, just relocated here since the
-              header on this page is trimmed down to coin/price/change. */}
-          {pageMode && (!fsFocusedCategory || fsFocusedCategory === "stats") && (
-          <div className="fs-dock-category">
-            <button type="button" className="fs-dock-category-header" onClick={() => toggleFsCategory("stats")}>
-              <span className="fs-dock-category-icon fs-dock-category-icon--stats">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 3v18h18" />
-                  <path d="M7 16l4-5 3 3 5-7" />
-                </svg>
-              </span>
-              <span className="fs-dock-category-label">{t("chart.stats", "Stats")}</span>
-              <span className="chart-fs-strip-item" style={{ marginLeft: 6 }}>{t("chart.high", "High")} <b className="chart-fs-strip-up">{dayHigh !== null ? formatLivePrice(dayHigh) : "—"}</b></span>
-              <span className="chart-fs-strip-item">{t("chart.low", "Low")} <b className="chart-fs-strip-down">{dayLow !== null ? formatLivePrice(dayLow) : "—"}</b></span>
-              <svg className={`fs-dock-category-chevron${fsOpenCategories.stats ? " fs-dock-category-chevron--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-            {fsOpenCategories.stats && (
-              <div className="fs-dock-category-body">
-                <div className="chart-fs-stats-grid">
-                  <div className="chart-fs-stat-col">
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.volUsd", "Vol (USD)")}</span>
-                      <span className="chart-fs-stat-value">
-                        {quoteVolume24h !== undefined ? formatCompactVolume(quoteVolume24h) : "—"}
-                      </span>
-                    </div>
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.bid", "Bid")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--up">
-                        {bidPrice !== null ? formatLivePrice(bidPrice) : "—"}
-                      </span>
-                    </div>
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.ask", "Ask")}</span>
-                      <span className="chart-fs-stat-value chart-fs-stat-value--down">
-                        {askPrice !== null ? formatLivePrice(askPrice) : "—"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="chart-fs-stat-col chart-fs-stat-col--right">
-                    <div className="chart-fs-stat-row">
-                      <span className="chart-fs-stat-label">{t("chart.volCoin", "Vol ({{coin}})", { coin })}</span>
-                      <span className="chart-fs-stat-value">
-                        {baseVolume24h !== null ? formatCompactVolume(baseVolume24h) : "—"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {zone && isPaid && fsSignalBucket && (
-                  <div className="chart-fs-meter">
-                    <span className="chart-fs-meter-label">{t("chart.signal", "Signal")}</span>
-                    <div className="chart-fs-meter-row">
-                      <span className="chart-fs-meter-track">
-                        <span
-                          className={`chart-fs-meter-dot chart-fs-meter-dot--${fsSignalBucket}`}
-                          style={{ left: `${fsSignalPct}%` }}
-                        />
-                      </span>
-                      <span className={`chart-fs-meter-value chart-fs-meter-value--${fsSignalBucket}`}>{fsSignalLabel}</span>
-                    </div>
-                  </div>
-                )}
-                {!isPaid && (
-                  <button
-                    className={`zone-signal-gate zone-signal-gate--${zone?.signal ?? "neutral"}`}
-                    onClick={() => onOpenUpgrade?.("pro")}
-                  >
-                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-${zone?.signal ?? "neutral"}`} />
-                    Unlock Status
-                  </button>
-                )}
-                {isPaid && (
-                  <div className="chart-fs-meter">
-                    <span className="chart-fs-meter-label">{t("chart.divergence", "Div")}</span>
-                    <div className="chart-fs-meter-row">
-                      <span className="chart-fs-meter-track chart-fs-meter-track--rev">
-                        <span
-                          className={`chart-fs-meter-dot chart-fs-meter-dot--${fsDivDotBucket}`}
-                          style={{ left: `${fsDivPct}%` }}
-                        />
-                      </span>
-                      <span className={`chart-fs-meter-value chart-fs-meter-value--${fsDivDotBucket}`}>{fsDivLabel}</span>
-                    </div>
-                  </div>
-                )}
-                {!isPaid && (
-                  <button
-                    className={`zone-signal-gate zone-signal-gate--div-${divergence?.type ?? "neutral"}`}
-                    onClick={() => onOpenUpgrade?.("pro")}
-                  >
-                    <span className={`zone-signal-live zone-signal-live--gate zone-signal-live--gate-div-${divergence?.type ?? "neutral"}`} />
-                    Unlock Divergence
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          )}
-
-        </div>
+        {fsDockInner}
       </div>
+      )}
     </div>,
     document.body,
   );
@@ -6154,13 +6189,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <span className="chart-bar-toolbar-spacer" />
               {isDesktopWidth ? heroIconRow : showToolsButton}
               {!isDesktopWidth && (
-                <span className="chart-tool-pinned chart-tool-pinned--save">
-                  <button type="button" className="chart-depth-btn" onClick={handleScreenshot} title={t("chart.save")}>
+                <span className="chart-tool-pinned">
+                  {/* Fullscreen (icon only); Save image lives in Show Tools. */}
+                  <button
+                    type="button"
+                    className="chart-depth-btn"
+                    onClick={toggleFullscreen}
+                    title={t("chart.fullscreen", "Fullscreen")}
+                    aria-label={t("chart.fullscreen", "Fullscreen")}
+                  >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
                     </svg>
-                    <span className="chart-tool-label">Save</span>
                   </button>
                 </span>
               )}
@@ -6666,15 +6706,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 { position: "relative", flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column" }
               : { position: "relative" }
           }
-          // Double-tap (touch) or double-click (mouse) toggles fullscreen.
-          onTouchStart={onChartTouchStart}
-          onTouchMove={onChartTouchMove}
-          onTouchEnd={onChartTouchEnd}
-          onDoubleClick={() => {
-            // Mouse only — a touch double-tap was already handled above.
-            if (Date.now() - dblTapRef.current.toggledAt < 800) return;
-            toggleFullscreen();
-          }}
+          // Double-click toggles fullscreen.
+          // Desktop (mouse) only — no double-tap gesture on mobile.
+          onDoubleClick={isDesktopWidth ? toggleFullscreen : undefined}
           className={`chart-dblclick-wrap${
             Capacitor.isNativePlatform() && !isFullscreen ? " chart-dblclick-wrap--no-hint" : ""
           }${
@@ -7125,14 +7159,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           {pageMode && !isDesktopWidth && (
             <button
               type="button"
-              className="chart-mobile-top-close"
-              onClick={() => { hapticTap(); toggleFullscreen(); }}
-              aria-label={t("chart.close", "Close")}
-              title={t("chart.close", "Close")}
+              className="chart-mobile-top-btn chart-mobile-top-reset"
+              onClick={() => { hapticTap(); handleResetView(); }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12" />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                <path d="M3 3v5h5" />
               </svg>
+              {t("chart.reset", "Reset")}
             </button>
           )}
           <PredictionOverlay
@@ -7184,6 +7218,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             // mobile keeps it in this rail, unchanged.
             onReset={pageMode && !isDesktopWidth ? handleResetView : undefined}
             fullHeightRail={pageMode && isDesktopWidth}
+            // Mobile: start below the Back / coin name / price block.
+            topOffset={pageMode && !isDesktopWidth ? 80 : undefined}
           />
           <button
             className="chart-reset-view-btn chart-save-view-btn"
@@ -7277,9 +7313,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         )}
 
+        {/* Mobile: big "Trade BTC" button right under the chart → Paper Trade. */}
+        {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && (
+          <button type="button" className="chart-trade-cta" onClick={onOpenPaperTrade}>
+            Trade {coin}
+          </button>
+        )}
+
         <div ref={eventCardsSlotRef} />
 
         {fsDockSheet}
+        {fsFlatSheet}
         {intervalSheetPortal}
         {toolsSheetPortal}
         {statsSheetOpen && ReactDOM.createPortal(

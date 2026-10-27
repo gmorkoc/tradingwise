@@ -490,3 +490,7 @@ span.push-toast-disclaimer--compact {
   flex-shrink: 0;
   color: var(--signal-accent);
 }
+
+/* Swipe-to-dismiss (PushToast.tsx swipeHandlers): the card owns its
+   drags so iOS doesn't start a page scroll and cancel the touch. */
+.push-toast { touch-action: none; }

@@ -2496,11 +2496,10 @@ html[data-theme="light"] .chart-active
    rule above) — "tap" since that's the actual gesture. Same pill box as
    desktop, just dimmer (0.7 vs the full 1) since it sits over live
    candles the whole time rather than flashing in briefly on hover. */
-@media (hover: none) {
-  .chart-dblclick-wrap::after {
-    content: "⛶  Double-tap for fullscreen";
-    opacity: 0.7;
-  }
+/* No double-tap gesture on mobile (touch screens / mobile widths), so no
+   hint either — desktop keeps double-click + its hover hint. */
+@media (hover: none), (max-width: 640px) {
+  .chart-dblclick-wrap::after { display: none; }
 }
 
 .day-hl-badge {
@@ -6651,6 +6650,14 @@ html:not([data-theme="light"]) .ai-read-chip--bearish { color: #fb7185; }
 .chart-bar-stats .mch-stats {
   display: contents;
 }
+/* With .mch-body flattened (display:contents) there's no card for its
+   mobile frosted-glass blobs (::before/::after, 150px, offset -50px) to
+   sit behind — they'd anchor to the next positioned ancestor instead and
+   poke 50px past .price-chart-container, giving it horizontal scroll. */
+.chart-bar-stats .mch-body::before,
+.chart-bar-stats .mch-body::after {
+  content: none;
+}
 .chart-bar-stats .mch-stat-signal {
   grid-column: 2;
   grid-row: 2;
@@ -7198,3 +7205,253 @@ html:not([data-theme="light"]) .chart-bar-more {
   line-height: 1;
   color: var(--color-text-muted);
 }
+/* Tools sheet: Paper trade row first, green-tinted so it stands out. */
+.date-range-sheet-item.cts-row--paper { border-top: none; }
+.cts-row--paper .cts-row-icon {
+  background: color-mix(in srgb, var(--action-green, #16a34a) 12%, transparent);
+  color: var(--action-green, #16a34a);
+}
+.cts-row--paper .date-range-sheet-label { color: var(--action-green, #16a34a); }
+
+/* Mobile: "Trade BTC" button under the chart (opens Paper Trade). */
+.chart-trade-cta {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  margin: 10px 0 4px;
+  border-radius: 10px;
+  background: #00ffa3;
+  color: #0b0e14;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.chart-trade-cta:active { transform: scale(0.98); filter: brightness(0.94); }
+/* Light theme: the app's own action green (white text) — the bright
+   #00ffa3 washes out on white. */
+html[data-theme="light"] .chart-trade-cta {
+  background: var(--action-green);
+  color: #fff;
+}
+/* Tools sheet: indicator chips (multi-select). */
+.cts-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 14px;
+}
+.cts-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cts-chip.active {
+  border-color: var(--action-green);
+  color: var(--action-green);
+  background: color-mix(in srgb, var(--action-green) 8%, transparent);
+}
+.cts-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cts-chip .interval-sheet-item-pro { margin-left: 2px; }
+
+/* Advance chart (mobile) dock sheet — Chart tools layout: every section
+   open, plain uppercase section labels instead of accordion headers, and
+   label/value rows with thin dividers. */
+.fs-dock-body-inner--flat .fs-dock-category {
+  border: none !important;
+  background: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+.fs-dock-body-inner--flat .fs-dock-category + .fs-dock-category {
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent) !important;
+}
+.fs-dock-body-inner--flat .fs-dock-category-header {
+  cursor: default;
+  padding: 14px 20px 8px !important;
+  min-height: 0 !important;
+  gap: 8px;
+  background: none !important;
+}
+.fs-dock-body-inner--flat .fs-dock-category-icon,
+.fs-dock-body-inner--flat .fs-dock-category-chevron { display: none !important; }
+.fs-dock-body-inner--flat .fs-dock-category-label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted) !important;
+}
+.fs-dock-body-inner--flat .fs-dock-category-header .chart-fs-strip-item { margin-left: auto !important; font-size: 11px; }
+.fs-dock-body-inner--flat .fs-dock-category-header .chart-fs-strip-item + .chart-fs-strip-item { margin-left: 10px !important; }
+.fs-dock-body-inner--flat .fs-dock-category-body {
+  padding: 0 0 6px !important;
+  animation: none !important;
+}
+.fs-dock-body-inner--flat .fs-info-list { padding: 0; gap: 0; }
+.fs-dock-body-inner--flat .fs-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px !important;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.fs-dock-body-inner--flat .fs-info-row:first-child { border-top: none; }
+.fs-dock-body-inner--flat .fs-info-label { font-size: 14px; color: var(--color-text); font-weight: 500; }
+.fs-dock-body-inner--flat .fs-info-value,
+.fs-dock-body-inner--flat .fs-info-link { font-size: 14px; font-weight: 700; }
+.fs-dock-body-inner--flat .chart-fs-meter,
+.fs-dock-body-inner--flat .fs-gauge { margin-left: 20px; margin-right: 20px; }
+.fs-dock-body-inner--flat .zone-signal-gate { margin-left: 20px; }
+/* Stats: same label/value rows as the other sections. */
+.fs-dock-body-inner--flat .chart-fs-stats-grid {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.fs-dock-body-inner--flat .chart-fs-stat-col { display: block !important; width: auto !important; }
+.fs-dock-body-inner--flat .chart-fs-stat-row {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between !important;
+  gap: 12px;
+  padding: 12px 20px !important;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.fs-dock-body-inner--flat .chart-fs-stat-col:first-child .chart-fs-stat-row:first-child { border-top: none; }
+.fs-dock-body-inner--flat .chart-fs-stat-label { font-size: 14px !important; font-weight: 500 !important; color: var(--color-text) !important; }
+.fs-dock-body-inner--flat .chart-fs-stat-value { font-size: 14px !important; font-weight: 700 !important; }
+.fs-dock-body-inner--flat .date-range-sheet-list { padding: 0; }
+/* Advance chart dock: "Market data" group heading (bigger than the
+   uppercase section labels under it). */
+.fs-dock-group-title {
+  padding: 22px 20px 4px;
+  margin-top: 8px;
+  border-top: 6px solid color-mix(in srgb, var(--color-text) 5%, transparent);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+/* Advance chart dock: Interval as one sideways-scrolling pill strip
+   (was 11 tall rows). */
+.cts-intervals {
+  display: flex;
+  gap: 6px;
+  padding: 0 20px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cts-intervals::-webkit-scrollbar { display: none; }
+.cts-interval {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: color-mix(in srgb, var(--color-text) 75%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cts-interval.active {
+  background: var(--action-green);
+  color: #fff;
+}
+.cts-interval.active .interval-pill-trend { color: inherit; }
+.cts-interval--locked { opacity: 0.55; }
+.cts-interval-short {
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.cts-interval-lock { flex-shrink: 0; }
+
+/* Advance chart (mobile): full-height sheet with MobileSymbolSheet's own
+   behavior (.mss-*). Above the chart page and its dock; header sticks to
+   the top of the scroll instead of .mss-header's absolute placement. */
+.fs-flat-backdrop { z-index: 200015; }
+.fs-flat-sheet { max-height: 88vh; }
+.fs-flat-sheet .mss-header {
+  position: sticky;
+  top: 0;
+  margin-top: -4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.fs-flat-sheet .mss-header-row { min-height: 32px; }
+.fs-flat-sheet .mss-close { top: 14px; }
+.fs-flat-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+/* Bigger touch target for the handle so the swipe is easy to catch. */
+.fs-dock-peek-toggle { min-height: 22px; padding: 6px 0 !important; margin: -6px 0 !important; }
+/* The handle owns vertical swipes — otherwise iOS starts a page scroll
+   and cancels the touch before the drag can be read. */
+.fs-dock-peek-toggle { touch-action: none; }
+.fs-dock { transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Advance chart (mobile): "‹ Back" before the coin name, "↻ Reset" where
+   the ✕ was — plain text buttons (no background), theme text color. */
+.chart-mobile-top-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.chart-mobile-top-btn:active { opacity: 0.6; }
+.chart-mobile-top-reset {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  z-index: 50;
+  gap: 5px;
+}
+/* Sits over the price axis: backed with the chart's own background so
+   the axis label under it doesn't show through (reads as no background). */
+.chart-mobile-top-reset {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--pc-bg, var(--color-surface));
+}
+/* Exact chart canvas paint on this page (PriceChart bgColor: #fff light,
+   #070c18 = --color-background dark fullscreen). */
+html[data-theme="light"] .chart-mobile-top-reset { background: #ffffff; }
+html:not([data-theme="light"]) .chart-mobile-top-reset { background: var(--color-background, #070c18); }

@@ -2752,3 +2752,24 @@ html[data-theme="light"] .ptc-card--activating .ptc-activate-sub.ptc-activate-su
   .ptc-hero-chart { height: 72px; }
   .ptc-activate-sub { margin-left: 66px; width: calc(100% - 66px - 16px); }
 }
+
+/* Mobile: Long/Buy matches the chart's "Trade BTC" button (mint, dark text). */
+@media (max-width: 640px) {
+  .ptc-hl-side--buy .ptc-hl-side-glider { background: #00ffa3; }
+  .ptc-hl-side-btn--buy.active { color: #0b0e14; }
+  .ptc-cta--buy { background: #00ffa3 !important; color: #0b0e14 !important; }
+  .ptc-cta--buy:hover:not(:disabled) { background: #00e894 !important; }
+}
+
+/* Mobile: no card header row (title / LIVE / "View all"). */
+@media (max-width: 640px) {
+  .ptc-header { display: none !important; }
+}
+/* Light theme: app action green + white text (matches the chart's Trade
+   button in light theme; bright mint washes out on white). */
+@media (max-width: 640px) {
+  html[data-theme="light"] .ptc-hl-side--buy .ptc-hl-side-glider { background: var(--action-green); }
+  html[data-theme="light"] .ptc-hl-side-btn--buy.active { color: #fff; }
+  html[data-theme="light"] .ptc-cta--buy { background: var(--action-green) !important; color: #fff !important; }
+  html[data-theme="light"] .ptc-cta--buy:hover:not(:disabled) { background: var(--action-green-hover) !important; }
+}

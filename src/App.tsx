@@ -1288,6 +1288,15 @@ function AppDashboard({
   // content", "orderbook" means "show chart-right-col instead", entirely
   // in place — no navigation, on every page including Chart/Markets.
   const [mobileChartTab, setMobileChartTab] = useState<"chart" | "orderbook">("chart");
+  // Green "new" dot on the header's Paper Trade icon until it's opened once.
+  const [paperTabSeen, setPaperTabSeen] = useState(() => {
+    try { return localStorage.getItem("paperTabSeen") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    if (mobileChartTab !== "orderbook" || paperTabSeen) return;
+    setPaperTabSeen(true);
+    try { localStorage.setItem("paperTabSeen", "1"); } catch { /* ignore */ }
+  }, [mobileChartTab, paperTabSeen]);
   // Any real navigation (menu, coin button, etc.) backs out of a
   // mid-page chart-right-col swap, same as it would reset any other
   // page-local UI state.
@@ -1317,7 +1326,7 @@ function AppDashboard({
         }}
       >
         {onChartPage ? (
-          <span key={chartTabSpinKey} className="chart-tab-logo-spin">
+          <span key={chartTabSpinKey} className={chartTabSpinKey > 0 ? "chart-tab-logo-spin" : "chart-tab-logo-static"}>
             <LogoIcon size={18} />
           </span>
         ) : (
@@ -1336,6 +1345,7 @@ function AppDashboard({
           <line x1="15" y1="16" x2="6" y2="16" />
           <line x1="12" y1="21" x2="6" y2="21" />
         </svg>
+        {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
       </button>
     </div>
   );
@@ -1581,10 +1591,17 @@ function AppDashboard({
   // layout per explicit request). Persisted (same localStorage pattern as
   // chartLayoutMode just above) so whichever tab was selected survives a
   // refresh or navigating away and back instead of resetting every time.
-  const [rightColTab, setRightColTab] = useState<"paper" | "flow" | "orderbook">(() => {
+  const [rightColTab, setRightColTab] = useState<"paper" | "flow" | "orderbook" | "posintel">(() => {
     const saved = localStorage.getItem("rightColTab");
-    return saved === "flow" || saved === "orderbook" ? saved : "paper";
+    return saved === "flow" || saved === "orderbook" || saved === "posintel" ? saved : "paper";
   });
+  // Mobile tabs: Paper Trading / Position Intelligence / Order Flow
+  // Pressure (Order Book has its own tab above the chart there). Desktop
+  // keeps Paper Trading / Order Flow Pressure / Order Book. A saved tab
+  // the current set doesn't have falls back to Paper Trading.
+  const rightColTabEff = !isWideDesktop
+    ? (rightColTab === "orderbook" ? "paper" : rightColTab)
+    : (rightColTab === "posintel" ? "paper" : rightColTab);
   useEffect(() => {
     localStorage.setItem("rightColTab", rightColTab);
   }, [rightColTab]);
@@ -1594,9 +1611,9 @@ function AppDashboard({
   const crcTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [crcHighlight, setCrcHighlight] = useState<{ left: number; width: number } | null>(null);
   useLayoutEffect(() => {
-    const el = crcTabRefs.current[rightColTab];
+    const el = crcTabRefs.current[rightColTabEff];
     if (el) setCrcHighlight({ left: el.offsetLeft, width: el.offsetWidth });
-  }, [rightColTab]);
+  }, [rightColTabEff]);
   // Hoisted to component scope (same reasoning as chartRightColEl just
   // above) so every other page's desktop "Paper Trading" flyout
   // (.activated-panels-rail further down) can reuse the exact same
@@ -1642,14 +1659,31 @@ function AppDashboard({
               </svg>
             ),
           },
-        ]).map(({ key, label, icon }) => (
+          {
+            key: "posintel" as const,
+            label: "Position Intelligence",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
+        ] as const)
+          .filter((tb) => (!isWideDesktop ? tb.key !== "orderbook" : tb.key !== "posintel"))
+          .sort((a, b) => {
+            const order = !isWideDesktop ? ["paper", "posintel", "flow"] : ["paper", "flow", "orderbook"];
+            return order.indexOf(a.key) - order.indexOf(b.key);
+          })
+          .map(({ key, label, icon }) => (
           <button
             key={key}
             ref={(el) => { crcTabRefs.current[key] = el; }}
             type="button"
             role="tab"
-            aria-selected={rightColTab === key}
-            className={`crc-tab${rightColTab === key ? " active" : ""}`}
+            aria-selected={rightColTabEff === key}
+            className={`crc-tab${rightColTabEff === key ? " active" : ""}`}
             onClick={() => setRightColTab(key)}
           >
             <span className="crc-tab-icon">{icon}</span>
@@ -1670,12 +1704,17 @@ function AppDashboard({
           from .crc-tab-panel-enter's CSS animation
           restarting on its own whenever a display:none panel
           toggles back to display:flex — no remount needed. */}
-      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab === "paper" ? "flex" : "none" }}>
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTabEff === "paper" ? "flex" : "none" }}>
         <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} onOpenAuth={onOpenAuth} />
       </div>
-      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab !== "paper" ? "flex" : "none" }}>
-        <OrderFlowPanel coin={coin} events={chartEvents} view={rightColTab === "orderbook" ? "orderbook" : "flow"} />
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTabEff === "flow" || rightColTabEff === "orderbook" ? "flex" : "none" }}>
+        <OrderFlowPanel coin={coin} events={chartEvents} view={rightColTabEff === "orderbook" ? "orderbook" : "flow"} />
       </div>
+      {!isWideDesktop && (
+        <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTabEff === "posintel" ? "flex" : "none" }}>
+          <PositionIntelligence coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} showHeader={false} />
+        </div>
+      )}
     </div>
   );
   // Chart page "2col" layout (wide desktop): Order Flow Pressure / Order
@@ -2001,7 +2040,10 @@ function AppDashboard({
     const onTouchStart = (e: TouchEvent) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      ignoreThisGesture = !!(e.target as Element)?.closest?.(".ta-panel");
+      ignoreThisGesture = !!(e.target as Element)?.closest?.(".ta-panel")
+        // Advance chart page: the left-edge swipe means "back" there
+        // (PriceChart.tsx), not "open the side menu".
+        || !!document.querySelector(".price-chart-container--page");
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (ignoreThisGesture) return;
@@ -2552,6 +2594,8 @@ function AppDashboard({
         )}
         <nav
           className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed && !navPeek ? " nav-collapsed" : ""}${navCollapsed && navPeek ? " nav-peek" : ""}`}
+          // Mobile: closed menu is out of the tap/focus order entirely.
+          {...(!isDesktopWidth && !mobileNavOpen ? { inert: "" } : {})}
           // Collapsed (icon-only) rail: hovering opens the full labeled
           // sidebar over the page (nav-peek), leaving collapses it again.
           onMouseEnter={() => {
@@ -3417,6 +3461,11 @@ function AppDashboard({
                           advanceChartPushedRef.current = true;
                           setActiveSection("advance-chart");
                         }}
+                        onOpenPaperTrade={() => {
+                          setMobileChartTab("orderbook");
+                          mainContentRef.current?.scrollTo({ top: 0 });
+                          window.scrollTo({ top: 0 });
+                        }}
                         onNavigateToPage={() => {
                           if (!isDesktopWidth) {
                             setMobileAdvanceChartOpen(true);
@@ -4108,18 +4157,17 @@ function AppDashboard({
           onGoHome={() => {
             // Closes whichever of the four mutually-exclusive panels is
             // currently open (each a no-op if it's already closed) and
-            // drops back to the Markets page — Home's own "you're at rest"
-            // state, not a fifth panel of its own. Matches the app's own
-            // default landing section (see activeSection's initializer
-            // above) rather than the chart.
+            // drops back to the Trade page (#trade) — Home's own "you're at
+            // rest" state, not a fifth panel of its own. Matches the app's
+            // default landing section (see activeSection's initializer).
             if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
             setAssetPanelOpen(false);
             setProfileOpen(false);
             setGlobalSearch(false);
             setDailyBriefPanelOpen(false);
-            setActiveSection("markets");
+            setActiveSection("chart");
           }}
-          homeActive={activeSection === "markets" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
+          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
           showAgentShowcase={showAgentShowcase}
         />
       )}

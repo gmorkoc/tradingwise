@@ -5187,6 +5187,13 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
        per-element overrides below that also kill :hover/:active bg. */
     -webkit-tap-highlight-color: transparent;
   }
+  /* Closed: the menu still sits behind .main-panel (it's revealed by the
+     panel sliding right), so nothing in it may take a tap — including
+     the strip under the status bar that .main-panel doesn't cover. */
+  .icon-strip:not(.mobile-open),
+  .icon-strip:not(.mobile-open) * {
+    pointer-events: none !important;
+  }
   .icon-strip.mobile-open {
     z-index: 300001;
     background: var(--color-surface) !important;
@@ -6910,6 +6917,11 @@ html[data-theme="light"] .pticker-price {
 .chart-below-full {
   padding: 16px 0;
 }
+@media (max-width: 640px) {
+  .chart-below-full {
+    padding: 8px 0;
+  }
+}
 /* Flyout's ✕ (activated-panel-head, absolutely positioned top-right)
    sits over the tab row's right end — leave room so LIVE stays visible. */
 .activated-panel .crc-tabs {
@@ -7012,4 +7024,36 @@ html[data-theme="light"] .pticker-price {
   .nav-cat-backdrop {
     display: none !important;
   }
+}
+
+
+/* Header Paper Trade icon: green "new" dot until opened once (no size change). */
+.chart-mobile-tab-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--action-green, #16a34a);
+  box-shadow: 0 0 0 2px var(--color-surface, #fff);
+  pointer-events: none;
+}
+
+/* Chart tab's C before its first tap: same box as the spin wrapper, no spin. */
+.chart-tab-logo-static { display: inline-flex; }
+
+/* Mobile: the Paper / Position Intelligence / Order Flow Pressure tab row
+   is wider than the screen — let it scroll sideways itself instead of
+   overflowing (and being clipped by) .chart-right-col. */
+@media (max-width: 960px) {
+  .chart-right-col--tabbed .crc-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 16px;
+  }
+  .chart-right-col--tabbed .crc-tabs::-webkit-scrollbar { display: none; }
+  .chart-right-col--tabbed .crc-tab { flex-shrink: 0; }
 }

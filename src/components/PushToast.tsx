@@ -70,6 +70,53 @@ export function PushToast() {
   const [muting, setMuting] = useState(false);
   const [justMuted, setJustMuted] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Manual dismiss: drag the card away (up for the top cards, down for
+  // iOS's bottom sheet, or sideways). Follows the finger; past a short
+  // distance it flies off and closes. Auto-hide pauses while touching.
+  const dragRef = useRef<{ x: number; y: number; dx: number; dy: number; moved: boolean } | null>(null);
+  const swipedRef = useRef(false);
+  const swipeHandlers = (mode: "up" | "down") => ({
+    onTouchStart: (e: React.TouchEvent<HTMLElement>) => {
+      const t = e.touches[0];
+      dragRef.current = { x: t.clientX, y: t.clientY, dx: 0, dy: 0, moved: false };
+      swipedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      e.currentTarget.style.transition = "none";
+    },
+    onTouchMove: (e: React.TouchEvent<HTMLElement>) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const t = e.touches[0];
+      d.dx = t.clientX - d.x;
+      d.dy = t.clientY - d.y;
+      if (Math.hypot(d.dx, d.dy) > 6) d.moved = true;
+      // Toward the dismiss direction follows 1:1; the other way only a
+      // small rubber-band.
+      const ty = mode === "up" ? (d.dy < 0 ? d.dy : d.dy / 4) : (d.dy > 0 ? d.dy : d.dy / 4);
+      const el = e.currentTarget;
+      el.style.translate = `${d.dx}px ${ty}px`;
+      el.style.opacity = String(Math.max(0.3, 1 - Math.max(Math.abs(d.dx), Math.abs(ty)) / 260));
+    },
+    onTouchEnd: (e: React.TouchEvent<HTMLElement>) => {
+      const d = dragRef.current;
+      dragRef.current = null;
+      const el = e.currentTarget;
+      el.style.transition = "translate 0.2s ease, opacity 0.2s ease";
+      if (!d) return;
+      if (d.moved) swipedRef.current = true;
+      const away = (mode === "up" ? d.dy < -40 : d.dy > 60) || Math.abs(d.dx) > 90;
+      if (away) {
+        const offY = mode === "up" ? "-160%" : "160%";
+        el.style.translate = Math.abs(d.dx) > 90 && Math.abs(d.dx) > Math.abs(d.dy) ? `${d.dx > 0 ? "120%" : "-120%"} 0` : `0 ${offY}`;
+        el.style.opacity = "0";
+        window.setTimeout(() => setToast(null), 200);
+      } else {
+        el.style.translate = "";
+        el.style.opacity = "";
+        timerRef.current = setTimeout(() => setToast(null), DURATION);
+      }
+    },
+  });
 
   useEffect(() => {
     const onPush = (e: Event) => {
@@ -90,6 +137,8 @@ export function PushToast() {
   const data = toast.data;
 
   const handleTap = () => {
+    // The click that follows a drag isn't a tap.
+    if (swipedRef.current) { swipedRef.current = false; return; }
     routeNotificationTap(data);
     setToast(null);
   };
@@ -166,7 +215,7 @@ export function PushToast() {
     // presence instead of a web-style toast bolted onto a native app.
     if (IS_IOS) {
       return ReactDOM.createPortal(
-        <div className={`push-toast push-toast--buy-signal push-toast--sheet${isSell ? " push-toast--sell" : ""}`} onClick={handleTap} role="alert">
+        <div className={`push-toast push-toast--buy-signal push-toast--sheet${isSell ? " push-toast--sell" : ""}`} onClick={handleTap} role="alert" {...swipeHandlers("down")}>
           <div className="push-toast-sheet-handle" />
           <button className="push-toast-close push-toast-close--rich" onClick={(e) => { e.stopPropagation(); setToast(null); }}>✕</button>
 
@@ -215,7 +264,7 @@ export function PushToast() {
     }
 
     return ReactDOM.createPortal(
-      <div className={`push-toast push-toast--buy-signal push-toast--rich${isSell ? " push-toast--sell" : ""}`} onClick={handleTap} role="alert">
+      <div className={`push-toast push-toast--buy-signal push-toast--rich${isSell ? " push-toast--sell" : ""}`} onClick={handleTap} role="alert" {...swipeHandlers("up")}>
         <button className="push-toast-close push-toast-close--rich" onClick={(e) => { e.stopPropagation(); setToast(null); }}>✕</button>
         <div className="push-toast-rich-head">
           <div className="push-toast-coin-logo">
@@ -256,7 +305,7 @@ export function PushToast() {
   }
 
   return ReactDOM.createPortal(
-    <div className={`push-toast${isBuySignal ? ` push-toast--buy-signal${isSell ? " push-toast--sell" : ""}` : ""}`} onClick={handleTap} role="alert">
+    <div className={`push-toast${isBuySignal ? ` push-toast--buy-signal${isSell ? " push-toast--sell" : ""}` : ""}`} onClick={handleTap} role="alert" {...swipeHandlers("up")}>
       {data?.type === "coin_mention" ? (
         <Avatar url={data.avatarUrl} fallback={initials(data.username ?? "?")} className="push-toast-avatar" />
       ) : isBuySignal ? (

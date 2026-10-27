@@ -47,6 +47,10 @@ interface Props {
    * hugging just the button stack. Omitted everywhere else, which keeps
    * the original centered floating-card look. */
   fullHeightRail?: boolean;
+  /** Anchor the rail this many px below the chart's top instead of
+   *  centering it (keeps it clear of an overlay header, e.g. the Advance
+   *  chart's Back / coin name / price block). Scrolls if it can't fit. */
+  topOffset?: number;
 }
 
 export interface ChartDrawingToolsHandle {
@@ -198,7 +202,7 @@ const TRASH_ICON = <IconMulti>
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
-  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail }: Props,
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset }: Props,
   ref,
 ) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
@@ -757,6 +761,8 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
               // bottom:0 pins to the true viewport bottom instead and
               // overlapped that bar's leftmost pill.
               { top: chartRect.top, left: chartRect.left, height: chartRect.height }
+            : topOffset !== undefined
+            ? { top: chartRect.top + topOffset, left: chartRect.left + 8, maxHeight: Math.max(120, chartRect.height - topOffset - 8), overflowY: "auto" }
             : { top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }
         }
       >
