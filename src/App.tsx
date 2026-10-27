@@ -63,8 +63,9 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
-import { LandingPage } from "./components/LandingPage";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
+import { PositionIntelligence } from "./components/PositionIntelligence";
+import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { PriceChart, formatLivePrice } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
@@ -94,8 +95,6 @@ function formatHeaderPriceMobile(p: number): string {
   }
   return formatLivePrice(p);
 }
-
-import { SectionBanner } from "./components/SectionBanner";
 import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { BtcMoveToast } from "./components/BtcMoveToast";
@@ -195,6 +194,15 @@ const NAV_CATEGORIES: { id: NavCategoryId; labelKey: string; d: string | string[
   },
 ];
 
+// The Trade page is section "chart" internally but lives at #trade in the
+// URL. Old #chart links still open it.
+function hashToSection(hash: string): SectionId {
+  return (hash === "trade" ? "chart" : hash) as SectionId;
+}
+function sectionToHash(section: SectionId): string {
+  return section === "chart" ? "trade" : section;
+}
+
 const NAV_ITEMS: {
   id: SectionId;
   labelKey: string;
@@ -203,6 +211,16 @@ const NAV_ITEMS: {
   hidden?: boolean;
   category?: NavCategoryId;
 }[] = [
+  {
+    // Shown as "Trade" (nav.chart) — first item, candlestick icon.
+    id: "chart",
+    labelKey: "nav.chart",
+    requiredTier: "pro",
+    d: [
+      "M8 3v4", "M6 7h4v9H6z", "M8 16v5",
+      "M16 4v5", "M14 9h4v6h-4z", "M16 15v4",
+    ],
+  },
   {
     id: "markets",
     labelKey: "nav.markets",
@@ -213,12 +231,6 @@ const NAV_ITEMS: {
       "M11.5 3a17 17 0 0 0 0 18",
       "M12.5 3a17 17 0 0 1 0 18",
     ],
-  },
-  {
-    id: "chart",
-    labelKey: "nav.chart",
-    requiredTier: "pro",
-    d: ["M3 3v18h18", "M7 16l4-4 4 4 5-5"],
   },
   {
     id: "candleai",
@@ -453,18 +465,22 @@ function AppDashboard({
 }: DashboardProps) {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
-    const hash = window.location.hash.slice(1) as SectionId;
+    const hash = hashToSection(window.location.hash.slice(1));
     // "advance-chart" has no NAV_ITEMS entry (no nav icon) but is still a
     // valid section reachable via hash — accept it explicitly.
-    // Default landing is the market overview ("markets", GlobalMarkets),
-    // not one coin's own chart — a fresh visit should see the market
-    // first, same as any other crypto app's landing page, and drill into
-    // a single coin's chart from there.
-    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "markets";
+    // Default landing is the Trade page (section "chart", URL #trade).
+    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
   });
   // Tapping Agent Ready while locked (non-elite) opens this instead of the
   // generic onOpenUpgrade — see the render block below, near TradingAgent.
   const [showEliteUpsell, setShowEliteUpsell] = useState(false);
+  // Agent Ready gate (floating trigger, mobile nav button, any
+  // "open-trading-agent" dispatch): signed out → sign in / sign up;
+  // signed in without Elite → Elite upsell. Elite users never hit this.
+  const agentGate = () => {
+    if (!user) onOpenAuth();
+    else setShowEliteUpsell(true);
+  };
   // Badge count shown on FloatingNavBar's Notifications icon — kept in
   // sync by NotificationsCenter itself (mount-time fetch, and again
   // whenever something there changes it) via onUnreadCountChange, rather
@@ -1088,7 +1104,15 @@ function AppDashboard({
   // not next to activatedPanelsRailEl further down, specifically so
   // those effects (which reference it) aren't reading a variable that
   // hasn't been declared yet in this component's hook order.
-  const [paperTradingFlyoutOpen, setPaperTradingFlyoutOpen] = useState(false);
+  // Persisted (same localStorage pattern as chartLayoutMode/rightColTab
+  // elsewhere in this file) — once enabled it should survive a browser
+  // refresh too, not just in-app navigation.
+  const [paperTradingFlyoutOpen, setPaperTradingFlyoutOpen] = useState(() => {
+    return localStorage.getItem("paperTradingFlyoutOpen") === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("paperTradingFlyoutOpen", String(paperTradingFlyoutOpen));
+  }, [paperTradingFlyoutOpen]);
   useEffect(() => {
     if (!signalsOpen) return;
     if (assetPanelOpen) setAssetPanelOpen(false);
@@ -1185,6 +1209,9 @@ function AppDashboard({
   // tablet range), rather than trying to show an inline indented list
   // with no room for it.
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("navCollapsed") === "1");
+  const [navPeek, setNavPeek] = useState(false);
+  const navPeekTimer = useRef<number | undefined>(undefined);
+  useEffect(() => { if (!navCollapsed) setNavPeek(false); }, [navCollapsed]);
   useEffect(() => {
     localStorage.setItem("navCollapsed", navCollapsed ? "1" : "0");
   }, [navCollapsed]);
@@ -1496,7 +1523,7 @@ function AppDashboard({
   // down), not just Chart/Markets.
   const chartRightColEl = (
     <div className="chart-right-col">
-      <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
+      <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} onOpenAuth={onOpenAuth} />
       {/* <OrderBook coin={coin} onOpenUpgrade={onOpenUpgrade} /> */}
       <OrderFlowPanel coin={coin} events={chartEvents} />
     </div>
@@ -1550,14 +1577,19 @@ function AppDashboard({
   // null/stale regardless of whether the node already exists; a callback
   // ref into state re-renders once the real node is there instead.
   const [activatedPanelsRailEl, setActivatedPanelsRailEl] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setPaperTradingFlyoutOpen(false);
-  }, [activeSection]);
   // "2col" mode only: Paper Trading / Order Flow Pressure / Order Book
   // shown one at a time as tabs instead of stacked (3col/2row keep the
   // original stacked chartRightColEl, unaffected — scoped to this one
-  // layout per explicit request).
-  const [rightColTab, setRightColTab] = useState<"paper" | "flow" | "orderbook">("paper");
+  // layout per explicit request). Persisted (same localStorage pattern as
+  // chartLayoutMode just above) so whichever tab was selected survives a
+  // refresh or navigating away and back instead of resetting every time.
+  const [rightColTab, setRightColTab] = useState<"paper" | "flow" | "orderbook">(() => {
+    const saved = localStorage.getItem("rightColTab");
+    return saved === "flow" || saved === "orderbook" ? saved : "paper";
+  });
+  useEffect(() => {
+    localStorage.setItem("rightColTab", rightColTab);
+  }, [rightColTab]);
   // Measured sliding glow-underline position (fancy-tabs sketch option A)
   // — same measure-and-position approach as CandleWatcher's interval
   // pills, since the three labels are different widths.
@@ -1567,6 +1599,238 @@ function AppDashboard({
     const el = crcTabRefs.current[rightColTab];
     if (el) setCrcHighlight({ left: el.offsetLeft, width: el.offsetWidth });
   }, [rightColTab]);
+  // Hoisted to component scope (same reasoning as chartRightColEl just
+  // above) so every other page's desktop "Paper Trading" flyout
+  // (.activated-panels-rail further down) can reuse the exact same
+  // tabbed Paper Trading / Order Flow Pressure / Order Book interface
+  // the Chart page's own 2col layout uses, instead of a bare stacked
+  // column with no tabs at all.
+  const chartRightColTabbedEl = (
+    <div className="chart-right-col chart-right-col--tabbed">
+      {/* Glow underline (fancy-tabs sketch option A) — a thin
+          gradient bar that shimmers continuously and glows
+          under the active tab, sliding/resizing between them;
+          the icon pops with a little overshoot on switch. */}
+      <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Order Flow / Order Book">
+        {([
+          {
+            key: "paper" as const,
+            label: "Paper Trading",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="13" rx="3" />
+                <path d="M2 10.5h20" />
+                <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
+          {
+            key: "flow" as const,
+            label: "Order Flow Pressure",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 17l5-6 4 3 5-8 4 5" />
+              </svg>
+            ),
+          },
+          {
+            key: "orderbook" as const,
+            label: "Order Book",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="14" y2="17" />
+              </svg>
+            ),
+          },
+        ]).map(({ key, label, icon }) => (
+          <button
+            key={key}
+            ref={(el) => { crcTabRefs.current[key] = el; }}
+            type="button"
+            role="tab"
+            aria-selected={rightColTab === key}
+            className={`crc-tab${rightColTab === key ? " active" : ""}`}
+            onClick={() => setRightColTab(key)}
+          >
+            <span className="crc-tab-icon">{icon}</span>
+            {label}
+          </button>
+        ))}
+        {crcHighlight && (
+          <div
+            className="crc-tab-highlight"
+            style={{ transform: `translateX(${crcHighlight.left}px)`, width: crcHighlight.width }}
+          />
+        )}
+      </div>
+      {/* No `key` on either panel — both PaperTradingCard and
+          OrderFlowPanel must stay the exact same mounted
+          instance across tab switches (live polling/state),
+          so the per-switch entrance animation below comes
+          from .crc-tab-panel-enter's CSS animation
+          restarting on its own whenever a display:none panel
+          toggles back to display:flex — no remount needed. */}
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab === "paper" ? "flex" : "none" }}>
+        <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} onOpenAuth={onOpenAuth} />
+      </div>
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab !== "paper" ? "flex" : "none" }}>
+        <OrderFlowPanel coin={coin} events={chartEvents} view={rightColTab === "orderbook" ? "orderbook" : "flow"} />
+      </div>
+    </div>
+  );
+  // Chart page "2col" layout (wide desktop): Order Flow Pressure / Order
+  // Book get their own tabbed column between the chart and Paper Trading,
+  // and Paper Trading gets a column to itself. Own tab state + highlight
+  // refs, separate from rightColTab above, since that one still drives
+  // the 3-tab version used by mobile and the other pages' flyout.
+  // Order Book is the default (and first) tab. Storage key bumped from
+  // "flowColTab" so everyone starts on Order Book once, instead of keeping
+  // a previously saved "flow".
+  const [flowColTab, setFlowColTab] = useState<"flow" | "orderbook">(() => {
+    return localStorage.getItem("flowColTabV2") === "flow" ? "flow" : "orderbook";
+  });
+  useEffect(() => {
+    localStorage.setItem("flowColTabV2", flowColTab);
+  }, [flowColTab]);
+  const flowTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [flowHighlight, setFlowHighlight] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = flowTabRefs.current[flowColTab];
+    if (el) setFlowHighlight({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [flowColTab, activeSection, chartLayoutMode, isWideDesktop]);
+  const chartFlowColEl = (
+    <div className="chart-right-col chart-right-col--tabbed">
+      <div className="crc-tabs" role="tablist" aria-label="Order Book / Order Flow">
+        {([
+          {
+            key: "orderbook" as const,
+            label: "Order Book",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="14" y2="17" />
+              </svg>
+            ),
+          },
+          {
+            key: "flow" as const,
+            label: "Order Flow Pressure",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 17l5-6 4 3 5-8 4 5" />
+              </svg>
+            ),
+          },
+        ]).map(({ key, label, icon }) => (
+          <button
+            key={key}
+            ref={(el) => { flowTabRefs.current[key] = el; }}
+            type="button"
+            role="tab"
+            aria-selected={flowColTab === key}
+            className={`crc-tab${flowColTab === key ? " active" : ""}`}
+            onClick={() => setFlowColTab(key)}
+          >
+            <span className="crc-tab-icon">{icon}</span>
+            {label}
+          </button>
+        ))}
+        {flowHighlight && (
+          <div
+            className="crc-tab-highlight"
+            style={{ transform: `translateX(${flowHighlight.left}px)`, width: flowHighlight.width }}
+          />
+        )}
+        <span className="ptc-live-badge crc-tabs-live"><span className="ptc-pulse-dot" />LIVE</span>
+      </div>
+      <div className="crc-tab-panel" style={{ display: "flex" }}>
+        <OrderFlowPanel coin={coin} events={chartEvents} view={flowColTab} hideLiveBadge />
+      </div>
+    </div>
+  );
+  // Paper Trading column: same tab-row header as chartFlowColEl above —
+  // Paper Trading / Position Intelligence, LIVE on the right. Both panels
+  // stay mounted (display toggle, not conditional render) so Paper
+  // Trading keeps its live state across tab switches.
+  const [paperColTab, setPaperColTab] = useState<"paper" | "posintel">(() => {
+    return localStorage.getItem("paperColTab") === "posintel" ? "posintel" : "paper";
+  });
+  useEffect(() => {
+    localStorage.setItem("paperColTab", paperColTab);
+  }, [paperColTab]);
+  const chartPaperColEl = (
+    <div className="chart-right-col chart-right-col--tabbed chart-right-col--paper">
+      <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Position Intelligence">
+        {([
+          {
+            key: "paper" as const,
+            label: "Paper Trading",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="13" rx="3" />
+                <path d="M2 10.5h20" />
+                <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
+          {
+            key: "posintel" as const,
+            label: "Position Intelligence",
+            icon: (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
+        ]).map(({ key, label, icon }) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={paperColTab === key}
+            className={`crc-tab${paperColTab === key ? " active" : ""}`}
+            onClick={() => setPaperColTab(key)}
+          >
+            <span className="crc-tab-icon">{icon}</span>
+            {label}
+            {paperColTab === key && <span className="crc-tab-underline" />}
+          </button>
+        ))}
+        <span className="ptc-live-badge crc-tabs-live"><span className="ptc-pulse-dot" />LIVE</span>
+      </div>
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: paperColTab === "paper" ? "flex" : "none" }}>
+        <PaperTradingCard
+          coin={coin}
+          onOpen={() => setActiveSection("riskcalc")}
+          onOpenAuth={onOpenAuth}
+          inTabRow
+          // Chart page's own bottom panel has the full trade History tab;
+          // everywhere else (this same column is the desktop flyout on
+          // other pages) it falls back to the Trade Manager page.
+          // From other pages (desktop): go to the Trade (#chart) page and
+          // open History there — the panel picks the request up on mount
+          // (ChartBottomPanel: chartBottomTab + chartBottomScroll).
+          onViewClosed={!isWideDesktop ? undefined : activeSection === "chart"
+            ? () => window.dispatchEvent(new CustomEvent("chart-bottom-tab", { detail: { tab: "history" } }))
+            : () => {
+                try {
+                  localStorage.setItem("chartBottomTab", "history");
+                  sessionStorage.setItem("chartBottomScroll", "1");
+                } catch { /* ignore */ }
+                setActiveSection("chart");
+              }}
+        />
+      </div>
+      <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: paperColTab === "posintel" ? "flex" : "none" }}>
+        <PositionIntelligence coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} showHeader={false} />
+      </div>
+    </div>
+  );
   const [chartFullscreen, setChartFullscreen] = useState(false);
   // true once we've pushed a history entry for the Advance Price Chart
   // page this session — guards onNavigateBack below from calling
@@ -1605,19 +1869,52 @@ function AppDashboard({
     if (btcData) setError("");
   }, [btcData]);
 
-  // Sync URL hash to the active section.
+  // Sync URL hash to the active section — pushState, not replaceState.
+  // replaceState overwrites the *current* entry instead of adding a new
+  // one, so the browser's history stack never actually accumulated a
+  // step per section visited: Back would skip straight past every page
+  // you'd navigated through and leave the app entirely. Two guards keep
+  // this from also breaking Back/Forward itself:
+  //   - skip the very first run (mount) — otherwise the initial section
+  //     pushes a duplicate entry on top of the one already at that same
+  //     hash from the page's own initial load, and Back would need two
+  //     presses to actually go anywhere.
+  //   - skip when the change came FROM the hashchange handler below (a
+  //     real Back/Forward) — otherwise handling that event by calling
+  //     setActiveSection would loop back through this effect and push
+  //     yet another entry, turning one Back press into "go back, then
+  //     silently get a new Forward entry appended right after it".
+  const isFirstHistorySyncRef = useRef(true);
+  const skipNextHistoryPushRef = useRef(false);
   useEffect(() => {
-    window.history.replaceState(null, "", `${window.location.search}#${activeSection}`);
+    if (isFirstHistorySyncRef.current) {
+      isFirstHistorySyncRef.current = false;
+      // Normalize the landing URL in place (no extra history entry): a bare
+      // URL or an old #chart link shows as #trade.
+      const want = `#${sectionToHash(activeSection)}`;
+      if (window.location.hash !== want) {
+        window.history.replaceState(null, "", `${window.location.search}${want}`);
+      }
+      return;
+    }
+    if (skipNextHistoryPushRef.current) {
+      skipNextHistoryPushRef.current = false;
+      return;
+    }
+    window.history.pushState(null, "", `${window.location.search}#${sectionToHash(activeSection)}`);
   }, [activeSection]);
 
   // Handle browser back/forward
   useEffect(() => {
     const onHashChange = () => {
-      const hash = window.location.hash.slice(1) as SectionId;
+      const hash = hashToSection(window.location.hash.slice(1));
       // Same "advance-chart" allowance as the initial-state reader above —
       // without it, pressing Forward back into the page after Back would
       // silently fail (hash changes but activeSection doesn't follow).
-      if (NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart") setActiveSection(hash);
+      if (NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart") {
+        skipNextHistoryPushRef.current = true;
+        setActiveSection(hash);
+      }
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
@@ -1646,6 +1943,24 @@ function AppDashboard({
   // Close mobile nav when section changes
   useEffect(() => {
     setMobileNavOpen(false);
+  }, [activeSection]);
+
+  // Close the other top-bar flyout panels on page navigation — none of
+  // them were wired to activeSection at all (only to each other, to stay
+  // mutually exclusive). Paper Trading is deliberately excluded: once
+  // enabled it should stay visible on every page until the user closes
+  // it themselves, not reset on every navigation like these transient
+  // overlays do.
+  useEffect(() => {
+    // Same "tell it to clean up" dispatch the mutual-exclusion effects
+    // above already use for this one specifically, not a direct
+    // setSignalsOpen(false) — its own listener owns closing it.
+    if (signalsOpen) window.dispatchEvent(new CustomEvent("close-buy-signals"));
+    setAssetPanelOpen(false);
+    setProfileOpen(false);
+    setGlobalSearch(false);
+    setDailyBriefPanelOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSection]);
 
   // First-visit swipe intro
@@ -2237,7 +2552,20 @@ function AppDashboard({
             onClick={() => setMobileNavOpen(false)}
           />
         )}
-        <nav className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed ? " nav-collapsed" : ""}`}>
+        <nav
+          className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed && !navPeek ? " nav-collapsed" : ""}${navCollapsed && navPeek ? " nav-peek" : ""}`}
+          // Collapsed (icon-only) rail: hovering opens the full labeled
+          // sidebar over the page (nav-peek), leaving collapses it again.
+          onMouseEnter={() => {
+            if (!navCollapsed || !isDesktopWidth) return;
+            window.clearTimeout(navPeekTimer.current);
+            navPeekTimer.current = window.setTimeout(() => setNavPeek(true), 120);
+          }}
+          onMouseLeave={() => {
+            window.clearTimeout(navPeekTimer.current);
+            navPeekTimer.current = window.setTimeout(() => setNavPeek(false), 150);
+          }}
+        >
           <button
             className="icon-strip-logo"
             onClick={fetchBTCData}
@@ -2462,7 +2790,7 @@ function AppDashboard({
                   </button>
                   <div className="icon-strip-invite-title">{t("nav.inviteTitle", "Invite a friend")}</div>
                   <p className="icon-strip-invite-sub">
-                    {t("nav.inviteSub", "Know someone who'd like CoinHintz? Send them an invite.")}
+                    {t("nav.inviteSub", "Invite a friend — when they sign up, you get $10,000 in free paper trading cash.")}
                   </p>
                   <input
                     type="email"
@@ -2539,7 +2867,13 @@ function AppDashboard({
                 <Avatar
                   url={profile?.avatar_url}
                   fallback={
-                    profile?.full_name
+                    !user ? (
+                      // Signed out: account icon instead of a "?".
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+                      </svg>
+                    ) : profile?.full_name
                       ? profile.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
                       : (user?.email?.[0] ?? "?").toUpperCase()
                   }
@@ -2550,57 +2884,30 @@ function AppDashboard({
                   <span className="icon-strip-profile-email">{user?.email ?? t("nav.signInPrompt", "Sign in")}</span>
                 </span>
               </button>
+
+              {/* Expand / collapse the sidebar (desktop). Collapsed: icon
+                  only; it also expands on hover (nav-peek). */}
+              <button
+                type="button"
+                className="icon-strip-btn icon-strip-expand-btn"
+                onClick={() => { setNavPeek(false); setNavCollapsed((v) => !v); }}
+                title={navCollapsed ? "Expand menu" : "Collapse menu"}
+                aria-label={navCollapsed ? "Expand menu" : "Collapse menu"}
+              >
+                <span className="nav-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <path d="M9 4v16" />
+                    {navCollapsed ? <path d="M13 10l2 2-2 2" /> : <path d="M15 10l-2 2 2 2" />}
+                  </svg>
+                </span>
+                <span className="icon-strip-label">{navCollapsed ? "Expand menu" : "Collapse menu"}</span>
+              </button>
             </div>
           )}
 
         </nav>
 
-        {/* Desktop-only Coinbase-style flyout — replaces the inline
-            accordion for min-width:641px (see .icon-strip-cat-items,
-            forced display:none at that width in App.css); mobile keeps
-            the original inline accordion untouched. */}
-        {openNavCategory && (() => {
-          const cat = NAV_CATEGORIES.find((c) => c.id === openNavCategory)!;
-          const items = NAV_ITEMS.filter((item) => !item.hidden && item.category === cat.id);
-          return (
-            <>
-              <div className="nav-cat-backdrop" onClick={() => setOpenNavCategory(null)} />
-              <div className="nav-cat-panel">
-                <div className="nav-cat-panel-header">
-                  <button
-                    type="button"
-                    className="nav-cat-panel-close"
-                    onClick={() => setOpenNavCategory(null)}
-                    aria-label={t("common.close", "Close")}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="nav-cat-panel-title">{t(cat.labelKey)}</div>
-                <div className="nav-cat-panel-items">
-                  {items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`nav-cat-panel-item${activeSection === item.id ? " active" : ""}`}
-                      onClick={() => {
-                        setActiveSection(item.id);
-                        setOpenNavCategory(null);
-                      }}
-                    >
-                      <span className="nav-icon-wrap">
-                        <NavIcon d={item.d} />
-                      </span>
-                      <span className="nav-cat-panel-item-label">{t(item.labelKey)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          );
-        })()}
 
         <div className="main-panel">
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
@@ -3028,88 +3335,10 @@ function AppDashboard({
               // preserving the existing tablet/mobile tab-switching
               // behavior untouched); only >=961px moves it into the new
               // experimental second column below.
-              // "2col" layout only — Paper Trading / Order Flow Pressure /
-              // Order Book as one flat tab row instead of stacked, so the
-              // top section never needs its own internal scroll just to
-              // reach whichever of the three you actually want. Both cards
-              // stay mounted (hidden via CSS, not conditionally rendered)
-              // so neither loses its own live polling/state when you
-              // switch tabs.
-              const chartRightColTabbedEl = (
-                <div className="chart-right-col chart-right-col--tabbed">
-                  {/* Glow underline (fancy-tabs sketch option A) — a thin
-                      gradient bar that shimmers continuously and glows
-                      under the active tab, sliding/resizing between them;
-                      the icon pops with a little overshoot on switch. */}
-                  <div className="crc-tabs" role="tablist" aria-label="Paper Trading / Order Flow / Order Book">
-                    {([
-                      {
-                        key: "paper" as const,
-                        label: "Paper Trading",
-                        icon: (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="2" y="6" width="20" height="13" rx="3" />
-                            <path d="M2 10.5h20" />
-                            <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        key: "flow" as const,
-                        label: "Order Flow Pressure",
-                        icon: (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 17l5-6 4 3 5-8 4 5" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        key: "orderbook" as const,
-                        label: "Order Book",
-                        icon: (
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="4" y1="7" x2="20" y2="7" />
-                            <line x1="4" y1="12" x2="20" y2="12" />
-                            <line x1="4" y1="17" x2="14" y2="17" />
-                          </svg>
-                        ),
-                      },
-                    ]).map(({ key, label, icon }) => (
-                      <button
-                        key={key}
-                        ref={(el) => { crcTabRefs.current[key] = el; }}
-                        type="button"
-                        role="tab"
-                        aria-selected={rightColTab === key}
-                        className={`crc-tab${rightColTab === key ? " active" : ""}`}
-                        onClick={() => setRightColTab(key)}
-                      >
-                        <span className="crc-tab-icon">{icon}</span>
-                        {label}
-                      </button>
-                    ))}
-                    {crcHighlight && (
-                      <div
-                        className="crc-tab-highlight"
-                        style={{ transform: `translateX(${crcHighlight.left}px)`, width: crcHighlight.width }}
-                      />
-                    )}
-                  </div>
-                  {/* No `key` on either panel — both PaperTradingCard and
-                      OrderFlowPanel must stay the exact same mounted
-                      instance across tab switches (live polling/state),
-                      so the per-switch entrance animation below comes
-                      from .crc-tab-panel-enter's CSS animation
-                      restarting on its own whenever a display:none panel
-                      toggles back to display:flex — no remount needed. */}
-                  <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab === "paper" ? "flex" : "none" }}>
-                    <PaperTradingCard coin={coin} onOpen={() => setActiveSection("riskcalc")} />
-                  </div>
-                  <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: rightColTab !== "paper" ? "flex" : "none" }}>
-                    <OrderFlowPanel coin={coin} events={chartEvents} view={rightColTab === "orderbook" ? "orderbook" : "flow"} />
-                  </div>
-                </div>
-              );
+              // chartRightColTabbedEl (Paper Trading / Order Flow Pressure /
+              // Order Book as one flat tab row, "2col" layout only) is now
+              // ALSO hoisted to component scope, same place/reasoning as
+              // chartRightColEl right above it — reused here unchanged.
               const dailyBriefEl = <DailyBrief coinTickers={coinTickers} variant="page" />;
               // Markets keeps the exact same right-column sidebar (Paper
               // Trading/Order Flow/Daily Brief) and layout-mode machinery
@@ -3123,13 +3352,6 @@ function AppDashboard({
               // column on its own.
               const chartColumnEl = activeSection === "markets" ? (
                 <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
-                  {/* SectionBanner now rendered by GlobalMarkets itself,
-                      inside .gm-wrap — it needs .gm-wrap's own
-                      padding/gap for alignment, and rendering it as an
-                      external sibling here (as every other page's
-                      SectionBanner is) meant duplicating that spacing via
-                      a pile of .chart-column > .sec-banner CSS overrides
-                      instead of just being a normal child. */}
                   {/* Hidden (not unmounted), same display:none/contents
                       swap as every other page uses below for the same
                       mobileChartTab state — keeps GlobalMarkets' own
@@ -3145,7 +3367,14 @@ function AppDashboard({
                       }}
                     />
                   </div>
-                  {!isWideDesktop && mobileChartTab === "orderbook" && chartRightColEl}
+                  {/* Mobile Paper Trading/Order Flow for "orderbook" no
+                      longer mounts here — moved to the same generic slot
+                      every other non-chart page uses (further down,
+                      activeSection !== "chart"), since this nested-inside
+                      -.chart-column mount point gave Markets different
+                      spacing/layout than every other page's identical
+                      chartRightColEl despite being the exact same
+                      component. One mount point, one layout context. */}
                 </div>
               ) : (
                     <div className={`chart-column${isWideDesktop ? " chart-two-col-left" : ""}`}>
@@ -3163,6 +3392,11 @@ function AppDashboard({
                         refreshTrigger={refreshTrigger}
                         theme={theme}
                         coin={coin}
+                        // Chart page "2col" (wide desktop): the Order Book /
+                        // Order Flow column lives inside the price chart's
+                        // own container, beside the chart, instead of as a
+                        // separate page column.
+                        sideColumn={isWideDesktop && !distractionFree && chartLayoutMode === "2col" ? chartFlowColEl : undefined}
                         quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
                         onZoneChange={(zone, price) => {
                           setChartZone(zone);
@@ -3187,7 +3421,6 @@ function AppDashboard({
                             return;
                           }
                           advanceChartPushedRef.current = true;
-                          window.history.pushState(null, "", `${window.location.search}#advance-chart`);
                           setActiveSection("advance-chart");
                         }}
                       >
@@ -3195,21 +3428,38 @@ function AppDashboard({
                             (PriceChart.tsx's own `children` slot), below
                             the chart, instead of as separate full-width
                             blocks after .chart-page-row. */}
-                        {!distractionFree && (
-                          <Watchlist
-                            onSelectCoin={(symbol) => {
-                              setCoin(symbol as CoinSymbol);
-                              clearCandleCache();
-                            }}
-                          />
-                        )}
-                        {!distractionFree && (
-                          <TopMoversCarousel
-                            onSelectCoin={(symbol) => {
-                              setCoin(symbol as CoinSymbol);
-                              clearCandleCache();
-                            }}
-                          />
+                        {/* Wide desktop: Top Cryptocurrencies (same table as
+                            the Markets page) full width, with a filter
+                            dropdown (All / Watchlist / Winners / Losers /
+                            Trending). Narrower widths keep the plain stacked
+                            Watchlist + Trending as before. */}
+                        {!distractionFree && isWideDesktop ? (
+                          <div className="chart-below-full">
+                            <ChartBottomPanel
+                              coin={coin}
+                              onSelectCoin={(symbol) => {
+                                setCoin(symbol as CoinSymbol);
+                                clearCandleCache();
+                              }}
+                              onOpenAuth={onOpenAuth}
+                              onOpenPaperTrading={() => setActiveSection("riskcalc")}
+                            />
+                          </div>
+                        ) : !distractionFree && (
+                          <>
+                            <Watchlist
+                              onSelectCoin={(symbol) => {
+                                setCoin(symbol as CoinSymbol);
+                                clearCandleCache();
+                              }}
+                            />
+                            <TopMoversCarousel
+                              onSelectCoin={(symbol) => {
+                                setCoin(symbol as CoinSymbol);
+                                clearCandleCache();
+                              }}
+                            />
+                          </>
                         )}
                       </PriceChart>
                       <div
@@ -3244,7 +3494,7 @@ function AppDashboard({
                           <polyline points="58,20 62,24 58,28" />
                         </svg>
                       </div>
-                      {!isWideDesktop && chartRightColEl}
+                      {!isWideDesktop && chartRightColTabbedEl}
                     </div>
                   </div>
               );
@@ -3283,8 +3533,8 @@ function AppDashboard({
                   ) : (
                     <div className="chart-layout chart-layout--2col">
                       {chartColumnEl}
-                      <div className="chart-two-col-right">
-                        {chartRightColTabbedEl}
+                      <div className="chart-two-col-right chart-two-col-right--paper">
+                        {chartPaperColEl}
                       </div>
                     </div>
                   )
@@ -3337,7 +3587,6 @@ function AppDashboard({
                 onOpenFullChart={() => {
                   setMobileAdvanceChartOpen(false);
                   advanceChartPushedRef.current = true;
-                  window.history.pushState(null, "", `${window.location.search}#advance-chart`);
                   setActiveSection("advance-chart");
                 }}
               />
@@ -3350,9 +3599,6 @@ function AppDashboard({
                 live polling/local state instead of refetching every time
                 chart-right-col is flipped on and back off. */}
             <div style={{ display: mobileChartTab === "orderbook" ? "none" : "contents" }}>
-            {activeSection !== "chart" && activeSection !== "advance-chart" && activeSection !== "markets" && (
-              <SectionBanner section={activeSection} />
-            )}
             <Suspense fallback={<SectionLoading />}>
               {activeSection === "heatmap" && (
                 <LiquidationHeatmap
@@ -3464,14 +3710,31 @@ function AppDashboard({
               </div>
             )}
             </div>
-            {/* Paper Trading / Order Flow Pressure — only while mobileChartTab
-                is "orderbook", replacing the page above instead of
-                stacking below it. Chart/Markets never hit this (they
-                already render the exact same chartRightColEl as part of
-                their own layout, driven by the same mobileChartTab state
-                — never both at once). Advance Chart has no equivalent
-                slot at all, so it's excluded rather than silently broken. */}
-            {!isWideDesktop && mobileChartTab === "orderbook" && activeSection !== "chart" && activeSection !== "markets" && activeSection !== "advance-chart" && chartRightColEl}
+            {/* Paper Trading / Order Flow Pressure / Order Book — shown
+                only while mobileChartTab is "orderbook", replacing the
+                page above instead of stacking below it. Tabbed
+                (chartRightColTabbedEl), same component the desktop
+                top-bar flyout uses, not the plain stacked chartRightColEl
+                — mobile had no tab switcher here at all before, unlike
+                every desktop entry point into Paper Trading. Chart never
+                hits this (it already renders the exact same
+                chartRightColTabbedEl as part of its own layout, driven by
+                the same mobileChartTab state — never both at once).
+                Markets used to have its own separate nested mount point
+                too, giving it different spacing from every other page
+                despite being the identical component — now uses this
+                same one, like everything else does. Advance Chart has no
+                equivalent slot at all, so it's excluded rather than
+                silently broken. Hidden via CSS (not unmounted) once
+                activeSection allows it at all — mounting
+                PaperTradingCard/OrderFlowPanel fresh on every tap was
+                doing real synchronous work on the main thread right as the
+                tap fired, which is why taps sometimes needed repeating. */}
+            {!isWideDesktop && activeSection !== "chart" && activeSection !== "advance-chart" && (
+              <div style={{ display: mobileChartTab === "orderbook" ? "contents" : "none" }}>
+                {chartRightColTabbedEl}
+              </div>
+            )}
           </div>
           {/* Paper Trading / Buy Signals, added as a real column here
               when activated from their top-bar icons (desktop only —
@@ -3481,7 +3744,12 @@ function AppDashboard({
               content into this same element via columnTarget; Paper
               Trading's is simple enough to just render directly. */}
           <aside className="activated-panels-rail" ref={setActivatedPanelsRailEl}>
-            {paperTradingFlyoutOpen && (
+            {/* Chart (only — Markets never embeds one, "always just chart
+                + Daily Brief" per chartColumnEl's own comment above)
+                already embeds its own Paper Trading column directly in
+                its "2col"/"2row"/"3col" layouts — showing the flyout too
+                on that page would duplicate it side by side. */}
+            {paperTradingFlyoutOpen && activeSection !== "chart" && (
               <div className="activated-panel">
                 <div className="activated-panel-head">
                   <button
@@ -3493,7 +3761,9 @@ function AppDashboard({
                     ✕
                   </button>
                 </div>
-                {chartRightColEl}
+                {/* Same column as the #chart page (Paper Trading /
+                    Position Intelligence tabs). */}
+                {chartPaperColEl}
               </div>
             )}
           </aside>
@@ -3795,7 +4065,7 @@ function AppDashboard({
         isMobile={!isWideDesktop}
         coinTickers={coinTickers}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
-        onAgentLocked={() => setShowEliteUpsell(true)}
+        onAgentLocked={agentGate}
         onReportIssue={() => setContactOpen(true)}
         showIntroShowcase={showAgentShowcase}
         // Advance Chart page — the floating trigger asks for (and
@@ -3844,7 +4114,7 @@ function AppDashboard({
           onOpenDailyBrief={() => setDailyBriefPanelOpen((v) => !v)}
           dailyBriefOpen={dailyBriefPanelOpen}
           agentLocked={!hasAccess(tier, "elite")}
-          onAgentLocked={() => setShowEliteUpsell(true)}
+          onAgentLocked={agentGate}
           onGoHome={() => {
             // Closes whichever of the four mutually-exclusive panels is
             // currently open (each a no-op if it's already closed) and
@@ -3946,7 +4216,6 @@ function AppGate() {
     if (!user) initialLoadDoneFor.current = null;
   }, [user, profileLoading]);
   const [showAuth, setShowAuth] = useState(false);
-  const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   // Native Google sign-in opens an in-app browser and returns immediately —
@@ -4053,29 +4322,12 @@ function AppGate() {
     return <UsernameGateModal userId={user.id} onSaved={refreshProfile} />;
   }
 
-  if (!user) {
-    return (
-      <>
-        <LandingPage
-          onSignIn={() => {
-            setAuthView("login");
-            setShowAuth(true);
-          }}
-          onSignUp={() => {
-            setAuthView("signup");
-            setShowAuth(true);
-          }}
-        />
-        {showAuth && (
-          <AuthModal
-            onClose={() => setShowAuth(false)}
-            initialView={authView}
-          />
-        )}
-      </>
-    );
-  }
-
+  // No more blanket "signed out = LandingPage instead of the whole app"
+  // wall — none of the real pages require signing in to view/use anymore
+  // (pro/elite tier gates are unaffected, and Paper Trading's own sign-up
+  // requirement is enforced inside PaperTradingCard itself, not here).
+  // AuthModal is still reachable via onOpenAuth wherever something
+  // actually needs an account.
   return (
     <>
       <AppDashboard

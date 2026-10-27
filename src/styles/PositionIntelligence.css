@@ -1,0 +1,274 @@
+/* Position Intelligence tab (PositionIntelligence.tsx) — lives in the
+   Chart page's Paper Trading column, next to Paper Trading. */
+.pi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+.pi-card--locked {
+  overflow: hidden;
+}
+
+.pi-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pi-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.pi-info {
+  display: inline-flex;
+  color: var(--color-text-muted);
+  cursor: help;
+}
+
+/* ── Group cards (matches the reference) ── */
+@keyframes pi-row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.pi-gc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: var(--pc-panel, var(--color-surface-alt));
+  animation: pi-row-in 0.35s ease both;
+}
+.pi-gc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pi-gc-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.pi-gc-icon {
+  display: flex;
+  color: var(--color-text-muted);
+}
+.pi-gc-total {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.pi-gc-sides {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+.pi-gc-dim {
+  color: var(--color-text-muted);
+}
+.pi-gc-track {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(148, 163, 184, 0.22);
+  overflow: hidden;
+}
+.pi-gc-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pi-gc-fill--long {
+  left: 0;
+  background: #22c55e;
+}
+.pi-gc-fill--short {
+  right: 0;
+  background: #f87171;
+}
+
+.pi-long { color: #16a34a; }
+.pi-short { color: #e11d48; }
+html:not([data-theme="light"]) .pi-long { color: #4ade80; }
+html:not([data-theme="light"]) .pi-short { color: #fb7185; }
+.pi-muted { color: var(--color-text-muted); }
+
+.pi-bias {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.pi-bias--long { color: #16a34a; background: rgba(34, 197, 94, 0.12); }
+.pi-bias--short { color: #e11d48; background: rgba(244, 63, 94, 0.12); }
+.pi-bias--neutral { color: var(--color-text-muted); background: rgba(148, 163, 184, 0.14); }
+html:not([data-theme="light"]) .pi-bias--long { color: #4ade80; }
+html:not([data-theme="light"]) .pi-bias--short { color: #fb7185; }
+
+/* ── By exchange — one compact line per exchange ── */
+.pi-exchanges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+.pi-ex-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+.pi-ex-name {
+  width: 58px;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.pi-ex-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.pi-ex-cell-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.pi-ex-cell b {
+  font-weight: 700;
+}
+
+.pi-foot {
+  margin: 0;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+.pi-empty {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-gc { animation: none; }
+}
+
+/* ── Skeleton ── */
+.pi-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pi-skeleton-row {
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--pc-panel, rgba(148, 163, 184, 0.1)) 0%, rgba(148, 163, 184, 0.18) 50%, var(--pc-panel, rgba(148, 163, 184, 0.1)) 100%);
+  background-size: 200% 100%;
+  animation: pi-shimmer 1.4s linear infinite;
+}
+@keyframes pi-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Locked state (matches the reference: blurred preview, centered
+   title + subtitle + outlined Unlock button) ── */
+.pi-locked {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+}
+.pi-locked-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  filter: blur(6px);
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+/* Centered over the upper part of the column (bottom inset), not the full
+   height — pulls the message a bit closer to the preview rows. */
+.pi-locked-overlay {
+  position: absolute;
+  inset: 0 0 30% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 12px;
+  text-align: center;
+}
+.pi-locked-title {
+  margin: 0;
+  max-width: 240px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+.pi-locked-sub {
+  margin: 0;
+  max-width: 260px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.pi-unlock-btn {
+  all: unset;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  background: var(--pc-panel, var(--color-surface-alt));
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.pi-unlock-btn:hover {
+  background: var(--pc-panel-2, var(--color-surface-alt));
+}
+.pi-unlock-btn:active {
+  transform: scale(0.97);
+}
+.pi-locked-note {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+}
+
+/* Solid green action button (shared --action-green, index.css). */
+.pi-unlock-btn {
+  border-color: transparent;
+  background: var(--action-green);
+  color: var(--action-green-text);
+}
+.pi-unlock-btn:hover {
+  background: var(--action-green-hover);
+}

@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
 const corsHeaders = {
@@ -29,12 +31,35 @@ Deno.serve(async (req) => {
   }
   const inviterName = body.inviterName?.trim() || "A CoinHintz user";
 
+  // Log the invite against the signed-in sender (identity from their JWT,
+  // never from the body) so the signup trigger
+  // (reward_referral_on_signup, migration 20261026120000) can pay them
+  // +$10,000 paper cash when this email signs up. Signed-out senders
+  // still get the email sent, just no reward.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const jwt = authHeader.replace(/^Bearer\s+/i, "");
+  if (jwt) {
+    try {
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { data: { user } } = await admin.auth.getUser(jwt);
+      if (user && user.email?.toLowerCase() !== email.toLowerCase()) {
+        await admin.from("referral_invites").upsert(
+          { inviter_id: user.id, invitee_email: email.toLowerCase() },
+          { onConflict: "inviter_id,invitee_email", ignoreDuplicates: true },
+        );
+      }
+    } catch (e) {
+      console.error("referral log failed:", e);
+    }
+  }
+
   const appUrl = "https://coinhintz.com";
   const html = `
     <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;">
       <p>Hey,</p>
       <p><strong>${escapeHtml(inviterName)}</strong> thinks you'd like <strong>CoinHintz</strong> —
       real-time crypto charts, paper trading, and an AI trading agent.</p>
+      <p>Sign up with this email address to get started with <strong>$100,000</strong> in free paper trading cash.</p>
       <p style="margin:24px 0;">
         <a href="${appUrl}" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;">
           Open CoinHintz

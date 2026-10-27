@@ -17,7 +17,7 @@ import { CATALOG, type CatalogEntry } from "../services/coinCatalog";
 import { fetchBinancePrices, fetchSparklines, type PriceEntry } from "../services/binancePrices";
 import { COINS } from "../services/coinglass";
 
-const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
+export const DEFAULT_IDS = ["bitcoin", "ethereum", "solana", "ripple"];
 
 // Only coins the price chart actually supports (a subset of the full watchlist catalog)
 const CHARTABLE_SYMBOLS = new Set<string>(COINS.map(c => c.symbol));

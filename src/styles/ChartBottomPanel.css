@@ -1,0 +1,172 @@
+/* Chart page bottom panel (ChartBottomPanel.tsx): plain-text tab row like
+   the reference — market tab, a divider, then the account tabs; active
+   tab in green. */
+.cbp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--pc-border, var(--color-border));
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cbp-tabs::-webkit-scrollbar { display: none; }
+.cbp-tab {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cbp-tab:hover { color: var(--color-text); }
+.cbp-tab.active {
+  color: var(--color-success, #16a34a);
+}
+.cbp-tab-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+.cbp-tabs-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--pc-border, var(--color-border));
+  flex-shrink: 0;
+}
+/* Every tab keeps the Top Cryptocurrencies tab's full height (table
+   header + 15 rows + pagination ≈ 807px), so switching tabs never
+   changes the page height or shifts anything. */
+.cbp-body {
+  min-height: 810px;
+}
+.cbp-table {
+  margin-top: 8px;
+}
+.cbp-muted {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.cbp-empty {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.cbp-gate {
+  padding: 48px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+.cbp-gate p { margin: 0; }
+.cbp-gate-btn,
+.cbp-close-btn {
+  all: unset;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.cbp-gate-btn:hover,
+.cbp-close-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.cbp-close-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+}
+.cbp-close-btn:disabled { opacity: 0.6; cursor: default; }
+.cbp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 20px 0;
+}
+.cbp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 24px;
+  border-left: 1px solid color-mix(in srgb, var(--pc-border, var(--color-border)) 45%, transparent);
+}
+.cbp-stat:first-child { padding-left: 0; border-left: none; }
+.cbp-stat span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.cbp-stat b {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+/* The table section inside the Markets tab: no extra top gap now that
+   the tab row sits above it. */
+.cbp .gm-section.tct--filterable {
+  padding-top: 12px;
+}
+
+/* Solid green action button (shared --action-green, index.css). */
+.cbp-gate-btn {
+  border-color: transparent;
+  background: var(--action-green);
+  color: var(--action-green-text);
+}
+.cbp-gate-btn:hover {
+  background: var(--action-green-hover) !important;
+}
+/* Filter dropdown at the right end of the tab row (Top Cryptocurrencies
+   tab only). Row keeps a fixed height so it doesn't change when the
+   dropdown appears/disappears with the tab. */
+.cbp-tabs {
+  min-height: 34px;
+  overflow: visible;
+}
+.cbp-tabs-right {
+  margin-left: auto;
+}
+/* Top Traders filter (Winners / Losers / All) — same green button look
+   as the coin filter. */
+.cbp-tt-filter {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 6px 28px 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--action-green-text);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center,
+    var(--action-green);
+  cursor: pointer;
+}
+
+/* Layout stability across tabs: fixed tab-row height (whether or not a
+   filter button sits on the right) and every tab's content starts the
+   same 12px below it, so switching tabs never moves anything. */
+.cbp-tabs {
+  box-sizing: border-box;
+  height: 58px;
+  min-height: 58px;
+  padding: 0;
+}
+.cbp .gm-section.tct--filterable { padding-top: 12px; }
+.cbp-table { margin-top: 12px; }
+.ttt { padding-top: 12px; }
+.cbp-gate, .cbp-empty, .cbp-stats { margin-top: 12px; }
+/* Keep the first child's top margin inside the panel (no margin
+   collapse), so the panel's own box never moves either. */
+.cbp-body { display: flow-root; }

@@ -76,8 +76,15 @@ button {
   transition: all 0.25s ease;
 }
 
-button:hover {
-  border-color: #646cff;
+/* hover: hover guards this to devices with a real pointer (mouse/trackpad)
+   — without it, WebKit on iOS simulates :hover on the first tap of ANY
+   button app-wide and only fires the actual click on a second tap, which
+   is why chart-mobile-tab (and potentially other buttons) sometimes needed
+   2-3 taps to register. Not related to the sliding-indicator animation. */
+@media (hover: hover) and (pointer: fine) {
+  button:hover {
+    border-color: #646cff;
+  }
 }
 
 /* :focus-visible only (not plain :focus) — Vite's own template default
@@ -126,4 +133,12 @@ textarea {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* Primary action buttons (reference: Hyperliquid's solid green CTA) —
+   shared so every main action reads the same. */
+:root {
+  --action-green: #0f9b6c;
+  --action-green-hover: #0c875e;
+  --action-green-text: #ffffff;
 }

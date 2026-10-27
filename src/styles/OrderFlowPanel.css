@@ -56,6 +56,20 @@
   color: var(--color-text-muted);
   white-space: nowrap;
 }
+/* Tabbed view: spread sits where the title used to be, styled close to
+   .ofp-title (bold, larger) with the bps figure kept small and muted. */
+.ofp-spread--title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+.ofp-spread--title .ofp-spread-bps {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0;
+}
 
 .ofp-loading {
   font-size: 12px;
@@ -204,5 +218,5 @@
   min-height: 160px;
   display: flex;
   flex-direction: column;
-  margin-top: 4px;
+  margin: 0;
 }

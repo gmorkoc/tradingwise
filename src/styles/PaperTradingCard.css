@@ -18,6 +18,9 @@
   flex-direction: column;
   gap: 16px;
   flex-shrink: 0;
+  /* Matches .ob-card's own effective mobile padding (.main-content
+     .chart-right-col .ob-card in App.css) — both cards sharing
+     .chart-right-col should read as a consistent pair. */
   padding: 16px;
 }
 /* Pre-activation: no header/title/LIVE badge left as a sibling to size
@@ -34,7 +37,7 @@
   flex: 1 1 auto !important;
   height: 100% !important;
   min-height: 0 !important;
-  padding: 0;
+  padding: 16px;
 }
 
 .ptc-header {
@@ -42,7 +45,7 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding-top: 8px;
+  padding-top: 0;
 }
 .ptc-header-right {
   display: flex;
@@ -109,11 +112,18 @@
      nothing to balance against above it. */
   justify-content: flex-start;
   text-align: center;
-  gap: 18px;
+  gap: 16px;
   width: 100%;
-  padding: 64px 16px 8px;
+  padding: 0;
   overflow: hidden;
+  /* Flat, theme-aware — was hardcoded #ffffff, which looked fine in
+     light theme but broke dark theme entirely (a bright white card
+     against the rest of the dark UI). --pc-bg already resolves
+     correctly per theme everywhere else in this file. */
   background: var(--pc-bg);
+}
+html:not([data-theme="light"]) .ptc-activate {
+  background: var(--color-background);
 }
 /* Cross-dissolve on activation (PaperTradingCard.tsx: dissolving) — a
    real two-scene movie cut, not an instant swap. Three things happen in
@@ -205,158 +215,181 @@
     animation: none;
   }
 }
-/* Soft dual-tone glow breathing behind everything — primary blue bleeding
-   into success green, the two colors the whole card's own stats already
-   use (profit/loss), so the "get started" moment borrows the same
-   palette instead of introducing a third accent. */
-.ptc-activate-glow {
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  width: 240px;
-  height: 180px;
-  transform: translateX(-50%);
-  background:
-    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--color-primary) 32%, transparent), transparent 60%),
-    radial-gradient(circle at 65% 60%, color-mix(in srgb, var(--pc-success, #22c55e) 26%, transparent), transparent 60%);
-  filter: blur(18px);
-  opacity: 0.8;
-  animation: ptc-activate-glow-breathe 4.5s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes ptc-activate-glow-breathe {
-  0%, 100% { opacity: 0.55; transform: translateX(-50%) scale(0.94); }
-  50% { opacity: 0.9; transform: translateX(-50%) scale(1.06); }
-}
-.ptc-activate-orbit {
+/* Small italic serif eyebrow (reference's "Simple Steps") — a deliberate
+   font-family switch from the rest of the card, a dark teal, not another
+   uppercase sans label. */
+.ptc-activate-eyebrow {
   position: relative;
   z-index: 1;
-  width: 84px;
-  height: 84px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 4px;
+  align-self: flex-start;
+  text-align: left;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--pc-success);
 }
-.ptc-activate-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px dashed var(--color-primary);
-  opacity: 0.35;
-}
-.ptc-activate-ring--1 {
-  animation: ptc-activate-spin 7s linear infinite;
-}
-.ptc-activate-ring--2 {
-  inset: 12px;
-  opacity: 0.3;
-  border-color: var(--pc-success, #22c55e);
-  animation: ptc-activate-spin 5s linear infinite reverse;
-}
-.ptc-activate-ring--3 {
-  inset: 24px;
-  opacity: 0.22;
-  border-style: solid;
-  animation: ptc-activate-pulse 2.4s ease-in-out infinite;
-}
-@keyframes ptc-activate-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes ptc-activate-pulse {
-  0%, 100% { transform: scale(0.92); opacity: 0.18; }
-  50% { transform: scale(1.08); opacity: 0.36; }
-}
-/* Six little sparks riding the outer ring's own orbit — each rotates a
-   full lap via its own .ptc-activate-spark--N rule (one per 60°, below)
-   with a staggered delay/duration so they drift apart instead of moving
-   as one rigid, visibly-fake clump. */
-.ptc-activate-spark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin: -2.5px 0 0 -2.5px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--color-primary) 70%, transparent);
-  animation: ptc-activate-orbit-spark linear infinite;
-}
-.ptc-activate-spark--0 { animation-duration: 6s; animation-delay: 0s; }
-.ptc-activate-spark--1 { animation-duration: 6s; animation-delay: -1s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
-.ptc-activate-spark--2 { animation-duration: 6s; animation-delay: -2s; }
-.ptc-activate-spark--3 { animation-duration: 6s; animation-delay: -3s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
-.ptc-activate-spark--4 { animation-duration: 6s; animation-delay: -4s; }
-.ptc-activate-spark--5 { animation-duration: 6s; animation-delay: -5s; background: var(--pc-success, #22c55e); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pc-success, #22c55e) 70%, transparent); }
-/* Plain translateX(radius) + rotate — no counter-rotation needed since a
-   round dot looks identical at every angle, unlike an icon/arrow shape. */
-@keyframes ptc-activate-orbit-spark {
-  from { transform: rotate(0deg) translateX(40px); opacity: 0.9; }
-  50% { opacity: 0.35; }
-  to { transform: rotate(360deg) translateX(40px); opacity: 0.9; }
-}
-.ptc-activate-coin {
+/* One-line subtitle under the headline (reference's "No confusion or
+   delays. Just fast and reliable testing."). */
+.ptc-activate-kicker {
   position: relative;
   z-index: 1;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--color-primary), var(--pc-success, #22c55e));
-  color: #fff;
-  box-shadow: 0 0 0 4px var(--color-primary-soft), 0 4px 14px color-mix(in srgb, var(--color-primary) 45%, transparent);
-  animation: ptc-activate-coin-pulse 2.4s ease-in-out infinite;
-}
-/* Diagonal shine sweeping across the coin every few seconds — a cheap,
-   common "something good is happening here" cue (same idea as a loading
-   shimmer, just slower/rarer so it reads as a flourish, not a spinner). */
-.ptc-activate-coin::after {
-  content: "";
-  position: absolute;
-  inset: -50%;
-  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
-  animation: ptc-activate-coin-shine 3.2s ease-in-out infinite;
-}
-@keyframes ptc-activate-coin-shine {
-  0%, 30% { transform: translateX(-60%); }
-  70%, 100% { transform: translateX(60%); }
-}
-@keyframes ptc-activate-coin-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  align-self: flex-start;
+  text-align: left;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--pc-text-muted);
+  max-width: 280px;
 }
 .ptc-activate-title {
   position: relative;
   z-index: 1;
+  align-self: flex-start;
+  text-align: left;
   margin: 0;
-  font-size: 14px;
+  font-family: Sora, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 22px;
   font-weight: 800;
-  line-height: 1.3;
-  background: linear-gradient(90deg, var(--color-text), var(--color-primary), var(--pc-success, #22c55e), var(--color-text));
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: ptc-activate-title-sheen 5s ease-in-out infinite;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--pc-text);
+  white-space: nowrap;
 }
-@keyframes ptc-activate-title-sheen {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+/* "How it works" timeline — a continuous connecting line threading
+   through solid-color square icons, no per-step card/border (confirmed
+   exact match against a reference: plain rows on the connector line,
+   not boxed banners). */
+.ptc-activate-steps {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+.ptc-activate-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  text-align: left;
+  width: 100%;
+  position: relative;
+}
+/* Short accent bar per row, not one continuous line threaded through
+   every icon — each row's own independent marker, dark for the first
+   (active) step and light gray for the rest, exactly matching the
+   reference rather than a generic progress line. */
+.ptc-activate-step-bar {
+  flex-shrink: 0;
+  width: 2px;
+  align-self: stretch;
+  border-radius: 1px;
+  background: var(--pc-border);
+}
+.ptc-activate-step--active .ptc-activate-step-bar {
+  background: var(--pc-text);
+}
+.ptc-activate-step-icon {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pc-bg);
+  border: 1px solid var(--pc-border);
+  color: var(--pc-text);
+}
+.ptc-activate-step--active .ptc-activate-step-icon {
+  background: #22c55e;
+  border-color: transparent;
+  color: #fff;
+}
+/* One-time fade-in, each row in sequence (not a continuous/infinite
+   animation) — plays once on mount, then settles. */
+.ptc-activate-step-icon {
+  opacity: 0;
+  animation: ptc-step-icon-fade-in 0.5s ease-out forwards;
+}
+.ptc-activate-step:nth-child(1) .ptc-activate-step-icon { animation-delay: 0.1s; }
+.ptc-activate-step:nth-child(2) .ptc-activate-step-icon { animation-delay: 0.35s; }
+.ptc-activate-step:nth-child(3) .ptc-activate-step-icon { animation-delay: 0.6s; }
+@keyframes ptc-step-icon-fade-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-activate-step-icon {
+    opacity: 1;
+    animation: none;
+  }
+}
+.ptc-activate-step-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.ptc-activate-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 4px;
+}
+.ptc-activate-step-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pc-text);
+  line-height: 1.25;
+}
+.ptc-activate-step-sub {
+  font-size: 13px;
+  color: var(--pc-text-muted);
+  line-height: 1.55;
 }
 .ptc-activate-sub {
   position: relative;
   z-index: 1;
+  align-self: flex-start;
+  text-align: left;
   margin: 0;
-  font-size: 11px;
-  color: var(--color-text-muted);
+  /* Aligned to the step TEXT column: bar(2px) + gap(14px) + icon(44px)
+     + gap(14px) = 74px — not flush with the icons/card edge, matches
+     where "Create your free account" etc. actually start. (Was 58px,
+     missing the accent bar + its own gap.)
+     An explicit width (not max-width/margin alone) — a flex item with
+     align-self:flex-start sizes to its own content's natural max-content
+     width instead of shrinking to fit between margins the way a normal
+     block child would, so without this the paragraph's intrinsic width
+     overflowed past the card on both sides and got clipped by
+     .ptc-activate's own overflow:hidden. */
+  margin-left: 74px;
+  width: calc(100% - 74px - 16px);
+  font-size: 10px;
+  color: var(--pc-text-muted);
   line-height: 1.5;
-  max-width: 280px;
 }
+/* Fine-print under the signed-out CTA (an account is needed) — smaller
+   and quieter than the disclaimer line above it, not another pitch.
+   Stays centered (overriding .ptc-activate-sub's own left-align) since
+   it sits right under the centered CTA button, not the left-aligned
+   header/disclaimer text. */
+.ptc-activate-sub--muted {
+  align-self: center;
+  text-align: center;
+  font-size: 10px;
+  opacity: 0.8;
+  max-width: none;
+}
+/* Matches .lp-btn-hero-primary.lp-btn-glow (LandingPage.css) exactly —
+   same indigo-to-blue gradient, same breathing glow + shimmer sweep. */
 .ptc-activate-cta {
   all: unset;
   position: relative;
@@ -369,20 +402,25 @@
   cursor: pointer;
   width: 100%;
   margin-top: 6px;
-  padding: 12px 0;
-  border-radius: 10px;
-  background: linear-gradient(90deg, var(--color-primary), var(--pc-success, #22c55e));
+  padding: 14px 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4f46e5, #0284c7);
   color: #fff;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: 0.01em;
-  transition: transform 0.15s;
+  /* No glow/box-shadow — it bled past .ptc-activate's own edges (clipped
+     by overflow:hidden right at the boundary, but still visible as a
+     colored haze right at the card's bottom corners), which is exactly
+     what broke the "edges must be pure white" requirement. The gradient
+     fill itself is enough of an accent without a halo around it. */
+  transition: transform 0.1s, opacity 0.15s;
 }
 .ptc-activate-cta:hover {
-  transform: translateY(-1px);
+  opacity: 0.88;
 }
 .ptc-activate-cta:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 .ptc-activate-cta:disabled {
   opacity: 0.6;
@@ -396,24 +434,261 @@
 .ptc-activate-cta-shine {
   position: absolute;
   inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
-  transform: translateX(-100%);
-  animation: ptc-activate-cta-sweep 3.6s ease-in-out infinite;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.28) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: ptc-activate-cta-sweep 3.2s ease-in-out infinite;
 }
 @keyframes ptc-activate-cta-sweep {
-  0%, 20% { transform: translateX(-120%); }
-  60%, 100% { transform: translateX(120%); }
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ptc-activate-ring,
-  .ptc-activate-spark,
-  .ptc-activate-coin,
-  .ptc-activate-coin::after,
-  .ptc-activate-glow,
-  .ptc-activate-title,
+  .ptc-activate-badge-flare,
+  .ptc-activate-cta,
   .ptc-activate-cta-shine {
     animation: none;
   }
+}
+
+/* ── Promo hero banner (PtcHero, PaperTradingCard.tsx) ───────────────────
+   Self-contained dark card in both themes — it's a showcase, so it keeps
+   its own palette instead of following the page surface. */
+.ptc-hero {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 16px 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 0% 0%, #312e81 0%, transparent 60%),
+    radial-gradient(100% 80% at 100% 100%, #064e3b 0%, transparent 65%),
+    linear-gradient(160deg, #0b1020 0%, #0f172a 55%, #0b1324 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: ptc-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ptc-hero-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.ptc-hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  pointer-events: none;
+  animation: ptc-hero-orb-drift 9s ease-in-out infinite alternate;
+}
+.ptc-hero-orb--a {
+  width: 140px; height: 140px;
+  top: -50px; right: -30px;
+  background: rgba(99, 102, 241, 0.45);
+}
+.ptc-hero-orb--b {
+  width: 120px; height: 120px;
+  bottom: -50px; left: 20%;
+  background: rgba(16, 185, 129, 0.35);
+  animation-delay: -4s;
+}
+@keyframes ptc-hero-orb-drift {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-24px, 14px); }
+}
+.ptc-hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 40%, #000 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 40%, #000 80%, transparent 100%);
+}
+.ptc-hero > :not(.ptc-hero-orb):not(.ptc-hero-grid) {
+  position: relative;
+}
+.ptc-hero-top {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.ptc-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.ptc-hero-pill--ghost {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.ptc-hero-pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  animation: ptc-hero-ping 1.8s ease-out infinite;
+}
+@keyframes ptc-hero-ping {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6); }
+  100% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+}
+.ptc-hero-balance-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+}
+.ptc-hero-balance {
+  font-family: Sora, Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, #ffffff 0%, #c7d2fe 60%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ptc-hero-balance-cents {
+  font-size: 18px;
+  opacity: 0.6;
+}
+.ptc-hero-chart {
+  position: relative;
+  height: 96px;
+  margin: 10px -16px 0;
+}
+.ptc-hero-chart svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ptc-hero-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ptc-hero-draw 1.6s 0.2s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.5));
+}
+@keyframes ptc-hero-draw {
+  to { stroke-dashoffset: 0; }
+}
+.ptc-hero-area {
+  opacity: 0;
+  animation: ptc-hero-fade 0.8s 1.2s ease forwards;
+}
+@keyframes ptc-hero-fade {
+  to { opacity: 1; }
+}
+.ptc-hero-end-dot {
+  position: absolute;
+  width: 9px; height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: #34d399;
+  opacity: 0;
+  animation: ptc-hero-fade 0.3s 1.7s forwards, ptc-hero-ping 1.8s 1.8s ease-out infinite;
+}
+.ptc-hero-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+}
+.ptc-hero-chip b {
+  color: #34d399;
+  font-weight: 800;
+}
+.ptc-hero-chip--a {
+  left: 16px;
+  bottom: 6px;
+  animation: ptc-hero-chip-in 0.5s 1.0s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    ptc-hero-float 4s 1.5s ease-in-out infinite;
+}
+.ptc-hero-chip--b {
+  right: 16px;
+  top: 30px;
+  animation: ptc-hero-chip-in 0.5s 1.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    ptc-hero-float 4.6s 1.85s ease-in-out infinite;
+}
+@keyframes ptc-hero-chip-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ptc-hero-float {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-4px); }
+}
+.ptc-hero-chip-side {
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.ptc-hero-chip-side--long {
+  color: #052e16;
+  background: #34d399;
+}
+.ptc-hero-chip-side--short {
+  color: #4c0519;
+  background: #fb7185;
+}
+.ptc-hero-feats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.ptc-hero-feats span {
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-hero,
+  .ptc-hero-orb,
+  .ptc-hero-pill-dot,
+  .ptc-hero-line,
+  .ptc-hero-area,
+  .ptc-hero-end-dot,
+  .ptc-hero-chip {
+    animation: none;
+  }
+  .ptc-hero-line { stroke-dashoffset: 0; }
+  .ptc-hero-area,
+  .ptc-hero-end-dot,
+  .ptc-hero-chip { opacity: 1; }
 }
 
 @keyframes ptc-shimmer {
@@ -1086,4 +1361,1394 @@
 }
 .ptc-page-link:hover {
   color: var(--color-primary);
+}
+
+/* ── Promo dark theme ─────────────────────────────────────────────────────
+   The pre-activation promo takes on the hero banner's palette across the
+   whole card (everything below the tab row — the tab row itself keeps the
+   normal page colors). */
+.ptc-card--activating {
+  background:
+    radial-gradient(90% 40% at 0% 0%, rgba(49, 46, 129, 0.9) 0%, transparent 70%),
+    radial-gradient(90% 45% at 100% 100%, rgba(6, 78, 59, 0.85) 0%, transparent 70%),
+    linear-gradient(170deg, #0b1020 0%, #0f172a 55%, #0b1324 100%) !important;
+  color: #fff;
+}
+
+/* Promo content on the dark background */
+.ptc-card--activating .ptc-activate,
+html:not([data-theme="light"]) .ptc-card--activating .ptc-activate {
+  background: transparent;
+}
+.ptc-card--activating .ptc-hero {
+  /* Already sitting on the same gradient — a lighter glass panel instead
+     of a second copy of the background. */
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.ptc-card--activating .ptc-activate-title,
+.ptc-card--activating .ptc-activate-step-label {
+  color: #fff;
+}
+.ptc-card--activating .ptc-activate-kicker,
+.ptc-card--activating .ptc-activate-step-sub {
+  color: rgba(255, 255, 255, 0.62);
+}
+.ptc-card--activating .ptc-activate-sub {
+  color: rgba(255, 255, 255, 0.45);
+}
+.ptc-card--activating .ptc-activate-step-bar {
+  background: rgba(255, 255, 255, 0.12);
+}
+.ptc-card--activating .ptc-activate-step--active .ptc-activate-step-bar {
+  background: #34d399;
+}
+.ptc-card--activating .ptc-activate-step-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.ptc-card--activating .ptc-activate-step--active .ptc-activate-step-icon {
+  background: #22c55e;
+  border-color: transparent;
+}
+.ptc-card--activating .ptc-activate-cta {
+  background: linear-gradient(135deg, #4f46e5, #059669);
+}
+/* Not activated: the dark promo fills the Chart page's Paper Trading
+   column edge to edge — drop the column's outer margin (normally
+   0 0 10px 10px, App.css .chart-two-col-right) so no page background
+   shows beside or below it. */
+.chart-two-col-right--paper:has(.ptc-card--activating) {
+  margin: 0;
+}
+
+/* ── Promo + hero: light theme ────────────────────────────────────────────
+   Same layout and accents as the dark version above, rebuilt on a light
+   base: soft indigo/mint washes over white instead of navy, dark text,
+   white glass chips. */
+html[data-theme="light"] .ptc-card--activating {
+  /* Glossy white → light gray, no color washes: a bright sheen across
+     the top fading into a cool neutral gray. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 38%),
+    radial-gradient(120% 60% at 50% 0%, #ffffff 0%, transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #fcfcfd 100%) !important;
+  color: #0f172a;
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-title,
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step-label {
+  color: #0f172a;
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-kicker,
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step-sub {
+  color: #64748b;
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-sub {
+  color: #94a3b8;
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step-bar {
+  background: rgba(15, 23, 42, 0.1);
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step--active .ptc-activate-step-bar {
+  background: #10b981;
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step-icon {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  border-color: rgba(15, 23, 42, 0.09);
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+html[data-theme="light"] .ptc-card--activating .ptc-activate-step--active .ptc-activate-step-icon {
+  background: #22c55e;
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Hero */
+html[data-theme="light"] .ptc-hero,
+html[data-theme="light"] .ptc-card--activating .ptc-hero {
+  color: #0f172a;
+  /* Glossy panel: hard white highlight on the top half (the "gloss"),
+     soft light-gray body below, bright inner edge + soft drop shadow. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 48%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfe 100%);
+  border-color: rgba(15, 23, 42, 0.07);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 12px 28px -14px rgba(15, 23, 42, 0.22);
+}
+html[data-theme="light"] .ptc-hero-orb--a {
+  background: rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] .ptc-hero-orb--b {
+  background: rgba(226, 232, 240, 0.2);
+}
+html[data-theme="light"] .ptc-hero-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+html[data-theme="light"] .ptc-hero-pill {
+  color: #047857;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+html[data-theme="light"] .ptc-hero-pill--ghost {
+  color: #475569;
+  background: linear-gradient(180deg, #ffffff 0%, #fdfdfe 100%);
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+html[data-theme="light"] .ptc-hero-pill-dot {
+  background: #10b981;
+}
+html[data-theme="light"] .ptc-hero-balance-label {
+  color: #64748b;
+}
+html[data-theme="light"] .ptc-hero-balance {
+  background: linear-gradient(180deg, #1f2937 0%, #4b5563 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html[data-theme="light"] .ptc-hero-line {
+  filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.35));
+}
+html[data-theme="light"] .ptc-hero-end-dot {
+  background: #10b981;
+}
+html[data-theme="light"] .ptc-hero-chip {
+  color: #334155;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+html[data-theme="light"] .ptc-hero-chip b {
+  color: #059669;
+}
+html[data-theme="light"] .ptc-hero-chip-side--long {
+  color: #fff;
+  background: #10b981;
+}
+html[data-theme="light"] .ptc-hero-chip-side--short {
+  color: #fff;
+  background: #f43f5e;
+}
+html[data-theme="light"] .ptc-hero-feats span {
+  color: #334155;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* Hero runs edge to edge across the promo card with no top border: the
+   card drops its own padding (!important — the tabbed-column rule in
+   App.css sets 16px at higher specificity) and .ptc-activate carries the
+   side/bottom padding instead, so the hero can pull back out to the
+   edges with negative margins without being clipped by
+   .ptc-activate's overflow:hidden. */
+.ptc-card--activating {
+  padding: 0 !important;
+}
+.ptc-card--activating .ptc-activate {
+  padding: 0 16px 16px;
+  box-sizing: border-box;
+}
+.ptc-card--activating .ptc-hero {
+  width: calc(100% + 32px);
+  margin: 0 -16px;
+  border-radius: 0;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+/* No borders or shadows on the hero at all (both themes, every context). */
+.ptc-hero,
+html[data-theme="light"] .ptc-hero,
+html[data-theme="light"] .ptc-card--activating .ptc-hero {
+  border: none;
+  box-shadow: none;
+}
+/* …and none on anything inside it either (pills, trade chips, feature
+   tags). !important so no theme/context rule can bring one back. */
+.ptc-hero,
+.ptc-hero * {
+  border: none !important;
+}
+
+/* Bottom of the hero fades into whatever sits behind it (the promo card's
+   own background) instead of ending on a hard edge. The hero's fill moves
+   onto ::before, which is masked to transparent toward the bottom — a
+   mask on the hero itself would fade its content (feature tags) too.
+   Same fills as the rules above, one per theme/context. */
+.ptc-hero {
+  --ptc-hero-bg:
+    radial-gradient(120% 90% at 0% 0%, #312e81 0%, transparent 60%),
+    radial-gradient(100% 80% at 100% 100%, #064e3b 0%, transparent 65%),
+    linear-gradient(160deg, #0b1020 0%, #0f172a 55%, #0b1324 100%);
+}
+.ptc-card--activating .ptc-hero {
+  --ptc-hero-bg: rgba(255, 255, 255, 0.04);
+}
+html[data-theme="light"] .ptc-hero,
+html[data-theme="light"] .ptc-card--activating .ptc-hero {
+  --ptc-hero-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.55) 48%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfe 100%);
+}
+.ptc-hero,
+html[data-theme="light"] .ptc-hero,
+html[data-theme="light"] .ptc-card--activating .ptc-hero,
+.ptc-card--activating .ptc-hero {
+  background: none;
+}
+.ptc-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--ptc-hero-bg);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+/* Grid lines fade out at the bottom too, so they don't outlast the fill. */
+.ptc-hero-grid {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 30%, #000 55%, transparent 100%);
+}
+/* The second glow orb used to sit on the bottom edge, which would leave a
+   hard colored cut-off right where the fade happens — moved up into the
+   solid part of the hero instead. */
+.ptc-hero-orb--b {
+  bottom: auto;
+  top: 30%;
+}
+
+/* Solid green action button (shared --action-green, index.css) — both
+   themes, replacing the indigo/green gradients above. */
+.ptc-activate-cta,
+.ptc-card--activating .ptc-activate-cta {
+  background: var(--action-green) !important;
+  color: var(--action-green-text);
+}
+.ptc-activate-cta:hover {
+  background: var(--action-green-hover) !important;
+  opacity: 1;
+}
+/* Open position (and the card's other .ptc-cta actions) — same solid
+   green action button. */
+.ptc-cta {
+  background: var(--action-green) !important;
+  color: var(--action-green-text) !important;
+}
+.ptc-cta:hover:not(:disabled) {
+  background: var(--action-green-hover) !important;
+}
+/* "View all N" closed positions — small icon button in the card header
+   (closed view), replacing the text link that sat under the list. */
+.ptc-view-all-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.ptc-view-all-btn:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.ptc-view-all-btn svg {
+  color: var(--color-text-muted);
+}
+/* Open ↔ Closed positions switch — full-width outlined button with an
+   icon at the bottom of the card (was a text link in the header). */
+.ptc-switch-view-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 0;
+  border-radius: 10px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ptc-switch-view-btn:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.ptc-switch-view-btn svg {
+  color: var(--color-text-muted);
+}
+
+/* ── Leverage picker (LeveragePicker) ─────────────────────────────────── */
+.ptc-lev {
+  position: relative;
+}
+.ptc-lev-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ptc-lev-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.ptc-lev-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ptc-lev-tag,
+.ptc-lev-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+}
+.ptc-lev-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: #d97706;
+  cursor: pointer;
+}
+html:not([data-theme="light"]) .ptc-lev-btn { color: #fbbf24; }
+.ptc-lev-btn:hover,
+.ptc-lev-btn.open {
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.ptc-lev-pop {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  padding: 20px 16px 16px;
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--pc-border, var(--color-border));
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: ptc-lev-in 0.14s ease;
+}
+@keyframes ptc-lev-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Slider: green filled track up to the thumb, faint track after it,
+   tick dots + labels underneath (1 / 5 / 10 / 15 / 20). */
+.ptc-lev-slider {
+  position: relative;
+  padding-bottom: 22px;
+}
+.ptc-lev-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.ptc-lev-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--action-green) var(--lev-pct), color-mix(in srgb, var(--action-green) 35%, transparent) var(--lev-pct));
+}
+.ptc-lev-slider input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--action-green) var(--lev-pct), color-mix(in srgb, var(--action-green) 35%, transparent) var(--lev-pct));
+}
+.ptc-lev-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6.5px;
+  border-radius: 50%;
+  background: var(--action-green);
+  border: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--action-green) 25%, transparent);
+}
+.ptc-lev-slider input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--action-green);
+  border: none;
+}
+.ptc-lev-ticks {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.ptc-lev-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ptc-lev-tick i {
+  margin-top: 6.5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--action-green) 60%, transparent);
+}
+.ptc-lev-tick b {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.ptc-lev-tick.on b {
+  color: var(--color-text);
+}
+.ptc-lev-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.ptc-lev-confirm {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 0;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--action-green);
+  color: var(--action-green-text);
+  cursor: pointer;
+}
+.ptc-lev-confirm:hover {
+  background: var(--action-green-hover);
+}
+
+/* ── Order Type picker (OrderTypePicker) ──────────────────────────────── */
+.ptc-ot-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ptc-ot-btn:hover,
+.ptc-ot-btn.open {
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+.ptc-ot-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 150px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--pc-border, var(--color-border));
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  animation: ptc-lev-in 0.14s ease;
+}
+.ptc-ot-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ptc-ot-item:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.ptc-ot-item svg {
+  color: var(--action-green);
+}
+.ptc-ot-item:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+.ptc-ot-soon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Amount — full-width row under Short/Long (was a small pill wedged
+   between the two halves): label left, big input filling the row, $/coin
+   unit toggle on the right. */
+.ptc-amount-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  background: var(--pc-bg);
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ptc-amount-row:focus-within {
+  border-color: var(--action-green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--action-green) 18%, transparent);
+}
+.ptc-amount-row-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.ptc-amount-row-input {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  text-align: right;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.ptc-amount-row .ptc-amount-unit-toggle {
+  align-self: stretch;
+  height: auto;
+  min-width: 44px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  border-left: 1px solid var(--pc-border, var(--color-border));
+  border-radius: 0 10px 10px 0;
+}
+
+/* ⓘ info icons with hover explanations (InfoTip). */
+.ptc-info {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  cursor: help;
+}
+.ptc-info:hover {
+  opacity: 1;
+}
+.ptc-segmented + .ptc-info {
+  margin-left: 8px;
+}
+.ptc-buysell-label .ptc-info {
+  color: inherit;
+}
+
+/* Roomier spacing between rows (form, detail lists, stats). */
+.ptc-form {
+  gap: 14px;
+  padding: 16px;
+}
+.ptc-form-row {
+  gap: 10px;
+  align-items: center;
+}
+.ptc-field {
+  gap: 6px;
+  font-size: 11px;
+}
+.ptc-futures-preview {
+  gap: 10px;
+  padding: 12px 14px;
+}
+.ptc-detail-row {
+  font-size: 12px;
+  align-items: center;
+}
+.ptc-amount-total {
+  margin-top: -6px;
+}
+.ptc-position-detail-inner {
+  gap: 9px;
+}
+
+/* Short / Long as one row; the shared live price sits once, centered,
+   just above it (.ptc-buysell-mid). */
+.ptc-buysell-half {
+  flex-direction: row;
+  align-items: center;
+  padding: 11px 12px;
+}
+/* Long on the left, Short on the right, each label centered in its half. */
+.ptc-buysell-half--buy,
+.ptc-buysell-half--sell { justify-content: center; text-align: center; }
+.ptc-buysell-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+}
+.ptc-buysell-mid {
+  align-self: center;
+  margin-bottom: -6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pc-success, var(--color-success));
+  white-space: nowrap;
+}
+/* Long / Buy (left half): ⓘ sits before the label. */
+.ptc-buysell-label--icon-first .ptc-info {
+  margin-left: 0;
+  margin-right: 4px;
+}
+
+/* ══ Order panel (Hyperliquid-style, flat) ═══════════════════════════════ */
+.ptc-form.ptc-form--hl {
+  gap: 12px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+
+/* Spot / Futures — underline tabs. */
+.ptc-hl-tabs {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--pc-border, var(--color-border));
+}
+.ptc-hl-tab {
+  all: unset;
+  flex: 1;
+  text-align: center;
+  padding: 9px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.ptc-hl-tab:hover { color: var(--color-text); }
+.ptc-hl-tab.active {
+  color: var(--color-text);
+  border-bottom-color: var(--action-green);
+}
+.ptc-hl-tabs-info {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+}
+
+/* Long / Short — bordered segment, active half tinted. */
+.ptc-hl-side {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+}
+.ptc-hl-side-btn {
+  all: unset;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.ptc-hl-side-btn:hover { color: var(--color-text); }
+.ptc-hl-side-btn--buy.active {
+  background: color-mix(in srgb, var(--action-green) 16%, transparent);
+  color: var(--action-green);
+}
+.ptc-hl-side-btn--sell.active {
+  background: color-mix(in srgb, var(--pc-danger, #e11d48) 14%, transparent);
+  color: var(--pc-danger, #e11d48);
+}
+.ptc-hl-side-btn .ptc-info { color: inherit; }
+
+/* Label / value rows. */
+.ptc-hl-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ptc-hl-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Amount field: coin/$ badge, big input, unit dropdown. */
+.ptc-hl-amount {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  cursor: text;
+}
+.ptc-hl-amount:focus-within { border-color: var(--action-green); }
+.ptc-hl-amount-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #2775ca;
+}
+.ptc-hl-amount input {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.ptc-hl-amount input::placeholder { color: var(--color-text-muted); opacity: 0.6; }
+.ptc-hl-unit {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* % of available slider with 0/25/50/75/Max marks + value box. */
+.ptc-hl-pct {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ptc-hl-pct-track {
+  position: relative;
+  flex: 1;
+  padding-bottom: 18px;
+}
+.ptc-hl-pct-track input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.ptc-hl-pct-track input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--action-green) var(--hl-pct), color-mix(in srgb, var(--color-text) 14%, transparent) var(--hl-pct));
+}
+.ptc-hl-pct-track input[type="range"]::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--action-green) var(--hl-pct), color-mix(in srgb, var(--color-text) 14%, transparent) var(--hl-pct));
+}
+.ptc-hl-pct-track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--action-green);
+  border: 2px solid var(--pc-bg, #fff);
+}
+.ptc-hl-pct-track input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--action-green);
+  border: 2px solid var(--pc-bg, #fff);
+}
+.ptc-hl-pct-marks {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.ptc-hl-pct-mark {
+  all: unset;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.ptc-hl-pct-mark i {
+  margin-top: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text) 18%, var(--pc-bg, #fff));
+}
+.ptc-hl-pct-mark.on i { background: var(--action-green); }
+.ptc-hl-pct-mark b {
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+.ptc-hl-pct-box {
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  text-align: right;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* TP/SL checkbox. */
+.ptc-hl-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ptc-hl-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--action-green);
+}
+
+/* Submit — one solid, flat button (green Long/Buy, red Short/Sell). */
+.ptc-cta {
+  padding: 11px 0 !important;
+  border-radius: 8px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+.ptc-cta--buy { background: var(--action-green) !important; }
+.ptc-cta--buy:hover:not(:disabled) { background: var(--action-green-hover) !important; }
+.ptc-cta--sell { background: #e11d48 !important; }
+.ptc-cta--sell:hover:not(:disabled) { background: #be123c !important; }
+
+/* Ask Agent — plain link with a small sparkle (not a card). */
+.ptc-agent-nudge {
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.ptc-agent-nudge-icon {
+  display: inline-flex;
+  color: #8b5cf6;
+}
+.ptc-agent-nudge-link { text-decoration: none; }
+.ptc-agent-nudge-link b { color: #7c3aed; font-weight: 600; }
+html:not([data-theme="light"]) .ptc-agent-nudge-link b { color: #a78bfa; }
+.ptc-hl-check input {
+  -webkit-appearance: none;
+  appearance: none;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+  background: transparent;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+.ptc-hl-check input:checked {
+  background: var(--action-green);
+  border-color: var(--action-green);
+}
+.ptc-hl-check input:checked::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: translateY(-1px) rotate(-45deg);
+}
+.ptc-hl-pct-mark i {
+  background: color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+.ptc-hl-pct-mark.on i { background: var(--action-green); }
+.ptc-hl-pct-track input[type="range"]::-webkit-slider-thumb {
+  border-color: var(--color-background, #fff);
+}
+/* TP / SL inputs: same bordered field as the amount box. */
+.ptc-form--hl .ptc-field input {
+  height: 36px;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--pc-border, var(--color-border)) !important;
+  background: transparent !important;
+  font-size: 13px;
+  color: var(--color-text);
+  box-sizing: border-box;
+  width: 100%;
+}
+.ptc-form--hl .ptc-field input:focus {
+  outline: none;
+  border-color: var(--action-green) !important;
+}
+
+/* ── Futures ↔ Spot transition ───────────────────────────────────────── */
+/* Sliding underline (replaces each tab's own bottom border). */
+.ptc-hl-tab.active { border-bottom-color: transparent; }
+.ptc-hl-tabs-bar {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: calc((100% - 28px) / 2);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--action-green);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ptc-hl-tabs--spot .ptc-hl-tabs-bar { transform: translateX(100%); }
+/* Tabs share the row with the ⓘ (28px) so the bar measures the same. */
+.ptc-hl-tabs { padding-right: 28px; }
+
+/* Futures-only rows expand / collapse (grid 0fr ↔ 1fr). */
+.ptc-hl-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: -14px; /* cancel the rows gap while closed */
+  transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, margin-bottom 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.ptc-hl-collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-bottom: 0;
+  pointer-events: auto;
+}
+.ptc-hl-collapse-inner {
+  min-height: 0;
+  overflow: visible;
+}
+.ptc-hl-collapse:not(.open) .ptc-hl-collapse-inner { overflow: hidden; }
+
+/* Long/Short ↔ Buy/Sell labels cross-fade in. */
+.ptc-hl-swap {
+  display: inline-block;
+  animation: ptc-hl-swap-in 0.25s ease;
+}
+@keyframes ptc-hl-swap-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+/* Futures preview (Margin / Size / Liq) slides in when it appears. */
+.ptc-form--hl .ptc-futures-preview {
+  animation: ptc-hl-swap-in 0.3s ease;
+}
+/* Submit label swaps smoothly too. */
+.ptc-cta { transition: background 0.25s ease, transform 0.1s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ptc-hl-tabs-bar,
+  .ptc-hl-collapse { transition: none; }
+  .ptc-hl-swap,
+  .ptc-form--hl .ptc-futures-preview { animation: none; }
+}
+
+/* ── Roomier spacing ─────────────────────────────────────────────────── */
+.ptc-form.ptc-form--hl { gap: 18px; }
+.ptc-hl-tab { padding: 11px 0; }
+.ptc-hl-side-btn { padding: 10px 0; }
+.ptc-hl-rows { gap: 14px; }
+.ptc-hl-amount { height: 48px; }
+.ptc-hl-pct { margin-top: -4px; }
+.ptc-form--hl .ptc-form-row { gap: 12px; }
+.ptc-form--hl .ptc-futures-preview { padding: 14px; gap: 12px; }
+.ptc-hl-check { margin-top: -6px; }
+
+/* ── Card-level spacing pass ─────────────────────────────────────────── */
+/* Consistent 20px rhythm between the card's sections (stats, order
+   panel, links, Closed Positions). */
+.ptc-card { gap: 20px; }
+
+/* Stats: three equal tiles, label + ⓘ on one line, values left-aligned
+   on the same baseline. */
+.ptc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ptc-stat {
+  min-width: 0;
+  gap: 6px;
+  padding: 12px;
+}
+.ptc-stat-value,
+.ptc-stat-value--editable {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ptc-stat-label {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 9.5px;
+}
+.ptc-stat-label .ptc-info { margin-left: 3px; }
+
+/* Bottom links: same size/color, tighter to each other than to the
+   sections around them. */
+.ptc-agent-nudge,
+.ptc-page-link {
+  font-size: 12px;
+  margin-top: 0;
+}
+.ptc-agent-nudge + .ptc-page-link { margin-top: -10px; }
+
+/* ── Long / Short sliding pill ───────────────────────────────────────── */
+.ptc-hl-side { position: relative; }
+.ptc-hl-side-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  transition: color 0.25s ease;
+}
+.ptc-hl-side-glider {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 4.5px);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--action-green) 16%, transparent);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background 0.32s ease;
+}
+.ptc-hl-side--sell .ptc-hl-side-glider {
+  transform: translateX(calc(100% + 3px));
+  background: color-mix(in srgb, var(--pc-danger, #e11d48) 14%, transparent);
+}
+
+/* ── Left alignment ──────────────────────────────────────────────────── */
+.ptc-hl-tab {
+  text-align: left;
+  padding-left: 2px;
+}
+.ptc-hl-side-btn {
+  justify-content: flex-start;
+  padding-left: 14px !important;
+}
+.ptc-switch-view-btn {
+  justify-content: flex-start;
+  padding-left: 14px;
+}
+
+/* ── Wave (ripple) on button press ───────────────────────────────────── */
+.ptc-wave-host {
+  position: relative;
+  overflow: hidden;
+}
+.ptc-wave {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: currentColor;
+  opacity: 0.22;
+  transform: scale(0);
+  animation: ptc-wave 0.6s ease-out forwards;
+}
+.ptc-cta .ptc-wave { background: #fff; opacity: 0.35; }
+@keyframes ptc-wave {
+  to { transform: scale(1); opacity: 0; }
+}
+/* Stats: tiles size to content again (equal tiles truncated values). */
+.ptc-stats {
+  display: flex;
+}
+.ptc-stat {
+  flex: 1 1 auto;
+}
+.ptc-stat-value,
+.ptc-stat-value--editable {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Open Positions section (now below the order panel): title row, with
+   breathing room above (separating it from the form) and below. */
+.ptc-positions {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.ptc-positions-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.ptc-positions-count {
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* Submit: label left-aligned; on click it slides out to the right and
+   glides back in from the left. */
+.ptc-cta {
+  display: flex !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  overflow: hidden;
+}
+.ptc-cta-label {
+  display: inline-block;
+}
+.ptc-cta-label--go {
+  animation: ptc-cta-go 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes ptc-cta-go {
+  0% { transform: translateX(0); opacity: 1; }
+  45% { transform: translateX(120px); opacity: 0; }
+  46% { transform: translateX(-24px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-cta-label--go { animation: none; }
+}
+/* Long / Short: no inner padding — the sliding pill fills each half edge
+   to edge inside the border. */
+.ptc-hl-side {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.ptc-hl-side-glider {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  border-radius: 0;
+}
+.ptc-hl-side--sell .ptc-hl-side-glider {
+  transform: translateX(100%);
+}
+.ptc-hl-side-btn {
+  border-radius: 0;
+}
+
+/* Submit sequence steps: each slides in from the left, holds, then
+   slides out to the right while fading. The idle label slides back in
+   when the sequence ends. */
+.ptc-cta-label--step {
+  animation: ptc-cta-step 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ptc-cta-step {
+  0% { transform: translateX(-18px); opacity: 0; }
+  25% { transform: translateX(0); opacity: 1; }
+  75% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(28px); opacity: 0; }
+}
+.ptc-cta-label--in {
+  animation: ptc-cta-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ptc-cta-in {
+  from { transform: translateX(-18px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+/* Disabled while the sequence runs, but keep full color (not dimmed). */
+.ptc-cta:disabled { opacity: 1 !important; cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  .ptc-cta-label--step,
+  .ptc-cta-label--in { animation: none; }
+}
+/* Submit label centered and bolder. */
+.ptc-cta {
+  justify-content: center !important;
+  text-align: center !important;
+  font-weight: 800 !important;
+  font-size: 0.95rem !important;
+  letter-spacing: 0.01em;
+}
+.ptc-cta { font-weight: 700 !important; }
+/* Short / Sell label right-aligned in its half (Long / Buy stays left). */
+.ptc-hl-side-btn--sell {
+  justify-content: flex-end;
+  padding-left: 0 !important;
+  padding-right: 14px !important;
+}
+
+/* Current Positions: title is a toggle; the list collapses/expands. */
+.ptc-positions-title {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ptc-positions-chevron {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  transform: rotate(-90deg);
+  transition: transform 0.25s ease;
+}
+.ptc-positions-title.open .ptc-positions-chevron {
+  transform: rotate(0deg);
+}
+.ptc-positions-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+}
+.ptc-positions-collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.ptc-positions-list {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptc-positions-collapse,
+  .ptc-positions-chevron { transition: none; }
+}
+/* Once open, don't clip anything inside a row (menus, gauge thumb). */
+.ptc-positions-collapse.open .ptc-positions-list { overflow: visible; }
+/* "Free account required" under the Start button: centered under it
+   (drop the step-text indent inherited from .ptc-activate-sub) and dark. */
+.ptc-activate-sub.ptc-activate-sub--muted,
+.ptc-card--activating .ptc-activate-sub.ptc-activate-sub--muted,
+html[data-theme="light"] .ptc-card--activating .ptc-activate-sub.ptc-activate-sub--muted {
+  align-self: stretch;
+  margin-left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 1;
+  color: var(--color-text);
+}
+.ptc-activate-auth-link {
+  all: unset;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--action-green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ptc-activate-auth-link:hover { color: var(--action-green-hover); }
+
+/* Short columns (e.g. a MacBook's default resolution): promo items keep
+   their natural size and the card scrolls, instead of the flex column
+   squashing the hero banner to a sliver. Extra bottom room so the
+   floating "Agent ready" button never sits on top of the Start button. */
+.ptc-card--activating .ptc-activate {
+  overflow: visible;
+  padding-bottom: 72px;
+}
+.ptc-card--activating .ptc-activate > * {
+  flex-shrink: 0;
+}
+@media (max-height: 950px) {
+  .ptc-card--activating .ptc-activate { gap: 12px; }
+  .ptc-activate-title { font-size: 19px; }
+  .ptc-activate-steps { gap: 14px; }
+  .ptc-activate-step-icon { width: 38px; height: 38px; border-radius: 10px; }
+  .ptc-activate-step-icon svg { width: 19px; height: 19px; }
+  .ptc-activate-step-label { font-size: 14px; }
+  .ptc-activate-step-sub { font-size: 12px; line-height: 1.45; }
+  .ptc-hero { padding: 12px 14px 10px; }
+  .ptc-hero-balance { font-size: 26px; }
+  .ptc-hero-chart { height: 72px; }
+  .ptc-activate-sub { margin-left: 66px; width: calc(100% - 66px - 16px); }
 }

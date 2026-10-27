@@ -1812,7 +1812,27 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // a fatal, unrecoverable crash in a production/minified build — exactly
   // what happened here (and the same bug class previously fixed in
   // ProfilePage.tsx, commit 6cb3507).
-  if (!user) return null;
+  // Signed out: still show the floating trigger (same look/animation),
+  // just gated — tapping it goes through onAgentLocked, which App.tsx
+  // routes to sign-in for signed-out viewers and to the Elite upsell for
+  // signed-in non-Elite ones. Nothing else of the agent renders.
+  if (!user) {
+    return phase !== "hidden" && !hideTrigger ? (
+      <button
+        type="button"
+        className={`ta-trigger${phase === "pop" ? " ta-trigger--collapsed" : ""}`}
+        onClick={() => onAgentLocked?.()}
+      >
+        <span className={`ta-trigger-orb${phase === "pop" ? " ta-trigger-orb--pop" : ""}`} />
+        {phase !== "pop" && (
+          <span className="ta-trigger-label">
+            {label}
+            {phase === "expanding" && <span className="ta-trigger-cursor" />}
+          </span>
+        )}
+      </button>
+    ) : null;
+  }
 
   const startListening = async () => {
     try {

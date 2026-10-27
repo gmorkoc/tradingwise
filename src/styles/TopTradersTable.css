@@ -1,0 +1,45 @@
+/* Top Traders tab (TopTradersTable.tsx). */
+.ttt-table { table-layout: fixed; margin-top: 0; }
+.ttt-table .gm-tr { animation: none; cursor: default; }
+.ttt-trader {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ttt-side {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.ttt-side--long { color: #16a34a; background: rgba(34, 197, 94, 0.12); }
+.ttt-side--short { color: #e11d48; background: rgba(244, 63, 94, 0.12); }
+.ttt-label { font-weight: 600; color: var(--color-text); }
+.ttt-addr { margin-left: 6px; color: var(--color-text-muted); }
+.ttt-sub { margin-left: 6px; font-size: 0.92em; }
+.ttt-muted { color: var(--color-text-muted); }
+.ttt-lev {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.ttt-lev--long { color: #16a34a; background: rgba(34, 197, 94, 0.12); }
+.ttt-lev--short { color: #e11d48; background: rgba(244, 63, 94, 0.12); }
+.ttt-chart-link {
+  display: inline-flex;
+  color: var(--color-text-muted);
+}
+.ttt-chart-link:hover { color: var(--action-green); }
+.ttt-foot {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+/* Same 15-row page height as Top Cryptocurrencies. */
+.ttt .gm-table-wrap { min-height: calc(15 * 43px + 34px); }
+.ttt-foot-inline { color: var(--color-text-muted); }

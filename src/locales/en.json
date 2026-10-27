@@ -1496,7 +1496,7 @@
     "ai": "AI Analysis",
     "market": "Market Data",
     "onchain": "On-Chain",
-    "chart": "Chart",
+    "chart": "Trade",
     "heatmap": "Heatmap",
     "alerts": "Alerts",
     "watchlist": "Watchlist",
@@ -2000,9 +2000,18 @@
     "insightDown": "{{coin}} is down {{pct}}% since open — sellers applying pressure at current levels."
   },
   "sectionBanner": {
+    "chart": {
+      "title": "Chart",
+      "desc": "Live candles, indicators and AI reads for every coin.",
+      "tags": [
+        "Live Price",
+        "Indicators",
+        "AI Analysis"
+      ]
+    },
     "ai": {
       "title": "AI Price Prediction",
-      "desc": "Institutional-grade analysis combining price action, funding rates, volume, RSI, and liquidation data into a single directional call with price targets.",
+      "desc": "AI-driven price targets from market data.",
       "tags": [
         "Price Targets",
         "Confidence Score",
@@ -2011,7 +2020,7 @@
     },
     "heatmap": {
       "title": "Liquidation Heatmap",
-      "desc": "Visualizes where leveraged positions will be force-liquidated. These clusters act as price magnets — markets routinely sweep liquidity zones before reversing, giving you predictable entry and exit points.",
+      "desc": "Where leveraged positions get liquidated.",
       "tags": [
         "Liquidity Zones",
         "Stop-Hunt Levels",
@@ -2020,7 +2029,7 @@
     },
     "onchain": {
       "title": "On-Chain Metrics",
-      "desc": "Tracks what wallets are actually doing on the blockchain — not what analysts are saying. Exchange outflows, whale accumulation, and miner behavior consistently lead price by days or weeks.",
+      "desc": "Exchange flows, whale moves and miner activity.",
       "tags": [
         "Whale Movements",
         "Exchange Flows",
@@ -2029,7 +2038,7 @@
     },
     "alerts": {
       "title": "Price Alerts",
-      "desc": "Define trigger conditions once and let the market come to you. Never miss a key breakout, support test, or indicator crossover again — get notified the moment conditions are met.",
+      "desc": "Get notified the moment your trigger hits.",
       "tags": [
         "Price Triggers",
         "Indicator Alerts",
@@ -2038,7 +2047,7 @@
     },
     "positions": {
       "title": "Long / Short Positions",
-      "desc": "Shows the ratio of longs to shorts across major derivatives exchanges. When everyone is positioned the same way, the market punishes them — extreme imbalances are powerful contrarian signals.",
+      "desc": "Real-time long/short ratio, major exchanges.",
       "tags": [
         "Long / Short Ratio",
         "Crowd Positioning",
@@ -2047,7 +2056,7 @@
     },
     "htf": {
       "title": "Higher Timeframe Analysis",
-      "desc": "Weekly and monthly structure defines where price is ultimately heading. Trading in the direction of the macro trend on HTF dramatically improves win rates on lower-timeframe entries.",
+      "desc": "Weekly/monthly structure for the macro trend.",
       "tags": [
         "Weekly / Monthly",
         "Macro Trend",
@@ -2056,7 +2065,7 @@
     },
     "orderflow": {
       "title": "Order Flow",
-      "desc": "The real-time tape of large trades hitting the book. Aggressive institutional orders reveal conviction before price reacts — giving you a window into what smart money is doing right now.",
+      "desc": "Real-time tape of large trades.",
       "tags": [
         "Real-Time Tape",
         "Large Orders",
@@ -2065,7 +2074,7 @@
     },
     "signals": {
       "title": "AI Signals",
-      "desc": "Multi-exchange consensus signals that filter noise from true momentum. Combines funding rates, RSI, MACD, volume profile, and liquidation data across exchanges into clear, actionable calls.",
+      "desc": "Multi-exchange AI signals, funding to volume.",
       "tags": [
         "Multi-Exchange",
         "Momentum Signals",
@@ -2074,7 +2083,7 @@
     },
     "fundingbot": {
       "title": "AI Funding Bot",
-      "desc": "Perpetual futures funding rates reveal leverage extremes in real time. Crowded longs paying 0.05%+ per 8h (over 50% annualized) almost always precede a flush. Shorts trapped in negative rates set up violent squeezes.",
+      "desc": "Live funding rates signal squeezes early.",
       "tags": [
         "Funding Rates",
         "Leverage Extremes",
@@ -2083,7 +2092,7 @@
     },
     "riskcalc": {
       "title": "Position Size Calculator",
-      "desc": "Know exactly how many contracts to buy before you place a trade. Enter your account size, risk tolerance, entry, and stop — the calculator tells you your position size, dollar risk, and R:R ratio for every target. Beginners get a guided step-by-step wizard. Experienced traders get a visual trade map with AI review.",
+      "desc": "Position size from account, risk and stop.",
       "tags": [
         "Position Sizing",
         "Risk Management",
@@ -2092,7 +2101,7 @@
     },
     "options": {
       "title": "Options Analytics",
-      "desc": "BTC and ETH options data straight from Deribit — open interest by strike, max pain, put/call ratio, and at-the-money implied volatility for every active expiry. See where the market is positioned before it moves.",
+      "desc": "BTC/ETH options: OI, max pain, IV.",
       "tags": [
         "Max Pain",
         "Open Interest",
@@ -2101,7 +2110,7 @@
     },
     "correlation": {
       "title": "Correlation Matrix",
-      "desc": "How BTC, ETH, and top alts actually move relative to each other — and to the US Dollar Index, Gold, and the S&P 500. Spot regime shifts (like BTC decoupling from stocks) before they show up in your charts.",
+      "desc": "How BTC, ETH and alts move together.",
       "tags": [
         "Cross-Asset",
         "Macro",
@@ -2110,7 +2119,7 @@
     },
     "strategyalerts": {
       "title": "Strategy Alerts",
-      "desc": "Build a rule once with indicators and price conditions. Apply it across coins and timeframes. Get pinged the instant it fires — even with the app closed.",
+      "desc": "Build a rule, get pinged when it fires.",
       "tags": [
         "Rules Engine",
         "Multi-Coin",
@@ -2119,7 +2128,7 @@
     },
     "gann": {
       "title": "Gann Analysis",
-      "desc": "W.D. Gann's geometric price/time relationships identify high-probability reversal zones that most traders never see. When price and time square off, reversals become highly probable.",
+      "desc": "Gann's price/time geometry, reversal zones.",
       "tags": [
         "Price / Time",
         "Geometric Levels",
@@ -2128,7 +2137,7 @@
     },
     "candleai": {
       "title": "Inside the Candle",
-      "desc": "AI reads every candle and tells you what market makers are doing — combining Elliott Wave (with invalidation levels), ICT/Smart Money Concepts (order blocks, fair value gaps, liquidity pools, premium/discount), Wyckoff phases, and Volume Profile into one directional call with key levels to watch.",
+      "desc": "AI reads candles via Elliott Wave, ICT, Wyckoff.",
       "tags": [
         "Elliott Wave",
         "ICT / SMC",
@@ -2139,7 +2148,7 @@
     },
     "markets": {
       "title": "Markets",
-      "desc": "Real-time overview of major crypto markets — prices, 24h changes, market caps and volume across hundreds of assets. Spot opportunities and compare performance across sectors at a glance.",
+      "desc": "Live market cap, volume, dominance and top movers.",
       "tags": [
         "Market Overview",
         "Sector Performance",
@@ -2148,7 +2157,7 @@
     },
     "marketheatmap": {
       "title": "Market Heatmap",
-      "desc": "Top 120 coins by market cap, sized by cap, colored by 24h change.",
+      "desc": "Top 120 coins, sized and colored by change.",
       "tags": [
         "Market Cap",
         "24h Change",
@@ -2157,7 +2166,7 @@
     },
     "altanalysis": {
       "title": "Alt Coin Analysis",
-      "desc": "Deep-dive AI-powered analysis for alternative cryptocurrencies. Combines price action, technical indicators, funding rates, and BTC macro context to generate directional predictions with price targets.",
+      "desc": "AI altcoin analysis with BTC context.",
       "tags": [
         "AI Prediction",
         "Technical Analysis",

@@ -39,6 +39,8 @@ export interface CoinMeta {
   explorer: string | null;
   whitepaper: string | null;
   subreddit: string | null;
+  // CoinGecko genesis_date ("YYYY-MM-DD"), often null for newer coins.
+  genesisDate: string | null;
 }
 
 const TTL = 5 * 60 * 1000;
@@ -70,6 +72,7 @@ export async function fetchCoinMeta(coin: string): Promise<CoinMeta | null> {
       athChangePercent: md.ath_change_percentage?.usd ?? null,
       weekChangePercent: md.price_change_percentage_7d ?? null,
       category: Array.isArray(d.categories) ? (d.categories.find((c: string) => c) ?? null) : null,
+      genesisDate: typeof d.genesis_date === "string" && d.genesis_date ? d.genesis_date : null,
       homepage: (links.homepage ?? []).find((u: string) => u) ?? null,
       sourceCode: (links.repos_url?.github ?? []).find((u: string) => u) ?? null,
       explorer: (links.blockchain_site ?? []).find((u: string) => u) ?? null,

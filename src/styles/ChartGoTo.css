@@ -1,0 +1,226 @@
+/* "Go to" popover (ChartGoTo.tsx) — opens above the chart's range bar. */
+.cgt {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 60;
+  width: 330px;
+  padding: 18px 18px 16px;
+  border-radius: 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 18px 48px -12px rgba(0, 0, 0, 0.35);
+  color: var(--color-text);
+  animation: cgt-in 0.16s ease;
+  text-align: left;
+}
+@keyframes cgt-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.cgt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cgt-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.cgt-close {
+  all: unset;
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.cgt-close:hover { color: var(--color-text); background: var(--color-input-bg, rgba(148, 163, 184, 0.12)); }
+
+/* Tabs with a track + sliding indicator, like the reference. */
+.cgt-tabs {
+  position: relative;
+  display: flex;
+  gap: 22px;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+.cgt-tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+.cgt-tab {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.cgt-tab.active { color: var(--color-text); }
+.cgt-tab-bar {
+  position: absolute;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--color-text);
+  z-index: 1;
+  transition: left 0.25s cubic-bezier(0.22, 1, 0.36, 1), width 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cgt-tab-bar--date { left: 0; width: 36px; }
+.cgt-tab-bar--range { left: 58px; width: 108px; }
+
+/* Inputs */
+.cgt-fields {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cgt-fields--range {
+  flex-direction: column;
+}
+.cgt-fields-row {
+  display: flex;
+  gap: 10px;
+}
+.cgt-input {
+  position: relative;
+  flex: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg, transparent);
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cgt-input--time { flex: 1; }
+.cgt-input--focus,
+.cgt-input:focus-within {
+  border-color: var(--color-primary, #4f46e5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+.cgt-input-label {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  width: 30px;
+}
+.cgt-input input {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+.cgt-input input::placeholder { color: var(--color-text-muted); opacity: 0.7; }
+.cgt-input-icon {
+  display: flex;
+  color: var(--color-text-muted);
+}
+
+/* Calendar */
+.cgt-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cgt-cal-month {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.cgt-cal-nav {
+  all: unset;
+  display: flex;
+  padding: 5px;
+  border-radius: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.cgt-cal-nav:hover:not(:disabled) { background: var(--color-input-bg, rgba(148, 163, 184, 0.12)); }
+.cgt-cal-nav:disabled { opacity: 0.3; cursor: default; }
+.cgt-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cgt-cal-weekdays {
+  margin-bottom: 4px;
+  padding: 4px 0;
+  border-radius: 6px;
+  background: var(--color-input-bg, rgba(148, 163, 184, 0.1));
+}
+.cgt-cal-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.cgt-day {
+  all: unset;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.cgt-day:hover:not(:disabled):not(.cgt-day--sel) { background: var(--color-input-bg, rgba(148, 163, 184, 0.14)); }
+.cgt-day:disabled { color: var(--color-text-muted); opacity: 0.45; cursor: default; }
+.cgt-day--today { text-decoration: underline; text-underline-offset: 4px; }
+.cgt-day--in { background: rgba(16, 185, 129, 0.12); border-radius: 0; }
+.cgt-day--sel {
+  background: #10b981;
+  color: #fff;
+  font-weight: 800;
+}
+
+.cgt-error {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #e11d48;
+}
+
+.cgt-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 16px -18px 0;
+  padding: 14px 18px 0;
+  border-top: 1px solid var(--color-border);
+}
+.cgt-btn {
+  all: unset;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cgt-btn--ghost {
+  border: 1px solid var(--color-primary, #4f46e5);
+  color: var(--color-primary, #4f46e5);
+}
+.cgt-btn--ghost:hover { background: rgba(79, 70, 229, 0.08); }
+.cgt-btn--primary {
+  background: var(--color-primary, #4f46e5);
+  color: #fff;
+}
+.cgt-btn--primary:hover { opacity: 0.9; }

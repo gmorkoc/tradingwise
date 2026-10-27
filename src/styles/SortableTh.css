@@ -1,0 +1,23 @@
+/* Click-to-sort table headers (SortableTh.tsx). */
+.sort-th-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  user-select: none;
+}
+.gm-th--r .sort-th-btn { flex-direction: row; }
+.sort-th-btn:hover { color: var(--color-text); }
+.sort-th--active .sort-th-btn { color: var(--color-text); }
+.sort-th-arrows { display: inline-flex; }
+.sort-th-arrows svg path { fill: currentColor; opacity: 0.28; }
+.sort-th-arrows--asc svg .up,
+.sort-th-arrows--desc svg .down {
+  opacity: 1;
+  fill: var(--action-green);
+}

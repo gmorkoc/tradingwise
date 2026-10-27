@@ -1,0 +1,135 @@
+/* TopCryptoTable filter dropdown + watchlist star (Chart page). */
+.tct-filter {
+  position: relative;
+}
+.tct-filter-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border, var(--color-border));
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.tct-filter-btn:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+.tct-filter-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.tct-filter-icon {
+  display: inline-flex;
+  color: var(--color-text-muted);
+}
+.tct-filter-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--pc-border, var(--color-border));
+  box-shadow: 0 14px 36px -10px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tct-filter-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.tct-filter-item:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.tct-filter-item.active {
+  background: color-mix(in srgb, var(--color-success, #16a34a) 16%, transparent);
+}
+.tct-filter-item--watchlist .tct-filter-icon { color: #f59e0b; }
+.tct-filter-item--gainers .tct-filter-icon { color: var(--color-success, #16a34a); }
+.tct-filter-item--losers .tct-filter-icon { color: var(--color-danger, #e11d48); }
+.tct-filter-item--trending .tct-filter-icon { color: #f97316; }
+
+.tct-th-star,
+.tct-td-star {
+  width: 28px;
+  padding-right: 0 !important;
+}
+.tct-star {
+  all: unset;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+.tct-star.on {
+  color: #f59e0b;
+}
+.tct-star:hover {
+  color: #f59e0b;
+}
+.tct-empty {
+  padding: 18px 4px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* Chart page version: no card background, fixed table geometry, and no
+   per-row entrance animation — changing the filter just swaps the rows in
+   place instead of re-flowing columns or sliding rows in. The body keeps
+   a full page's height (15 rows) so the pagination row and everything
+   below stay put when a filter returns fewer coins. */
+.gm-section.tct--filterable {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+  animation: none;
+}
+.tct--filterable .gm-table {
+  table-layout: fixed;
+}
+.tct--filterable .gm-td--name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tct--filterable .gm-tr {
+  animation: none;
+}
+.tct--filterable .gm-table-wrap {
+  min-height: calc(15 * 43px + 34px);
+}
+.tct-filter-btn,
+.tct-filter-item {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Filter button in the shared solid green (--action-green, index.css). */
+.tct-filter-btn {
+  border-color: transparent;
+  background: var(--action-green);
+  color: var(--action-green-text);
+}
+.tct-filter-btn:hover {
+  background: var(--action-green-hover);
+}
+.tct-filter-btn .tct-filter-icon,
+.tct-filter-btn .tct-filter-count {
+  color: rgba(255, 255, 255, 0.8);
+}

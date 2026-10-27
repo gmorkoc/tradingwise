@@ -242,9 +242,6 @@ export function MarketHeatmap() {
 
   return (
     <div className="mhm-root">
-      {/* Title/description live in SectionBanner (App.tsx renders it above
-          this for every non-chart section) — this bar is just the
-          interval tabs, not a resurrected duplicate header. */}
       <div className="mhm-controls">
         <div className="mhm-interval-toggle" role="group" aria-label={t("marketHeatmap.interval", "Interval")}>
           {INTERVALS.map(({ key, label }) => (

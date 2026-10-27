@@ -17,6 +17,7 @@ import {
   SeriesMarker,
   UTCTimestamp,
   LineStyle,
+  PriceScaleMode,
 } from "lightweight-charts";
 import { coinglass, CandleDataPoint, CoinSymbol, COINS, getTickerSnapshot } from "../services/coinglass";
 import { fetchCoinMeta, fetchOpenInterestCoins, CoinMeta } from "../services/coinMeta";
@@ -35,6 +36,7 @@ import { OrderBookProfileModal } from "./OrderBookProfile";
 import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDrawingTools";
 import { ZoneAnalysisModal } from "./ZoneAnalysisModal";
+import { ChartGoTo } from "./ChartGoTo";
 import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
 import { CompactPriceView } from "./CompactPriceView";
@@ -188,6 +190,11 @@ interface PriceChartProps {
   // that group's own chart-fs-header-group--empty modifier, so this never
   // needs its own pageMode check here.
   headerStats?: React.ReactNode;
+  // Optional column rendered inside .price-chart-container, to the right of
+  // the chart (header, canvas, range bar, AI read) — App.tsx's Order Book /
+  // Order Flow column. Not shown in fullscreen. `children` still runs full
+  // width below both.
+  sideColumn?: React.ReactNode;
 }
 
 export const INTERVALS: TimeInterval[] = [
@@ -234,6 +241,34 @@ export const INTERVAL_SHORT: Record<TimeInterval, string> = {
 
 // Intervals that require at least Pro
 const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
+
+// Live clock for the right end of the range bar ("14:01:15 (UTC-4)").
+// Its own component so the once-a-second tick only re-renders this span,
+// not the whole chart.
+function RangeBarClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const off = -now.getTimezoneOffset();
+  const h = Math.trunc(off / 60);
+  const m = Math.abs(off % 60);
+  const utc = `UTC${off === 0 ? "" : h > 0 ? `+${h}` : `${h}`}${m ? `:${String(m).padStart(2, "0")}` : ""}`;
+  const time = now.toLocaleTimeString("en-GB", { hour12: false });
+  return <span className="chart-range-clock">{time} ({utc})</span>;
+}
+
+// Range presets for the bar under the chart (TradingView-style): each one
+// picks a candle interval AND zooms to that much history.
+const RANGE_PRESETS: { key: string; label: string; interval: TimeInterval; seconds: number; tip: string }[] = [
+  { key: "1h", label: "1h", interval: "5min", seconds: 60 * 60, tip: "1 hour in 5 minute intervals" },
+  { key: "4h", label: "4h", interval: "15min", seconds: 4 * 60 * 60, tip: "4 hours in 15 minute intervals" },
+  { key: "1d", label: "1d", interval: "1h", seconds: 24 * 60 * 60, tip: "1 day in 1 hour intervals" },
+  { key: "1w", label: "1w", interval: "4h", seconds: 7 * 24 * 60 * 60, tip: "1 week in 4 hour intervals" },
+  { key: "1m", label: "1m", interval: "1day", seconds: 30 * 24 * 60 * 60, tip: "1 month in 1 day intervals" },
+  { key: "1y", label: "1y", interval: "1week", seconds: 365 * 24 * 60 * 60, tip: "1 year in 1 week intervals" },
+];
 
 // Full coin name for the chart title ("Bitcoin" rather than "BTC") — COINS
 // already carries this (services/coinglass.ts), just keyed by symbol here
@@ -1492,13 +1527,120 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   forceHideHeader,
   onChartEventsChange,
   children,
+  sideColumn,
   headerStats,
 }) => {
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
+  // AI chart read (trend + pattern card under the chart) is on request:
+  // hidden behind an "Analyze" button until asked for. Stays open across
+  // coin/interval switches for the session once opened.
+  const [aiReadOpen, setAiReadOpen] = useState(false);
+  const aiReadOpenRef = useRef(false);
+  aiReadOpenRef.current = aiReadOpen;
+  // Latest-closure ref so the chart load effect always calls the current
+  // coin/interval/quota version.
+  const runPatternAIRef = useRef<(candles: CandleDataPoint[]) => void>(() => {});
+  runPatternAIRef.current = (candles: CandleDataPoint[]) => {
+    if (exceeded || candles.length === 0) return;
+    const c = coin;
+    const iv = interval;
+    consume().then((ok) => {
+      if (!ok) return;
+      getCandlePatternAnalysis(c, iv, candles).then((res) => {
+        if (res.success && res.result) {
+          setPatternInsight(res.result);
+          setPatternInsightAt(Date.now());
+          writePatternCache(c, iv, res.result);
+        }
+      });
+    });
+  };
+  const openAiRead = () => {
+    setAiReadOpen(true);
+    // Skip the AI call if this coin+interval already has a cached result.
+    if (!readPatternCache(coin, interval)) runPatternAIRef.current(lastCandlesRef.current);
+  };
   const isLight = theme === "light";
 
   const [interval, setInterval] = useState<TimeInterval>("1day");
+  // Active range preset (bar under the chart). Only counts while the chart
+  // is still on that preset's interval — picking another interval anywhere
+  // else silently drops it back to that interval's normal default window.
+  const [rangePreset, setRangePreset] = useState<string | null>(null);
+  const activeRangePreset = RANGE_PRESETS.find((p) => p.key === rangePreset && p.interval === interval) ?? null;
+  const rangeSecondsRef = useRef<{ interval: TimeInterval; seconds: number } | null>(null);
+  rangeSecondsRef.current = activeRangePreset ? { interval: activeRangePreset.interval, seconds: activeRangePreset.seconds } : null;
+  // Visible window for a fresh view: the active preset's span if any,
+  // otherwise the interval's own default.
+  const viewWindowFor = (iv: TimeInterval) =>
+    rangeSecondsRef.current?.interval === iv ? rangeSecondsRef.current.seconds : INTERVAL_WINDOW[iv];
+  // "Go to" dialog (calendar button in the range bar). A custom range that
+  // needs a different interval is parked here and applied by the normal
+  // load path once that interval's candles arrive.
+  const [goToOpen, setGoToOpen] = useState(false);
+  // Price scale toggles (right end of the range bar): % / log are mutually
+  // exclusive modes (both off = normal), auto = price axis auto-fits the
+  // visible candles. Persisted.
+  const [scaleMode, setScaleMode] = useState<"normal" | "percent" | "log">(() => {
+    try {
+      const v = localStorage.getItem("chartScaleMode");
+      return v === "percent" || v === "log" ? v : "normal";
+    } catch { return "normal"; }
+  });
+  const [autoScale, setAutoScale] = useState(true);
+  useEffect(() => {
+    try { localStorage.setItem("chartScaleMode", scaleMode); } catch { /* ignore */ }
+  }, [scaleMode]);
+  const pendingRangeRef = useRef<{ interval: TimeInterval; from: number; to: number } | null>(null);
+  const fmtDay = (ts: number) => new Date(ts * 1000).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  // Jump to one moment, keeping the current zoom level. Returns an error
+  // message instead when it's older than what this interval has loaded.
+  const goToDate = (ts: number): string | null => {
+    const candles = lastCandlesRef.current;
+    const ts0 = chartRef.current?.timeScale();
+    if (!candles.length || !ts0) return "Chart data hasn't loaded yet.";
+    const first = candles[0].time as number;
+    const last = candles[candles.length - 1].time as number;
+    if (ts < first) {
+      return `This interval only goes back to ${fmtDay(first)}. Pick a later date, or switch to a bigger interval (e.g. 1D or 1W) to go further back.`;
+    }
+    const vr = ts0.getVisibleRange();
+    const span = vr ? (vr.to as number) - (vr.from as number) : (INTERVAL_WINDOW[interval] ?? 7 * 86400);
+    let from = ts - span / 2;
+    let to = ts + span / 2;
+    if (to > last) { from -= to - last; to = last; }
+    setRangePreset(null);
+    ts0.setVisibleRange({ from: Math.max(from, first) as UTCTimestamp, to: to as UTCTimestamp });
+    return null;
+  };
+  // Show exactly from → to, picking a candle size that fits the span.
+  const goToRange = (from: number, to: number): string | null => {
+    const span = to - from;
+    const iv: TimeInterval =
+      span <= 6 * 3600 ? "5min"
+      : span <= 2 * 86400 ? "15min"
+      : span <= 10 * 86400 ? "1h"
+      : span <= 60 * 86400 ? "4h"
+      : span <= 2 * 365 * 86400 ? "1day"
+      : "1week";
+    setRangePreset(null);
+    if (iv === interval) {
+      const candles = lastCandlesRef.current;
+      if (!candles.length) return "Chart data hasn't loaded yet.";
+      const first = candles[0].time as number;
+      const last = candles[candles.length - 1].time as number;
+      if (to < first) return `This interval only goes back to ${fmtDay(first)}.`;
+      chartRef.current?.timeScale().setVisibleRange({
+        from: Math.max(from, first) as UTCTimestamp,
+        to: Math.min(to, last) as UTCTimestamp,
+      });
+      return null;
+    }
+    pendingRangeRef.current = { interval: iv, from, to };
+    setInterval(iv);
+    return null;
+  };
   useEffect(() => {
     if (requestInterval && requestInterval !== interval) setInterval(requestInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1788,14 +1930,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [coinMeta, setCoinMeta] = useState<CoinMeta | null>(null);
   const [oiCoins, setOiCoins] = useState<number | null>(null);
   useEffect(() => {
-    if (!(isFullscreen && !isDesktopWidth)) return;
+    const mobileFs = isFullscreen && !isDesktopWidth;
+    // Desktop bar header also needs coin meta (genesis date → "16Y old").
+    const desktopBar = isDesktopWidth && !isFullscreen && !pageMode;
+    if (!mobileFs && !desktopBar) return;
     let cancelled = false;
     setCoinMeta(null);
-    setOiCoins(null);
     fetchCoinMeta(coin).then((m) => { if (!cancelled) setCoinMeta(m); });
-    fetchOpenInterestCoins(coin).then((v) => { if (!cancelled) setOiCoins(v); });
+    if (mobileFs) {
+      setOiCoins(null);
+      fetchOpenInterestCoins(coin).then((v) => { if (!cancelled) setOiCoins(v); });
+    }
     return () => { cancelled = true; };
-  }, [isFullscreen, isDesktopWidth, coin]);
+  }, [isFullscreen, isDesktopWidth, pageMode, coin]);
   // Advance Price Chart page, mobile — how much bottom clearance the
   // scroll container needs to reserve so the chart's own time-axis date
   // labels clear the docked bottom sheet. Measured from the actual
@@ -2431,7 +2578,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // zoom/pan the chart was left at; it's always a fresh, correct
         // view instead, same INTERVAL_WINDOW definition the very first
         // load for this coin+interval already uses.
-        const window = INTERVAL_WINDOW[interval];
+        const window = viewWindowFor(interval);
         const lastCandleTime = lastCandlesRef.current[lastCandlesRef.current.length - 1].time as number;
         if (window) {
           chart.timeScale().setVisibleRange({
@@ -2598,7 +2745,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (chart && prevIsFullscreenForToggleRef.current !== isFullscreen) {
       prevIsFullscreenForToggleRef.current = isFullscreen;
       if (lastCandlesRef.current.length > 0) {
-        const window = INTERVAL_WINDOW[interval];
+        const window = viewWindowFor(interval);
         const lastCandleTime = lastCandlesRef.current[lastCandlesRef.current.length - 1].time as number;
         if (window) {
           chart.timeScale().setVisibleRange({
@@ -2790,19 +2937,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             setPatternInsight(trendAwarePattern(data, newBanner?.sentiment ?? null));
             setPatternInsightAt(Date.now());
           }
-          // Only call AI if quota allows
-          if (!exceeded) {
-            consume().then((ok) => {
-              if (!ok) return;
-              getCandlePatternAnalysis(coin, interval, data).then((res) => {
-                if (res.success && res.result) {
-                  setPatternInsight(res.result);
-                  setPatternInsightAt(Date.now());
-                  writePatternCache(coin, interval, res.result);
-                }
-              });
-            });
-          }
+          // AI pattern call only while the viewer has the AI chart read
+          // open (on request), and only if quota allows.
+          if (aiReadOpenRef.current) runPatternAIRef.current(data);
 
           // EMA / MA overlays
           ema20Ref.current?.setData(calcEMALine(data, 20));
@@ -2887,8 +3024,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           const viewKey = `${coin}-${interval}`;
           if (viewInitializedForRef.current !== viewKey) {
             viewInitializedForRef.current = viewKey;
-            const window = INTERVAL_WINDOW[interval];
-            if (window && data.length > 0) {
+            const window = viewWindowFor(interval);
+            const pending = pendingRangeRef.current;
+            if (pending && pending.interval === interval && data.length > 0) {
+              pendingRangeRef.current = null;
+              const first = data[0].time as number;
+              const last = data[data.length - 1].time as number;
+              chartRef.current?.timeScale().setVisibleRange({
+                from: Math.max(pending.from, first) as UTCTimestamp,
+                to: Math.min(Math.max(pending.to, first), last) as UTCTimestamp,
+              });
+            } else if (window && data.length > 0) {
               const to = data[data.length - 1].time as number;
               chartRef.current?.timeScale().setVisibleRange({
                 from: (to - window) as UTCTimestamp,
@@ -4056,6 +4202,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Grid toggle now renders next to Indicators in .chart-legend-actions
   // instead of alongside Chart style — split out of the combined control
   // below so it can be positioned separately while Chart style stays put.
+  // Desktop Chart page (not fullscreen, not the Advance Chart page) uses the
+  // exchange-style bar header instead of the classic hero header.
+  const useBarHeader = isDesktopWidth && !isFullscreen && !pageMode;
+  // "16Y old" / "8M old" from CoinGecko's genesis date (when it has one).
+  const coinAgeLabel = (() => {
+    const g = coinMeta?.genesisDate;
+    if (!g) return null;
+    const t = Date.parse(g);
+    if (!Number.isFinite(t)) return null;
+    const months = Math.floor((Date.now() - t) / (30.44 * 86400000));
+    if (months < 1) return "New";
+    return months >= 12 ? `${Math.floor(months / 12)}Y old` : `${months}M old`;
+  })();
   const gridToggleButton = (
     <button
       type="button"
@@ -4223,6 +4382,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // as real pills and folds the rest (1sec/15min/6h/1month/all) behind a
   // trailing "More" pill that opens the exact same dropdown fsIntervalButton
   // already uses above — nothing becomes unreachable, it's reorganized.
+  // Re-applied on anything that can recreate the chart (theme, fullscreen,
+  // coin/interval reloads), not just on toggle.
+  useEffect(() => {
+    chartRef.current?.priceScale("right").applyOptions({
+      mode: scaleMode === "percent" ? PriceScaleMode.Percentage : scaleMode === "log" ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+      autoScale,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scaleMode, autoScale, coin, interval, isFullscreen, theme, showGrid, loading]);
   const QUICK_INTERVALS: TimeInterval[] = ["5min", "1h", "4h", "1day", "1week"];
   const quickIntervalPills = (
     <div className="chart-quick-interval-pills">
@@ -4363,6 +4531,62 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Low/Vol/Signal/Bid/Ask/Divergence stay inline in the header instead
   // (chart-fs-stats-strip/chart-fs-info-row above) — this sheet never
   // duplicates live stats, only settings.
+  // Chart style / grid / depth / view-switch / screenshot / fullscreen
+  // icon buttons — shared by the classic header and the desktop bar header.
+  const heroIconRow = (
+    <div className="chart-hero-icon-row">
+      {/* Chart style (candle/line/area) picker — mobile and
+          desktop both now; it already has its own mobile
+          bottom-sheet branch built in (isDesktopWidth ? portal
+          dropdown : indicators-sheet), unlike gridToggleButton
+          right below, which stays desktop-only. */}
+      {gridStyleControls}
+      {isDesktopWidth && gridToggleButton}
+      <button
+        className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
+        onClick={() => setShowDepthProfile((v) => !v)}
+        title={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+        data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="6" />
+          <line x1="21" y1="10" x2="6" y2="10" />
+          <line x1="15" y1="14" x2="6" y2="14" />
+          <line x1="12" y1="18" x2="6" y2="18" />
+        </svg>
+      </button>
+      {/* Desktop only — mobile goes back to its own text link
+          below the header instead (chart-compact-link, right
+          after this row closes), not merged into this icon
+          set. */}
+      {isDesktopWidth && chartViewSwitchRow}
+      <button
+        type="button"
+        className="chart-depth-btn"
+        onClick={handleScreenshot}
+        title={t("chart.save")}
+        data-tooltip={t("chart.save")}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      </button>
+      {isDesktopWidth && (
+        <button
+          type="button"
+          className="chart-depth-btn"
+          onClick={toggleFullscreen}
+          title={t("chart.fullscreen", "Fullscreen")}
+          data-tooltip={t("chart.fullscreen", "Fullscreen")}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+          </svg>
+        </button>
+      )}
+    </div>
+  );
   const fsSignalBucket = zone
     ? (zone.signal === "oversold" || zone.signal === "buy" || zone.signal === "strong-buy"
         ? "oversold"
@@ -5372,11 +5596,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}`}
+      className={`price-chart-container${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
-        className={isFullscreen ? "price-chart-fs-scroll" : undefined}
+        className={isFullscreen ? "price-chart-fs-scroll pcc-main" : "pcc-main"}
         style={
           pageMode && !isDesktopWidth
             ? ({ "--fs-dock-clearance": `${fsDockClearance}px` } as React.CSSProperties)
@@ -5475,6 +5699,109 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {!forceHideHeader && (
         <>
         <div className={`chart-fs-header-group${pageMode ? " chart-fs-header-group--empty" : ""}`}>
+          {useBarHeader ? (
+          <>
+            {/* Desktop Chart page header, exchange-style (reference:
+                Hyperliquid): coin + price + change on the left, a divider,
+                then a single row of label-over-value stats, with the
+                interval pills / chart icons on their own toolbar row
+                underneath. headerStats (App.tsx's .mch-stats) joins the
+                same stat row, restyled to match (PriceChart.css). */}
+            {/* Exchange-style bar header (reference: Hyperliquid): coin +
+                price + change, a divider, then label-over-value stats. */}
+            <div className="chart-bar-header">
+              <div className="chart-bar-id">
+          {/* Reference: Hyperliquid's market selector — coin icon, ticker +
+              full name, price / 24h change / age underneath, and the picker
+              as its own small button (mini icon + chevron) beside it. */}
+          <div className="chart-bar-coin">
+            {!heroLogoError ? (
+              <img
+                className="chart-bar-coin-icon"
+                src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                alt=""
+                loading="lazy"
+                onError={() => setHeroLogoError(true)}
+              />
+            ) : (
+              <span className="chart-bar-coin-icon chart-bar-coin-icon--glyph" style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}>
+                {COIN_GLYPHS[coin] ?? coin[0]}
+              </span>
+            )}
+            <span className="chart-bar-coin-text">
+              <span className="chart-bar-coin-name">
+                {coin}
+                <span className="chart-bar-coin-full">{COIN_FULL_NAME[coin] ?? ""}</span>
+              </span>
+              <span className="chart-bar-coin-price-row">
+                {currentPrice !== null && (
+                  <span className={`chart-bar-price${dayChangePercent !== null ? (dayChangePercent >= 0 ? " chart-bar-price--up" : " chart-bar-price--down") : ""}`}>
+                    {formatLivePrice(currentPrice)}
+                  </span>
+                )}
+                {dayChangePercent !== null && (
+                  <span className={`chart-bar-change${dayChangePercent >= 0 ? " up" : " down"}`}>
+                    {dayChangePercent >= 0 ? "↑" : "↓"}{Math.abs(dayChangePercent).toFixed(2)}%
+                  </span>
+                )}
+                {coinAgeLabel && <span className="chart-bar-age">{coinAgeLabel}</span>}
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="chart-bar-picker"
+            onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+            aria-label="Change coin"
+            title="Change coin"
+          >
+            <span className="chart-bar-picker-icon" style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}>
+              {COIN_GLYPHS[coin] ?? coin[0]}
+            </span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+        <span className="chart-bar-divider" />
+              <div className="chart-bar-stats">
+                {/* 24H change as its own stat (was a line under the price). */}
+                <div className="chart-bar-stat">
+                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Change</span>
+                  <span className={`chart-bar-stat-value${dayChangePercent === null ? "" : dayChangePercent >= 0 ? " up" : " down"}`}>
+                    {dayChangeAbs !== null && dayChangePercent !== null
+                      ? `${dayChangeAbs >= 0 ? "+" : "-"}${formatLivePrice(Math.abs(dayChangeAbs))} / ${dayChangePercent >= 0 ? "+" : ""}${dayChangePercent.toFixed(2)}%`
+                      : "—"}
+                    {dayChangePercent !== null && (
+                      <span className={`chart-bar-arrow ${dayChangePercent >= 0 ? "up" : "down"}`}>{dayChangePercent >= 0 ? "▲" : "▼"}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="chart-bar-stat">
+                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} {t("chart.high", "High")}</span>
+                  <span className="chart-bar-stat-value">{displayDayHigh !== null ? formatLivePrice(displayDayHigh) : "—"}<span className="chart-bar-arrow up">▲</span></span>
+                </div>
+                <div className="chart-bar-stat">
+                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} {t("chart.low", "Low")}</span>
+                  <span className="chart-bar-stat-value">{displayDayLow !== null ? formatLivePrice(displayDayLow) : "—"}<span className="chart-bar-arrow down">▼</span></span>
+                </div>
+                {quoteVolume24h !== undefined && (
+                  <div className="chart-bar-stat">
+                    <span className="chart-bar-stat-label">24h Vol</span>
+                    <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
+                  </div>
+                )}
+                {headerStats}
+              </div>
+            </div>
+            <div className="chart-bar-toolbar">
+              {quickIntervalPills}
+              <span className="chart-bar-toolbar-spacer" />
+              {heroIconRow}
+            </div>
+          </>
+          ) : (
+          <>
           <div className="chart-header">
             <div className="chart-header-left">
               {/* Fullscreen (mobile/iOS and desktop alike): exchange-style
@@ -5888,58 +6215,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     chart-mobile-interval-fs-row, right after
                     .chart-dblclick-wrap closes) — desktop keeps both here. */}
                 {isDesktopWidth && quickIntervalPills}
-                <div className="chart-hero-icon-row">
-                  {/* Chart style (candle/line/area) picker — mobile and
-                      desktop both now; it already has its own mobile
-                      bottom-sheet branch built in (isDesktopWidth ? portal
-                      dropdown : indicators-sheet), unlike gridToggleButton
-                      right below, which stays desktop-only. */}
-                  {gridStyleControls}
-                  {isDesktopWidth && gridToggleButton}
-                  <button
-                    className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
-                    onClick={() => setShowDepthProfile((v) => !v)}
-                    title={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
-                    data-tooltip={showDepthProfile ? "Hide depth profile" : "Show depth profile"}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="6" />
-                      <line x1="21" y1="10" x2="6" y2="10" />
-                      <line x1="15" y1="14" x2="6" y2="14" />
-                      <line x1="12" y1="18" x2="6" y2="18" />
-                    </svg>
-                  </button>
-                  {/* Desktop only — mobile goes back to its own text link
-                      below the header instead (chart-compact-link, right
-                      after this row closes), not merged into this icon
-                      set. */}
-                  {isDesktopWidth && chartViewSwitchRow}
-                  <button
-                    type="button"
-                    className="chart-depth-btn"
-                    onClick={handleScreenshot}
-                    title={t("chart.save")}
-                    data-tooltip={t("chart.save")}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                      <circle cx="12" cy="13" r="4" />
-                    </svg>
-                  </button>
-                  {isDesktopWidth && (
-                    <button
-                      type="button"
-                      className="chart-depth-btn"
-                      onClick={toggleFullscreen}
-                      title={t("chart.fullscreen", "Fullscreen")}
-                      data-tooltip={t("chart.fullscreen", "Fullscreen")}
-                    >
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                {heroIconRow}
                 {/* Mobile's own separate row — the text link this control
                     used to be before it was folded into chart-hero-icon-
                     row (desktop only now, above) as a bare icon. */}
@@ -5979,56 +6255,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
 
           {isDesktopWidth && headerStats}
+          </>
+          )}
 
         </div>
         </>
         )}
 
-        {displayBanner && isPaid && !isFullscreen && (
-          <div
-            className={`interval-banner interval-banner--${displayBanner.sentiment}${isDesktopWidth ? "" : " interval-banner--tappable"}`}
-            // Desktop has no pattern-insight sheet to tap into (the full
-            // text/context already sits in the hero row above this), so
-            // this stays a plain read-only banner there — mobile keeps
-            // the tap-to-expand behavior.
-            role={isDesktopWidth ? undefined : "button"}
-            tabIndex={isDesktopWidth ? undefined : 0}
-            onClick={isDesktopWidth ? undefined : () => setPatternInsightSheetOpen(true)}
-            onKeyDown={isDesktopWidth ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
-          >
-            <div className="interval-banner-header">
-              <span className="interval-banner-title pi-fade-in">{displayBanner.title}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {bannerAt !== null && (
-                  <span className="pattern-insight-updated">
-                    {t("chart.lastUpdated", "Updated")} {formatClockTime(bannerAt)}
-                  </span>
-                )}
-                <span style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                  <span className="aiqw-live-badge">
-                    <span className="aiqw-live-dot" />
-                    LIVE
-                  </span>
-                  <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
-                    {t("chart.aiPowered")}
-                  </span>
-                </span>
-                <button
-                  className="interval-banner-close"
-                  onClick={(e) => { e.stopPropagation(); setBanner(null); }}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            <p className="interval-banner-body interval-banner-body--preview pi-fade-in pi-fade-in--d1">{displayBanner.body}</p>
-            {zoneDivergenceSentence && !isFullscreen && (
-              <p className={`chart-hero-zone-sentence chart-hero-zone-sentence--${intervalSignal ?? divergence?.type ?? "neutral"}`}>
-                {zoneDivergenceSentence}
-              </p>
-            )}
-          </div>
-        )}
         {patternInsightSheetOpen && displayBanner && ReactDOM.createPortal(
           <>
             <div className="interval-sheet-backdrop" onClick={() => setPatternInsightSheetOpen(false)} />
@@ -6054,47 +6287,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           document.body,
         )}
 
-        {!isPaid && (
-          <div className="chart-ai-placeholder">
-            <div className="chart-ai-placeholder-preview" aria-hidden="true">
-              <div className="chart-ai-placeholder-header">
-                <div className="cap-badge" />
-                <div className="cap-title" />
-                <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
-                  <div className="cap-pill" />
-                  <div className="cap-pill" />
-                </div>
-              </div>
-              <div className="cap-line cap-line--full" />
-              <div className="cap-line cap-line--three-quarter" />
-            </div>
-            <div className="chart-ai-placeholder-overlay">
-              <div className="cap-overlay-left">
-                <div className="cap-overlay-header">
-                  <span className="cap-overlay-title">AI Chart Features</span>
-                  <span className="cap-overlay-ai-badge">AI</span>
-                  <span className="cap-overlay-tier-badge">PRO</span>
-                  <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
-                </div>
-                <div className="cap-overlay-features">
-                  {["Interval sentiment & trend context", "Candlestick pattern detection", "Next-move predictions"].map(f => (
-                    <span key={f} className="cap-overlay-feature">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <button
-                className="cap-overlay-btn"
-                onClick={() => onOpenUpgrade?.("pro")}
-              >
-                <span className="cap-btn-full">Upgrade Now</span>
-                <span className="cap-btn-short">Upgrade</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Free-user AI upsell: one combined banner, under the chart
+            (below), instead of one here and another one there. */}
 
         <div
           style={
@@ -6378,25 +6572,96 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               gating the rest of the app already uses. flex-shrink:0 (see
               PriceChart.css) keeps this a fixed-height row while the
               chart canvas above it (flex:1) does all the shrinking. */}
-          {pageMode && isDesktopWidth && (
-            <div className="chart-tv-bottom-bar">
-              {INTERVALS.map((opt) => {
-                const needsPro = PRO_INTERVALS.has(opt);
-                const locked = needsPro && !isPaid;
-                return (
-                  <button
-                    type="button"
-                    key={opt}
-                    className={`chart-tv-bottom-pill${interval === opt ? " active" : ""}`}
-                    onClick={() => {
-                      if (locked) { onOpenUpgrade?.("pro"); return; }
-                      setInterval(opt);
-                    }}
-                  >
-                    {INTERVAL_SHORT[opt]}
-                  </button>
-                );
-              })}
+          {/* Range presets bar (desktop — Chart page AND the Advance
+              Chart page, where it replaced the old interval-pill bottom
+              bar; intervals are still in the top toolbar there).
+              TradingView-style: each button switches the candle interval
+              and zooms the view to that span. Hover shows what it means. */}
+          {isDesktopWidth && (
+            <div className={`chart-range-bar${pageMode ? " chart-range-bar--page" : ""}`}>
+              {RANGE_PRESETS.map((p) => (
+                <button
+                  type="button"
+                  key={p.key}
+                  className={`chart-range-btn${activeRangePreset?.key === p.key ? " active" : ""}`}
+                  data-tip={p.tip}
+                  aria-label={p.tip}
+                  onClick={() => {
+                    setRangePreset(p.key);
+                    if (interval === p.interval) {
+                      // Same interval — no reload coming, so zoom right now.
+                      const candles = lastCandlesRef.current;
+                      if (candles.length) {
+                        const to = candles[candles.length - 1].time as number;
+                        chartRef.current?.timeScale().setVisibleRange({
+                          from: (to - p.seconds) as UTCTimestamp,
+                          to: to as UTCTimestamp,
+                        });
+                      }
+                    } else {
+                      // Different interval — the normal load path applies
+                      // the preset's window via viewWindowFor() on first
+                      // load for the new coin+interval.
+                      rangeSecondsRef.current = { interval: p.interval, seconds: p.seconds };
+                      setInterval(p.interval);
+                    }
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+              <span className="chart-range-divider" />
+              <button
+                type="button"
+                className={`chart-range-btn chart-range-btn--icon${goToOpen ? " active" : ""}`}
+                data-tip="Go to date or custom range"
+                aria-label="Go to date or custom range"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setGoToOpen((o) => !o)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="17" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                  <path d="M10 15h7M14 12l3 3-3 3" />
+                </svg>
+              </button>
+              {goToOpen && (
+                <ChartGoTo
+                  onClose={() => setGoToOpen(false)}
+                  onGoToDate={goToDate}
+                  onGoToRange={goToRange}
+                />
+              )}
+              <span className="chart-range-spacer" />
+              <RangeBarClock />
+              <span className="chart-range-divider" />
+              <button
+                type="button"
+                className={`chart-range-btn chart-range-btn--scale${scaleMode === "percent" ? " active" : ""}`}
+                data-tip="Percentage scale"
+                aria-pressed={scaleMode === "percent"}
+                onClick={() => setScaleMode((m) => (m === "percent" ? "normal" : "percent"))}
+              >
+                %
+              </button>
+              <button
+                type="button"
+                className={`chart-range-btn chart-range-btn--scale${scaleMode === "log" ? " active" : ""}`}
+                data-tip="Logarithmic scale"
+                aria-pressed={scaleMode === "log"}
+                onClick={() => setScaleMode((m) => (m === "log" ? "normal" : "log"))}
+              >
+                log
+              </button>
+              <button
+                type="button"
+                className={`chart-range-btn chart-range-btn--scale${autoScale ? " active" : ""}`}
+                data-tip="Auto-fit price axis to visible candles"
+                aria-pressed={autoScale}
+                onClick={() => setAutoScale((a) => !a)}
+              >
+                auto
+              </button>
             </div>
           )}
           {!pageMode && isDesktopWidth && (
@@ -6763,13 +7028,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="chart-ai-placeholder-overlay">
               <div className="cap-overlay-left">
                 <div className="cap-overlay-header">
-                  <span className="cap-overlay-title">AI Pattern Analysis</span>
+                  <span className="cap-overlay-title">AI Chart Read</span>
                   <span className="cap-overlay-ai-badge">AI</span>
                   <span className="cap-overlay-tier-badge">PRO</span>
                   <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
                 </div>
                 <div className="cap-overlay-features">
-                  {["Candlestick pattern recognition", "Bullish / bearish confidence score", "Next-move narrative & outlook"].map(f => (
+                  {/* Both former banners' features, in one list. */}
+                  {[
+                    "Interval sentiment & trend context",
+                    "Candlestick pattern recognition",
+                    "Bullish / bearish confidence score",
+                    "Next-move predictions & outlook",
+                  ].map(f => (
                     <span key={f} className="cap-overlay-feature">
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                       {f}
@@ -6786,63 +7057,88 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             </div>
           </div>
-        ) : displayPatternInsight ? (
-          <div
-            className={`pattern-insight pattern-insight--${displayPatternInsight.type}`}
-          >
-            <div className="pattern-insight-header">
-              <span
-                className={`pattern-insight-badge pattern-insight-badge--${displayPatternInsight.type}`}
-              >
-                {displayPatternInsight.type === "bullish"
-                  ? "🟢"
-                  : displayPatternInsight.type === "bearish"
-                    ? "🔴"
-                    : "⚪"}{" "}
-                {displayPatternInsight.name}
+        ) : !aiReadOpen ? (
+          // On request: nothing is generated or shown until the viewer asks
+          // for it — the pattern AI call (which spends AI quota) only runs
+          // from here, not on every chart load.
+          <button type="button" className="ai-read-cta" onClick={openAiRead}>
+            <span className="ai-read-cta-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
+              </svg>
+            </span>
+            <span className="ai-read-cta-text">
+              <span className="ai-read-cta-title">AI Chart Read</span>
+              <span className="ai-read-cta-sub">Trend bias + candlestick pattern for {coin} {INTERVAL_SHORT[interval]}</span>
+            </span>
+            <span className="ai-read-cta-btn">Analyze</span>
+          </button>
+        ) : (displayPatternInsight || (displayBanner && !isFullscreen)) ? (
+          <div className={`ai-read ai-read--${displayBanner?.sentiment ?? displayPatternInsight?.type ?? "neutral"}`}>
+            <div className="ai-read-head">
+              <span className="ai-read-head-title">
+                <span className="ai-read-spark">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" /></svg>
+                </span>
+                AI Chart Read
+                <span className="ai-read-head-ctx">{coin} · {INTERVAL_SHORT[interval]}</span>
               </span>
-              <div className="pattern-insight-header-right">
-                {patternInsightAt !== null && (
-                  <span className="pattern-insight-updated">
-                    {t("chart.lastUpdated", "Updated")} {formatClockTime(patternInsightAt)}
+              <span className="ai-read-head-right">
+                {(bannerAt ?? patternInsightAt) !== null && (
+                  <span className="ai-read-updated">
+                    {t("chart.lastUpdated", "Updated")} {formatClockTime((bannerAt ?? patternInsightAt) as number)}
                   </span>
                 )}
-                <span style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                  <span className="aiqw-live-badge">
-                    <span className="aiqw-live-dot" />
-                    LIVE
-                  </span>
-                  <span className="pattern-insight-ai-badge pattern-insight-ai-badge--pill">
-                    {t("chart.aiPowered")}
-                  </span>
-                </span>
-              </div>
+                <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
+                <button type="button" className="ai-read-close" aria-label="Hide AI Chart Read" onClick={() => setAiReadOpen(false)}>✕</button>
+              </span>
             </div>
-            <div className="pattern-insight-body-scroll">
-              <p
-                key={`summary-${displayPatternInsight.name}`}
-                className="pattern-insight-summary pi-fade-in"
-              >
-                {displayPatternInsight.summary}
-              </p>
-              <p
-                key={`narrative-${displayPatternInsight.name}`}
-                className="pattern-insight-narrative pi-fade-in pi-fade-in--d1"
-              >
-                {displayPatternInsight.narrative}
-              </p>
-              <div className="pattern-insight-next">
-                <span className="pattern-insight-next-label">
-                  {t("chart.nextMove")}
-                </span>
-                <p
-                  key={`nextmove-${displayPatternInsight.name}`}
-                  className="pattern-insight-next-text pi-fade-in pi-fade-in--d2"
+
+            <div className="ai-read-body">
+              {displayBanner && !isFullscreen && (
+                <div
+                  className={`ai-read-col ai-read-trend${isDesktopWidth ? "" : " interval-banner--tappable"}`}
+                  role={isDesktopWidth ? undefined : "button"}
+                  tabIndex={isDesktopWidth ? undefined : 0}
+                  onClick={isDesktopWidth ? undefined : () => setPatternInsightSheetOpen(true)}
+                  onKeyDown={isDesktopWidth ? undefined : (e) => { if (e.key === "Enter" || e.key === " ") setPatternInsightSheetOpen(true); }}
                 >
+                  <span className="ai-read-label">Trend</span>
+                  <span className={`ai-read-chip ai-read-chip--${displayBanner.sentiment}`}>
+                    {displayBanner.sentiment === "bullish" ? "▲" : displayBanner.sentiment === "bearish" ? "▼" : "●"} {displayBanner.title}
+                  </span>
+                  <p className="ai-read-text pi-fade-in">{displayBanner.body}</p>
+                  {zoneDivergenceSentence && (
+                    <p className={`ai-read-note chart-hero-zone-sentence--${intervalSignal ?? divergence?.type ?? "neutral"}`}>
+                      {zoneDivergenceSentence}
+                    </p>
+                  )}
+                </div>
+              )}
+              {displayPatternInsight && (
+                <div className="ai-read-col ai-read-pattern">
+                  <span className="ai-read-label">Pattern</span>
+                  <span className={`ai-read-chip ai-read-chip--${displayPatternInsight.type}`}>
+                    {displayPatternInsight.name}
+                  </span>
+                  <p key={`summary-${displayPatternInsight.name}`} className="ai-read-summary pi-fade-in">
+                    {displayPatternInsight.summary}
+                  </p>
+                  <p key={`narrative-${displayPatternInsight.name}`} className="ai-read-text pi-fade-in pi-fade-in--d1">
+                    {displayPatternInsight.narrative}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {displayPatternInsight && (
+              <div className="ai-read-next">
+                <span className="ai-read-next-label">{t("chart.nextMove")}</span>
+                <p key={`nextmove-${displayPatternInsight.name}`} className="ai-read-next-text pi-fade-in pi-fade-in--d2">
                   {displayPatternInsight.nextMove}
                 </p>
               </div>
-            </div>
+            )}
           </div>
         ) : null}
 
@@ -6882,6 +7178,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           />
         )}
       </div>
+
+      {sideColumn && !isFullscreen && <aside className="pcc-side">{sideColumn}</aside>}
 
       {/* #chart (compact, non-fullscreen) renders its own inline version
           above instead (chart-compact-inline), mobile and desktop both —

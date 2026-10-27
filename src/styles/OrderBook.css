@@ -13,8 +13,8 @@
   height: calc(100% - 20px);
   box-sizing: border-box;
   position: relative;
-  margin: 0 4px 10px 10px;
-  padding: 0 20px 18px 3px;
+  margin: 0;
+  padding: 0;
 }
 
 /* embedded=true (OrderFlowPanel.tsx) — same flex-column shape .ob-card
@@ -46,12 +46,21 @@
    Visual parity with the reference exchange UI: the active tab shows a
    ✕ (cosmetic only — this app has no generic panel system behind it to
    actually close/re-add), "+" is likewise a non-functional visual stub. */
+/* Same row shape/typography as .ofp-header (OrderFlowPanel.css) — no
+   padding of its own, 10px gap, tabs on the left styled like the
+   .ofp-spread--title text, + / expand pushed to the right. */
 .ob-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px 8px 0;
+  gap: 10px;
+  padding: 0;
+  /* 14px to the dropdowns below — same spacing .ofp-card uses between
+     its header and content. */
+  margin-bottom: 14px;
   flex-shrink: 0;
+}
+.ob-tabs .ob-tab-add {
+  margin-left: auto;
 }
 
 .ob-tab {
@@ -62,8 +71,9 @@
   border-radius: 7px;
   background: transparent;
   color: var(--pc-text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   padding: 0;
   cursor: pointer;
   white-space: nowrap;
@@ -74,8 +84,8 @@
 }
 
 .ob-tab--active {
-  background: var(--pc-panel);
-  color: var(--pc-text);
+  background: transparent;
+  color: var(--color-text);
 }
 
 .ob-tab-close {
@@ -517,6 +527,9 @@
   .chart-active .ob-card {
     margin: 0;
     padding-left: 3px;
+  }
+  .ob-card {
+    padding: 16px;
   }
 }
 

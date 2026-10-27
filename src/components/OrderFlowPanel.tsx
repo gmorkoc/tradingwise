@@ -56,6 +56,9 @@ interface Props {
   // every other call site still does) to keep this panel fully self-
   // contained with its own internal switcher, unchanged.
   view?: "flow" | "orderbook";
+  // The Chart page's Order Flow / Order Book column shows LIVE in its own
+  // tab row instead, so it hides the copy in this panel's header.
+  hideLiveBadge?: boolean;
 }
 
 interface HistoryEntry {
@@ -78,7 +81,7 @@ const SNAPSHOT_INTERVAL_MS = 15 * 60 * 1000;
 // "every resting order," and "what's actually happened" (the same
 // support/resistance/zone events already driving the on-chart dots,
 // ChartEventAnnotations.tsx) instead of a wall of numbers.
-export function OrderFlowPanel({ coin, events, view: controlledView }: Props) {
+export function OrderFlowPanel({ coin, events, view: controlledView, hideLiveBadge }: Props) {
   // Uncontrolled (every call site except the 2col layout's own Paper
   // Trading/Flow/Book tab switcher, App.tsx) now shows both reads on
   // live depth stacked — Flow Pressure then Order Book, always, no
@@ -256,15 +259,22 @@ export function OrderFlowPanel({ coin, events, view: controlledView }: Props) {
         </>
       ) : (
         <>
+          {(view === "flow" || !hideLiveBadge) && (
           <div className="ofp-header">
-            <span className="ofp-title">{view === "flow" ? "Order Flow Pressure" : "Order Book"}</span>
-            <div className="ofp-header-right">
-              {view === "flow" && !loading && !unavailable && (
-                <span className="ofp-spread">Spread {fmtSpread(spread)} ({spreadBps.toFixed(4)} bps)</span>
-              )}
-              <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
-            </div>
+            {/* No title here — the tab row above this panel already names
+                it. The spread takes the title's spot on the left instead. */}
+            {view === "flow" && !loading && !unavailable && (
+              <span className="ofp-spread ofp-spread--title">
+                Spread {fmtSpread(spread)} <span className="ofp-spread-bps">({spreadBps.toFixed(4)} bps)</span>
+              </span>
+            )}
+            {!hideLiveBadge && (
+              <div className="ofp-header-right" style={{ marginLeft: "auto" }}>
+                <span className="ptc-live-badge"><span className="ptc-pulse-dot" />LIVE</span>
+              </div>
+            )}
           </div>
+          )}
           {view === "flow" && flowBody}
           {view === "orderbook" && (
             <div className="ofp-ladder-wrap">

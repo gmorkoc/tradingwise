@@ -5,7 +5,6 @@ import {
   CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush, ReferenceArea,
 } from "recharts";
 import "../styles/GlobalMarkets.css";
-import { SectionBanner } from "./SectionBanner";
 import { deribit } from "../services/deribit";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -23,7 +22,7 @@ interface GlobalData {
 }
 
 interface ChartPoint { time: string; value: number; raw: number; }
-interface CoinRow {
+export interface CoinRow {
   id: string; symbol: string; name: string; image: string;
   market_cap_rank: number; current_price: number;
   price_change_percentage_24h: number;
@@ -82,17 +81,17 @@ const LIQ_RANGES = [
   { label: "1Y", days: 365 },
 ] as const;
 
-const TABLE_PAGE_SIZE = 15;
+export const TABLE_PAGE_SIZE = 15;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function fmtBig(n: number): string {
+export function fmtBig(n: number): string {
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
   if (n >= 1e9)  return `$${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6)  return `$${(n / 1e6).toFixed(2)}M`;
   return `$${n.toLocaleString()}`;
 }
 
-function fmtPrice(n: number): string {
+export function fmtPrice(n: number): string {
   if (n >= 1000) return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   if (n >= 1)    return `$${n.toLocaleString("en-US", { maximumFractionDigits: 3 })}`;
   return `$${n.toPrecision(4)}`;
@@ -107,7 +106,7 @@ function fmtDate(ts: number, days: number): string {
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
-const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
+export const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
 // alternative.me's full Fear & Greed history (back to Feb 2018) in one
 // request — limit=0 means "no limit", not "zero rows". Small per-row
 // (value/classification/timestamp only), so fetching everything once and
@@ -139,7 +138,7 @@ const COINALYZE_BASE = Capacitor.isNativePlatform() ? "https://www.coinhintz.io/
 // access to see the actual native networking error) — this bounds the
 // damage regardless of cause: a hang becomes a clean, retriable failure
 // instead of an infinite stuck skeleton.
-async function cgFetch<T>(url: string, ttl: number, timeoutMs?: number): Promise<T> {
+export async function cgFetch<T>(url: string, ttl: number, timeoutMs?: number): Promise<T> {
   const now = Date.now();
   if (cache[url] && now - cache[url].ts < ttl) return cache[url].data as T;
   // Key goes in the query string, not an x-cg-demo-api-key header — a
@@ -173,7 +172,7 @@ async function plainFetch<T>(url: string, ttl: number): Promise<T> {
 }
 
 // ── Sparkline ──────────────────────────────────────────────────────────────────
-function Sparkline({ data, color, width = 90, height = 28 }: { data?: number[]; color: string; width?: number; height?: number }) {
+export function Sparkline({ data, color, width = 90, height = 28 }: { data?: number[]; color: string; width?: number; height?: number }) {
   if (!data || data.length < 2) return <span className="gm-spark-empty" style={{ width, height }} />;
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -257,11 +256,46 @@ function DomTooltip({ active, payload }: { active?: boolean; payload?: { name: s
   );
 }
 
+// Labels drawn directly on the donut so the side legend isn't needed at
+// all — every slice gets one. Recharts calls this per slice with the
+// actual rendered geometry (cx/cy/midAngle/radii), not just the raw data,
+// so each label can be positioned at that slice's own midpoint. Slices
+// >=5% share get a two-line label (name + %) centered inside their own
+// wedge; thinner ones (BNB/XRP/USDC-sized) have no room for that without
+// spilling into a neighbor, so they get one compact line positioned just
+// outside the ring instead, anchored outward (away from the ring) based
+// on which side of the circle they fall on.
+function renderDonutSliceLabel(props: any) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
+  const RADIAN = Math.PI / 180;
+  const pct = `${(percent * 100).toFixed(1)}%`;
+  if (percent >= 0.05) {
+    const r = innerRadius + (outerRadius - innerRadius) / 2;
+    const x = cx + r * Math.cos(-midAngle * RADIAN);
+    const y = cy + r * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className="gm-dom-pie-label">
+        <tspan x={x} dy="-0.35em" fontSize={12} fontWeight={800}>{name}</tspan>
+        <tspan x={x} dy="1.15em" fontSize={10.5} fontWeight={600}>{pct}</tspan>
+      </text>
+    );
+  }
+  const r = outerRadius + 14;
+  const x = cx + r * Math.cos(-midAngle * RADIAN);
+  const y = cy + r * Math.sin(-midAngle * RADIAN);
+  const cos = Math.cos(-midAngle * RADIAN);
+  return (
+    <text x={x} y={y} textAnchor={cos >= 0 ? "start" : "end"} dominantBaseline="central"
+      className="gm-dom-pie-label gm-dom-pie-label--outside" fontSize={9.5} fontWeight={700}>
+      {name} {pct}
+    </text>
+  );
+}
+
 // ── Skeleton loader ──────────────────────────────────────────────────────────────
 function GmSkeleton() {
   return (
     <div className="gm-wrap">
-      <SectionBanner section="markets" />
       <div className="gm-skel gm-skel-hero" />
       <div className="gm-stats-grid">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -301,13 +335,21 @@ interface Props {
 }
 
 export function GlobalMarkets({ onSelectCoin }: Props = {}) {
+  // Desktop gets a bigger dominance donut (taller chart here + a wider
+  // .gm-dom-donut box in GlobalMarkets.css); mobile keeps 300px.
+  const [isDesktopDonut, setIsDesktopDonut] = useState(() => window.matchMedia("(min-width: 641px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 641px)");
+    const on = (e: MediaQueryListEvent) => setIsDesktopDonut(e.matches);
+    mql.addEventListener("change", on);
+    return () => mql.removeEventListener("change", on);
+  }, []);
   const [global, setGlobal]       = useState<GlobalData | null>(null);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [coins, setCoins]         = useState<CoinRow[]>([]);
   // Table pagination — 250 rows (each with its own sparkline SVG) is too
   // much to mount/animate at once, same reasoning any large data table
   // paginates instead of rendering everything up front.
-  const [tablePage, setTablePage] = useState(1);
   // Gainers/Losers banner — page 1 (index 0) is Gainers, page 2 (index 1)
   // is Losers, with an auto-advancing progress bar (gm-mover-banner-
   // progress-fill below) between them, same "1/2 pager + arrows" pattern
@@ -382,7 +424,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         if (!mountedRef.current) return;
         setGlobal(g.data);
         setCoins(c);
-        setTablePage(1);
         setLoading(false);
       })
       .catch(e => {
@@ -527,7 +568,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
 
   if (loading) return <GmSkeleton />;
   if (error) return (
-    <div className="gm-wrap"><SectionBanner section="markets" /><div className="gm-error">{error}</div></div>
+    <div className="gm-wrap"><div className="gm-error">{error}</div></div>
   );
 
   const g = global!;
@@ -585,8 +626,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     }));
   })();
 
-  const tableTotalPages = Math.max(1, Math.ceil(coins.length / TABLE_PAGE_SIZE));
-  const pagedCoins = coins.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
 
   // "Altcoin Strength" — this app's own honest equivalent of
   // blockchaincenter.net's "Altcoin Season Index": there's no free public
@@ -618,10 +657,11 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
     <>
       <div className="gm-dom-layout">
         <div className="gm-dom-donut">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88}
-                paddingAngle={2} startAngle={90} endAngle={-270} animationDuration={900} animationBegin={100} stroke="none">
+          <ResponsiveContainer width="100%" height={isDesktopDonut ? 420 : 300}>
+            <PieChart margin={{ top: 24, right: 50, bottom: 24, left: 50 }}>
+              <Pie data={pieData} dataKey="value" nameKey="name" innerRadius="58%" outerRadius="92%"
+                paddingAngle={2} startAngle={90} endAngle={-270} isAnimationActive={false} stroke="none"
+                label={renderDonutSliceLabel} labelLine={false}>
                 {pieData.map(d => <Cell key={d.name} fill={d.fill} />)}
               </Pie>
               <Tooltip content={<DomTooltip />} />
@@ -729,8 +769,6 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
 
   return (
     <div className="gm-wrap">
-      <SectionBanner section="markets" />
-
       {/* ── Hero: one glowing card (the original gm-hero treatment) now
           carrying the Market Status / Trending / Market Activity /
           Community columns instead of just the market-cap figure — real
@@ -1250,87 +1288,8 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         </div>
       </div>
 
-      <div className="gm-section gm-table-section">
-        <div className="gm-section-header">
-          <span className="gm-section-title">Top Cryptocurrencies</span>
-          <span className="gm-section-sub">{coins.length.toLocaleString()} coins by market capitalization</span>
-        </div>
-        <div className="gm-table-wrap">
-          <table className="gm-table">
-            <thead>
-              <tr>
-                <th className="gm-th gm-th--rank">#</th>
-                <th className="gm-th">Name</th>
-                <th className="gm-th gm-th--r">Price</th>
-                <th className="gm-th gm-th--r">24h %</th>
-                <th className="gm-th gm-th--r">7d %</th>
-                <th className="gm-th gm-th--c">Last 7 Days</th>
-                <th className="gm-th gm-th--r">Market Cap</th>
-                <th className="gm-th gm-th--r">Volume (24h)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedCoins.map((c, i) => {
-                const chg24  = c.price_change_percentage_24h ?? 0;
-                const chg7d  = c.price_change_percentage_7d_in_currency ?? 0;
-                return (
-                  <tr key={c.id} className="gm-tr" style={{ animationDelay: `${Math.min(i, 20) * 20}ms` }}
-                    onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
-                    <td className="gm-td gm-td--rank">{c.market_cap_rank}</td>
-                    <td className="gm-td gm-td--name">
-                      <img src={c.image} alt={c.name} className="gm-coin-img" loading="lazy" />
-                      <span className="gm-coin-name">{c.name}</span>
-                      <span className="gm-coin-sym">{c.symbol.toUpperCase()}</span>
-                    </td>
-                    <td className="gm-td gm-td--r">{fmtPrice(c.current_price)}</td>
-                    <td className={`gm-td gm-td--r gm-pct${chg24 >= 0 ? "--pos" : "--neg"}`}>
-                      {chg24 >= 0 ? "▲" : "▼"} {Math.abs(chg24).toFixed(2)}%
-                    </td>
-                    <td className={`gm-td gm-td--r gm-pct${chg7d >= 0 ? "--pos" : "--neg"}`}>
-                      {chg7d >= 0 ? "▲" : "▼"} {Math.abs(chg7d).toFixed(2)}%
-                    </td>
-                    <td className="gm-td gm-td--c">
-                      <Sparkline data={c.sparkline_in_7d?.price} color={chg7d >= 0 ? "#22c55e" : "#fb7185"} width={80} height={24} />
-                    </td>
-                    <td className="gm-td gm-td--r gm-td--muted">{fmtBig(c.market_cap)}</td>
-                    <td className="gm-td gm-td--r gm-td--muted">{fmtBig(c.total_volume)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="gm-pagination">
-          <span className="gm-pagination-info">
-            {(tablePage - 1) * TABLE_PAGE_SIZE + 1}–{Math.min(tablePage * TABLE_PAGE_SIZE, coins.length)} of {coins.length}
-          </span>
-          <div className="gm-pagination-controls">
-            <button type="button" className="gm-page-btn" disabled={tablePage <= 1}
-              onClick={() => setTablePage(p => Math.max(1, p - 1))} aria-label="Previous page">
-              ‹
-            </button>
-            {/* First, last, current ±1 — never the full page list (could
-                be 10 pages at 25/page), same "don't render 250 rows at
-                once" reasoning this pagination exists for in the first
-                place. Gaps show as a plain "…", not a clickable control. */}
-            {Array.from({ length: tableTotalPages }, (_, idx) => idx + 1)
-              .filter(p => p === 1 || p === tableTotalPages || Math.abs(p - tablePage) <= 1)
-              .map((p, idx, arr) => (
-                <span key={p} style={{ display: "contents" }}>
-                  {idx > 0 && arr[idx - 1] !== p - 1 && <span className="gm-page-ellipsis">…</span>}
-                  <button type="button" className={`gm-page-btn${p === tablePage ? " gm-page-btn--active" : ""}`}
-                    onClick={() => setTablePage(p)}>
-                    {p}
-                  </button>
-                </span>
-              ))}
-            <button type="button" className="gm-page-btn" disabled={tablePage >= tableTotalPages}
-              onClick={() => setTablePage(p => Math.min(tableTotalPages, p + 1))} aria-label="Next page">
-              ›
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Top Cryptocurrencies table moved to the Trade (#chart) page's
+          bottom panel (ChartBottomPanel). */}
     </div>
   );
 }

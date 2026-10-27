@@ -1616,7 +1616,6 @@ html[data-theme="light"] .coin-picker-menu--table {
   min-width: 0;
   min-height: 0;
 }
-
 .chart-section-wrap {
   display: flex;
   flex-direction: row;
@@ -1730,6 +1729,14 @@ html[data-theme="light"] .coin-picker-menu--table {
   height: auto;
   padding: 8px 0 18px 0px;
 }
+/* Mobile only — matches .ptc-card's (Paper Trading) own padding, same
+   specificity as the rule above so source order (this comes after) is
+   what makes it win here instead of fighting over selector weight. */
+@media (max-width: 640px) {
+  .main-content .chart-right-col .ob-card {
+    padding: 16px;
+  }
+}
 /* The asks/bids lists themselves are the scrollable containers — not an
    ancestor several levels up. max-height (not a flat height — a flat
    height left dead empty space above the spread row whenever there
@@ -1801,6 +1808,17 @@ html[data-theme="light"] .coin-picker-menu--table {
 .chart-right-col--tabbed {
   gap: 0;
 }
+.chart-right-col.chart-right-col--tabbed {
+  padding: 0;
+}
+/* Chart page's own copy of this gets its padding for free from
+   ".chart-section-wrap > .chart-right-col" (that rule only matches
+   there) — the every-other-page flyout (.activated-panel) has no such
+   ancestor, so without this the tab row/content sat flush against the
+   panel's own edges with no inset at all. Same 16px either way. */
+.activated-panel .chart-right-col--tabbed {
+  padding: 0;
+}
 /* Glow underline (picked from the fancy-tabs Design sketches,
    KvwB2LJU3URseXX3zfSx2f, option A) — plain icon+label tabs, a thin
    gradient bar that shimmers continuously and glows under the active
@@ -1811,16 +1829,17 @@ html[data-theme="light"] .coin-picker-menu--table {
   display: flex;
   flex-shrink: 0;
   gap: 24px;
+  padding-left: 16px;
   border-bottom: 1px solid var(--pc-border);
 }
 .crc-tab {
   all: unset;
   box-sizing: border-box;
   cursor: pointer;
-  padding: 9px 1px 13px;
+  padding: 16px 0px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   font-size: 12px;
   font-weight: 800;
   color: var(--color-text-muted);
@@ -1850,6 +1869,33 @@ html[data-theme="light"] .coin-picker-menu--table {
   background: var(--color-primary);
   pointer-events: none;
   transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Single-tab row (Paper Trading column): no sliding highlight to measure,
+   just a static underline under the one tab. */
+.crc-tab {
+  position: relative;
+}
+.crc-tab-underline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+/* The card's header now only holds the Open/Closed Positions link — drop
+   it entirely when that's empty (pre-activation never renders it). */
+.crc-tab-panel .ptc-header:has(.ptc-title:empty):not(:has(.ptc-header-right)) {
+  display: none;
+}
+/* LIVE badge at the right end of the Order Flow / Order Book tab row. */
+.crc-tabs-live {
+  margin-left: auto;
+  padding-right: 16px;
+  align-self: center;
+  align-items: center;
 }
 
 @keyframes crc-panel-in {
@@ -1905,11 +1951,7 @@ html[data-theme="light"] .coin-picker-menu--table {
   overflow-x: hidden;
   border-radius: 0;
   overscroll-behavior: contain;
-  /* .chart-two-col-right's own padding is 16px 16px 0 (no bottom) — fine
-     when Daily Brief sat below it with its own top padding providing the
-     gap, but here this card's own scroll boundary IS the bottom edge, so
-     without this the last row of content sat flush against it. */
-  padding-bottom: 16px;
+  padding: 16px;
 }
 /* Matches: scrolling happens on the card above, not here too.
    overflow-y alone (overflow-x left at its default 'visible') is an
@@ -1957,7 +1999,11 @@ html[data-theme="light"] .coin-picker-menu--table {
   height: calc(100vh - 64px - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
   display: flex;
   flex-direction: column;
-  width: 440px;
+  /* Matches .activated-panels-rail's own width exactly (App.css, further
+     down) — the Chart page's embedded Paper Trading column and every
+     other page's top-bar flyout should read as the same consistent
+     width, not two different sidebars. */
+  width: 460px;
   flex-shrink: 0;
   min-height: 0;
   /* Not overflow:hidden — it was clipping .chart-col-expand-toggle (the
@@ -1970,10 +2016,26 @@ html[data-theme="light"] .coin-picker-menu--table {
      so their combined height fills this box exactly rather than
      overflowing it. */
   margin: 0 0 10px 10px;
-  padding: 0 16px 0;
+  padding: 0;
   border-left: 1px solid var(--pc-border);
   gap: 14px;
   transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Chart page "2col": Order Flow / Order Book column sits between the
+   chart and Paper Trading. Both side columns narrower than the single
+   460px one they replace, so the chart keeps enough width on laptops. */
+.chart-two-col-right--flow {
+  width: clamp(280px, 20vw, 360px);
+}
+.chart-two-col-right--paper {
+  width: clamp(310px, 22vw, 400px);
+}
+/* The column's tabbed .chart-right-col is now a direct child (no
+   -row--top/--bottom wrapper in between), so it has to be told to fill
+   the column's full viewport height — otherwise it shrinks to its
+   content and the Paper Trading promo / order book stop short. */
+.chart-two-col-right > .chart-right-col {
+  flex: 1;
 }
 .chart-two-col-right--expanded {
   /* ~15% over the base 440px, not the old fixed 840px (nearly double) —
@@ -2691,12 +2753,8 @@ html[data-theme="light"] .icon-strip {
     display: none;
   }
 
-  /* Desktop swaps the inline accordion for a Coinbase-style flyout next to
-     the rail (.nav-cat-panel below) — mobile keeps the inline list above
-     untouched. */
-  .icon-strip-cat-items {
-    display: none;
-  }
+  /* (The Coinbase-style .nav-cat-panel flyout is gone — categories
+     always expand inline now, at every width.) */
 }
 
 /* ── Category flyout (desktop only) ───────────────────────────────────────
@@ -4541,7 +4599,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
   padding: 0;
   background: rgba(255, 255, 255, 0.08);
   border: none;
-  border-radius: 12px;
+  border-radius: 50%;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -4551,7 +4609,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
    header's own white background (--color-surface, #ffffff) in light
    theme — an explicit, clearly visible tint instead. */
 html[data-theme="light"] .mch-search-btn {
-  background: rgba(15, 23, 42, 0.05);
+  background: rgb(15 23 42 / 3%);
 }
 .mch-search-btn:hover {
   background: var(--color-border);
@@ -5828,7 +5886,7 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
   /* Same issue in light theme too — --color-surface-alt (#f8fafc) is
      barely distinguishable from the header's white background. */
   html[data-theme="light"] .chart-mobile-tabs {
-    background: rgba(15, 23, 42, 0.05);
+    background: rgb(15 23 42 / 3%);
   }
   /* Slide — one shared white pill behind the icons, translated to
      whichever is active instead of each icon getting its own background.
@@ -5876,6 +5934,18 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     cursor: pointer;
     opacity: 0.55;
     transition: opacity 0.25s ease, color 0.2s ease;
+  }
+  /* The visible circle is only 32px — well under Apple's 44pt minimum tap
+     target, which is why taps near the edge missed and needed repeating.
+     This invisible pseudo-element expands the real hit area without
+     touching the 32px visual size: -3px horizontally (half of the 6px gap
+     to the neighbor tab, so the two expanded zones meet edge-to-edge
+     instead of overlapping into each other), -6px vertically (room is
+     open above/below, nothing else sits that close). */
+  .chart-mobile-tab::before {
+    content: "";
+    position: absolute;
+    inset: -6px -3px;
   }
   .chart-mobile-tab.active {
     opacity: 1;
@@ -5976,6 +6046,9 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     flex: 1;
     min-height: 0;
     height: auto !important;
+  }
+  .chart-right-col.chart-right-col--tabbed {
+    margin: 0;
   }
 }
 
@@ -6717,7 +6790,9 @@ html[data-theme="light"] .pticker-price {
 .mss-chart-frozen .chart-event-dots-layer,
 .mss-chart-frozen .chart-event-cards,
 .mss-chart-frozen .chart-event-dots-pager,
-.mss-chart-frozen .pattern-insight {
+.mss-chart-frozen .pattern-insight,
+.mss-chart-frozen .ai-read,
+.mss-chart-frozen .ai-read-cta {
   display: none !important;
 }
 .mss-chart-frozen .chart-dblclick-wrap::after {
@@ -6828,4 +6903,113 @@ html[data-theme="light"] .pticker-price {
 .mss-scroll .fs-info-list,
 .mss-scroll .fs-gauge {
   padding: 0 16px;
+}
+
+/* Chart page (wide desktop), below the chart: Top Cryptocurrencies table,
+   full width. */
+.chart-below-full {
+  padding: 16px 0;
+}
+/* Flyout's ✕ (activated-panel-head, absolutely positioned top-right)
+   sits over the tab row's right end — leave room so LIVE stays visible. */
+.activated-panel .crc-tabs {
+  padding-right: 44px;
+}
+
+/* ── Collapsed sidebar: icons only; hover opens the full sidebar ────────── */
+@media (min-width: 961px) {
+  /* Icons only — no labels under them (nav, Settings/Support, profile). */
+  .icon-strip.nav-collapsed { width: 64px; }
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-label,
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-cat-label,
+  .icon-strip.nav-collapsed .icon-strip-bottom-web .icon-strip-label,
+  .icon-strip.nav-collapsed .icon-strip-profile-info {
+    display: none !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-btn,
+  .icon-strip.nav-collapsed .icon-strip-nav .icon-strip-cat-head,
+  .icon-strip.nav-collapsed .icon-strip-bottom-web .icon-strip-btn,
+  .icon-strip.nav-collapsed .icon-strip-profile-row {
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-nav { gap: 6px; }
+
+  /* Hover "peek": full 280px labeled sidebar drawn over the page. The
+     negative margin keeps its slot in the layout at the collapsed 64px,
+     so the page doesn't shift while it's open. */
+  .icon-strip.nav-peek {
+    width: 280px;
+    margin-right: -216px;
+    box-shadow: 8px 0 28px -12px rgba(0, 0, 0, 0.25);
+    background: var(--color-surface);
+  }
+  html[data-theme="light"] .icon-strip.nav-peek { background: #fff; }
+  /* The collapsed-mode category flyout isn't needed while peeking —
+     categories expand inline like the normal sidebar. */
+  .app-shell.nav-collapsed:has(.icon-strip.nav-peek) .nav-cat-panel,
+  .app-shell.nav-collapsed:has(.icon-strip.nav-peek) .nav-cat-backdrop {
+    display: none !important;
+  }
+}
+/* Expand / collapse menu button (bottom of the sidebar). */
+.icon-strip-expand-btn .icon-strip-label { color: var(--color-text-muted); }
+.icon-strip-profile-avatar svg { color: var(--color-text-muted); }
+@media (min-width: 961px) {
+  /* Category items' wrapper (.icon-strip-cat) centers its icon button
+     too — it was left-aligned, putting those three icons 10px off. */
+  .icon-strip.nav-collapsed .icon-strip-cat {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-cat-head {
+    justify-content: center !important;
+    align-items: center !important;
+  }
+}
+@media (min-width: 961px) {
+  /* Account icon centered inside its avatar circle. */
+  .icon-strip.nav-collapsed .icon-strip-profile-avatar,
+  .icon-strip-profile-avatar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-avatar span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-strip.nav-collapsed .icon-strip-profile-row {
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  /* Even spacing between Settings / Support / Account / Expand. */
+  .icon-strip.nav-collapsed .icon-strip-bottom-web { gap: 6px !important; }
+  .icon-strip.nav-collapsed .icon-strip-bottom-web > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+  /* Hover peek must never move the page: width and the compensating
+     negative margin animate together (same duration/easing), so
+     width + margin stays at the collapsed 64px the whole time. Only the
+     Expand button (navCollapsed false) actually changes the layout. */
+  .icon-strip {
+    transition: width 0.22s ease, margin-right 0.22s ease, box-shadow 0.22s ease;
+  }
+}
+/* Category flyout panel (.nav-cat-panel) retired on desktop — the
+   collapsed rail now opens the full sidebar on hover, where categories
+   expand inline instead. (641–960px tablet rail, which has no hover-open
+   sidebar, still uses it.) */
+@media (min-width: 961px) {
+  .nav-cat-panel,
+  .nav-cat-backdrop {
+    display: none !important;
+  }
 }

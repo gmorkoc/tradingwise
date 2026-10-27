@@ -1,7 +1,7 @@
 /* ── Wrapper ──────────────────────────────────────────────────────────────── */
 .gm-wrap {
   width: 100%;
-  padding: 24px 20px 48px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -22,24 +22,6 @@ html[data-theme="light"] .gm-status-col {
 html[data-theme="light"] .gm-activity-tile,
 html[data-theme="light"] .gm-marketstatus-tile {
   background: rgba(15, 23, 42, 0.025);
-}
-
-/* The Markets page's SectionBanner is now GlobalMarkets' own first
-   .gm-wrap child (not an external sibling) — SectionBanner.css's own
-   default margin (12px all round) is overridden to 0 here so .gm-wrap's
-   own padding/gap is the only spacing, same as every other child. Scoped
-   to .gm-wrap so other pages' SectionBanner (rendered by App.tsx, no
-   .gm-wrap next to it) is untouched. */
-.gm-wrap > .sec-banner {
-  margin: 0;
-}
-@media (max-width: 640px) {
-  .gm-wrap > .sec-banner { gap: 10px; }
-  .gm-wrap > .sec-banner .sec-banner-icon { width: 26px; height: 26px; font-size: 0.74rem; border-radius: 8px; }
-  .gm-wrap > .sec-banner .sec-banner-title { font-size: 0.76rem; }
-  .gm-wrap > .sec-banner .sec-banner-desc { font-size: 0.7rem; line-height: 1.35; }
-  .gm-wrap > .sec-banner .sec-banner-tags { gap: 4px; margin-top: 4px; }
-  .gm-wrap > .sec-banner .sec-banner-tag { font-size: 0.6rem; padding: 1px 7px; }
 }
 
 /* ── Shared entrance animation ────────────────────────────────────────────── */
@@ -793,7 +775,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  gap: 24px;
   flex-wrap: wrap;
   /* Fills the card's own full height (now matching the chart card's
      height, .gm-dom-chart-grid default stretch above) and centers its
@@ -803,7 +785,18 @@ html[data-theme="light"] .gm-marketstatus-tile {
 .gm-dom-donut {
   position: relative;
   flex: 0 0 auto;
-  width: 240px;
+  /* Desktop: wide enough that the outside labels' margins don't squeeze
+     the ring (mobile overrides to 100% / max 360px below). */
+  /* Grows to fill what's left beside the legend (up to 440px), instead
+     of a fixed size that pushed the legend below in narrower cards. */
+  flex: 1 1 300px;
+  width: auto;
+  min-width: 260px;
+  max-width: 440px;
+}
+@media (min-width: 641px) {
+  .gm-dom-center-value { font-size: 1.9rem; }
+  .gm-dom-center-label { font-size: 0.75rem; }
 }
 .gm-dom-center {
   position: absolute;
@@ -860,6 +853,44 @@ html[data-theme="light"] .gm-marketstatus-tile {
   font-size: 0.74rem;
   color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: every slice now carries its own label directly on the donut
+   (renderDonutSliceLabel in GlobalMarkets.tsx — big slices get a two-line
+   label inside their own wedge, thin ones get a compact line just outside
+   the ring), so the separate side-legend card is redundant here and is
+   hidden entirely rather than kept as a second copy of the same numbers. */
+@media (max-width: 640px) {
+  .gm-dom-layout {
+    justify-content: center;
+    gap: 0;
+  }
+  .gm-dom-donut {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+  }
+  .gm-dom-legend {
+    display: none;
+  }
+  /* Labels inside a wedge (>=5% share) — white text with a dark outline
+     (stroke, not text-shadow — more reliable on SVG <text> across WebKit)
+     so it stays readable against every slice color, from the bright
+     orange BTC wedge to the muted gray "Others" one. */
+  .gm-dom-pie-label {
+    fill: #fff;
+    stroke: rgba(0, 0, 0, 0.45);
+    stroke-width: 3px;
+    paint-order: stroke fill;
+    pointer-events: none;
+  }
+  /* Thin slices (<5% share) — sits on the plain card background just
+     outside the ring, not over a colored wedge, so it uses the normal
+     text color instead of the white+outline treatment above. */
+  .gm-dom-pie-label--outside {
+    fill: var(--color-text-secondary);
+    stroke: none;
+  }
 }
 
 /* ── Bitcoin Dominance horizontal bar (companion to the donut above) ────── */
@@ -946,8 +977,8 @@ html[data-theme="light"] .gm-marketstatus-tile {
    the page" structure. Everything else keeps its prior relative order,
    just shifted down a slot. */
 .gm-wrap > .sec-banner { order: -6; }
-.gm-hero { order: -5; }
-.gm-table-section { order: -4; }
+.gm-table-section { order: -5; }
+.gm-hero { order: -4; }
 .gm-mcap-card { order: -3; }
 .gm-fnghist-section { order: -1; }
 .gm-altseason-card { order: 0; }

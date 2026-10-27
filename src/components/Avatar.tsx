@@ -1,6 +1,9 @@
+import type React from "react";
+
 interface AvatarProps {
   url?: string | null;
-  fallback: string;
+  // Text initials, or any node (e.g. a person icon for signed-out users).
+  fallback: React.ReactNode;
   className: string;
 }
 
