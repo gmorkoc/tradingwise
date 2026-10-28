@@ -290,10 +290,12 @@ html[data-theme="light"] .ta-trigger-dot {
 .ta-panel {
   --ta-accent: #6ea8ff;
   --ta-accent-2: #a78bfa;
-  --ta-bg-1: #14182a;
-  --ta-bg-2: #0a0c18;
-  --ta-text: #eef0f7;
-  --ta-text-dim: #9298ad;
+  /* Dark theme = pure black family (was navy): lifted near-black at the
+     top fading to #000, Apple neutral greys for text. */
+  --ta-bg-1: #141416;
+  --ta-bg-2: #000000;
+  --ta-text: #f5f5f7;
+  --ta-text-dim: #98989d;
   /* Shared by .ta-thinking-label and .ta-msg--agent .ta-msg-text on
      purpose — the live-streamed "thinking" text becomes that exact
      bubble's content the moment the reply resolves, so they read from one
@@ -301,16 +303,18 @@ html[data-theme="light"] .ta-trigger-dot {
      Near-white, matching real iOS iMessage dark-mode received-bubble text
      (not a muted/dim gray). */
   --ta-agent-text: #f2f2f7;
-  --ta-border: rgba(255, 255, 255, 0.1);
-  --ta-overlay: rgba(255, 255, 255, 0.04);
+  --ta-border: rgba(255, 255, 255, 0.14);
+  --ta-overlay: rgba(255, 255, 255, 0.06);
   --ta-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 
   display: flex;
   flex-direction: column;
   position: relative;
+  /* Softer top sheen than before (0.22 washed the header into blue-grey on
+     a black page); a faint blue glow keeps the Agent Ready identity. */
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 30%),
-    radial-gradient(120% 60% at 15% 0%, rgba(110, 168, 255, 0.12), transparent 60%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0) 30%),
+    radial-gradient(120% 60% at 15% 0%, rgba(110, 168, 255, 0.09), transparent 60%),
     linear-gradient(175deg, var(--ta-bg-1) 0%, var(--ta-bg-2) 100%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
