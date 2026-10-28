@@ -2831,6 +2831,100 @@ html[data-theme="light"] .chart-active
   }
 }
 
+/* ── Explain Zone: single glass pill (idle / drawing / zone drawn) ────── */
+.czp {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  color: #0f172a;
+  animation: chart-explain-zone-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+html:not([data-theme="light"]) .czp {
+  background: rgba(28, 28, 30, 0.78);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  color: #f5f5f7;
+}
+.czp-main,
+.czp-cancel,
+.czp-clear {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.czp-main {
+  gap: 7px;
+  height: 100%;
+  padding: 0 10px 0 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+.czp-main--static { cursor: default; }
+.czp-main:not(.czp-main--static):active { opacity: 0.6; }
+.czp-icon { flex-shrink: 0; }
+.czp-icon--spark {
+  color: #0a84ff;
+  animation: czp-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes czp-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50%      { transform: scale(1.18) rotate(20deg); opacity: 0.85; }
+}
+.czp--drawing .czp-icon { color: #0a84ff; animation: czp-nudge 1s ease-in-out infinite; }
+@keyframes czp-nudge {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(2px, -2px); }
+}
+.czp-pro {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0a84ff;
+  background: rgba(10, 132, 255, 0.14);
+}
+.czp-sep {
+  width: 1px;
+  height: 16px;
+  background: currentColor;
+  opacity: 0.18;
+}
+.czp-cancel {
+  height: 100%;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0a84ff;
+}
+.czp-cancel:active { opacity: 0.6; }
+.czp-clear {
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 2px 0 4px;
+  border-radius: 50%;
+  background: rgba(127, 127, 127, 0.18);
+  color: inherit;
+}
+.czp-clear:active { transform: scale(0.9); }
+@media (prefers-reduced-motion: reduce) {
+  .czp, .czp-icon--spark, .czp--drawing .czp-icon { animation: none; }
+}
+
 .chart-explain-zone-btn {
   display: flex;
   align-items: center;
@@ -3010,6 +3104,46 @@ html[data-theme="light"] .chart-clear-zone-btn__label {
 .chart-clear-zone-btn:hover .chart-clear-zone-btn__icon {
   transform: scale(1.1) rotate(6deg);
   box-shadow: 0 8px 22px rgba(244, 63, 94, 0.7), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark theme — the app's pure-black palette: labels on the lifted #111113
+   surface with a neutral rim and white text (no navy/wine tints); icons in
+   the iOS system blue / red with a softer glow. */
+html:not([data-theme="light"]) .chart-explain-zone-btn__label,
+html:not([data-theme="light"]) .chart-clear-zone-btn__label {
+  color: #f5f5f7;
+  background: rgba(17, 17, 19, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+html:not([data-theme="light"]) .chart-explain-zone-btn:hover .chart-explain-zone-btn__label {
+  background: rgba(28, 28, 30, 0.95);
+}
+html:not([data-theme="light"]) .chart-explain-zone-btn__icon,
+html:not([data-theme="light"]) .chart-explain-zone-btn--active .chart-explain-zone-btn__icon {
+  background: #0a84ff;
+  border-color: rgba(255, 255, 255, 0.85);
+}
+html:not([data-theme="light"]) .chart-explain-zone-btn__icon {
+  animation-name: chart-explain-zone-glow-dark;
+}
+html:not([data-theme="light"]) .chart-explain-zone-btn--active .chart-explain-zone-btn__icon {
+  animation-name: chart-explain-zone-pulse;
+}
+@keyframes chart-explain-zone-glow-dark {
+  0%, 100% { box-shadow: 0 6px 18px rgba(10, 132, 255, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4); }
+  50%      { box-shadow: 0 6px 24px rgba(10, 132, 255, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4); }
+}
+html:not([data-theme="light"]) .chart-explain-zone-btn__pro {
+  background: #1c1c1e;
+  color: #f5f5f7;
+  box-shadow: 0 0 0 2px #000, inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+html:not([data-theme="light"]) .chart-clear-zone-btn__icon {
+  background: #ff453a;
+  border-color: rgba(255, 255, 255, 0.85);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(255, 69, 58, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5267,12 +5401,12 @@ html[data-theme="light"] .chart-fullscreen-btn {
    harder behind it, and give the search a filled field. */
 html:not([data-theme="light"]) .indicators-sheet-backdrop { background: rgba(0, 0, 0, 0.7); }
 html:not([data-theme="light"]) .indicators-sheet {
-  background: #111113;
+  background: #0a0a0b;
   border-top: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.8);
 }
 html:not([data-theme="light"]) .indicators-sheet .indicators-sheet-header {
-  background: #111113;
+  background: #0a0a0b;
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 html:not([data-theme="light"]) .coin-picker-sheet .coin-picker-search-wrap {

@@ -57,6 +57,9 @@ interface Props {
    *  they can never float over the sidebar/header when the chart is
    *  scrolled or partly covered. */
   contained?: boolean;
+  /** Render only the drawing layer (no tool rail / magnet badge) — used
+      while drawing or showing an "Explain Zone" zone outside draw mode. */
+  hideToolbar?: boolean;
 }
 
 export interface ChartDrawingToolsHandle {
@@ -64,6 +67,8 @@ export interface ChartDrawingToolsHandle {
   activateZoneTool: () => void;
   /** Remove all zone drawings */
   clearZoneTool: () => void;
+  /** Leave zone-draw mode without drawing (back to the cursor) */
+  cancelZoneTool: () => void;
 }
 
 const TOOL_CLICKS: Record<DrawingTool, number> = {
@@ -208,7 +213,7 @@ const TRASH_ICON = <IconMulti>
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
-  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset, contained }: Props,
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset, contained, hideToolbar }: Props,
   ref,
 ) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
@@ -217,7 +222,16 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
   const [pendingPts, setPendingPts] = useState<ChartPt[]>([]);
   const [chartRect, setChartRect]   = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
-  const canvasRef        = useRef<HTMLCanvasElement>(null);
+  const canvasRef        = useRef<HTMLCanvasElement | null>(null);
+  // The canvas element itself, as state: it can be re-created (e.g. once
+  // the `contained` portal host becomes available), and the native touch
+  // listeners below must follow the live element — on iOS a stale canvas
+  // meant zone/brush/line touches went nowhere.
+  const [canvasEl, setCanvasEl] = useState<HTMLCanvasElement | null>(null);
+  const setCanvasRef = useCallback((el: HTMLCanvasElement | null) => {
+    canvasRef.current = el;
+    setCanvasEl(el);
+  }, []);
   const drawingsRef      = useRef<Drawing[]>([]);
   const pendingRef       = useRef<ChartPt[]>([]);
   const mousePosRef      = useRef<ScreenPt | null>(null);
@@ -589,14 +603,12 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
   useEffect(() => { scheduleRenderRef.current = scheduleRender; }, [scheduleRender]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !canvasEl) return;
 
-    // Poll until the canvas mounts (it mounts after chartRect is first set)
-    let canvas = canvasRef.current;
-    let pollId = 0;
+    // Attached to the live canvas element; re-runs if it's re-created.
+    const canvas: HTMLCanvasElement = canvasEl;
+    const pollId = 0;
     const attach = () => {
-      canvas = canvasRef.current;
-      if (!canvas) { pollId = window.setTimeout(attach, 50); return; }
 
       const getPos = (e: TouchEvent): ScreenPt => {
         const t = e.touches[0] || e.changedTouches[0];
@@ -672,7 +684,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
     attach();
 
     return () => { clearTimeout(pollId); cleanup(); };
-  }, [visible]); // intentionally minimal — chartRect changes must NOT re-attach mid-gesture
+  }, [visible, canvasEl]); // intentionally minimal — chartRect changes must NOT re-attach mid-gesture
 
   // ── Mouse handlers (desktop) ─────────────────────────────────────────────
 
@@ -751,6 +763,11 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
     clearZoneTool: () => {
       setDrawings(prev => prev.filter(d => d.type !== 'zone'));
     },
+    cancelZoneTool: () => {
+      zoneActiveRef.current = false;
+      zoneScreenRef.current = [];
+      setTool('cursor');
+    },
   }), []);
 
   if (!visible || !chartRect) return null;
@@ -761,6 +778,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
 
   const ui = (
     <>
+      {!hideToolbar && (
       <div
         className={`cdt-toolbar${fullHeightRail ? " cdt-toolbar--full-rail" : ""}`}
         style={
@@ -829,15 +847,16 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
           {TRASH_ICON}
         </button>
       </div>
+      )}
 
-      {magnet && (
+      {magnet && !hideToolbar && (
         <div className="cdt-magnet-badge" style={{ top: box.top + 8, left: box.left + 50, ...(host ? { position: "absolute" as const, zIndex: 30 } : {}) }}>
           ⊕ Magnet On
         </div>
       )}
 
       <canvas
-        ref={canvasRef}
+        ref={setCanvasRef}
         className="cdt-canvas"
         style={{
           top:          box.top,

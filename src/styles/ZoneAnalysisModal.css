@@ -1,12 +1,15 @@
+/* Dark: the app's pure-black theme — same lifted #111113 surface and rim
+   as the bottom sheets, neutral Apple greys for text (no navy). */
 .zam-modal[data-theme="dark"] {
-  --zam-bg:           #0a1120;
-  --zam-border:       rgba(255,255,255,0.08);
-  --zam-text-primary: #e8edf5;
-  --zam-text-body:    #94a8c2;
-  --zam-text-muted:   #4a6080;
-  --zam-shadow:       0 32px 90px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
-  --zam-surface:      rgba(255,255,255,0.04);
+  --zam-bg:           #111113;
+  --zam-border:       rgba(255,255,255,0.14);
+  --zam-text-primary: #f5f5f7;
+  --zam-text-body:    #b0b0b6;
+  --zam-text-muted:   #8e8e93;
+  --zam-shadow:       0 32px 90px rgba(0,0,0,0.85);
+  --zam-surface:      rgba(255,255,255,0.06);
 }
+.zam-modal[data-theme="dark"] { border-top-color: rgba(255,255,255,0.22); }
 
 .zam-modal[data-theme="light"] {
   --zam-bg:           #f7f9fc;
@@ -26,7 +29,7 @@
   position: fixed;
   inset: 0;
   z-index: 1100;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;

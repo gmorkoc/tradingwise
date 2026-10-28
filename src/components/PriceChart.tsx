@@ -2127,8 +2127,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Dark theme is pure black everywhere (same as the Liquidation Heatmap
   // card), fullscreen included.
   // The coin bottom sheet's chart matches the sheet's own dark surface
-  // (#111113, BottomSheet.css / .mss-sheet) instead of pure black.
-  const bgColor = isLight ? "#ffffff" : prefsScope === "sheet" ? "#111113" : "#000000";
+  // (#0a0a0b, BottomSheet.css / .mss-sheet) instead of pure black.
+  const bgColor = isLight ? "#ffffff" : prefsScope === "sheet" ? "#0a0a0b" : "#000000";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -2306,6 +2306,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const handleClearZone = useCallback(() => {
     drawingToolsRef.current?.clearZoneTool();
     setHasZone(false);
+  }, []);
+
+  const handleCancelZoneDraw = useCallback(() => {
+    drawingToolsRef.current?.cancelZoneTool();
+    setAwaitingZoneDraw(false);
   }, []);
 
   const handleZoneComplete = useCallback((_drawing: Drawing, candles: CandleDataPoint[]) => {
@@ -7522,7 +7527,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             seriesRef={candleRef}
             containerRef={containerRef}
             candlesRef={lastCandlesRef}
-            visible={pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen}
+            // Also on while drawing / showing an "Explain Zone" zone — the
+            // drawing layer must exist for the finger/mouse to draw on.
+            visible={(pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen) || awaitingZoneDraw || hasZone}
+            // Zone-only (tools panel not open): just the drawing layer, no rail.
+            hideToolbar={!(pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen)}
             persistRef={drawingsPersistRef}
             onZoneComplete={handleZoneComplete}
             // No Save/Reset in the rail: Save is in the mobile bottom bar
@@ -7573,29 +7582,42 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
           {isFullscreen && (
             <div className="chart-zone-btn-row">
-              <button
-                className={`chart-explain-zone-btn${awaitingZoneDraw ? " chart-explain-zone-btn--active" : ""}`}
-                onClick={handleExplainZoneStart}
-                title="Draw a free area on the chart and get an AI explanation of it"
-              >
-                <span className="chart-explain-zone-btn__icon">
-                  {awaitingZoneDraw ? "✏️" : "✨"}
-                  {!isPaid && <span className="chart-explain-zone-btn__pro">PRO</span>}
-                </span>
-                <span className="chart-explain-zone-btn__label">
-                  {awaitingZoneDraw ? "Draw a zone…" : "Explain Zone"}
-                </span>
-              </button>
-              {hasZone && (
-                <button
-                  className="chart-clear-zone-btn"
-                  onClick={handleClearZone}
-                  title="Clear the drawn zone"
-                >
-                  <span className="chart-clear-zone-btn__icon">✕</span>
-                  <span className="chart-clear-zone-btn__label">Clear</span>
-                </button>
-              )}
+              {/* One glass pill with three states:
+                  idle → "✦ Explain Zone"; drawing → "✎ Drag on the chart · Cancel";
+                  zone drawn → "✦ Explain Zone  ✕" (✕ clears it). */}
+              <div className={`czp${awaitingZoneDraw ? " czp--drawing" : ""}`}>
+                {awaitingZoneDraw ? (
+                  <>
+                    <span className="czp-main czp-main--static">
+                      <svg className="czp-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      <span className="czp-label">Drag on the chart</span>
+                    </span>
+                    <span className="czp-sep" aria-hidden="true" />
+                    <button type="button" className="czp-cancel" onClick={handleCancelZoneDraw}>Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="czp-main"
+                      onClick={handleExplainZoneStart}
+                      title="Draw a free area on the chart and get an AI explanation of it"
+                    >
+                      <svg className="czp-icon czp-icon--spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                      <span className="czp-label">Explain Zone</span>
+                      {!isPaid && <span className="czp-pro">PRO</span>}
+                    </button>
+                    {hasZone && (
+                      <>
+                        <span className="czp-sep" aria-hidden="true" />
+                        <button type="button" className="czp-clear" onClick={handleClearZone} title="Clear the drawn zone" aria-label="Clear zone">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>

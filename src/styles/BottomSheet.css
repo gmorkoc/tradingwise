@@ -141,7 +141,7 @@
    surface — instead of disappearing into the page. */
 html:not([data-theme="light"]) .bs-sheet {
   /* iOS elevated dark surface — clearly lifted off the pure-black page. */
-  background: #111113;
+  background: #0a0a0b;
   /* A real border (not an inset shadow) so the rim also shows down the
      sides — content covered the inset version there. */
   border: 1px solid rgba(255, 255, 255, 0.14);
@@ -152,7 +152,7 @@ html:not([data-theme="light"]) .bs-sheet {
 @media (max-width: 900px) {
   html:not([data-theme="light"]) .bs-sheet { border-left: none; border-right: none; border-bottom: none; }
 }
-html:not([data-theme="light"]) .bs-header { background: #111113; border-bottom-color: rgba(255, 255, 255, 0.1); }
+html:not([data-theme="light"]) .bs-header { background: #0a0a0b; border-bottom-color: rgba(255, 255, 255, 0.1); }
 html:not([data-theme="light"]) .bs-backdrop { background: rgba(0, 0, 0, 0.7); }
 @media (min-width: 901px) {
   html:not([data-theme="light"]) .bs-backdrop--modal .bs-sheet {
