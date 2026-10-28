@@ -719,6 +719,17 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
 
   const positions = portfolio?.positions ?? [];
   const openCount = positions.length;
+  // "Open" stat tap → show the Current Positions list (open tab, expanded)
+  // and bring it into view.
+  const positionsRef = useRef<HTMLDivElement>(null);
+  const showOpenPositions = () => {
+    if (openCount === 0) return;
+    setPositionsView("open");
+    setPositionsOpen(true);
+    requestAnimationFrame(() => {
+      positionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
   const formPrice = livePrices[coin];
   // Only meaningful when entering a coin quantity — in USD mode the input
   // IS the cost already, showing it again would just repeat the number.
@@ -868,9 +879,25 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               <span className="ptc-stat-label">Cash<InfoTip text={PTC_TIPS["Cash"]} /></span>
               {cashError && <span className="ptc-cash-error">{cashError}</span>}
             </div>
-            <div className="ptc-stat">
+            {/* Tappable when there are open positions: jumps to the
+                Current Positions list, expanded. */}
+            <div
+              className={`ptc-stat${openCount > 0 ? " ptc-stat--link" : ""}`}
+              role={openCount > 0 ? "button" : undefined}
+              tabIndex={openCount > 0 ? 0 : undefined}
+              aria-label={openCount > 0 ? `Show ${openCount} open position${openCount === 1 ? "" : "s"}` : undefined}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).closest(".ptc-info")) return; // the ⓘ keeps its own tooltip
+                showOpenPositions();
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showOpenPositions(); } }}
+            >
               <span className="ptc-stat-value">{openCount}</span>
-              <span className="ptc-stat-label">Open<InfoTip text={PTC_TIPS["Open"]} /></span>
+              <span className="ptc-stat-label">Open<InfoTip text={PTC_TIPS["Open"]} />
+                {openCount > 0 && (
+                  <svg className="ptc-stat-link-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+                )}
+              </span>
             </div>
             <div className="ptc-stat">
               <span className={`ptc-stat-value${perf && perf.totalPnl !== 0 ? (perf.totalPnl > 0 ? " ptc-up" : " ptc-down") : ""}`}>
@@ -1066,7 +1093,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
           )}
 
           {positionsView === "open" && openCount > 0 && (
-            <div className="ptc-positions">
+            <div className="ptc-positions" ref={positionsRef}>
               <button
                 type="button"
                 className={`ptc-positions-title${positionsOpen ? " open" : ""}`}

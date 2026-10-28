@@ -55,7 +55,7 @@
   height: 10px;
   border-radius: 50%;
   background: #fb7185;
-  box-shadow: 0 0 0 2px #0a0d1c, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+  box-shadow: 0 0 0 2px #000, 0 0 6px 1px rgba(251, 113, 133, 0.7);
   animation: ta-trigger-dot-pulse 1.6s ease-in-out infinite;
 }
 html[data-theme="light"] .ta-trigger-dot {

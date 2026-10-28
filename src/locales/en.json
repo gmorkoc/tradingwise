@@ -750,24 +750,27 @@
       "free": {
         "label": "Free",
         "features": [
-          "Live price charts",
-          "Order book",
-          "Watchlist",
-          "Fear & Greed gauge",
-          "Flash news banner"
+          "Live charts, drawing tools & indicator library",
+          "Markets overview & watchlist",
+          "Order book, order flow & liquidation heatmap",
+          "On-chain, funding & long/short data",
+          "Top Traders & position size calculator",
+          "Market Pulse news & whale alerts",
+          "Paper Trading (free account)"
         ]
       },
       "pro": {
         "label": "Pro",
         "features": [
           "Everything in Free",
-          "Buy & Sell Signals",
-          "HTF Multi-Timeframe AI",
-          "AI Market Intelligence",
-          "On-Chain AI Analysis",
-          "Price Prediction Chart",
-          "Liquidation Heatmap AI",
+          "Buy & Sell Signals with push alerts",
           "Inside the AI Candle",
+          "Analyze a Chart from a screenshot",
+          "AI-built custom indicators",
+          "Alt Analysis, Options & Correlation Matrix",
+          "Strategy Alerts",
+          "AI on HTF, On-Chain & Liquidation Heatmap",
+          "Price Prediction Chart",
           "Coinbase Premium AI",
           "100 AI requests / week"
         ]
@@ -776,6 +779,7 @@
         "label": "Elite",
         "features": [
           "Everything in Pro — unlimited AI requests",
+          "Alt Analysis AI scans",
           "Early access to features"
         ]
       }

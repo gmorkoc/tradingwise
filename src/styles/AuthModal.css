@@ -488,3 +488,28 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ── Passkey sign-in ─────────────────────────────────────────────────────
+   Same outline button as Google, just a key icon. On the welcome screen
+   it's a quieter text link under "I already have an account". */
+.auth-passkey { margin-top: 10px; }
+.auth-welcome-passkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+/* ── Email verification code ─────────────────────────────────────────────
+   One wide box, big spaced digits, so it reads as "type the code here". */
+.auth-code-input {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  padding-left: 0.35em; /* balances the trailing letter-spacing */
+  font-variant-numeric: tabular-nums;
+}
+.auth-code-input::placeholder { color: var(--color-text-muted); opacity: 0.4; }

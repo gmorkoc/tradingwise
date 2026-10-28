@@ -582,3 +582,791 @@ html[data-theme="light"] .upgrade-confirm .upgrade-sub strong { color: #1e293b; 
 
 html[data-theme="light"] .upgrade-agent-callout-title { color: #1e1b4b; }
 html[data-theme="light"] .upgrade-agent-callout-desc  { color: #475569; }
+
+/* ══ Apple glass redesign — light (white / light grey) in every theme ═════
+   `html:root` prefixes give these the same specificity as the old
+   html[data-theme="light"] rules above, so they win by coming later. */
+html:root .upgrade-backdrop {
+  background: rgba(15, 23, 42, 0.28);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+html:root .upgrade-card {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%),
+    #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 28px;
+  box-shadow: 0 40px 120px rgba(15, 23, 42, 0.25), 0 2px 8px rgba(15, 23, 42, 0.06);
+  color: #1d1d1f;
+}
+@media (min-width: 681px) {
+  html:root .upgrade-card::before { display: none; }
+}
+html:root .upgrade-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+}
+html:root .upgrade-close:hover { background: rgba(0, 0, 0, 0.1); }
+
+html:root .upgrade-title {
+  color: #1d1d1f;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+html:root .upgrade-sub { color: #6e6e73; }
+
+/* Plan cards: frosted white glass. */
+html:root .upgrade-plan {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(15, 23, 42, 0.06);
+}
+html:root .upgrade-plan:hover {
+  background: rgba(255, 255, 255, 0.86);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 18px 44px rgba(15, 23, 42, 0.09);
+}
+/* Most popular: plain white with a crisp ring in the plan's color. */
+html:root .upgrade-plan--popular,
+html:root .upgrade-plan--popular:hover {
+  background: #ffffff;
+  border-color: transparent;
+  box-shadow:
+    0 0 0 2px var(--plan-color, #0071e3),
+    0 18px 48px color-mix(in srgb, var(--plan-color, #0071e3) 18%, transparent);
+}
+
+html:root .upgrade-popular-badge {
+  top: -12px;
+  padding: 4px 12px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  background: color-mix(in srgb, var(--plan-color, #0071e3) 75%, #1d4ed8);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--plan-color, #0071e3) 30%, transparent);
+}
+html:root .upgrade-current-badge {
+  color: #6e6e73;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+html:root .upgrade-plan-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; }
+html:root .upgrade-plan-amount {
+  color: #1d1d1f;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+html:root .upgrade-plan-per { color: #86868b; }
+html:root .upgrade-plan-features li { color: #424245; }
+/* Check marks as small tinted circles. */
+html:root .upgrade-plan-check {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-right: 0; /* the li's own 8px gap already spaces it */
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--plan-color, #0071e3) 14%, transparent);
+}
+
+/* Elite's Agent Ready box: soft lavender glass. */
+html:root .upgrade-agent-callout {
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 16px;
+  box-shadow: none;
+}
+html:root .upgrade-agent-callout-title { color: #1d1d1f; }
+html:root .upgrade-agent-callout-desc { color: #6e6e73; }
+
+/* Buttons: Apple-style pills, solid color, no glow. */
+html:root .upgrade-plan-cta {
+  border-radius: 999px;
+  padding: 13px 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  background: color-mix(in srgb, var(--plan-color, #0071e3) 72%, #1d4ed8);
+  box-shadow: none;
+}
+html:root .upgrade-plan[style*="a78bfa"] .upgrade-plan-cta {
+  background: color-mix(in srgb, var(--plan-color) 70%, #6d28d9);
+}
+html:root .upgrade-plan-cta:hover {
+  opacity: 1;
+  transform: none;
+  filter: brightness(1.06);
+  box-shadow: none;
+}
+html:root .upgrade-plan-cta:active { transform: scale(0.98); }
+html:root .upgrade-plan-current {
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: #6e6e73;
+}
+
+html:root .upgrade-footer,
+html:root .upgrade-manage-link { color: #6e6e73; }
+html:root .upgrade-lost-list li { color: #424245; }
+html:root .upgrade-confirm .upgrade-sub strong { color: #1d1d1f; }
+html:root .upgrade-error { color: #d70015; }
+
+@media (max-width: 680px) {
+  html:root .upgrade-card { border-radius: 0; border: none; }
+  html:root .upgrade-card::before { background: rgba(0, 0, 0, 0.14); }
+}
+
+/* ── Inside the plan picker (Apple-style layout) ─────────────────────────── */
+html:root .upgrade-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 36px;
+  text-align: center;
+}
+html:root .upgrade-title { font-size: clamp(1.7rem, 3vw, 2.3rem); margin: 4px 0 0; }
+html:root .upgrade-sub { font-size: 1rem; margin: 0; max-width: 46ch; }
+
+html:root .upgrade-plans { gap: 18px; align-items: stretch; }
+html:root .upgrade-plan { padding: 26px 24px 24px; gap: 14px; }
+
+html:root .upgrade-plan-head { display: flex; flex-direction: column; gap: 4px; }
+html:root .upgrade-plan-tagline {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: #6e6e73;
+  min-height: 2.8em; /* two lines, so prices line up across cards */
+}
+html:root .upgrade-plan-price { display: flex; align-items: baseline; gap: 4px; }
+html:root .upgrade-plan-amount { font-size: 2.4rem; line-height: 1; }
+html:root .upgrade-plan-per { font-size: 0.95rem; }
+
+/* Button sits right under the price now, not pinned to the bottom. */
+html:root .upgrade-plan-cta,
+html:root .upgrade-plan-current { margin-top: 2px; text-align: center; }
+html:root .upgrade-plan-current { padding: 13px 18px; font-size: 0.9rem; font-weight: 600; }
+.upgrade-plan-cta-spacer { height: 46px; }
+
+html:root .upgrade-plan-divider {
+  height: 1px;
+  margin: 4px 0 0;
+  background: rgba(0, 0, 0, 0.07);
+}
+html:root .upgrade-plan-includes {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+html:root .upgrade-plan-features { gap: 10px; margin: 0; }
+html:root .upgrade-plan-features li { font-size: 0.86rem; align-items: center; }
+
+html:root .upgrade-agent-callout { margin: 2px 0 0; }
+
+/* Trust row under the cards. */
+.upgrade-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  margin: 28px 0 12px;
+}
+.upgrade-trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #424245;
+}
+.upgrade-trust-item svg { color: #86868b; }
+
+@media (max-width: 680px) {
+  html:root .upgrade-header { margin: 8px 0 24px; }
+  html:root .upgrade-plan-tagline { min-height: 0; }
+  .upgrade-trust { gap: 8px 16px; margin-top: 22px; }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────────
+   Entrance: header fades down, cards rise in one after another, feature
+   rows and their checkmarks pop in after their card. Interaction: cards
+   tilt toward the pointer with a moving glass highlight, and the "focused"
+   card (tap/click any card) steps forward while the others ease back. */
+html:root .upgrade-header { animation: ug-head-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes ug-head-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+html:root .upgrade-plans { perspective: 1200px; }
+html:root .upgrade-plan {
+  --rx: 0deg;
+  --ry: 0deg;
+  --lift: 0px;
+  --scale: 1;
+  cursor: pointer;
+  transform: translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--scale));
+  transform-style: preserve-3d;
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.35s ease,
+    background 0.3s ease,
+    opacity 0.3s ease,
+    filter 0.3s ease;
+  animation: ug-card-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; /* backwards: once done, the tilt/focus transform takes over */
+  animation-delay: calc(0.08s + var(--i, 0) * 0.09s);
+  overflow: hidden;
+}
+@keyframes ug-card-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+/* While the pointer is over a card, follow it faster. */
+html:root .upgrade-plan:hover {
+  --lift: -4px;
+  transition: transform 0.12s ease-out, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Focus: chosen card forward, the rest slightly back. */
+html:root .upgrade-plans:has(.upgrade-plan--focus) .upgrade-plan:not(.upgrade-plan--focus) {
+  --scale: 0.975;
+  opacity: 0.82;
+  filter: saturate(0.85);
+}
+html:root .upgrade-plans:has(.upgrade-plan--focus) .upgrade-plan:not(.upgrade-plan--focus):hover {
+  opacity: 1;
+  filter: none;
+}
+html:root .upgrade-plan--focus {
+  --scale: 1.02;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 2px var(--plan-color, #0071e3),
+    0 24px 60px color-mix(in srgb, var(--plan-color, #0071e3) 22%, transparent);
+}
+html:root .upgrade-plan--focus .upgrade-plan-cta { animation: ug-cta-breathe 2.6s ease-in-out infinite; }
+/* Keeps the glass button's inner highlights while the outer ring breathes. */
+@keyframes ug-cta-breathe {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+      0 6px 18px color-mix(in srgb, var(--plan-color, #0071e3) 28%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--plan-color, #0071e3) 0%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+      0 6px 18px color-mix(in srgb, var(--plan-color, #0071e3) 28%, transparent),
+      0 0 0 6px color-mix(in srgb, var(--plan-color, #0071e3) 16%, transparent);
+  }
+}
+
+/* Glass highlight that follows the pointer. */
+.upgrade-plan-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 45%);
+  opacity: 0;
+  mix-blend-mode: soft-light;
+  transition: opacity 0.3s ease;
+}
+html:root .upgrade-plan:hover .upgrade-plan-sheen { opacity: 1; }
+/* Keep the card's real content above the sheen. */
+html:root .upgrade-plan > *:not(.upgrade-plan-sheen):not(.upgrade-popular-badge) { position: relative; z-index: 1; }
+
+/* Badge floats outside the card, so the card can't clip it. */
+html:root .upgrade-plan { overflow: visible; }
+.upgrade-plan-sheen { overflow: hidden; }
+
+/* Feature rows + checkmarks pop in after their card. */
+html:root .upgrade-plan-features li {
+  animation: ug-row-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(0.35s + var(--i, 0) * 0.09s + var(--fi, 0) * 0.04s);
+}
+@keyframes ug-row-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+html:root .upgrade-plan-check {
+  animation: ug-check-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+  animation-delay: calc(0.45s + var(--i, 0) * 0.09s + var(--fi, 0) * 0.04s);
+}
+@keyframes ug-check-pop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* Buttons: press-in, and a light sweep on hover. */
+html:root .upgrade-plan-cta { position: relative; overflow: hidden; isolation: isolate; }
+html:root .upgrade-plan-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+html:root .upgrade-plan-cta:hover::after { transform: translateX(120%); }
+
+/* Phones: no tilt (touch), just a gentle press. */
+@media (hover: none) {
+  html:root .upgrade-plan:active { --scale: 0.985; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:root .upgrade-header,
+  html:root .upgrade-plan,
+  html:root .upgrade-plan-features li,
+  html:root .upgrade-plan-check,
+  html:root .upgrade-plan--focus .upgrade-plan-cta { animation: none !important; }
+  html:root .upgrade-plan { transform: none !important; }
+}
+
+/* ── Glass action buttons ────────────────────────────────────────────────
+   Tinted translucent glass in the plan's color: a see-through fill with
+   blur, a bright top edge, a soft inner glow and a hairline rim — instead
+   of a flat solid pill. Downgrade buttons keep their inline red/amber. */
+html:root .upgrade-plan-cta:not(.upgrade-plan-cta--down) {
+  color: #ffffff;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, color-mix(in srgb, var(--plan-color, #0071e3) 72%, #1d4ed8) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  backdrop-filter: blur(14px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 6px 18px color-mix(in srgb, var(--plan-color, #0071e3) 28%, transparent);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+html:root .upgrade-plan[style*="a78bfa"] .upgrade-plan-cta:not(.upgrade-plan-cta--down) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, color-mix(in srgb, var(--plan-color) 70%, #6d28d9) 78%, transparent);
+}
+html:root .upgrade-plan-cta:not(.upgrade-plan-cta--down):hover {
+  filter: brightness(1.05) saturate(1.05);
+}
+/* "Current Plan": clear grey glass. */
+html:root .upgrade-plan-current {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.25) 100%),
+    rgba(0, 0, 0, 0.04);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: #6e6e73;
+}
+
+/* ── No blur ──────────────────────────────────────────────────────────────
+   Crisp instead of frosted: the page behind is just dimmed, cards are
+   solid white, buttons keep their glass shine/rim without blurring. */
+html:root .upgrade-backdrop {
+  background: rgba(15, 23, 42, 0.4);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html:root .upgrade-card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html:root .upgrade-plan,
+html:root .upgrade-plan:hover {
+  background: #ffffff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html:root .upgrade-plan-cta:not(.upgrade-plan-cta--down),
+html:root .upgrade-plan-current {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+/* Without blur, a see-through tint looks washed out — make the button
+   tint solid, keeping the glass top shine and rim. */
+html:root .upgrade-plan-cta:not(.upgrade-plan-cta--down) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, var(--plan-color, #0071e3) 72%, #1d4ed8);
+}
+html:root .upgrade-plan[style*="a78bfa"] .upgrade-plan-cta:not(.upgrade-plan-cta--down) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%),
+    color-mix(in srgb, var(--plan-color) 70%, #6d28d9);
+}
+html:root .upgrade-plan-current {
+  background: linear-gradient(180deg, #ffffff 0%, #f2f2f4 100%);
+}
+
+/* ── Crisp selected cards ────────────────────────────────────────────────
+   Scaling (and a resting 3D transform) re-rasterizes the card and blurs
+   its text. Focus is shown with the ring + shadow only; cards sit flat
+   (plain 2D, whole pixels) unless the pointer is actively tilting one. */
+html:root .upgrade-plan,
+html:root .upgrade-plan--focus,
+html:root .upgrade-plans:has(.upgrade-plan--focus) .upgrade-plan:not(.upgrade-plan--focus) {
+  --scale: 1;
+  transform: translateY(var(--lift));
+  transform-style: flat;
+  filter: none;
+}
+html:root .upgrade-plans:has(.upgrade-plan--focus) .upgrade-plan:not(.upgrade-plan--focus) { opacity: 0.88; }
+@media (hover: hover) and (pointer: fine) {
+  html:root .upgrade-plan:hover {
+    transform: translateY(var(--lift)) rotateX(var(--rx)) rotateY(var(--ry));
+  }
+}
+
+/* ── Agent Ready highlight (Elite) — no box ───────────────────────────────
+   Just the glowing orb beside a small purple name, a headline and a
+   short line; no background, no border. */
+html:root .upgrade-agent-callout {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+  margin: 4px 0 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+html:root .upgrade-agent-callout-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 6px 14px rgba(124, 58, 237, 0.35));
+}
+html:root .upgrade-agent-callout-icon .ta-trigger-orb { width: 40px; height: 40px; }
+html:root .upgrade-agent-callout-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.upgrade-agent-callout-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7c3aed;
+}
+html:root .upgrade-agent-callout-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #1d1d1f;
+  line-height: 1.3;
+}
+html:root .upgrade-agent-callout-desc {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+/* Feature icons: plain monochrome line icons (no tinted circle). */
+html:root .upgrade-plan-check {
+  width: 18px;
+  height: 18px;
+  background: none;
+  color: #1d1d1f;
+}
+.upgrade-plan-icon { display: block; }
+html:root .upgrade-plan-features li { gap: 10px; color: #1d1d1f; }
+
+/* ── Laptop screens (1200–1512px) ────────────────────────────────────────
+   Narrower, tighter, and never taller than the window — the card scrolls
+   inside itself instead of getting cut off on ~768–900px-tall screens. */
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-backdrop { padding: 16px; }
+  html:root .upgrade-card {
+    max-width: 1040px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 30px 32px 22px;
+    border-radius: 24px;
+  }
+  html:root .upgrade-header { margin-bottom: 22px; gap: 6px; }
+  html:root .upgrade-title { font-size: 1.75rem; }
+  html:root .upgrade-sub { font-size: 0.92rem; }
+  html:root .upgrade-plans { gap: 14px; }
+  html:root .upgrade-plan { padding: 20px 20px 18px; gap: 11px; border-radius: 20px; }
+  html:root .upgrade-plan-tagline { font-size: 0.8rem; min-height: 2.6em; }
+  html:root .upgrade-plan-amount { font-size: 2rem; }
+  html:root .upgrade-plan-per { font-size: 0.85rem; }
+  html:root .upgrade-plan-cta,
+  html:root .upgrade-plan-current { padding: 11px 16px; font-size: 0.88rem; }
+  .upgrade-plan-cta-spacer { height: 40px; }
+  html:root .upgrade-plan-features { gap: 8px; }
+  html:root .upgrade-plan-features li { font-size: 0.8rem; gap: 9px; }
+  html:root .upgrade-plan-check { width: 16px; height: 16px; }
+  .upgrade-plan-icon { width: 14px; height: 14px; }
+  html:root .upgrade-agent-callout-icon { width: 36px; height: 36px; }
+  html:root .upgrade-agent-callout-icon .ta-trigger-orb { width: 32px; height: 32px; }
+  html:root .upgrade-agent-callout-title { font-size: 0.86rem; }
+  html:root .upgrade-agent-callout-desc { font-size: 0.75rem; }
+  .upgrade-trust { margin: 18px 0 8px; }
+  .upgrade-trust-item { font-size: 0.75rem; }
+  html:root .upgrade-footer { font-size: 0.72rem; }
+}
+/* Any desktop: never let the card exceed the window height. */
+@media (min-width: 681px) {
+  html:root .upgrade-card { max-height: calc(100vh - 32px); overflow-y: auto; }
+}
+
+/* No colored ring on the highlighted (blue Pro / focused) card — it
+   stands out with a soft colored shadow and slight lift instead. */
+html:root .upgrade-plan--popular,
+html:root .upgrade-plan--popular:hover,
+html:root .upgrade-plan--focus {
+  border-color: transparent;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 22px 56px color-mix(in srgb, var(--plan-color, #0071e3) 20%, transparent);
+}
+
+/* "Most popular" / "Your plan" pills, inside the card at the end of the
+   price row (no longer floating above the card). */
+html:root .upgrade-plan-price { flex-wrap: wrap; }
+.upgrade-plan-pill {
+  margin-left: auto;
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--plan-color, #0071e3) 70%, #1d4ed8);
+  background: color-mix(in srgb, var(--plan-color, #0071e3) 14%, transparent);
+}
+.upgrade-plan-pill--current {
+  color: #6e6e73;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Less empty space above the "Choose your plan" header and below it. */
+@media (min-width: 681px) {
+  html:root .upgrade-card { padding-top: 30px; }
+  html:root .upgrade-header { margin-bottom: 8px; }
+}
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-card { padding-top: 22px; }
+  html:root .upgrade-header { margin-bottom: 8px; }
+}
+
+/* ── Laptop screens (1200–1512px), take two: noticeably more compact ──── */
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-card {
+    max-width: 900px;
+    padding: 20px 26px 16px;
+    border-radius: 22px;
+  }
+  html:root .upgrade-close { top: 12px; right: 12px; width: 28px; height: 28px; }
+  html:root .upgrade-header { margin-bottom: 8px; gap: 4px; }
+  html:root .upgrade-title { font-size: 1.45rem; }
+  html:root .upgrade-sub { font-size: 0.82rem; }
+
+  html:root .upgrade-plans { gap: 12px; }
+  html:root .upgrade-plan { padding: 16px 16px 14px; gap: 9px; border-radius: 18px; }
+  html:root .upgrade-plan-label { font-size: 0.66rem; }
+  html:root .upgrade-plan-tagline { font-size: 0.74rem; min-height: 2.5em; }
+  html:root .upgrade-plan-amount { font-size: 1.65rem; }
+  html:root .upgrade-plan-per { font-size: 0.76rem; }
+  .upgrade-plan-pill { font-size: 0.62rem; padding: 3px 8px; }
+
+  html:root .upgrade-plan-cta,
+  html:root .upgrade-plan-current { padding: 8px 14px; font-size: 0.8rem; }
+  .upgrade-plan-cta-spacer { height: 34px; }
+
+  html:root .upgrade-plan-includes { font-size: 0.72rem; }
+  html:root .upgrade-plan-features { gap: 6px; }
+  html:root .upgrade-plan-features li { font-size: 0.74rem; gap: 8px; line-height: 1.35; }
+  html:root .upgrade-plan-check { width: 14px; height: 14px; }
+  .upgrade-plan-icon { width: 13px; height: 13px; }
+
+  html:root .upgrade-agent-callout { gap: 10px; }
+  html:root .upgrade-agent-callout-icon { width: 30px; height: 30px; }
+  html:root .upgrade-agent-callout-icon .ta-trigger-orb { width: 28px; height: 28px; }
+  .upgrade-agent-callout-name { font-size: 0.6rem; }
+  html:root .upgrade-agent-callout-title { font-size: 0.8rem; }
+  html:root .upgrade-agent-callout-desc { font-size: 0.7rem; }
+
+  .upgrade-trust { margin: 12px 0 4px; gap: 6px 16px; }
+  .upgrade-trust-item { font-size: 0.7rem; }
+  .upgrade-trust-item svg { width: 12px; height: 12px; }
+  html:root .upgrade-footer { font-size: 0.66rem; margin-top: 4px; }
+}
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-card { max-width: 980px; }
+}
+
+/* Header, trust row and fine print: left-aligned (cards unchanged). */
+html:root .upgrade-header {
+  align-items: flex-start;
+  text-align: left;
+}
+html:root .upgrade-sub { max-width: none; }
+.upgrade-trust { justify-content: flex-start; }
+html:root .upgrade-footer { text-align: left; }
+
+/* Tighter bottom block: trust row → fine print → terms line. */
+html:root .upgrade-trust { margin-bottom: 6px; }
+html:root .upgrade-footer { margin: 2px 0 0; line-height: 1.45; }
+html:root .upgrade-footer + .upgrade-footer { margin-top: 2px; }
+/* Terms / Privacy links match the fine print's size. */
+html:root .upgrade-footer .upgrade-manage-link { font-size: inherit; padding: 0; }
+
+/* Trust row now sits above the cards, under the header. */
+html:root .upgrade-trust { margin: -6px 0 18px; }
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-trust { margin: -4px 0 14px; }
+}
+/* Room between the cards and the fine print below them. */
+html:root .upgrade-plans { margin-bottom: 18px; }
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .upgrade-plans { margin-bottom: 14px; }
+}
+
+/* ══ Dark theme ═══════════════════════════════════════════════════════════
+   Same layout and motion as the light picker above; colors only. Sheet is
+   a lifted near-black (the page is pure black) with a visible rim, cards
+   are dark grey with hairline edges, text uses Apple's dark-mode greys.
+   Same specificity as the html:root rules, so these win by coming later. */
+html:not([data-theme="light"]) .upgrade-backdrop { background: rgba(0, 0, 0, 0.6); }
+html:not([data-theme="light"]) .upgrade-card {
+  color: #f5f5f7;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 30%),
+    #0c0c0e;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.75);
+}
+html:not([data-theme="light"]) .upgrade-close { background: rgba(255, 255, 255, 0.1); color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-close:hover { background: rgba(255, 255, 255, 0.16); }
+html:not([data-theme="light"]) .upgrade-title { color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-sub { color: #98989d; }
+
+/* Cards */
+html:not([data-theme="light"]) .upgrade-plan,
+html:not([data-theme="light"]) .upgrade-plan:hover {
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+html:not([data-theme="light"]) .upgrade-plan--popular,
+html:not([data-theme="light"]) .upgrade-plan--popular:hover,
+html:not([data-theme="light"]) .upgrade-plan--focus {
+  background: #19191c;
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 22px 56px color-mix(in srgb, var(--plan-color, #0071e3) 22%, transparent);
+}
+html:not([data-theme="light"]) .upgrade-plan-sheen { mix-blend-mode: overlay; opacity: 0; }
+html:not([data-theme="light"]) .upgrade-plan:hover .upgrade-plan-sheen { opacity: 0.35; }
+
+html:not([data-theme="light"]) .upgrade-plan-tagline { color: #98989d; }
+html:not([data-theme="light"]) .upgrade-plan-amount { color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-plan-per { color: #8e8e93; }
+html:not([data-theme="light"]) .upgrade-plan-divider { background: rgba(255, 255, 255, 0.08); }
+html:not([data-theme="light"]) .upgrade-plan-includes { color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-plan-features li { color: #d1d1d6; }
+html:not([data-theme="light"]) .upgrade-plan-check { color: #f5f5f7; }
+
+/* Pills beside the price */
+html:not([data-theme="light"]) .upgrade-plan-pill {
+  color: color-mix(in srgb, var(--plan-color, #0071e3) 80%, #ffffff);
+  background: color-mix(in srgb, var(--plan-color, #0071e3) 20%, transparent);
+}
+html:not([data-theme="light"]) .upgrade-plan-pill--current { color: #c7c7cc; background: rgba(255, 255, 255, 0.1); }
+
+/* Buttons: upgrade buttons keep their glossy color; Current Plan is dark glass. */
+html:not([data-theme="light"]) .upgrade-plan-current {
+  color: #c7c7cc;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Elite's Agent Ready block */
+html:not([data-theme="light"]) .upgrade-agent-callout-title { color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-agent-callout-desc { color: #98989d; }
+html:not([data-theme="light"]) .upgrade-agent-callout-name { color: #b69cff; }
+
+/* Fine print, links, errors */
+html:not([data-theme="light"]) .upgrade-footer,
+html:not([data-theme="light"]) .upgrade-manage-link { color: #8e8e93; }
+html:not([data-theme="light"]) .upgrade-lost-list li { color: #d1d1d6; }
+html:not([data-theme="light"]) .upgrade-confirm .upgrade-sub strong { color: #f5f5f7; }
+html:not([data-theme="light"]) .upgrade-error { color: #ff6961; }
+
+/* Phones: full-height sheet — no side rim, light drag handle. */
+@media (max-width: 680px) {
+  html:not([data-theme="light"]) .upgrade-card { border-left: none; border-right: none; border-bottom: none; }
+  html:not([data-theme="light"]) .upgrade-card::before { background: rgba(255, 255, 255, 0.22); }
+}
+
+/* ── Dark: Elite-popup edge treatment (desktop) ───────────────────────────
+   Same frame as the Elite upsell (.bg-elite-card): near-black gradient
+   with a faint violet→blue tint, a tinted border, an outer glow, and a
+   bright streak along the top edge. Pro/Elite cards get borders tinted in
+   their own plan color. */
+@media (min-width: 681px) {
+  html:not([data-theme="light"]) .upgrade-card {
+    background: linear-gradient(160deg, rgba(12, 8, 22, 0.98) 0%, rgba(4, 8, 16, 0.98) 55%, rgba(0, 0, 0, 0.98) 100%);
+    border: 1px solid rgba(139, 152, 250, 0.24);
+    box-shadow:
+      0 40px 110px rgba(0, 0, 0, 0.7),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 70px rgba(99, 102, 241, 0.16);
+  }
+  html:not([data-theme="light"]) .upgrade-card::before {
+    display: block;
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.7), rgba(56, 189, 248, 0.7), transparent);
+    pointer-events: none;
+  }
+  html:not([data-theme="light"]) .upgrade-plan[style*="38bdf8"],
+  html:not([data-theme="light"]) .upgrade-plan[style*="38bdf8"]:hover {
+    border-color: rgba(56, 189, 248, 0.26);
+  }
+  html:not([data-theme="light"]) .upgrade-plan[style*="a78bfa"],
+  html:not([data-theme="light"]) .upgrade-plan[style*="a78bfa"]:hover {
+    border-color: rgba(167, 139, 250, 0.26);
+  }
+}

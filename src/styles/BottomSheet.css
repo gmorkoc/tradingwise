@@ -134,3 +134,26 @@
   }
   .bs-sheet.bs-sheet--full .bs-scroll { flex: 1 1 auto; min-height: 0; }
 }
+
+/* Dark theme: the page is pure black, so sheets/popups get a visible edge —
+   a hairline rim, a bright top edge, and a slightly lifted near-black
+   surface — instead of disappearing into the page. */
+html:not([data-theme="light"]) .bs-sheet {
+  background: #0c0c0e;
+  /* A real border (not an inset shadow) so the rim also shows down the
+     sides — content covered the inset version there. */
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
+}
+/* Phones: the sheet is edge-to-edge, so only its top edge needs the rim. */
+@media (max-width: 900px) {
+  html:not([data-theme="light"]) .bs-sheet { border-left: none; border-right: none; border-bottom: none; }
+}
+html:not([data-theme="light"]) .bs-header { background: #0c0c0e; }
+html:not([data-theme="light"]) .bs-backdrop { background: rgba(0, 0, 0, 0.6); }
+@media (min-width: 901px) {
+  html:not([data-theme="light"]) .bs-backdrop--modal .bs-sheet {
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.75);
+  }
+}

@@ -67,11 +67,44 @@ html .bg-root.bg-root--promo .bg-overlay .bg-elite-card > * {
     box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4);
     animation: pp-pop 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
+  /* Dark: same frame as the Elite upsell popup (.bg-elite-card) — a
+     near-black gradient with a faint plan tint, a plan-tinted border, an
+     outer glow in the plan color, and a bright streak along the top edge. */
   .bs-sheet.paywall-promo-sheet--pro {
-    background: linear-gradient(160deg, rgba(12, 24, 42, 0.98) 0%, rgba(8, 18, 34, 0.98) 100%);
+    background: linear-gradient(160deg, rgba(6, 12, 20, 0.97) 0%, rgba(0, 0, 0, 0.97) 100%);
   }
   .bs-sheet.paywall-promo-sheet--elite {
-    background: linear-gradient(160deg, rgba(18, 12, 36, 0.98) 0%, rgba(12, 10, 28, 0.98) 100%);
+    background: linear-gradient(160deg, rgba(12, 8, 20, 0.97) 0%, rgba(0, 0, 0, 0.97) 100%);
+  }
+  html:not([data-theme="light"]) .bs-backdrop--modal .bs-sheet.paywall-promo-sheet--pro {
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.6),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 60px rgba(14, 165, 233, 0.18);
+  }
+  html:not([data-theme="light"]) .bs-backdrop--modal .bs-sheet.paywall-promo-sheet--elite {
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    box-shadow:
+      0 32px 80px rgba(0, 0, 0, 0.6),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 60px rgba(124, 58, 237, 0.15);
+  }
+  /* Top glow streak (same as .bg-elite-card::before). */
+  html:not([data-theme="light"]) .bs-sheet.paywall-promo-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    z-index: 4;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.7), transparent);
+  }
+  html:not([data-theme="light"]) .bs-sheet.paywall-promo-sheet--elite::before {
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.7), transparent);
   }
   html[data-theme="light"] .bs-sheet.paywall-promo-sheet--pro {
     background: linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 55%, #eff6ff 100%);
@@ -89,6 +122,9 @@ html .bg-root.bg-root--promo .bg-overlay .bg-elite-card > * {
     pointer-events: none;
   }
   .paywall-promo-sheet .bs-close { pointer-events: auto; }
+  /* Keep the floating header clear in dark too (BottomSheet's dark
+     .bs-header fill would otherwise paint a strip across the top). */
+  html:not([data-theme="light"]) .paywall-promo-sheet .bs-header { background: none; }
   html .bg-root.bg-root--promo .bg-overlay .bg-elite-card {
     padding: 44px 48px 36px;
     gap: 24px;

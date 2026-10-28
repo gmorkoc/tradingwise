@@ -217,7 +217,7 @@
 .lhm-scale-max {
   font-size: 0.62rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.7);
   white-space: nowrap;
   text-align: center;
   letter-spacing: 0.02em;
@@ -232,7 +232,7 @@
 
 .lhm-scale-zero {
   font-size: 0.62rem;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.62);
 }
 
 /* Canvas wrapper */
@@ -280,7 +280,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.82rem;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.62);
   z-index: 5;
 }
 .lhm-overlay.lhm-error { color: #f87171; }
@@ -324,7 +324,7 @@
 }
 
 .lhm-tooltip-lbl {
-  color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.66);
   flex: 1;
 }
 
@@ -379,7 +379,7 @@
 .lhm-lev-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.62);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   flex-shrink: 0;
@@ -391,7 +391,7 @@
   background: none;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.62);
   font-size: 0.7rem;
   font-weight: 600;
   padding: 3px 9px;
@@ -408,7 +408,7 @@
 /* ── Disclaimer ──────────────────────────────────────────────────────────────── */
 .lhm-disclaimer {
   font-size: 0.68rem;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.55);
   padding: 8px 18px;
   margin: 0;
   border-top: 1px solid rgba(255,255,255,0.05);
@@ -455,7 +455,7 @@
 
 .lhm-analysis-badge {
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.62);
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 99px;
@@ -491,7 +491,7 @@
 .lhm-col-sub {
   font-size: 0.68rem;
   font-weight: 500;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.62);
   margin-left: 2px;
 }
 
@@ -505,7 +505,7 @@
 .lhm-cluster-row:last-child { border-bottom: none; padding-bottom: 0; }
 
 .lhm-cluster-price { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.9); }
-.lhm-cluster-sep   { color: rgba(255,255,255,0.35); font-weight: 400; }
+.lhm-cluster-sep   { color: rgba(255,255,255,0.55); font-weight: 400; }
 
 .lhm-cluster-meta { display: flex; align-items: center; gap: 8px; }
 
@@ -535,7 +535,7 @@
 .lhm-cluster-bar-fill--long  { background: #22c55e; }
 .lhm-cluster-bar-fill--short { background: #f87171; }
 
-.lhm-no-cluster { font-size: 0.75rem; color: rgba(255,255,255,0.35); }
+.lhm-no-cluster { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
 
 .lhm-summary {
   font-size: 0.78rem;
@@ -615,7 +615,7 @@
   align-items: center;
   gap: 10px;
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.62);
   padding: 8px 0;
 }
 

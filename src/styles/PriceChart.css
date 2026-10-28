@@ -12,8 +12,8 @@
      tokens are aliased the same way so both cards' titles, muted labels
      and dividers always match exactly, in both themes. */
   --pc-bg: var(--color-surface-alt);
-  --pc-panel: rgba(255, 255, 255, 0.035);
-  --pc-panel-2: rgba(255, 255, 255, 0.06);
+  --pc-panel: rgba(255, 255, 255, 0.06);   /* a step stronger: visible on pure black */
+  --pc-panel-2: rgba(255, 255, 255, 0.09);
   --pc-border: var(--color-border);
   --pc-text: var(--color-text);
   --pc-text-secondary: var(--color-text-secondary);
@@ -25,14 +25,14 @@
   --pc-danger: #fb7185;
   --pc-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   --pc-chart-bg: #141230;
-  --pc-chart-text: #9490c0;
-  --pc-chart-grid: #2b2748;
+  --pc-chart-text: #8e8e93; /* neutral grey (was purple-tinted) */
+  --pc-chart-grid: #1f1f22;
   /* rgb() of --pc-bg / --color-surface-alt (#111827) — the fullscreen
      sticky header (.chart-fs-header-group) blends this at 75% opacity
      over whatever's behind it, so it has to be the same hue as the flat
      --pc-bg surrounding it (status bar strip included) or the sticky
      band reads as a visibly different color band across the top. */
-  --pc-scrim-rgb: 17, 24, 39;
+  --pc-scrim-rgb: 0, 0, 0; /* dark theme is pure black now */
 }
 /* Aurora Glass is dark-only. Light theme keeps the app's normal colors
    (no indigo takeover) but gives its own sections a bit of separation from
@@ -156,7 +156,7 @@ html[data-theme="light"] .chart-active
   /* Same #070c18 literal as the --fs (iOS) variant below — see its
      comment. Light's own :fullscreen override further down still uses
      --pc-bg correctly. */
-  background: #070c18;
+  background: #000; /* was #070c18 — dark theme is pure black */
 }
 
 html[data-theme="light"] .price-chart-container:fullscreen,
@@ -263,7 +263,7 @@ html[data-theme="light"]
      --pc-scrim-rgb). --pc-bg's own dark value (--color-surface-alt,
      #111827) is visibly grayer; the light override right below still
      uses --pc-bg correctly, since that token is already right for light. */
-  background: #070c18;
+  background: #000; /* was #070c18 — dark theme is pure black */
 }
 
 @media (min-width: 769px) {
@@ -518,7 +518,7 @@ html[data-theme="light"]
      without touching those tokens here either. Without this the header
      group still used --pc-bg's own value (--color-surface-alt, #111827),
      a visibly grayer mismatch against the canvas below it. */
-  background: #070c18;
+  background: #000; /* was #070c18 — dark theme is pure black */
 }
 
 html[data-theme="light"] .price-chart-container--fs .chart-fs-header-group,
@@ -2471,7 +2471,7 @@ html[data-theme="light"] .chart-active
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(15, 23, 42, 0.82);
+  background: rgba(28, 28, 30, 0.82);
   color: #94a3b8;
   font-size: 0.68rem;
   font-weight: 600;
@@ -3640,7 +3640,7 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
   gap: 6px;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(28, 28, 30, 0.55);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 500;
@@ -7763,7 +7763,7 @@ html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ct
   max-width: calc(100% - 48px);
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.86);
+  background: rgba(28, 28, 30, 0.86);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 600;
@@ -7804,7 +7804,7 @@ html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ct
   height: 40px;
   margin-top: -20px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.86);
+  background: rgba(28, 28, 30, 0.86);
   color: #fff;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
   animation: swipe-chev 1.3s cubic-bezier(0.45, 0, 0.2, 1) infinite;
@@ -7815,7 +7815,7 @@ html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ct
   left: 12px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.86);
+  background: rgba(28, 28, 30, 0.86);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 600;

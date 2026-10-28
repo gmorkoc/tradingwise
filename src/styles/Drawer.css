@@ -471,3 +471,88 @@
 @media (max-width: 480px) {
   .drawer { width: 290px; }
 }
+
+/* ══ Modern look — matches the side nav (.icon-strip.mobile-open) ════════
+   Plain surface (white in light theme), no section dividers or framed
+   controls, line icons on the left of every row, soft hover pills. */
+.drawer {
+  background: var(--color-surface);
+  border-right: none;
+  box-shadow: 12px 0 48px rgba(0, 0, 0, 0.18);
+}
+html[data-theme="light"] .drawer { background: #fff; }
+.drawer-header {
+  border-bottom: none;
+  padding-bottom: 8px;
+}
+.drawer-close {
+  background: none;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  color: var(--color-text-muted);
+}
+.drawer-close:hover { background: var(--color-input-bg); color: var(--color-text); }
+/* The global button rule (index.css) adds 0.6em/1.2em padding — inside a
+   36px button that left no room and squeezed the X icon to nothing. */
+.drawer-close { padding: 0; flex-shrink: 0; color: var(--color-text-secondary); }
+.drawer-close svg { flex-shrink: 0; display: block; }
+
+.drawer-body { padding: 4px 0 0; }
+.drawer-section {
+  padding: 4px 12px 8px;
+  border-bottom: none;
+}
+.drawer-section-title,
+.drawer-guide-toggle {
+  margin: 0;
+  padding: 14px 10px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.drawer-guide-toggle { width: 100%; }
+.drawer-guide-toggle:hover { color: var(--color-text-secondary); }
+
+.drawer-row,
+.drawer-row--clickable {
+  margin: 0;
+  padding: 10px;
+  gap: 12px;
+  border-bottom: none;
+  border-radius: 10px;
+}
+.drawer-row--clickable + .drawer-row--clickable { margin-top: 0; }
+.drawer-row--clickable:hover { background: var(--color-input-bg); }
+.drawer-row-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.drawer-row-label { font-size: 0.88rem; font-weight: 500; color: var(--color-text); }
+.drawer-ico { flex-shrink: 0; color: var(--color-text-muted); }
+.drawer-row--danger .drawer-ico { color: var(--color-danger); }
+.drawer-chev {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+.drawer-guide-toggle .drawer-chev { transform: rotate(90deg); }
+.drawer-guide-toggle .drawer-chev--open { transform: rotate(-90deg); }
+
+/* Inline controls: soft fills instead of bordered boxes. */
+.drawer-toggle-btn,
+.drawer-coin-select {
+  border: none;
+  background: var(--color-input-bg);
+  border-radius: 8px;
+}
+.drawer-docs { gap: 0; }
+
+.drawer-ai-usage { margin: 0; padding: 10px; border: none; background: none; }
+
+.drawer-footer-block { padding: 16px 22px 24px; border-top: none; }

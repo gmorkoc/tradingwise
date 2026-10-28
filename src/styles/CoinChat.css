@@ -237,7 +237,7 @@ html[data-theme="light"] .coin-chat-panel {
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.92);
+  background: rgba(28, 28, 30, 0.92);
   color: #fff;
   font-size: 0.76rem;
   font-weight: 600;

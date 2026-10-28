@@ -1424,19 +1424,6 @@ function AppDashboard({
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
-  // Coming back to Trade (#trade) from any other page always shows the
-  // chart in its default view: page scrolled back to the top so the
-  // chart is in view. The chart itself remounts fresh on return (default
-  // zoom window, no leftover pan/zoom), and mobileChartTab is reset to
-  // "chart" by the effect further up.
-  const prevSectionRef = useRef(activeSection);
-  useEffect(() => {
-    const prev = prevSectionRef.current;
-    prevSectionRef.current = activeSection;
-    if (activeSection !== "chart" || prev === "chart") return;
-    mainContentRef.current?.scrollTo({ top: 0 });
-    window.scrollTo({ top: 0 });
-  }, [activeSection]);
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -2717,6 +2704,7 @@ function AppDashboard({
           onOpenLeverage={() => setLeverageOpen(true)}
           onOpenLearn={() => setLearnOpen(true)}
           onOpenTutorials={() => setTutorialOpen(true)}
+          onOpenAssetCalc={() => setAssetPanelOpen(true)}
           onOpenProfile={() => {
             setDrawerOpen(false);
             setProfileOpen(true);
@@ -2913,23 +2901,6 @@ function AppDashboard({
                 />
               </div>
 
-              {/* Calculator moved here from the mobile floating nav bar —
-                  Daily Brief took over that icon-triggered full-screen
-                  slot instead (see FloatingNavBar.tsx's own comment). */}
-              <button
-                className="icon-strip-btn"
-                onClick={() => {
-                  setAssetPanelOpen(true);
-                  setMobileNavOpen(false);
-                }}
-                title={t("assetCalc.title")}
-              >
-                <span className="nav-icon-wrap">
-                  <NavIcon d={["M18 20V10", "M12 20V4", "M6 20V14"]} />
-                </span>
-                <span className="icon-strip-label">{t("assetCalc.title")}</span>
-              </button>
-
               <button
                 className="icon-strip-btn"
                 onClick={() => {
@@ -2973,12 +2944,12 @@ function AppDashboard({
                     setMobileNavOpen(false);
                     onOpenAuth();
                   }}
-                  title={t("nav.signIn", "Sign In / Register")}
+                  title={t("nav.signIn", "Sign In")}
                 >
                   <span className="nav-icon-wrap">
                     <NavIcon d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
                   </span>
-                  <span className="icon-strip-label">{t("nav.signIn", "Sign In / Register")}</span>
+                  <span className="icon-strip-label">{t("nav.signIn", "Sign In")}</span>
                 </button>
               )}
             </div>

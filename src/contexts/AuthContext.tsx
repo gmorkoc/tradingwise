@@ -40,6 +40,10 @@ interface AuthContextValue {
   signUp:      (email: string, password: string, fullName: string, username: string) => Promise<string | null>;
   signIn:      (email: string, password: string) => Promise<string | null>;
   signInWithMagicLink: (email: string) => Promise<string | null>;
+  /** Confirm a new account with the 6-digit code from the sign-up email. */
+  verifyEmailCode: (email: string, code: string) => Promise<string | null>;
+  /** Send the sign-up confirmation email (with its code) again. */
+  resendVerification: (email: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<string | null>;
   signInWithApple: () => Promise<string | null>;
   appleSignInAvailable: boolean;
@@ -125,8 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { listener.then(l => l.remove()); };
   }, []);
 
+  // Returns "verify_email" (not an error) when the account was created but
+  // has to be confirmed first — Supabase hands back no session in that case
+  // (email confirmation on), and AuthModal switches to its code step.
   const signUp = async (email: string, password: string, fullName: string, username: string): Promise<string | null> => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -139,12 +146,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!error) {
       supabase.functions.invoke("notify-admin", { body: { event: "signup", email } }).catch(() => {});
+      if (!data.session) return "verify_email";
     }
     return error?.message ?? null;
   };
 
   const signIn = async (email: string, password: string): Promise<string | null> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Account exists but was never confirmed — send the user to the code step.
+    if (error && /email not confirmed/i.test(error.message)) return "verify_email";
+    return error?.message ?? null;
+  };
+
+  // Confirms the account with the emailed code. Supabase normally returns
+  // a session here; returns "verified_no_session" when it confirmed the
+  // email but didn't sign in, so AuthModal can finish with the password.
+  const verifyEmailCode = async (email: string, code: string): Promise<string | null> => {
+    const token = code.trim();
+    let { data, error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
+    // Newer Supabase treats sign-up codes as plain "email" OTPs — retry that way.
+    if (error && /expired|invalid|not found/i.test(error.message)) {
+      ({ data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" }));
+    }
+    if (error) return error.message;
+    return data?.session ? null : "verified_no_session";
+  };
+
+  const resendVerification = async (email: string): Promise<string | null> => {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
     return error?.message ?? null;
   };
 
@@ -226,7 +259,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, profile, session, loading, profileLoading,
       tier: profile?.tier ?? "free",
-      signUp, signIn, signInWithMagicLink, signInWithGoogle, signInWithApple,
+      signUp, signIn, signInWithMagicLink, verifyEmailCode, resendVerification, signInWithGoogle, signInWithApple,
       appleSignInAvailable: APPLE_SIGNIN_AVAILABLE,
       signOut, resetPassword, refreshProfile,
     }}>

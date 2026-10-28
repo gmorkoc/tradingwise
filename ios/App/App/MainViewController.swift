@@ -24,6 +24,7 @@ class MainViewController: CAPBridgeViewController {
     // comment), and it must happen before the web content loads.
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(NotificationAuthPlugin())
+        bridge?.registerPluginInstance(PasskeyPlugin())
     }
 
     override func viewDidLoad() {

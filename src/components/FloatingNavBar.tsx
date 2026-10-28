@@ -147,7 +147,10 @@ export function FloatingNavBar({
   // the bar's z-index globally) keeps it below every OTHER overlay in the
   // app that was never asked to show it underneath — AuthModal, the
   // upgrade/paywall modals, etc.
-  const raised = signalsOpen || searchOpen || profileOpen || dailyBriefOpen;
+  // Profile is NOT in this list any more: it's a full-screen page on
+  // phones, so the bar should stay underneath it (hidden), not float on top.
+  const raised = signalsOpen || searchOpen || dailyBriefOpen;
+  void profileOpen;
 
   // Sliding highlight (a single shared pill, not a per-button background)
   // that animates from the previously active item to the newly active one

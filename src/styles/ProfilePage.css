@@ -746,3 +746,329 @@ html[data-theme="light"] .pp-ai-track { background: rgba(0, 0, 0, 0.07); }
 
   .pp-danger-row { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── Passkeys (Security tab) ───────────────────────────────────────────── */
+.pp-passkeys {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+.pp-passkeys-title {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.pp-passkeys-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pp-passkeys-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-input-bg);
+}
+.pp-passkeys-name { font-size: 0.88rem; font-weight: 600; color: var(--color-text); }
+.pp-passkeys-date { flex: 1; font-size: 0.75rem; color: var(--color-text-muted); }
+.pp-passkeys-remove {
+  all: unset;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-danger, #e11d48);
+  cursor: pointer;
+}
+.pp-passkeys-remove:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+/* Spacing: title → description → list → button each get real room. */
+.pp-passkeys .pp-passkeys-title { margin-bottom: 8px; }
+.pp-passkeys .pp-pane-sub { margin: 0 0 16px; }
+.pp-passkeys .pp-passkeys-list { margin: 0 0 18px; }
+.pp-passkeys .pp-msg { margin: 0 0 14px; }
+.pp-passkeys .pp-actions { margin-top: 0; }
+.pp-passkeys-item { padding: 12px 14px; }
+
+/* ══ Apple-style light redesign (same language as the plan picker) ═══════
+   Light grey sheet, white rounded content panel, Apple greys, white
+   "selected" pill in the side nav, glossy pill buttons. No blur anywhere.
+   `html:root` keeps these ahead of the older theme rules above. */
+html:root .pp-overlay {
+  background: rgba(15, 23, 42, 0.4);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html:root .pp-modal {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 26px;
+  box-shadow: 0 40px 120px rgba(15, 23, 42, 0.25), 0 2px 8px rgba(15, 23, 42, 0.06);
+  color: #1d1d1f;
+}
+
+/* Header: no divider, Apple type. */
+html:root .pp-header { border-bottom: none; padding: 20px 22px 14px; }
+html:root .pp-header-name { color: #1d1d1f; font-weight: 700; letter-spacing: -0.01em; }
+html:root .pp-header-email { color: #6e6e73; }
+html:root .pp-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+}
+html:root .pp-close:hover { background: rgba(0, 0, 0, 0.1); }
+
+/* Body: nav on the grey sheet, content in a white rounded panel. */
+html:root .pp-body { padding: 0 14px 14px; gap: 12px; }
+html:root .pp-nav { border-right: none; padding: 6px 0; gap: 2px; width: 172px; }
+html:root .pp-nav-item {
+  opacity: 1;
+  color: #6e6e73;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+html:root .pp-nav-item:hover { background: rgba(0, 0, 0, 0.04); color: #1d1d1f; }
+html:root .pp-nav-item--active,
+html:root .pp-nav-item--active:hover {
+  background: #ffffff;
+  color: #1d1d1f;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+html:root .pp-nav-item--danger { color: #d70015; }
+html:root .pp-nav-item--danger:hover { background: rgba(215, 0, 21, 0.06); color: #d70015; }
+html:root .pp-nav-item--danger.pp-nav-item--active { background: #ffffff; color: #d70015; }
+
+html:root .pp-content {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(15, 23, 42, 0.05);
+}
+html:root .pp-content::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+
+/* Text inside the panel. */
+html:root .pp-pane-title { color: #1d1d1f; font-size: 1rem; font-weight: 700; letter-spacing: -0.015em; }
+html:root .pp-pane-sub { color: #6e6e73; }
+html:root .pp-stat-label,
+html:root .pp-field label { color: #86868b; letter-spacing: 0.06em; }
+html:root .pp-stat-value { color: #1d1d1f; }
+html:root .pp-divider { background: rgba(0, 0, 0, 0.07); border-color: rgba(0, 0, 0, 0.07); }
+html:root .pp-upgrade-hint { color: #424245; }
+html:root .pp-upgrade-link { color: #0071e3; }
+
+/* Inputs: soft grey fill, blue focus ring. */
+html:root .pp-field input,
+html:root .pp-field textarea {
+  background: #f5f5f7;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #1d1d1f;
+}
+html:root .pp-field input:focus,
+html:root .pp-field textarea:focus {
+  background: #ffffff;
+  border-color: rgba(0, 113, 227, 0.55);
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.12);
+}
+
+/* Buttons: glossy pills (solid tint + top shine + light rim). */
+html:root .pp-btn { border-radius: 999px; padding: 10px 20px; font-weight: 600; letter-spacing: -0.01em; }
+html:root .pp-btn--primary {
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%), #0071e3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 6px 16px rgba(0, 113, 227, 0.25);
+}
+html:root .pp-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 55%), #0077ed;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+html:root .pp-btn--ghost {
+  color: #1d1d1f;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: linear-gradient(180deg, #ffffff 0%, #f2f2f4 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+html:root .pp-btn--ghost:hover { background: linear-gradient(180deg, #ffffff 0%, #ebebed 100%); }
+html:root .pp-btn--danger {
+  color: #d70015;
+  border: 1px solid rgba(215, 0, 21, 0.18);
+  background: rgba(215, 0, 21, 0.06);
+}
+html:root .pp-btn--danger:hover:not(:disabled) { background: rgba(215, 0, 21, 0.1); border-color: rgba(215, 0, 21, 0.3); }
+
+/* Phones: full-screen sheet; nav becomes a scrolling pill row. */
+@media (max-width: 580px) {
+  html:root .pp-modal { border-radius: 0; border: none; }
+  html:root .pp-body { padding: 0; gap: 0; }
+  html:root .pp-nav { width: 100%; padding: 6px 12px 10px; border-bottom: none; }
+  html:root .pp-content { border-radius: 20px 20px 0 0; }
+  /* Safe areas: header clears the status bar / Dynamic Island, and the
+     content's last lines clear the home indicator. */
+  html:root .pp-header {
+    padding-top: max(16px, var(--native-safe-area-top, env(safe-area-inset-top)));
+  }
+  html:root .pp-content {
+    padding-bottom: max(16px, var(--native-safe-area-bottom, env(safe-area-inset-bottom)));
+  }
+}
+
+/* ── Glossy glass colors (no blur) ───────────────────────────────────────
+   Soft blue/lavender light falling across a pale sheet, a bright sheen
+   along the top edge, and panels/pills with a white-to-clear gloss. */
+html:root .pp-modal {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(70% 55% at 0% 0%, rgba(147, 197, 253, 0.35), rgba(147, 197, 253, 0) 70%),
+    radial-gradient(60% 50% at 100% 100%, rgba(196, 181, 253, 0.32), rgba(196, 181, 253, 0) 70%),
+    radial-gradient(50% 40% at 100% 0%, rgba(167, 243, 208, 0.18), rgba(167, 243, 208, 0) 70%),
+    #f2f3f7;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 40px 120px rgba(15, 23, 42, 0.25),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+html:root .pp-content {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.86) 100%);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 14px 36px rgba(99, 102, 241, 0.08);
+}
+html:root .pp-nav-item--active,
+html:root .pp-nav-item--active:hover {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.82) 100%);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 6px 16px rgba(99, 102, 241, 0.1);
+}
+html:root .pp-nav-item:hover { background: rgba(255, 255, 255, 0.55); }
+html:root .pp-close { background: rgba(255, 255, 255, 0.7); box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(15, 23, 42, 0.08); }
+html:root .pp-close:hover { background: #ffffff; }
+html:root .pp-field input,
+html:root .pp-field textarea {
+  background: linear-gradient(180deg, #eef0f5 0%, #f5f6fa 100%);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* Large screens (above 1512px): wider and taller, with roomier content. */
+@media (min-width: 1513px) {
+  html:root .pp-modal { max-width: 980px; height: min(88vh, 780px); }
+  html:root .pp-header { padding: 24px 26px 16px; }
+  html:root .pp-body { padding: 0 18px 18px; gap: 16px; }
+  html:root .pp-nav { width: 196px; }
+  html:root .pp-nav-item { padding: 10px 14px; font-size: 0.9rem; }
+  html:root .pp-pane { padding: 30px 34px; }
+  html:root .pp-pane-title { font-size: 1.1rem; }
+}
+
+/* Laptop screens (1200–1512px): a little more compact. */
+@media (min-width: 1200px) and (max-width: 1512px) {
+  html:root .pp-modal { max-width: 760px; height: min(88vh, 620px); }
+  html:root .pp-header { padding: 16px 18px 10px; }
+  html:root .pp-nav { width: 156px; }
+  html:root .pp-nav-item { padding: 8px 11px; font-size: 0.8rem; }
+  html:root .pp-pane { padding: 20px 22px; }
+}
+
+/* ══ Dark theme — same glossy glass language, dark tones ═════════════════
+   Everything above is the light look; when the app isn't in light theme
+   these take over (same specificity, later in the file). */
+html:not([data-theme="light"]) .pp-overlay { background: rgba(0, 0, 0, 0.55); }
+html:not([data-theme="light"]) .pp-modal {
+  color: #f5f5f7;
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(70% 55% at 0% 0%, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0) 70%),
+    radial-gradient(60% 50% at 100% 100%, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0) 70%),
+    radial-gradient(50% 40% at 100% 0%, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0) 70%),
+    #121317;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 40px 120px rgba(0, 0, 0, 0.6);
+}
+html:not([data-theme="light"]) .pp-header-name { color: #f5f5f7; }
+html:not([data-theme="light"]) .pp-header-email { color: #98989d; }
+html:not([data-theme="light"]) .pp-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+html:not([data-theme="light"]) .pp-close:hover { background: rgba(255, 255, 255, 0.14); }
+
+html:not([data-theme="light"]) .pp-nav-item { color: #98989d; }
+html:not([data-theme="light"]) .pp-nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #f5f5f7; }
+html:not([data-theme="light"]) .pp-nav-item--active,
+html:not([data-theme="light"]) .pp-nav-item--active:hover {
+  color: #f5f5f7;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.07) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+html:not([data-theme="light"]) .pp-nav-item--danger,
+html:not([data-theme="light"]) .pp-nav-item--danger:hover,
+html:not([data-theme="light"]) .pp-nav-item--danger.pp-nav-item--active { color: #ff6961; }
+
+html:not([data-theme="light"]) .pp-content {
+  background: linear-gradient(180deg, rgba(44, 44, 50, 0.96) 0%, rgba(30, 30, 36, 0.96) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 14px 36px rgba(0, 0, 0, 0.35);
+}
+html:not([data-theme="light"]) .pp-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); }
+
+html:not([data-theme="light"]) .pp-pane-title,
+html:not([data-theme="light"]) .pp-stat-value { color: #f5f5f7; }
+html:not([data-theme="light"]) .pp-pane-sub { color: #98989d; }
+html:not([data-theme="light"]) .pp-stat-label,
+html:not([data-theme="light"]) .pp-field label { color: #8e8e93; }
+html:not([data-theme="light"]) .pp-divider { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.08); }
+html:not([data-theme="light"]) .pp-upgrade-hint { color: #c7c7cc; }
+html:not([data-theme="light"]) .pp-upgrade-link { color: #409cff; }
+
+html:not([data-theme="light"]) .pp-field input,
+html:not([data-theme="light"]) .pp-field textarea {
+  color: #f5f5f7;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.04) 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+html:not([data-theme="light"]) .pp-field input:focus,
+html:not([data-theme="light"]) .pp-field textarea:focus {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(64, 156, 255, 0.6);
+  box-shadow: 0 0 0 4px rgba(64, 156, 255, 0.16);
+}
+
+html:not([data-theme="light"]) .pp-btn--ghost {
+  color: #f5f5f7;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+html:not([data-theme="light"]) .pp-btn--ghost:hover { background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%); }
+html:not([data-theme="light"]) .pp-btn--danger {
+  color: #ff6961;
+  border-color: rgba(255, 105, 97, 0.25);
+  background: rgba(255, 105, 97, 0.1);
+}
+html:not([data-theme="light"]) .pp-btn--primary { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 16px rgba(0, 113, 227, 0.35); }
+html:not([data-theme="light"]) .pp-passkeys { border-top-color: rgba(255, 255, 255, 0.08); }
+html:not([data-theme="light"]) .pp-passkeys-item { background: rgba(255, 255, 255, 0.06); }
+html:not([data-theme="light"]) .pp-passkeys-title,
+html:not([data-theme="light"]) .pp-passkeys-name { color: #f5f5f7; }

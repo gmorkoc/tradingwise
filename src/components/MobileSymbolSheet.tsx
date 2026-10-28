@@ -287,6 +287,7 @@ export function MobileSymbolSheet({ coin, theme, quoteVolume24h, ticker, onOpenA
               onChartStyleChange={setActiveStyle}
               forceHideIndicators
               forceHideHeader
+              prefsScope="sheet"
             />
           </div>
 

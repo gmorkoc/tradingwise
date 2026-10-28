@@ -32,7 +32,7 @@
      kept it), trying it again here: translucent dark glass with blur +
      saturate and faint inset edge highlights, same structure as light
      theme's version just re-tinted dark instead of a from-scratch design. */
-  background: rgba(20, 22, 30, 0.55);
+  background: rgba(0, 0, 0, 0.55); /* neutral black glass (was navy-tinted) */
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -194,7 +194,7 @@ html[data-theme="light"] .fnb-item--active { color: #1e1b2e; }
   height: 11px;
   border-radius: 50%;
   background: #fb7185;
-  box-shadow: 0 0 0 2px #0a0d1c, 0 0 6px 1px rgba(251, 113, 133, 0.7);
+  box-shadow: 0 0 0 2px #000, 0 0 6px 1px rgba(251, 113, 133, 0.7);
   animation: ta-trigger-dot-pulse 1.6s ease-in-out infinite;
 }
 html[data-theme="light"] .fnb-agent-dot {
@@ -294,12 +294,13 @@ html[data-theme="light"] .fnb-active-indicator.fnb-glass { background: none; }
   border-radius: inherit;
   overflow: hidden;
   transform: scale(1);
-  /* Dark theme: a thin white tint plus a brightened view of what's behind,
-     so it reads as light see-through glass rather than a grey chip. */
-  background-color: rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: brightness(1.25) saturate(1.1);
-  backdrop-filter: brightness(1.25) saturate(1.1);
-  box-shadow: none;
+  /* Dark theme: a clear white tint with a soft top highlight. (The old
+     "brighten what's behind" trick did nothing once dark theme went pure
+     black — brightened black is still black — so the pill faded out.) */
+  background-color: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   transition:
     transform 0.11s cubic-bezier(0.25, 0.8, 0.3, 1),
     background-color 0.11s ease,

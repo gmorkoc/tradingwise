@@ -268,7 +268,7 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 20px;
-  background: #0a0d1c;
+  background: #000; /* dark theme is pure black */
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   animation: gs-docked-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
 }

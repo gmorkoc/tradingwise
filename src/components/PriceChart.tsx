@@ -142,6 +142,11 @@ interface PriceChartProps {
   // See toggleFullscreen below for how these replace the old local-overlay
   // enter/exit behavior.
   pageMode?: boolean;
+  /** Which chart this is, so its saved settings (indicators, style, grid,
+   *  scale) stay its own: "trade" (#trade), "advance" (#advance-chart) or
+   *  "sheet" (the coin bottom sheet). Defaults to advance for pageMode,
+   *  trade otherwise. */
+  prefsScope?: "trade" | "advance" | "sheet";
   onNavigateToPage?: () => void;
   /** Mobile Tools sheet → full chart page with the drawing panel open. */
   /** Mobile Tools sheet → the Trade page's Paper Trade view. */
@@ -945,17 +950,25 @@ interface ChartPrefs {
   showGrid?: boolean;
   chartStyle?: ChartStyle;
 }
-function readChartPrefs(): ChartPrefs {
+// Each chart (Trade, Advance Chart, coin sheet) keeps its own copy under
+// its own key, so a change on one never shows up on the others. None of
+// them reads the old shared key (chart_prefs_v1) any more — it still held
+// indicators switched on back when every chart shared one setting, which
+// kept showing up on Trade. Each chart starts clean once, then remembers
+// its own setup.
+type ChartPrefsScope = "trade" | "advance" | "sheet";
+const chartPrefsKey = (scope: ChartPrefsScope) => `${CHART_PREFS_KEY}:v2:${scope}`;
+function readChartPrefs(scope: ChartPrefsScope): ChartPrefs {
   try {
-    const r = localStorage.getItem(CHART_PREFS_KEY);
+    const r = localStorage.getItem(chartPrefsKey(scope));
     return r ? (JSON.parse(r) as ChartPrefs) : {};
   } catch {
     return {};
   }
 }
-function writeChartPrefs(prefs: ChartPrefs) {
+function writeChartPrefs(scope: ChartPrefsScope, prefs: ChartPrefs) {
   try {
-    localStorage.setItem(CHART_PREFS_KEY, JSON.stringify(prefs));
+    localStorage.setItem(chartPrefsKey(scope), JSON.stringify(prefs));
   } catch {}
 }
 
@@ -1479,6 +1492,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   coinChatOpen,
   onToggleCoinChat,
   pageMode,
+  prefsScope: prefsScopeProp,
   onNavigateToPage,
   onOpenDrawingTools,
   onOpenPaperTrade,
@@ -1494,6 +1508,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   sideColumn,
   headerStats,
 }) => {
+  const prefsScope: ChartPrefsScope = prefsScopeProp ?? (pageMode ? "advance" : "trade");
   const { t, i18n } = useTranslation();
   const { exceeded, consume, isPaid } = useAIQuota();
   // AI chart read (trend + pattern card under the chart) is on request:
@@ -1560,13 +1575,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // visible candles. Persisted.
   const [scaleMode, setScaleMode] = useState<"normal" | "percent" | "log">(() => {
     try {
-      const v = localStorage.getItem("chartScaleMode");
+      // Own key per chart (Trade / Advance / sheet), no shared fallback.
+      const v = localStorage.getItem(`chartScaleMode:v2:${prefsScope}`);
       return v === "percent" || v === "log" ? v : "normal";
     } catch { return "normal"; }
   });
   const [autoScale, setAutoScale] = useState(true);
   useEffect(() => {
-    try { localStorage.setItem("chartScaleMode", scaleMode); } catch { /* ignore */ }
+    try { localStorage.setItem(`chartScaleMode:v2:${prefsScope}`, scaleMode); } catch { /* ignore */ }
   }, [scaleMode]);
   const pendingRangeRef = useRef<{ interval: TimeInterval; from: number; to: number } | null>(null);
   // Mobile "Date Range" picker: the real iOS action sheet in the native
@@ -1695,23 +1711,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Lazy-initialized from localStorage (readChartPrefs, above) once per
   // mount — indicator/grid/candle-style choices persist across page loads
   // instead of resetting to off/"line" every time.
-  const [showBB, setShowBB] = useState(() => readChartPrefs().showBB ?? false);
-  const [showRSI, setShowRSI] = useState(() => readChartPrefs().showRSI ?? false);
-  const [showMACD, setShowMACD] = useState(() => readChartPrefs().showMACD ?? false);
-  const [showEMA20, setShowEMA20] = useState(() => readChartPrefs().showEMA20 ?? false);
-  const [showEMA50, setShowEMA50] = useState(() => readChartPrefs().showEMA50 ?? false);
-  const [showEMA200, setShowEMA200] = useState(() => readChartPrefs().showEMA200 ?? false);
-  const [showMA20, setShowMA20] = useState(() => readChartPrefs().showMA20 ?? false);
-  const [showMA50, setShowMA50] = useState(() => readChartPrefs().showMA50 ?? false);
-  const [showMA200, setShowMA200] = useState(() => readChartPrefs().showMA200 ?? false);
+  const [showBB, setShowBB] = useState(() => readChartPrefs(prefsScope).showBB ?? false);
+  const [showRSI, setShowRSI] = useState(() => readChartPrefs(prefsScope).showRSI ?? false);
+  const [showMACD, setShowMACD] = useState(() => readChartPrefs(prefsScope).showMACD ?? false);
+  const [showEMA20, setShowEMA20] = useState(() => readChartPrefs(prefsScope).showEMA20 ?? false);
+  const [showEMA50, setShowEMA50] = useState(() => readChartPrefs(prefsScope).showEMA50 ?? false);
+  const [showEMA200, setShowEMA200] = useState(() => readChartPrefs(prefsScope).showEMA200 ?? false);
+  const [showMA20, setShowMA20] = useState(() => readChartPrefs(prefsScope).showMA20 ?? false);
+  const [showMA50, setShowMA50] = useState(() => readChartPrefs(prefsScope).showMA50 ?? false);
+  const [showMA200, setShowMA200] = useState(() => readChartPrefs(prefsScope).showMA200 ?? false);
   // setShowGann dropped — nothing can turn this on while the Gann Pivots
   // checkbox is commented out of the indicators menu above (user request);
   // restoring that checkbox should also restore the setter here.
   const [showGann] = useState(false);
-  const [showFib, setShowFib] = useState(() => readChartPrefs().showFib ?? false);
-  const [showSR, setShowSR] = useState(() => readChartPrefs().showSR ?? false);
-  const [showZones, setShowZones] = useState(() => readChartPrefs().showZones ?? false);
-  const [showDayHL, setShowDayHL] = useState(() => readChartPrefs().showDayHL ?? false);
+  const [showFib, setShowFib] = useState(() => readChartPrefs(prefsScope).showFib ?? false);
+  const [showSR, setShowSR] = useState(() => readChartPrefs(prefsScope).showSR ?? false);
+  const [showZones, setShowZones] = useState(() => readChartPrefs(prefsScope).showZones ?? false);
+  const [showDayHL, setShowDayHL] = useState(() => readChartPrefs(prefsScope).showDayHL ?? false);
   useEffect(() => {
     if (!forceHideIndicators) return;
     setShowBB(false); setShowRSI(false); setShowMACD(false);
@@ -1745,7 +1761,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [intervalMenuOpen, setIntervalMenuOpen] = useState(false);
   const intervalBtnRef = useRef<HTMLButtonElement>(null);
   const [intervalMenuPos, setIntervalMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [showCME, setShowCME] = useState(() => readChartPrefs().showCME ?? false);
+  const [showCME, setShowCME] = useState(() => readChartPrefs(prefsScope).showCME ?? false);
   const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
@@ -1777,12 +1793,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // the shared saved preference other chart instances read/write (a user
   // who turned grid off elsewhere shouldn't land here with it off too;
   // they can still toggle it back off here if they want, same as always).
-  const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs().showGrid ?? false));
+  const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs(prefsScope).showGrid ?? false));
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
   const [chartStyle, setChartStyle] = useState<ChartStyle>(
-    () => readChartPrefs().chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line"),
+    () => readChartPrefs(prefsScope).chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line"),
   );
   useEffect(() => {
     if (requestChartStyle && requestChartStyle !== chartStyle) setChartStyle(requestChartStyle);
@@ -1795,7 +1811,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // change — the matching lazy useState initializers above (readChartPrefs)
   // are what actually restores them on the next mount/page load.
   useEffect(() => {
-    writeChartPrefs({
+    writeChartPrefs(prefsScope, {
       showBB, showRSI, showMACD,
       showEMA20, showEMA50, showEMA200,
       showMA20, showMA50, showMA200,
@@ -2124,9 +2140,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // real value (#070c18) instead — confirmed working earlier this
   // session. Scoped to just this chart-canvas paint color, not the
   // shared --pc-bg/--pc-scrim-rgb tokens other components use too.
-  const bgColor = isLight
-    ? "#ffffff"
-    : (isFullscreen ? "#070c18" : "#111827");
+  // Dark theme is pure black everywhere (same as the Liquidation Heatmap
+  // card), fullscreen included.
+  const bgColor = isLight ? "#ffffff" : "#000000";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -2222,7 +2238,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const candleRef = useRef<any>(null);
   // Shared indicator catalog (indicatorLibrary.ts) — same picker + drawing
   // on every chart in the app. RSI/MACD stay on this chart's own panels.
-  const [libIndicators, toggleLibIndicator, clearLibIndicators] = useIndicatorSelection("price-chart");
+  const [libIndicators, toggleLibIndicator, clearLibIndicators] = useIndicatorSelection(`price-chart:v2:${prefsScope}`); // own list per chart, fresh start
   // Close-price line, used only when chartStyle === "line" — kept alive
   // (hidden) the rest of the time rather than swapped in/out, so toggling
   // styles never has to add/remove a series mid-session.

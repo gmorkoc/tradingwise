@@ -14,6 +14,7 @@ import {
   type BlockedUser, type BlockChangeDetail,
 } from "../services/coinChat";
 import { Avatar } from "./Avatar";
+import { PasskeysPanel } from "./PasskeysPanel";
 import { playAlertSoundFile } from "../utils/alertSound";
 import { redirectToBillingPortal } from "../services/stripeService";
 import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat";
@@ -786,6 +787,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                     {t("profile.security.changePassword")}
                   </button>
                 </div>
+
+                <PasskeysPanel />
               </div>
             )}
 

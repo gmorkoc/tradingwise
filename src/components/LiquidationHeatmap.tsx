@@ -246,7 +246,8 @@ function renderCanvas(
   ctx.beginPath(); ctx.moveTo(axisX, 0); ctx.lineTo(axisX, H); ctx.stroke();
 
   ctx.font      = "11px -apple-system,sans-serif";
-  ctx.fillStyle = isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.55)";
+  // Price-axis labels — brighter in dark so they read on pure black.
+  ctx.fillStyle = isDark ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.62)";
   for (let i = 0; i <= 7; i++) {
     const price = pMin + (pMax - pMin) * (i / 7);
     const y     = H - (i / 7) * H;
@@ -280,7 +281,7 @@ function renderCanvas(
   const showDate   = candleSpan >= 3600;
   const pts        = [0, 0.2, 0.4, 0.6, 0.8, 1].map(f => Math.min(Math.floor(f * (cols - 1)), cols - 1));
 
-  ctx.fillStyle = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.45)";
+  ctx.fillStyle = isDark ? "rgba(255,255,255,0.66)" : "rgba(0,0,0,0.58)"; // date labels, brighter for contrast
   ctx.font      = "10px -apple-system,sans-serif";
   for (const ci of pts) {
     const x = ((ci + 0.5) / cols) * W;

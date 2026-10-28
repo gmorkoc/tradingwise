@@ -1373,3 +1373,16 @@ html[data-theme="light"] .db-head-title--fancy { --db-shine: #16a34a; }
   .db-page .db-head-pulse-line { animation: none; stroke-dashoffset: 0; }
   .db-page .db-head-title--fancy { animation: none; }
 }
+
+/* Dark theme: same two-tone look as light — the sheet (header area) is a
+   lifted dark grey, and the news card below it is the page's pure black
+   with rounded top corners, plus a hairline so the edge reads. */
+html:not([data-theme="light"]) .db-sheet {
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+}
+html:not([data-theme="light"]) .db-sheet .db-card {
+  background: #000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}

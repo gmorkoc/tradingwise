@@ -7,7 +7,10 @@ const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 // URL scheme, not a page load) — the default implicit flow only works
 // when Supabase can read tokens back out of window.location itself.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth: { flowType: "pkce" },
+  // experimental.passkey: turns on supabase.auth.passkey.* (Face ID /
+  // Touch ID sign-in). The server side is enabled in the Supabase
+  // dashboard (Auth → Passkeys); until then these calls just error.
+  auth: { flowType: "pkce", experimental: { passkey: true } },
 });
 
 export type Tier = "free" | "pro" | "elite";

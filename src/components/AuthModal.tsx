@@ -4,17 +4,28 @@ import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
 import { BottomSheet } from "./BottomSheet";
 import { RiskDisclaimer } from "./RiskDisclaimer";
-import { isUsernameAvailable, USERNAME_PATTERN } from "../services/supabase";
+import { isUsernameAvailable, USERNAME_PATTERN, supabase } from "../services/supabase";
+import { passkeysAvailable, signInWithPasskey } from "../services/passkeys";
 import "../styles/AuthModal.css";
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-type View = "welcome" | "magic" | "sent" | "login" | "signup" | "reset";
+type View = "welcome" | "magic" | "sent" | "login" | "signup" | "reset" | "verify";
 
 interface Props {
   onClose: () => void;
   initialView?: string;
 }
+
+// Passkey (key) icon — line style to match the form's other icons.
+const PASSKEY_ICON = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="8" cy="15" r="4" />
+    <path d="M10.85 12.15L19 4" />
+    <path d="M18 5l2 2" />
+    <path d="M15 8l2 2" />
+  </svg>
+);
 
 const GOOGLE_ICON = (
   <svg width="18" height="18" viewBox="0 0 48 48">
@@ -66,7 +77,7 @@ const EyeOff = () => (
 
 export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const { t } = useTranslation();
-  const { signIn, signUp, signInWithMagicLink, signInWithGoogle, signInWithApple, appleSignInAvailable, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithMagicLink, verifyEmailCode, resendVerification, signInWithGoogle, signInWithApple, appleSignInAvailable, resetPassword } = useAuth();
 
   const [view, setView] = useState<View>(
     initialView === "signup" ? "signup" : initialView === "login" ? "login" : "welcome"
@@ -88,6 +99,18 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const backdropRef = useRef<HTMLDivElement>(null);
   const [isPhone] = useState(() => window.matchMedia("(max-width: 640px)").matches);
   const disclaimerRef = useRef<HTMLLabelElement>(null);
+  // Email verification step (after sign-up, or signing in to an
+  // unconfirmed account): 6-digit code + resend with a short cooldown.
+  const [code, setCode] = useState("");
+  const [resendIn, setResendIn] = useState(0);
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendIn]);
+  // Passkey sign-in button only where the device supports passkeys.
+  const [canPasskey, setCanPasskey] = useState(false);
+  useEffect(() => { passkeysAvailable().then(setCanPasskey); }, []);
 
   useEffect(() => {
     setError(""); setInfo("");
@@ -145,7 +168,13 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     e.preventDefault();
     setBusy(true); setError("");
     const err = await signIn(email, password);
-    if (err) {
+    if (err === "verify_email") {
+      // Never confirmed — send a fresh code and go to the code step.
+      await resendVerification(email);
+      setResendIn(30);
+      setCode("");
+      setView("verify");
+    } else if (err) {
       setError(err.toLowerCase().includes("invalid login credentials")
         ? "no_account" : err);
     } else { onClose(); }
@@ -172,7 +201,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     }
     saveTerms();
     const err = await signUp(email, password, name, trimmedUsername);
-    if (err) {
+    if (err === "verify_email") {
+      setResendIn(30);
+      setCode("");
+      setView("verify");
+      setBusy(false);
+    } else if (err) {
       const isDupe = err.toLowerCase().includes("already registered")
         || err.toLowerCase().includes("already been registered")
         || err.toLowerCase().includes("user already exists");
@@ -180,6 +214,56 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
       setBusy(false);
     } else {
       onClose();
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = code.replace(/\D/g, "");
+    // Supabase's code length is a project setting (currently 8) — accept 6–8.
+    if (clean.length < 6) { setError("Enter the code from the email."); return; }
+    setBusy(true); setError("");
+    const err = await verifyEmailCode(email, clean);
+    if (err === "verified_no_session") {
+      // Confirmed but not signed in — finish with the password from sign-up.
+      await finishAfterConfirm();
+      return;
+    }
+    setBusy(false);
+    if (err) setError(/expired|invalid/i.test(err) ? "That code is wrong or has expired. Check the latest email, or send a new code." : err);
+    else onClose();
+  };
+
+  // Used after the email is confirmed (by code, or by the link opened in
+  // the browser): sign in with the password typed during sign-up, so the
+  // user doesn't have to enter it again.
+  const finishAfterConfirm = async () => {
+    setBusy(true); setError("");
+    if (!password) { setBusy(false); setView("login"); setInfo("Email confirmed. Sign in to continue."); return; }
+    const err = await signIn(email, password);
+    setBusy(false);
+    if (!err) { onClose(); return; }
+    if (err === "verify_email") setError("Not confirmed yet. Enter the code from the email, or open the link in it first.");
+    else setError(err);
+  };
+
+  const handleResend = async () => {
+    if (resendIn > 0) return;
+    setError(""); setInfo("");
+    const err = await resendVerification(email);
+    if (err) setError(err);
+    else { setInfo("New code sent. Check your inbox (and spam folder)."); setResendIn(30); }
+  };
+
+  const handlePasskey = async () => {
+    setBusy(true); setError("");
+    const err = await signInWithPasskey();
+    setBusy(false);
+    if (err) setError(err);
+    else {
+      // Cancelled sheets return null too — only close once a session exists.
+      const { data } = await supabase.auth.getSession();
+      if (data.session) onClose();
     }
   };
 
@@ -228,6 +312,12 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <button className="auth-welcome-login" onClick={() => setView("login")}>
               {t("auth.welcome.haveAccount")}
             </button>
+            {canPasskey && (
+              <button className="auth-link-btn auth-welcome-passkey" type="button" onClick={handlePasskey} disabled={busy}>
+                {PASSKEY_ICON} Sign in with a passkey
+              </button>
+            )}
+            {error && <p className="auth-error">{error}</p>}
           </div>
         )}
 
@@ -350,6 +440,11 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
             <button className="auth-google" type="button" onClick={handleGoogle} disabled={busy}>
               {GOOGLE_ICON} {t("auth.continueWithGoogle")}
             </button>
+            {canPasskey && (
+              <button className="auth-google auth-passkey" type="button" onClick={handlePasskey} disabled={busy}>
+                {PASSKEY_ICON} Sign in with a passkey
+              </button>
+            )}
 
             <p className="auth-switch">
               <button className="auth-link-btn" onClick={() => setView("magic")}>{t("auth.login.useMagicLink")}</button>
@@ -453,6 +548,49 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               {" · "}
               {t("auth.signup.alreadyAccount")}{" "}
               <button className="auth-link-btn" onClick={() => setView("login")}>{t("auth.signup.signinLink")}</button>
+            </p>
+          </>
+        )}
+
+        {/* ── Email verification (6-digit code) ── */}
+        {view === "verify" && (
+          <>
+            <div className="auth-sent-icon">✉️</div>
+            <h2 className="auth-title">Check your email</h2>
+            <p className="auth-sub">
+              We sent a verification code to <strong>{email}</strong>. Enter it below to confirm your account.
+            </p>
+            <form className="auth-form" onSubmit={handleVerify}>
+              <label className="auth-label">Verification code
+                <input
+                  className="auth-input auth-code-input"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={8}
+                  value={code}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="Code"
+                  required
+                  autoFocus={!isPhone}
+                />
+              </label>
+              {error && <p className="auth-error">{error}</p>}
+              {info && <p className="auth-info">{info}</p>}
+              <button className="auth-submit" disabled={busy || code.length < 6}>{busy ? "Confirming…" : "Confirm email"}</button>
+            </form>
+            <p className="auth-switch">
+              Didn't get it?{" "}
+              <button type="button" className="auth-link-btn" onClick={handleResend} disabled={resendIn > 0}>
+                {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+              </button>
+              {" · "}
+              <button type="button" className="auth-link-btn" onClick={() => setView("signup")}>Use a different email</button>
+            </p>
+            <p className="auth-switch">
+              Confirmed with the link in the email?{" "}
+              <button type="button" className="auth-link-btn" onClick={finishAfterConfirm} disabled={busy}>Continue</button>
             </p>
           </>
         )}
