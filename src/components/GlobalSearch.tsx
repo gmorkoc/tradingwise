@@ -37,7 +37,7 @@ const COIN_ICONS: Record<string, string> = {
 const SECTIONS: { id: SectionId; label: string; desc: string; icon: string; keywords: string[] }[] = [
   { id: "chart", label: "Price Chart", desc: "Live candlestick chart with indicators", icon: "📈",
     keywords: ["candles", "candlestick", "live chart", "technical chart", "price action", "tradingview"] },
-  { id: "candleai", label: "Inside the Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦",
+  { id: "candleai", label: "Inside the AI Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦",
     keywords: ["pattern recognition", "market maker", "smart money", "candle reading", "ai candle", "order blocks", "fair value gap", "wyckoff", "elliott wave"] },
   { id: "heatmap", label: "Liquidation Heatmap", desc: "Futures liquidation zones and stop-hunt levels", icon: "🔥",
     keywords: ["liquidation map", "liquidity zones", "stop hunt", "liq levels", "long liquidations", "short liquidations", "leverage liquidations", "liquidation clusters"] },

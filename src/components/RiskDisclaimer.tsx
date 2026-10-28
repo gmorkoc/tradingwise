@@ -13,7 +13,30 @@ interface Props {
 // text, same localization, one place to keep them in sync.
 export const RiskDisclaimer = forwardRef<HTMLLabelElement, Props>(
   ({ checked, onChange, shake }, ref) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    // Same localized legal pages the upgrade screen links to.
+    const legalSuffix = ["es", "it", "tr"].includes(i18n.language) ? `.${i18n.language}` : "";
+    // "Terms of Use" and "Billing Policy" inside the checkbox sentence link
+    // to the Terms page (which includes the Billing & Subscription Policy).
+    // Tapping a link opens it without ticking the box.
+    const termsUrl = `https://coinhintz.io/terms${legalSuffix}.html`;
+    const LINK_WORDS = [
+      "Terms of Use", "Billing Policy",
+      "Términos de Uso", "Política de Facturación",
+      "Termini di Utilizzo", "Politica di Fatturazione",
+      "Kullanım Şartları", "Faturalama Politikası",
+    ];
+    const label = t("auth.disclaimer.checkLabel");
+    const re = new RegExp(`(${LINK_WORDS.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+    const linkedLabel = label.split(re).map((part, i) =>
+      LINK_WORDS.includes(part) ? (
+        <a key={i} href={termsUrl} target="_blank" rel="noopener noreferrer" className="auth-terms-link" onClick={(e) => e.stopPropagation()}>
+          {part}
+        </a>
+      ) : (
+        part
+      ),
+    );
     return (
       <div className="auth-disclaimer">
         <div className="auth-disclaimer-scroll">
@@ -37,7 +60,7 @@ export const RiskDisclaimer = forwardRef<HTMLLabelElement, Props>(
         </div>
         <label ref={ref} className={`auth-terms-check${shake ? " auth-terms-check--shake" : ""}`}>
           <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
-          <span>{t("auth.disclaimer.checkLabel")}</span>
+          <span>{linkedLabel}</span>
         </label>
       </div>
     );

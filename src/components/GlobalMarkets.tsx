@@ -5,6 +5,7 @@ import {
   CartesianGrid, PieChart, Pie, Cell, ComposedChart, Bar, Line, Brush, ReferenceArea,
 } from "recharts";
 import "../styles/GlobalMarkets.css";
+import { fetchBrief, type BriefItem } from "./DailyBrief";
 import { deribit } from "../services/deribit";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -329,8 +330,8 @@ interface Props {
   // setCoin/clearCandleCache/setActiveSection("chart"), same pattern
   // Watchlist/TopMoversCarousel/PriceChart's own hero stack already use).
   // Any CoinGecko coin can be clicked, not just ones the app's own COINS
-  // roster recognizes — an unsupported symbol just lands on the chart's
-  // existing "No chart data available" empty state instead of a crash.
+  // roster recognizes — App.tsx's openChartCoin shows the "coming soon"
+  // sheet (CoinUnavailableSheet) for coins the chart has no data for.
   onSelectCoin?: (symbol: string) => void;
 }
 
@@ -370,6 +371,34 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
   const [error, setError]         = useState("");
   // "Market Pulse" (Liquidations-style widget substitute, see LIQ_RANGES comment)
   const [liqRange, setLiqRange]   = useState<{ label: string; days: number }>(LIQ_RANGES[1]);
+  // ── Desktop hero (gmh-*): CoinGecko's real trending list + live news ──
+  // Shown on every width now (phones: a swipeable card carousel).
+  const isHeroDesktop = true;
+  // Phones: which carousel card is in view (for the dots).
+  const [heroIdx, setHeroIdx] = useState(0);
+  const [trending, setTrending] = useState<{ id: string; symbol: string; name: string; thumb: string; chg: number | null }[]>([]);
+  const [trendPage, setTrendPage] = useState(0);
+  const [news, setNews] = useState<BriefItem[]>([]);
+  const [aiAlertPillHidden, setAiAlertPillHidden] = useState(() => {
+    try { return localStorage.getItem("gmhAiAlertPillHidden") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    if (!isHeroDesktop) return;
+    type TrendResp = { coins: { item: { id: string; symbol: string; name: string; thumb: string; data?: { price_change_percentage_24h?: { usd?: number } } } }[] };
+    cgFetch<TrendResp>("https://api.coingecko.com/api/v3/search/trending", TTL.trending)
+      .then((d) => setTrending((d.coins ?? []).slice(0, 10).map(({ item }) => ({
+        id: item.id, symbol: item.symbol, name: item.name, thumb: item.thumb,
+        chg: item.data?.price_change_percentage_24h?.usd ?? null,
+      }))))
+      .catch(() => {});
+    fetchBrief().then((items) => setNews(items.filter((i) => i.category === "crypto").slice(0, 6))).catch(() => {});
+  }, [isHeroDesktop]);
+  // Trending pages 1/2 every 6s.
+  useEffect(() => {
+    if (!isHeroDesktop || trending.length <= 5) return;
+    const id = window.setInterval(() => setTrendPage((p) => (p === 0 ? 1 : 0)), 6000);
+    return () => window.clearInterval(id);
+  }, [isHeroDesktop, trending.length, trendPage]);
   const [liqData, setLiqData]     = useState<{ time: string; ret: number; price: number }[]>([]);
   const [liqLoading, setLiqLoading] = useState(true);
   // BTC/ETH open interest, in base-asset units (BTC/ETH), Binance perps via
@@ -775,6 +804,194 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
           data only (no fabricated metrics — see the comments on
           altcoinStrengthPct/marketActivity above for what's genuinely
           available right now vs. what isn't). ─────────────────────────── */}
+      {/* ── Desktop hero: Market Status · Trending · Derivatives · Community,
+          then a row of quick pills — real data only (ETF Flows / CMC20 /
+          liquidations aren't available to us, so honest stand-ins fill
+          those slots). Phones keep the .gm-hero below. ─────────────────── */}
+      {isHeroDesktop && (() => {
+        const ago = (ts: number) => {
+          const m = Math.max(1, Math.round((Date.now() - ts) / 60000));
+          return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
+        };
+        const days = liqData.slice(-30);
+        const upDays = days.filter((d) => d.ret >= 0).length;
+        const downDays = days.length - upDays;
+        const avgMove = days.length ? days.reduce((a, d) => a + Math.abs(d.ret), 0) / days.length : 0;
+        const oiTotal = oiStats ? oiStats.btcUsd + oiStats.ethUsd : null;
+        const trendRows = trending.slice(trendPage * 5, trendPage * 5 + 5);
+        const askAI = (prompt: string) => window.dispatchEvent(new CustomEvent("open-trading-agent-with-prompt", { detail: { prompt } }));
+        const openLink = (url?: string) => { if (url) window.open(url, "_blank", "noopener,noreferrer"); };
+        const SRC_COLORS: Record<string, string> = { CoinTelegraph: "#f5b700", CoinDesk: "#1a56db", Decrypt: "#111827" };
+        const hero = (
+          <div className="gmh-block">
+            <div
+              className="gmh"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                const card = el.firstElementChild as HTMLElement | null;
+                if (!card) return;
+                setHeroIdx(Math.round(el.scrollLeft / (card.offsetWidth + 12)));
+              }}
+            >
+              {/* Market Status */}
+              <section className="gmh-card">
+                <div className="gmh-head">Market Status <span className="gmh-chev">›</span></div>
+                <div className="gmh-ms">
+                  <div className="gmh-ms-col">
+                    <div className="gmh-tile gmh-tile--fng">
+                      <span className="gmh-label">Fear &amp; Greed</span>
+                      {fngValue !== null ? <FearGreedGauge value={fngValue} label={fng!.value_classification} compact /> : <span className="gm-skel gm-skel-stat" />}
+                    </div>
+                    <div className="gmh-tile">
+                      <span className="gmh-label">Altcoin Season</span>
+                      {altcoinStrengthPct !== null ? (
+                        <div className="gmh-alt">
+                          <strong>{altcoinStrengthPct}</strong>
+                          <span className="gmh-alt-track"><i style={{ left: `${altcoinStrengthPct}%` }} /></span>
+                        </div>
+                      ) : <span className="gm-skel gm-skel-stat" />}
+                    </div>
+                  </div>
+                  <div className="gmh-ms-col">
+                    <div className="gmh-tile">
+                      <span className="gmh-label">Market Cap</span>
+                      <div className="gmh-val"><strong>{fmtBig(mcap)}</strong>
+                        <em className={chg24h >= 0 ? "up" : "down"}>{chg24h >= 0 ? "▲" : "▼"} {Math.abs(chg24h).toFixed(2)}%</em></div>
+                    </div>
+                    <div className="gmh-tile">
+                      <span className="gmh-label">24h Volume</span>
+                      <div className="gmh-val"><strong>{fmtBig(vol)}</strong></div>
+                    </div>
+                    <div className="gmh-tile">
+                      <span className="gmh-label">BTC Dominance</span>
+                      <div className="gmh-val"><strong>{btcDom.toFixed(1)}%</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Trending (CoinGecko search trending) */}
+              <section className="gmh-card">
+                <div className="gmh-head">
+                  Trending <span className="gmh-chev">›</span>
+                  {trending.length > 5 && (
+                    <span className="gmh-pager">
+                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label="Previous">‹</button>
+                      <span>{trendPage + 1}/2</span>
+                      <button type="button" onClick={() => setTrendPage((p) => (p === 0 ? 1 : 0))} aria-label="Next">›</button>
+                      <span key={trendPage} className="gmh-pager-ring" aria-hidden="true" />
+                    </span>
+                  )}
+                </div>
+                <div className="gmh-trend">
+                  {trendRows.length === 0 && Array.from({ length: 5 }).map((_, i) => <span key={i} className="gm-skel gmh-trend-skel" />)}
+                  {trendRows.map((c, i) => (
+                    <button key={c.id} type="button" className="gmh-trend-row" onClick={() => onSelectCoin?.(c.symbol.toUpperCase())}>
+                      <span className="gmh-trend-rank">{trendPage * 5 + i + 1}</span>
+                      <img src={c.thumb} alt="" loading="lazy" />
+                      <span className="gmh-trend-sym">{c.symbol.toUpperCase()}</span>
+                      <span className="gmh-trend-name">{c.name}</span>
+                      {c.chg !== null && (
+                        <span className={`gmh-trend-chg ${c.chg >= 0 ? "up" : "down"}`}>{c.chg >= 0 ? "+" : ""}{c.chg.toFixed(1)}%</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {/* Derivatives */}
+              <section className="gmh-card">
+                <div className="gmh-head">Derivatives <span className="gmh-chev">›</span></div>
+                <div className="gmh-tile gmh-deriv">
+                  <div className="gmh-deriv-stats">
+                    <div><span className="gmh-label">BTC daily moves (30d)</span><strong>{avgMove.toFixed(2)}% avg</strong></div>
+                    <div><span className="gmh-label">Up days</span><strong className="up">{upDays}</strong></div>
+                    <div><span className="gmh-label">Down days</span><strong className="down">{downDays}</strong></div>
+                  </div>
+                  <div className="gmh-bars">
+                    {days.map((d, i) => (
+                      <span key={i} className={d.ret >= 0 ? "up" : "down"} style={{ height: `${Math.max(8, Math.min(100, Math.abs(d.ret) * 18))}%` }} title={`${d.time}: ${d.ret >= 0 ? "+" : ""}${d.ret.toFixed(2)}%`} />
+                    ))}
+                  </div>
+                </div>
+                <div className="gmh-row2">
+                  <div className="gmh-tile" title="BTC + ETH futures open interest">
+                    <span className="gmh-label">Open Interest</span>
+                    <div className="gmh-val"><strong>{oiTotal !== null ? fmtBig(oiTotal) : "—"}</strong></div>
+                  </div>
+                  <div className="gmh-tile">
+                    <span className="gmh-label">Volume (24h)</span>
+                    <div className="gmh-val"><strong>{fmtBig(vol)}</strong></div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Community → latest crypto headlines */}
+              <section className="gmh-card">
+                <div className="gmh-head">Community <span className="gmh-chev">›</span></div>
+                <div className="gmh-posts">
+                  {news.length === 0 && [0, 1].map((i) => <span key={i} className="gm-skel gmh-post-skel" />)}
+                  {news.slice(0, 2).map((n) => (
+                    <button key={n.url} type="button" className="gmh-post" onClick={() => openLink(n.url)}>
+                      <span className="gmh-post-head">
+                        <span className="gmh-post-avatar" style={{ background: SRC_COLORS[n.source] ?? "#6366f1" }}>{n.source.slice(0, 1)}</span>
+                        <strong>{n.source}</strong>
+                        <span className="gmh-post-time">· {ago(n.pubDate)}</span>
+                      </span>
+                      <span className="gmh-post-text">{n.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* Phones: which card is showing. */}
+            <div className="gmh-dots" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => <span key={i} className={i === heroIdx ? "on" : ""} />)}
+            </div>
+
+            {/* Quick pills */}
+            <div className="gmh-pills">
+              {news[0] && (
+                <button type="button" className="gmh-pill gmh-pill--topic" onClick={() => openLink(news[0].url)}>
+                  <span className="gmh-pill-tag">Topic</span><span className="gmh-pill-text">{news[0].title}</span>
+                </button>
+              )}
+              <button type="button" className="gmh-pill gmh-pill--new" onClick={() => window.dispatchEvent(new CustomEvent("open-trading-agent"))}>
+                <span className="gmh-pill-new">New</span>Try Agent Ready
+              </button>
+              <button type="button" className="gmh-pill gmh-pill--new" onClick={() => window.dispatchEvent(new CustomEvent("open-daily-brief"))}>
+                <span className="gmh-pill-new">New</span>Top News
+              </button>
+              {!aiAlertPillHidden && (
+                <span className="gmh-pill gmh-pill--alert">
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("open-strategy-alert"))}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+                    Add AI alert
+                  </button>
+                  <button type="button" className="gmh-pill-x" aria-label="Hide" onClick={() => { setAiAlertPillHidden(true); try { localStorage.setItem("gmhAiAlertPillHidden", "1"); } catch { /* ignore */ } }}>×</button>
+                </span>
+              )}
+              {news[1] && (
+                <button type="button" className="gmh-pill gmh-pill--hot" onClick={() => openLink(news[1].url)}>
+                  <span aria-hidden="true">🔥</span><span className="gmh-pill-text">{news[1].title}</span>
+                </button>
+              )}
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI(`Why is the crypto market ${chg24h >= 0 ? "up" : "down"} today?`)}>
+                <span aria-hidden="true">{chg24h >= 0 ? "↗" : "↘"}</span>Why is the market {chg24h >= 0 ? "up" : "down"} today?
+              </button>
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI("Are altcoins outperforming Bitcoin right now?")}>
+                <span aria-hidden="true">⇄</span>Are altcoins outperforming Bitcoin?
+              </button>
+              <button type="button" className="gmh-pill gmh-pill--ask" onClick={() => askAI("What are the key support and resistance levels for BTC right now?")}>
+                <span aria-hidden="true">◎</span>Key BTC levels right now?
+              </button>
+            </div>
+          </div>
+        );
+        return hero;
+      })()}
+
       <div className="gm-hero">
         <span className="gm-hero-glow" />
         <div className="gm-status-grid">

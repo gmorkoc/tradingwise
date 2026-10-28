@@ -26,7 +26,7 @@ const SLIDES: Slide[] = [
     screenshot: `/whats-new/inside-the-candle.png?v=${IMG_V}`,
     title: "Institutional-grade chart reading",
     desc: "Elliott Wave with invalidation levels, ICT smart money concepts, Wyckoff phases, and Volume Profile — all in one AI-powered read.",
-    ctaLabel: "Open Inside the Candle",
+    ctaLabel: "Open Inside the AI Candle",
     section: "candleai",
   },
   {

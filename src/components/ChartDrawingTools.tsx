@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
+import ReactDOM from 'react-dom';
 import type { IChartApi } from 'lightweight-charts';
 import type { CandleDataPoint } from '../services/coinglass';
 import '../styles/ChartDrawingTools.css';
@@ -51,6 +52,11 @@ interface Props {
    *  centering it (keeps it clear of an overlay header, e.g. the Advance
    *  chart's Back / coin name / price block). Scrolls if it can't fit. */
   topOffset?: number;
+  /** Render the rail + drawing canvas INSIDE the chart's container
+   *  (absolute, clipped by it) instead of fixed over the whole page — so
+   *  they can never float over the sidebar/header when the chart is
+   *  scrolled or partly covered. */
+  contained?: boolean;
 }
 
 export interface ChartDrawingToolsHandle {
@@ -202,7 +208,7 @@ const TRASH_ICON = <IconMulti>
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(function ChartDrawingTools(
-  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset }: Props,
+  { chartRef, seriesRef, containerRef, candlesRef, visible, persistRef, onZoneComplete, onSave, onReset, fullHeightRail, topOffset, contained }: Props,
   ref,
 ) {
   const [tool, setTool]         = useState<DrawingTool>('cursor');
@@ -749,7 +755,11 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
 
   if (!visible || !chartRect) return null;
 
-  return (
+  // contained: positions relative to the container (portal below).
+  const host = contained ? containerRef.current : null;
+  const box = host ? { top: 0, left: 0, width: chartRect.width, height: chartRect.height } : chartRect;
+
+  const ui = (
     <>
       <div
         className={`cdt-toolbar${fullHeightRail ? " cdt-toolbar--full-rail" : ""}`}
@@ -762,8 +772,8 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
               // overlapped that bar's leftmost pill.
               { top: chartRect.top, left: chartRect.left, height: chartRect.height }
             : topOffset !== undefined
-            ? { top: chartRect.top + topOffset, left: chartRect.left + 8, maxHeight: Math.max(120, chartRect.height - topOffset - 8), overflowY: "auto" }
-            : { top: chartRect.top + chartRect.height / 2 - 40, left: chartRect.left + 8, transform: "translateY(-50%)" }
+            ? { top: box.top + topOffset, left: box.left + 8, maxHeight: Math.max(120, box.height - topOffset - 8), overflowY: "auto", ...(host ? { position: "absolute" as const, zIndex: 30 } : {}) }
+            : { top: box.top + box.height / 2 - 40, left: box.left + 8, transform: "translateY(-50%)", ...(host ? { position: "absolute" as const, zIndex: 30 } : {}) }
         }
       >
         {(onSave || onReset) && (
@@ -821,7 +831,7 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
       </div>
 
       {magnet && (
-        <div className="cdt-magnet-badge" style={{ top: chartRect.top + 8, left: chartRect.left + 50 }}>
+        <div className="cdt-magnet-badge" style={{ top: box.top + 8, left: box.left + 50, ...(host ? { position: "absolute" as const, zIndex: 30 } : {}) }}>
           ⊕ Magnet On
         </div>
       )}
@@ -830,10 +840,11 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
         ref={canvasRef}
         className="cdt-canvas"
         style={{
-          top:          chartRect.top,
-          left:         chartRect.left,
-          width:        chartRect.width,
-          height:       chartRect.height,
+          top:          box.top,
+          left:         box.left,
+          width:        box.width,
+          height:       box.height,
+          ...(host ? { position: "absolute" as const, zIndex: 25 } : {}),
           cursor:       tool === 'cursor' ? 'default' : 'crosshair',
           pointerEvents: tool === 'cursor' ? 'none' : 'all',
         }}
@@ -845,4 +856,5 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
       />
     </>
   );
+  return host ? ReactDOM.createPortal(ui, host) : ui;
 });

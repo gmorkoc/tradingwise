@@ -476,3 +476,15 @@
   .auth-card { padding: 28px 12px 24px 20px; }
   .auth-disclaimer-scroll { max-height: calc(100vh - 460px); min-height: 160px; }
 }
+
+/* Phones: sign-in lives in the app's bottom sheet (BottomSheet.tsx). The
+   sheet scrolls as one, so the body doesn't need its own scroller. */
+.auth-sheet .auth-sheet-inner { padding: 8px 20px 24px; }
+.auth-sheet .auth-card-body { overflow: visible; padding-right: 0; }
+.auth-sheet .bs-title { display: flex; align-items: center; }
+/* "Terms of Use" / "Billing Policy" links inside the agreement sentence. */
+.auth-terms-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

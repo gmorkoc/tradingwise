@@ -1,0 +1,506 @@
+/* IndicatorPicker — shared indicator browser (TradingView-style). */
+.ip-sheet .bs-body { padding-top: 0; }
+.ip-title { display: inline-flex; align-items: center; gap: 4px; }
+.ip-back {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ip-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 4px;
+  padding: 0 12px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+.ip-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--color-text);
+  font-size: 16px; /* 16px: iOS doesn't zoom the page on focus */
+}
+.ip-search-clear {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.ip-section {
+  padding: 18px 16px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ip-list { display: flex; flex-direction: column; }
+.ip-row,
+.ip-cat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ip-row + .ip-row { border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.ip-row:active,
+.ip-cat:active { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.ip-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ip-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+.ip-cat .ip-row-name { font-size: 1.05rem; font-weight: 500; }
+.ip-row-sub {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+.ip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ip-cat-icon { flex-shrink: 0; color: var(--color-text); }
+.ip-chev { flex-shrink: 0; color: var(--color-text-muted); }
+.ip-empty { padding: 24px 16px; color: var(--color-text-muted); font-size: 0.9rem; }
+.ip-check {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--color-success, #16a34a);
+}
+.ip-row--on .ip-row-name { color: var(--color-success, #16a34a); }
+/* Fixed height: searching or drilling into a category never resizes the
+   sheet — the content scrolls inside it instead. */
+.bs-sheet.ip-sheet { height: 82vh; }
+.ip-sheet .bs-scroll { flex: 1 1 auto; min-height: 0; }
+
+/* ── Desktop: mega menu ─────────────────────────────────────────────── */
+.ip-mega-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200030;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 72px;
+  background: rgba(15, 23, 42, 0.28);
+  animation: ip-fade 0.15s ease;
+}
+@keyframes ip-fade { from { opacity: 0; } to { opacity: 1; } }
+.ip-mega-close {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.ip-mega-close:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); }
+/* Clear all — turns off every indicator on the chart. */
+.ip-section--row { display: flex; align-items: center; justify-content: space-between; }
+.ip-clear {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-danger, #e11d48) 9%, transparent);
+  color: var(--color-danger, #e11d48);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+.ip-clear:hover { background: color-mix(in srgb, var(--color-danger, #e11d48) 15%, transparent); }
+
+/* ── Desktop: TradingView-style indicators dialog ─────────────────────── */
+.ip-tv {
+  width: min(1040px, calc(100vw - 48px));
+  height: min(720px, calc(100vh - 100px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  animation: ip-drop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes ip-drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.ip-tv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 4px 20px;
+}
+.ip-tv-title { font-size: 1.2rem; font-weight: 700; color: var(--color-text); }
+.ip-search.ip-tv-search { margin: 10px 20px 8px; height: 40px; }
+.ip-tv-search input { font-size: 0.95rem; }
+.ip-tv-main { flex: 1; min-height: 0; display: flex; }
+.ip-tv-side {
+  width: 210px;
+  flex-shrink: 0;
+  padding: 4px 10px 16px 14px;
+  overflow-y: auto;
+}
+.ip-tv-side-label {
+  padding: 14px 10px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ip-tv-side-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.ip-tv-side-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ip-tv-side-item em { font-style: normal; font-size: 0.75rem; color: var(--color-text-muted); }
+.ip-tv-side-item:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.ip-tv-side-item.active { background: color-mix(in srgb, var(--color-text) 9%, transparent); font-weight: 600; }
+.ip-tv-content { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 4px 20px 0 18px; }
+.ip-tv-toolbar { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 10px 0 6px; }
+.ip-tv-chip {
+  padding: 5px 13px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ip-tv-chip.active { background: var(--color-text); color: var(--color-surface); }
+.ip-tv-heading {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ip-tv-table { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 8px 12px; }
+.ip-tv-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 130px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  min-width: 0;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  cursor: pointer;
+  outline: none;
+}
+.ip-tv-row:hover,
+.ip-tv-row:focus-visible { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.ip-tv-row--head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: default;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--color-surface);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ip-tv-row--head:hover { background: var(--color-surface); }
+.ip-tv-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ip-tv-name-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ip-tv-row--on .ip-tv-name-text { color: var(--color-success, #16a34a); font-weight: 600; }
+.ip-tv-check { flex-shrink: 0; color: var(--color-success, #16a34a); }
+.ip-tv-muted { min-width: 0; font-size: 0.82rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ip-tv-star {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: color-mix(in srgb, var(--color-text) 30%, transparent);
+  cursor: pointer;
+}
+.ip-tv-star:hover { color: var(--color-text); }
+.ip-tv-star.on { color: var(--color-text); }
+/* Lighter type in the desktop dialog. */
+.ip-tv-title { font-weight: 600; }
+.ip-tv-side-item { font-weight: 400; }
+.ip-tv-side-item.active { font-weight: 500; }
+.ip-tv-chip { font-weight: 400; }
+.ip-tv-row { font-weight: 400; }
+.ip-tv-row--head { font-weight: 500; }
+.ip-tv-row--on .ip-tv-name-text { font-weight: 500; }
+.ip-tv-side-label { font-weight: 500; }
+/* Spacing pass (desktop dialog). */
+.ip-tv-head { padding: 20px 20px 6px 24px; }
+.ip-search.ip-tv-search { margin: 10px 24px 12px; height: 42px; }
+.ip-tv-side { width: 220px; padding: 4px 14px 20px 18px; }
+.ip-tv-side-label { padding: 18px 12px 8px; }
+.ip-tv-side-label:first-child { padding-top: 8px; }
+.ip-tv-side-item { padding: 9px 12px; margin-bottom: 2px; }
+.ip-tv-content { padding: 4px 24px 0 20px; border-left: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.ip-tv-toolbar { gap: 8px; padding: 8px 0 12px; }
+.ip-tv-row { padding: 9px 10px; margin: 0 -10px; column-gap: 16px; }
+.ip-tv-row--head { padding-top: 6px; padding-bottom: 8px; }
+.ip-tv-name { gap: 10px; }
+.ip-tv-table { padding: 0 10px 12px; margin: 0 -10px; }
+/* Section explainer above the table (desktop) / list (phone). */
+.ip-tv-about {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+}
+.ip-tv-about-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.ip-tv-about-title { font-size: 0.92rem; font-weight: 600; color: var(--color-text); margin-bottom: 3px; }
+.ip-tv-about-text { margin: 0; font-size: 0.82rem; line-height: 1.5; color: var(--color-text-muted); }
+.ip-cat-about {
+  margin: 10px 16px 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+}
+/* Explainer: plain text, smaller, no background. */
+.ip-tv-about { padding: 2px 0 4px; background: none; }
+.ip-tv-about-title { font-size: 0.85rem; }
+.ip-tv-about-text { font-size: 0.76rem; line-height: 1.45; }
+.ip-tv-about-icon { width: 28px; height: 28px; }
+.ip-cat-about { padding: 0; background: none; font-size: 0.78rem; line-height: 1.45; }
+.ip-tv-about-title { font-size: 0.8rem; margin-bottom: 2px; }
+.ip-tv-about-text { font-size: 0.7rem; line-height: 1.45; }
+.ip-tv-about-icon { width: 24px; height: 24px; }
+.ip-tv-about-icon svg { width: 15px; height: 15px; }
+.ip-cat-about { font-size: 0.72rem; }
+/* Explainer: icon inline with the title, everything left-aligned. */
+.ip-tv-about { display: block; text-align: left; }
+.ip-tv-about-title { display: flex; align-items: center; gap: 7px; }
+.ip-tv-about-title svg { flex-shrink: 0; }
+/* Explainer sits under the list. */
+.ip-tv-about { margin: 14px 0 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent); }
+.ip-tv-about-title { font-size: 0.88rem; }
+.ip-tv-about-title svg { width: 16px; height: 16px; }
+.ip-tv-about-text { font-size: 0.8rem; line-height: 1.5; }
+.ip-cat-about { font-size: 0.8rem; line-height: 1.5; }
+
+/* ── AI indicators ─────────────────────────────────────────────────────── */
+.ip-tv-side-ai { margin-top: 6px; color: #7c3aed; font-weight: 500; }
+.ip-tv-side-ai.active { background: color-mix(in srgb, #7c3aed 10%, transparent); }
+.ip-tv-side-ai-spark { width: 18px; text-align: center; font-size: 15px; }
+.ip-tv-build { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 0 20px; }
+.ip-build-mobile { padding: 12px 16px 24px; }
+.ip-cat--ai .ip-row-name { color: #7c3aed; }
+.ip-cat-ai-spark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  flex-shrink: 0;
+  font-size: 18px;
+  color: #7c3aed;
+}
+.ip-ai-new {
+  display: block;
+  margin: 4px 16px 8px;
+  padding: 10px 12px;
+  width: calc(100% - 32px);
+  border: 1px dashed color-mix(in srgb, #7c3aed 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #7c3aed 5%, transparent);
+  color: #7c3aed;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ip-ai-actions { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.ip-ai-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 6px;
+  background: color-mix(in srgb, #7c3aed 9%, transparent);
+  color: #7c3aed;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ip-ai-act--del { padding: 4px 6px; background: none; color: var(--color-text-muted); }
+.ip-ai-act--del:hover { color: var(--color-danger, #e11d48); background: color-mix(in srgb, var(--color-danger, #e11d48) 8%, transparent); }
+
+/* Builder */
+.aib { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+.aib-spark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 17px;
+}
+.aib-intro { display: flex; gap: 12px; align-items: flex-start; }
+.aib-intro-title { font-size: 0.98rem; font-weight: 600; color: var(--color-text); }
+.aib-intro-text { margin: 3px 0 0; font-size: 0.82rem; line-height: 1.45; color: var(--color-text-muted); }
+.aib-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.aib-example {
+  padding: 6px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+.aib-example:hover { border-color: color-mix(in srgb, #7c3aed 45%, var(--color-border)); color: #7c3aed; }
+.aib-input {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.aib-input:focus-within { border-color: color-mix(in srgb, #7c3aed 55%, var(--color-border)); box-shadow: 0 0 0 3px color-mix(in srgb, #7c3aed 12%, transparent); }
+.aib-input textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px; /* iOS: no zoom on focus */
+  line-height: 1.45;
+}
+@media (min-width: 901px) { .aib-input textarea { font-size: 0.9rem; } }
+.aib-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 10px 14px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.aib-quota { flex: 1; min-width: 0; font-size: 0.74rem; color: var(--color-text-muted); }
+.aib-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.aib-btn:disabled { opacity: 0.5; cursor: default; }
+.aib-btn--ghost { background: color-mix(in srgb, var(--color-text) 7%, transparent); color: var(--color-text); }
+.aib-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: aib-spin 0.7s linear infinite;
+}
+@keyframes aib-spin { to { transform: rotate(360deg); } }
+.aib-error { margin: 0; font-size: 0.82rem; color: var(--color-danger, #e11d48); }
+.aib-result {
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, #7c3aed 30%, var(--color-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, #7c3aed 4%, var(--color-surface));
+}
+.aib-result-head { display: flex; align-items: center; gap: 10px; }
+.aib-result-head .aib-spark { width: 28px; height: 28px; font-size: 14px; border-radius: 8px; }
+.aib-result-name { font-size: 0.98rem; font-weight: 600; color: var(--color-text); }
+.aib-result-tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+.aib-result-desc { margin: 8px 0 0; font-size: 0.84rem; line-height: 1.45; color: var(--color-text); }
+.aib-result-note { margin: 6px 0 0; font-size: 0.76rem; color: var(--color-success, #16a34a); }
+.ip-tv-side-item .ip-tv-side-ai-spark { flex: 0 0 18px; }
+/* Close button: icon dead-center in its square, square flush with the
+   dialog's right padding and centered on the title line. */
+.ip-tv-head { align-items: center; }
+.ip-mega-close {
+  padding: 0;
+  margin: 0 -6px 0 auto;
+  line-height: 0;
+  flex-shrink: 0;
+}
+.ip-mega-close svg { display: block; }

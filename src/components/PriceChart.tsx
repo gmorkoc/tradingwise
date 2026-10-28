@@ -46,6 +46,9 @@ import { CompactPriceView } from "./CompactPriceView";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { supabase } from "../services/supabase";
 import "../styles/PriceChart.css";
+import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
+import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
+import { getIndicatorDef } from "../services/customIndicators";
 
 export type TimeInterval =
   | "1sec"
@@ -268,7 +271,7 @@ const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
 // Live clock for the right end of the range bar ("14:01:15 (UTC-4)").
 // Its own component so the once-a-second tick only re-renders this span,
 // not the whole chart.
-function RangeBarClock() {
+export function RangeBarClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
@@ -1777,7 +1780,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs().showGrid ?? false));
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
-  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => readChartPrefs().chartStyle ?? "candle");
+  // Default style: Line on phones, candles on desktop (a saved choice wins).
+  const [chartStyle, setChartStyle] = useState<ChartStyle>(
+    () => readChartPrefs().chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line"),
+  );
   useEffect(() => {
     if (requestChartStyle && requestChartStyle !== chartStyle) setChartStyle(requestChartStyle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1913,6 +1919,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const fsDockFlat = !!pageMode && !isDesktopWidth;
   // Advance chart bottom bar: ƒx opens its own Indicators menu.
   const [indSheetOpen, setIndSheetOpen] = useState(false);
+  // Indicators list sheet, opened from the Chart tools sheet.
+  const [toolsIndOpen, setToolsIndOpen] = useState(false);
+  // Advance chart (mobile): the top-right Menu's dropdown (Reset / Save / Close).
+  const [advMenuOpen, setAdvMenuOpen] = useState(false);
   // Custom date range picker sits below the sheet — close the sheet so
   // it's visible when picked from the sheet's Date range row.
   useEffect(() => {
@@ -2210,6 +2220,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candleRef = useRef<any>(null);
+  // Shared indicator catalog (indicatorLibrary.ts) — same picker + drawing
+  // on every chart in the app. RSI/MACD stay on this chart's own panels.
+  const [libIndicators, toggleLibIndicator, clearLibIndicators] = useIndicatorSelection("price-chart");
   // Close-price line, used only when chartStyle === "line" — kept alive
   // (hidden) the rest of the time rather than swapped in/out, so toggling
   // styles never has to add/remove a series mid-session.
@@ -2231,6 +2244,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const srLineRefs = useRef<any[]>([]);
   const zoneLineRefs = useRef<any[]>([]);
   const lastCandlesRef = useRef<CandleDataPoint[]>([]);
+  useChartIndicators({
+    chart: chartRef.current,
+    mainSeries: candleRef.current,
+    getCandles: () => lastCandlesRef.current,
+    enabled: libIndicators,
+    isDark: !isLight,
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gannMarkersPluginRef = useRef<any>(null);
 
@@ -3912,6 +3932,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     rsiChartRef.current?.timeScale().fitContent();
     macdChartRef.current?.timeScale().fitContent();
   };
+  // Mobile toolbar "Reset": the whole chart back to its defaults — every
+  // indicator off (this chart's own + the shared catalog), no grid,
+  // Line style (the mobile default), normal auto-fit price scale, no date
+  // range — then fit the view.
+  const handleFullReset = () => {
+    setShowBB(false); setShowRSI(false); setShowMACD(false);
+    setShowEMA20(false); setShowEMA50(false); setShowEMA200(false);
+    setShowMA20(false); setShowMA50(false); setShowMA200(false);
+    setShowFib(false); setShowSR(false); setShowZones(false); setShowDayHL(false); setShowCME(false);
+    clearLibIndicators();
+    setShowGrid(false);
+    setChartStyle("line");
+    setScaleMode("normal");
+    setAutoScale(true);
+    setRangePreset(null);
+    setShowDepthProfile(false);
+    setShowCompactView(false);
+    requestAnimationFrame(() => {
+      chartRef.current?.priceScale("right").applyOptions({ autoScale: true });
+      handleResetView();
+    });
+  };
 
   const handleAskAgentReady = () => {
     const captured = captureChartDataUrl();
@@ -4149,6 +4191,40 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     { key: "rsi", label: t("chart.rsi14"), color: "#818cf8", checked: showRSI, onToggle: () => setShowRSI((v) => !v) },
     { key: "macd", label: t("chart.macd1269"), color: "#f97316", checked: showMACD, onToggle: () => setShowMACD((v) => !v) },
   ];
+  // This chart's own indicators, listed in the shared picker by category.
+  const BUILTIN_CATEGORY: Record<string, PickerItem["category"]> = {
+    bb: "Volatility", ema20: "Moving Averages", ema50: "Moving Averages", ema200: "Moving Averages",
+    ma20: "Moving Averages", ma50: "Moving Averages", ma200: "Moving Averages",
+    cme: "Levels & Zones", fib: "Levels & Zones", sr: "Levels & Zones", dayhl: "Levels & Zones", zones: "Levels & Zones",
+    rsi: "Momentum", macd: "Momentum",
+  };
+  const BUILTIN_DESC: Record<string, string> = {
+    bb: "20-period average with ±2 standard-deviation bands — squeezes and breakouts.",
+    ema20: "Fast exponential average — short-term trend and pullback support.",
+    ema50: "Medium-term exponential average — the trend most swing traders watch.",
+    ema200: "Long-term exponential average — bull vs bear market line.",
+    ma20: "Simple 20-period average of closes.",
+    ma50: "Simple 50-period average — medium-term trend.",
+    ma200: "Simple 200-period average — the classic long-term trend line.",
+    cme: "Price gaps left on CME Bitcoin futures over weekends — often get filled.",
+    fib: "Fibonacci retracement levels from the recent swing high and low.",
+    sr: "Key support and resistance levels detected from price history.",
+    dayhl: "Today's 24-hour high and low as lines on the chart.",
+    zones: "Highlighted areas where buyers or sellers have stepped in before.",
+    rsi: "Relative Strength Index in its own panel — over 70 overbought, under 30 oversold.",
+    macd: "MACD line, signal and histogram in their own panel.",
+  };
+  const pickerBuiltIn: PickerItem[] = fsQuickIndicators.map((ind) => ({
+    id: `pc-${ind.key}`,
+    name: ind.label,
+    description: BUILTIN_DESC[ind.key],
+    kind: ind.key === "rsi" || ind.key === "macd" ? "pane" : "overlay",
+    category: BUILTIN_CATEGORY[ind.key] ?? "Trend",
+    checked: ind.checked,
+    onToggle: ind.onToggle,
+    pro: ind.pro,
+    color: ind.color,
+  }));
 
   // Indicators toggle — icon button matches Order Depth/Save/Expand
   // (chart-legend-actions), same spot on desktop and mobile. Desktop opens
@@ -4164,6 +4240,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             const r = indicatorsBtnRef.current.getBoundingClientRect();
             setIndicatorsMenuPos({ top: r.bottom + 6, left: r.left });
           }
+          if (!isDesktopWidth) { setToolsIndOpen(true); return; }
           setMenuOpen((v) => !v);
         }}
         title={t("chart.indicators")}
@@ -4187,6 +4264,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="indicators-menu-backdrop" onClick={() => setMenuOpen(false)} />
             <div className="indicators-menu indicators-menu--portal" style={{ top: indicatorsMenuPos.top, left: indicatorsMenuPos.left }}>
               {indicatorsList}
+              <div className="indicators-menu-divider" />
+              <button type="button" className="indicators-menu-all" onClick={() => { setMenuOpen(false); setToolsIndOpen(true); }}>
+                All indicators{libIndicators.length ? ` · ${libIndicators.length} on` : ""} ›
+              </button>
             </div>
           </>,
           document.body,
@@ -4255,6 +4336,37 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // mounted underneath, just hidden).
   const [mobileView, setMobileView] = useState<"chart" | "orderbook" | "trades">("chart");
   const mobileTabs = useBarHeader && !isDesktopWidth;
+  // Mobile Trade chart: on page load, a ~2s hint in the middle of the chart
+  // that some tools only work in full screen. Shown once per load.
+  const [fsHint, setFsHint] = useState<"show" | "fade" | "gone">("gone");
+  const fsHintShownRef = useRef(false);
+  const fsHintTimersRef = useRef<number[]>([]);
+  useEffect(() => {
+    // Wait for the real chart (not the loading placeholder).
+    if (!mobileTabs || loading || fsHintShownRef.current) return;
+    fsHintShownRef.current = true;
+    setFsHint("show");
+    fsHintTimersRef.current = [
+      window.setTimeout(() => setFsHint("fade"), 2000),
+      window.setTimeout(() => setFsHint("gone"), 2400),
+    ];
+  }, [mobileTabs, loading]);
+  useEffect(() => () => { fsHintTimersRef.current.forEach((t) => window.clearTimeout(t)); }, []);
+  // Advance chart (mobile): on open, a short animation showing that a swipe
+  // from the left edge closes the page. Once per load.
+  const [swipeHint, setSwipeHint] = useState<"show" | "fade" | "gone">("gone");
+  const swipeHintShownRef = useRef(false);
+  const swipeHintTimersRef = useRef<number[]>([]);
+  useEffect(() => {
+    if (!pageMode || isDesktopWidth || loading || swipeHintShownRef.current) return;
+    swipeHintShownRef.current = true;
+    setSwipeHint("show");
+    swipeHintTimersRef.current = [
+      window.setTimeout(() => setSwipeHint("fade"), 2600),
+      window.setTimeout(() => setSwipeHint("gone"), 3000),
+    ];
+  }, [pageMode, isDesktopWidth, loading]);
+  useEffect(() => () => { swipeHintTimersRef.current.forEach((t) => window.clearTimeout(t)); }, []);
   // Stats-row scroll indicator (mobile): thumb size = visible share of
   // the row, position = how far it's scrolled.
   const barStatsRef = useRef<HTMLDivElement>(null);
@@ -4657,6 +4769,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </button>
       )}
       {gridStyleControls}
+      {isDesktopWidth && (
+        <button
+          type="button"
+          className={`chart-depth-btn chart-fx-btn${toolsIndOpen ? " chart-depth-btn--active" : ""}`}
+          onClick={() => setToolsIndOpen(true)}
+          title="Indicators"
+          data-tooltip="Indicators"
+          aria-label="Indicators"
+        >
+          <span className="chart-fx-glyph">ƒx</span>
+          {libIndicators.length + fsQuickIndicators.filter((i) => i.checked).length > 0 && (
+            <span className="chart-fx-count">{libIndicators.length + fsQuickIndicators.filter((i) => i.checked).length}</span>
+          )}
+        </button>
+      )}
       {isDesktopWidth && gridToggleButton}
       <button
         className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
@@ -4746,6 +4873,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             ))}
           </div>
+          {/* "Indicators" row → opens its own sheet with the list. */}
+          <button
+            type="button"
+            className="date-range-sheet-item cts-row"
+            onClick={() => { hapticTap(); setToolsSheetOpen(false); setToolsIndOpen(true); }}
+          >
+            <span className="cts-row-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg>
+            </span>
+            <span className="cts-row-text">
+              <span className="date-range-sheet-label">Indicators</span>
+              <span className="date-range-sheet-sub">
+                {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? `${on.length} on · ${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` : "None on"; })()}
+              </span>
+            </span>
+            <span className="cts-row-chev">›</span>
+          </button>
+          <div className="cts-section-label">Tools</div>
           <button
             type="button"
             className="date-range-sheet-item cts-row"
@@ -5134,6 +5279,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </span>
               <span className={`cts-switch${showGrid ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
             </button>
+            {/* Indicators: one row (like Grid) → the shared Indicators screen. */}
+            <button
+              type="button"
+              className="date-range-sheet-item cts-row"
+              onClick={() => { hapticTap(); setToolsIndOpen(true); }}
+            >
+              <span className="cts-row-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg>
+              </span>
+              <span className="cts-row-text">
+                <span className="date-range-sheet-label">Indicators</span>
+                <span className="date-range-sheet-sub">
+                  {(() => { const on = [...fsQuickIndicators.filter((i) => i.checked).map((i) => i.label), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? `${on.length} on · ${on.slice(0, 3).join(", ")}${on.length > 3 ? "…" : ""}` : "None on"; })()}
+                </span>
+              </span>
+              <span className="cts-row-chev">›</span>
+            </button>
           </div>
           ) : (
           <div className="fs-dock-category-body">
@@ -5164,7 +5326,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       </div>
       )}
 
-      {(!fsFocusedCategory || fsFocusedCategory === "indicators") && (
+      {!fsDockFlat && (!fsFocusedCategory || fsFocusedCategory === "indicators") && (
       <div className="fs-dock-category">
         <button type="button" className="fs-dock-category-header" onClick={() => { if (!fsDockFlat) toggleFsCategory("indicators"); }}>
           <span className="fs-dock-category-icon fs-dock-category-icon--indicators">
@@ -5773,7 +5935,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <button
               type="button"
               className={`fs-bar-btn fs-bar-icon${fsQuickIndicators.some((i) => i.checked) ? " fs-bar-btn--on" : ""}`}
-              onClick={(e) => { e.stopPropagation(); hapticTap(); setIndSheetOpen(true); }}
+              onClick={(e) => { e.stopPropagation(); hapticTap(); setToolsIndOpen(true); }}
               aria-label={t("chart.indicators", "Indicators")}
             >
               <span className="fs-bar-fx">ƒx</span>
@@ -5790,22 +5952,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
             </button>
-            <button
-              type="button"
-              className="fs-bar-btn fs-bar-icon"
-              onClick={(e) => { e.stopPropagation(); hapticTap(); handleScreenshot(); }}
-              aria-label={t("chart.save", "Save")}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
-            </button>
-            <button
-              type="button"
-              className="fs-bar-btn fs-bar-icon"
-              onClick={(e) => { e.stopPropagation(); hapticTap(); toggleFullscreen(); }}
-              aria-label="Exit fullscreen"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
-            </button>
+            {/* Save + Close live in the top-right Menu now. */}
           </div>
           <button
             type="button"
@@ -6152,20 +6299,21 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 price + change, a divider, then label-over-value stats. */}
             <div className={`chart-bar-header-wrap${mobileTabs ? " chart-bar-header-wrap--mobile" : ""}`}>
             <div className="chart-bar-header" ref={barStatsRef} onScroll={updateBarScroll}>
-              <div className="chart-bar-id">
+              <div
+                className="chart-bar-id chart-bar-id--tap"
+                role="button"
+                tabIndex={0}
+                aria-label="Change coin"
+                onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
+              >
           {/* Reference: Hyperliquid's market selector — coin icon, ticker +
               full name, price / 24h change / age underneath, and the picker
               as its own small button (mini icon + chevron) beside it. */}
           {/* Mobile: the whole coin block opens the coin picker (the
               separate picker button is hidden there). */}
-          <div
-            className={`chart-bar-coin${!isDesktopWidth ? " chart-bar-coin--tap" : ""}`}
-            role={!isDesktopWidth ? "button" : undefined}
-            tabIndex={!isDesktopWidth ? 0 : undefined}
-            aria-label={!isDesktopWidth ? "Change coin" : undefined}
-            onClick={!isDesktopWidth ? (e) => onOpenCoinPicker?.(e.currentTarget) : undefined}
-            onKeyDown={!isDesktopWidth ? (e) => { if (e.key === "Enter" || e.key === " ") onOpenCoinPicker?.(e.currentTarget); } : undefined}
-          >
+          {/* The whole block (.chart-bar-id) opens the coin picker. */}
+          <div className="chart-bar-coin chart-bar-coin--tap">
             {!heroLogoError ? (
               <img
                 className="chart-bar-coin-icon"
@@ -6186,7 +6334,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {/* Mobile: clear "this is a selector" cue on the name. */}
                 {!isDesktopWidth && (
                   <span className="chart-bar-coin-caret" aria-hidden="true">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                   </span>
                 )}
               </span>
@@ -6206,20 +6354,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
           </div>
           {isDesktopWidth && (
-          <button
-            type="button"
-            className="chart-bar-picker"
-            onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
-            aria-label="Change coin"
-            title="Change coin"
-          >
+          <span className="chart-bar-picker" aria-hidden="true">
             <span className="chart-bar-picker-icon" style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}>
               {COIN_GLYPHS[coin] ?? coin[0]}
             </span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9" />
             </svg>
-          </button>
+          </span>
           )}
         </div>
         <span className="chart-bar-divider" />
@@ -6289,21 +6431,32 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <OrderBook coin={coin} embedded view={mobileView} />
               </div>
             )}
-            <div className="chart-bar-toolbar">
+            <div className={`chart-bar-toolbar${isDesktopWidth ? "" : " chart-bar-toolbar--actions"}`}>
               {quickIntervalPills}
               <span className="chart-bar-toolbar-spacer" />
               {isDesktopWidth ? heroIconRow : showToolsButton}
               {!isDesktopWidth && (
-                <span className="chart-tool-pinned">
-                  {/* Fullscreen (icon only); Save image lives in Show Tools. */}
+                <span className="chart-tool-pinned ctb-actions">
+                  {/* Reset (icon + label) and Full chart (bigger icon only);
+                      Save image lives in Show Tools. */}
                   <button
                     type="button"
                     className="chart-depth-btn"
-                    onClick={toggleFullscreen}
-                    title={t("chart.fullscreen", "Fullscreen")}
-                    aria-label={t("chart.fullscreen", "Fullscreen")}
+                    onClick={() => { hapticTap(); handleFullReset(); }}
+                    title="Reset chart"
+                    aria-label="Reset chart"
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                    <span className="chart-tool-label">Reset</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="chart-depth-btn ctb-full"
+                    onClick={toggleFullscreen}
+                    title="Full chart"
+                    aria-label="Full chart"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
                     </svg>
                   </button>
@@ -6813,6 +6966,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }`}
           ref={dblClickWrapRef}
         >
+            {swipeHint !== "gone" && pageMode && !isDesktopWidth && (
+              <div className={`chart-swipe-hint${swipeHint === "fade" ? " chart-swipe-hint--out" : ""}`} aria-hidden="true">
+                <span className="chart-swipe-hint-edge" />
+                <span className="chart-swipe-hint-chev">
+                  {/* Hand gesture (thumb + index up, fingers folded) */}
+                  <svg width="30" height="30" viewBox="1 7 21 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5.5 26.5c-2.4-2.6-2.6-6.2-.8-9.2l3.4-5.6c.8-1.3 2.8-.6 2.5 1l-.9 3.6 5.2-6.8c.9-1.2 2.8-.2 2.2 1.2l-2.9 5.2" />
+                    <path d="M11.2 15.4l4.6-5.1c1-1.1 2.8 0 2.1 1.4l-3.6 5.6" />
+                    <path d="M13.6 18.2l4.2-3.4c1.1-.9 2.6.5 1.7 1.7l-3.8 4" />
+                    <path d="M15 21.1l3.6-2.9c1.1-.8 2.4.7 1.5 1.8l-3.4 3.3" />
+                    <path d="M5.5 26.5c2.6 2.6 6.6 3 9.6.9l2.7-2.5" />
+                  </svg>
+                </span>
+              </div>
+            )}
+            {fsHint !== "gone" && mobileTabs && (
+              <div className={`chart-fs-hint${fsHint === "fade" ? " chart-fs-hint--out" : ""}`} aria-live="polite">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                <span>Some features only work in full screen</span>
+              </div>
+            )}
             {/* "Compact" side of the Full/Compact switch above — covers
                 just this chart area (not the header/switch themselves,
                 both outside .chart-dblclick-wrap) instead of the old
@@ -7254,17 +7428,46 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
           )}
           {pageMode && !isDesktopWidth && (
+            /* Menu → Reset / Save / Close (sheet below). */
             <button
               type="button"
               className="chart-mobile-top-btn chart-mobile-top-reset"
-              onClick={() => { hapticTap(); handleResetView(); }}
+              onClick={() => { hapticTap(); setAdvMenuOpen((v) => !v); }}
+              aria-haspopup="menu"
+              aria-expanded={advMenuOpen}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-                <path d="M3 3v5h5" />
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
               </svg>
-              {t("chart.reset", "Reset")}
+              Menu
             </button>
+          )}
+          {pageMode && !isDesktopWidth && advMenuOpen && (
+            <>
+              {/* Tap outside closes it. */}
+              <div className="adv-menu-scrim" onClick={() => setAdvMenuOpen(false)} />
+              <div className="adv-menu" role="menu">
+                {([
+                  ["Reset Chart", () => handleResetView(), <><path key="a" d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path key="b" d="M3 3v5h5" /></>],
+                  ["Save", () => handleScreenshot(), <><path key="a" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle key="b" cx="12" cy="13" r="4" /></>],
+                  ["Close", () => toggleFullscreen(), <><line key="a" x1="18" y1="6" x2="6" y2="18" /><line key="b" x1="6" y1="6" x2="18" y2="18" /></>],
+                ] as const).map(([label, run, icon], i) => (
+                  <button
+                    key={label}
+                    type="button"
+                    role="menuitem"
+                    className="adv-menu-btn"
+                    data-i={i}
+                    onClick={() => { hapticTap(); setAdvMenuOpen(false); run(); }}
+                  >
+                    <span>{label}</span>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
           <PredictionOverlay
             chartRef={chartRef}
@@ -7446,6 +7649,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         )}
         {intervalSheetPortal}
         {toolsSheetPortal}
+        <IndicatorPicker
+          open={toolsIndOpen}
+          onClose={() => setToolsIndOpen(false)}
+          enabled={libIndicators}
+          onToggle={(id) => { hapticTap(); toggleLibIndicator(id); }}
+          builtIn={pickerBuiltIn}
+          hideIds={["rsi", "macd"]}
+          isPaid={isPaid}
+          onUpgrade={() => { setToolsIndOpen(false); onOpenUpgrade?.("pro"); }}
+        />
         {statsSheetOpen && (
           <BottomSheet open onClose={() => setStatsSheetOpen(false)} title={<>{coin} stats</>} ariaLabel={`${coin} stats`}>
               <div className="chart-stats-sheet chart-bar-stats">

@@ -7093,3 +7093,25 @@ html[data-theme="light"] .pticker-price {
     max-width: none;
   }
 }
+
+/* Left-edge swipe-back indicator (App.tsx): follows the finger, fills
+   in once the swipe is far enough to go back. */
+.back-swipe {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 200050;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  opacity: 0;
+  transform: translate(-60px, -50%);
+  pointer-events: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.back-swipe--ready { background: var(--action-green, #16a34a); color: #fff; }

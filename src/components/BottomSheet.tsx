@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import "../styles/BottomSheet.css";
 
@@ -17,17 +17,23 @@ interface Props {
   /** Extra class on the scrolling content area. */
   bodyClassName?: string;
   ariaLabel?: string;
+  /** Desktop (≥901px): a centered modal instead of a sheet. Phones keep the sheet. */
+  desktopModal?: boolean;
 }
 
-export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel }: Props) {
+export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number } | null>(null);
+  // Dragged up to full screen (phones). Resets each time it opens.
+  const [full, setFull] = useState(false);
+  useEffect(() => { if (!open) setFull(false); }, [open]);
   if (!open) return null;
 
-  // Drag the header down to dismiss — follows the finger 1:1 downward (a
-  // small rubber-band upward), closes past 90px. Only once the content is
-  // scrolled to the top, so it never fights the content's own scroll.
+  // Drag the header: up past 60px → full screen; down past 90px → back to
+  // normal height from full screen, or close from normal. Follows the
+  // finger 1:1 down, with a rubber band up. Downward drags only count once
+  // the content is scrolled to the top, so they never fight its scroll.
   const onTouchStart = (e: React.TouchEvent) => {
     dragRef.current = { startY: e.touches[0].clientY };
     if (sheetRef.current) sheetRef.current.style.transition = "none";
@@ -38,7 +44,7 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
     if (!drag || !sheet) return;
     const dy = e.touches[0].clientY - drag.startY;
     if (dy > 0 && (scrollRef.current?.scrollTop ?? 0) > 0) return;
-    sheet.style.transform = `translateY(${dy > 0 ? dy : Math.max(dy / 3, -40)}px)`;
+    sheet.style.transform = `translateY(${dy > 0 ? dy : full ? Math.max(dy / 4, -20) : Math.max(dy / 2, -70)}px)`;
   };
   const onTouchEnd = (e: React.TouchEvent) => {
     const drag = dragRef.current;
@@ -48,14 +54,15 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
     const dy = e.changedTouches[0].clientY - drag.startY;
     sheet.style.transition = "";
     sheet.style.transform = "";
-    if (dy > 90) onClose();
+    if (dy < -60 && !full) setFull(true);
+    else if (dy > 90) { if (full) setFull(false); else onClose(); }
   };
 
   return ReactDOM.createPortal(
-    <div className="bs-backdrop" onClick={onClose}>
+    <div className={`bs-backdrop${desktopModal ? " bs-backdrop--modal" : ""}`} onClick={onClose}>
       <div
         ref={sheetRef}
-        className={`bs-sheet${className ? ` ${className}` : ""}`}
+        className={`bs-sheet${full ? " bs-sheet--full" : ""}${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
         onClick={(e) => e.stopPropagation()}

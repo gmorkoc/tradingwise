@@ -20,6 +20,9 @@ export function usePullToRefresh(
 
   const pullDistanceRef = useRef(0);
   const startYRef = useRef<number | null>(null);
+  const startXRef = useRef(0);
+  // Decided on the first real movement: is this a vertical pull at all?
+  const axisRef = useRef<"pending" | "pull" | "other">("pending");
   const pullingRef = useRef(false);
   const refreshingRef = useRef(false);
   const onRefreshRef = useRef(onRefresh);
@@ -44,13 +47,26 @@ export function usePullToRefresh(
         return;
       }
       startYRef.current = e.touches[0].clientY;
+      startXRef.current = e.touches[0].clientX;
+      axisRef.current = "pending";
       pullingRef.current = true;
-      setDragging(true);
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!pullingRef.current || startYRef.current === null) return;
       const delta = e.touches[0].clientY - startYRef.current;
+      const dx = Math.abs(e.touches[0].clientX - startXRef.current);
+      // A sideways swipe (carousels, chips, charts) is never a pull —
+      // bail out before preventDefault so it scrolls normally.
+      if (axisRef.current === "pending") {
+        if (dx < 6 && Math.abs(delta) < 6) return;
+        axisRef.current = dx > Math.abs(delta) ? "other" : "pull";
+        if (axisRef.current === "other") {
+          pullingRef.current = false;
+          return;
+        }
+        setDragging(true);
+      }
       if (delta <= 0 || el.scrollTop > 0) {
         pullingRef.current = false;
         setDragging(false);

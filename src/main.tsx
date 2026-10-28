@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar } from '@capacitor/status-bar'
 import { initKeyboardAvoidance } from './utils/keyboardAvoidance'
+import { installInAppLinks } from './utils/externalLinks'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import App from './App.tsx'
 import './index.css'
@@ -20,6 +21,9 @@ window.addEventListener('unhandledrejection', (e) => {
   // eslint-disable-next-line no-console
   console.error('[unhandledrejection]', e.reason);
 });
+
+// iPhone app: external links open in the in-app browser, not Safari.
+installInAppLinks();
 
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';

@@ -1599,6 +1599,19 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     return () => window.removeEventListener("open-trading-agent-with-image", onOpenWithImage);
   }, [canUseAgent, onAgentLocked, handleSend]);
 
+  // Markets page question pills ("Why is the market up today?" …): open
+  // the panel and send that question right away.
+  useEffect(() => {
+    const onOpenWithPrompt = (e: Event) => {
+      if (!canUseAgent) { onAgentLocked?.(); return; }
+      const prompt = (e as CustomEvent<{ prompt?: string }>).detail?.prompt;
+      setOpen(true);
+      if (prompt) handleSend(prompt);
+    };
+    window.addEventListener("open-trading-agent-with-prompt", onOpenWithPrompt);
+    return () => window.removeEventListener("open-trading-agent-with-prompt", onOpenWithPrompt);
+  }, [canUseAgent, onAgentLocked, handleSend]);
+
   // Set right before stopping for an explicit Cancel (see handleMicCancel)
   // — the "listeningState: stopped" listener below fires either way (a
   // manual stop and a cancel both end the same native session the same

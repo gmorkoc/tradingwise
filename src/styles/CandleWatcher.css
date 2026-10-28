@@ -4562,3 +4562,270 @@ body.cw-chart-fullscreen-active .fnb-bar {
   .cw-left-top-row { padding-left: 0; }
   .cw-left > .cw-pills { padding-left: 0; }
 }
+
+/* Mobile: indicator pills as the Trade header's stat strip (label over
+   value, hairline dividers), scrolling sideways with a faded end. */
+@media (max-width: 900px) {
+  .cw-left > .cw-pills-stats {
+    padding: 8px 0 10px;
+    border-bottom: 1px solid var(--color-border);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+    padding-right: 28px;
+  }
+  .cw-pills-stats .chart-bar-stat-value.cw-stat-warn { color: #f59e0b; }
+}
+
+/* Phones: stat strip and interval bar share one width (edge to edge,
+   like the chart) and one 16px text inset, so the borders line up. */
+@media (max-width: 640px) {
+  .cw-left > .cw-pills-stats {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+  }
+  .cw-left > .cw-mbar {
+    margin-top: -10px; /* no column gap: the two bars stack border to border */
+    padding: 8px 12px 8px 14px;
+  }
+}
+
+/* Phones/tablets: a taller chart box (the chart sizes itself to it). */
+@media (max-width: 900px) {
+  .cw-chart-dblclick-wrap:not(.cw-chart-dblclick-wrap--fullscreen) .cw-chart-wrap {
+    height: clamp(360px, 54vh, 520px);
+  }
+}
+
+/* Mobile stat strip: label on top, value with a tiny ring gauge (RSI,
+   BB%, VOL — fill = level, color = signal), */
+@media (max-width: 900px) {
+  .cw-pills-stats .cw-stat { --cw-tone: var(--color-text-muted); }
+  .cw-pills-stats .cw-stat--bull { --cw-tone: var(--color-success, #16a34a); }
+  .cw-pills-stats .cw-stat--bear { --cw-tone: var(--color-danger, #e11d48); }
+  .cw-pills-stats .cw-stat--warn { --cw-tone: #f59e0b; }
+  .cw-pills-stats .chart-bar-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .cw-pills-stats .chart-bar-stat-value {
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .cw-stat-ring { flex-shrink: 0; transform: rotate(-90deg); }
+  .cw-stat-ring-track {
+    fill: none;
+    stroke: color-mix(in srgb, var(--color-text) 10%, transparent);
+    stroke-width: 3;
+  }
+  .cw-stat-ring-fill {
+    fill: none;
+    stroke: var(--cw-tone);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.4s ease;
+  }
+}
+
+
+/* Phones: a vertical swipe over the chart scrolls the page natively
+   (same as the Trade chart). Horizontal pan and pinch-zoom stay with the
+   chart; it never claims vertical drags (vertTouchDrag off on phones).
+   Drawing mode and fullscreen keep the chart's full touch control. */
+@media (max-width: 900px) {
+  /* Also with drawing tools showing: the drawing canvas only takes touches
+     while a tool is picked (pointer-events none in cursor mode). */
+  .cw-chart-dblclick-wrap:not(.cw-chart-dblclick-wrap--fullscreen) .cw-chart-wrap {
+    touch-action: pan-y;
+  }
+}
+/* Desktop ƒx menu: link to the shared indicator picker. */
+.cw-tb-menu-all { color: var(--color-primary) !important; font-weight: 600; border-top: 1px solid var(--color-border); margin-top: 4px; }
+
+/* Desktop: the price/OHLC line stays at the chart's left edge even with
+   drawing tools on — their rail starts below it (topOffset), so no clash. */
+@media (min-width: 901px) {
+  .cw-chart-wrap--draw .cw-ohlc-overlay { left: 12px; }
+}
+
+/* 1200–1512px screens: a narrower right panel (max 360px, even if it was
+   dragged wider) so the chart keeps most of the width. */
+@media (min-width: 1200px) and (max-width: 1512px) {
+  .cw-grid:not(.cw-grid--panel-collapsed) {
+    grid-template-columns: minmax(0, 1fr) 6px min(var(--cw-sidebar-w, 440px), 360px) !important;
+  }
+}
+
+/* ── Daily close banner (redesign) ─────────────────────────────────────
+   Clean card in the app's current style: trend icon, "Daily close ·
+   Bullish +1.70%", one-line read, and an O/H/L/C/Range stat strip (label
+   over value, hairline dividers — same as the indicator strip). */
+.cw-daily-banner.cw-daily-banner {
+  --db: var(--color-success, #16a34a);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--db);
+  border-radius: 12px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--db) 7%, var(--color-surface)), var(--color-surface) 60%);
+  box-shadow: none;
+}
+.cw-daily-banner.cw-daily-banner--bearish { --db: var(--color-danger, #e11d48); }
+.cw-db-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--db);
+  background: color-mix(in srgb, var(--db) 12%, transparent);
+}
+.cw-db-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cw-db-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cw-db-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.cw-db-dir { font-size: 0.95rem; font-weight: 700; color: var(--db); }
+.cw-db-pct {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--db);
+  background: color-mix(in srgb, var(--db) 12%, transparent);
+}
+.cw-db-insight {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+.cw-db-stats { display: flex; flex-shrink: 0; }
+.cw-db-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 14px;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+.cw-db-stat:first-child { border-left: none; }
+.cw-db-stat span { font-size: 0.7rem; font-weight: 500; color: var(--color-text-muted); }
+.cw-db-stat strong {
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.cw-db-stat strong.up { color: var(--color-success, #16a34a); }
+.cw-db-stat strong.down { color: var(--color-danger, #e11d48); }
+.cw-db-close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.cw-db-close:hover { background: color-mix(in srgb, var(--color-text) 6%, transparent); color: var(--color-text); }
+/* Narrower screens: stats wrap under the text. */
+@media (max-width: 1100px) {
+  .cw-daily-banner.cw-daily-banner { flex-wrap: wrap; align-items: flex-start; }
+  .cw-db-main { flex-basis: calc(100% - 100px); }
+  .cw-db-stats { order: 3; width: 100%; padding-left: 48px; overflow-x: auto; scrollbar-width: none; }
+  .cw-db-stats::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 640px) {
+  .cw-daily-banner.cw-daily-banner { margin: 0 0 12px; border-radius: 10px; }
+  .cw-db-stats { padding-left: 0; }
+  .cw-db-stat:first-child { padding-left: 0; }
+}
+
+/* Dark theme: the AI tab's empty state was near-black (#161b24 → #0e1218).
+   Lighter, in the app's navy family, with brighter tiles — all widths. */
+html:not([data-theme="light"]) .cw-right-panel.cw-right-panel--ai-hero {
+  background:
+    radial-gradient(140% 45% at 50% 0%, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0) 70%),
+    linear-gradient(180deg, #1c2638 0%, #18213a 45%, #141c2e 100%);
+}
+html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile-skel {
+  background: rgba(255, 255, 255, 0.1);
+}
+/* AI empty state: "Run AI analysis" spans the full width of the tiles. */
+.cw-ai-start .cw-ai-start-btn {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+}
+.cw-ai-start .cw-ai-start-btn { margin-top: 10px; }
+
+/* ── AI prediction "Analyzing…" overlay: light theme ─────────────────── */
+html[data-theme="light"] .cw-ai-overlay {
+  background: rgba(241, 245, 249, 0.72);
+}
+html[data-theme="light"] .cw-ai-overlay-card {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(37, 99, 235, 0.16);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(15, 23, 42, 0.04), 0 0 60px rgba(79, 70, 229, 0.08);
+}
+html[data-theme="light"] .cw-ai-overlay-star { color: #2563eb; }
+html[data-theme="light"] .cw-ai-overlay-heading { color: #0f172a; }
+html[data-theme="light"] .cw-ai-overlay-sub { color: #64748b; }
+html[data-theme="light"] .cw-ai-overlay-stage {
+  border-top-color: rgba(15, 23, 42, 0.07);
+  border-bottom-color: rgba(15, 23, 42, 0.07);
+}
+html[data-theme="light"] .cw-ai-overlay-stage-label { color: #64748b; }
+/* Default value color (rows without their own color). */
+html[data-theme="light"] .cw-ai-overlay-stage-value { color: #0f172a; }
+html[data-theme="light"] .cw-ai-overlay-chip {
+  color: #64748b;
+  border-color: rgba(15, 23, 42, 0.1);
+  background: #f8fafc;
+}
+html[data-theme="light"] .cw-ai-overlay-chip--done {
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.3);
+  background: rgba(22, 163, 74, 0.07);
+}
+html[data-theme="light"] .cw-ai-overlay-chip--active {
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.45);
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+html[data-theme="light"] .cw-ai-overlay-bar { background: rgba(15, 23, 42, 0.07); }
+html[data-theme="light"] .cw-ai-overlay-close { color: rgba(15, 23, 42, 0.35); }
+html[data-theme="light"] .cw-ai-overlay-close:hover { color: #dc2626; }
+/* Spinning ring around the ✦: the mask's circle was sized to the box's
+   far corner, so the visible band fell outside the rounded edge and the
+   ring never showed. closest-side keeps it on the edge. */
+.cw-ai-overlay-ring {
+  mask: radial-gradient(circle closest-side, transparent 82%, #000 86%);
+  -webkit-mask: radial-gradient(circle closest-side, transparent 82%, #000 86%);
+}

@@ -11,8 +11,11 @@ import { BlurGate } from "./MembershipGate";
 import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
 import { MMNarrationFeed, MMFeedEntry } from "./MMNarrationFeed";
-import { COIN_COLORS, COIN_GLYPHS } from "./PriceChart";
+import { COIN_COLORS, COIN_GLYPHS, RangeBarClock } from "./PriceChart";
 import { BottomSheet } from "./BottomSheet";
+import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
+import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
+import { getIndicatorDef } from "../services/customIndicators";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { ChartDrawingTools, Drawing } from "./ChartDrawingTools";
 import "../styles/CandleWatcher.css";
@@ -38,6 +41,8 @@ type Interval = { label: string; value: string; refresh: number; limit: number; 
 
 interface Indicators {
   rsi: number | null;
+  stochK: number | null;         // Stochastic RSI %K (0–100)
+  stochD: number | null;         // Stochastic RSI %D (0–100)
   macdLine: number | null;
   macdSignal: number | null;
   macdHist: number | null;
@@ -106,6 +111,21 @@ const INTERVALS: Interval[] = [
     },
   },
 ];
+
+// Mobile toolbar: quick intervals shown inline (the rest via ⌄), like the
+// Trade page chart. Labels match it: minutes lowercase, the rest upper.
+const CW_QUICK_IVS = ["15m", "1h", "4h", "1d"];
+const cwIvShort = (l: string) => (l.endsWith("m") && l !== "1M" ? l : l.toUpperCase());
+const CW_RANGES = [["1D", "1 day", 86400], ["1W", "1 week", 7 * 86400], ["1M", "1 month", 30 * 86400], ["3M", "3 months", 90 * 86400], ["1Y", "1 year", 365 * 86400], [null, "Default view", null]] as const;
+const CW_LAYERS = [
+  ["ema", "EMA 20 / 50", "#38bdf8"],
+  ["bb", "Bollinger Bands", "#6366f1"],
+  ["volume", "Volume", "#94a3b8"],
+  ["ict", "Smart Money levels (OB, FVG, BOS)", "#ef4444"],
+  ["retests", "Retests", "#22c55e"],
+  ["patterns", "Candle patterns & Wyckoff", "#f59e0b"],
+  ["divergence", "RSI divergences", "#a855f7"],
+] as const;
 
 function fmtCountdown(sec: number): string {
   if (sec <= 0) return "closing…";
@@ -305,6 +325,23 @@ function calcSR(candles: CandleDataPoint[], lookback = 5): { support: number[]; 
   return { support: s, resistance: r };
 }
 
+// Stochastic RSI (14, 14, 3, 3): where RSI sits in its own 14-bar range,
+// smoothed — %K = 3-bar average of that, %D = 3-bar average of %K.
+function calcStochRSI(candles: CandleDataPoint[]): { k: number | null; d: number | null } {
+  const rsi = calcRSIArray(candles).filter((v): v is number => v != null);
+  const raw: number[] = [];
+  for (let i = 13; i < rsi.length; i++) {
+    const win = rsi.slice(i - 13, i + 1);
+    const lo = Math.min(...win);
+    const hi = Math.max(...win);
+    raw.push(hi === lo ? 50 : ((rsi[i] - lo) / (hi - lo)) * 100);
+  }
+  const sma3 = (a: number[]) => a.slice(2).map((_, i) => (a[i] + a[i + 1] + a[i + 2]) / 3);
+  const k = sma3(raw);
+  const d = sma3(k);
+  return { k: k.length ? k[k.length - 1] : null, d: d.length ? d[d.length - 1] : null };
+}
+
 function buildIndicators(candles: CandleDataPoint[]): Indicators {
   const closes = candles.map(c => c.close);
   const ema20arr  = calcEMA(closes, 20);
@@ -313,8 +350,11 @@ function buildIndicators(candles: CandleDataPoint[]): Indicators {
   const bb = calcBB(candles);
   const macd = calcMACD(candles);
   const { support, resistance } = calcSR(candles);
+  const stoch = calcStochRSI(candles);
   return {
     rsi:        calcRSI(candles),
+    stochK:     stoch.k,
+    stochD:     stoch.d,
     macdLine:   macd.line,
     macdSignal: macd.signal,
     macdHist:   macd.hist,
@@ -1896,11 +1936,46 @@ function CandleTapeRow({ candle, prev1, prev2, isLast, isNew }: {
 
 function IndicatorPill({
   label, value, status,
-}: { label: string; value: string; status: "bull" | "bear" | "neutral" | "warn" }) {
+}: { label: string; value: string; status: "bull" | "bear" | "neutral" | "warn"; meter?: number }) {
   return (
     <div className={`cw-pill cw-pill--${status}`}>
       <span className="cw-pill-label">{label}</span>
       <span className="cw-pill-value">{value}</span>
+    </div>
+  );
+}
+
+// Mobile: the same label-over-value stat as the Trade page header
+// (.chart-bar-stat), colored by status instead of a pill background.
+// meter (0–1): a tiny ring gauge before the value (RSI, BB%, volume);
+// Mobile strip spells most indicators out (RSI / MACD / ATR / EMA stay short).
+const CW_STAT_NAMES: Record<string, string> = {
+  "BB%": "Bollinger Position",
+  VOL: "Volume",
+  EMA20: "20 EMA",
+  EMA50: "50 EMA",
+  Elliott: "Elliott Wave",
+};
+function IndicatorStat({
+  label, value, status, meter,
+}: { label: string; value: string; status: "bull" | "bear" | "neutral" | "warn"; meter?: number }) {
+  const tone = status === "bull" ? " up" : status === "bear" ? " down" : status === "warn" ? " cw-stat-warn" : "";
+  return (
+    <div className={`chart-bar-stat cw-stat cw-stat--${status}`}>
+      <span className="chart-bar-stat-label">{CW_STAT_NAMES[label] ?? label}</span>
+      <span className={`chart-bar-stat-value${tone}`}>
+        {meter != null && (
+          <svg className="cw-stat-ring" width="16" height="16" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="8" className="cw-stat-ring-track" />
+            <circle
+              cx="10" cy="10" r="8" className="cw-stat-ring-fill"
+              pathLength={100}
+              strokeDasharray={`${Math.round(Math.max(0.03, Math.min(1, meter)) * 100)} 100`}
+            />
+          </svg>
+        )}
+        {value}
+      </span>
     </div>
   );
 }
@@ -2040,12 +2115,14 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const saved = Number(localStorage.getItem("cwSidebarWidth"));
     return saved >= 300 && saved <= 720 ? saved : 440;
   });
-  // Desktop starts with the panel hidden (icon rail) — new key so everyone
-  // gets that default once; mobile keeps its old saved state.
-  const cwPanelKey = window.matchMedia("(min-width: 901px)").matches ? "cwRightPanelCollapsedV2" : "cwRightPanelCollapsed";
+  // Desktop starts with the panel open (Overview / AI / Elliott / Live
+  // Tape) — new key so everyone gets that default once, even if the old
+  // "starts hidden" default was saved; hiding it is remembered from here.
+  // Mobile keeps its old saved state.
+  const cwPanelKey = window.matchMedia("(min-width: 901px)").matches ? "cwRightPanelCollapsedV3" : "cwRightPanelCollapsed";
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
     const saved = localStorage.getItem(cwPanelKey);
-    return saved === null ? cwPanelKey === "cwRightPanelCollapsedV2" : saved === "1";
+    return saved === null ? false : saved === "1";
   });
   useEffect(() => {
     localStorage.setItem(cwPanelKey, rightPanelCollapsed ? "1" : "0");
@@ -2090,8 +2167,18 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   }, [cwPrefs]);
   const cwLayersRef = useRef(cwPrefs.layers);
   cwLayersRef.current = cwPrefs.layers;
-  const [cwMenu, setCwMenu] = useState<null | "interval" | "style" | "layers" | "range">(null);
-  const [cwDrawOn, setCwDrawOn] = useState(false);
+  const [cwMenu, setCwMenu] = useState<null | "interval" | "style" | "layers" | "range" | "tools" | "indicators">(null);
+  // Drawing tools: shown by default on desktop (hiding them is remembered);
+  // off by default on phones, where they'd cover the chart.
+  const cwDrawDesktop = () => window.matchMedia("(min-width: 901px)").matches;
+  const [cwDrawOn, setCwDrawOn] = useState(() => {
+    if (!cwDrawDesktop()) return false;
+    try { return localStorage.getItem("cwDrawOnV1") !== "0"; } catch { return true; }
+  });
+  useEffect(() => {
+    if (!cwDrawDesktop()) return;
+    try { localStorage.setItem("cwDrawOnV1", cwDrawOn ? "1" : "0"); } catch { /* ignore */ }
+  }, [cwDrawOn]);
   // Date range (desktop toolbar): kept across interval changes while it
   // fits that candle size; loads as much history as it needs.
   const [cwRange, setCwRange] = useState<{ label: string; secs: number } | null>(null);
@@ -2125,6 +2212,16 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
   const interval = INTERVALS[intervalIdx];
   const isDark   = theme === "dark";
+  // Shared indicator catalog (indicatorLibrary.ts) — same picker + drawing
+  // as every other chart in the app, on top of this page's own layers.
+  const [libIndicators, toggleLibIndicator] = useIndicatorSelection("candle-watcher");
+  useChartIndicators({
+    chart: chartRef.current,
+    mainSeries: candleSeriesRef.current,
+    getCandles: () => candlesRef.current,
+    enabled: libIndicators,
+    isDark,
+  });
 
   // ── Build chart ─────────────────────────────────────────────────────────────
 
@@ -2145,11 +2242,23 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       // lockVisibleTimeRangeOnResize: hiding/showing the side panel stretches
       // the same candles to the new width instead of revealing empty space.
       timeScale: { borderColor: isDark ? "#1e293b" : "#e2e8f0", timeVisible: true, secondsVisible: false, lockVisibleTimeRangeOnResize: true },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      // Phones: a vertical swipe scrolls the page, not the chart (the
+      // chart still pans sideways, pinch-zooms, and the price axis
+      // drags to stretch). Desktop keeps free vertical panning.
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: cwDesktopRef.current },
       handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
       width:  chartContainerRef.current.clientWidth,
-      height: 460,
+      // Always the container's real height — a fixed 460 inside a shorter
+      // container cut off the lower candles, volume and time axis.
+      height: chartContainerRef.current.clientHeight || 460,
     });
+    if (!cwDesktopRef.current) {
+      // Phones: candles centered between the OHLC legend (top) and the
+      // volume bars (bottom) instead of running under either; a few
+      // empty bars on the right so the last candle isn't against the axis.
+      chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.16, bottom: 0.12 } });
+      chart.applyOptions({ timeScale: { rightOffset: 4, barSpacing: 7 } });
+    }
 
     // Transparent — RoundedCandleOverlay (rendered in the JSX below) paints
     // the visible rounded-corner bodies/wicks on its own canvas instead.
@@ -2215,9 +2324,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     const ro = new ResizeObserver(() => {
       const el = chartContainerRef.current;
       if (!el) return;
-      // Desktop terminal layout: the chart fills its (flex) container's
-      // height too. Mobile keeps the fixed 460 set at creation.
-      if (cwDesktopRef.current && !el.closest(".cw-chart-dblclick-wrap--fullscreen") && el.clientHeight > 0) {
+      // The chart fills its container's height (desktop flex column,
+      // phone fixed-height box). Fullscreen sizes itself separately.
+      if (!el.closest(".cw-chart-dblclick-wrap--fullscreen") && el.clientHeight > 0) {
         chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
       } else {
         chart.applyOptions({ width: el.clientWidth });
@@ -2251,7 +2360,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     if (!chartRef.current) return;
     const h = chartContainerRef.current?.clientHeight ?? 0;
     chartRef.current.applyOptions({
-      height: isChartFullscreen ? window.innerHeight - 64 : (cwDesktop && h > 0 ? h : 460),
+      height: isChartFullscreen ? window.innerHeight - 64 : (h > 0 ? h : 460),
     });
   }, [isChartFullscreen, cwDesktop]);
 
@@ -2300,7 +2409,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   useEffect(() => {
     if (!cwMenu) return;
     const close = (e: MouseEvent) => {
-      if (!(e.target as Element).closest?.(".cw-tb-menu-wrap, .cw-tb-sheet")) setCwMenu(null);
+      if (!(e.target as Element).closest?.(".cw-tb-menu-wrap, .cw-tb-sheet, .ip-sheet")) setCwMenu(null);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
@@ -3192,7 +3301,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       const w = chartContainerRef.current.clientWidth;
       const h = chartContainerRef.current.clientHeight;
       if (w > 0) {
-        chartRef.current.resize(w, cwDesktopRef.current && h > 0 ? h : 460);
+        chartRef.current.resize(w, h > 0 ? h : 460);
         chartRef.current.timeScale().fitContent();
       }
     });
@@ -3707,51 +3816,76 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       </div>
     </>
   );
+  // Mobile "Show Tools" sheet row — same markup as the Trade page's.
+  const cwToolRow = (label: string, sub: string | null, on: boolean, onClick: () => void, icon: React.ReactNode, key?: string) => (
+    <button key={key} type="button" className="date-range-sheet-item cts-row" role="switch" aria-checked={on} onClick={onClick}>
+      <span className="cts-row-icon">{icon}</span>
+      <span className="cts-row-text">
+        <span className="date-range-sheet-label">{label}</span>
+        {sub && <span className="date-range-sheet-sub">{sub}</span>}
+      </span>
+      <span className={`cts-switch${on ? " cts-switch--on" : ""}`} aria-hidden="true"><i /></span>
+    </button>
+  );
+  const Pill = cwDesktop ? IndicatorPill : IndicatorStat;
   const pillsEl = (
     <>
       {ind && (
-        <div className="cw-pills">
-          <IndicatorPill
+        <div className={cwDesktop ? "cw-pills" : "chart-bar-stats cw-pills-stats"}>
+          <Pill
             label="RSI"
             value={ind.rsi != null ? ind.rsi.toFixed(1) : "—"}
             status={rsiStatus()}
+            meter={ind.rsi != null ? ind.rsi / 100 : undefined}
           />
-          <IndicatorPill
+          <Pill
+            label="Stoch RSI"
+            value={ind.stochK != null ? ind.stochK.toFixed(0) : "—"}
+            status={ind.stochK == null ? "neutral"
+              : ind.stochK >= 80 ? "warn"
+              : ind.stochK <= 20 ? "bull"
+              : ind.stochD != null && ind.stochK > ind.stochD ? "bull"
+              : ind.stochD != null && ind.stochK < ind.stochD ? "bear" : "neutral"}
+            meter={ind.stochK != null ? ind.stochK / 100 : undefined}
+          />
+          <Pill
             label="MACD"
             value={ind.macdHist != null ? (ind.macdHist > 0 ? "+" : "") + ind.macdHist.toFixed(3) : "—"}
             status={macdStatus()}
           />
-          <IndicatorPill
+          <Pill
             label="BB%"
             value={ind.bbPct != null ? (ind.bbPct * 100).toFixed(0) + "%" : "—"}
             status={bbStatus()}
+            meter={ind.bbPct != null ? ind.bbPct : undefined}
           />
-          <IndicatorPill
+          <Pill
             label="VOL"
             value={ind.volRatio != null ? ind.volRatio.toFixed(2) + "×" : "—"}
             status={volStatus()}
+            meter={ind.volRatio != null ? ind.volRatio / 3 : undefined}
           />
-          <IndicatorPill
+          <Pill
             label="EMA20"
             value={ind.ema20 != null && lastPrice != null
               ? lastPrice > ind.ema20 ? "↑ Above" : "↓ Below"
               : "—"}
             status={ind.ema20 != null && lastPrice != null ? (lastPrice > ind.ema20 ? "bull" : "bear") : "neutral"}
           />
-          <IndicatorPill
+          <Pill
             label="EMA50"
             value={ind.ema50 != null && lastPrice != null
               ? lastPrice > ind.ema50 ? "↑ Above" : "↓ Below"
               : "—"}
             status={ind.ema50 != null && lastPrice != null ? (lastPrice > ind.ema50 ? "bull" : "bear") : "neutral"}
           />
-          <IndicatorPill
+          <Pill
             label="ATR"
             value={ind.atr != null ? "$" + ind.atr.toFixed(0) : "—"}
             status="neutral"
           />
           {wyckoff && (
-            <IndicatorPill
+            <Pill
               label="Wyckoff"
               value={wyckoff.phase}
               status={
@@ -3761,7 +3895,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             />
           )}
           {elliottResult && elliottResult.pattern !== "none" && (
-            <IndicatorPill
+            <Pill
               label="Elliott"
               value={`${elliottResult.pattern === "impulse" ? "W" : "Corr"} ${elliottResult.currentWave}`}
               status={elliottResult.direction === "bullish" ? "bull" : elliottResult.direction === "bearish" ? "bear" : "neutral"}
@@ -3821,7 +3955,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   );
 
   return (
-    <BlurGate requiredTier="pro" featureName="Inside the Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
+    <BlurGate requiredTier="pro" featureName="Inside the AI Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
       <div className="cw-page">
 
         {/* ── AI Scan Overlay ── */}
@@ -4201,41 +4335,48 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
         })()}
 
         {/* ── Daily close banner ── */}
-        {dailyCloseBanner && !dailyCloseBanner.dismissed && (
-          <div className={`cw-daily-banner cw-daily-banner--${dailyCloseBanner.direction}`}>
-            <div className="cw-daily-banner-icon">
-              {dailyCloseBanner.direction === "bullish" ? "📈" : "📉"}
+        {dailyCloseBanner && !dailyCloseBanner.dismissed && (() => {
+          const b = dailyCloseBanner;
+          const up = b.direction === "bullish";
+          const fmt = (v: number) => `$${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+          const rangePct = b.low > 0 ? ((b.high - b.low) / b.low) * 100 : 0;
+          return (
+            <div className={`cw-daily-banner cw-daily-banner--${b.direction}`}>
+              <span className="cw-db-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  {up ? <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></> : <><path d="M3 7l6 6 4-4 8 8" /><path d="M15 17h6v-6" /></>}
+                </svg>
+              </span>
+              <div className="cw-db-main">
+                <div className="cw-db-title">
+                  <span className="cw-db-eyebrow">Daily close</span>
+                  <span className="cw-db-dir">{up ? "Bullish" : "Bearish"}</span>
+                  <span className="cw-db-pct">{b.changePct >= 0 ? "+" : ""}{b.changePct.toFixed(2)}%</span>
+                </div>
+                <p className="cw-db-insight">{dailyCloseInsight(b.open, b.high, b.low, b.close, b.changePct)}</p>
+              </div>
+              <div className="cw-db-stats">
+                <div className="cw-db-stat"><span>Open</span><strong>{fmt(b.open)}</strong></div>
+                <div className="cw-db-stat"><span>High</span><strong className="up">{fmt(b.high)}</strong></div>
+                <div className="cw-db-stat"><span>Low</span><strong className="down">{fmt(b.low)}</strong></div>
+                <div className="cw-db-stat"><span>Close</span><strong>{fmt(b.close)}</strong></div>
+                <div className="cw-db-stat"><span>Range</span><strong>{rangePct.toFixed(2)}%</strong></div>
+              </div>
+              <button
+                type="button"
+                className="cw-db-close"
+                aria-label="Dismiss"
+                onClick={() => {
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  sessionStorage.setItem(`daily-banner-dismissed-${coin}`, todayStr);
+                  setDailyCloseBanner(prev => prev ? { ...prev, dismissed: true } : null);
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
             </div>
-            <div className="cw-daily-banner-body">
-              <div className="cw-daily-banner-title">
-                Daily Close &nbsp;·&nbsp;
-                <span className={`cw-daily-banner-dir cw-daily-banner-dir--${dailyCloseBanner.direction}`}>
-                  {dailyCloseBanner.direction === "bullish" ? "Bullish" : "Bearish"}
-                </span>
-                <span className={`cw-daily-banner-pct cw-daily-banner-pct--${dailyCloseBanner.direction}`}>
-                  {dailyCloseBanner.changePct >= 0 ? "+" : ""}{dailyCloseBanner.changePct.toFixed(2)}%
-                </span>
-              </div>
-              <div className="cw-daily-banner-stats">
-                <span>O <strong>${dailyCloseBanner.open.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
-                <span>H <strong>${dailyCloseBanner.high.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
-                <span>L <strong>${dailyCloseBanner.low.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
-                <span>C <strong>${dailyCloseBanner.close.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></span>
-              </div>
-              <div className="cw-daily-banner-insight">
-                {dailyCloseInsight(dailyCloseBanner.open, dailyCloseBanner.high, dailyCloseBanner.low, dailyCloseBanner.close, dailyCloseBanner.changePct)}
-              </div>
-            </div>
-            <button
-              className="cw-daily-banner-close"
-              onClick={() => {
-                const todayStr = new Date().toISOString().slice(0, 10);
-                sessionStorage.setItem(`daily-banner-dismissed-${coin}`, todayStr);
-                setDailyCloseBanner(prev => prev ? { ...prev, dismissed: true } : null);
-              }}
-            >✕</button>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Signal cards — a full-width, single-row briefing strip above the
             2-column chart/AI-panel grid below (not inside .cw-left, which
@@ -4322,7 +4463,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
               {/* Desktop chart toolbar (TradingView-style): range, style,
                   grid, layers, drawing, price scale, save/reset/fullscreen. */}
-              {(
+              {cwDesktop && (
                 <div className="cw-tb">
                   {/* Interval (the big pill track is hidden on desktop). */}
                   <div className="cw-tb-menu-wrap">
@@ -4408,6 +4549,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                             <span className={`cw-tb-switch${cwPrefs.layers[k] ? " on" : ""}`}><i /></span>
                           </button>
                         ))}
+                        <button type="button" className="cw-tb-menu-item cw-tb-menu-all" onClick={() => setCwMenu("indicators")}>
+                          All indicators{libIndicators.length ? ` · ${libIndicators.length} on` : ""} ›
+                        </button>
                       </>))}
                   </div>
                   <button type="button" className={`cw-tb-btn${cwDrawOn ? " cw-tb-btn--on" : ""}`} onClick={() => setCwDrawOn((v) => !v)} title="Drawing tools" aria-pressed={cwDrawOn}>
@@ -4462,6 +4606,56 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     </span>
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Mobile: same bars as the Trade page chart — interval
+                toolbar (quick intervals · Show Tools · fullscreen) above,
+                Date Range · clock · % log auto below. Indicator pills
+                sit above the toolbar. */}
+            {!cwDesktop && pillsEl}
+            {!cwDesktop && (
+              <div className="chart-bar-toolbar chart-bar-toolbar--actions cw-mbar">
+                <div className="chart-quick-interval-pills">
+                  {CW_QUICK_IVS.map((label) => {
+                    const i = INTERVALS.findIndex((iv) => iv.label === label);
+                    return (
+                      <button key={label} type="button" className={`interval-pill${i === intervalIdx ? " interval-pill--active" : ""}`} onClick={() => setIntervalIdx(i)}>
+                        {cwIvShort(label)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className={`interval-pill interval-pill--more${!CW_QUICK_IVS.includes(INTERVALS[intervalIdx]?.label) ? " interval-pill--active" : ""}`}
+                    onClick={() => setCwMenu("interval")}
+                    title="Interval"
+                    aria-label="Interval"
+                  >
+                    {!CW_QUICK_IVS.includes(INTERVALS[intervalIdx]?.label) && <span className="cw-mbar-iv-cur">{cwIvShort(INTERVALS[intervalIdx]?.label ?? "")}</span>}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                </div>
+                <span className="chart-bar-toolbar-spacer" />
+                <div className="chart-hero-icon-row">
+                  <button type="button" className={`chart-depth-btn chart-show-tools-btn${cwMenu === "tools" ? " chart-depth-btn--active" : ""}`} onClick={() => setCwMenu("tools")}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="4" y1="6" x2="14" y2="6" /><circle cx="17" cy="6" r="2.5" /><line x1="20" y1="6" x2="20" y2="6" />
+                      <line x1="10" y1="12" x2="20" y2="12" /><circle cx="7" cy="12" r="2.5" />
+                      <line x1="4" y1="18" x2="13" y2="18" /><circle cx="16" cy="18" r="2.5" />
+                    </svg>
+                    <span className="chart-tool-label">Show Tools</span>
+                  </button>
+                </div>
+                <span className="chart-tool-pinned ctb-actions">
+                  <button type="button" className="chart-depth-btn" onClick={() => { chartRef.current?.timeScale().fitContent(); setCwPrefs((p) => ({ ...p, autoScale: true })); }} title="Reset view" aria-label="Reset view">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                    <span className="chart-tool-label">Reset</span>
+                  </button>
+                  <button type="button" className="chart-depth-btn ctb-full" onClick={toggleChartFullscreen} title="Full chart" aria-label="Full chart">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                  </button>
+                </span>
               </div>
             )}
 
@@ -4544,7 +4738,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 candlesRef={candlesRef}
                 visible={cwDrawOn && !isChartFullscreen}
                 persistRef={cwDrawingsRef}
-                topOffset={86}
+                topOffset={cwDesktop ? 98 : 86}
+                contained
               />
               <RoundedCandleOverlay
                 chartRef={chartRef}
@@ -4615,8 +4810,117 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             </div>
             </div>
 
-            {/* Indicator pills — mobile: under the chart; desktop: in the toolbar row. */}
-            {!cwDesktop && pillsEl}
+            {!cwDesktop && (
+              <div className="chart-range-bar chart-range-bar--mobile cw-mrange">
+                <button type="button" className="chart-range-select" onClick={() => setCwMenu("range")}>
+                  <span>{cwRange ? CW_RANGES.find((r) => r[0] === cwRange.label)?.[1] ?? cwRange.label : "Date Range"}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </button>
+                <span className="chart-range-spacer" />
+                <RangeBarClock />
+                <span className="chart-range-divider" />
+                <button type="button" className={`chart-range-btn chart-range-btn--scale${cwPrefs.scale === "percent" ? " active" : ""}`} aria-pressed={cwPrefs.scale === "percent"} onClick={() => setCwPrefs((p) => ({ ...p, scale: p.scale === "percent" ? "normal" : "percent" }))}>%</button>
+                <button type="button" className={`chart-range-btn chart-range-btn--scale${cwPrefs.scale === "log" ? " active" : ""}`} aria-pressed={cwPrefs.scale === "log"} onClick={() => setCwPrefs((p) => ({ ...p, scale: p.scale === "log" ? "normal" : "log" }))}>log</button>
+                <button type="button" className={`chart-range-btn chart-range-btn--scale${cwPrefs.autoScale ? " active" : ""}`} aria-pressed={cwPrefs.autoScale} onClick={() => setCwPrefs((p) => ({ ...p, autoScale: !p.autoScale }))}>auto</button>
+              </div>
+            )}
+            {!cwDesktop && cwMenu === "interval" && (
+              <BottomSheet open onClose={() => setCwMenu(null)} title={<>Interval</>} className="cw-tb-sheet" ariaLabel="Interval">
+                <div className="interval-sheet-list cw-tb-sheet-list">
+                  {INTERVALS.map((iv, i) => (
+                    <button key={iv.label} type="button" className={`cw-tb-menu-item${i === intervalIdx ? " active" : ""}`} onClick={() => { setIntervalIdx(i); setCwMenu(null); }}>
+                      <b className="cw-tb-iv-label">{iv.label}</b>
+                      {intervalCountdowns[i] && <span className="cw-tb-iv-countdown">closes in {intervalCountdowns[i]}</span>}
+                      {i === intervalIdx && <span className="cw-tb-check">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </BottomSheet>
+            )}
+            {!cwDesktop && cwMenu === "range" && (
+              <BottomSheet open onClose={() => setCwMenu(null)} title={<>Date range</>} className="cw-tb-sheet" ariaLabel="Date range">
+                <div className="date-range-sheet-list">
+                  {CW_RANGES.map(([short, l, secs]) => {
+                    const fits = secs === null || cwRangeFits(secs, interval);
+                    const on = secs === null ? !cwRange : cwRange?.secs === secs;
+                    return (
+                      <button
+                        key={l}
+                        type="button"
+                        className={`date-range-sheet-item${on ? " active" : ""}${fits ? "" : " cw-tb-menu-item--off"}`}
+                        disabled={!fits}
+                        onClick={() => { cwApplyRange(short ?? "", secs); setCwMenu(null); }}
+                      >
+                        <span className="date-range-sheet-label">{l}</span>
+                        <span className="date-range-sheet-sub">{fits ? (secs === null ? "Latest candles, auto-fit" : `${l} of ${interval.label} candles`) : `Too many ${interval.label} candles — pick a bigger interval`}</span>
+                        {on && <span className="chart-style-check">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </BottomSheet>
+            )}
+            <IndicatorPicker
+              open={cwMenu === "indicators"}
+              onClose={() => setCwMenu(null)}
+              enabled={libIndicators}
+              onToggle={toggleLibIndicator}
+              isPaid={isPaid}
+              onUpgrade={() => { setCwMenu(null); onOpenUpgrade(); }}
+              builtIn={CW_LAYERS.map(([k, l, c]): PickerItem => ({
+                id: `cw-${k}`,
+                name: l,
+                category: k === "ema" ? "Moving Averages" : k === "bb" ? "Volatility" : k === "volume" ? "Volume" : "Smart Money",
+                description: ({
+                  ema: "Fast and medium exponential averages — trend and pullback support.",
+                  bb: "20-period average with ±2 standard-deviation bands.",
+                  volume: "Volume bars under the candles.",
+                  ict: "Order blocks, fair-value gaps and breaks of structure.",
+                  retests: "Where price came back to test a broken level.",
+                  patterns: "Candlestick patterns and Wyckoff phases marked on the chart.",
+                  divergence: "Where price and RSI disagree — early reversal hints.",
+                } as Record<string, string>)[k],
+                checked: cwPrefs.layers[k],
+                onToggle: () => setCwPrefs((p) => ({ ...p, layers: { ...p.layers, [k]: !p.layers[k] } })),
+                color: c,
+              }))}
+            />
+            {!cwDesktop && cwMenu === "tools" && (
+              <BottomSheet open onClose={() => setCwMenu(null)} title={<>Chart tools</>} className="cw-tb-sheet cts-sheet" ariaLabel="Chart tools">
+                <div className="interval-sheet-list date-range-sheet-list">
+                  <div className="cts-section-label">Chart style</div>
+                  <div className="cts-styles">
+                    {([["candle", "Candle"], ["hollow", "Hollow"], ["line", "Line"], ["heikinAshi", "Heikin Ashi"]] as const).map(([k, l]) => (
+                      <button key={k} type="button" className={`cts-style${cwPrefs.style === k ? " active" : ""}`} onClick={() => setCwPrefs((p) => ({ ...p, style: k }))}>
+                        {k === "line" ? (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l6-6 4 4 8-8" /></svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="7" y1="3" x2="7" y2="8" /><rect x="4" y="8" width="6" height="8" fill={k === "hollow" ? "none" : "currentColor"} /><line x1="7" y1="16" x2="7" y2="21" /><line x1="17" y1="5" x2="17" y2="10" /><rect x="14" y="10" width="6" height="6" fill={k === "hollow" ? "none" : "currentColor"} /><line x1="17" y1="16" x2="17" y2="19" /></svg>
+                        )}
+                        <span>{l}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {cwToolRow("Grid", "Background grid lines on the chart", cwPrefs.grid, () => setCwPrefs((p) => ({ ...p, grid: !p.grid })),
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>)}
+                  {cwToolRow("Drawing tools", "Trend lines, rays and levels on the chart", cwDrawOn, () => { setCwDrawOn((v) => !v); setCwMenu(null); },
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>)}
+                  <button type="button" className="date-range-sheet-item cts-row" onClick={() => setCwMenu("indicators")}>
+                    <span className="cts-row-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg></span>
+                    <span className="cts-row-text">
+                      <span className="date-range-sheet-label">Indicators</span>
+                      <span className="date-range-sheet-sub">{(() => { const on = [...CW_LAYERS.filter(([k]) => cwPrefs.layers[k]).map(([, l]) => l), ...libIndicators.map((id) => getIndicatorDef(id)?.name ?? id)]; return on.length ? `${on.length} on · ${on.slice(0, 2).join(", ")}${on.length > 2 ? "…" : ""}` : "None on"; })()}</span>
+                    </span>
+                    <span className="cts-row-chev">›</span>
+                  </button>
+                  <div className="cts-section-label">Chart</div>
+                  <button type="button" className="date-range-sheet-item cts-row" onClick={() => { saveChart(); setCwMenu(null); }}>
+                    <span className="cts-row-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg></span>
+                    <span className="cts-row-text"><span className="date-range-sheet-label">Save image</span><span className="date-range-sheet-sub">Download the chart as a PNG</span></span>
+                  </button>
+                </div>
+              </BottomSheet>
+            )}
 
             {/* Mobile: live tape under the chart. Desktop: a right-panel tab. */}
           </div>

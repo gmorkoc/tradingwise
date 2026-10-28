@@ -654,7 +654,7 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "Inside the Candle — Full Chart Analysis",
+          "title": "Inside the AI Candle — Full Chart Analysis",
           "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — GPT-4o reads your chart and explains every move in plain language."
         },
         {
@@ -765,7 +765,7 @@
           "On-Chain AI Analysis",
           "Price Prediction Chart",
           "Liquidation Heatmap AI",
-          "Inside the Candle",
+          "Inside the AI Candle",
           "Coinbase Premium AI",
           "100 AI requests / week"
         ]
@@ -854,7 +854,7 @@
     "lf": {
       "elitePro": "Unlimited AI requests",
       "agentReady": "Agent Ready — AI Trading Chat",
-      "candleai": "Inside the Candle",
+      "candleai": "Inside the AI Candle",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Early access to new features",
       "aiMkt": "AI Market Intelligence",
@@ -883,7 +883,7 @@
       "word2": "signal.",
       "word3": "candle.",
       "closer": "Every signal. One AI.",
-      "screen1": "Inside the Candle",
+      "screen1": "Inside the AI Candle",
       "screen2": "Strategy Builder",
       "screen3": "Live Tape",
       "tag1": "Pattern Recognition",
@@ -1000,7 +1000,7 @@
       "pillWyckoff": "Wyckoff Phases",
       "pillElliott": "Elliott Wave",
       "pillTradePlan": "Trade Plan",
-      "cta": "Unlock Inside the Candle"
+      "cta": "Unlock Inside the AI Candle"
     },
     "heatmap": {
       "label": "Liquidation Heatmap",
@@ -1045,7 +1045,7 @@
             "Price Prediction with scenarios",
             "Liquidation Heatmap AI",
             "Custom Strategy Alerts",
-            "Inside the Candle",
+            "Inside the AI Candle",
             "Coinbase Premium AI",
             "100 AI requests / week"
           ]
@@ -1508,7 +1508,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluence",
     "fundingbot": "Funding Bot",
-    "candleai": "Inside the Candle",
+    "candleai": "Inside the AI Candle",
     "markets": "Markets",
     "marketheatmap": "Market Heatmap",
     "altanalysis": "Alt Analysis",
@@ -2136,7 +2136,7 @@
       ]
     },
     "candleai": {
-      "title": "Inside the Candle",
+      "title": "Inside the AI Candle",
       "desc": "AI reads candles via Elliott Wave, ICT, Wyckoff.",
       "tags": [
         "Elliott Wave",

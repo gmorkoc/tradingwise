@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { CoinUnavailableSheet } from "./components/CoinUnavailableSheet";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
@@ -108,6 +109,9 @@ import TermsGateModal from "./components/TermsGateModal";
 import UsernameGateModal from "./components/UsernameGateModal";
 import { PortfolioValueChart } from "./components/PortfolioValueChart";
 import "./App.css";
+
+// Coins the chart has candle data for (the app's COINS roster).
+const SUPPORTED_CHART_COINS = new Set<string>(COINS.map((c) => c.symbol as string));
 
 // Everything below is behind a section nav tab — only one is ever visible at a
 // time, so each ships as its own chunk fetched on first visit instead of
@@ -220,6 +224,12 @@ const NAV_ITEMS: {
     ],
   },
   {
+    id: "candleai",
+    labelKey: "nav.candleai",
+    requiredTier: "elite",
+    d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"],
+  },
+  {
     id: "markets",
     labelKey: "nav.markets",
     d: [
@@ -229,12 +239,6 @@ const NAV_ITEMS: {
       "M11.5 3a17 17 0 0 0 0 18",
       "M12.5 3a17 17 0 0 1 0 18",
     ],
-  },
-  {
-    id: "candleai",
-    labelKey: "nav.candleai",
-    requiredTier: "elite",
-    d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"],
   },
   {
     id: "heatmap",
@@ -622,6 +626,23 @@ function AppDashboard({
     localStorage.setItem("coin", coin);
   }, [coin]);
 
+  // Every coin tap in the app (Markets, movers, search, notifications…)
+  // goes through here. Coins the chart has no data for show the "coming
+  // soon" sheet instead of opening an empty chart. Returns true if opened.
+  const [unavailableCoin, setUnavailableCoin] = useState<string | null>(null);
+  const openChartCoin = (symbol: string, opts: { recent?: boolean; navigate?: boolean } = {}): boolean => {
+    const sym = String(symbol || "").toUpperCase();
+    if (!SUPPORTED_CHART_COINS.has(sym)) {
+      setUnavailableCoin(sym || "This coin");
+      return false;
+    }
+    setCoin(sym as CoinSymbol);
+    clearCandleCache();
+    if (opts.recent) setRecentCoins(addRecentCoin(sym));
+    if (opts.navigate) setActiveSection("chart");
+    return true;
+  };
+
   // Follows the selected coin (not hardcoded to BTC) so the toast is
   // relevant to whatever chart is actually open.
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert(coin);
@@ -636,9 +657,7 @@ function AppDashboard({
   const [highlightCommentId, setHighlightCommentId] = useState<number | null>(null);
   useEffect(() => {
     const applyCoinMention = (detail: { coin: string; commentId: number }) => {
-      setCoin(detail.coin as CoinSymbol);
-      clearCandleCache();
-      setActiveSection("chart");
+      if (!openChartCoin(detail.coin, { navigate: true })) return;
       setShowCoinChat(true);
       setHighlightCommentId(detail.commentId);
     };
@@ -672,9 +691,7 @@ function AppDashboard({
     const onOpenPriceAlert = (e: Event) => {
       const detail = (e as CustomEvent<{ coin?: string }>).detail;
       if (!detail?.coin) return;
-      setCoin(detail.coin as CoinSymbol);
-      clearCandleCache();
-      setActiveSection("chart");
+      openChartCoin(detail.coin, { navigate: true });
     };
     window.addEventListener("open-price-alert", onOpenPriceAlert);
     return () => window.removeEventListener("open-price-alert", onOpenPriceAlert);
@@ -1062,6 +1079,12 @@ function AppDashboard({
   // screen, same mutual-exclusion treatment as the other floating panels
   // below.
   const [dailyBriefPanelOpen, setDailyBriefPanelOpen] = useState(false);
+  // Markets page "Top News" pill opens the News panel.
+  useEffect(() => {
+    const onOpenBrief = () => setDailyBriefPanelOpen(true);
+    window.addEventListener("open-daily-brief", onOpenBrief);
+    return () => window.removeEventListener("open-daily-brief", onOpenBrief);
+  }, []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -1930,27 +1953,36 @@ function AppDashboard({
   //     silently get a new Forward entry appended right after it".
   const isFirstHistorySyncRef = useRef(true);
   const skipNextHistoryPushRef = useRef(false);
+  // Position in the app's own page history (0 = the page the app opened
+  // on) — lets the edge swipe know whether there's anything to go back to.
+  const historyIdxRef = useRef(0);
   useEffect(() => {
     if (isFirstHistorySyncRef.current) {
       isFirstHistorySyncRef.current = false;
       // Normalize the landing URL in place (no extra history entry): a bare
       // URL or an old #chart link shows as #trade.
       const want = `#${sectionToHash(activeSection)}`;
-      if (window.location.hash !== want) {
-        window.history.replaceState(null, "", `${window.location.search}${want}`);
-      }
+      historyIdxRef.current = 0;
+      window.history.replaceState({ appIdx: 0 }, "", `${window.location.search}${want}`);
       return;
     }
     if (skipNextHistoryPushRef.current) {
       skipNextHistoryPushRef.current = false;
       return;
     }
-    window.history.pushState(null, "", `${window.location.search}#${sectionToHash(activeSection)}`);
+    // Same page as the current entry (e.g. a section alias settling on
+    // load) — don't stack a duplicate, or Back/swipe-back would need an
+    // extra press to actually go anywhere.
+    if (window.location.hash === `#${sectionToHash(activeSection)}`) return;
+    historyIdxRef.current += 1;
+    window.history.pushState({ appIdx: historyIdxRef.current }, "", `${window.location.search}#${sectionToHash(activeSection)}`);
   }, [activeSection]);
 
   // Handle browser back/forward
   useEffect(() => {
     const onHashChange = () => {
+      const idx = (window.history.state as { appIdx?: number } | null)?.appIdx;
+      historyIdxRef.current = typeof idx === "number" ? idx : 0;
       const hash = hashToSection(window.location.hash.slice(1));
       // Same "advance-chart" allowance as the initial-state reader above —
       // without it, pressing Forward back into the page after Back would
@@ -2029,44 +2061,90 @@ function AppDashboard({
     };
   }, []);
 
-  // Swipe gesture — open on right-swipe from left edge, close on left-swipe
+  // Left-edge swipe right = Back (like a browser / iOS), with a round ←
+  // indicator that follows the finger. On the first page (nothing to go
+  // back to) it opens the side menu instead. Swipe left closes the menu.
+  const backSwipeRef = useRef<HTMLDivElement>(null);
+  const inHorizontalScroller = (el: Element | null) => {
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 2) {
+        const ox = getComputedStyle(n).overflowX;
+        if (ox === "auto" || ox === "scroll") return true;
+      }
+    }
+    return false;
+  };
   useEffect(() => {
-    const EDGE = 40;
-    const THRESHOLD = 50;
+    const EDGE = 30;
+    const THRESHOLD = 70;
     let startX = 0,
-      startY = 0;
+      startY = 0,
+      fromEdge = false,
+      tracking = false;
     // Any overlay with its own horizontal swipe gesture (currently just
     // Agent Ready's .ta-panel — its history rows swipe left/right for
     // delete/pin) needs to opt out of this one entirely, not just win on
     // preventDefault — this is a SEPARATE document-level listener, so it
-    // fires and opens the main nav drawer regardless of what the touch
-    // target's own handlers already did with the same gesture. A touch
-    // starting anywhere inside such an overlay is ignored for its whole
-    // start-to-end sequence.
+    // fires regardless of what the touch target's own handlers already did
+    // with the same gesture. A touch starting anywhere inside such an
+    // overlay is ignored for its whole start-to-end sequence.
     let ignoreThisGesture = false;
+    const canGoBack = () => historyIdxRef.current > 0;
+    const setIndicator = (dx: number | null) => {
+      const el = backSwipeRef.current;
+      if (!el) return;
+      if (dx == null) { el.style.opacity = "0"; el.style.transform = "translate(-60px, -50%)"; el.classList.remove("back-swipe--ready"); return; }
+      const d = Math.min(dx, 110);
+      el.style.opacity = String(Math.min(1, d / 40));
+      el.style.transform = `translate(${-60 + d * 0.75}px, -50%)`;
+      el.classList.toggle("back-swipe--ready", dx > THRESHOLD);
+    };
     const onTouchStart = (e: TouchEvent) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
+      fromEdge = startX < EDGE;
+      tracking = false;
       ignoreThisGesture = !!(e.target as Element)?.closest?.(".ta-panel")
-        // Advance chart page: the left-edge swipe means "back" there
-        // (PriceChart.tsx), not "open the side menu".
-        || !!document.querySelector(".price-chart-container--page");
+        // Advance chart page: it handles its own left-edge "back".
+        || !!document.querySelector(".price-chart-container--page")
+        // A sheet/modal is open — its own gestures win.
+        || !!document.querySelector(".bs-backdrop, .mss-backdrop")
+        // Started on something that scrolls sideways (carousels, chip
+        // rows) — that swipe belongs to it, not to Back.
+        || inHorizontalScroller(e.target as Element | null);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (ignoreThisGesture || !fromEdge || mobileNavOpenRef.current || !canGoBack()) return;
+      const dx = e.touches[0].clientX - startX;
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (!tracking && dy > 24 && dy > dx) { fromEdge = false; setIndicator(null); return; }
+      if (dx > 8) { tracking = true; setIndicator(dx); }
     };
     const onTouchEnd = (e: TouchEvent) => {
+      const wasTracking = tracking;
+      tracking = false;
+      setIndicator(null);
       if (ignoreThisGesture) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = Math.abs(e.changedTouches[0].clientY - startY);
       if (dy > 80) return; // vertical scroll, ignore
-      if (!mobileNavOpenRef.current && startX < EDGE && dx > THRESHOLD)
-        setMobileNavOpen(true);
-      else if (mobileNavOpenRef.current && dx < -THRESHOLD)
+      if (!mobileNavOpenRef.current && fromEdge && dx > THRESHOLD) {
+        if (canGoBack()) window.history.back();
+        else if (!wasTracking) setMobileNavOpen(true);
+      } else if (mobileNavOpenRef.current && dx < -50) {
         setMobileNavOpen(false);
+      }
     };
+    const onTouchCancel = () => { tracking = false; setIndicator(null); };
     document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchCancel, { passive: true });
     return () => {
       document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchCancel);
     };
   }, []);
 
@@ -3408,12 +3486,7 @@ function AppDashboard({
                       instead of refetching every time. */}
                   <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
                     <GlobalMarkets
-                      onSelectCoin={(symbol) => {
-                        setCoin(symbol as CoinSymbol);
-                        clearCandleCache();
-                        setRecentCoins(addRecentCoin(symbol));
-                        setActiveSection("chart");
-                      }}
+                      onSelectCoin={(symbol) => { openChartCoin(symbol, { recent: true, navigate: true }); }}
                     />
                   </div>
                   {/* Mobile Paper Trading/Order Flow for "orderbook" no
@@ -3455,11 +3528,7 @@ function AppDashboard({
                         onOpenAuth={onOpenAuth}
                         onOpenUpgrade={onOpenUpgrade}
                         onOpenCoinPicker={openCoinPicker}
-                        onSelectCoin={(symbol) => {
-                          setCoin(symbol as CoinSymbol);
-                          clearCandleCache();
-                          setRecentCoins(addRecentCoin(symbol));
-                        }}
+                        onSelectCoin={(symbol) => { openChartCoin(symbol, { recent: true }); }}
                         onFullscreenChange={setChartFullscreen}
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
@@ -3498,10 +3567,7 @@ function AppDashboard({
                           <div className="chart-below-full">
                             <ChartBottomPanel
                               coin={coin}
-                              onSelectCoin={(symbol) => {
-                                setCoin(symbol as CoinSymbol);
-                                clearCandleCache();
-                              }}
+                              onSelectCoin={(symbol) => { openChartCoin(symbol); }}
                               onOpenAuth={onOpenAuth}
                               onOpenPaperTrading={() => setActiveSection("riskcalc")}
                             />
@@ -3603,11 +3669,7 @@ function AppDashboard({
                 onOpenAuth={onOpenAuth}
                 onOpenUpgrade={onOpenUpgrade}
                 onOpenCoinPicker={openCoinPicker}
-                onSelectCoin={(symbol) => {
-                  setCoin(symbol as CoinSymbol);
-                  clearCandleCache();
-                  setRecentCoins(addRecentCoin(symbol));
-                }}
+                onSelectCoin={(symbol) => { openChartCoin(symbol, { recent: true }); }}
                 onFullscreenChange={setChartFullscreen}
                 pageMode
                 onNavigateBack={() => {
@@ -3891,14 +3953,15 @@ function AppDashboard({
             document.body,
           )}
 
+        <CoinUnavailableSheet
+          symbol={unavailableCoin}
+          onClose={() => setUnavailableCoin(null)}
+          onBrowse={() => openCoinPicker()}
+        />
         <GlobalSearch
           open={globalSearch}
           onClose={() => setGlobalSearch(false)}
-          onCoinSelect={(c) => {
-            setCoin(c);
-            clearCandleCache();
-            setActiveSection("chart");
-          }}
+          onCoinSelect={(c) => { openChartCoin(c, { navigate: true }); }}
           onSectionSelect={(s) => setActiveSection(s as SectionId)}
           // Mobile's only remaining path to this is FloatingNavBar's
           // Search icon (the old mobile header search button was moved
@@ -4082,6 +4145,9 @@ function AppDashboard({
 
         <WhaleAlerts btcPrice={btcData?.price} coinChatOpen={activeSection === "chart" && showCoinChat} />
 
+        <div ref={backSwipeRef} className="back-swipe" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+        </div>
         {swipeHint && (
           <div className="swipe-hint">
             <div className="swipe-hint-hand">

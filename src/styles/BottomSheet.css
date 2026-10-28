@@ -103,3 +103,34 @@
 .bs-body .interval-sheet-list,
 .bs-body .indicators-menu--sheet,
 .bs-body .date-range-sheet-list { overflow: visible; max-height: none; }
+
+/* desktopModal: on desktop the sheet becomes a centered modal. */
+@media (min-width: 901px) {
+  .bs-backdrop--modal { align-items: center; justify-content: center; padding: 24px; }
+  .bs-backdrop--modal .bs-sheet {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - 48px);
+    margin: 0;
+    border-radius: 16px;
+    padding-bottom: 0;
+    animation: bs-modal-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bs-backdrop--modal .bs-handle { display: none; }
+  .bs-backdrop--modal .bs-header { padding-top: 14px; }
+}
+@keyframes bs-modal-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* Dragged up to full screen (phones): fills the viewport under the status
+   bar, square top corners, height animates between the two states. */
+.bs-sheet { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.3s ease; }
+@media (max-width: 900px) {
+  .bs-sheet.bs-sheet--full {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
+  }
+  .bs-sheet.bs-sheet--full .bs-scroll { flex: 1 1 auto; min-height: 0; }
+}

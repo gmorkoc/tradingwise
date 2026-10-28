@@ -6862,9 +6862,8 @@ html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar .interval-pill.inter
   width: 20px;
   height: 20px;
   margin-left: 2px;
-  border-radius: 6px;
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-text) 9%, transparent);
+  background: none;
 }
 /* Date Range trigger is a plain button now (opens a sheet). */
 button.chart-range-select {
@@ -7676,3 +7675,217 @@ html:not([data-theme="light"]) .fs-bar-more::before { background: linear-gradien
 .fs-bar-sep { margin: 0 -5px; }
 /* A bit of breathing room between the divider line and the icons. */
 .fs-bar { height: 56px; padding-top: 8px; box-sizing: border-box; }
+
+/* Mobile chart toolbar (Trade page + Inside the Candle):
+   15m 1H 4H 1D ⌄ · · · Show Tools · Reset · [Full chart icon], everything
+   after the intervals flush right and sized to fit one 390px row. */
+html .chart-bar-toolbar.chart-bar-toolbar--actions .chart-hero-icon-row {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+/* The spacer is the 1px divider after ⌄ — keep it; push the tools right instead. */
+html .chart-bar-toolbar.chart-bar-toolbar--actions .chart-hero-icon-row { margin-left: auto !important; }
+html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .interval-pill.interval-pill.interval-pill.interval-pill { padding: 4px 4px !important; }
+.chart-bar-toolbar--actions .ctb-actions { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+.chart-bar-toolbar--actions .ctb-actions::before { display: none !important; }
+html .chart-bar-toolbar.chart-bar-toolbar--actions .ctb-actions .chart-tool-label { display: inline !important; }
+html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .chart-depth-btn {
+  padding: 0 4px !important;
+  gap: 4px;
+}
+html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .ctb-full { padding: 0 0 0 5px !important; justify-content: flex-end; }
+html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ctb-full svg { width: 18px !important; height: 18px !important; }
+/* Chart tools sheet: indicator rows (dot + name + switch). */
+.cts-ind-dot { width: 10px; height: 10px; border-radius: 50%; }
+/* Desktop indicators dropdown: link to the full shared picker. */
+.indicators-menu-all {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.indicators-menu-all:hover { background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+/* Desktop toolbar: ƒx opens the indicators mega menu. */
+.chart-fx-btn { position: relative; }
+.chart-fx-glyph { font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700; font-size: 15px; line-height: 1; }
+.chart-fx-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--color-success, #16a34a);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+}
+/* Desktop Trade toolbar: breathing room between the chart tool icons. */
+@media (min-width: 901px) {
+  html .chart-bar-toolbar .chart-hero-icon-row { gap: 8px !important; }
+}
+/* The whole coin block (icon, name, price, picker) opens the coin picker. */
+.chart-bar-id--tap {
+  cursor: pointer;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+@media (min-width: 901px) {
+  .chart-bar-id--tap { margin: -6px -8px; padding: 6px 8px; transition: background 0.15s ease; }
+  .chart-bar-id--tap:hover,
+  .chart-bar-id--tap:focus-visible { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+  .chart-bar-id--tap:hover .chart-bar-picker { background: color-mix(in srgb, var(--color-text) 10%, transparent); }
+}
+/* Mobile Trade chart: brief "full screen" hint on page load. */
+.chart-fs-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  animation: chart-fs-hint-in 0.25s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.chart-fs-hint--out { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+@keyframes chart-fs-hint-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+/* Advance chart (mobile): "swipe right to close" hint on open. */
+.chart-swipe-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.chart-swipe-hint--out { opacity: 0; }
+.chart-swipe-hint-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 26px;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.35), transparent);
+  animation: swipe-edge 1.3s ease-in-out infinite;
+}
+.chart-swipe-hint-chev {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-top: -20px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  animation: swipe-chev 1.3s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+.chart-swipe-hint-pill {
+  position: absolute;
+  top: calc(50% + 32px);
+  left: 12px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: swipe-pill-in 0.3s ease both;
+}
+@keyframes swipe-chev {
+  0% { transform: translateX(0); opacity: 0; }
+  15% { opacity: 1; }
+  70% { transform: translateX(96px); opacity: 1; }
+  100% { transform: translateX(110px); opacity: 0; }
+}
+@keyframes swipe-edge { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes swipe-pill-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.chart-swipe-hint-chev { width: 44px; height: 44px; margin-top: -22px; }
+/* Advance chart (mobile): Menu → an iOS-style context menu under it —
+   one rounded card, three rows with hairline dividers (label left, icon
+   right), scaling open from its top-right corner. */
+.adv-menu-scrim { position: absolute; inset: 0; z-index: 49; }
+.adv-menu {
+  position: absolute;
+  top: 50px;
+  right: 12px;
+  z-index: 51;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 0.5px color-mix(in srgb, var(--color-text) 14%, transparent);
+  transform-origin: top right;
+  animation: adv-menu-in 0.24s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+@keyframes adv-menu-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+.adv-menu-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 46px;
+  padding: 0 16px;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.adv-menu-btn + .adv-menu-btn { border-top: 0.5px solid color-mix(in srgb, var(--color-text) 16%, transparent); }
+.adv-menu-btn:active { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+.adv-menu-btn svg { flex-shrink: 0; }
+/* Close in red, like a destructive iOS menu action. */
+.adv-menu-btn[data-i="2"] { color: var(--color-danger, #ef4444); }
+/* Narrower, and above the chart's floating buttons (Explain Zone etc.). */
+.adv-menu { width: 160px; z-index: 1001; }
+.adv-menu-scrim { z-index: 1000; }
+.adv-menu-btn { height: 44px; padding: 0 14px; font-size: 15px; }
+/* Explain Zone's row sits at z 1100 in the same layer — stay above it. */
+.adv-menu { z-index: 1201; }
+.adv-menu-scrim { z-index: 1200; }
+/* Advance chart bottom bar (Save/Close moved to Menu): spread what's left
+   evenly across the full width. */
+.fs-bar-scroll { justify-content: space-around; padding-right: 0; }
+/* …with breathing room at both ends. */
+.fs-bar { padding-left: 16px; padding-right: 14px; }
+.chart-swipe-hint-chev { width: 54px; height: 54px; margin-top: -27px; }

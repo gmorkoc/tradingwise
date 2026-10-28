@@ -370,7 +370,7 @@ export const LandingPage: React.FC<Props> = ({ onSignIn, onSignUp }) => {
           <div className="lp-cai-tile lp-cai-tile--chart">
             <div className="lp-cai-chart-hd">
               <span className="lp-cai-chart-logo">✦</span>
-              <span className="lp-cai-chart-name">Inside the Candle</span>
+              <span className="lp-cai-chart-name">Inside the AI Candle</span>
               <span className="lp-cai-chart-pair">BTC/USD · 4H</span>
               <span className="lp-cai-forecast-pill"><span className="dot" />{t("landing.candleAI.forecastPill")}</span>
             </div>

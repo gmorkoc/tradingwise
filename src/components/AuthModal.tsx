@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { CoinHintzLogo } from "./CoinHintzLogo";
+import { BottomSheet } from "./BottomSheet";
 import { RiskDisclaimer } from "./RiskDisclaimer";
 import { isUsernameAvailable, USERNAME_PATTERN } from "../services/supabase";
 import "../styles/AuthModal.css";
@@ -85,6 +86,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
   const [termsAgreed, setTermsAgreed] = useState(alreadyAgreed);
   const [termsShake,  setTermsShake]  = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const [isPhone] = useState(() => window.matchMedia("(max-width: 640px)").matches);
   const disclaimerRef = useRef<HTMLLabelElement>(null);
 
   useEffect(() => {
@@ -211,15 +213,8 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
     else { onClose(); }
   };
 
-  return (
-    <div className="auth-backdrop" ref={backdropRef} onClick={handleBackdrop}>
-      <div className="auth-card">
-        <button className="auth-close" onClick={onClose}>✕</button>
-
-        <div className="auth-logo">
-          <CoinHintzLogo variant="nav" />
-        </div>
-
+  // Phones: the app's bottom sheet (logo as its title). Desktop: the card.
+  const body = (
         <div className="auth-card-body">
 
         {/* ── Welcome gateway (default when no specific intent was given) ── */}
@@ -255,7 +250,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               <label className="auth-label">{t("auth.login.emailLabel")}
                 <div className="auth-input-wrap">
                   <span className="auth-input-leading-icon"><MailIcon /></span>
-                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus={!isPhone} />
                 </div>
               </label>
               {error && <p className="auth-error">{error}</p>}
@@ -317,7 +312,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               <label className="auth-label">{t("auth.login.emailLabel")}
                 <div className="auth-input-wrap">
                   <span className="auth-input-leading-icon"><MailIcon /></span>
-                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus={!isPhone} />
                 </div>
               </label>
               <label className="auth-label">{t("auth.login.passwordLabel")}
@@ -383,7 +378,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               <label className="auth-label">{t("auth.signup.fullNameLabel")}
                 <div className="auth-input-wrap">
                   <span className="auth-input-leading-icon"><UserIcon /></span>
-                  <input className="auth-input auth-input--leading" type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+                  <input className="auth-input auth-input--leading" type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} required autoFocus={!isPhone} />
                 </div>
               </label>
               <label className="auth-label">{t("auth.signup.usernameLabel")}
@@ -471,7 +466,7 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
               <label className="auth-label">{t("auth.reset.emailLabel")}
                 <div className="auth-input-wrap">
                   <span className="auth-input-leading-icon"><MailIcon /></span>
-                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                  <input className="auth-input auth-input--leading" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required autoFocus={!isPhone} />
                 </div>
               </label>
               {error && <p className="auth-error">{error}</p>}
@@ -485,6 +480,26 @@ export const AuthModal: React.FC<Props> = ({ onClose, initialView }) => {
         )}
 
         </div>
+  );
+
+  if (isPhone) {
+    return (
+      <BottomSheet open onClose={onClose} title={<CoinHintzLogo variant="nav" />} className="auth-sheet" ariaLabel="Sign in">
+        <div className="auth-sheet-inner">{body}</div>
+      </BottomSheet>
+    );
+  }
+
+  return (
+    <div className="auth-backdrop" ref={backdropRef} onClick={handleBackdrop}>
+      <div className="auth-card">
+        <button className="auth-close" onClick={onClose}>✕</button>
+
+        <div className="auth-logo">
+          <CoinHintzLogo variant="nav" />
+        </div>
+
+        {body}
       </div>
     </div>
   );
