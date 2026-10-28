@@ -51,7 +51,7 @@ export function AgentChartModal({ coin, initialInterval, onClose }: Props) {
     const isDark = document.documentElement.dataset.theme !== "light";
     const chart = createChart(el, {
       layout: {
-        background: { type: ColorType.Solid, color: isDark ? "#0f1117" : "#ffffff" },
+        background: { type: ColorType.Solid, color: isDark ? "#000000" : "#ffffff" },
         textColor: isDark ? "#94a3b8" : "#475569",
       },
       grid: {

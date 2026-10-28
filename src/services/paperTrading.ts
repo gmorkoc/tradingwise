@@ -317,6 +317,19 @@ function rowToMessage(m: {
   };
 }
 
+// Edit-and-resend: removes a user message and everything after it in the
+// same conversation (ids are sequential), so the edited text can be sent
+// again and Agent Ready answers it fresh.
+export async function deleteAgentMessagesFrom(userId: string, conversationId: string, fromId: number): Promise<void> {
+  const { error } = await supabase
+    .from("agent_messages")
+    .delete()
+    .eq("user_id", userId)
+    .eq("conversation_id", conversationId)
+    .gte("id", fromId);
+  if (error) throw new Error(error.message);
+}
+
 export async function fetchAgentMessages(userId: string, conversationId: string): Promise<AgentMessage[]> {
   const { data, error } = await supabase
     .from("agent_messages")

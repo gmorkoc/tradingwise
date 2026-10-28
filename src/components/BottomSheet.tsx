@@ -19,9 +19,11 @@ interface Props {
   ariaLabel?: string;
   /** Desktop (≥901px): a centered modal instead of a sheet. Phones keep the sheet. */
   desktopModal?: boolean;
+  /** Pinned under the title inside the sticky header (e.g. a search box) — doesn't scroll. */
+  headerExtra?: ReactNode;
 }
 
-export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal }: Props) {
+export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number } | null>(null);
@@ -79,6 +81,12 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
                 </svg>
               </button>
             </div>
+            {headerExtra && (
+              // Own touches (typing, selecting) shouldn't drag the sheet.
+              <div className="bs-header-extra" onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+                {headerExtra}
+              </div>
+            )}
           </div>
           <div className={`bs-body${bodyClassName ? ` ${bodyClassName}` : ""}`}>{children}</div>
         </div>

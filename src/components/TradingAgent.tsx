@@ -18,7 +18,7 @@ import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsent, updatePreferences,
   fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
   AgentMessage, PaperPortfolio, PaperPosition, ConversationSummary, AgentWatch, AgentAction, BalanceUpdate, AgentPerformance, MarketInterval, CoinSnapshot, ShowChartInterval, PreferencesUpdate,
-  PositionsListResponse, PositionsListItem, fetchClosedPositions,
+  PositionsListResponse, PositionsListItem, fetchClosedPositions, deleteAgentMessagesFrom,
 } from "../services/paperTrading";
 
 // Plain text input (no native number spinner), but still only lets the
@@ -72,9 +72,22 @@ import "../styles/TradingAgent.css";
 
 // iOS only (native SFSpeechRecognizer via the Capacitor plugin) — same
 // scoping as push notifications/RevenueCat IAP elsewhere in this app.
-// Desktop/web keep typing only; a Web Speech API path would need its own
-// separate handling and isn't added here.
-const SPEECH_AVAILABLE = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+// Desktop/web use the browser's own Web Speech API instead (WEB_SPEECH
+// below) — same flow: the spoken words stream into the composer as text.
+const NATIVE_SPEECH = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+type WebSpeechCtor = new () => {
+  lang: string; interimResults: boolean; continuous: boolean;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null; onerror: (() => void) | null;
+  start: () => void; stop: () => void;
+};
+const WEB_SPEECH_CTOR: WebSpeechCtor | null = NATIVE_SPEECH || typeof window === "undefined"
+  ? null
+  : ((window as unknown as { SpeechRecognition?: WebSpeechCtor; webkitSpeechRecognition?: WebSpeechCtor }).SpeechRecognition
+    ?? (window as unknown as { webkitSpeechRecognition?: WebSpeechCtor }).webkitSpeechRecognition
+    ?? null);
+// Voice input available at all (native app or a browser with Web Speech).
+const SPEECH_AVAILABLE = NATIVE_SPEECH || !!WEB_SPEECH_CTOR;
 // Gates the History list's swipe-to-delete gesture — a native iOS table-view
 // convention, not something web/desktop users expect from a click-driven
 // UI (they keep the always-visible trash-icon button instead).
@@ -949,7 +962,24 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // with four big labelled cards. Desktop's header is untouched (separate
   // render branch below, no hub-sheet logic at all).
   const [hubOpen, setHubOpen] = useState(false);
+  // Mobile hub row: fade its right edge while there are more icons to
+  // scroll to (hidden once scrolled to the end, or when everything fits).
+  const [hubMoreRight, setHubMoreRight] = useState(false);
+  const hubRowRef = useRef<HTMLDivElement | null>(null);
+  const updateHubFade = (el: HTMLDivElement) => {
+    setHubMoreRight(el.scrollWidth - el.clientWidth - el.scrollLeft > 4);
+  };
   const [draft, setDraft] = useState("");
+  // While the user is actively typing, the Send button shows "…"; it
+  // switches back to "Send" once they pause (700ms with no keystrokes).
+  const [typing, setTyping] = useState(false);
+  const typingTimerRef = useRef<number | null>(null);
+  const noteTyping = () => {
+    setTyping(true);
+    if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = window.setTimeout(() => setTyping(false), 700);
+  };
+  useEffect(() => () => { if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current); }, []);
   // "Ask Agent Ready" button on the Advance Chart page — a chart
   // screenshot (data: URL) attached to the NEXT message sent, shown as a
   // thumbnail above the composer until then. Not persisted into chat
@@ -964,6 +994,10 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // mode) — reset on every new partial result, and firing stop()s the
   // session if 2s pass with nothing new, same as the user going quiet.
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Browser (Web Speech) recognizer while recording on desktop/web.
+  const webRecRef = useRef<InstanceType<WebSpeechCtor> | null>(null);
+  // Hidden file input behind the paperclip (attach an image).
+  const attachInputRef = useRef<HTMLInputElement>(null);
   // The agent's own real reasoning text, streamed in live as it arrives —
   // not a simulated/templated indicator, the actual narration tokens the
   // model generates from the real market data it just fetched.
@@ -1476,8 +1510,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // state (setState isn't synchronous), silently sending with no image
   // attached. undefined (not passed) means "use whatever's already in
   // pendingImage", same as every normal manual send.
+  // Latest handleSend, for callbacks created earlier (e.g. the web speech
+  // recognizer's onend) that would otherwise hold a stale copy.
+  const handleSendRef = useRef<(content?: string, image?: string | null) => void>(() => {});
   const handleSend = async (overrideContent?: string, overrideImage?: string | null) => {
-    const content = overrideContent ?? draft.trim();
+    // An attached image with no text still sends, with a default question.
+    const content = overrideContent ?? (draft.trim() || (pendingImage ? "What do you see in this image?" : ""));
     if (!content || sending) return;
     // Reset immediately (not after the round trip) so a typed message sent
     // while a voice reply would otherwise still be pending doesn't also
@@ -1573,6 +1611,51 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
       setSending(false);
     }
   };
+  handleSendRef.current = handleSend;
+
+  // ── Copy / Edit under messages ─────────────────────────────────────────
+  // Copy: puts a message's text on the clipboard ("Copied" for 1.5s).
+  // Edit (your own messages): edit in place, then "Save & resend" removes
+  // that message and everything after it (screen + database) and sends the
+  // edited text, so Agent Ready answers it fresh.
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const [pendingResend, setPendingResend] = useState<string | null>(null);
+  const copyMessage = async (m: AgentMessage) => {
+    try {
+      await navigator.clipboard.writeText(m.content);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = m.content;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* ignore */ }
+      ta.remove();
+    }
+    setCopiedId(m.id);
+    window.setTimeout(() => setCopiedId((id) => (id === m.id ? null : id)), 1500);
+  };
+  const saveEdit = async (m: AgentMessage) => {
+    const text = editText.trim();
+    if (!text || !user || sending) return;
+    setEditingId(null);
+    setMessages((prev) => prev.filter((x) => x.id < m.id));
+    try {
+      await deleteAgentMessagesFrom(user.id, conversationId, m.id);
+    } catch (err) {
+      console.error("Couldn't remove old messages:", err);
+    }
+    // Sent from an effect (next render) so handleSend sees the trimmed
+    // message list as the conversation history.
+    setPendingResend(text);
+  };
+  useEffect(() => {
+    if (pendingResend === null || sending) return;
+    const text = pendingResend;
+    setPendingResend(null);
+    handleSendRef.current(text);
+  }, [pendingResend, sending]);
 
   // "Ask Agent Ready" button (PriceChart.tsx, Advance Chart page) —
   // dispatches this with a chart screenshot instead of calling
@@ -1772,6 +1855,11 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     clearSilenceTimer();
     setListening(false);
     if (markAsVoice) lastSendWasVoiceRef.current = true;
+    if (webRecRef.current) {
+      try { webRecRef.current.stop(); } catch { /* already stopped */ }
+      webRecRef.current = null;
+      return;
+    }
     SpeechRecognition.stop().catch(() => { /* already stopped, or hung — UI already recovered either way */ });
   };
   // 4s of no new partial result = treat it as the user going quiet and
@@ -1784,7 +1872,7 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   };
 
   useEffect(() => {
-    if (!SPEECH_AVAILABLE) return;
+    if (!NATIVE_SPEECH) return; // web uses WEB_SPEECH_CTOR in startListening instead
     // Writes straight into the composer's own draft — calling a state
     // setter is safe even from this mount-only effect's stale closure
     // (setter identities are stable across renders, unlike a read of
@@ -1848,6 +1936,52 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   }
 
   const startListening = async () => {
+    // Desktop/web: the browser's own speech recognition, same behavior —
+    // words stream into the composer as text, left there to review/send.
+    if (WEB_SPEECH_CTOR) {
+      try {
+        const rec = new WEB_SPEECH_CTOR();
+        rec.lang = "en-US";
+        rec.interimResults = true;
+        rec.continuous = false;
+        let spoken = "";
+        rec.onresult = (e) => {
+          let text = "";
+          for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
+          spoken = text;
+          setDraft(text);
+          armSilenceTimer();
+        };
+        // Web: speak instead of typing — once the user stops talking (or
+        // taps stop), the transcript is sent as their message right away.
+        // Cancel (✕) still discards it.
+        rec.onend = () => {
+          clearSilenceTimer();
+          setListening(false);
+          const cancelled = speechCancelledRef.current;
+          speechCancelledRef.current = false;
+          webRecRef.current = null;
+          const text = spoken.trim();
+          if (!cancelled && text) {
+            setDraft("");
+            setTyping(false);
+            handleSendRef.current(text);
+          }
+        };
+        rec.onerror = () => { clearSilenceTimer(); setListening(false); webRecRef.current = null; };
+        draftBeforeRecordingRef.current = draft;
+        setDraft("");
+        webRecRef.current = rec;
+        setListening(true);
+        armSilenceTimer();
+        rec.start();
+      } catch (err) {
+        setListening(false);
+        webRecRef.current = null;
+        console.error("Speech recognition failed:", err);
+      }
+      return;
+    }
     try {
       const { speechRecognition } = await SpeechRecognition.checkPermissions();
       if (speechRecognition !== "granted") {
@@ -2034,11 +2168,12 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
         {isMobile ? (
           <div className="ta-head-actions">
             <button type="button" className="ta-head-icon-btn ta-head-icon-btn--labelled" onClick={() => setHubOpen(true)} title="Agent actions" aria-label="Agent actions">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
               <span>Menu</span>
             </button>
-            <button type="button" className="ta-head-close ta-head-icon-btn--labelled" onClick={() => setOpen(false)} title="Close" aria-label="Close">
-              <span className="ta-head-close-glyph">✕</span><span>Close</span>
+            {/* Round close button — just the X in a circle, no label. */}
+            <button type="button" className="ta-head-close ta-head-close--round" onClick={() => setOpen(false)} title="Close" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
         ) : (
@@ -2424,8 +2559,61 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 {m.imageUrl && (
                   <img src={m.imageUrl} alt="Chart screenshot" className="ta-msg-image" />
                 )}
-                <p className="ta-msg-text">{m.content}</p>
-                <span className="ta-msg-time">{formatMsgTime(m.createdAt)}</span>
+                {editingId === m.id ? (
+                  <div className="ta-msg-edit">
+                    <textarea
+                      className="ta-msg-edit-input"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveEdit(m); }
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      rows={Math.min(6, Math.max(2, Math.ceil(editText.length / 48)))}
+                      autoFocus
+                    />
+                    <div className="ta-msg-edit-actions">
+                      <button type="button" className="ta-msg-edit-cancel" onClick={() => setEditingId(null)}>Cancel</button>
+                      <button type="button" className="ta-msg-edit-save" onClick={() => saveEdit(m)} disabled={!editText.trim() || sending}>Save &amp; resend</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="ta-msg-text">{m.content}</p>
+                )}
+                {editingId !== m.id && (
+                  <div className="ta-msg-meta">
+                    <span className="ta-msg-time">{formatMsgTime(m.createdAt)}</span>
+                    {m.content.trim() && (
+                      <span className="ta-msg-actions">
+                        <button
+                          type="button"
+                          className="ta-msg-action"
+                          onClick={() => copyMessage(m)}
+                          aria-label={copiedId === m.id ? "Copied" : "Copy message"}
+                          title={copiedId === m.id ? "Copied" : "Copy"}
+                        >
+                          {copiedId === m.id ? (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                          ) : (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                          )}
+                        </button>
+                        {m.role === "user" && (
+                          <button
+                            type="button"
+                            className="ta-msg-action"
+                            onClick={() => { setEditText(m.content); setEditingId(m.id); }}
+                            disabled={sending}
+                            aria-label="Edit message"
+                            title="Edit"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></svg>
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {m.newsSources && m.newsSources.length > 0 && (
                   <div className="ta-sources">
                     <span className="ta-sources-label">
@@ -2796,16 +2984,60 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 get that for free (see the scrollLeft effect above, which
                 covers the one gap: a value set programmatically, with no
                 real caret, doesn't auto-follow on its own). */}
+            {/* Input + Send share one field box (.ta-composer-field) so the
+                Send button reads as embedded inside the input. */}
+            <div className="ta-composer-field">
+            {/* Attach an image (chart screenshot etc.) — it shows as the
+                pending thumbnail above and goes with the next message. */}
+            <button
+              type="button"
+              className="ta-composer-attach"
+              onClick={() => attachInputRef.current?.click()}
+              disabled={sending || listening}
+              aria-label="Attach an image"
+              title="Attach an image"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+              </svg>
+            </button>
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                // Downscale big photos (max 1600px, JPEG) so the upload stays small.
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+                    const c = document.createElement("canvas");
+                    c.width = Math.round(img.width * scale);
+                    c.height = Math.round(img.height * scale);
+                    c.getContext("2d")?.drawImage(img, 0, 0, c.width, c.height);
+                    setPendingImage(c.toDataURL("image/jpeg", 0.85));
+                  };
+                  img.src = String(reader.result);
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
             <input
               ref={composerInputRef}
               className="ta-composer-input"
               value={draft}
-              onChange={(e) => { setDraft(e.target.value); lastSendWasVoiceRef.current = false; }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+              onChange={(e) => { setDraft(e.target.value); lastSendWasVoiceRef.current = false; noteTyping(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { setTyping(false); handleSend(); } }}
               onFocus={() => { if (hubOpen) setHubOpen(false); }}
               placeholder={listening ? "Listening…" : "Tell the agent what to do…"}
               disabled={sending || listening}
             />
+            {/* Mic and Send live inside the pill too, at its right end. */}
             {SPEECH_AVAILABLE && (
               <button
                 type="button"
@@ -2830,10 +3062,25 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
               </button>
             )}
             {!listening && (
-              <button type="button" className="ta-composer-send" onClick={() => handleSend()} disabled={sending || !draft.trim()}>
-                {sending ? "…" : "Send"}
+              <button
+                type="button"
+                className="ta-composer-send"
+                onClick={() => { setTyping(false); handleSend(); }}
+                disabled={sending || (!draft.trim() && !pendingImage)}
+                aria-label="Send"
+                title="Send"
+              >
+                {sending || (typing && draft.trim())
+                  ? <span className="ta-send-dots" aria-label={sending ? "Sending" : "Typing"}><i /><i /><i /></span>
+                  : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 19V5" />
+                      <path d="M5 12l7-7 7 7" />
+                    </svg>
+                  )}
               </button>
             )}
+            </div>
           </div>
         </>
       )}
@@ -2847,7 +3094,14 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
           time the row opens. Tapping an icon runs the real action, same
           handlers the desktop row's icons already use, and closes it. */}
       {isMobile && hubOpen && (
-        <div className="ta-hub-row">
+        <div
+          className={`ta-hub-row${hubMoreRight ? " ta-hub-row--more" : ""}`}
+          ref={(el) => {
+            hubRowRef.current = el;
+            if (el) requestAnimationFrame(() => updateHubFade(el));
+          }}
+          onScroll={(e) => updateHubFade(e.currentTarget)}
+        >
           <button type="button" className="ta-hub-row-item" style={{ "--i": 0 } as React.CSSProperties} onClick={() => { handleNewConversation(); setHubOpen(false); }}>
             <span className="ta-hub-circle">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>

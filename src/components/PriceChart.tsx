@@ -39,7 +39,6 @@ import { PredictionModal } from "./PredictionModal";
 import { ChartDrawingTools, Drawing, ChartDrawingToolsHandle } from "./ChartDrawingTools";
 import { ZoneAnalysisModal } from "./ZoneAnalysisModal";
 import { ChartGoTo } from "./ChartGoTo";
-import { ActionSheet, ActionSheetButtonStyle } from "@capacitor/action-sheet";
 import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
 import { CompactPriceView } from "./CompactPriceView";
@@ -1585,26 +1584,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     try { localStorage.setItem(`chartScaleMode:v2:${prefsScope}`, scaleMode); } catch { /* ignore */ }
   }, [scaleMode]);
   const pendingRangeRef = useRef<{ interval: TimeInterval; from: number; to: number } | null>(null);
-  // Mobile "Date Range" picker: the real iOS action sheet in the native
-  // app; a bottom sheet (same look as the interval sheet) on mobile web.
+  // Mobile "Date Range" picker: our own BottomSheet everywhere, iOS app
+  // included (the native iOS action sheet ignored the app's theme).
   const [dateRangeSheetOpen, setDateRangeSheetOpen] = useState(false);
   const [statsSheetOpen, setStatsSheetOpen] = useState(false);
-  const openDateRangeSheet = async () => {
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const options = [
-          ...RANGE_PRESETS.map((x) => ({ title: x.tip })),
-          { title: "Custom range…" },
-          { title: "Cancel", style: ActionSheetButtonStyle.Cancel },
-        ];
-        const { index } = await ActionSheet.showActions({ title: "Date range", options });
-        if (index < RANGE_PRESETS.length) applyRangePreset(RANGE_PRESETS[index]);
-        else if (index === RANGE_PRESETS.length) setGoToOpen(true);
-        return;
-      } catch {
-        // Plugin unavailable (older native build) — fall back to the web sheet.
-      }
-    }
+  const openDateRangeSheet = () => {
     setDateRangeSheetOpen(true);
   };
   // Range preset (1h…1y): switch the candle interval and zoom to that span.
@@ -2142,7 +2126,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // shared --pc-bg/--pc-scrim-rgb tokens other components use too.
   // Dark theme is pure black everywhere (same as the Liquidation Heatmap
   // card), fullscreen included.
-  const bgColor = isLight ? "#ffffff" : "#000000";
+  // The coin bottom sheet's chart matches the sheet's own dark surface
+  // (#111113, BottomSheet.css / .mss-sheet) instead of pure black.
+  const bgColor = isLight ? "#ffffff" : prefsScope === "sheet" ? "#111113" : "#000000";
   // true when we're using the CSS fallback (iOS / no Fullscreen API)
   const cssFsRef = useRef(false);
 
@@ -7366,14 +7352,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             return (
               <div className="chart-tv-ohlc-overlay">
                 <div className="chart-tv-ohlc-row">
+                  {/* Coin icon + title: tap to switch coin. */}
                   <span
-                    className="chart-tv-ohlc-icon"
-                    style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                    className="chart-tv-ohlc-pick"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Switch coin"
+                    onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
                   >
-                    {COIN_GLYPHS[coin] ?? coin[0]}
-                  </span>
-                  <span className="chart-tv-ohlc-title">
-                    {COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar · {INTERVAL_SHORT[interval]} · CRYPTO
+                    <span
+                      className="chart-tv-ohlc-icon"
+                      style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
+                    >
+                      {COIN_GLYPHS[coin] ?? coin[0]}
+                    </span>
+                    <span className="chart-tv-ohlc-title">
+                      {COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar · {INTERVAL_SHORT[interval]} · CRYPTO
+                    </span>
+                    <svg className="chart-tv-ohlc-pick-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                   </span>
                   <span className={`chart-tv-ohlc-dot${changeUp ? " up" : " down"}`} />
                   <span className="chart-tv-ohlc-values">

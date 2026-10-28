@@ -38,6 +38,17 @@
 @media (hover: hover) and (pointer: fine) {
   .ta-trigger:hover {
     transform: scale(1.08);
+    /* No highlighted border (index.css's global button:hover turns every
+       button's border purple) — keep the resting border instead. */
+    border-color: var(--color-border);
+  }
+  /* Hover animates the orb instead: brighter, faster "breathing" glow and
+     the light inside swirling quicker. */
+  .ta-trigger:hover .ta-trigger-orb {
+    animation: ta-orb-glow-fast 1.1s ease-in-out infinite, ta-orb-scale 1.1s ease-in-out infinite;
+  }
+  .ta-trigger:hover .ta-trigger-orb::before {
+    animation-duration: 2.4s;
   }
 }
 /* Resting state — settles down to just the circle after a few idle
@@ -476,11 +487,8 @@ html[data-theme="light"] .ta-panel {
   font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: -0.01em;
+  /* Plain solid title (was a blue→purple gradient). */
   color: var(--ta-text);
-  background: linear-gradient(90deg, var(--ta-accent), var(--ta-accent-2) 85%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
   /* A 4th header icon button (watchlist) pushed .ta-head-actions wide
      enough that this wrapped to two lines on narrower screens, stretching
      the whole header taller and throwing off vertical centering. Truncate
@@ -586,10 +594,33 @@ html[data-theme="light"] .ta-panel {
 .ta-head-icon-btn--labelled span { line-height: 1; }
 .ta-head-close-glyph { font-size: 0.95rem; }
 .ta-head-icon-btn--labelled span {
-  font-size: 0.72rem;
+  font-size: 0.84rem;
   font-weight: 600;
   white-space: nowrap;
 }
+/* Bigger, evenly sized tap targets with icon + label centered together. */
+.ta-head-icon-btn--labelled {
+  height: 38px;
+  gap: 6px;
+  padding: 0 12px;
+}
+.ta-head-icon-btn--labelled svg { width: 18px; height: 18px; }
+/* Round close: X centered in a soft filled circle, same height as Menu. */
+.ta-head-close.ta-head-close--round {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ta-overlay);
+  color: var(--ta-text);
+}
+.ta-head-close.ta-head-close--round:hover { background: var(--ta-overlay); border-color: transparent; }
+.ta-head-close--round svg { display: block; }
+.ta-head-close.ta-head-close--round { margin-left: 8px; } /* breathing room after "Menu" */
 
 /* ── Mobile-only Hub row (isMobile prop) — collapses New/History/
    Watchlist/Positions/Report into one "Menu" header button; tapping it
@@ -611,6 +642,16 @@ html[data-theme="light"] .ta-panel {
 }
 .ta-hub-row::-webkit-scrollbar {
   display: none;
+}
+/* Centered when everything fits; still scrolls normally when it doesn't
+   (auto margins on the ends, not justify-content:center, which would cut
+   off the first items once the row overflows). */
+.ta-hub-row > .ta-hub-row-item:first-child { margin-left: auto; }
+.ta-hub-row > .ta-hub-row-item:last-child { margin-right: auto; }
+/* More icons off to the right: fade the right edge as a hint. */
+.ta-hub-row--more {
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
 }
 .ta-hub-row-item {
   display: flex;
@@ -1011,9 +1052,10 @@ html[data-theme="light"] .ta-panel {
   margin: 10px 14px 0;
   padding: 10px 14px;
   border-radius: 14px;
-  background: linear-gradient(165deg, rgba(110, 168, 255, 0.14), rgba(167, 139, 250, 0.08));
-  border: 1px solid rgba(110, 168, 255, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  /* Neutral card (was a blue→purple tint) so the blue button stands out. */
+  background: var(--ta-overlay);
+  border: 1px solid var(--ta-border);
+  box-shadow: none;
   flex-shrink: 0;
 }
 .ta-continue-banner-text {
@@ -1030,7 +1072,8 @@ html[data-theme="light"] .ta-panel {
 .ta-continue-banner-btn {
   flex-shrink: 0;
   border: none;
-  background: linear-gradient(165deg, var(--ta-accent), var(--ta-accent-2));
+  /* Solid iOS system blue, same as Send and your message bubbles. */
+  background: #0091ff;
   color: #fff;
   border-radius: 999px;
   padding: 7px 14px;
@@ -1038,8 +1081,10 @@ html[data-theme="light"] .ta-panel {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(110, 168, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: none;
 }
+html[data-theme="light"] .ta-continue-banner-btn { background: #0088ff; }
+.ta-continue-banner-btn:hover { filter: brightness(1.06); border-color: transparent; }
 
 /* ── Portfolio summary strip ─────────────────────────────────────────────── */
 .ta-portfolio {
@@ -1105,21 +1150,20 @@ html[data-theme="light"] .ta-panel {
   text-transform: uppercase;
   color: var(--ta-text-dim);
 }
-.ta-portfolio-label::before {
-  content: "$";
-  font-family: var(--ta-mono);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--ta-accent);
-}
+/* (No blue "$" before every label any more — it also showed on "Win rate",
+   which isn't a dollar amount.) */
 .ta-portfolio-value {
   font-family: var(--ta-mono);
   font-weight: 700;
   font-size: 1.1rem;
-  background: linear-gradient(135deg, var(--ta-accent), var(--ta-accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  /* Plain solid number (was a blue→purple gradient). It's a <button> when
+     editable, so clear the global button background/border/padding that
+     the gradient used to cover up (it showed as a white box). */
+  color: var(--ta-text);
+  background: none;
+  border: none;
+  padding: 0;
+  -webkit-text-fill-color: currentColor;
 }
 .ta-portfolio-value--editable {
   border: none;
@@ -1270,6 +1314,76 @@ html[data-theme="light"] .ta-panel {
 .ta-msg--user .ta-msg-time { align-self: flex-end; }
 .ta-msg--agent .ta-msg-time { align-self: flex-start; }
 
+/* Time + Copy/Edit row under a bubble. The icons are faint until you hover
+   the message (always visible on touch screens). */
+.ta-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ta-msg--user .ta-msg-meta { align-self: flex-end; flex-direction: row-reverse; }
+.ta-msg--agent .ta-msg-meta { align-self: flex-start; }
+.ta-msg-meta .ta-msg-time { align-self: center; }
+.ta-msg-actions { display: inline-flex; gap: 2px; margin-top: 3px; }
+.ta-msg-action {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--ta-text-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.ta-msg-action:hover:not(:disabled) { color: var(--ta-text); background: var(--ta-overlay); border-color: transparent; }
+.ta-msg-action:disabled { opacity: 0.4; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .ta-msg .ta-msg-actions { opacity: 0.7; transition: opacity 0.15s ease; }
+  .ta-msg:hover .ta-msg-actions,
+  .ta-msg .ta-msg-actions:focus-within { opacity: 1; }
+}
+
+/* Inline editor for your own message. */
+.ta-msg-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(420px, 70vw);
+}
+.ta-msg-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--ta-border);
+  background: var(--ta-overlay);
+  color: var(--ta-text);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  outline: none;
+}
+.ta-msg-edit-input:focus { border-color: #0091ff; box-shadow: 0 0 0 3px rgba(0, 145, 255, 0.18); }
+.ta-msg-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ta-msg-edit-cancel,
+.ta-msg-edit-save {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.ta-msg-edit-cancel { background: var(--ta-overlay); color: var(--ta-text); }
+.ta-msg-edit-save { background: #0091ff; color: #fff; }
+html[data-theme="light"] .ta-msg-edit-save { background: #0088ff; }
+.ta-msg-edit-save:disabled { opacity: 0.45; cursor: default; }
+.ta-msg-edit-cancel:hover, .ta-msg-edit-save:hover { border-color: transparent; }
+
 .ta-msg-text {
   margin: 0;
   padding: 10px 14px;
@@ -1290,36 +1404,41 @@ html[data-theme="light"] .ta-panel {
 /* iMessage bubble colors — the blue "sent" bubble is the same fixed blue
    in both themes (real iMessage doesn't recolor it for dark mode either);
    only the gray "received" bubble swaps per theme below. */
+/* iOS Messages colors: sent = system blue per the current HIG (#0091FF
+   dark / #0088FF light), solid, white text — no glass, border or glow. */
 .ta-msg--user .ta-msg-text {
-  background: linear-gradient(165deg, rgba(109, 184, 255, 0.55), rgba(11, 147, 246, 0.42) 60%, rgba(6, 112, 214, 0.5) 100%);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background: #0091ff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: none;
   border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 14px rgba(11, 147, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow: none;
 }
+html[data-theme="light"] .ta-msg--user .ta-msg-text { background: #0088ff; }
 /* Color AND font-size/weight/line-height intentionally match
    .ta-thinking-label exactly — this bubble's content IS what was just
    streaming in the gray typing indicator a moment earlier, so keeping the
    exact same look through that handoff avoids the text visibly
    reflowing/recoloring the instant the real message replaces it. */
+/* iOS Messages received bubble: #262629 gray (dark) / #E9E9EB (light),
+   solid, no border/glass. */
 .ta-msg--agent .ta-msg-text {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 60%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #262629;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: none;
   color: var(--ta-agent-text);
   font-size: 0.82rem;
   font-weight: 500;
   line-height: 1.5;
   border-bottom-left-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 html[data-theme="light"] .ta-msg--agent .ta-msg-text {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.65), rgba(20, 30, 60, 0.04) 60%);
-  border: 1px solid rgba(20, 30, 60, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: #e9e9eb;
+  border: none;
+  box-shadow: none;
 }
 /* Permanent, not collapsible — the whole point is this stays visible after
    the response lands and on reload, not just while streaming. */
@@ -1358,17 +1477,18 @@ html[data-theme="light"] .ta-msg--agent .ta-msg-text {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 14px;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03) 60%);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* Same iOS received-bubble gray as the agent's replies (it becomes one). */
+  background: #262629;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
   border-bottom-left-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: none;
 }
 html[data-theme="light"] .ta-msg-text.ta-typing {
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.65), rgba(20, 30, 60, 0.04) 60%);
-  border: 1px solid rgba(20, 30, 60, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: #e9e9eb;
+  border: none;
+  box-shadow: none;
 }
 .ta-msg-text.ta-typing .ta-thinking-orb { margin-top: 2px; }
 /* The bubble is a <button> now (handleInterruptTyping), not a plain div —
@@ -2201,22 +2321,76 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   border-top: 1px solid var(--ta-border);
   flex-shrink: 0;
 }
+/* The visible "input" (reference: a single soft pill): text field, mic and
+   a round Send button all inside one fully-rounded bar with a soft fill and
+   no border. Focus shows as a subtle ring. */
+.ta-composer-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 4px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+html[data-theme="light"] .ta-composer-field { background: rgba(15, 23, 42, 0.07); }
+.ta-composer-field:focus-within {
+  box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.35);
+}
+/* Round buttons inside the pill. */
+.ta-composer-field .ta-composer-send,
+.ta-composer-field .ta-composer-mic {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.ta-composer-field .ta-composer-mic {
+  border: none;
+  background: transparent;
+}
+/* Paperclip (attach image) at the pill's left end. */
+.ta-composer-attach {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--ta-text-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ta-composer-attach:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: var(--ta-text); border-color: transparent; }
+html[data-theme="light"] .ta-composer-attach:hover:not(:disabled) { background: rgba(15, 23, 42, 0.06); }
+.ta-composer-attach:disabled { opacity: 0.45; cursor: default; }
+.ta-composer-field .ta-composer-mic:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.ta-composer-field .ta-send-dots i { width: 4px; height: 4px; }
 .ta-composer-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--ta-border);
+  border: none;
   border-radius: 999px;
-  background: var(--ta-overlay);
+  background: transparent;
   color: var(--ta-text);
-  font-size: 0.85rem;
-  padding: 10px 16px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.88rem;
+  padding: 8px 8px 8px 4px; /* the paperclip already sits to its left */
 }
 .ta-composer-input::placeholder { color: var(--ta-text-dim); }
 .ta-composer-input:focus {
   outline: none;
-  border-color: var(--ta-accent);
-  box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.14);
+  border: none;
+  box-shadow: none;
 }
 .ta-composer-send {
   flex-shrink: 0;
@@ -2227,13 +2401,49 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
   min-width: 64px;
   text-align: center;
   border: none;
-  border-radius: 999px;
-  background: linear-gradient(165deg, var(--ta-accent), var(--ta-accent-2));
+  /* Rounded rectangle (not a pill); 8px so it nests evenly inside the
+     12px field box with its 4px inset. */
+  border-radius: 8px;
+  /* iOS Messages send button: system blue with a white arrow, matching the
+     sent bubbles (#0091FF dark / #0088FF light). */
+  background: #0091ff;
+  box-shadow: none;
   color: #fff;
   font-weight: 700;
   font-size: 0.82rem;
   padding: 0 20px;
   cursor: pointer;
+}
+.ta-composer-send:hover:not(:disabled) { filter: brightness(1.06); border-color: transparent; }
+/* Animated "…" while typing/sending: three dots that bounce and brighten
+   one after another (same rhythm as a chat "typing" indicator). */
+.ta-send-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+}
+.ta-send-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: ta-send-dot 1s ease-in-out infinite;
+}
+.ta-send-dots i:nth-child(2) { animation-delay: 0.15s; }
+.ta-send-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes ta-send-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30%           { transform: translateY(-3px); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta-send-dots i { animation: none; opacity: 0.7; }
+}
+html[data-theme="light"] .ta-composer-send {
+  background: #0088ff;
+  color: #fff;
 }
 .ta-composer-send:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
 
@@ -2440,4 +2650,69 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 .ta-snapshot-opening-note {
   font-size: 0.72rem;
   color: var(--ta-text-dim);
+}
+
+/* ── Dark: glow edge, same as the Pro/Elite promo popups ─────────────────
+   Blue→violet tinted border (the Agent Ready accents), a soft outer glow,
+   and a bright streak along the top edge. */
+html:not([data-theme="light"]) .ta-panel {
+  /* Same solid background as the Pro promo / Elite upsell popups. */
+  background: linear-gradient(160deg, #06101a 0%, #000 100%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: rgba(129, 140, 248, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(99, 102, 241, 0.18);
+}
+/* Header: no separate tint — the panel's own solid background shows
+   through, with just the hairline divider underneath. */
+html:not([data-theme="light"]) .ta-head {
+  background: none;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+html:not([data-theme="light"]) .ta-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(110, 168, 255, 0.75), rgba(167, 139, 250, 0.75), transparent);
+}
+
+/* ── Light theme: same structure as dark, light tones ─────────────────────
+   Solid white panel (faint blue at the top-left), no separate header tint,
+   a blue-violet tinted edge with a soft colored glow, and the same top
+   streak. No frosted blur. */
+html[data-theme="light"] .ta-panel {
+  background: linear-gradient(160deg, #f3f7ff 0%, #ffffff 45%, #ffffff 100%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 32px 80px rgba(15, 23, 42, 0.16),
+    0 0 50px rgba(99, 102, 241, 0.12);
+}
+html[data-theme="light"] .ta-head {
+  background: none;
+  border-bottom-color: rgba(15, 23, 42, 0.07);
+}
+html[data-theme="light"] .ta-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.55), rgba(139, 92, 246, 0.55), transparent);
 }

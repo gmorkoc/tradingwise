@@ -6,6 +6,7 @@ import { AIQuotaWall } from "./AIQuotaWall";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { useAuth } from "../contexts/AuthContext";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/AltAnalysis.css";
 
 interface Props {
@@ -72,6 +73,14 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
 
   const [query, setQuery]         = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  // Phones get the coin picker as a bottom sheet instead of a dropdown.
+  const [isPhone, setIsPhone] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const onChange = () => setIsPhone(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
   const [coin, setCoin]           = useState<typeof COINS[number]>(COINS.find(c => c.symbol === "ETH") ?? COINS[1]);
   const [tf, setTf]               = useState<Timeframe>("1Y");
   const [candles, setCandles]     = useState<CandleDataPoint[]>([]);
@@ -430,7 +439,46 @@ export function AltAnalysis({ onOpenUpgrade, onOpenAuth }: Props) {
               <span>{coin.symbol}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6"/></svg>
             </button>
-            {showDropdown && (
+            {isPhone && (
+              <BottomSheet
+                open={showDropdown}
+                onClose={() => { setShowDropdown(false); setQuery(""); }}
+                title={<>Select coin</>}
+                className="alt-coin-sheet"
+                ariaLabel="Select coin"
+                headerExtra={
+                  <div className="alt-sheet-search">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input
+                      className="alt-sheet-search-input"
+                      placeholder="Search coin…"
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                    />
+                  </div>
+                }
+              >
+                <div className="alt-sheet-list">
+                  {filtered.map(c => {
+                    const col = SECTOR_COLORS[SECTOR_MAP[c.symbol] ?? ""] ?? "#818cf8";
+                    return (
+                      <button
+                        key={c.symbol}
+                        type="button"
+                        className={`alt-sheet-item${c.symbol === coin.symbol ? " alt-sheet-item--active" : ""}`}
+                        onClick={() => handleSelectCoin(c)}
+                      >
+                        <span className="alt-dd-symbol" style={{ color: col }}>{c.symbol}</span>
+                        <span className="alt-dd-name">{c.name}</span>
+                        <span className="alt-dd-sector" style={{ color: col }}>{SECTOR_MAP[c.symbol] ?? "Other"}</span>
+                      </button>
+                    );
+                  })}
+                  {filtered.length === 0 && <div className="alt-dd-empty">No coins found</div>}
+                </div>
+              </BottomSheet>
+            )}
+            {showDropdown && !isPhone && (
               <div className="alt-dropdown">
                 <div className="alt-dropdown-search">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>

@@ -2361,6 +2361,27 @@ html[data-theme="light"] .chart-active
   font-size: 0.78rem;
   white-space: nowrap;
 }
+/* Coin icon + title: tappable (the overlay itself is pointer-events:none). */
+/* Overlay sits above the drawing canvas (z 25) and other chart layers so
+   the tappable title actually gets the tap; it stays pointer-events:none
+   itself, so everything else still passes through to the chart. */
+.chart-tv-ohlc-overlay:has(.chart-tv-ohlc-pick) { z-index: 40; }
+.chart-tv-ohlc-pick {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: auto !important;
+  cursor: pointer;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
+}
+.chart-tv-ohlc-pick:active { opacity: 0.6; }
+.chart-tv-ohlc-pick:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.chart-tv-ohlc-pick-chev { flex-shrink: 0; opacity: 0.7; color: var(--color-text); }
 .chart-tv-ohlc-icon {
   flex-shrink: 0;
   display: flex;
@@ -5222,6 +5243,49 @@ html[data-theme="light"] .chart-fullscreen-btn {
 .coin-picker-sheet {
   height: 88vh;
 }
+/* Coin picker in the shared BottomSheet: the sheet's own scroller and
+   body become a flex column so the table's body is what scrolls (header
+   row + search stay put). */
+.bs-sheet.coin-picker-bs .bs-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bs-sheet.coin-picker-bs .coin-picker-bs-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.bs-sheet.coin-picker-bs .bs-header { flex-shrink: 0; }
+
+/* Dark: the sheet was pure black on a pure-black page and vanished. Lift
+   it to the iOS elevated dark surface, add a bright top rim, dim the page
+   harder behind it, and give the search a filled field. */
+html:not([data-theme="light"]) .indicators-sheet-backdrop { background: rgba(0, 0, 0, 0.7); }
+html:not([data-theme="light"]) .indicators-sheet {
+  background: #111113;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.8);
+}
+html:not([data-theme="light"]) .indicators-sheet .indicators-sheet-header {
+  background: #111113;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+html:not([data-theme="light"]) .coin-picker-sheet .coin-picker-search-wrap {
+  margin: 10px 16px 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+html:not([data-theme="light"]) .coin-picker-sheet .coin-picker-table-header,
+html:not([data-theme="light"]) .coin-picker-sheet .coin-picker-table-body { background: transparent; }
+html:not([data-theme="light"]) .coin-picker-sheet .coin-picker-table-data.active {
+  background: rgba(10, 132, 255, 0.18);
+}
 
 .indicators-sheet-header {
   display: flex;
@@ -7393,6 +7457,8 @@ html[data-theme="light"] .chart-trade-cta {
    the top of the scroll instead of .mss-header's absolute placement. */
 .fs-flat-backdrop { z-index: 200015; }
 .fs-flat-sheet { max-height: 88vh; }
+/* Chart settings sheet: no side padding on the inner body. */
+.fs-flat-sheet .fs-dock-body-inner { padding-left: 0; padding-right: 0; }
 .fs-flat-sheet .mss-header {
   position: sticky;
   top: 0;

@@ -4759,17 +4759,17 @@ body.cw-chart-fullscreen-active .fnb-bar {
   .cw-db-stat:first-child { padding-left: 0; }
 }
 
-/* Dark theme: the AI tab's empty state was near-black (#161b24 → #0e1218).
-   Lighter, in the app's navy family, with brighter tiles — all widths. */
+/* Dark theme: the AI tab's empty state follows the pure-black theme —
+   black with a faint top glow, neutral grey tiles (no navy) — all widths. */
 html:not([data-theme="light"]) .cw-right-panel.cw-right-panel--ai-hero {
   background:
-    radial-gradient(140% 45% at 50% 0%, rgba(148, 163, 184, 0.1), rgba(148, 163, 184, 0) 70%),
-    linear-gradient(180deg, #1c2638 0%, #18213a 45%, #141c2e 100%);
+    radial-gradient(140% 40% at 50% 0%, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 70%),
+    #000;
 }
 html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  background: #121212;
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 html:not([data-theme="light"]) .cw-right-panel--ai-hero .cw-ai-start-tile-skel {
   background: rgba(255, 255, 255, 0.1);

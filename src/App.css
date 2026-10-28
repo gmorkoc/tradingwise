@@ -2890,6 +2890,21 @@ html[data-theme="light"] .icon-strip {
   flex-shrink: 0;
   position: relative;
 }
+/* Thin divider above Settings / Sign In-Out, separating them from the
+   page links above. Inset to line up with the menu rows. */
+.icon-strip-bottom::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  width: 70%;
+  height: 1px;
+  background: rgb(15 23 42 / 5%);
+}
+html:not([data-theme="light"]) .icon-strip-bottom::before {
+  background: rgb(255 255 255 / 8%);
+}
+
 
 .icon-strip-btn {
   width: 100%;
@@ -4205,8 +4220,45 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
   padding: 0 24px;
   background: var(--color-surface);
   overflow: visible;
+  position: relative;
+}
+/* Mobile only: header slides up out of view while scrolling down and
+   back on scroll up (App.tsx mchHidden). The negative margin collapses
+   its space so the page moves up with it; --mch-h is its measured height. */
+@media (max-width: 640px) {
+  .main-coin-header {
+    transition:
+      margin-top 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.22s ease;
+    will-change: transform;
+  }
+  .main-coin-header.main-coin-header--hidden {
+    margin-top: calc(-1 * var(--mch-h, 64px));
+    transform: translateY(-12px);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .main-coin-header { transition: none; }
 }
 
+/* Header toggle's logo tab: spinning while loading/refreshing — no blue
+   glow behind it (the ring + "C" draw-in only). */
+.chart-mobile-tab .chart-tab-logo-loading .ptr-logo-glow { display: none; }
+.chart-mobile-tab .chart-tab-logo-loading { display: inline-flex; }
+/* The logo in the toggle uses the colors we designed: near-black #111113
+   disc, faint neutral edge, green top arc + white bottom arc. Beats the
+   older flat black/white recolor (.chart-mobile-tab .st-logo-icon …). */
+html .chart-mobile-tab .st-logo-icon circle[fill^="url"] { fill: #111113; }
+html .chart-mobile-tab .st-logo-icon circle[stroke] {
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 1;
+}
+html .chart-mobile-tab .st-logo-icon path[stroke="#4ade80"] { stroke: #4ade80; }
+html .chart-mobile-tab .st-logo-icon path[stroke="white"] { stroke: #fff; }
+.chart-mobile-tab .st-logo-icon { width: 26px; height: 26px; }
 /* .mch-body itself is display:contents on desktop (its children render
    inline as part of this header, see the .mch-body rule above .mch-left),
    so a border on .mch-body would have no box to paint on — this is the
@@ -5480,6 +5532,23 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
     border-radius: 8px;
     color: var(--color-text-muted);
   }
+  /* Support row: "● Online" badge right after the label (the drawer's
+     visible area is narrower than the row, so don't push it to the edge). */
+  /* Row ends where the divider above ends (divider: left 20px + 70% wide;
+     +12px for the button's right padding), so "Online" lines up with it. */
+  .icon-strip .icon-strip-bottom .icon-strip-support {
+    width: calc(70% + 32px); box-sizing: border-box;
+  }
+  .icon-strip .icon-strip-bottom .icon-strip-support-badge {
+    display: flex; align-items: center; align-self: center; gap: 4px; margin-left: auto;
+    line-height: 1;
+    /* Small text sits optically low next to the 0.88rem label; nudge up. */
+    transform: translateY(-1px);
+    font-size: 0.68rem; font-weight: 600; color: var(--color-text-muted);
+  }
+  .icon-strip .icon-strip-bottom .icon-strip-support-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0;
+  }
   .icon-strip .icon-strip-bottom .icon-strip-btn:hover,
   .icon-strip .icon-strip-bottom .icon-strip-btn:active,
   .icon-strip .icon-strip-bottom .icon-strip-btn:focus {
@@ -6581,7 +6650,8 @@ html[data-theme="light"] .pticker-price {
   position: relative;
   width: 100%;
   max-width: 100vw;
-  max-height: 92vh;
+  /* Opens shorter (was 92vh); content scrolls inside. */
+  max-height: 86vh;
   background: var(--color-surface);
   border-radius: 20px 20px 0 0;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
@@ -6759,6 +6829,12 @@ html[data-theme="light"] .pticker-price {
 }
 .mss-chart-frozen .price-chart-container {
   padding: 0;
+}
+/* Dark: chart area matches the sheet surface (chart canvas does too,
+   PriceChart bgColor for prefsScope "sheet"). */
+html:not([data-theme="light"]) .mss-chart-frozen .price-chart-container {
+  --pc-bg: #111113;
+  background: #111113;
 }
 .mss-chart-tools-row {
   display: flex;
@@ -7144,3 +7220,26 @@ html[data-theme="light"] .pticker-price {
   transition: background 0.15s ease, color 0.15s ease;
 }
 .back-swipe--ready { background: var(--action-green, #16a34a); color: #fff; }
+
+/* ── Dark theme: every bottom sheet lifted off the pure-black page ──────
+   Same look as the shared BottomSheet (BottomSheet.css): iOS elevated
+   dark surface #111113 (just off black), bright top rim, deeper shadow, darker backdrop.
+   Covers the older hand-rolled sheets that don't use BottomSheet. */
+html:not([data-theme="light"]) .mss-sheet,
+html:not([data-theme="light"]) .interval-sheet,
+html:not([data-theme="light"]) .ob-sheet,
+html:not([data-theme="light"]) .db-sheet {
+  background: #111113;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.8);
+}
+html:not([data-theme="light"]) .mss-header,
+html:not([data-theme="light"]) .interval-sheet-header,
+html:not([data-theme="light"]) .ob-sheet-header {
+  background: #111113;
+}
+html:not([data-theme="light"]) .mss-backdrop,
+html:not([data-theme="light"]) .interval-sheet-backdrop,
+html:not([data-theme="light"]) .ob-sheet-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}

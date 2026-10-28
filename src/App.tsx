@@ -59,6 +59,7 @@ import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
 import { PaywallPromo } from "./components/PaywallPromo";
+import { BottomSheet } from "./components/BottomSheet";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -1039,6 +1040,39 @@ function AppDashboard({
 
   const { tier, user, profile, signOut } = useAuth();
   const { used: aiUsed, limit: aiLimit } = useAIQuota();
+  // AI Usage card — same used/limit useAIQuota computes for ProfilePage's
+  // own AI Usage section, so they never drift. Desktop sidebar only.
+  const aiUsageCardEl = (
+    <div className="icon-strip-usage-card">
+      <div className="icon-strip-usage-head">
+        <span className={`icon-strip-usage-icon${tier === "elite" ? " icon-strip-usage-icon--elite" : tier === "pro" ? " icon-strip-usage-icon--pro" : ""}`}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+          </svg>
+        </span>
+        <span className="icon-strip-usage-title">{t("nav.aiUsage", "AI Usage")}</span>
+        {tier !== "elite" && (
+          <button type="button" className="icon-strip-usage-upgrade" onClick={onOpenUpgrade}>
+            {t("nav.upgrade", "Upgrade")}
+          </button>
+        )}
+      </div>
+      {/* Always the bar, whatever the tier; amber/red near the limit. */}
+      <div className="icon-strip-usage-track">
+        <div
+          className={`icon-strip-usage-fill${tier === "elite" ? " icon-strip-usage-fill--elite" : tier === "pro" ? " icon-strip-usage-fill--pro" : ""}${tier === "elite" ? "" : aiLimit > 0 && aiUsed / aiLimit >= 0.9 ? " icon-strip-usage-fill--red" : aiLimit > 0 && aiUsed / aiLimit >= 0.6 ? " icon-strip-usage-fill--amber" : ""}`}
+          style={{ width: tier === "elite" ? "100%" : aiLimit > 0 ? `${Math.min(100, (aiUsed / aiLimit) * 100)}%` : "100%" }}
+        />
+      </div>
+      <div className="icon-strip-usage-caption">
+        {tier === "elite"
+          ? t("profile.aiUsage.unlimited", "Unlimited")
+          : aiLimit > 0
+            ? t("nav.usageOfLimit", "{{used}} of {{limit}} used", { used: aiUsed, limit: aiLimit })
+            : t("nav.usageLocked", "Upgrade to unlock AI requests")}
+      </div>
+    </div>
+  );
   // Shows the in-app buy-signal toast anywhere in the app, the instant it
   // fires — independent of whether a push notification actually made it
   // through (browser push subscriptions can go stale; this doesn't rely
@@ -1376,15 +1410,22 @@ function AppDashboard({
         title={onChartPage ? t("chart.tabLabel", "Chart") : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection)}
         onClick={() => {
           setMobileChartTab("chart");
-          if (onChartPage) setChartTabSpinKey((k) => k + 1);
+          setChartTabSpinKey((k) => k + 1);
         }}
       >
-        {onChartPage ? (
+        {/* The round "C" logo on every page. While the page loads / data
+            refreshes it spins like desktop's sidebar logo (ring + the
+            "C" drawing itself in); a tap spins it once. */}
+        {loading || refreshing ? (
+          <span className="ptr-logo-wrap chart-tab-logo-loading">
+            <span className="ptr-logo-glow" />
+            <span className="ptr-logo-ring" />
+            <LogoIcon size={18} animated />
+          </span>
+        ) : (
           <span key={chartTabSpinKey} className={chartTabSpinKey > 0 ? "chart-tab-logo-spin" : "chart-tab-logo-static"}>
             <LogoIcon size={18} />
           </span>
-        ) : (
-          <NavIcon d={NAV_ITEMS.find((n) => n.id === activeSection)?.d ?? ["M3 3v18h18", "M7 16l4-4 4 4 5-5"]} size={16} />
         )}
       </button>
       <button
@@ -1424,6 +1465,30 @@ function AppDashboard({
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Mobile header: slides away while scrolling down, comes back on any
+  // scroll up (or near the top). Small threshold so tiny jitters and iOS
+  // bounce don't flicker it.
+  const [mchHidden, setMchHidden] = useState(false);
+  useEffect(() => {
+    // Listen at the document (capture) and only react to the page's own
+    // scroller — works even if .main-content mounts after the boot screen.
+    let lastY = 0;
+    const onScroll = (e: Event) => {
+      const el = mainContentRef.current;
+      if (!el || e.target !== el) return;
+      const y = el.scrollTop;
+      if (y <= 40) setMchHidden(false);
+      else if (y > lastY + 8) setMchHidden(true);
+      else if (y < lastY - 8) setMchHidden(false);
+      else return; // within threshold: keep lastY anchored
+      lastY = y;
+    };
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
+  }, []);
+  // A new page always starts with the header showing.
+  useEffect(() => { setMchHidden(false); }, [activeSection]);
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1547,7 +1612,11 @@ function AppDashboard({
   // visible seam; tucking it slightly behind instead hides that edge
   // under the keyboard's own opaque surface.
   const KEYBOARD_OVERLAP_PX = 32;
-  const coinPickerSheetRef = useRef<HTMLDivElement>(null);
+  // The sheet is the shared BottomSheet (position:relative inside its
+  // bottom-aligned backdrop, so `bottom` lifts it), found by its class.
+  const coinPickerSheetRef = {
+    get current() { return document.querySelector<HTMLElement>(".bs-sheet.coin-picker-bs"); },
+  };
   useEffect(() => {
     if (!coinPickerOpen) return;
     const showSub = Keyboard.addListener("keyboardWillShow", (info) => {
@@ -2107,6 +2176,9 @@ function AppDashboard({
     if (!el) { root.style.setProperty("--mch-bottom", "0px"); return; }
     const update = () => {
       root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);
+      // Header's own height — the hide-on-scroll animation slides it up by
+      // exactly this much (.main-coin-header--hidden).
+      root.style.setProperty("--mch-h", `${el.offsetHeight}px`);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -2920,6 +2992,29 @@ function AppDashboard({
                 <span className="icon-strip-label">{t("nav.settings")}</span>
               </button>
 
+              <button
+                type="button"
+                className="icon-strip-btn icon-strip-support"
+                onClick={() => {
+                  setContactOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                title={t("nav.support", "Support")}
+              >
+                <span className="nav-icon-wrap">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </span>
+                <span className="icon-strip-label">{t("nav.support", "Support")}</span>
+                <span className="icon-strip-support-badge">
+                  <span className="icon-strip-support-dot" />
+                  {t("nav.online", "Online")}
+                </span>
+              </button>
+
               {/* Signed in: Sign out. Signed out: Sign in / Register
                   (opens the auth sheet) — never "Sign out" without an
                   account. */}
@@ -3028,46 +3123,9 @@ function AppDashboard({
                 </div>
               )}
 
-              {/* Right above the account row, not after Support — same
-                  used/limit useAIQuota already computes for ProfilePage's
-                  own AI Usage section, reused here, not re-derived, so
-                  the two never drift out of sync. */}
-              <div className="icon-strip-usage-card">
-                <div className="icon-strip-usage-head">
-                  <span className={`icon-strip-usage-icon${tier === "elite" ? " icon-strip-usage-icon--elite" : tier === "pro" ? " icon-strip-usage-icon--pro" : ""}`}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-                    </svg>
-                  </span>
-                  <span className="icon-strip-usage-title">{t("nav.aiUsage", "AI Usage")}</span>
-                  {tier !== "elite" && (
-                    <button type="button" className="icon-strip-usage-upgrade" onClick={onOpenUpgrade}>
-                      {t("nav.upgrade", "Upgrade")}
-                    </button>
-                  )}
-                </div>
-                {/* Always the bar, no matter the tier — elite just
-                    renders it full with an "Unlimited" caption instead
-                    of swapping to a different, bar-less layout. */}
-                {/* Tier's own color (same values as TIER_CONFIG in
-                    ProfilePage.tsx: pro #38bdf8, elite #a78bfa) as the
-                    base fill — amber/red still take over once close to
-                    the limit, a more useful signal in the moment than
-                    staying on-brand. */}
-                <div className="icon-strip-usage-track">
-                  <div
-                    className={`icon-strip-usage-fill${tier === "elite" ? " icon-strip-usage-fill--elite" : tier === "pro" ? " icon-strip-usage-fill--pro" : ""}${tier === "elite" ? "" : aiLimit > 0 && aiUsed / aiLimit >= 0.9 ? " icon-strip-usage-fill--red" : aiLimit > 0 && aiUsed / aiLimit >= 0.6 ? " icon-strip-usage-fill--amber" : ""}`}
-                    style={{ width: tier === "elite" ? "100%" : aiLimit > 0 ? `${Math.min(100, (aiUsed / aiLimit) * 100)}%` : "100%" }}
-                  />
-                </div>
-                <div className="icon-strip-usage-caption">
-                  {tier === "elite"
-                    ? t("profile.aiUsage.unlimited", "Unlimited")
-                    : aiLimit > 0
-                      ? t("nav.usageOfLimit", "{{used}} of {{limit}} used", { used: aiUsed, limit: aiLimit })
-                      : t("nav.usageLocked", "Upgrade to unlock AI requests")}
-                </div>
-              </div>
+              {/* Right above the account row, not after Support. Shared
+                  with the phone menu (aiUsageCardEl). */}
+              {aiUsageCardEl}
 
               <button
                 type="button"
@@ -3351,7 +3409,7 @@ function AppDashboard({
               real thing: the hamburger, mch-right's fallback icons, and
               the coin button are all still needed there. */}
           {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
-          <div ref={mchRef} className="main-coin-header">
+          <div ref={mchRef} className={`main-coin-header${mchHidden && !mobileNavOpen ? " main-coin-header--hidden" : ""}`}>
             <div className="mch-left">
               <button
                 className="mch-menu-btn"
@@ -3375,18 +3433,6 @@ function AppDashboard({
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
-              {/* .top-nav-bar (its own wordmark) never renders on native
-                  iOS, and is itself hidden below isDesktopWidth — this is
-                  the exact gap where "coinhintz" branding was otherwise
-                  missing entirely. */}
-              {(Capacitor.isNativePlatform() || !isDesktopWidth) && (
-                <div className="top-nav-logo">
-                  <span className="mch-logo mch-logo-shimmer">
-                    coinhint<span className="top-nav-logo-accent">z</span>
-                  </span>
-                  <sup className="top-nav-logo-tm">©</sup>
-                </div>
-              )}
               {/* Chart/Advance Chart pages: PriceChart.tsx's own
                   chart-hero-id-row is now the coin selector there too
                   (desktop included, not just mobile) — this button would
@@ -3896,6 +3942,7 @@ function AppDashboard({
                     onOpenAuth={onOpenAuth}
                     onOpenUpgrade={onOpenUpgrade}
                     ticker={coinTickers.get(coin)}
+                    onOpenCoinPicker={openCoinPicker}
                   />
                 </Suspense>
               </div>
@@ -4009,32 +4056,32 @@ function AppDashboard({
           </aside>
         )}
 
-        {coinPickerOpen &&
+        {coinPickerOpen && isDesktopWidth &&
           ReactDOM.createPortal(
-            isDesktopWidth ? (
-              <>
-                <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
-                <div
-                  className="coin-picker-menu coin-picker-menu--table"
-                  style={{ top: coinPickerPos.top, left: coinPickerPos.left }}
-                >
-                  {coinPickerTableContent}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="indicators-sheet-backdrop" onClick={closeCoinPicker} />
-                <div className="indicators-sheet coin-picker-sheet" ref={coinPickerSheetRef}>
-                  <div className="indicators-sheet-header">
-                    <span className="indicators-sheet-title">Select a Crypto</span>
-                    <button type="button" className="indicators-sheet-close" onClick={closeCoinPicker}>✕</button>
-                  </div>
-                  {coinPickerTableContent}
-                </div>
-              </>
-            ),
+            <>
+              <div className="coin-picker-backdrop" onClick={closeCoinPicker} />
+              <div
+                className="coin-picker-menu coin-picker-menu--table"
+                style={{ top: coinPickerPos.top, left: coinPickerPos.left }}
+              >
+                {coinPickerTableContent}
+              </div>
+            </>,
             document.body,
           )}
+        {/* Phones / iOS: the shared BottomSheet. */}
+        {!isDesktopWidth && (
+          <BottomSheet
+            open={coinPickerOpen}
+            onClose={closeCoinPicker}
+            title="Select a Crypto"
+            className="coin-picker-sheet coin-picker-bs"
+            bodyClassName="coin-picker-bs-body"
+            ariaLabel="Select a Crypto"
+          >
+            {coinPickerTableContent}
+          </BottomSheet>
+        )}
 
         <CoinUnavailableSheet
           symbol={unavailableCoin}

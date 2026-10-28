@@ -35,7 +35,12 @@ interface Props {
   // alone can't give this (lastPrice below is derived from whatever
   // interval's candles are selected, not a fixed 24h window).
   ticker?: Ticker24h;
+  /** Opens App's coin picker (same one the Trade chart uses). */
+  onOpenCoinPicker?: (anchor: HTMLElement) => void;
 }
+
+// "FORECAST · BULLISH · WEAK" chart badge — off; it overlapped the coin name.
+const SHOW_FORECAST_BADGE: boolean = false;
 
 type Interval = { label: string; value: string; refresh: number; limit: number; durationSec: number; nextClose?: (nowSec: number) => number };
 
@@ -1982,7 +1987,7 @@ function IndicatorStat({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker }) => {
+export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker, onOpenCoinPicker }) => {
   const { tier } = useAuth();
   const isPaid = hasAccess(tier, "pro");
   const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
@@ -2258,7 +2263,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background:  { type: ColorType.Solid, color: isDark ? "#0f1117" : "#ffffff" },
+        background:  { type: ColorType.Solid, color: isDark ? "#000000" : "#ffffff" },
         textColor:   isDark ? "#94a3b8" : "#475569",
       },
       grid: {
@@ -4715,11 +4720,22 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 return (
                   <div className="chart-tv-ohlc-overlay cw-ohlc-overlay">
                     <div className="chart-tv-ohlc-row">
-                      <span className="chart-tv-ohlc-icon" style={{ background: COIN_COLORS[coin as string] ?? "var(--color-primary)" }}>
-                        {COIN_GLYPHS[coin as string] ?? (coin as string)[0]}
-                      </span>
-                      <span className="chart-tv-ohlc-title">
-                        {name} / U.S. Dollar · {interval.label.toUpperCase()} · CRYPTO
+                      {/* Coin icon + title: tap to switch coin. */}
+                      <span
+                        className="chart-tv-ohlc-pick"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Switch coin"
+                        onClick={(e) => onOpenCoinPicker?.(e.currentTarget)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
+                      >
+                        <span className="chart-tv-ohlc-icon" style={{ background: COIN_COLORS[coin as string] ?? "var(--color-primary)" }}>
+                          {COIN_GLYPHS[coin as string] ?? (coin as string)[0]}
+                        </span>
+                        <span className="chart-tv-ohlc-title">
+                          {name} / U.S. Dollar · {interval.label.toUpperCase()} · CRYPTO
+                        </span>
+                        <svg className="chart-tv-ohlc-pick-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                       </span>
                       <span className={`chart-tv-ohlc-dot${up ? " up" : " down"}`} />
                       <span className="chart-tv-ohlc-values">
@@ -4789,7 +4805,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   </button>
                 </div>
               )}
-              {showForecast && aiRead && (
+              {/* Forecast badge hidden: it overlapped the coin name overlay
+                  at the top-left. The forecast candles still draw. */}
+              {SHOW_FORECAST_BADGE && showForecast && aiRead && (
                 <div className={`cw-forecast-badge${aiRead.bias === "bearish" ? " cw-forecast-badge--bear" : ""}`}>
                   <span className="cw-forecast-badge-dot" />
                   {(() => {

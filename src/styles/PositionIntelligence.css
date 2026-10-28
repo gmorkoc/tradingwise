@@ -48,6 +48,12 @@
   background: var(--pc-panel, var(--color-surface-alt));
   animation: pi-row-in 0.35s ease both;
 }
+/* Dark: the panel tint nearly vanished on pure black — a lighter fill plus
+   a hairline border so the cards read as cards. */
+html:not([data-theme="light"]) .pi-gc {
+  background: #1c1c1e;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
 .pi-gc-top {
   display: flex;
   align-items: center;

@@ -481,6 +481,12 @@
   box-shadow: 12px 0 48px rgba(0, 0, 0, 0.18);
 }
 html[data-theme="light"] .drawer { background: #fff; }
+/* Dark: same just-off-black surface + rim as the bottom sheets. */
+html:not([data-theme="light"]) .drawer {
+  background: #111113;
+  border-right: none;
+  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.8);
+}
 .drawer-header {
   border-bottom: none;
   padding-bottom: 8px;
