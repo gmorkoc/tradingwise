@@ -103,7 +103,9 @@ function toLevels(pairs: [number, number][]): Level[] {
 
 async function fetchBinance(coin: string) {
   const sym = BINANCE_SYM[coin] ?? `${coin}USDT`;
-  const d = await fetchBn(`/api/v3/depth?symbol=${sym}&limit=100`);
+  // 1000 levels (weight 50): 100 only spans a few dollars on BTC, so any
+  // coarse grouping (10 / 100) collapsed the whole book into 1–2 rows.
+  const d = await fetchBn(`/api/v3/depth?symbol=${sym}&limit=1000`);
   const parse = (raw: [string, string][]) =>
     toLevels(raw.map(([p, s]) => [parseFloat(p), parseFloat(s)]));
   return {
@@ -114,7 +116,7 @@ async function fetchBinance(coin: string) {
 
 async function fetchKraken(coin: string) {
   const sym = KRAKEN_SYM[coin] ?? `${coin}USD`;
-  const res = await fetch(`https://api.kraken.com/0/public/Depth?pair=${sym}&count=100`);
+  const res = await fetch(`https://api.kraken.com/0/public/Depth?pair=${sym}&count=500`);
   if (!res.ok) throw new Error("unavailable");
   const d = await res.json();
   if (d.error?.length) throw new Error("unavailable");
@@ -126,7 +128,7 @@ async function fetchKraken(coin: string) {
 
 async function fetchOKX(coin: string) {
   const sym = OKX_SYM[coin] ?? `${coin}-USDT`;
-  const res = await fetch(`https://www.okx.com/api/v5/market/books?instId=${sym}&sz=50`);
+  const res = await fetch(`https://www.okx.com/api/v5/market/books?instId=${sym}&sz=400`);
   if (!res.ok) throw new Error("unavailable");
   const d = await res.json();
   const book = d.data?.[0];
@@ -144,7 +146,7 @@ async function fetchCoinbase(coin: string) {
   if (!res.ok) throw new Error("unavailable");
   const d = await res.json();
   const parse = (raw: [string, string, number][]) =>
-    toLevels(raw.slice(0, 100).map(([p, s]) => [parseFloat(p), parseFloat(s)]));
+    toLevels(raw.slice(0, 1000).map(([p, s]) => [parseFloat(p), parseFloat(s)]));
   return { bids: parse(d.bids), asks: parse(d.asks) };
 }
 
@@ -189,6 +191,23 @@ function fmtPrice(p: number): string {
   if (p >= 1000)  return p.toLocaleString("en-US", { maximumFractionDigits: 2 });
   if (p >= 1)     return p.toFixed(4);
   return p.toFixed(6);
+}
+
+// A grouped level's price, shown with exactly the grouping's decimals —
+// fmtPrice alone rounds BTC to 1 decimal, so at a 0.01 tick neighbouring
+// rows (81,404.61 / 81,404.62) displayed as the same "81,404.6".
+function fmtLevelPrice(p: number, tick: number): string {
+  // Decimals the tick itself has (0.05 → 2, 2.5 → 1, 100 → 0).
+  const decimals = (fmtPrecisionLabel(tick).split(".")[1] ?? "").length;
+  return p.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// A row's dollar value (amount × price): $603.5K, $1.24M, $842.
+function fmtUsd(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(v >= 1 ? 0 : 2)}`;
 }
 
 function fmtSize(s: number): string {
@@ -407,8 +426,11 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
   }, [coin]);
   const activePrecision = precision ?? ladder[0];
 
-  const displayBids = groupLevels(bids, activePrecision, "bid");
-  const displayAsks = groupLevels(asks, activePrecision, "ask");
+  // Deeper fetch (up to 1000 levels) → cap what's drawn per side so a fine
+  // tick doesn't render hundreds of rows on every 2.5s poll.
+  const MAX_ROWS = 40;
+  const displayBids = groupLevels(bids, activePrecision, "bid").slice(0, MAX_ROWS);
+  const displayAsks = groupLevels(asks, activePrecision, "ask").slice(0, MAX_ROWS);
 
   const maxTotal = Math.max(
     displayBids[displayBids.length - 1]?.total ?? 1,
@@ -480,7 +502,7 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
               <div className="ob-col-headers">
                 <span>Price (USD)</span>
                 <span>Amount ({coin})</span>
-                <span>Total ({coin})</span>
+                <span>Total (USD)</span>
               </div>
 
               {/* Asks — best ask nearest the spread row, at the bottom of this section */}
@@ -488,16 +510,18 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
                 {displayAsks.map((lvl) => (
                   <div key={lvl.price} className="ob-row">
                     <div className="ob-fill ob-fill--ask" style={{ width: `${(lvl.total / maxTotal) * 100}%` }} />
-                    <span className="ob-cell ob-price ob-price--ask">{fmtPrice(lvl.price)}</span>
+                    <span className="ob-cell ob-price ob-price--ask">{fmtLevelPrice(lvl.price, activePrecision)}</span>
                     <span className="ob-cell ob-size">{fmtSize(lvl.size)}</span>
-                    <span className="ob-cell ob-size">{fmtSize(lvl.total)}</span>
+                    <span className="ob-cell ob-size">{fmtUsd(lvl.usdValue)}</span>
                   </div>
                 ))}
               </div>
 
               <div className="ob-mid-row">
                 <span className="ob-mid-price">{fmtPrice(midPrice)}</span>
-                <span className="ob-spread-label">Spread {fmtPrice(spread)} ({spreadBps.toFixed(4)} bps)</span>
+                <span className="ob-spread-label">
+                  Spread {spread >= 1 ? fmtPrice(spread) : spread.toPrecision(2).replace(/\.?0+$/, "")} ({spreadBps < 0.1 ? spreadBps.toFixed(3) : spreadBps.toFixed(2)} bps)
+                </span>
               </div>
 
               {/* Bids — column-reverse so best bid sits near mid-row */}
@@ -505,9 +529,9 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
                 {displayBids.map((lvl) => (
                   <div key={lvl.price} className="ob-row">
                     <div className="ob-fill ob-fill--bid" style={{ width: `${(lvl.total / maxTotal) * 100}%` }} />
-                    <span className="ob-cell ob-price ob-price--bid">{fmtPrice(lvl.price)}</span>
+                    <span className="ob-cell ob-price ob-price--bid">{fmtLevelPrice(lvl.price, activePrecision)}</span>
                     <span className="ob-cell ob-size">{fmtSize(lvl.size)}</span>
-                    <span className="ob-cell ob-size">{fmtSize(lvl.total)}</span>
+                    <span className="ob-cell ob-size">{fmtUsd(lvl.usdValue)}</span>
                   </div>
                 ))}
               </div>

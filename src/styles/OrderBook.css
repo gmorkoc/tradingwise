@@ -380,6 +380,9 @@
   flex-shrink: 0;
 }
 
+/* Amount + Total values are right-aligned, so their headers are too
+   (Amount's header used to sit left while its numbers sat right). */
+.ob-col-headers span:nth-child(2),
 .ob-col-headers span:last-child {
   text-align: right;
 }
@@ -392,15 +395,30 @@
   scrollbar-width: thin;
   scrollbar-color: var(--pc-border) transparent;
 }
+/* Asks arrive best-first (lowest price); column-reverse stacks them
+   upward from the bottom so the best ask sits right above the spread row
+   and a short list hugs the spread instead of floating at the top. */
+.ob-section--asks {
+  display: flex;
+  flex-direction: column-reverse;
+  /* Shrink to its rows (capped at half) instead of stretching — a short
+     ask list no longer leaves a big empty gap above the sells; the whole
+     book sits together right under the column headers. */
+  flex: 0 0 auto;
+  max-height: 50%;
+}
 
 /* Bids: shrink to content, capped at half the body — no fixed height so
    filtered results don't leave empty space at the top */
+/* Bids arrive best-first (highest price), so a normal column puts the
+   best bid at the top, right under the spread row. (column-reverse had
+   flipped it — lowest bid nearest the spread.) */
 .ob-section--bids {
   flex: 0 0 auto;
   max-height: 50%;
   overflow-y: auto;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: var(--pc-border) transparent;
 }
@@ -431,12 +449,17 @@
   transition: width 0.35s ease;
 }
 
+/* Exchange-style palette (Hyperliquid look): teal-green buys, rose sells,
+   deep tinted depth bars. */
+/* Depth bars use the app's own action colors: the green of the "Trade"
+   buttons and the app's red. */
 .ob-fill--bid {
-  background: #4ade80;
+  background: var(--action-green, #0f9b6c);
 }
 .ob-fill--ask {
-  background: #fb7185;
+  background: var(--color-danger, #fb7185);
 }
+html:not([data-theme="light"]) .ob-fill { opacity: 0.28; }
 
 /* Cells */
 .ob-cell {
@@ -453,15 +476,21 @@
   font-weight: 600;
 }
 .ob-price--bid {
-  color: #4ade80;
+  color: #1fa67d;
 }
 .ob-price--ask {
-  color: #fb7185;
+  color: #ed7088;
 }
 .ob-size {
-  color: var(--pc-text-muted);
+  color: var(--pc-text);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
+.ob-price { font-variant-numeric: tabular-nums; }
+/* Light theme: same hues, a shade deeper so they read on white. */
+html[data-theme="light"] .ob-price--bid { color: #168a68; }
+html[data-theme="light"] .ob-price--ask { color: #d9506b; }
+html[data-theme="light"] .ob-fill { opacity: 0.16; }
 
 .ob-row--trade {
   grid-template-columns: 1fr 1fr 1fr;

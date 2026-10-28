@@ -4226,16 +4226,22 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
    glow behind it (the ring + "C" draw-in only). */
 .chart-mobile-tab .chart-tab-logo-loading .ptr-logo-glow { display: none; }
 .chart-mobile-tab .chart-tab-logo-loading { display: inline-flex; }
-/* The logo in the toggle uses the colors we designed: near-black #111113
-   disc, faint neutral edge, green top arc + white bottom arc. Beats the
-   older flat black/white recolor (.chart-mobile-tab .st-logo-icon …). */
-html .chart-mobile-tab .st-logo-icon circle[fill^="url"] { fill: #111113; }
-html .chart-mobile-tab .st-logo-icon circle[stroke] {
+/* Dark theme only: the toggle logo uses the colors we designed —
+   near-black #111113 disc, faint neutral edge, green top arc + white
+   bottom arc. */
+html:not([data-theme="light"]) .chart-mobile-tab .st-logo-icon circle[fill^="url"] { fill: #111113; }
+html:not([data-theme="light"]) .chart-mobile-tab .st-logo-icon circle[stroke] {
   stroke: rgba(255, 255, 255, 0.14);
   stroke-width: 1;
 }
-html .chart-mobile-tab .st-logo-icon path[stroke="#4ade80"] { stroke: #4ade80; }
-html .chart-mobile-tab .st-logo-icon path[stroke="white"] { stroke: #fff; }
+html:not([data-theme="light"]) .chart-mobile-tab .st-logo-icon path[stroke="#4ade80"] { stroke: #4ade80; }
+html:not([data-theme="light"]) .chart-mobile-tab .st-logo-icon path[stroke="white"] { stroke: #fff; }
+/* Light theme: the logo's original colors — indigo gradient disc, indigo
+   rim, green + white C (undoes the older flat black/white recolor). */
+html[data-theme="light"] .chart-mobile-tab .st-logo-icon circle[fill^="url"] { fill: url(#ch-grad); }
+html[data-theme="light"] .chart-mobile-tab .st-logo-icon circle[stroke] { stroke: #818cf8; }
+html[data-theme="light"] .chart-mobile-tab .st-logo-icon path[stroke="#4ade80"] { stroke: #4ade80; }
+html[data-theme="light"] .chart-mobile-tab .st-logo-icon path[stroke="white"] { stroke: #fff; }
 .chart-mobile-tab .st-logo-icon { width: 26px; height: 26px; }
 /* .mch-body itself is display:contents on desktop (its children render
    inline as part of this header, see the .mch-body rule above .mch-left),

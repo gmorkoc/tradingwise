@@ -6525,8 +6525,10 @@ html:not([data-theme="light"]) .ai-read-chip--bearish { color: #fb7185; }
    (App.css .chart-right-col .ob-section: 280px / 200px). */
 .pcc-side .chart-right-col .ob-section--asks,
 .pcc-side .chart-right-col .ob-section--bids {
-  flex: 1 1 0;
-  max-height: none;
+  /* Shrink to content (no stretched empty gap above the sells), but can
+     still shrink and scroll when both sides are long. */
+  flex: 0 1 auto;
+  max-height: 50%;
 }
 
 /* ── Desktop exchange-style bar header (Chart page, useBarHeader) ───────
