@@ -57,6 +57,13 @@ interface Props {
 // Profile dropped (still reachable via AccountMenu elsewhere; see
 // profileOpen's own comment in Props), Home takes its slot as the
 // "return to the chart, close whatever's open" action.
+// Selection style — flip this one value to switch:
+//   "stretch" = stretchy blob: the pill's leading edge reaches the new tab
+//               first and the tail catches up, like pulled liquid.
+//   "expand"  = only the active tab shows its label; its pill widens to fit.
+//   "glass"   = liquid-glass lift/slide pill (iOS 26 style).
+const NAV_STYLE = "stretch" as "glass" | "expand" | "stretch";
+
 function useItems({
   signalsOpen, onOpenDailyBrief, dailyBriefOpen, onSearch, searchOpen, onGoHome, homeActive,
 }: Omit<Props, "agentUnread" | "agentLocked" | "onAgentLocked" | "profileOpen">) {
@@ -65,7 +72,7 @@ function useItems({
       label: "Home",
       // Feather Icons' "home".
       icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <path d="M9 22V12h6v10" />
         </svg>
@@ -76,7 +83,7 @@ function useItems({
     {
       label: "Signals",
       icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 17l6-6 4 4 8-8" />
           <path d="M15 7h6v6" />
         </svg>
@@ -90,7 +97,7 @@ function useItems({
     {
       label: "Search",
       icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="11" cy="11" r="7" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
@@ -101,7 +108,7 @@ function useItems({
     {
       label: "News",
       icon: (
-        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="5" y="3" width="14" height="18" rx="2" />
           <line x1="8" y1="8" x2="16" y2="8" />
           <line x1="8" y1="12" x2="16" y2="12" />
@@ -152,6 +159,158 @@ export function FloatingNavBar({
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
   const activeLabel = items.find((i) => i.isActive)?.label ?? null;
 
+  // ── Liquid-glass selection (matches the native iOS 26 tab bar) ────────
+  // Measured off a 240fps recording of the real thing:
+  //   rest  → flat grey pill
+  //   touch → LIFT: the pill turns into clear glass (fill gone, bright rim,
+  //           faint rainbow fringe), ~1.15× wide / 1.2× tall; holding longer
+  //           swells it past the bar (~1.3× / 1.45×)
+  //   move  → SLIDE: glides to the new tab in ~110ms while lifted; icons it
+  //           passes over magnify through it
+  //   land  → DROP: shrinks back to the pill and fades clear → grey (~100ms)
+  // Position is a spring written straight to the element each frame (no
+  // React re-render per frame).
+  const glassRef = useRef<HTMLSpanElement>(null);
+  const springRef = useRef({ x: 0, w: 0, vx: 0, vw: 0, tx: 0, tw: 0, ready: false, raf: 0 });
+  const [pressedLabel, setPressedLabel] = useState<string | null>(null);
+  const pressedRef = useRef<string | null>(null);
+  const [lifted, setLifted] = useState(false);
+  const [held, setHeld] = useState(false);
+  const holdTimerRef = useRef(0);
+  const dropTimerRef = useRef(0);
+  const scheduleDrop = () => {
+    window.clearTimeout(dropTimerRef.current);
+    dropTimerRef.current = window.setTimeout(() => {
+      if (!pressedRef.current && !springRef.current.raf) { setLifted(false); setHeld(false); }
+    }, 70);
+  };
+  // Icons under the moving glass magnify (overlap-weighted).
+  const magnify = (x: number, w: number) => {
+    const bar = barRef.current;
+    if (!bar) return;
+    const b = bar.getBoundingClientRect();
+    for (const btn of Object.values(itemRefs.current)) {
+      if (!btn) continue;
+      const r = btn.getBoundingClientRect();
+      const l = r.left - b.left - bar.clientLeft;
+      const overlap = Math.max(0, Math.min(l + r.width, x + w) - Math.max(l, x)) / r.width;
+      const icon = btn.querySelector<HTMLElement>(".fnb-item-icon-wrap");
+      if (icon) icon.style.transform = overlap > 0.02 ? `scale(${1 + 0.22 * overlap})` : "";
+    }
+  };
+  const kick = () => {
+    const sp = springRef.current;
+    if (sp.raf) return;
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(0.032, (now - last) / 1000);
+      last = now;
+      const K = 900, D = 56; // ~110ms glide, no visible overshoot
+      sp.vx += (K * (sp.tx - sp.x) - D * sp.vx) * dt; sp.x += sp.vx * dt;
+      sp.vw += (K * (sp.tw - sp.w) - D * sp.vw) * dt; sp.w += sp.vw * dt;
+      const el = glassRef.current;
+      if (el) { el.style.width = `${sp.w}px`; el.style.transform = `translateX(${sp.x}px)`; }
+      magnify(sp.x, sp.w);
+      const done = Math.abs(sp.tx - sp.x) < 0.3 && Math.abs(sp.vx) < 4 && Math.abs(sp.tw - sp.w) < 0.3 && Math.abs(sp.vw) < 4;
+      if (done) {
+        sp.x = sp.tx; sp.w = sp.tw; sp.vx = sp.vw = 0;
+        if (el) { el.style.width = `${sp.w}px`; el.style.transform = `translateX(${sp.x}px)`; }
+        sp.raf = 0;
+        magnify(sp.x, pressedRef.current ? sp.w : 0);
+        scheduleDrop();
+        return;
+      }
+      sp.raf = requestAnimationFrame(step);
+    };
+    sp.raf = requestAnimationFrame(step);
+  };
+  const glassTo = (left: number, width: number, jump = false) => {
+    const sp = springRef.current;
+    sp.tx = left; sp.tw = width;
+    if (jump || !sp.ready) {
+      sp.x = left; sp.w = width; sp.vx = sp.vw = 0; sp.ready = true;
+      const el = glassRef.current;
+      if (el) { el.style.width = `${width}px`; el.style.transform = `translateX(${left}px)`; }
+      return;
+    }
+    kick();
+  };
+  const rectOf = (label: string | null) => {
+    const bar = barRef.current;
+    const el = label ? itemRefs.current[label] : null;
+    if (!bar || !el) return null;
+    const b = bar.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { left: r.left - b.left - bar.clientLeft, width: r.width };
+  };
+  const press = (label: string) => {
+    if (NAV_STYLE !== "glass") return;
+    pressedRef.current = label;
+    setPressedLabel(label);
+    setLifted(true);
+    window.clearTimeout(dropTimerRef.current);
+    window.clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = window.setTimeout(() => { if (pressedRef.current) setHeld(true); }, 220);
+    const r = rectOf(label);
+    if (r) glassTo(r.left, r.width);
+    const sp = springRef.current;
+    magnify(sp.x, sp.w);
+  };
+  const release = () => {
+    if (!pressedRef.current) return;
+    pressedRef.current = null;
+    setPressedLabel(null);
+    window.clearTimeout(holdTimerRef.current);
+    setHeld(false);
+    if (!springRef.current.raf) { magnify(0, 0); scheduleDrop(); }
+  };
+  useEffect(() => () => {
+    if (springRef.current.raf) cancelAnimationFrame(springRef.current.raf);
+    window.clearTimeout(holdTimerRef.current);
+    window.clearTimeout(dropTimerRef.current);
+  }, []);
+  // Follow the active item (and its size) with the spring.
+  useEffect(() => {
+    if (NAV_STYLE !== "glass") return;
+    if (!indicator) return;
+    if (pressedLabel) return; // the press is already steering it
+    const sp = springRef.current;
+    const moving = sp.ready && (Math.abs(sp.x - indicator.left) > 1 || Math.abs(sp.w - indicator.width) > 1);
+    if (moving) setLifted(true); // e.g. navigation from elsewhere: lift, slide, drop
+    glassTo(indicator.left, indicator.width);
+    if (!moving) { magnify(0, 0); scheduleDrop(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indicator?.left, indicator?.width, pressedLabel]);
+
+
+  // Stretchy blob: first stretch the pill to cover both the old and new
+  // tab (leading edge jumps ahead), then pull the tail in with a springy
+  // ease so it settles on the new tab.
+  const stretchPrevRef = useRef<{ left: number; width: number } | null>(null);
+  useEffect(() => {
+    if (NAV_STYLE !== "stretch" || !indicator) return;
+    const el = glassRef.current;
+    if (!el) return;
+    const set = (left: number, width: number, transition: string) => {
+      el.style.transition = transition;
+      el.style.transform = `translateX(${left}px)`;
+      el.style.width = `${width}px`;
+    };
+    const a = stretchPrevRef.current;
+    const b = indicator;
+    stretchPrevRef.current = b;
+    if (!a || Math.abs(a.left - b.left) < 1) {
+      set(b.left, b.width, "opacity 0.18s ease");
+      return;
+    }
+    const reach = "transform 0.16s ease-out, width 0.16s ease-out";
+    if (b.left > a.left) set(a.left, b.left + b.width - a.left, reach);
+    else set(b.left, a.left + a.width - b.left, reach);
+    const settle = "cubic-bezier(0.3, 1.5, 0.5, 1)";
+    const id = window.setTimeout(() => set(b.left, b.width, `transform 0.34s ${settle}, width 0.34s ${settle}`), 160);
+    return () => window.clearTimeout(id);
+  }, [indicator?.left, indicator?.width]);
+
   useLayoutEffect(() => {
     const bar = barRef.current;
     const el = activeLabel ? itemRefs.current[activeLabel] : null;
@@ -188,8 +347,12 @@ export function FloatingNavBar({
       key={item.label}
       ref={(el) => { itemRefs.current[item.label] = el; }}
       type="button"
-      className={`fnb-item${item.isActive ? " fnb-item--active" : ""}`}
+      className={`fnb-item${item.isActive ? " fnb-item--active" : ""}${pressedLabel === item.label ? " fnb-item--pressed" : ""}`}
       onClick={item.action}
+      onPointerDown={() => press(item.label)}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onPointerLeave={() => { if (pressedRef.current === item.label) release(); }}
       aria-label={item.label}
       aria-current={item.isActive ? "page" : undefined}
     >
@@ -206,18 +369,17 @@ export function FloatingNavBar({
   return (
     <nav
       ref={barRef}
-      className={`fnb-bar${raised ? " fnb-bar--raised" : ""}`}
+      className={`fnb-bar${raised ? " fnb-bar--raised" : ""}${NAV_STYLE !== "glass" ? ` fnb-bar--${NAV_STYLE}` : ""}`}
       aria-label="Quick navigation"
     >
       <span
-        className="fnb-active-indicator"
+        ref={glassRef}
+        className={`fnb-active-indicator fnb-glass${lifted ? " fnb-glass--lift" : ""}${held ? " fnb-glass--hold" : ""}`}
         aria-hidden="true"
-        style={
-          indicator
-            ? { transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px`, opacity: 1 }
-            : { opacity: 0 }
-        }
-      />
+        style={{ opacity: indicator ? 1 : 0 }}
+      >
+        <span className="fnb-glass-body" />
+      </span>
       {leftItems.map(renderItem)}
       <button
         type="button"

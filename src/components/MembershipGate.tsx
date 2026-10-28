@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, useCallback, useRef, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Tier, hasAccess } from "../services/supabase";
@@ -20,6 +20,12 @@ interface Props {
   featureName?: string;
   previewSrc?: string;
   className?: string;
+  // Optional feature-specific item added at the top of the card's feature
+  // list (e.g. Analyze a Chart when opened from there).
+  extraFeature?: { icon: ReactNode; title: string; desc: string };
+  // Optional small line above the headline naming the locked feature
+  // (e.g. "Alt Analysis is part of Pro") — used by the menu promo.
+  eyebrow?: string;
 }
 
 function CheckIcon({ color }: { color: string }) {
@@ -146,13 +152,44 @@ function formatAmount(cents: number, currency: string) {
 }
 
 /* ── BlurGate: shows static preview image blurred + upgrade card overlay ──── */
-export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className }) => {
+export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
   const [loadingPlan,     setLoadingPlan]     = useState(false);
   const [prorationData,   setProrationData]   = useState<{ amountDue: number; currency: string } | null>(null);
   const [upgrading,       setUpgrading]       = useState(false);
   const [upgraded,        setUpgraded]        = useState(false);
+
+  // Phones: the overlay is position:fixed, but on iOS its containing block
+  // isn't always the viewport (an ancestor can offset it), so a plain
+  // top: <header bottom> left a gap of blurred page between header and
+  // card. Measure where top:0 actually lands, then offset by exactly what's
+  // needed to start right under the header.
+  const overlayCleanupRef = useRef<(() => void) | null>(null);
+  const overlayRef = useCallback((el: HTMLDivElement | null) => {
+    overlayCleanupRef.current?.();
+    overlayCleanupRef.current = null;
+    if (!el) return;
+    const place = () => {
+      if (window.innerWidth > 680) { el.style.top = ""; return; }
+      el.style.top = "0px";
+      const origin = el.getBoundingClientRect().top;
+      const header = document.querySelector<HTMLElement>(".main-coin-header");
+      const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+      el.style.top = `${Math.max(0, Math.round(headerBottom - origin))}px`;
+    };
+    place();
+    const header = document.querySelector<HTMLElement>(".main-coin-header");
+    const ro = new ResizeObserver(place);
+    if (header) ro.observe(header);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, { passive: true, capture: true });
+    overlayCleanupRef.current = () => {
+      ro.disconnect();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, { capture: true });
+    };
+  }, []);
 
   if (loading) return <>{children}</>;
   if (user && hasAccess(tier, requiredTier)) return <>{children}</>;
@@ -203,7 +240,9 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
   const proFeatures = t("membershipGate.pro.features", { returnObjects: true }) as Array<{
     icon: string; title: string; desc: string;
   }>;
-  const features = isProGate ? proFeatures : eliteFeatures;
+  const baseFeatures = isProGate ? proFeatures : eliteFeatures;
+  const features: Array<{ icon: ReactNode; title: string; desc: string }> =
+    extraFeature ? [extraFeature, ...baseFeatures] : baseFeatures;
 
   const planPrice = isProGate ? "$30.99" : t("membershipGate.blurGate.planPrice");
 
@@ -236,7 +275,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
           ? <img src={previewSrc} className="bg-preview-img" alt="" draggable={false} />
           : children}
       </div>
-      <div className="bg-overlay">
+      <div className="bg-overlay" ref={overlayRef}>
         <div className={`bg-elite-card${isProGate ? " bg-elite-card--pro" : ""}`}>
 
           {/* Top bar: badge + price */}
@@ -252,6 +291,15 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
 
           {/* Headline */}
           <div className="bg-elite-headline">
+            {eyebrow && (
+              <span className="bg-elite-eyebrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                {eyebrow}
+              </span>
+            )}
             <h3>{headline}</h3>
             <p>{sub}</p>
           </div>
@@ -334,14 +382,28 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                   : loadingPlan
                     ? t("membershipGate.blurGate.redirecting")
                     : ctaLabel}
-                {!loadingPlan && (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                )}
               </button>
 
-              <p className="bg-card-trust">{trustLine}</p>
+              <p className={`bg-card-trust${isProGate ? " bg-card-trust--split" : ""}`}>
+                <span>{trustLine}</span>
+                {/* Pro paywalls: second option for unlimited AI, as a plain
+                    link on the same line. Signed out → sign in first;
+                    signed in → the upgrade screen (Stripe on web, Apple
+                    IAP on iOS). */}
+                {isProGate && (
+                  <>
+                    <button
+                      type="button"
+                      className="bg-elite-link"
+                      onClick={!user ? onOpenAuth : onOpenUpgrade}
+                    >
+                      {t("membershipGate.pro.eliteLinkPre", "Go")}{" "}
+                      <span className="bg-elite-link-word">Elite</span>{" "}
+                      {t("membershipGate.pro.eliteLinkPost", "for unlimited AI and access to Agent Ready")}
+                    </button>
+                  </>
+                )}
+              </p>
             </>
           )}
 

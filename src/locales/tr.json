@@ -1550,7 +1550,7 @@
     "label": "Balina Uyarısı · BTC",
     "bullish": "▲ Boğa",
     "bearish": "▼ Ayı",
-    "snooze": "30dk Ertele"
+    "snooze": "1sa Ertele"
   },
   "orderBook": {
     "title": "Emir Defteri",

@@ -31,12 +31,36 @@
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.06);
   min-width: 280px;
   max-width: 340px;
-  animation: whale-slide-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  /* Slide/fade in, then wipe out from right to left in step with the
+     progress bar: a soft-edged mask moves leftward over the whole timer,
+     so whatever is right of the bar's end is already fading away. */
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 50%, transparent 62%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 50%, transparent 62%, transparent 100%);
+  -webkit-mask-size: 200% 100%;
+  mask-size: 200% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation:
+    whale-slide-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1),
+    whale-fade-in 0.3s ease-out,
+    whale-wipe var(--dismiss-ms, 4000ms) linear forwards;
 }
 
 @keyframes whale-slide-in {
-  from { opacity: 0; transform: translateX(-18px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(0)      scale(1);   }
+  from { transform: translateX(-18px) scale(0.95); }
+  to   { transform: translateX(0)      scale(1);   }
+}
+@keyframes whale-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* 0% = fully visible; 124% = the fade band has passed the left edge. */
+@keyframes whale-wipe {
+  from { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+  to   { -webkit-mask-position: 124% 0; mask-position: 124% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .whale-alert { animation: none; -webkit-mask-image: none; mask-image: none; }
 }
 
 .whale-alert-main {

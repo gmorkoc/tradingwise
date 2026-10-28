@@ -19,7 +19,7 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: 16px;
+  bottom: 20px;
   z-index: 60;
   display: flex;
   align-items: center;
@@ -108,8 +108,9 @@ html[data-theme="light"] .fnb-bar {
      reference screenshot's bar reads as a simple white pill with soft
      blur showing through faintly, not a directional highlight/sheen; the
      earlier multi-gradient attempt approximated that but didn't match it
-     exactly. This is the literal value, not a reconstruction. */
-  background: rgba(255, 255, 255, 0.92);
+     exactly. This is the literal value, not a reconstruction. Now fully
+     transparent (just the blur) by request. */
+  background: rgb(255 255 255 / 0%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.7);
@@ -174,7 +175,7 @@ html[data-theme="light"] .fnb-item--active { color: #1e1b2e; }
    sized to match their 22x22 viewBox exactly. */
 /* Extra breathing room from its two immediate neighbors (Signals, Search)
    specifically — margin on this one item only. */
-.fnb-agent-item { padding: 0; margin: 0 10px; }
+.fnb-agent-item { padding: 0; margin: 0 22px; }
 .fnb-agent-orb-inline {
   /* A <button>'s <span> child is inline by default — width/height on an
      inline, non-replaced element are ignored entirely. .fnb-item-icon-wrap
@@ -226,7 +227,7 @@ html[data-theme="light"] .fnb-agent-dot {
 .fnb-agent-callout {
   position: fixed;
   left: 50%;
-  bottom: 84px;
+  bottom: 88px;
   transform: translateX(-50%);
   z-index: 261;
   max-width: 220px;
@@ -270,3 +271,128 @@ html[data-theme="light"] .fnb-agent-dot {
      layout that already has .icon-strip for navigation. */
   .fnb-bar { display: none; }
 }
+/* ── Liquid-glass selection (iOS 26 tab bar) ─────────────────────────────
+   FloatingNavBar.tsx's spring moves/stretches the outer element each frame
+   (so no CSS transition on its transform/width). The inner body carries
+   the look per state:
+     rest  → flat grey pill (the normal active-tab background)
+     lift  → frosted white glass, no border, soft shadow, ~1.15× / 1.22×
+     hold  → swells past the bar, ~1.3× / 1.45×
+   Releasing drops back to rest in ~110ms. */
+.fnb-active-indicator.fnb-glass {
+  transition: opacity 0.18s ease;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+  will-change: transform, width;
+}
+html[data-theme="light"] .fnb-active-indicator.fnb-glass { background: none; }
+
+.fnb-glass-body {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  transform: scale(1);
+  /* Dark theme: a thin white tint plus a brightened view of what's behind,
+     so it reads as light see-through glass rather than a grey chip. */
+  background-color: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: brightness(1.25) saturate(1.1);
+  backdrop-filter: brightness(1.25) saturate(1.1);
+  box-shadow: none;
+  transition:
+    transform 0.11s cubic-bezier(0.25, 0.8, 0.3, 1),
+    background-color 0.11s ease,
+    box-shadow 0.11s ease;
+}
+html[data-theme="light"] .fnb-glass-body {
+  background-color: rgba(15, 23, 42, 0.07);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Lift: frosted white bubble, no rim/border, soft shadow. */
+.fnb-glass--lift .fnb-glass-body {
+  transform: scale(1.15, 1.22);
+  background-color: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.3) brightness(1.3);
+  backdrop-filter: blur(6px) saturate(1.3) brightness(1.3);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0.9, 0.3, 1.15),
+    background-color 0.08s ease,
+    box-shadow 0.08s ease;
+}
+html[data-theme="light"] .fnb-glass--lift .fnb-glass-body {
+  background-color: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+  backdrop-filter: blur(10px) saturate(1.4);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+/* Hold: swells past the bar. */
+.fnb-glass--hold .fnb-glass-body,
+html[data-theme="light"] .fnb-glass--hold .fnb-glass-body {
+  transform: scale(1.3, 1.45);
+  transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.1), background-color 0.08s ease, box-shadow 0.08s ease;
+}
+
+/* Buttons sit above the glass. Icon magnification is set per frame from
+   JS (overlap with the glass); the pressed tab's label grows with it. */
+.fnb-item { position: relative; z-index: 1; }
+.fnb-item .fnb-item-icon-wrap { transition: transform 0.1s ease-out; }
+.fnb-item .fnb-item-label { transition: transform 0.12s ease-out; }
+.fnb-item--pressed .fnb-item-label { transform: scale(1.12) translateY(1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fnb-glass-body,
+  .fnb-glass--lift .fnb-glass-body,
+  .fnb-glass--hold .fnb-glass-body,
+  html[data-theme="light"] .fnb-glass--lift .fnb-glass-body,
+  html[data-theme="light"] .fnb-glass--hold .fnb-glass-body { transition: none; transform: none; }
+}
+
+/* ── "Expanding label" selection style (NAV_STYLE = "expand") ────────────
+   Only the active tab shows its label, beside the icon; its own pill
+   widens to fit while the others shrink to icons. The sliding glass
+   indicator is hidden in this mode. */
+.fnb-bar--expand .fnb-active-indicator { display: none; }
+.fnb-bar--expand .fnb-item {
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: row;
+  gap: 0;
+  transition:
+    flex-grow 0.42s cubic-bezier(0.3, 1.2, 0.5, 1),
+    background-color 0.3s ease,
+    color 0.2s ease;
+}
+.fnb-bar--expand .fnb-item-icon-wrap { transform: none !important; }
+.fnb-bar--expand .fnb-item-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 0.72rem;
+  transform: none !important;
+  transition: max-width 0.42s ease, opacity 0.2s ease, margin 0.42s ease;
+}
+.fnb-bar--expand .fnb-item--active {
+  flex-grow: 2.2;
+  background-color: rgba(255, 255, 255, 0.07);
+}
+html[data-theme="light"] .fnb-bar--expand .fnb-item--active { background-color: rgba(15, 23, 42, 0.07); }
+.fnb-bar--expand .fnb-item--active .fnb-item-label {
+  max-width: 80px;
+  opacity: 1;
+  margin-left: 6px;
+  transition-delay: 0s, 0.12s, 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fnb-bar--expand .fnb-item,
+  .fnb-bar--expand .fnb-item-label { transition: none; }
+}
+
+/* ── "Stretchy blob" selection style (NAV_STYLE = "stretch") ─────────────
+   Position/width transitions are set inline from FloatingNavBar.tsx; the
+   pill keeps its flat rest look (no glass lift). */
+.fnb-bar--stretch .fnb-item-icon-wrap { transform: none !important; }

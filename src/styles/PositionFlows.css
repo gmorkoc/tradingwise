@@ -575,6 +575,21 @@
 }
 
 @media (max-width: 640px) {
-  .ls2-wrap { padding: 14px 12px; }
+  .ls2-wrap { padding: 0; }
+  /* Positions page on phones: containers run flat — no frame, no
+     rounded corners, no padding of their own. */
+  .ls2-vol-wrap,
+  .ls2-vc,
+  .ls2-vc--long,
+  .ls2-vc--short,
+  .ls2-ex-card,
+  .ls2-ev-wrap,
+  .ls2-lt-wrap,
+  .ls2-chart-section,
+  .ls2-mc-wrap {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
   .ls2-vc-amount { font-size: 1.2rem; }
 }

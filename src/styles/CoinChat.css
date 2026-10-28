@@ -908,7 +908,7 @@ html[data-theme="light"] .coin-chat-panel {
   .coin-chat-trigger {
     position: fixed;
     right: 12px;
-    bottom: 88px;
+    bottom: 92px;
     z-index: 250;
     isolation: isolate;
     display: inline-flex;

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "../services/supabase";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { AIQuotaWall } from "./AIQuotaWall";
+import { PaywallPromo } from "./PaywallPromo";
 import "../styles/ChartAnalyzeModal.css";
 
 interface Props {
@@ -131,6 +132,32 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  // Free/signed-out: the same upgrade promo every locked page shows from
+  // the menu (bottom sheet on phones, popup on desktop), with Analyze a
+  // Chart as the first feature.
+  if (!isPaid) {
+    return (
+      <PaywallPromo
+        open
+        onClose={onClose}
+        requiredTier="pro"
+        featureName={t("chartAnalyze.title", "Analyze a Chart")}
+        onOpenAuth={onOpenAuth}
+        onOpenUpgrade={onOpenUpgrade}
+        extraFeature={{
+          icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          ),
+          title: t("chartAnalyze.title", "Analyze a Chart"),
+          desc: t("chartAnalyze.gateDesc", "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take."),
+        }}
+      />
+    );
+  }
 
   const addBlobs = (blobs: Blob[]) => {
     setImages(prev => {

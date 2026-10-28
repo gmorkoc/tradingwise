@@ -1550,7 +1550,7 @@
     "label": "Avviso Balena · BTC",
     "bullish": "▲ Rialzista",
     "bearish": "▼ Ribassista",
-    "snooze": "Silenzia 30m"
+    "snooze": "Silenzia 1h"
   },
   "orderBook": {
     "title": "Libro Ordini",

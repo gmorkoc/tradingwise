@@ -258,10 +258,10 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  /* Directly above .fnb-bar: its own bottom offset (18px + safe-area)
+  /* Directly above .fnb-bar: its own bottom offset (20px) + 2px + safe-area
      plus its height (~62px: 50px item + 6px top/bottom padding) plus a
      small 8px gap. */
-  bottom: calc(18px + env(safe-area-inset-bottom) + 62px + 8px);
+  bottom: calc(22px + env(safe-area-inset-bottom) + 62px + 8px);
   z-index: 100004;
   max-height: 50vh;
   display: flex;

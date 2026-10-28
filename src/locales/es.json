@@ -1545,7 +1545,7 @@
     "label": "Alerta Ballena · BTC",
     "bullish": "▲ Alcista",
     "bearish": "▼ Bajista",
-    "snooze": "Silenciar 30m"
+    "snooze": "Silenciar 1h"
   },
   "orderBook": {
     "title": "Libro de Órdenes",

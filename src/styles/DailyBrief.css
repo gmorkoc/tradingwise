@@ -35,7 +35,7 @@
    — same 16px insets, no max-width cap — so the two read as the same
    width stacked on top of each other instead of the sheet running
    slightly wider (it used to use its own 10px-safe-area inset formula).
-   `bottom` is .fnb-bar's own bottom (16px) + its actual height (62px:
+   `bottom` is .fnb-bar's own bottom (20px) + its actual height (62px:
    50px item + 6px top/bottom padding) + a clean 8px gap on top — no
    env(safe-area-inset-bottom) added here, since .fnb-bar's own bottom
    doesn't add it either; adding it only on this side was inflating the
@@ -46,7 +46,7 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(16px + 62px + 8px);
+  bottom: calc(20px + 62px + 8px);
   z-index: 400;
   margin: 0 auto;
   /* Matches .db-card's own background/box-shadow exactly, not its own
@@ -165,7 +165,7 @@ html[data-theme="light"] .db-sheet--full {
    since it now rests ~90px above the true bottom edge instead of at
    bottom:0 like it did when this was first written as a flat 120%. */
 .db-sheet--scroll-hidden {
-  transform: translateY(calc(100% + 16px + 62px + 8px + 20px));
+  transform: translateY(calc(100% + 20px + 62px + 8px + 20px));
 }
 
 
@@ -195,11 +195,14 @@ html[data-theme="light"] .db-sheet--full {
 
 .db-head {
   width: 100%;
+  box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 0 8px;
+  /* .db-drag-zone has no left padding, so the title gets its own inset
+     here, lined up with the card below (.db-card's 14px margin + 2px). */
+  padding: 14px 0 10px 16px;
 }
 
 .db-head-title-row {
@@ -213,11 +216,10 @@ html[data-theme="light"] .db-sheet--full {
    right-aligned, kept apart from .db-head-title-row's brand on the left. */
 .db-head-status {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
-  padding-top: 2px;
 }
 
 .db-head-updated {
@@ -227,7 +229,7 @@ html[data-theme="light"] .db-sheet--full {
 }
 
 .db-head-title {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
@@ -258,6 +260,14 @@ html[data-theme="light"] .db-sheet--full {
 }
 html[data-theme="light"] .db-card {
   box-shadow: none;
+}
+/* Mobile sheet: everything inside the card (lead story and the "Your
+   latest" list alike) uses the plain surface color — white in light
+   theme, the theme's own surface in dark. Only the header above the card
+   keeps the sheet's own tint. */
+.db-sheet .db-card,
+.db-sheet .db-featured {
+  background: var(--color-surface);
 }
 
 .db-card-list {
@@ -738,13 +748,19 @@ html[data-theme="light"] .db-sheet .db-live--red {
      narrow phone screen that reads as a lot of wasted margin either side
      of the headline/thumbnail. Tightened here, not removed outright, so
      there's still a little breathing room. */
-  .db-card { margin-left: 6px; margin-right: 6px; }
+  /* No side margin: the card fills the sheet's full width. */
+  .db-card { margin-left: 0; margin-right: 0; }
   .db-featured-badge,
-  .db-featured-main,
-  .db-section-label,
-  .db-list-item {
+  .db-featured-main {
     padding-left: 8px;
     padding-right: 8px;
+  }
+  /* "Your latest" label + rows: the card has no side margin now, so they
+     carry their own gutter. */
+  .db-section-label,
+  .db-list-item {
+    padding-left: 16px;
+    padding-right: 16px;
   }
   /* Left stays 22px — that's room for the timeline dot/marker graphic
      (.db-timeline-marker), not a side gutter, so it isn't part of this. */
@@ -815,26 +831,53 @@ html:not([data-theme="light"]) .db-page {
 .db-page-head-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .db-section-cols {
   display: flex;
+  align-items: center;
   gap: 2px;
   padding: 2px;
-  border-radius: 8px;
+  border-radius: 9px;
   background: var(--color-input-bg);
 }
+/* Desktop: the "Market Pulse" title is itself the button that opens the
+   column picker. Looks like the plain title; a soft hover/open tint hints
+   it's clickable. */
+.db-head-title-btn {
+  all: unset;
+  box-sizing: border-box;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  transition: background 0.15s, color 0.15s;
+}
+.db-head-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.db-head-title-btn:hover,
+.db-head-title-btn.open { background: var(--color-input-bg); }
+.db-head-title-btn:focus-visible,
+.db-section-cols-btn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.db-section-cols--open { animation: db-cols-reveal 0.2s ease both; }
 .db-section-cols-btn {
   all: unset;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 22px;
-  border-radius: 6px;
+  width: 28px;
+  height: 26px;
+  border-radius: 7px;
   color: var(--color-text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -846,6 +889,19 @@ html:not([data-theme="light"]) .db-page {
   background: var(--color-card-bg);
   color: var(--color-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+/* Collapsed picker: just the current choice. Opening reveals the other
+   options to its right, each fading/sliding in one after another (the
+   per-button delay is set inline from DailyBrief.tsx). */
+.db-section-cols-btn--reveal {
+  animation: db-cols-reveal 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes db-cols-reveal {
+  from { opacity: 0; transform: translateX(-6px) scale(0.85); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-section-cols-btn--reveal { animation: none; }
 }
 
 .db-page-list {
@@ -989,6 +1045,23 @@ html:not([data-theme="light"]) .db-page {
 @keyframes db-shine-sweep {
   to { transform: translateX(120%); }
 }
+
+/* Mobile sheet: the lead story runs full width, square edges — no
+   border, glow ring or radius. */
+.db-sheet .db-featured {
+  margin: 0 0 6px;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  animation: none;
+}
+.db-sheet .db-featured::before { border-radius: 0; }
+/* The shine sweep (::before) parks itself off to the side with a
+   translateX — with no margin around this block anymore, that sticks out
+   past the card and made the whole card scroll sideways on iOS. Clip it
+   here, and never let the card itself scroll horizontally. */
+.db-sheet .db-featured { overflow: hidden; }
+.db-sheet .db-card { overflow-x: hidden; }
 
 /* List rows — a quick scale/highlight on tap/hover instead of just a
    color change, and the thumbnail gets a subtle zoom to match. */
@@ -1204,4 +1277,99 @@ html:not([data-theme="light"]) .db-page {
 }
 .db-section-row:hover .db-section-row-title {
   color: var(--color-primary);
+}
+
+/* ── Market Pulse header flourish ────────────────────────────────────────
+   A heartbeat line that draws itself on a loop beside the title (it's
+   called Market *Pulse*), and a green shimmer that sweeps across the
+   title once every couple of beats. */
+.db-head-pulse {
+  --db-pulse: #22c55e;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 28px;
+  height: 14px;
+  color: var(--db-pulse);
+  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.55));
+}
+html[data-theme="light"] .db-head-pulse {
+  --db-pulse: #16a34a;
+  filter: drop-shadow(0 0 3px rgba(22, 163, 74, 0.35));
+}
+.db-head-pulse svg { width: 100%; height: 100%; overflow: visible; }
+.db-head-pulse polyline {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Faint full trace underneath so the icon never disappears completely. */
+.db-head-pulse-trail { opacity: 0.22; }
+.db-head-pulse-line {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: db-pulse-draw 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes db-pulse-draw {
+  0%   { stroke-dashoffset: 48; opacity: 1; }
+  50%  { stroke-dashoffset: 0;  opacity: 1; }
+  80%  { stroke-dashoffset: 0;  opacity: 0; }
+  100% { stroke-dashoffset: 48; opacity: 0; }
+}
+
+.db-head-title--fancy {
+  --db-shine: #22c55e;
+  background: linear-gradient(
+    100deg,
+    var(--color-text) 0%,
+    var(--color-text) 40%,
+    var(--db-shine) 50%,
+    var(--color-text) 60%,
+    var(--color-text) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: none;
+  animation: db-title-shine 4.8s ease-in-out infinite;
+}
+html[data-theme="light"] .db-head-title--fancy { --db-shine: #16a34a; }
+@keyframes db-title-shine {
+  0%, 55%  { background-position: 100% 0; }
+  85%, 100% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-head-pulse-line { animation: none; stroke-dashoffset: 0; }
+  .db-head-title--fancy { animation: none; }
+}
+
+/* Desktop: the heartbeat sits after the title, so both animations run
+   right to left — the line draws from its right end back toward the
+   title, and the shine sweeps from right to left across the text. */
+.db-page .db-head-pulse-line {
+  stroke-dashoffset: -48;
+  animation-name: db-pulse-draw-rtl;
+}
+@keyframes db-pulse-draw-rtl {
+  0%   { stroke-dashoffset: -48; opacity: 1; }
+  50%  { stroke-dashoffset: 0;   opacity: 1; }
+  80%  { stroke-dashoffset: 0;   opacity: 0; }
+  100% { stroke-dashoffset: -48; opacity: 0; }
+}
+.db-page .db-head-title--fancy {
+  background-position: 0% 0;
+  animation-name: db-title-shine-rtl;
+}
+@keyframes db-title-shine-rtl {
+  0%, 55%   { background-position: 0% 0; }
+  85%, 100% { background-position: 100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .db-page .db-head-pulse-line { animation: none; stroke-dashoffset: 0; }
+  .db-page .db-head-title--fancy { animation: none; }
 }

@@ -646,7 +646,9 @@
         }
       ],
       "cta": "Unlock Pro — $30.99/mo",
-      "trust": "100 AI requests/week · Instant access"
+      "trust": "100 AI requests/week · Instant access",
+      "eliteLinkPre": "Go",
+      "eliteLinkPost": "for unlimited AI and access to Agent Ready"
     },
     "elite": {
       "headline": "The Full Institutional Toolkit",
@@ -721,7 +723,7 @@
           "desc": "Every Pro tool, included"
         }
       ],
-      "signInBtn": "Sign in to upgrade",
+      "signInBtn": "Login to Upgrade Now",
       "upgradeBtn": "Upgrade to Elite",
       "redirecting": "Redirecting…",
       "trust": "Instant access · Includes everything in Pro",
@@ -1688,7 +1690,7 @@
     "label": "Whale Alert · BTC",
     "bullish": "▲ Bullish",
     "bearish": "▼ Bearish",
-    "snooze": "Snooze 30m"
+    "snooze": "Snooze 1h"
   },
   "optionsAnalytics": {
     "loading": "Loading options data…",

@@ -98,3 +98,26 @@ export function subscribeWhaleAlerts(cb: Callback): () => void {
     if (listeners.size === 0) stopPolling();
   };
 }
+
+// ── Dev only: fake alerts for testing the banner ─────────────────────────
+// Open http://localhost:5173/?fakewhales#trade, or call
+// window.__fakeWhales(3) from the console. Stripped from production builds.
+if (import.meta.env.DEV && typeof window !== "undefined") {
+  const samples: Array<Pick<WhaleTx, "amount" | "from" | "to" | "sentiment">> = [
+    { amount: 1250, from: "Binance", to: "bc1q…x7k2", sentiment: "bullish" },
+    { amount: 842.5, from: "bc1q…9fa3", to: "Coinbase", sentiment: "bearish" },
+    { amount: 3120, from: "bc1q…a81d", to: "bc1q…77ce", sentiment: "neutral" },
+    { amount: 510.2, from: "Kraken", to: "bc1q…d0e4", sentiment: "bullish" },
+  ];
+  const fire = (count = 3) => {
+    for (let i = 0; i < count; i++) {
+      const s = samples[i % samples.length];
+      const hash = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      listeners.forEach(cb => cb({ ...s, id: `fake-${hash}`, hash, time: Date.now(), fromRaw: s.from, toRaw: s.to }));
+    }
+  };
+  (window as unknown as { __fakeWhales: typeof fire }).__fakeWhales = fire;
+  if (new URLSearchParams(window.location.search).has("fakewhales")) {
+    setTimeout(() => fire(3), 2500);
+  }
+}

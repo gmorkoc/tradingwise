@@ -933,7 +933,9 @@ html[data-theme="light"] .bg-proration-success p { color: #334155; }
   .bg-overlay,
   .bg-root--top .bg-overlay {
     position: fixed;
-    inset: 0;
+    /* Starts below the mobile header (App.tsx publishes --mch-bottom), so
+       the header and its menu button are always reachable on a gated page. */
+    inset: var(--mch-bottom, 0px) 0 0 0;
     z-index: 2000;
     align-items: flex-end;
     padding: 0;
@@ -960,6 +962,46 @@ html[data-theme="light"] .bg-proration-success p { color: #334155; }
   .bg-modal-close {
     top: max(14px, var(--native-safe-area-top, env(safe-area-inset-top)));
   }
+
+  /* Page paywalls (not the Elite popup): the overlay already starts below
+     the header, so the card just fills what's left — no full-screen
+     height or status-bar padding of its own — and keeps its last lines
+     clear of the floating nav bar. */
+  .bg-overlay .bg-elite-card {
+    height: 100%;
+    padding-top: 20px;
+    padding-bottom: 110px;
+  }
+  /* Edge-to-edge on phones: no frame, glow ring or top streak. */
+  .bg-overlay .bg-elite-card,
+  html[data-theme="light"] .bg-overlay .bg-elite-card {
+    border: none;
+    box-shadow: none;
+  }
+  .bg-overlay .bg-elite-card::before { display: none; }
+  /* Top of the card fades in from the header's own color, so the two read
+     as one surface instead of a hard seam. Same gradients as the base
+     cards, with that fade layered on top. */
+  .bg-overlay .bg-elite-card {
+    background:
+      linear-gradient(to bottom, var(--color-surface) 0, transparent 120px),
+      linear-gradient(160deg, rgba(18, 12, 36, 0.97) 0%, rgba(12, 10, 28, 0.97) 100%);
+  }
+  .bg-overlay .bg-elite-card--pro {
+    background:
+      linear-gradient(to bottom, var(--color-surface) 0, transparent 120px),
+      linear-gradient(160deg, rgba(12, 24, 42, 0.97) 0%, rgba(8, 18, 34, 0.97) 100%);
+  }
+  html[data-theme="light"] .bg-overlay .bg-elite-card {
+    background:
+      linear-gradient(to bottom, var(--color-surface) 0, transparent 120px),
+      linear-gradient(160deg, #faf5ff 0%, #f3f0ff 50%, #eff6ff 100%);
+  }
+  html[data-theme="light"] .bg-overlay .bg-elite-card--pro {
+    background:
+      linear-gradient(to bottom, var(--color-surface) 0, transparent 120px),
+      linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 50%, #eff6ff 100%);
+  }
 }
 
 @media (max-width: 540px) {
@@ -968,4 +1010,160 @@ html[data-theme="light"] .bg-proration-success p { color: #334155; }
   .mg-title         { font-size: 1.4rem; }
   .mg-wall          { padding: 48px 20px; }
   .bg-elite-features { grid-template-columns: 1fr; }
+}
+
+/* ── Desktop page paywalls: same structure as Analyze a Chart's ─────────
+   The upgrade card fills the whole content area (edge to edge, at least
+   the height of the screen under the 64px top bar), no frame, and its top
+   fades in from the top bar's own color so the two read as one surface. */
+@media (min-width: 681px) {
+  .bg-root { min-height: calc(100dvh - 64px); }
+  .bg-overlay,
+  .bg-root--top .bg-overlay {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+  .bg-overlay .bg-elite-card,
+  html[data-theme="light"] .bg-overlay .bg-elite-card {
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    /* Content column sits a little above the vertical middle — a fixed
+       top offset (not true centering), so it also stays in view on pages
+       whose blurred content runs far below the screen. */
+    justify-content: flex-start;
+    padding-top: 10vh;
+  }
+  .bg-overlay .bg-elite-card::before { display: none; }
+  /* Card spans the area, but its content stays a readable column,
+     centered. */
+  .bg-overlay .bg-elite-card > * {
+    width: 100%;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
+  .bg-overlay .bg-elite-card {
+    background:
+      linear-gradient(to bottom, var(--color-card-bg) 0, transparent 140px),
+      linear-gradient(160deg, rgba(18, 12, 36, 0.97) 0%, rgba(12, 10, 28, 0.97) 100%);
+  }
+  .bg-overlay .bg-elite-card--pro {
+    background:
+      linear-gradient(to bottom, var(--color-card-bg) 0, transparent 140px),
+      linear-gradient(160deg, rgba(12, 24, 42, 0.97) 0%, rgba(8, 18, 34, 0.97) 100%);
+  }
+  html[data-theme="light"] .bg-overlay .bg-elite-card {
+    background:
+      linear-gradient(to bottom, var(--color-card-bg) 0, transparent 140px),
+      linear-gradient(160deg, #faf5ff 0%, #f3f0ff 50%, #eff6ff 100%);
+  }
+  html[data-theme="light"] .bg-overlay .bg-elite-card--pro {
+    background:
+      linear-gradient(to bottom, var(--color-card-bg) 0, transparent 140px),
+      linear-gradient(160deg, #f0f9ff 0%, #e0f2fe 50%, #eff6ff 100%);
+  }
+}
+
+/* "Go Elite for unlimited AI →" — inline text link at the end of a Pro
+   paywall's fine print: same size as the line, just purple and bold. */
+.bg-elite-link {
+  all: unset;
+  font: inherit;
+  font-weight: 700;
+  color: #114a6e;
+  cursor: pointer;
+  display: inline;
+}
+/* Dark theme: #114a6e would vanish on the dark card — a light blue there. */
+html:not([data-theme="light"]) .bg-elite-link { color: #93c5fd; }
+/* Only the word "Elite" is purple. */
+.bg-elite-link-word { color: #7c3aed; }
+html:not([data-theme="light"]) .bg-elite-link-word { color: #a78bfa; }
+.bg-elite-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.bg-elite-link:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; border-radius: 3px; }
+
+/* Fine print under the paywall button ("100 AI requests/week · … · Go
+   Elite …") — a bit bigger so the Elite option reads clearly. */
+.bg-elite-card .bg-card-trust { font-size: 0.78rem; line-height: 1.5; }
+/* Pro paywalls: plan facts on the left, "Go Elite …" link on the right
+   (wraps under on narrow screens). */
+.bg-card-trust.bg-card-trust--split {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+.bg-card-trust--split .bg-elite-link { margin-left: auto; text-align: right; }
+
+/* ── Paywall button: same look and animation as "Start paper trading"
+   (PaperTradingCard.css .ptc-activate-cta) — flat gradient, no border or
+   glow at rest or on hover, a soft light sweep across it on a loop, a
+   slight fade on hover and a press-in on tap. */
+.bg-elite-cta,
+.bg-elite-cta:hover,
+.bg-elite-cta--pro,
+.bg-elite-cta--pro:hover {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+.bg-elite-cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  transition: transform 0.1s, opacity 0.15s;
+}
+.bg-elite-cta--pro { background: linear-gradient(135deg, #4f46e5, #0284c7); }
+.bg-elite-cta:hover { opacity: 0.88; transform: none; }
+.bg-elite-cta:active { transform: scale(0.97); }
+.bg-elite-cta:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.8); outline-offset: 2px; }
+.bg-elite-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.28) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: bg-cta-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes bg-cta-sweep {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bg-elite-cta::after { animation: none; }
+}
+
+/* Phones: fine print stacks — smaller "100 AI requests/week …" line, then
+   the Elite link on its own row, both centered. */
+@media (max-width: 680px) {
+  .bg-card-trust.bg-card-trust--split {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  /* Tucked right under the button (the card's own gap is ~20px). */
+  .bg-elite-card .bg-card-trust.bg-card-trust--split { margin-top: -12px; }
+  /* Smaller and left-aligned, right under the button. */
+  .bg-card-trust--split > span:first-child {
+    font-size: 0.62rem;
+    text-align: left;
+  }
+  .bg-card-trust--split .bg-elite-link {
+    align-self: center;
+    margin-top: 10px;
+    margin-left: 0;
+    text-align: center;
+  }
 }

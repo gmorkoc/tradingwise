@@ -5,7 +5,7 @@ import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/WhaleAlerts.css";
 
 const DISMISS_MS = 4_000;
-const SNOOZE_MS = 30 * 60 * 1000;
+const SNOOZE_MS = 60 * 60 * 1000;
 
 function playWhaleSound() {
   try {
@@ -159,7 +159,11 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
       role="status"
       aria-live="polite"
     >
-      <div className="whale-alert" key={current.id}>
+      <div
+        className="whale-alert"
+        key={current.id}
+        style={{ "--dismiss-ms": `${DISMISS_MS}ms` } as React.CSSProperties}
+      >
         <div className="whale-alert-main">
           <div className="whale-alert-icon">🐋</div>
 
@@ -254,19 +258,16 @@ export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
           type="button"
           className="whale-snooze-footer"
           onClick={snooze}
-          aria-label="Snooze whale alerts for 30 minutes"
+          aria-label="Snooze whale alerts for 1 hour"
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="13" r="8"/>
             <path d="M12 9v4l3 2"/>
           </svg>
-          {t("whaleAlerts.snooze", "Snooze 30m")}
+          {t("whaleAlerts.snooze", "Snooze 1h")}
         </button>
 
-        <div
-          className="whale-alert-progress"
-          style={{ "--dismiss-ms": `${DISMISS_MS}ms` } as React.CSSProperties}
-        />
+        <div className="whale-alert-progress" />
       </div>
     </div>
   );

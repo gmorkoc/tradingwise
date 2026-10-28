@@ -661,7 +661,14 @@ html[data-theme="light"] .fb-row-tip {
 
 /* ── Mobile / responsive ─────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .fb-page { padding: 10px; gap: 12px; }
+  /* Funding bot on phones: containers run flat — no padding, no frame. */
+  .fb-page { padding: 0; gap: 12px; }
+  .fb-scanner-wrap,
+  .fb-detail {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+  }
   .fb-title { font-size: 1.05rem; }
   .fb-detail-stats { gap: 14px; }
   .fb-detail-stat { align-items: flex-start; }

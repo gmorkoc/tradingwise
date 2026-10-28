@@ -631,7 +631,7 @@
 }
 
 @media (max-width: 640px) {
-  .htf-wrap { padding: 12px 12px 32px; gap: 12px; }
+  .htf-wrap { padding: 0; gap: 12px; }
   .htf-title { font-size: 18px; }
 
   .htf-inline-stats { font-size: 12px; }

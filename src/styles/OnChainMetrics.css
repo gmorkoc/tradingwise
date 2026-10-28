@@ -298,3 +298,8 @@
   border-radius: 6px;
   padding: 2px 7px;
 }
+
+@media (max-width: 640px) {
+  .onchain-card { padding: 0; }
+  .onchain-ai { padding: 16px 0 0; }
+}

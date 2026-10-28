@@ -777,3 +777,17 @@ html[data-theme="light"] .lhm-tooltip-val  { color: rgba(0,0,0,0.9); }
   .lhm-controls-bar{ justify-content: flex-start; }
   .lhm-scale-bar-wrap { min-width: 38px; padding-left: 6px; }
 }
+
+/* Phones: section containers run edge to edge — no left/right padding. */
+@media (max-width: 640px) {
+  .lhm-top-bar,
+  .lhm-controls-bar,
+  .lhm-lev-row,
+  .lhm-disclaimer,
+  .lhm-analysis,
+  .lhm-analysis-col,
+  .lhm-ai-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

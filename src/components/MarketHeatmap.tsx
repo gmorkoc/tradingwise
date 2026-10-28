@@ -223,6 +223,8 @@ export function MarketHeatmap() {
       dominance: totalCap > 0 ? (c.market_cap / totalCap) * 100 : 0,
     }));
   }, [coins, changeInterval]);
+  const upCount = tiles.filter(tl => tl.change > 0).length;
+  const downCount = tiles.filter(tl => tl.change < 0).length;
 
   // Flat treemap, no sector grouping — matches CoinMarketCap's own crypto
   // heatmap (coinmarketcap.com/crypto-heatmap), which this was asked to
@@ -243,6 +245,21 @@ export function MarketHeatmap() {
   return (
     <div className="mhm-root">
       <div className="mhm-controls">
+        {/* Market breadth for the chosen interval + the color scale the
+            tiles use (heatColor: full color at ±8%). */}
+        <div className="mhm-summary">
+          {tiles.length > 0 && (
+            <span className="mhm-breadth">
+              <span className="mhm-breadth-up">▲ {upCount}</span>
+              <span className="mhm-breadth-down">▼ {downCount}</span>
+            </span>
+          )}
+          <span className="mhm-legend" aria-label="Color scale from -8% to +8%">
+            <span className="mhm-legend-label">−8%</span>
+            <span className="mhm-legend-bar" />
+            <span className="mhm-legend-label">+8%</span>
+          </span>
+        </div>
         <div className="mhm-interval-toggle" role="group" aria-label={t("marketHeatmap.interval", "Interval")}>
           {INTERVALS.map(({ key, label }) => (
             <button

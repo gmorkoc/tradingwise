@@ -566,3 +566,7 @@
   .rcw-top  { padding: 16px 16px 16px; }
   .rcw-footer { padding: 0 16px 16px; }
 }
+
+@media (max-width: 640px) {
+  .rc-picker { padding: 0; }
+}

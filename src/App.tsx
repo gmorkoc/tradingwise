@@ -58,6 +58,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
+import { PaywallPromo } from "./components/PaywallPromo";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -71,6 +72,9 @@ import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // landing section now, needed immediately on load, same reasoning as the
 // comment on the lazy block below.
 import { GlobalMarkets } from "./components/GlobalMarkets";
+
+// Desktop Focus mode (moon) button — hidden for now; flip to bring it back.
+const SHOW_FOCUS_BUTTON = false;
 
 // No-op on web/desktop, where this plugin isn't meaningful (and may not
 // be present) — same convention as PriceChart.tsx/TradingAgent.tsx's own
@@ -204,6 +208,18 @@ function hashToSection(hash: string): SectionId {
 function sectionToHash(section: SectionId): string {
   return section === "chart" ? "trade" : section;
 }
+
+// Pages that are fully paywalled (BlurGate around the whole page). Tapping
+// one of these in the menu without access shows its upgrade promo
+// (PaywallPromo) instead of navigating; opening the URL directly still
+// lands on the page's own full-page paywall.
+const PAYWALLED_PAGES: Partial<Record<SectionId, { tier: Tier; name: string }>> = {
+  candleai: { tier: "pro", name: "Inside the AI Candle" },
+  altanalysis: { tier: "pro", name: "Alt Analysis" },
+  options: { tier: "pro", name: "Options Analytics" },
+  correlation: { tier: "pro", name: "Correlation Matrix" },
+  strategyalerts: { tier: "pro", name: "Strategy Alerts" },
+};
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -584,8 +600,11 @@ function AppDashboard({
   // Controlled by the header's own Focus button (mch-focus-btn below) —
   // the old separate sidebar rail button for this was removed as a
   // redundant second entry point once that button did everything it did.
+  // Focus button is hidden for now (SHOW_FOCUS_BUTTON) — while it is,
+  // Focus mode always starts off so nobody gets stuck with alerts muted
+  // and no way to turn it back on.
   const [distractionFree, setDistractionFree] = useState(
-    () => localStorage.getItem("distraction-free") === "true",
+    () => SHOW_FOCUS_BUTTON && localStorage.getItem("distraction-free") === "true",
   );
   useEffect(() => {
     localStorage.setItem("distraction-free", String(distractionFree));
@@ -1089,6 +1108,8 @@ function AppDashboard({
   const [profileOpen, setProfileOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [chartAnalyzeOpen, setChartAnalyzeOpen] = useState(false);
+  // Locked page whose upgrade promo is showing (menu tap without access).
+  const [promoSection, setPromoSection] = useState<SectionId | null>(null);
   const [coinPickerOpen, setCoinPickerOpen] = useState(false);
   const [coinSearch, setCoinSearch] = useState("");
   const [recentCoins, setRecentCoins] = useState<string[]>(loadRecentCoins);
@@ -1223,6 +1244,15 @@ function AppDashboard({
     return () => { cancelled = true; clearInterval(id); };
   }, []);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // The phone "Analyze a Chart" paywall is a full page (BlurGate) rather
+  // than a dismissable popup, so leave it whenever the user moves on:
+  // opening the menu or switching page closes it.
+  useEffect(() => {
+    if (mobileNavOpen) setChartAnalyzeOpen(false);
+  }, [mobileNavOpen]);
+  useEffect(() => {
+    setChartAnalyzeOpen(false);
+  }, [activeSection]);
   // Desktop-only collapse to a narrow icon-only rail (persisted — a
   // layout choice, not per-session state). Collapsed mode drops labels/
   // category grouping entirely and falls back to the flyout panel for a
@@ -1394,6 +1424,19 @@ function AppDashboard({
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
+  // Coming back to Trade (#trade) from any other page always shows the
+  // chart in its default view: page scrolled back to the top so the
+  // chart is in view. The chart itself remounts fresh on return (default
+  // zoom window, no leftover pan/zoom), and mobileChartTab is reset to
+  // "chart" by the effect further up.
+  const prevSectionRef = useRef(activeSection);
+  useEffect(() => {
+    const prev = prevSectionRef.current;
+    prevSectionRef.current = activeSection;
+    if (activeSection !== "chart" || prev === "chart") return;
+    mainContentRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, [activeSection]);
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -2065,6 +2108,30 @@ function AppDashboard({
   // indicator that follows the finger. On the first page (nothing to go
   // back to) it opens the side menu instead. Swipe left closes the menu.
   const backSwipeRef = useRef<HTMLDivElement>(null);
+  // Publishes where the mobile header ends (--mch-bottom) so full-screen
+  // paywalls (BlurGate's .bg-overlay on mobile) start below it — the
+  // header, and its menu button, stay visible and tappable on every gated
+  // page instead of being covered with no way out but a swipe.
+  const mchCleanupRef = useRef<(() => void) | null>(null);
+  const mchRef = useCallback((el: HTMLDivElement | null) => {
+    mchCleanupRef.current?.();
+    mchCleanupRef.current = null;
+    const root = document.documentElement;
+    if (!el) { root.style.setProperty("--mch-bottom", "0px"); return; }
+    const update = () => {
+      root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, { passive: true, capture: true });
+    mchCleanupRef.current = () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, { capture: true });
+    };
+  }, []);
   const inHorizontalScroller = (el: Element | null) => {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
       if (n.scrollWidth > n.clientWidth + 2) {
@@ -2231,12 +2298,25 @@ function AppDashboard({
     }
   }, [autoRefresh, coin]);
 
+  // In-app navigation to a page (menu, search). A paywalled page the user
+  // can't open shows its upgrade promo where they are instead of
+  // navigating; returns whether it actually navigated.
+  const openSection = (id: SectionId): boolean => {
+    const gate = PAYWALLED_PAGES[id];
+    if (gate && !(user && hasAccess(tier, gate.tier))) {
+      setPromoSection(id);
+      setMobileNavOpen(false);
+      return false;
+    }
+    setActiveSection(id);
+    return true;
+  };
   const renderNavItem = (item: (typeof NAV_ITEMS)[number]) => (
     <button
       key={item.id}
       className={`icon-strip-btn${activeSection === item.id ? " active" : ""}`}
       onClick={() => {
-        setActiveSection(item.id);
+        if (!openSection(item.id)) return;
         // Desktop-only: a flat item (never true for a category's own
         // sub-items) closes an open flyout panel instead of leaving it
         // open over a section it no longer matches. Guarded to desktop so
@@ -2652,6 +2732,19 @@ function AppDashboard({
           isOpen={contactOpen}
           onClose={() => setContactOpen(false)}
         />
+        {(() => {
+          const gate = promoSection ? PAYWALLED_PAGES[promoSection] : undefined;
+          return (
+            <PaywallPromo
+              open={!!gate}
+              onClose={() => setPromoSection(null)}
+              requiredTier={gate?.tier ?? "pro"}
+              featureName={gate?.name ?? ""}
+              onOpenAuth={onOpenAuth}
+              onOpenUpgrade={onOpenUpgrade ?? (() => {})}
+            />
+          );
+        })()}
         <ChartAnalyzeModal
           isOpen={chartAnalyzeOpen}
           onClose={() => setChartAnalyzeOpen(false)}
@@ -2856,19 +2949,38 @@ function AppDashboard({
                 <span className="icon-strip-label">{t("nav.settings")}</span>
               </button>
 
-              <button
-                className="icon-strip-btn"
-                onClick={() => {
-                  signOut();
-                  setMobileNavOpen(false);
-                }}
-                title={t("nav.signOut")}
-              >
-                <span className="nav-icon-wrap">
-                  <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-                </span>
-                <span className="icon-strip-label">{t("nav.signOut")}</span>
-              </button>
+              {/* Signed in: Sign out. Signed out: Sign in / Register
+                  (opens the auth sheet) — never "Sign out" without an
+                  account. */}
+              {user ? (
+                <button
+                  className="icon-strip-btn"
+                  onClick={() => {
+                    signOut();
+                    setMobileNavOpen(false);
+                  }}
+                  title={t("nav.signOut")}
+                >
+                  <span className="nav-icon-wrap">
+                    <NavIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                  </span>
+                  <span className="icon-strip-label">{t("nav.signOut")}</span>
+                </button>
+              ) : (
+                <button
+                  className="icon-strip-btn"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    onOpenAuth();
+                  }}
+                  title={t("nav.signIn", "Sign In / Register")}
+                >
+                  <span className="nav-icon-wrap">
+                    <NavIcon d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                  </span>
+                  <span className="icon-strip-label">{t("nav.signIn", "Sign In / Register")}</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -3073,7 +3185,7 @@ function AppDashboard({
                     PriceAlerts/BuySignals (which need to stay mounted
                     somewhere at every width for their own background price-
                     watching/toast effects) are never mounted twice at once. */}
-                {isWideDesktop && (
+                {SHOW_FOCUS_BUTTON && isWideDesktop && (
                   <HoverTip
                     className="top-nav-icon-tip"
                     placement="left"
@@ -3203,7 +3315,7 @@ function AppDashboard({
                 <HoverTip className="top-nav-icon-tip" placement="left" text="Notifications">
                   <button
                     className="mch-search-btn mch-notif-feed-btn"
-                    onClick={() => setNotificationsCenterOpen(true)}
+                    onClick={() => (user ? setNotificationsCenterOpen(true) : onOpenAuth())}
                   >
                     <svg
                       width="16"
@@ -3268,7 +3380,7 @@ function AppDashboard({
               real thing: the hamburger, mch-right's fallback icons, and
               the coin button are all still needed there. */}
           {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
-          <div className="main-coin-header">
+          <div ref={mchRef} className="main-coin-header">
             <div className="mch-left">
               <button
                 className="mch-menu-btn"
@@ -3389,7 +3501,7 @@ function AppDashboard({
                   <BuySignals onOpenUpgrade={onOpenUpgrade} hideTrigger={!isWideDesktop} />
                   <button
                     className="mch-search-btn mch-notif-feed-btn"
-                    onClick={() => setNotificationsCenterOpen(true)}
+                    onClick={() => (user ? setNotificationsCenterOpen(true) : onOpenAuth())}
                     title="Notifications"
                   >
                     <svg
@@ -3962,7 +4074,7 @@ function AppDashboard({
           open={globalSearch}
           onClose={() => setGlobalSearch(false)}
           onCoinSelect={(c) => { openChartCoin(c, { navigate: true }); }}
-          onSectionSelect={(s) => setActiveSection(s as SectionId)}
+          onSectionSelect={(s) => { openSection(s as SectionId); }}
           // Mobile's only remaining path to this is FloatingNavBar's
           // Search icon (the old mobile header search button was moved
           // there) — "docked" attaches it directly above the nav bar.
@@ -4143,7 +4255,10 @@ function AppDashboard({
         {/* Price signal banner (bullish/bearish) hidden for now — see
             priceAlert state above, logic left intact to re-enable easily. */}
 
-        <WhaleAlerts btcPrice={btcData?.price} coinChatOpen={activeSection === "chart" && showCoinChat} />
+        {/* Mobile: whale alerts only on the Trade page (#trade). Desktop unchanged. */}
+        {(isWideDesktop || activeSection === "chart") && (
+          <WhaleAlerts btcPrice={btcData?.price} coinChatOpen={activeSection === "chart" && showCoinChat} />
+        )}
 
         <div ref={backSwipeRef} className="back-swipe" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -4238,6 +4353,7 @@ function AppDashboard({
             setProfileOpen(false);
             setGlobalSearch(false);
             setDailyBriefPanelOpen(false);
+            setChartAnalyzeOpen(false);
             setActiveSection("chart");
           }}
           homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
@@ -4328,6 +4444,15 @@ function AppGate() {
   }, [user, profileLoading]);
   const [showAuth, setShowAuth] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  // The plan picker ("Choose your plan") is only for signed-in users —
+  // anyone not signed in gets the sign in / sign up screen instead, from
+  // every entry point (buttons, upgrade-reminder push taps, etc.).
+  const userRef = useRef(user);
+  userRef.current = user;
+  const openUpgrade = useCallback(() => {
+    if (userRef.current) setShowUpgrade(true);
+    else setShowAuth(true);
+  }, []);
 
   // Native Google sign-in opens an in-app browser and returns immediately —
   // the real session lands later, asynchronously, via a deep-link listener
@@ -4342,10 +4467,10 @@ function AppGate() {
   // dispatches this instead of calling setShowUpgrade directly — that
   // service module sits well below App.tsx and has no access to this state.
   useEffect(() => {
-    const onOpenUpgradeEvent = () => setShowUpgrade(true);
+    const onOpenUpgradeEvent = () => openUpgrade();
     window.addEventListener("open-upgrade-modal", onOpenUpgradeEvent);
     return () => window.removeEventListener("open-upgrade-modal", onOpenUpgradeEvent);
-  }, []);
+  }, [openUpgrade]);
 
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
     const stored = localStorage.getItem("theme");
@@ -4443,12 +4568,12 @@ function AppGate() {
     <>
       <AppDashboard
         onOpenAuth={() => setShowAuth(true)}
-        onOpenUpgrade={() => setShowUpgrade(true)}
+        onOpenUpgrade={openUpgrade}
         theme={theme}
         setTheme={setTheme}
       />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      {showUpgrade && (
+      {showUpgrade && user && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}
           onOpenAuth={() => {

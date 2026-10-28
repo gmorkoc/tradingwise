@@ -125,8 +125,8 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange }: Prop
         </div>
 
         <div className="notif-list">
-          {loading && items.length === 0 && <p className="notif-empty">Loading…</p>}
-          {!loading && items.length === 0 && (
+          {user && loading && items.length === 0 && <p className="notif-empty">Loading…</p>}
+          {user && !loading && items.length === 0 && (
             <p className="notif-empty">No notifications yet — buy/sell signals, price alerts, strategy alerts and news will show up here.</p>
           )}
           {items.map((n) => (

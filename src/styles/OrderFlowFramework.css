@@ -605,3 +605,7 @@
   .ep-leg    { grid-template-columns: 60px 1fr 1fr; }
   .vp-row-price { width: 70px; font-size: 0.62rem; }
 }
+
+@media (max-width: 640px) {
+  .oft-root { padding: 0; }
+}

@@ -4530,12 +4530,12 @@ body.cw-chart-fullscreen-active .fnb-bar {
 }
 @media (max-width: 900px) {
   /* Toolbar menus sit right on top of the floating nav (.fnb-bar: fixed,
-     bottom 16px, 64px tall — no safe-area offset of its own). */
-  .cw-tb-menu { bottom: 86px; }
+     bottom 20px, 64px tall — no safe-area offset of its own). */
+  .cw-tb-menu { bottom: 90px; }
 }
 @media (max-width: 900px) {
-  /* Flush on top of the floating nav (16px + 64px), no gap. */
-  .cw-tb-menu { bottom: 80px; }
+  /* Flush on top of the floating nav (20px + 64px), no gap. */
+  .cw-tb-menu { bottom: 84px; }
 }
 /* Phone toolbar menus as the app's bottom sheet. */
 .cw-tb-sheet-list { padding: 6px 10px 12px; }
