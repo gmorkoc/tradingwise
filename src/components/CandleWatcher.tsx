@@ -2043,6 +2043,34 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   useEffect(() => {
     if (rightTab === "read" || rightTab === "plan" || rightTab === "narration") lastAiTabRef.current = rightTab;
   }, [rightTab]);
+  // Switching panel tabs (Overview / AI / Elliott / Live Tape) swaps the
+  // panel body's content; when the new tab is shorter the page shrinks
+  // and the browser (iOS especially) jumps the scroll, often to the top.
+  // Hold the body at least as tall as it was and put the scroll position
+  // back, so the page stays exactly where the user tapped.
+  const panelBodyRef = useRef<HTMLDivElement>(null);
+  const switchRightTab = (next: typeof rightTab) => {
+    const body = panelBodyRef.current;
+    let scroller: HTMLElement | null = body?.parentElement ?? null;
+    while (scroller && scroller !== document.body) {
+      const oy = getComputedStyle(scroller).overflowY;
+      if ((oy === "auto" || oy === "scroll") && scroller.scrollHeight > scroller.clientHeight) break;
+      scroller = scroller.parentElement;
+    }
+    const scrollEl = scroller && scroller !== document.body ? scroller : null;
+    const top = scrollEl ? scrollEl.scrollTop : window.scrollY;
+    // Phones only — on desktop the panel body is its own fixed-height
+    // scroll area, so its height never moves the page.
+    if (body && !cwDesktop) {
+      const prevMin = parseFloat(body.style.minHeight) || 0;
+      body.style.minHeight = `${Math.max(prevMin, body.offsetHeight)}px`;
+    }
+    setRightTab(next);
+    requestAnimationFrame(() => {
+      if (scrollEl) scrollEl.scrollTop = top;
+      else window.scrollTo({ top });
+    });
+  };
   // Back on mobile, the desktop-only tabs don't exist — fall back.
   useEffect(() => {
     // Desktop folds Monthly into Overview.
@@ -4938,7 +4966,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   type="button"
                   className={`cw-rail-btn${tb.active ? " cw-rail-btn--active" : ""}`}
                   onClick={() => {
-                    setRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
+                    switchRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
                     setRightPanelCollapsed(false);
                   }}
                   title={tb.label}
@@ -4977,7 +5005,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         // Clicking the open tab hides the panel (to the icon rail).
                         if (tb.active) { if (cwDesktop) setRightPanelCollapsed(true); return; }
                         // AI keeps whichever of Read/Plan/Narration was last open.
-                        setRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
+                        switchRightTab(tb.key === "read" ? lastAiTabRef.current : tb.key);
                       }}
                       title={tb.active && cwDesktop ? `Hide panel` : tb.label}
                     >
@@ -4990,7 +5018,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </>
             </div>
 
-            <div className="cw-right-panel-body">
+            <div className="cw-right-panel-body" ref={panelBodyRef}>
             {rightTab === "signals" && <div className="cw-panel-signals">{signalCardsEl}</div>}
             {rightTab === "tape" && <div className="cw-panel-tape">{liveTapeEl}</div>}
 
