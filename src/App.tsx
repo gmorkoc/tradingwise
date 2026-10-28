@@ -1466,30 +1466,6 @@ function AppDashboard({
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
 
-  // Mobile header: slides away while scrolling down, comes back on any
-  // scroll up (or near the top). Small threshold so tiny jitters and iOS
-  // bounce don't flicker it.
-  const [mchHidden, setMchHidden] = useState(false);
-  useEffect(() => {
-    // Listen at the document (capture) and only react to the page's own
-    // scroller — works even if .main-content mounts after the boot screen.
-    let lastY = 0;
-    const onScroll = (e: Event) => {
-      const el = mainContentRef.current;
-      if (!el || e.target !== el) return;
-      const y = el.scrollTop;
-      if (y <= 40) setMchHidden(false);
-      else if (y > lastY + 8) setMchHidden(true);
-      else if (y < lastY - 8) setMchHidden(false);
-      else return; // within threshold: keep lastY anchored
-      lastY = y;
-    };
-    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    return () => document.removeEventListener("scroll", onScroll, { capture: true });
-  }, []);
-  // A new page always starts with the header showing.
-  useEffect(() => { setMchHidden(false); }, [activeSection]);
-
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -2175,11 +2151,7 @@ function AppDashboard({
     const root = document.documentElement;
     if (!el) { root.style.setProperty("--mch-bottom", "0px"); return; }
     const update = () => {
-      root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);
-      // Header's own height — the hide-on-scroll animation slides it up by
-      // exactly this much (.main-coin-header--hidden).
-      root.style.setProperty("--mch-h", `${el.offsetHeight}px`);
-    };
+      root.style.setProperty("--mch-bottom", `${Math.max(0, Math.round(el.getBoundingClientRect().bottom))}px`);    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -3409,7 +3381,7 @@ function AppDashboard({
               real thing: the hamburger, mch-right's fallback icons, and
               the coin button are all still needed there. */}
           {!(isDesktopWidth && !Capacitor.isNativePlatform()) && (
-          <div ref={mchRef} className={`main-coin-header${mchHidden && !mobileNavOpen ? " main-coin-header--hidden" : ""}`}>
+          <div ref={mchRef} className="main-coin-header">
             <div className="mch-left">
               <button
                 className="mch-menu-btn"

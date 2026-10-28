@@ -4222,28 +4222,6 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
   overflow: visible;
   position: relative;
 }
-/* Mobile only: header slides up out of view while scrolling down and
-   back on scroll up (App.tsx mchHidden). The negative margin collapses
-   its space so the page moves up with it; --mch-h is its measured height. */
-@media (max-width: 640px) {
-  .main-coin-header {
-    transition:
-      margin-top 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.22s ease;
-    will-change: transform;
-  }
-  .main-coin-header.main-coin-header--hidden {
-    margin-top: calc(-1 * var(--mch-h, 64px));
-    transform: translateY(-12px);
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
-  .main-coin-header { transition: none; }
-}
-
 /* Header toggle's logo tab: spinning while loading/refreshing — no blue
    glow behind it (the ring + "C" draw-in only). */
 .chart-mobile-tab .chart-tab-logo-loading .ptr-logo-glow { display: none; }
