@@ -48,6 +48,11 @@ import "../styles/PriceChart.css";
 import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
 import { getIndicatorDef } from "../services/customIndicators";
+import { useProVision } from "../hooks/useProVision";
+import { computeProVision, mergeHigherTimeframe, type PvTile, type PvResult } from "../services/proVision";
+import { ProVisionOverlay } from "./ProVisionOverlay";
+import { ProVisionGuide } from "./ProVisionGuide";
+import { getMacroEvents, eventShortName, EVENT_PAUSE_BEFORE_MS, EVENT_PAUSE_AFTER_MS, type MacroEvent } from "../services/macroEvents";
 
 export type TimeInterval =
   | "1sec"
@@ -65,6 +70,83 @@ export type TimeInterval =
 // initial per-coin/interval load and the fullscreen-toggle view reset
 // (see the isFullscreen effect further down), so both apply exactly the
 // same "what does a reset view look like" definition.
+// Pro Vision range prices: compact, enough precision for cheap coins.
+function fmtPvPrice(p: number): string {
+  if (p >= 1000) return p.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (p >= 1) return p.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return p.toPrecision(4);
+}
+
+// Stepped "square-wave" sparkline (rounded steps) in a 100×40 box: the
+// series averaged into `bins` levels, each a flat run joined to the next by
+// a short rounded step; the end dot sits just past the line's end.
+function pvStepSpark(series: number[], bins: number) {
+  if (!series.length) return { line: "", area: "", end: null as readonly [number, number] | null };
+  const XMAX = 90;
+  const lv: number[] = [];
+  for (let k = 0; k < bins; k++) {
+    const a = Math.floor((k * series.length) / bins), z = Math.max(a + 1, Math.floor(((k + 1) * series.length) / bins));
+    const part = series.slice(a, z);
+    lv.push(part.length ? part.reduce((p, q) => p + q, 0) / part.length : lv[lv.length - 1] ?? 0);
+  }
+  const lo = Math.min(...lv), hi = Math.max(...lv);
+  const span = hi - lo || 1;
+  const ys = lv.map((v) => 34 - ((v - lo) / span) * 28);
+  const bw = XMAX / bins;
+  const r = Math.min(2.2, bw / 3);
+  let line = `M0 ${ys[0].toFixed(1)}`;
+  ys.forEach((y, k) => {
+    const xe = (k + 1) * bw;
+    if (k < bins - 1) {
+      const yn = ys[k + 1];
+      line += ` L${(xe - r).toFixed(1)} ${y.toFixed(1)} C${xe.toFixed(1)} ${y.toFixed(1)} ${xe.toFixed(1)} ${yn.toFixed(1)} ${(xe + r).toFixed(1)} ${yn.toFixed(1)}`;
+    } else {
+      line += ` L${xe.toFixed(1)} ${y.toFixed(1)}`;
+    }
+  });
+  return { line, area: `${line} L${XMAX} 40 L0 40 Z`, end: [97, ys[bins - 1] + 3] as const };
+}
+
+// Pro Vision Signal check rows: one line icon + short description per check
+// (MA, DMI, Ichimoku, RSI, Stochastic, MACD, Volume).
+const pvIcon = (d: string) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+);
+const PV_ROW_ICONS = [
+  pvIcon("M3 17l5-5 4 3 8-8M3 21h18"),
+  pvIcon("M4 20V10M10 20V4M16 20v-7M22 20H2"),
+  pvIcon("M6 18a4 4 0 0 1 .5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1 0 9H6z"),
+  pvIcon("M12 3v3M12 18v3M5 12H2M22 12h-3M7 7l-2-2M19 19l-2-2M7 17l-2 2M19 5l-2 2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"),
+  pvIcon("M3 12c3-6 6-6 9 0s6 6 9 0"),
+  pvIcon("M3 12h4l3-7 4 14 3-7h4"),
+  pvIcon("M5 20V12M10 20V6M15 20v-9M20 20V9"),
+];
+const PV_ROW_DESC = [
+  "Price vs 20 & 200 averages",
+  "Who's pushing, and how hard",
+  "Price vs the cloud",
+  "Momentum, last 14 candles",
+  "Where price sits in its range",
+  "Momentum shift",
+  "Market buys vs sells",
+];
+
+// Pro Vision volume amounts: 3.95K, 4.63M.
+function fmtPvVol(v: number): string {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(2)}K`;
+  return v.toFixed(v >= 10 ? 0 : 2);
+}
+
+// Pro Vision event countdown: "2h 14m", "45m", "under 1m".
+function fmtCountdown(ms: number): string {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 1) return "under 1m";
+  const h = Math.floor(m / 60);
+  return h ? `${h}h ${m % 60}m` : `${m}m`;
+}
+
 const INTERVAL_WINDOW: Partial<Record<TimeInterval, number>> = {
   "1min": 6 * 60 * 60,
   "5min": 2 * 24 * 60 * 60,
@@ -2246,6 +2328,146 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const srLineRefs = useRef<any[]>([]);
   const zoneLineRefs = useRef<any[]>([]);
   const lastCandlesRef = useRef<CandleDataPoint[]>([]);
+
+  // ── Pro Vision (Trade + Advance charts, Pro/Elite) ────────────────────
+  // Recomputed whenever the chart's data reloads (chartGeneration bumps).
+  const [proVisionOn, setProVisionOn] = useProVision();
+  const pvActive = proVisionOn && isPaid && (prefsScope === "trade" || prefsScope === "advance");
+  // Live loop: every 5s pull the newest 2 candles of this interval and fold
+  // them into the read, so the Signal check updates in real time even on
+  // intervals the chart itself only refreshes occasionally.
+  const [pvLiveTail, setPvLiveTail] = useState<CandleDataPoint[]>([]);
+  const [pvUpdatedAt, setPvUpdatedAt] = useState(0);
+  useEffect(() => {
+    if (!pvActive || interval === "all") return;
+    let alive = true;
+    const pull = () => coinglass.getLatestCandles(coin, interval, 2).then((t) => {
+      if (alive && t.length) { setPvLiveTail(t); setPvUpdatedAt(Date.now()); }
+    });
+    pull();
+    const id = window.setInterval(pull, 5000);
+    return () => { alive = false; clearInterval(id); setPvLiveTail([]); };
+  }, [pvActive, coin, interval]);
+  const pvLocal = useMemo(() => {
+    if (!pvActive) return null;
+    const base = lastCandlesRef.current;
+    if (!pvLiveTail.length || !base.length) return computeProVision(base);
+    // Replace the forming candle / append a just-opened one (never reorder).
+    const merged = base.slice();
+    for (const t of pvLiveTail) {
+      const lastT = merged[merged.length - 1].time;
+      if (t.time === lastT) merged[merged.length - 1] = t;
+      else if (t.time > lastT) merged.push(t);
+    }
+    return computeProVision(merged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvActive, chartGeneration, coin, interval, pvLiveTail]);
+
+  // Multi-timeframe column: the verdict on 5m / 15m / 1h / 4h / 1D,
+  // refreshed every minute.
+  const [pvMtf, setPvMtf] = useState<{ label: string; iv: TimeInterval; bias: "bull" | "bear" | "neutral" | null; checks: ("bull" | "bear" | "neutral")[]; strength: number | null }[]>([]);
+  useEffect(() => {
+    if (!pvActive) { setPvMtf([]); return; }
+    let alive = true;
+    const frames: [TimeInterval, string][] = [["5min", "5m"], ["15min", "15m"], ["1h", "1h"], ["4h", "4h"], ["1day", "1D"]];
+    const load = async () => {
+      const out = await Promise.all(frames.map(async ([iv, label]) => {
+        try {
+          const cs = await coinglass.getHistoricalCandles(iv, coin);
+          const r = computeProVision(cs);
+          return { label, iv, bias: r ? r.verdict.bias : null, checks: r ? r.checks : [], strength: r ? r.bullStrength : null };
+        } catch { return { label, iv, bias: null, checks: [], strength: null }; }
+      }));
+      if (alive) setPvMtf(out);
+    };
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [pvActive, coin]);
+  // Short charts (1s/1m/5m): signals come from the 15m chart instead — the
+  // short candles' own signals only broke even after fees in backtests.
+  const pvShortSec = interval === "1sec" ? 1 : interval === "1min" ? 60 : interval === "5min" ? 300 : 0;
+  const [pvHtf, setPvHtf] = useState<PvResult | null>(null);
+  useEffect(() => {
+    if (!pvActive || !pvShortSec) { setPvHtf(null); return; }
+    let alive = true;
+    coinglass.getHistoricalCandles("15min", coin, 520 * 900)
+      .then((cs) => { if (alive) setPvHtf(computeProVision(cs)); })
+      .catch(() => { if (alive) setPvHtf(null); });
+    return () => { alive = false; };
+    // Refetch when the chart reloads (cache keeps this cheap).
+  }, [pvActive, pvShortSec, coin, chartGeneration]);
+  const pvBase = useMemo<PvResult | null>(() => {
+    if (!pvActive) return null;
+    if (!pvShortSec || !pvHtf) return pvLocal;
+    // Too few short candles for a local read (e.g. 1m loads 60): use the
+    // 15m read alone, without local trend colors/spikes.
+    const base: PvResult = pvLocal ?? { ...pvHtf, trend: [], spikes: [], spikeGuard: null, rangeBox: null, rangeSignals: [], ribbon: { lines: [], bull: [] }, flips: [], barSec: pvShortSec };
+    return mergeHigherTimeframe(base, pvHtf, 900, "15m");
+  }, [pvActive, pvShortSec, pvHtf, pvLocal]);
+
+  // Scheduled macro events (FOMC, CPI, jobs…): warn ahead, and pause
+  // signals from 30 min before to 1 h after each release.
+  const [pvEvents, setPvEvents] = useState<MacroEvent[]>([]);
+  const [pvNow, setPvNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!pvActive) return;
+    let alive = true;
+    const load = () => getMacroEvents().then((e) => { if (alive) setPvEvents(e); });
+    load();
+    const tick = window.setInterval(() => setPvNow(Date.now()), 30_000);
+    const reload = window.setInterval(load, 30 * 60 * 1000);
+    return () => { alive = false; clearInterval(tick); clearInterval(reload); };
+  }, [pvActive]);
+  const pvEventInfo = useMemo(() => {
+    const inWindow = (ms: number) => pvEvents.find((e) => ms >= e.time - EVENT_PAUSE_BEFORE_MS && ms <= e.time + EVENT_PAUSE_AFTER_MS);
+    const live = inWindow(pvNow) ?? null;
+    const next = pvEvents.find((e) => e.time > pvNow && e.time - pvNow <= 24 * 3600 * 1000) ?? null;
+    return { inWindow, live, next };
+  }, [pvEvents, pvNow]);
+  const pvResult = useMemo<PvResult | null>(() => {
+    if (!pvBase || !pvEvents.length) return pvBase;
+    // Drop signals (and the live zone) that fired inside an event window.
+    const signals = pvBase.signals.filter((s) => !pvEventInfo.inWindow(s.time * 1000));
+    const zone = pvBase.zone && pvEventInfo.inWindow(pvBase.zone.from * 1000) ? null : pvBase.zone;
+    return { ...pvBase, signals, zone };
+  }, [pvBase, pvEvents, pvEventInfo]);
+  const pvColorMap = useMemo(() => {
+    if (!pvResult) return null;
+    const m = new Map<number, string>();
+    const cs = lastCandlesRef.current;
+    pvResult.trend.forEach((b, i) => {
+      // No clear trend = yellow (like the classic signal-ribbon look).
+      if (cs[i]) m.set(cs[i].time, b === "bull" ? "#4ade80" : b === "bear" ? "#fb7185" : "#facc15");
+    });
+    return m;
+  }, [pvResult]);
+  const [pvTileOpen, setPvTileOpen] = useState<PvTile | null>(null);
+  // Signal check carousel: one indicator at a time, auto-advancing every
+  // 4.5s; pauses while hovered / touched / focused.
+  const PV_SLIDE_MS = 4500;
+  const [pvSlide, setPvSlide] = useState(0);
+  const [pvSlidePaused, setPvSlidePaused] = useState(false);
+  useEffect(() => {
+    if (!pvActive || pvSlidePaused) return;
+    const id = window.setInterval(() => setPvSlide((s) => (s + 1) % 7), PV_SLIDE_MS);
+    return () => clearInterval(id);
+  }, [pvActive, pvSlidePaused, pvSlide]);
+  const pvTouchX = useRef<number | null>(null);
+  // Advance Chart fills the screen, so its Signal check starts collapsed
+  // to one line (verdict + hit rate); Trade shows it open.
+  const [pvCardOpen, setPvCardOpen] = useState(prefsScope !== "advance");
+  // "How to use Pro Vision": opens once, the first time Pro Vision is on
+  // (remembered), and from the card's "How to use" link after that.
+  const [pvGuideOpen, setPvGuideOpen] = useState(false);
+  useEffect(() => {
+    if (!pvActive) return;
+    let seen = false;
+    try { seen = localStorage.getItem("proVisionGuideSeen:v1") === "1"; } catch { /* ignore */ }
+    if (seen) return;
+    try { localStorage.setItem("proVisionGuideSeen:v1", "1"); } catch { /* ignore */ }
+    setPvGuideOpen(true);
+  }, [pvActive]);
   useChartIndicators({
     chart: chartRef.current,
     mainSeries: candleRef.current,
@@ -6251,6 +6473,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </svg>
                 {t("priceAlerts.title", "Alert")}
               </button>
+              {/* Pro Vision switch (same shared setting as the top bar's). */}
+              <button
+                type="button"
+                className={`pv-toggle pv-toggle--toolbar${proVisionOn && isPaid ? " pv-toggle--on" : ""}`}
+                role="switch"
+                aria-checked={proVisionOn && isPaid}
+                aria-label="Pro Vision"
+                title={proVisionOn && isPaid ? "Pro Vision on — click to go back to the normal chart" : "Pro Vision: trend candles, buy/sell signals and a live signal check"}
+                onClick={() => {
+                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                  setProVisionOn(!proVisionOn);
+                }}
+              >
+                <svg className="pv-toggle-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                </svg>
+                <span className="pv-toggle-label">Pro Vision</span>
+                <span className="pv-toggle-track" aria-hidden="true"><span className="pv-toggle-knob" /></span>
+              </button>
             </div>
             <div className="chart-tv-toolbar-right">
               <div className="chart-tv-segmented-group">
@@ -7492,6 +7733,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             seriesRef={candleRef}
             prediction={predictionPath}
           />
+          {/* Pro Vision's painted ribbon — before the candles so it sits under them. */}
+          <ProVisionOverlay
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            candlesRef={lastCandlesRef}
+            result={pvResult}
+            visible={!!pvResult && chartStyle !== "line"}
+            generation={chartGeneration}
+            layer="under"
+          />
           <RoundedCandleOverlay
             chartRef={chartRef}
             seriesRef={candleRef}
@@ -7501,7 +7752,42 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             style={chartStyle === "hollow" ? "hollow" : chartStyle === "heikinAshi" ? "heikinAshi" : "candle"}
             generation={chartGeneration}
             visible={chartStyle !== "line"}
+            colorMap={pvColorMap}
           />
+          <ProVisionOverlay
+            chartRef={chartRef}
+            seriesRef={candleRef}
+            candlesRef={lastCandlesRef}
+            result={pvResult}
+            visible={!!pvResult && chartStyle !== "line"}
+            generation={chartGeneration}
+          />
+          {pvResult && (
+            <div className="pv-strength" aria-label={`Trend strength: bull ${pvResult.bullStrength}%`}>
+              <span className="pv-strength-tag">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                Pro Vision
+              </span>
+              <div className="pv-strength-track">
+                <div className="pv-strength-bull" style={{ width: `${pvResult.bullStrength}%` }} />
+                <div className="pv-strength-bear" style={{ width: `${100 - pvResult.bullStrength}%` }} />
+              </div>
+              <span className={`pv-strength-val pv-strength-val--${pvResult.bullStrength >= 50 ? "bull" : "bear"}`}>
+                {pvResult.bullStrength >= 50 ? `Bull ${pvResult.bullStrength}%` : `Bear ${100 - pvResult.bullStrength}%`}
+              </span>
+              {pvResult.regime.kind === "range" && <span className="pv-strength-flag">Sideways</span>}
+              {pvResult.spikeGuard && <span className="pv-strength-flag pv-strength-flag--spike">⚡ Spike</span>}
+              {pvEventInfo.live ? (
+                <span className="pv-strength-flag pv-strength-flag--event">⏸ {eventShortName(pvEventInfo.live.title)} · paused</span>
+              ) : pvEventInfo.next ? (
+                <span className="pv-strength-flag pv-strength-flag--event">
+                  {eventShortName(pvEventInfo.next.title)} in {fmtCountdown(pvEventInfo.next.time - pvNow)}
+                </span>
+              ) : null}
+              {pvResult.liquidity.thin && <span className="pv-strength-flag">Thin · signals off</span>}
+              {pvResult.signalSource && <span className="pv-strength-flag pv-strength-flag--src">Signals: {pvResult.signalSource}</span>}
+            </div>
+          )}
           <LineDotFillOverlay
             chartRef={chartRef}
             seriesRef={lineCloseRef}
@@ -7621,6 +7907,406 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
           )}
         </div>
+
+        {/* Pro Vision: Signal check — trend + momentum tiles, buyers vs
+            sellers, and an overall verdict. Tap a tile to see what it means. */}
+        {pvResult && (
+          <div className={`pv-card${pvCardOpen ? "" : " pv-card--collapsed"}${prefsScope === "advance" ? " pv-card--advance" : ""}`}>
+            <button
+              type="button"
+              className={`pv-card-head pvs--${pvResult.verdict.bias}`}
+              onClick={() => setPvCardOpen((v) => !v)}
+              aria-expanded={pvCardOpen}
+            >
+              {/* One combined header: icon, title, live score, verdict pill. */}
+              <span className="pvl-title">
+                <span className="pvl-title-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12h4l3-7 4 14 3-7h4" />
+                  </svg>
+                </span>
+                <span className="pvl-title-text">ProVision Signal Check</span>
+                <span key={`hs:${pvResult.bullStrength}`} className="pvl-score">
+                  {pvResult.bullStrength}<span className="pvl-score-of">/100</span>
+                </span>
+              </span>
+              <span className="pv-card-head-right">
+                {!pvCardOpen && pvResult.stats.winRate !== null && (
+                  <span className="pv-card-mini">Hit rate {pvResult.stats.winRate}% · {pvResult.stats.total} signals</span>
+                )}
+                <span key={`v:${pvResult.verdict.bias}`} className={`pvl-pill pvl-pill--${pvResult.verdict.bias}`}>
+                  <span className="pvl-pill-dot" aria-hidden="true" />
+                  {pvResult.verdict.bias === "bull" ? "Bullish" : pvResult.verdict.bias === "bear" ? "Bearish" : "Mixed"}
+                  {" · "}{pvResult.verdict.agree} of {pvResult.verdict.total}
+                  <span className="pvl-pill-sep">/</span>
+                  live
+                </span>
+                <svg className="pv-card-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              </span>
+            </button>
+            {pvCardOpen && (
+              <button type="button" className="pv-howto" onClick={() => setPvGuideOpen(true)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+                How to use Pro Vision
+              </button>
+            )}
+            {pvCardOpen && pvResult.barSec <= 300 && (
+              <div className="pv-alert" role="status">
+                <span className="pv-alert-icon" aria-hidden="true">⏱</span>
+                <span>
+                  {pvResult.signalSource
+                    ? <><strong>Signals from the {pvResult.signalSource} chart.</strong> Moves on this short chart are too small to beat fees, so BUY/SELL, the zone, Signal check and track record come from {pvResult.signalSource} — use this chart to time your entry.</>
+                    : <><strong>Short timeframes are noisy.</strong> Moves here are too small to beat fees — use 15m and above for signals.</>}
+                </span>
+              </div>
+            )}
+            {pvCardOpen && (pvEventInfo.live || pvEventInfo.next) && (() => {
+              const ev = (pvEventInfo.live ?? pvEventInfo.next)!;
+              const name = eventShortName(ev.title);
+              const at = new Date(ev.time).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+              const resume = new Date(ev.time + EVENT_PAUSE_AFTER_MS).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+              const soon = !pvEventInfo.live && ev.time - pvNow <= 2 * 3600 * 1000;
+              return (
+                <div className={`pv-alert pv-alert--event${pvEventInfo.live || soon ? " pv-alert--event-hot" : ""}`} role="status">
+                  <span className="pv-alert-icon" aria-hidden="true">{pvEventInfo.live ? "⏸" : "⚠"}</span>
+                  <span>
+                    {pvEventInfo.live ? (
+                      <><strong>{name} now ({ev.title}, {at}).</strong> Big, fast moves are likely — signals are paused until {resume}.</>
+                    ) : (
+                      <><strong>{name} in {fmtCountdown(ev.time - pvNow)}</strong> ({ev.title}, {at}).
+                        {" "}Expect volatility around it — signals pause from 30 min before until 1 h after.
+                        {ev.forecast ? ` Forecast ${ev.forecast}${ev.previous ? `, previous ${ev.previous}` : ""}.` : ""}</>
+                    )}
+                  </span>
+                </div>
+              );
+            })()}
+            {pvCardOpen && pvResult.liquidity.thin && (
+              <div className="pv-alert" role="status">
+                <span className="pv-alert-icon" aria-hidden="true">◌</span>
+                <span>
+                  <strong>Signals off — thin market.</strong> Only about ${(pvResult.liquidity.quoteVol24h / 1e6).toFixed(1)}M traded in the last 24h, too little for reliable signals.
+                  Trend colors and the checks below still update.
+                </span>
+              </div>
+            )}
+            {pvCardOpen && pvResult.spikeGuard && (
+              <div className="pv-alert pv-alert--spike" role="status">
+                <span className="pv-alert-icon" aria-hidden="true">⚡</span>
+                <span>
+                  <strong>Sudden {pvResult.spikeGuard.up ? "jump" : "drop"}</strong> — often news-driven.
+                  Signals against it are paused for {Math.max(1, pvResult.spikeGuard.barsLeft)} more candle{pvResult.spikeGuard.barsLeft === 1 ? "" : "s"}; expect wide swings.
+                </span>
+              </div>
+            )}
+            {pvCardOpen && pvResult.regime.kind === "range" && (
+              <div className="pv-alert" role="status">
+                <span className="pv-alert-icon" aria-hidden="true">≈</span>
+                <span>
+                  <strong>Sideways market</strong> — no clear trend (Choppiness {pvResult.regime.chop.toFixed(0)}, ADX {pvResult.regime.adx.toFixed(0)}).
+                  {pvResult.rangeBox && ` Range ${fmtPvPrice(pvResult.rangeBox.bottom)} – ${fmtPvPrice(pvResult.rangeBox.top)}.`}
+                  {pvResult.barSec >= 3600
+                    ? " Range mode is on: R·BUY near the floor, R·SELL near the ceiling, until price breaks out."
+                    : " Watch for a close outside the range — range signals run on 1h and above."}
+                </span>
+              </div>
+            )}
+            {/* ── Signal matrix: score meter + indicators × timeframes heat grid ── */}
+            {pvCardOpen && (() => {
+              const ROWS = ["MA 20/200", "DMI", "Ichimoku", "RSI", "Stochastic", "MACD", "Volume"];
+              const openRow = (r: number) => {
+                if (r < 6) { setPvTileOpen(pvResult.tiles[r]); return; }
+                setPvTileOpen({
+                  key: "macd", label: "Volume", bias: pvResult.volume.bias,
+                  value: `${pvResult.volume.buyPct >= pvResult.volume.sellPct ? "Buyers" : "Sellers"} ${Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct)}%`,
+                  detail: `${pvResult.volume.real ? "Real market buys vs market sells" : "Estimated buying vs selling (from candle colour)"} over the last 20 candles: buy ${fmtPvVol(pvResult.volume.buyVol)}, sell ${fmtPvVol(pvResult.volume.sellVol)}. 55%+ on one side counts as bullish or bearish.`,
+                });
+              };
+              const vb = pvResult.verdict.bias;
+              const leanBull = pvResult.checks.filter((b) => b === "bull").length;
+              const leanBear = pvResult.checks.filter((b) => b === "bear").length;
+              const holdouts = ROWS.filter((_, i) => vb !== "neutral" && pvResult.checks[i] !== vb && pvResult.checks[i] !== "neutral");
+              const tileVal = (r: number) => (r < 6 ? pvResult.tiles[r].value : `${pvResult.volume.buyPct >= pvResult.volume.sellPct ? "Buyers" : "Sellers"} ${Math.max(pvResult.volume.buyPct, pvResult.volume.sellPct)}%`);
+              return (
+                <div className={`pvr pvr--${vb}`}>
+                  <div className="pvr-side">
+                    {/* Header: title + soft subtitle, status pill on the right. */}
+                    <div className={`pvl-head pvs--${vb}`}>
+                      <span className="pvl-head-text">
+                        <span className="pvl-sub">
+                          <span key={`lb:${leanBull}`} className="pvl-count pvl-count--bull">
+                            <span className="pvl-count-arrow" aria-hidden="true">▲</span>
+                            <span className="pvl-count-n">{leanBull}</span>
+                            <span className="pvl-count-l">bullish</span>
+                          </span>
+                          <span key={`lr:${leanBear}`} className="pvl-count pvl-count--bear">
+                            <span className="pvl-count-arrow" aria-hidden="true">▼</span>
+                            <span className="pvl-count-n">{leanBear}</span>
+                            <span className="pvl-count-l">bearish</span>
+                          </span>
+                          {holdouts.length > 0 && (
+                            <span className="pvl-hold">{holdouts.join(", ")} holding out</span>
+                          )}
+                          <span className="pvl-time">
+                            <span className="pvl-time-dot" aria-hidden="true" />
+                            {pvUpdatedAt ? new Date(pvUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "connecting…"}
+                          </span>
+                        </span>
+                        {/* Order flow + timeframes folded into the header as one line. */}
+                        <span className="pvl-meta">
+                          <span
+                            className="pvl-meta-flow"
+                            title={pvResult.volume.real ? "Real market-buy vs market-sell volume, last 20 candles" : "Estimated from candle colour, last 20 candles"}
+                          >
+                            {/* Mini half-circle gauge: green = buyers share, red = sellers, needle at the split. */}
+                            {(() => {
+                              const f = Math.min(1, Math.max(0, pvResult.volume.buyPct / 100));
+                              const a = Math.PI * (1 - f);
+                              const px = 14 + 11 * Math.cos(a), py = 14 - 11 * Math.sin(a);
+                              const nx = 14 + 8 * Math.cos(a), ny = 14 - 8 * Math.sin(a);
+                              return (
+                                <svg className="pvl-gauge" width="35" height="20" viewBox="0 0 28 16" aria-hidden="true">
+                                  <path d={`M3 14 A11 11 0 0 1 ${px.toFixed(2)} ${py.toFixed(2)}`} className="pvl-gauge-buy" />
+                                  <path d={`M${px.toFixed(2)} ${py.toFixed(2)} A11 11 0 0 1 25 14`} className="pvl-gauge-sell" />
+                                  <line x1="14" y1="14" x2={nx.toFixed(2)} y2={ny.toFixed(2)} className="pvl-gauge-needle" />
+                                  <circle cx="14" cy="14" r="1.6" className="pvl-gauge-hub" />
+                                </svg>
+                              );
+                            })()}
+                            <span className={pvResult.volume.buyPct >= pvResult.volume.sellPct ? "pvl-meta-up pvl-meta-lead" : "pvl-meta-up"}>
+                              Buyers {pvResult.volume.buyPct}%
+                            </span>
+                            <span className="pvl-meta-dot">·</span>
+                            <span className={pvResult.volume.sellPct > pvResult.volume.buyPct ? "pvl-meta-down pvl-meta-lead" : "pvl-meta-down"}>
+                              Sellers {pvResult.volume.sellPct}%
+                            </span>
+                          </span>
+                          {pvMtf.length > 0 && (
+                            <span className="pvl-meta-tfs">
+                              {pvMtf.map((m) => {
+                                const pct = m.strength === null ? 0 : m.bias === "bear" ? 100 - m.strength : m.bias === "bull" ? m.strength : 50;
+                                return (
+                                  <span
+                                    key={`${m.label}:${m.bias}`}
+                                    className={`pvl-meta-tf pvl-meta-tf--${m.bias}${m.iv === interval ? " pvl-meta-tf--live" : ""}`}
+                                    title={`${m.label}: ${m.bias === "bull" ? "bullish" : m.bias === "bear" ? "bearish" : "mixed"}${m.strength === null ? "" : ` · ${Math.round(pct)}%`}`}
+                                  >
+                                    {/* Tiny ring gauge: fill = how strongly that timeframe leans. */}
+                                    <span className="pvl-ring" style={{ ["--ring-p" as string]: `${Math.max(pct, 6) * 3.6}deg` }} aria-hidden="true" />
+                                    {m.label}
+                                  </span>
+                                );
+                              })}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </div>
+                    {/* Cards: icon tile, title, big number + unit, and a filled
+                        sparkline of that check's last ~30 candles. */}
+                    <div className="pvs-grid">
+                      {/* The 7 checks as a carousel: one card at a time,
+                          auto-advancing; icon dots to jump; swipe on phones. */}
+                      {(() => {
+                        const r = pvSlide % ROWS.length;
+                        const name = ROWS[r];
+                        const b = pvResult.checks[r];
+                        const v = tileVal(r).replace(/\s*[↑↓]$/, "");
+                        const ro = pvResult.checkReadout[r];
+                        const { line, area, end } = pvStepSpark(pvResult.checkSeries[r] ?? [], 14);
+                        const gid = `pvs-grad-car`;
+                        const go = (k: number) => setPvSlide(((k % ROWS.length) + ROWS.length) % ROWS.length);
+                        return (
+                          <div
+                            className="pvk"
+                            onMouseEnter={() => setPvSlidePaused(true)}
+                            onMouseLeave={() => setPvSlidePaused(false)}
+                            onFocus={() => setPvSlidePaused(true)}
+                            onBlur={() => setPvSlidePaused(false)}
+                            onTouchStart={(e) => { pvTouchX.current = e.touches[0].clientX; setPvSlidePaused(true); }}
+                            onTouchEnd={(e) => {
+                              const x0 = pvTouchX.current;
+                              pvTouchX.current = null;
+                              if (x0 !== null) {
+                                const dx = e.changedTouches[0].clientX - x0;
+                                if (Math.abs(dx) > 40) go(r + (dx < 0 ? 1 : -1));
+                              }
+                              setPvSlidePaused(false);
+                            }}
+                            aria-roledescription="carousel"
+                            aria-label="Indicators"
+                          >
+                            <button
+                              key={`slide:${r}`}
+                              type="button"
+                              className={`pvs pvk-card pvs--${b}`}
+                              onClick={() => openRow(r)}
+                              aria-label={`${name}: ${ro?.big} ${ro?.unit}, ${v}. ${r + 1} of ${ROWS.length}`}
+                            >
+                              <span className="pvs-icon" aria-hidden="true">{PV_ROW_ICONS[r]}</span>
+                              <span className="pvs-text">
+                                <span className="pvs-name">{name}</span>
+                                <span key={`${ro?.big}`} className="pvs-big">
+                                  {ro?.big}<span className="pvs-unit">{ro?.unit}</span>
+                                </span>
+                                <span className="pvk-desc">
+                                  {PV_ROW_DESC[r]} · <span className="pvk-state">{b === "bull" ? "▲ " : b === "bear" ? "▼ " : ""}{v}</span>
+                                </span>
+                              </span>
+                              <span className="pvs-spark pvk-spark" aria-hidden="true">
+                                <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+                                  <defs>
+                                    <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
+                                      <stop offset="0%" style={{ stopColor: "var(--c)", stopOpacity: 0.3 }} />
+                                      <stop offset="100%" style={{ stopColor: "var(--c)", stopOpacity: 0 }} />
+                                    </linearGradient>
+                                  </defs>
+                                  {area && <path d={area} fill={`url(#${gid})`} />}
+                                  {line && <path d={line} className="pvs-line" vectorEffect="non-scaling-stroke" />}
+                                </svg>
+                                {end && <span className="pvs-end" style={{ left: `${end[0]}%`, top: `${(end[1] / 40) * 100}%` }} />}
+                              </span>
+                            </button>
+                            <div className="pvk-nav">
+                              <div className="pvk-dots" role="tablist" aria-label="Choose indicator">
+                                {ROWS.map((nm, k) => (
+                                  <button
+                                    key={nm}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={k === r}
+                                    aria-label={nm}
+                                    title={nm}
+                                    className={`pvk-dot pvk-dot--${pvResult.checks[k]}${k === r ? " pvk-dot--on" : ""}`}
+                                    onClick={() => go(k)}
+                                  >
+                                    {PV_ROW_ICONS[k]}
+                                  </button>
+                                ))}
+                              </div>
+                              <span className="pvk-progress" aria-hidden="true">
+                                <span key={`p:${r}:${pvSlidePaused}`} className={`pvk-progress-fill${pvSlidePaused ? " pvk-progress-fill--paused" : ""}`} style={{ animationDuration: `${PV_SLIDE_MS}ms` }} />
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {pvCardOpen && (<>
+            {/* Track record: every signal on the loaded history. A signal
+                "worked" if price moved one average candle range its way
+                before touching its invalidation level (within 20 candles). */}
+            {(() => {
+              const st = pvResult.stats;
+              const per = st.perTradePct;
+              const paid = (per ?? 0) > 0;
+              const fmtP = (v: number | null, plus = true) => (v === null ? "—" : `${v > 0 && plus ? "+" : ""}${v.toFixed(2)}%`);
+              const ratio = st.avgWinPct !== null && st.avgLossPct ? Math.abs(st.avgWinPct / st.avgLossPct) : null;
+              // Most recent trades first-to-last, each as a small tile.
+              const recent = pvResult.signals.slice(-10);
+              return (
+                <div className="pvt">
+                  <div className="pvt-head">
+                    <span className="pvt-title">
+                      Track record
+                      <span className="pvt-src">{pvResult.signalSource ? `${pvResult.signalSource} chart` : "this chart"} · {st.total} signal{st.total === 1 ? "" : "s"}</span>
+                    </span>
+                    {st.trades > 0 && (
+                      <span className={`pvt-bottom pvt-bottom--${paid ? "good" : "bad"}`}>
+                        {paid ? "Paid off" : "Lost money"} · {fmtP(per)} per trade
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="pvt-strip">
+                    <span className="pvt-kv"><span className="pvt-k">Hit rate</span><span className="pvt-v">{st.winRate === null ? "—" : `${st.winRate}%`}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">Won / lost</span><span className="pvt-v"><span className="pvt-g">{st.worked}</span> / <span className="pvt-r">{st.failed}</span>{st.open ? <span className="pvt-dim"> · {st.open} open</span> : null}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">Avg win</span><span className="pvt-v pvt-g">{fmtP(st.avgWinPct)}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">Avg loss</span><span className="pvt-v pvt-r">{fmtP(st.avgLossPct, false)}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k">Win : loss size</span><span className="pvt-v">{ratio === null ? "—" : `${ratio.toFixed(1)} : 1`}</span></span>
+                  </div>
+
+                  {recent.length > 0 && (
+                    <div className="pvt-trades" aria-label="Recent signals and their results">
+                      <span className="pvt-k">Last {recent.length}</span>
+                      <span className="pvt-tiles">
+                        {recent.map((s) => {
+                          const res = s.pnlPct === null ? "open" : s.pnlPct > 0 ? "win" : "loss";
+                          const when = new Date(s.time * 1000).toLocaleDateString([], { month: "short", day: "numeric" });
+                          return (
+                            <span
+                              key={s.time}
+                              className={`pvt-tile pvt-tile--${res}`}
+                              title={`${s.side === "buy" ? "Buy" : "Sell"} · ${when} · ${s.pnlPct === null ? "still open" : fmtP(s.pnlPct)}`}
+                            >
+                              <span className="pvt-tile-side">{s.side === "buy" ? "▲" : "▼"}</span>
+                              <span className="pvt-tile-pnl">{s.pnlPct === null ? "open" : fmtP(s.pnlPct)}</span>
+                            </span>
+                          );
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                  <details className="pvt-how">
+                    <summary>How this is measured</summary>
+                    <p>
+                      {pvResult.barSec <= 300 && !pvResult.signalSource
+                        ? "Each signal is traded from its close with a stop at its invalidation line, taking profit after a typical one-candle move (or exiting after 20 candles), minus 0.1% fees. "
+                        : "Each signal is traded from its close with a stop at its invalidation line that then trails 3 typical candle-moves behind the best price — exiting when the trend turns, or after 60 candles — minus 0.1% fees. Fewer trades win, but winners run. "}
+                      Signals need 5 of 7 checks to agree and the bigger trend to match; intraday they must also hold 3 candles with ADX ≥ 20, sideways stretches and fades of ⚡ spikes are skipped, and thin markets get none. Past results on this chart only — not a promise.
+                    </p>
+                  </details>
+                </div>
+              );
+            })()}
+            {/* Range mode's own track record (1h and above). */}
+            {pvResult.rangeStats.trades > 0 && (
+              <div className="pv-group">
+                <span className="pv-group-label">Range signals (R·BUY / R·SELL)</span>
+                <div className="pv-pnl">
+                  <div className="pv-pnl-cell">
+                    <span className="pv-pnl-label">Trades</span>
+                    <span className="pv-pnl-val">{pvResult.rangeStats.trades}</span>
+                  </div>
+                  <div className="pv-pnl-cell">
+                    <span className="pv-pnl-label">Hit rate</span>
+                    <span className="pv-pnl-val">{pvResult.rangeStats.winRate === null ? "—" : `${pvResult.rangeStats.winRate}%`}</span>
+                  </div>
+                  <div className="pv-pnl-cell">
+                    <span className="pv-pnl-label">Per trade</span>
+                    <span className={`pv-pnl-val ${(pvResult.rangeStats.perTradePct ?? 0) > 0 ? "pv-stat-val--bull" : "pv-stat-val--bear"}`}>
+                      {pvResult.rangeStats.perTradePct === null ? "—" : `${pvResult.rangeStats.perTradePct > 0 ? "+" : ""}${pvResult.rangeStats.perTradePct.toFixed(2)}%`}
+                    </span>
+                  </div>
+                </div>
+                <span className="pv-note">
+                  While the market is sideways: buy a bounce off the floor, sell a rejection at the ceiling. Stop just outside the box, target the middle of the range, 0.1% fees.
+                </span>
+              </div>
+            )}
+            </>)}
+          </div>
+        )}
+        <ProVisionGuide open={pvGuideOpen && pvActive} onClose={() => setPvGuideOpen(false)} />
+        <BottomSheet
+          open={!!pvTileOpen}
+          onClose={() => setPvTileOpen(null)}
+          title={<>{pvTileOpen?.label}</>}
+          ariaLabel={pvTileOpen?.label ?? "Signal detail"}
+          desktopModal
+        >
+          {pvTileOpen && (
+            <div className="pv-detail">
+              <span className={`pv-verdict pv-verdict--${pvTileOpen.bias}`}>{pvTileOpen.value}</span>
+              <p className="pv-detail-text">{pvTileOpen.detail}</p>
+            </div>
+          )}
+        </BottomSheet>
 
         {/* Mobile web/iOS only — desktop keeps both of these up in
             .chart-header-right instead (see isDesktopWidth guards there).

@@ -64,6 +64,7 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
+import { useProVision } from "./hooks/useProVision";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
@@ -1040,6 +1041,7 @@ function AppDashboard({
 
   const { tier, user, profile, signOut } = useAuth();
   const { used: aiUsed, limit: aiLimit } = useAIQuota();
+  const [proVision, setProVision] = useProVision();
   // AI Usage card — same used/limit useAIQuota computes for ProfilePage's
   // own AI Usage section, so they never drift. Desktop sidebar only.
   const aiUsageCardEl = (
@@ -3203,6 +3205,37 @@ function AppDashboard({
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                       </svg>
+                    </button>
+                  </HoverTip>
+                )}
+                {/* Pro Vision — switches the Trade chart into its signal mode
+                    (trend-colored candles, signals + invalidation zone,
+                    Signal check). Pro/Elite only; others get the plan picker. */}
+                {(activeSection === "chart" || activeSection === "advance-chart") && (
+                  <HoverTip
+                    className="top-nav-icon-tip"
+                    placement="left"
+                    text={proVision ? "Pro Vision on — click to go back to the normal chart" : "Pro Vision: trend candles, buy/sell signals and a live signal check"}
+                  >
+                    <button
+                      type="button"
+                      className={`pv-toggle${proVision ? " pv-toggle--on" : ""}`}
+                      role="switch"
+                      aria-checked={proVision}
+                      aria-label="Pro Vision"
+                      onClick={() => {
+                        if (!proVision && tier !== "pro" && tier !== "elite") {
+                          if (!user) onOpenAuth?.(); else onOpenUpgrade?.();
+                          return;
+                        }
+                        setProVision(!proVision);
+                      }}
+                    >
+                      <svg className="pv-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                      </svg>
+                      <span className="pv-toggle-label">Pro Vision</span>
+                      <span className="pv-toggle-track" aria-hidden="true"><span className="pv-toggle-knob" /></span>
                     </button>
                   </HoverTip>
                 )}

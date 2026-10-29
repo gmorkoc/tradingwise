@@ -156,6 +156,8 @@ interface CandleDataPoint {
   low: number;
   close: number;
   volume?: number;
+  /** Binance only: base volume bought by takers (market buys) this candle. */
+  takerBuyVolume?: number;
 }
 
 // Market-cap-ordered (not hand-grouped by category like the old ~70-coin
@@ -595,6 +597,9 @@ async function fetchBinanceKlines(
         low:    parseFloat(c[3] as string),
         close:  parseFloat(c[4] as string),
         volume: parseFloat(c[5] as string),
+        // Kline field 9: volume bought by market (taker) orders — the real
+        // buy side of this candle's volume (Pro Vision's Delta Volume).
+        takerBuyVolume: parseFloat(c[9] as string),
       }))
       .filter(c => Number.isFinite(c.time) && Number.isFinite(c.open) &&
         Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close));
@@ -954,6 +959,31 @@ export const coinglass = {
       };
     } catch {
       return null;
+    }
+  },
+
+  // Pro Vision's live loop: the newest `limit` candles of any interval,
+  // uncached (the regular kline cache would hold them for minutes).
+  getLatestCandles: async (coin: CoinSymbol | string, interval: TimeInterval, limit = 2): Promise<CandleDataPoint[]> => {
+    const bnMap: Partial<Record<TimeInterval, string>> = {
+      '1sec': '1s', '1min': '1m', '5min': '5m', '15min': '15m', '1h': '1h', '4h': '4h',
+      '6h': '6h', '1day': '1d', '1week': '1w', '1month': '1M',
+    };
+    const bn = bnMap[interval];
+    if (!bn) return [];
+    try {
+      const res = await bnApi.get('/api/v3/klines', { params: { symbol: `${coin}USDT`, interval: bn, limit } });
+      return (res.data as (string | number)[][]).map((c) => ({
+        time: Math.floor((c[0] as number) / 1000),
+        open: parseFloat(c[1] as string),
+        high: parseFloat(c[2] as string),
+        low: parseFloat(c[3] as string),
+        close: parseFloat(c[4] as string),
+        volume: parseFloat(c[5] as string),
+        takerBuyVolume: parseFloat(c[9] as string),
+      })).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close));
+    } catch {
+      return [];
     }
   },
 

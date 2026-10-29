@@ -403,6 +403,7 @@ function paintRoundedCandles(
   upColor: string,
   downColor: string,
   hollowUp: boolean,
+  colorMap?: Map<number, string> | null,
 ) {
   ctx.clearRect(0, 0, width, height);
   if (!candles.length || barSpacing <= 0) return;
@@ -420,7 +421,8 @@ function paintRoundedCandles(
     if (highY <= -9000 || lowY <= -9000 || openY <= -9000 || closeY <= -9000) continue;
 
     const up = c.close >= c.open;
-    const color = up ? upColor : downColor;
+    // Pro Vision: a per-candle trend color overrides up/down coloring.
+    const color = colorMap?.get(c.time) ?? (up ? upColor : downColor);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.2;
@@ -464,11 +466,13 @@ interface RoundedCandleOverlayProps {
   style: "candle" | "hollow" | "heikinAshi";
   generation: number;
   visible: boolean;
+  /** Optional per-candle color by candle time (Pro Vision trend colors). */
+  colorMap?: Map<number, string> | null;
 }
 
-export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor, downColor, style, generation, visible }: RoundedCandleOverlayProps) {
+export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor, downColor, style, generation, visible, colorMap }: RoundedCandleOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const colorsRef = useRef({ upColor, downColor, style });
+  const colorsRef = useRef({ upColor, downColor, style, colorMap });
   const renderRef = useRef<(() => void) | null>(null);
   const subCleanupRef = useRef<(() => void) | null>(null);
   const subscribedChartRef = useRef<IChartApi | null>(null);
@@ -524,15 +528,15 @@ export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor,
     const timeToX = (t: number) => (chart.timeScale().timeToCoordinate(t as Time) ?? -9999) as number;
     const priceToY = (p: number) => (series.priceToCoordinate(p) ?? -9999) as number;
 
-    paintRoundedCandles(ctx, logW, logH, visible, barSpacing, timeToX, priceToY, colorsRef.current.upColor, colorsRef.current.downColor, colorsRef.current.style === "hollow");
+    paintRoundedCandles(ctx, logW, logH, visible, barSpacing, timeToX, priceToY, colorsRef.current.upColor, colorsRef.current.downColor, colorsRef.current.style === "hollow", colorsRef.current.style === "heikinAshi" ? null : colorsRef.current.colorMap);
   }, [chartRef, seriesRef, candlesRef]);
 
   renderRef.current = render;
 
   useEffect(() => {
-    colorsRef.current = { upColor, downColor, style };
+    colorsRef.current = { upColor, downColor, style, colorMap };
     if (visible) render();
-  }, [upColor, downColor, style, generation, visible, render]);
+  }, [upColor, downColor, style, generation, visible, render, colorMap]);
 
   useEffect(() => () => { subCleanupRef.current?.(); }, []);
 

@@ -65,6 +65,13 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/bybit-api/, ''),
           headers: { 'accept': 'application/json' },
         },
+        // Economic calendar (Pro Vision event warnings) — mirrors middleware.ts.
+        '/ff-cal': {
+          target: 'https://nfs.faireconomy.media',
+          changeOrigin: true,
+          rewrite: () => '/ff_calendar_thisweek.json',
+          headers: { 'accept': 'application/json' },
+        },
         '/bnf-api': {
           target: 'https://fapi.binance.com',
           changeOrigin: true,

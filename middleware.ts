@@ -1,4 +1,4 @@
-export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*'] };
+export const config = { matcher: ['/cg-api/:path*', '/cg-sdk/:path*', '/coinalyze-api/:path*', '/bn-api/:path*', '/gecko-api/:path*', '/ff-cal'] };
 
 // Reflects whatever Origin actually sent the request, instead of checking
 // it against a fixed web-origin allowlist — that allowlist never included
@@ -28,6 +28,25 @@ export default async function middleware(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
+
+  // ── Economic calendar (Pro Vision event warnings) ─────────────────────────
+  // This week's scheduled macro events (FOMC, CPI, jobs, GDP…). The upstream
+  // JSON sends no CORS header, so browsers need it proxied; CDN-cached for
+  // 30 min since it only changes when the week's schedule does.
+  if (url.pathname === '/ff-cal') {
+    const response = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', {
+      headers: { accept: 'application/json' },
+    });
+    const text = await response.text();
+    return new Response(text, {
+      status: response.status,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+        ...corsHeaders(req),
+      },
+    });
+  }
 
   // ── CoinGlass SDK proxy (preserves /api/ prefix for SDK-generated paths) ─
   if (url.pathname.startsWith('/cg-sdk/')) {
