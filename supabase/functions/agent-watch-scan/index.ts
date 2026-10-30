@@ -230,7 +230,10 @@ Deno.serve(async (req) => {
       });
 
       const title = `${watch.coin} — watch triggered`;
-      await notifyUser(watch.user_id, title, result.explanation, { type: "agent_watch", watchId: watch.id, coin: watch.coin });
+      // conversationId lets a tap open the exact chat the watch lives in.
+      await notifyUser(watch.user_id, title, result.explanation, {
+        type: "agent_watch", watchId: watch.id, coin: watch.coin, conversationId: watch.conversation_id,
+      });
     } catch (err) {
       console.error(`watch ${watch.id} failed:`, err);
       errors.push({ watchId: watch.id, error: String(err) });
@@ -264,7 +267,7 @@ Deno.serve(async (req) => {
       });
 
       await notifyUser(pos.user_id, `${pos.coin} — ${reasonLabel}`, body, {
-        type: "agent_position_close", coin: pos.coin, reason, pnl: String(pnl),
+        type: "agent_position_close", coin: pos.coin, reason, pnl: String(pnl), conversationId,
       });
     } catch (err) {
       console.error(`position ${pos.user_id}/${pos.coin} failed:`, err);

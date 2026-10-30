@@ -15,6 +15,7 @@ import { COIN_COLORS, COIN_GLYPHS, RangeBarClock } from "./PriceChart";
 import { BottomSheet } from "./BottomSheet";
 import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
+import { useLiveKline } from "../hooks/useLiveKline";
 import { getIndicatorDef } from "../services/customIndicators";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { ChartDrawingTools, Drawing } from "./ChartDrawingTools";
@@ -2244,6 +2245,22 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   const [forecastColors, setForecastColors] = useState({ up: "#7dd3fc", down: "#fca5a5" });
 
   const interval = INTERVALS[intervalIdx];
+  // Live forming candle (Binance kline stream): the last bar grows tick by
+  // tick instead of waiting for the next refresh. Series updated directly.
+  useLiveKline(coin as string, interval.label === "1M" ? null : interval.value, (c) => {
+    const cs = candlesRef.current;
+    const last = cs[cs.length - 1];
+    if (!candleSeriesRef.current || !last || c.time < last.time) return;
+    if (c.time === last.time) cs[cs.length - 1] = { ...last, ...c };
+    else cs.push(c);
+    candleSeriesRef.current.update({ time: c.time as UTCTimestamp, open: c.open, high: c.high, low: c.low, close: c.close });
+    cwLineSeriesRef.current?.update({ time: c.time as UTCTimestamp, value: c.close });
+    volSeriesRef.current?.update({
+      time: c.time as UTCTimestamp,
+      value: c.volume,
+      color: c.close >= c.open ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)",
+    });
+  });
   const isDark   = theme === "dark";
   // Shared indicator catalog (indicatorLibrary.ts) — same picker + drawing
   // as every other chart in the app, on top of this page's own layers.

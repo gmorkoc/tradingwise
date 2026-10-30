@@ -16,6 +16,17 @@ export interface NotificationTapData {
   strategyId?: string;
   username?: string;
   avatarUrl?: string;
+  /** Agent Ready notifications: the chat the alert / close message is in. */
+  conversationId?: string;
+}
+
+// Agent Ready tap that arrived before the panel was mounted (cold launch
+// from a notification) — the panel drains this when it mounts.
+let pendingAgentOpen: { conversationId?: string } | null = null;
+export function consumePendingAgentOpen(): { conversationId?: string } | null {
+  const p = pendingAgentOpen;
+  pendingAgentOpen = null;
+  return p;
 }
 
 export function routeNotificationTap(data: NotificationTapData | null | undefined): void {
@@ -54,8 +65,13 @@ export function routeNotificationTap(data: NotificationTapData | null | undefine
       }
       break;
     case "agent_watch":
-    case "agent_position_close":
-      window.dispatchEvent(new CustomEvent("open-trading-agent"));
+    case "agent_position_close": {
+      // Open Agent Ready on the chat this alert belongs to. Stash it too in
+      // case the panel isn't mounted yet (app launched by the tap).
+      const detail = { conversationId: data.conversationId };
+      pendingAgentOpen = detail;
+      window.dispatchEvent(new CustomEvent("open-trading-agent", { detail }));
       break;
+    }
   }
 }

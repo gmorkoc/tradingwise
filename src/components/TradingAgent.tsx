@@ -23,6 +23,7 @@ import { LiquidationGauge } from "./LiquidationGauge";
 import { formatLivePrice } from "./PriceChart";
 import { OrderBookProfileModal } from "./OrderBookProfile";
 import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
+import { consumePendingAgentOpen } from "../utils/notificationRouting";
 import {
   fetchPortfolio, fetchAgentMessages, sendAgentMessage, setActionStatus, executeTrade, executeBasket, closePosition, updateCashBalance, acceptConsent, updatePreferences,
   fetchConversations, deleteConversation, addAgentNote, cancelWatch, confirmWatch, fetchWatchesForConversation, fetchAllWatches, fetchAgentPerformance, synthesizeAgentSpeech,
@@ -768,13 +769,30 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // "agent_position_close" routing) dispatches this so the panel actually
   // opens instead of the tap just focusing/launching the app with nothing
   // else happening.
+  // With a conversationId (watch / position-close alerts) it opens that
+  // exact chat, not whichever one happened to be open. A tap that launched
+  // the app before this mounted is picked up from consumePendingAgentOpen.
   useEffect(() => {
-    const onOpen = () => {
+    const openWith = (detail?: { conversationId?: string } | null) => {
+      consumePendingAgentOpen();
       if (!canUseAgent) { onAgentLocked?.(); return; }
+      if (detail?.conversationId) {
+        openerSentRef.current = true; // don't greet over an existing chat
+        setConversationId(detail.conversationId);
+        setShowHistory(false);
+        setShowWatches(false);
+        setShowPositions(false);
+        setHubOpen(false);
+      }
       setOpen(true);
     };
+    const onOpen = (e: Event) => openWith((e as CustomEvent<{ conversationId?: string }>).detail);
     window.addEventListener("open-trading-agent", onOpen);
+    // Cold launch from a notification: the tap fired before we existed.
+    const pending = consumePendingAgentOpen();
+    if (pending) openWith(pending);
     return () => window.removeEventListener("open-trading-agent", onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canUseAgent, onAgentLocked]);
 
   // "Ask Agent Ready" button (PriceChart.tsx, Advance Chart page) listener

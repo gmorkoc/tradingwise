@@ -49,6 +49,7 @@ import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
 import { getIndicatorDef } from "../services/customIndicators";
 import { useProVisionGate, openProVisionPaywall } from "../hooks/useProVisionGate";
+import { useLiveKline, binanceKlineInterval } from "../hooks/useLiveKline";
 import { fetchProVision, fetchProVisionMtf, ProVisionLockedError, type PvTile, type PvResult } from "../services/proVision";
 import { ProVisionOverlay } from "./ProVisionOverlay";
 import { ProVisionGuide } from "./ProVisionGuide";
@@ -2296,6 +2297,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pvGate = useProVisionGate();
   const pvScope = prefsScope === "trade" || prefsScope === "advance";
   const pvActive = pvGate.activeFor(coin) && pvScope;
+  const pvActiveRef = useRef(pvActive);
+  pvActiveRef.current = pvActive;
   // Switch is on but this coin isn't unlocked (Pro's 4th coin, ended trial).
   const pvLocked = pvGate.on && pvScope && !pvGate.access.allowed(coin);
   // Free accounts (and signed-out visitors) always see the ProVision banner
@@ -2334,7 +2337,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [pvLiveTail, setPvLiveTail] = useState<CandleDataPoint[]>([]);
   const [pvUpdatedAt, setPvUpdatedAt] = useState(0);
   useEffect(() => {
-    if (!pvActive || interval === "all") return;
+    // The live kline stream feeds pvLiveTail itself when available.
+    if (!pvActive || interval === "all" || binanceKlineInterval(interval)) return;
     let alive = true;
     const pull = () => coinglass.getLatestCandles(coin, interval, 2).then((t) => {
       if (alive && t.length) { setPvLiveTail(t); setPvUpdatedAt(Date.now()); }
@@ -2374,7 +2378,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     if (!pvActive) { setPvBase(null); setPvServerLocked(false); pvLastKey.current = ""; return; }
     if (pvShortSec && !pvHtfCandles) return; // wait for the 15m candles
     const keyChanged = pvLastKey.current !== pvCalcKey;
-    const wait = keyChanged ? 0 : Math.max(0, 8000 - (Date.now() - pvLastCalc.current));
+    const wait = keyChanged ? 0 : Math.max(0, 3000 - (Date.now() - pvLastCalc.current));
     let alive = true;
     const id = window.setTimeout(() => {
       const base = lastCandlesRef.current;
@@ -3430,13 +3434,53 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     };
   }, [coin, isFullscreen]);
 
-  // ── Live polling (1sec + 1min) ───────────────────────────────────────────
+  // ── Live forming candle on EVERY timeframe (Binance kline stream) ───────
+  // The last bar grows tick by tick. Chart series are updated directly
+  // (no React render per tick); the price readout updates ≤1×/s and the
+  // ProVision live tail ≤ every 2.5s so it re-reads in near real time.
+  const liveLastPriceAt = useRef(0);
+  const liveLastTailAt = useRef(0);
+  const liveIv = binanceKlineInterval(interval);
+  useLiveKline(coin, liveIv, (candle) => {
+    if (!candleRef.current) return;
+    const cs = lastCandlesRef.current;
+    const last = cs[cs.length - 1];
+    if (!last || candle.time < last.time) return; // stale / before history loaded
+    // Keep our own copy in step so overlays / ProVision see the live bar.
+    if (candle.time === last.time) cs[cs.length - 1] = { ...last, ...candle };
+    else cs.push(candle);
+    if (chartStyleRef.current === "line") {
+      lineCloseRef.current?.update({ time: candle.time as UTCTimestamp, value: candle.close });
+    } else if (chartStyleRef.current === "hollow") {
+      candleRef.current.update({ ...candle, time: candle.time as UTCTimestamp, color: candle.close >= candle.open ? "transparent" : undefined });
+    } else if (chartStyleRef.current === "candle") {
+      candleRef.current.update({ ...candle, time: candle.time as UTCTimestamp });
+    }
+    volumeRef.current?.update({
+      time: candle.time as UTCTimestamp,
+      value: candle.volume,
+      color: candle.close >= candle.open ? "rgba(74,222,128,0.45)" : "rgba(251,113,133,0.45)",
+    });
+    const now = Date.now();
+    if (now - liveLastPriceAt.current >= 1000) {
+      liveLastPriceAt.current = now;
+      updateCurrentPrice(candle.close);
+    }
+    if (pvActiveRef.current && now - liveLastTailAt.current >= 2500) {
+      liveLastTailAt.current = now;
+      setPvLiveTail([candle]);
+      setPvUpdatedAt(now);
+    }
+  });
+  useEffect(() => { setIsLive(!!liveIv); }, [liveIv]);
+
+  // ── Fallback polling (1sec + 1min) when the stream is unavailable ───────
   useEffect(() => {
-    if (interval !== "1sec" && interval !== "1min") {
-      setIsLive(false);
+    // The kline stream above covers these now; this stays only as a
+    // backstop for coins Binance doesn't list (stream can't connect).
+    if ((interval !== "1sec" && interval !== "1min") || liveIv) {
       return;
     }
-    setIsLive(true);
     const isSecond = interval === "1sec";
     const timer = window.setInterval(
       async () => {

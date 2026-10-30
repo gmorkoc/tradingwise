@@ -9727,6 +9727,40 @@ html[data-theme="light"] .pvsb-cell--ghost { background: var(--k2); }
     border-left: 1px solid rgba(127, 127, 127, 0.16);
   }
 }
+/* Wide desktops (≥1720px): always ONE row — Indicators | Order flow |
+   Timeframes — scrolling sideways if it doesn't fit, never wrapping. */
+@media (min-width: 1720px) {
+  .pvr .pvl-head-text.pvl-head-text {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+    container-type: normal;
+    gap: 0 18px;
+  }
+  .pvr .pvl-head-text::-webkit-scrollbar { display: none; }
+  .pvr .pvl-head-text .pvl-sub,
+  .pvr .pvl-head-text .pvl-meta-flow,
+  .pvr .pvl-head-text .pvl-meta-tfs {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    white-space: nowrap;
+  }
+  .pvr .pvl-head-text .pvl-meta-flow,
+  .pvr .pvl-head-text .pvl-meta-tfs {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    padding-left: 18px;
+    border-left: 1px solid rgba(127, 127, 127, 0.16);
+  }
+  /* Keep each group's caption above it; items inside stay on one line. */
+  .pvr .pvl-head-text .pvl-sub > *,
+  .pvr .pvl-head-text .pvl-meta-flow > *,
+  .pvr .pvl-head-text .pvl-meta-tfs > * { flex-shrink: 0; }
+}
 /* Not enough room for one row: stack the groups, light divider between. */
 @container (max-width: 1180px) {
   .pvr .pvl-sub,
