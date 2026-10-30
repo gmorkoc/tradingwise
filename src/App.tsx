@@ -4286,7 +4286,10 @@ function AppDashboard({
       <PushToast />
       <TradingAgent
         selectedCoin={coin}
-        hideTrigger={!isWideDesktop}
+        // No floating trigger on the Advance Chart (desktop) — it sat over
+        // the chart's own banners there; the agent is still reachable from
+        // the top bar / everywhere else.
+        hideTrigger={!isWideDesktop || activeSection === "advance-chart"}
         isMobile={!isWideDesktop}
         coinTickers={coinTickers}
         onNavigateToSection={(section) => setActiveSection(section as SectionId)}
@@ -4478,6 +4481,8 @@ function AppGate() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    // Mobile Safari tints its top/bottom bars with this — match the app bg.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
   }, [theme]);
 
   // Follow the OS theme live until the user makes an explicit choice

@@ -43,6 +43,8 @@ if ('scrollRestoration' in history) {
     ? storedTheme
     : (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', theme);
+  // Browser bars / safe areas match the app background.
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
 }
 
 // Android: keep the WebView clear of the status bar / notch. (No-op on iOS —

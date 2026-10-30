@@ -58,6 +58,13 @@ html[data-theme="light"] body {
   background: var(--color-background);
   color: var(--color-text);
 }
+/* Dark too: the root/body background is what mobile Safari tints its top
+   and bottom bars (safe areas) with — without it they showed a navy tint
+   instead of our black. */
+html,
+html body {
+  background: var(--color-background);
+}
 
 /* Blank screen shown while Supabase resolves auth — prevents flicker */
 .app-boot-screen {
