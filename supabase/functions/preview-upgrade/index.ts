@@ -1,5 +1,6 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { tierSubOnly } from "../_shared/provision.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,8 +41,12 @@ Deno.serve(async (req) => {
     if (authError || !user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
     const { newPriceId } = await req.json();
-    if (!newPriceId) {
-      return new Response(JSON.stringify({ error: "newPriceId is required" }), {
+    // Only the current Pro / Elite prices can be previewed.
+    const TIER_PRICES = new Set(
+      [Deno.env.get("STRIPE_PRO_PRICE_ID"), Deno.env.get("STRIPE_ELITE_PRICE_ID")].filter((p): p is string => !!p),
+    );
+    if (typeof newPriceId !== "string" || !TIER_PRICES.has(newPriceId)) {
+      return new Response(JSON.stringify({ error: "Unknown plan" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,17 +68,19 @@ Deno.serve(async (req) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: profile.stripe_customer_id,
       status: "active",
-      limit: 1,
+      limit: 10,
     });
+    // Skip the ProVision plan — this acts on the Pro/Elite subscription only.
+    const tierSub = tierSubOnly(subscriptions.data);
 
-    if (!subscriptions.data.length) {
+    if (!tierSub) {
       return new Response(JSON.stringify({ error: "No active subscription found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const subscription = subscriptions.data[0];
+    const subscription = tierSub;
     const currentRank  = TIER_RANK[subscription.items.data[0]?.price.id ?? ""] ?? 0;
     const newRank      = TIER_RANK[newPriceId] ?? 0;
     const isDowngrade  = newRank < currentRank;

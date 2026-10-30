@@ -252,7 +252,14 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
       const { data, error: fnError } = await supabase.functions.invoke("analyze-chart", {
         body: { images: dataUrls, coin: coin ?? null },
       });
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) {
+        // Weekly limit (429) / plan errors come back as { error } — show that text.
+        const ctx = (fnError as { context?: Response }).context;
+        const serverMsg = ctx && typeof ctx.json === "function"
+          ? await ctx.json().then((d: { error?: string }) => d?.error).catch(() => undefined)
+          : undefined;
+        throw new Error(serverMsg ?? fnError.message);
+      }
       if (!data?.analysis) throw new Error(t("chartAnalyze.errors.noResult", "Analysis failed — please try again."));
       setAnalysis(data.analysis);
     } catch (err: any) {

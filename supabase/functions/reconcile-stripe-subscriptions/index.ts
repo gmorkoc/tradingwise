@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAccountEvent } from "../_shared/accountEvents.ts";
+import { isProvisionSub } from "../_shared/provision.ts";
 
 // One-time (re-runnable) repair tool for the 2026-10 incident: the Stripe
 // webhook endpoint was Disabled in the Stripe dashboard for an unknown
@@ -55,7 +56,8 @@ interface Correction {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get("x-admin-secret") !== ADMIN_SECRET) {
+  // Fail closed if the secret isn't configured (missing header === undefined).
+  if (!ADMIN_SECRET || req.headers.get("x-admin-secret") !== ADMIN_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -89,8 +91,14 @@ Deno.serve(async (req) => {
     // Prefer a non-canceled subscription (there should only ever be one
     // live at a time per customer); fall back to the most recently updated
     // canceled one if that's all there is.
-    const live = subs.data.find(s => s.status !== "canceled");
-    const chosen = live ?? subs.data.sort((a, b) => b.canceled_at! - a.canceled_at!)[0];
+    // Tier only: ignore the ProVision plan's subscription entirely.
+    const tierSubs = subs.data.filter(s => !isProvisionSub(s));
+    if (tierSubs.length === 0) {
+      skipped.push({ email: profile.email, customerId: profile.stripe_customer_id, reason: "only a ProVision subscription" });
+      continue;
+    }
+    const live = tierSubs.find(s => s.status !== "canceled");
+    const chosen = live ?? tierSubs.sort((a, b) => b.canceled_at! - a.canceled_at!)[0];
 
     const priceId = chosen.items.data[0]?.price.id ?? "";
     const resolvedTier = live ? PRICE_TIER[priceId] : "free";

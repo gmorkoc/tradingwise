@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiRateLimit, limitResponse } from "../_shared/aiLimits.ts";
 
 // Speaks a Trading Agent reply aloud via OpenAI's own neural TTS model —
 // the same class of model ChatGPT's voice mode uses — rather than the
@@ -30,6 +31,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!
     ).auth.getUser(token);
     if (authError || !user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+
+    // Agent Ready is Elite-only — check on the server, not just in the app —
+    // and cap voice playback per user so it can't run up the TTS bill.
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("tier")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.tier !== "elite") {
+      return limitResponse("Agent Ready is an Elite feature.", corsHeaders, 403);
+    }
+    if (!(await aiRateLimit(supabaseAdmin, user.id, "agent-speech", 3600, 120))) {
+      return limitResponse("Voice limit reached for now — try again in a bit.", corsHeaders);
+    }
 
     if (!OPENAI_API_KEY) return new Response("Server not configured", { status: 500, headers: corsHeaders });
 

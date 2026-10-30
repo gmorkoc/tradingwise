@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAccountEvent } from "../_shared/accountEvents.ts";
+import { tierSubOnly } from "../_shared/provision.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,17 +50,19 @@ Deno.serve(async (req) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: profile.stripe_customer_id,
       status: "active",
-      limit: 1,
+      limit: 10,
     });
+    // Skip the ProVision plan — this acts on the Pro/Elite subscription only.
+    const tierSub = tierSubOnly(subscriptions.data);
 
-    if (!subscriptions.data.length) {
+    if (!tierSub) {
       return new Response(JSON.stringify({ error: "No active subscription found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const subscription = subscriptions.data[0];
+    const subscription = tierSub;
 
     // Release any active subscription schedule before cancelling.
     // A schedule locks the subscription and will reject cancel_at_period_end otherwise.

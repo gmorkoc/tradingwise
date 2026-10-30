@@ -48,7 +48,7 @@ import "../styles/PriceChart.css";
 import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
 import { getIndicatorDef } from "../services/customIndicators";
-import { useProVision } from "../hooks/useProVision";
+import { useProVisionGate, openProVisionPaywall } from "../hooks/useProVisionGate";
 import { computeProVision, mergeHigherTimeframe, type PvTile, type PvResult } from "../services/proVision";
 import { ProVisionOverlay } from "./ProVisionOverlay";
 import { ProVisionGuide } from "./ProVisionGuide";
@@ -2290,8 +2290,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
   // ── Pro Vision (Trade + Advance charts, Pro/Elite) ────────────────────
   // Recomputed whenever the chart's data reloads (chartGeneration bumps).
-  const [proVisionOn, setProVisionOn] = useProVision();
-  const pvActive = proVisionOn && isPaid && (prefsScope === "trade" || prefsScope === "advance");
+  // Who may run it on this coin: ProVision plan / Elite (unlimited), free
+  // trial, or Pro's 3 coins a day — see useProVisionGate.
+  const pvGate = useProVisionGate();
+  const pvScope = prefsScope === "trade" || prefsScope === "advance";
+  const pvActive = pvGate.activeFor(coin) && pvScope;
+  // Switch is on but this coin isn't unlocked (Pro's 4th coin, ended trial).
+  const pvLocked = pvGate.on && pvScope && !pvGate.access.allowed(coin);
+  const pvLockReason = pvLocked ? pvGate.access.lockReason(coin) : null;
+  // Count this coin toward Pro's daily allowance once ProVision runs on it.
+  const { markUsed: pvMarkUsed } = pvGate.access;
+  useEffect(() => {
+    if (pvActive) pvMarkUsed(coin);
+  }, [pvActive, coin, pvMarkUsed]);
   // Short "preparing" intro each time Pro Vision is switched on (not on page
   // load when it was already on).
   const PV_INTRO_MS = 2800;
@@ -6445,15 +6456,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               {/* Pro Vision switch (same shared setting as the top bar's). */}
               <button
                 type="button"
-                className={`pv-toggle pv-toggle--toolbar${proVisionOn && isPaid ? " pv-toggle--on" : ""}`}
+                className={`pv-toggle pv-toggle--toolbar${pvActive ? " pv-toggle--on" : ""}`}
                 role="switch"
-                aria-checked={proVisionOn && isPaid}
+                aria-checked={pvActive}
                 aria-label="ProVision"
-                title={proVisionOn && isPaid ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
-                onClick={() => {
-                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                  setProVisionOn(!proVisionOn);
-                }}
+                title={pvActive ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
+                onClick={() => pvGate.toggle(coin)}
               >
                 <span className="pv-toggle-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
                 <span className="pv-toggle-track" aria-hidden="true">
@@ -7681,8 +7689,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {([
                   ...((prefsScope === "trade" || prefsScope === "advance")
                     ? [[
-                        proVisionOn && isPaid ? "ProVision: On" : "ProVision: Off",
-                        () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setProVisionOn(!proVisionOn); },
+                        pvActive ? "ProVision: On" : "ProVision: Off",
+                        () => pvGate.toggle(coin),
                         <path key="a" d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />,
                       ] as const]
                     : []),
@@ -7903,6 +7911,31 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
           )}
         </div>
+
+        {/* ProVision switched on but not unlocked for this coin (Pro's 4th
+            coin today, or the free trial ended) — say so and offer the way in. */}
+        {pvLocked && pvLockReason && (
+          <button
+            type="button"
+            className="pv-locked"
+            onClick={() => openProVisionPaywall({ reason: pvLockReason, coin })}
+          >
+            <span className="pv-locked-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            </span>
+            <span className="pv-locked-text">
+              <strong>
+                {pvLockReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvLockReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
+              </strong>
+              <span>
+                {pvLockReason === "pro-limit"
+                  ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
+                  : pvLockReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
+              </span>
+            </span>
+            <span className="pv-locked-cta">{pvLockReason === "trial-available" || pvLockReason === "signin" ? "Start" : "Unlock"}</span>
+          </button>
+        )}
 
         {/* Pro Vision: Signal check — trend + momentum tiles, buyers vs
             sellers, and an overall verdict. Tap a tile to see what it means. */}

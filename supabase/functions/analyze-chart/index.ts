@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consumeAiQuota, limitResponse, PRO_WEEKLY_AI_LIMIT } from "../_shared/aiLimits.ts";
 
 // Invoked from ChartAnalyzeModal.tsx — a user picks/shoots one or more
 // chart screenshots and gets a real technical read back. Pro/Elite only
@@ -49,6 +50,14 @@ Deno.serve(async (req) => {
     }
     if (images.length > MAX_IMAGES) {
       return new Response(`Too many images (max ${MAX_IMAGES})`, { status: 400, headers: corsHeaders });
+    }
+
+    // Weekly AI quota, counted here on the server (the client can't reset it).
+    if (!(await consumeAiQuota(supabaseAdmin, user.id, profile?.tier))) {
+      return limitResponse(
+        `You've used this week's ${PRO_WEEKLY_AI_LIMIT} AI requests. It resets on Monday, or go Elite for unlimited.`,
+        corsHeaders,
+      );
     }
 
     const contextLine = coin

@@ -75,6 +75,8 @@ export async function getIAPPlans(): Promise<IAPPlan[]> {
       // match by product identifier instead — App Store Connect product IDs
       // should follow a "..._pro_..." / "..._elite_..." naming convention.
       const id = pkg.product.identifier.toLowerCase();
+      // "provision" contains "pro" — it's the separate ProVision plan, not a tier.
+      if (id.includes("provision")) continue;
       const tier: Tier | undefined = id.includes("elite") ? "elite" : id.includes("pro") ? "pro" : undefined;
       if (!tier) continue;
       plans.push({ tier, pkg, priceString: pkg.product.priceString });
@@ -83,6 +85,40 @@ export async function getIAPPlans(): Promise<IAPPlan[]> {
   } catch (err) {
     console.error("RevenueCat getOfferings failed:", err);
     return [];
+  }
+}
+
+// ── ProVision plan (separate from the tiers) ─────────────────────────────
+// Lives in its own RevenueCat offering "provision" (falls back to any
+// package whose product id contains "provision"), granting the
+// "provision" entitlement — see supabase/functions/_shared/provision.ts.
+export const PROVISION_ENTITLEMENT = "provision";
+
+export async function getProVisionIAPPackage(): Promise<{ pkg: PurchasesPackage; priceString: string } | null> {
+  if (!isIAPAvailable()) return null;
+  try {
+    const offerings = await Purchases.getOfferings();
+    const pools = [offerings.all?.["provision"], offerings.current].filter(Boolean);
+    for (const off of pools) {
+      const pkg = off!.availablePackages.find((p) => p.product.identifier.toLowerCase().includes("provision"))
+        ?? (off === offerings.all?.["provision"] ? off!.availablePackages[0] : undefined);
+      if (pkg) return { pkg, priceString: pkg.product.priceString };
+    }
+    return null;
+  } catch (err) {
+    console.error("RevenueCat ProVision offering failed:", err);
+    return null;
+  }
+}
+
+export async function purchaseProVisionIAP(pkg: PurchasesPackage): Promise<{ success: boolean; cancelled: boolean; error?: string }> {
+  try {
+    const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+    const ok = !!customerInfo.entitlements.active[PROVISION_ENTITLEMENT];
+    return ok ? { success: true, cancelled: false } : { success: false, cancelled: false, error: "Purchase didn't unlock ProVision" };
+  } catch (err: any) {
+    if (err?.userCancelled) return { success: false, cancelled: true };
+    return { success: false, cancelled: false, error: err?.message ?? "Purchase failed" };
   }
 }
 

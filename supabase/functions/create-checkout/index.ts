@@ -35,6 +35,34 @@ Deno.serve(async (req) => {
 
     const { priceId, origin } = await req.json();
 
+    // Only our own current plans can be bought here (Pro, Elite, ProVision)
+    // — never an arbitrary price ID sent by the client.
+    const ALLOWED_PRICES = new Set(
+      [
+        Deno.env.get("STRIPE_PRO_PRICE_ID"),
+        Deno.env.get("STRIPE_ELITE_PRICE_ID"),
+        Deno.env.get("STRIPE_PROVISION_PRICE_ID"),
+      ].filter((p): p is string => !!p),
+    );
+    if (typeof priceId !== "string" || !ALLOWED_PRICES.has(priceId)) {
+      return new Response(JSON.stringify({ error: "Unknown plan" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Send people back only to our own site after checkout (no open redirect).
+    const ALLOWED_ORIGINS = new Set([
+      "https://coinhintz.io",
+      "https://www.coinhintz.io",
+      "https://coinhintz.com",
+      "https://www.coinhintz.com",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      ...(Deno.env.get("CHECKOUT_ALLOWED_ORIGINS") ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+    ]);
+    const returnOrigin = typeof origin === "string" && ALLOWED_ORIGINS.has(origin) ? origin : "https://coinhintz.io";
+
     // Get or create Stripe customer
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -57,8 +85,8 @@ Deno.serve(async (req) => {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/?payment=success`,
-      cancel_url:  `${origin}/?payment=cancelled`,
+      success_url: `${returnOrigin}/?payment=success`,
+      cancel_url:  `${returnOrigin}/?payment=cancelled`,
       allow_promotion_codes: true,
     });
 

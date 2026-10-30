@@ -64,7 +64,8 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
-import { useProVision } from "./hooks/useProVision";
+import { useProVisionGate } from "./hooks/useProVisionGate";
+import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
@@ -1041,7 +1042,10 @@ function AppDashboard({
 
   const { tier, user, profile, signOut } = useAuth();
   const { used: aiUsed, limit: aiLimit } = useAIQuota();
-  const [proVision, setProVision] = useProVision();
+  // ProVision: switch position + who may use it on which coin (plan /
+  // trial / Pro's 3 coins a day). `proVision` = actually running here.
+  const pvGate = useProVisionGate();
+  const proVision = pvGate.activeFor(coin);
   // AI Usage card — same used/limit useAIQuota computes for ProfilePage's
   // own AI Usage section, so they never drift. Desktop sidebar only.
   const aiUsageCardEl = (
@@ -1355,7 +1359,8 @@ function AppDashboard({
     setInviteStatus("sending");
     try {
       const { error } = await supabase.functions.invoke("send-invite", {
-        body: { email, inviterName: profile?.full_name || user?.email || "" },
+        // Inviter name is taken server-side from the sender's profile.
+        body: { email },
       });
       if (error) throw error;
       setInviteStatus("sent");
@@ -2728,6 +2733,8 @@ function AppDashboard({
           }}
         />
       )} */}
+      {/* ProVision sales sheet — any ProVision switch or the chart opens it. */}
+      <ProVisionPaywallHost onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
       <ProfilePage
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
@@ -2956,14 +2963,11 @@ function AppDashboard({
                 aria-label="ProVision"
                 onClick={() => {
                   hapticTap();
-                  if (!proVision && tier !== "pro" && tier !== "elite") {
-                    setMobileNavOpen(false);
-                    if (!user) onOpenAuth?.(); else onOpenUpgrade?.();
-                    return;
-                  }
-                  setProVision(!proVision);
+                  // Locked → the gate opens the ProVision sheet; close the menu either way.
+                  const locked = !proVision && pvGate.access.lockReason(coin) !== null;
+                  pvGate.toggle(coin);
                   // Let the knob slide first, then close the menu.
-                  window.setTimeout(() => setMobileNavOpen(false), 280);
+                  window.setTimeout(() => setMobileNavOpen(false), locked ? 0 : 280);
                 }}
               >
                 <span className="nav-icon-wrap">
@@ -3257,13 +3261,7 @@ function AppDashboard({
                       role="switch"
                       aria-checked={proVision}
                       aria-label="ProVision"
-                      onClick={() => {
-                        if (!proVision && tier !== "pro" && tier !== "elite") {
-                          if (!user) onOpenAuth?.(); else onOpenUpgrade?.();
-                          return;
-                        }
-                        setProVision(!proVision);
-                      }}
+                      onClick={() => pvGate.toggle(coin)}
                     >
                       <span className="pv-toggle-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
                       <span className="pv-toggle-track" aria-hidden="true">

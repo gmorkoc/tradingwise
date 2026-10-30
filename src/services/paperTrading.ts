@@ -497,7 +497,11 @@ export async function sendAgentMessage(
     body: JSON.stringify({ message: content, history, selectedCoin, viaVoice, imageDataUrl: imageDataUrl ?? undefined }),
     signal,
   });
-  if (!res.ok || !res.body) throw new Error(`Agent didn't respond (${res.status}) — please try again`);
+  if (!res.ok || !res.body) {
+    // Limits (403 Elite-only / 429 rate limit) come back as { error } — show that.
+    const msg = await res.json().then((d) => d?.error as string | undefined).catch(() => undefined);
+    throw new Error(msg ?? `Agent didn't respond (${res.status}) — please try again`);
+  }
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

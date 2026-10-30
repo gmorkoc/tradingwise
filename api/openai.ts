@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const TIER_LIMITS: Record<string, number> = { free: 0, pro: 25, elite: Infinity };
+// Weekly limits — same numbers and week key as src/hooks/useAIQuota.ts and
+// supabase/functions/_shared/aiLimits.ts (the server is the only counter).
+// Elite is unlimited; the large cap just keeps its usage tracked.
+const TIER_LIMITS: Record<string, number> = { free: 0, pro: 100, elite: 1_000_000_000 };
 
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   "gpt-4o":      { input: 2.50,  output: 10.00 },
@@ -12,8 +15,12 @@ function calcCost(model: string, inputTokens: number, outputTokens: number): num
   return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
 }
 
-function getDayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+// Monday (UTC) of the current week — the quota resets weekly.
+function getWeekKey(): string {
+  const now = new Date();
+  const daysSinceMonday = (now.getUTCDay() + 6) % 7;
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday));
+  return monday.toISOString().slice(0, 10);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -77,8 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (tier === "free")
     return res.status(403).json({ error: "Pro subscription required for AI features" });
 
-  // ── 5. Atomic quota check + increment (Pro only, Elite unlimited) ─────────
-  if (tier !== "elite") {
+  // ── 5. Atomic quota check + increment (Pro 100/week, Elite tracked) ───────
+  {
     if (!serviceKey)
       return res.status(500).json({ error: "Server misconfigured" });
 
@@ -91,11 +98,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           apikey: serviceKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ p_user_id: userId, p_day_key: getDayKey(), p_limit: limit }),
+        body: JSON.stringify({ p_user_id: userId, p_day_key: getWeekKey(), p_limit: limit }),
       });
-      const allowed = await rpcRes.json();
-      if (!allowed)
-        return res.status(429).json({ error: "Daily AI quota exceeded. Upgrade to Elite for unlimited access." });
+      const allowed = rpcRes.ok ? await rpcRes.json() : false;
+      if (allowed !== true)
+        return res.status(429).json({ error: "Weekly AI limit reached. It resets on Monday, or go Elite for unlimited." });
     } catch {
       return res.status(500).json({ error: "Quota check failed" });
     }
@@ -105,11 +112,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "OpenAI API key not configured" });
 
+  // Only the models the app uses, and a sane answer size — the browser can't
+  // pick an expensive model or ask for a huge response on our key.
+  const ALLOWED_MODELS = new Set(Object.keys(MODEL_PRICING));
+  const MAX_TOKENS_CAP = 1500;
+  const body = { ...(req.body ?? {}) };
+  if (!ALLOWED_MODELS.has(body.model)) body.model = "gpt-4o-mini";
+  const asked = Number(body.max_tokens ?? body.max_completion_tokens);
+  body.max_tokens = Number.isFinite(asked) && asked > 0 ? Math.min(asked, MAX_TOKENS_CAP) : 800;
+  delete body.max_completion_tokens;
+  if (Number(body.n) > 1) body.n = 1;
+  delete body.stream;
+
   try {
     const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(body),
     });
     const data = await upstream.json();
     res.status(upstream.status).json(data);

@@ -165,7 +165,8 @@ export async function reportCoinComment(commentId: number, reporterId: string): 
   // same pattern as postCoinComment's own notify-mention call — a failed
   // email shouldn't surface as the report itself having failed.
   if (!error) {
-    supabase.functions.invoke("notify-admin", { body: { event: "report", commentId, reporterId } }).catch(() => {});
+    // Reporter is taken server-side from the session, not this body.
+    supabase.functions.invoke("notify-admin", { body: { event: "report", commentId } }).catch(() => {});
   }
 }
 

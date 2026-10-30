@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase, Tier } from "../services/supabase";
+import type { Tier } from "../services/supabase";
 
 const TIER_LIMITS: Record<Tier, number> = { free: 0, pro: 100, elite: Infinity };
 
@@ -17,8 +17,12 @@ function getWeekKey(): string {
   return monday.toISOString().slice(0, 10);
 }
 
+// The server counts usage now (api/openai.ts and the AI edge functions call
+// try_increment_ai_quota with this same week key); clients can no longer
+// write ai_requests_used. This hook only reads the count, bumps it
+// optimistically for the UI, and re-syncs from the profile shortly after.
 export function useAIQuota() {
-  const { tier, profile } = useAuth();
+  const { tier, profile, refreshProfile } = useAuth();
   const [localUsed, setLocalUsed] = useState<number | null>(null);
 
   const weekKey = useMemo(() => getWeekKey(), []);
@@ -43,24 +47,13 @@ export function useAIQuota() {
     // Elite: Infinity limit, never blocked — but still tracks usage
     if (current >= limit) return false;
 
-    const next = current + 1;
-    setLocalUsed(next); // Optimistic increment
+    setLocalUsed(current + 1); // Optimistic — the server does the real count
 
-    if (profile?.id) {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ ai_requests_used: next, ai_requests_week: weekKey })
-        .eq("id", profile.id);
-
-      if (error) {
-        console.error("AI quota sync failed:", error.message);
-        setLocalUsed(current); // Rollback on failure
-        return false;
-      }
-    }
+    // Pull the server's count once the request has had time to land.
+    if (profile?.id) window.setTimeout(() => { void refreshProfile(); }, 4000);
 
     return true;
-  }, [localUsed, profileUsed, limit, weekKey, profile]);
+  }, [localUsed, profileUsed, limit, profile, refreshProfile]);
 
   return { exceeded, remaining, used, limit, consume, isPaid };
 }

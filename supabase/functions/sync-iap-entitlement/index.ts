@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAccountEvent } from "../_shared/accountEvents.ts";
+import { PROVISION_ENTITLEMENT } from "../_shared/provision.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -84,8 +85,26 @@ Deno.serve(async (req) => {
       if (rank > bestRank) { bestRank = rank; tier = mappedTier; expiresAtMs = expiresMs; }
     }
 
+    // ProVision plan: separate entitlement, separate columns. Grant only —
+    // like tiers below, this never revokes (EXPIRATION webhook does that).
+    let provision = false;
+    const pv = entitlements[PROVISION_ENTITLEMENT];
+    if (pv) {
+      const pvExp = pv.expires_date ? new Date(pv.expires_date).getTime() : null;
+      if (pvExp === null || pvExp > now) {
+        provision = true;
+        await supabaseAdmin
+          .from("profiles")
+          .update({
+            provision_status: "active",
+            provision_end_at: pvExp ? new Date(pvExp).toISOString() : null,
+          })
+          .eq("id", user.id);
+      }
+    }
+
     if (!tier) {
-      return new Response(JSON.stringify({ tier: null }), {
+      return new Response(JSON.stringify({ tier: null, provision }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -113,7 +132,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ tier }), {
+    return new Response(JSON.stringify({ tier, provision }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

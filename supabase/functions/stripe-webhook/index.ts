@@ -1,6 +1,7 @@
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAccountEvent } from "../_shared/accountEvents.ts";
+import { isProvisionSub, provisionFields } from "../_shared/provision.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2024-06-20",
@@ -65,6 +66,15 @@ Deno.serve(async (req) => {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode !== "subscription") break;
       const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+      // ProVision plan: its own columns only — never the tier.
+      if (isProvisionSub(sub)) {
+        const pid = await updateProfileByCustomer(customerId(session), provisionFields(sub));
+        if (session.customer_details?.email) {
+          await notifyAdmin({ event: "purchase", email: session.customer_details.email, tier: "provision" });
+        }
+        if (pid) await logAccountEvent(supabaseAdmin, pid, "subscription_started", { tier: "provision", provider: "stripe" });
+        break;
+      }
       const priceId = sub.items.data[0]?.price.id ?? "";
       const tier = PRICE_TIER[priceId];
       const fields: Record<string, unknown> = {
@@ -83,6 +93,10 @@ Deno.serve(async (req) => {
     case "customer.subscription.updated": {
       const raw = event.data.object as Stripe.Subscription;
       const sub = await stripe.subscriptions.retrieve(raw.id);
+      if (isProvisionSub(sub)) {
+        await updateProfileByCustomer(customerId(raw), provisionFields(sub));
+        break;
+      }
       const priceId = sub.items.data[0]?.price.id ?? "";
       const tier = PRICE_TIER[priceId];
       const cust = customerId(raw);
@@ -108,6 +122,16 @@ Deno.serve(async (req) => {
 
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
+      // ProVision ended: clear only ProVision — the tier is untouched.
+      if (isProvisionSub(sub)) {
+        const pid = await updateProfileByCustomer(customerId(sub), {
+          provision_status: "canceled",
+          provision_end_at: null,
+          provision_stripe_sub_id: null,
+        });
+        if (pid) await logAccountEvent(supabaseAdmin, pid, "subscription_canceled", { tier: "provision", provider: "stripe" });
+        break;
+      }
       const id = await updateProfileByCustomer(customerId(sub), {
         tier:                "free",
         subscription_status: "canceled",
@@ -121,6 +145,15 @@ Deno.serve(async (req) => {
       const invoice = event.data.object as Stripe.Invoice;
       if (invoice.subscription) {
         const sub = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        if (isProvisionSub(sub)) {
+          const pid = await updateProfileByCustomer(customerId(sub), provisionFields(sub));
+          if (pid) {
+            await logAccountEvent(supabaseAdmin, pid, "payment_succeeded", {
+              tier: "provision", provider: "stripe", amount: invoice.amount_paid, currency: invoice.currency,
+            });
+          }
+          break;
+        }
         const priceId = sub.items.data[0]?.price.id ?? "";
         const tier = PRICE_TIER[priceId];
         const fields: Record<string, unknown> = {
@@ -140,9 +173,16 @@ Deno.serve(async (req) => {
 
     case "invoice.payment_failed": {
       const invoice = event.data.object as Stripe.Invoice;
-      const id = await updateProfileByCustomer(customerId(invoice), {
-        subscription_status: "past_due",
-      });
+      // Mark past_due on whichever plan the failed invoice belongs to.
+      let failedIsProvision = false;
+      if (invoice.subscription) {
+        const failedSub = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        failedIsProvision = isProvisionSub(failedSub);
+      }
+      const id = await updateProfileByCustomer(
+        customerId(invoice),
+        failedIsProvision ? { provision_status: "past_due" } : { subscription_status: "past_due" },
+      );
       if (id) await logAccountEvent(supabaseAdmin, id, "payment_failed", { provider: "stripe" });
       break;
     }

@@ -197,10 +197,21 @@ Deno.serve(async (req) => {
   let positionsChecked = 0, positionsClosed = 0;
   const errors: unknown[] = [];
 
-  const { data: watches } = await supabaseAdmin
+  const { data: allWatches } = await supabaseAdmin
     .from("agent_watches").select("id, user_id, conversation_id, coin, condition_text, interval").eq("active", true);
 
-  for (const watch of (watches ?? []) as WatchRow[]) {
+  // Agent Ready is Elite-only: each watch costs an AI call every minute, so
+  // only check watches belonging to users who are Elite right now.
+  const watchUserIds = [...new Set(((allWatches ?? []) as WatchRow[]).map((w) => w.user_id))];
+  const eliteIds = new Set<string>();
+  if (watchUserIds.length) {
+    const { data: eliteRows } = await supabaseAdmin
+      .from("profiles").select("id").in("id", watchUserIds).eq("tier", "elite");
+    for (const r of eliteRows ?? []) eliteIds.add(r.id as string);
+  }
+  const watches = ((allWatches ?? []) as WatchRow[]).filter((w) => eliteIds.has(w.user_id));
+
+  for (const watch of watches) {
     watchesChecked++;
     try {
       const market = await getMarket(watch.coin, watch.interval);

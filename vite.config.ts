@@ -117,7 +117,10 @@ export default defineConfig(({ mode }) => {
           target: 'https://api.openai.com',
           changeOrigin: true,
           rewrite: () => '/v1/chat/completions',
-          headers: { 'Authorization': `Bearer ${env.VITE_OPENAI_API_KEY}` },
+          // Dev-only proxy (runs in Vite's server, never the browser). Prefer the
+          // un-prefixed name: anything starting VITE_ ships to the browser the
+          // moment client code reads it.
+          headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY || env.VITE_OPENAI_API_KEY}` },
         },
       },
     },

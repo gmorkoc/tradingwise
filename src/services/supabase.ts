@@ -41,6 +41,27 @@ export interface Profile {
   signal_watchlist_coins: string[];
   signal_min_confidence: "low" | "medium" | "high";
   avatar_url: string | null;
+  // ProVision plan (separate from tier) — see 20261030000000_provision_plan.sql
+  provision_status?: string | null;
+  provision_end_at?: string | null;
+  provision_stripe_sub_id?: string | null;
+  provision_trial_started_at?: string | null;
+}
+
+/** Does this profile own an active ProVision plan? "canceling" still counts
+ *  until its end date; past_due keeps access briefly like a tier would. */
+export function hasProVisionPlan(profile: Profile | null): boolean {
+  const s = profile?.provision_status;
+  if (!s || s === "canceled" || s === "incomplete_expired" || s === "unpaid") return false;
+  const end = profile?.provision_end_at ? new Date(profile.provision_end_at).getTime() : null;
+  return end === null || end > Date.now();
+}
+
+/** Start the free 3-day ProVision trial (server-side, once per account). */
+export async function startProVisionTrial(): Promise<string | null> {
+  const { data, error } = await supabase.rpc("start_provision_trial");
+  if (error) throw error;
+  return (data as string | null) ?? null;
 }
 
 export const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, elite: 2 };

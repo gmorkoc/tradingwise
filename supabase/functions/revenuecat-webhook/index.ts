@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logAccountEvent } from "../_shared/accountEvents.ts";
+import { PROVISION_ENTITLEMENT } from "../_shared/provision.ts";
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -48,7 +49,10 @@ async function updateProfile(userId: string, fields: Record<string, unknown>) {
 
 Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
-  const expected = `Bearer ${Deno.env.get("REVENUECAT_WEBHOOK_SECRET")}`;
+  const secret = Deno.env.get("REVENUECAT_WEBHOOK_SECRET");
+  // Fail closed: with no secret configured, "Bearer undefined" would match.
+  if (!secret) return new Response("Webhook not configured", { status: 500 });
+  const expected = `Bearer ${secret}`;
   // RevenueCat authenticates webhooks with a shared-secret Authorization
   // header you set in its dashboard (not a signature scheme like Stripe's).
   if (auth !== expected) {
@@ -58,6 +62,40 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const event = body.event as RevenueCatEvent;
   const userId = event.app_user_id;
+
+  // ProVision plan events (its own product + entitlement) only ever touch
+  // the provision_* columns — never tier / subscription_*. Without this an
+  // EXPIRATION of ProVision would downgrade a Pro/Elite user to free.
+  const isProvision =
+    (event.entitlement_ids ?? []).includes(PROVISION_ENTITLEMENT) ||
+    (event.product_id ?? "").toLowerCase().includes("provision");
+  if (isProvision) {
+    const endAt = event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : undefined;
+    switch (event.type) {
+      case "INITIAL_PURCHASE":
+      case "RENEWAL":
+      case "PRODUCT_CHANGE":
+      case "UNCANCELLATION":
+        await updateProfile(userId, { provision_status: "active", ...(endAt ? { provision_end_at: endAt } : {}) });
+        await logAccountEvent(supabaseAdmin, userId,
+          event.type === "INITIAL_PURCHASE" ? "subscription_started" : event.type === "RENEWAL" ? "payment_succeeded" : "subscription_reactivated",
+          { tier: "provision", provider: "apple" });
+        break;
+      case "CANCELLATION":
+        await updateProfile(userId, { provision_status: "canceling" });
+        break;
+      case "EXPIRATION":
+        await updateProfile(userId, { provision_status: "canceled", provision_end_at: null });
+        await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { tier: "provision", provider: "apple" });
+        break;
+      case "BILLING_ISSUE":
+        await updateProfile(userId, { provision_status: "past_due" });
+        break;
+    }
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   switch (event.type) {
     case "INITIAL_PURCHASE": {

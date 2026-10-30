@@ -109,14 +109,22 @@ Deno.serve(async (req) => {
     ({ commentId } = await req.json());
     if (!commentId) return new Response("Missing commentId", { status: 400, headers: corsHeaders });
 
+    // Only the comment's own author (from their JWT) can trigger a reply.
+    const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: { user } } = jwt ? await supabaseAdmin.auth.getUser(jwt) : { data: { user: null } };
+    if (!user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+
     const { data: comment } = await supabaseAdmin
       .from("coin_comments")
-      .select("id, coin, body, is_bot, reply_to_id, user_id, image_url")
+      .select("id, coin, body, is_bot, reply_to_id, user_id, image_url, created_at")
       .eq("id", commentId)
       .maybeSingle();
     if (!comment || comment.is_bot) {
       console.log(`[${commentId}] skip — ${!comment ? "comment not found" : "is_bot"}`);
       return new Response("skip", { status: 200, headers: corsHeaders });
+    }
+    if (comment.user_id !== user.id) {
+      return new Response("Forbidden", { status: 403, headers: corsHeaders });
     }
 
     // The client only ever renders one level of nesting — CoinChat.tsx's
@@ -132,6 +140,18 @@ Deno.serve(async (req) => {
     const replyToId = comment.reply_to_id ?? comment.id;
 
     const botId = await getOrCreateBotId();
+
+    // Replays: if the bot already posted in this thread after this comment,
+    // it has handled it — don't reply (or pay for an AI call) again.
+    const { count: botAfter } = await supabaseAdmin
+      .from("coin_comments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", botId)
+      .eq("reply_to_id", replyToId)
+      .gt("created_at", comment.created_at);
+    if ((botAfter ?? 0) > 0) {
+      return new Response("already handled", { status: 200, headers: corsHeaders });
+    }
 
     // Welcome takes priority over everything below — a brand-new poster
     // gets greeted regardless of what their first message actually says,

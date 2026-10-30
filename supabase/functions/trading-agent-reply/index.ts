@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiRateLimit, limitResponse } from "../_shared/aiLimits.ts";
 import { fetchCryptoNews, NewsItem } from "../_shared/news.ts";
 import { MarketContext, getMarketContext } from "../_shared/market.ts";
 import { fetchPositioning, Positioning } from "../_shared/positioning.ts";
@@ -1027,6 +1028,22 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!
     ).auth.getUser(token);
     if (authError || !user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+
+    // Agent Ready is Elite-only — enforced here, not just in the app — and
+    // capped per user (each turn is a gpt-4o call, sometimes with an image).
+    {
+      const gate = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: gateProfile } = await gate.from("profiles").select("tier").eq("id", user.id).maybeSingle();
+      if (gateProfile?.tier !== "elite") {
+        return limitResponse("Agent Ready is an Elite feature.", corsHeaders, 403);
+      }
+      if (!(await aiRateLimit(gate, user.id, "trading-agent-reply", 3600, 120))) {
+        return limitResponse("You're sending messages very fast — give Agent Ready a minute.", corsHeaders);
+      }
+    }
 
     if (!OPENAI_API_KEY) return new Response("Server not configured", { status: 500, headers: corsHeaders });
 

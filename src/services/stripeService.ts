@@ -8,6 +8,11 @@ export const PRICE_IDS = {
   elite: import.meta.env.VITE_STRIPE_ELITE_PRICE_ID as string,
 };
 
+/** ProVision plan ($99/yr) — its own Stripe subscription, separate from the
+ *  tier (see supabase/functions/_shared/provision.ts). Empty until the
+ *  price exists in Stripe and VITE_STRIPE_PROVISION_PRICE_ID is set. */
+export const PROVISION_PRICE_ID = (import.meta.env.VITE_STRIPE_PROVISION_PRICE_ID as string | undefined) ?? "";
+
 async function authHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not authenticated");

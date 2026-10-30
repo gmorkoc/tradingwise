@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiRateLimit, limitResponse } from "../_shared/aiLimits.ts";
 
 // Invoked from the Advance Chart page's mobile hero card (PriceChart.tsx,
 // "Agent" category) — a short, opinionated read on whatever coin/interval
@@ -32,6 +33,16 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!
     ).auth.getUser(token);
     if (authError || !user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+
+    // Free for everyone, but capped per user so one account can't run up the
+    // bill (the client already caches each coin's take for 5 minutes).
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    if (!(await aiRateLimit(supabaseAdmin, user.id, "chart-quick-take", 3600, 60))) {
+      return limitResponse("Too many quick takes — try again in a bit.", corsHeaders);
+    }
 
     if (!OPENAI_API_KEY) return new Response("Server not configured", { status: 500, headers: corsHeaders });
 

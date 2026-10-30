@@ -8191,7 +8191,18 @@ html[data-theme="light"] .pv-card { background: #fff; border-color: rgba(15, 23,
 .pv-card--collapsed { padding: 10px 14px; gap: 0; }
 /* Advance Chart: sits in the full-height page column — don't let the chart
    squeeze it, and scroll inside when expanded on a short screen. */
-.pv-card--advance { flex-shrink: 0; margin: 8px 12px 6px; max-height: 46vh; overflow-y: auto; }
+.pv-card--advance {
+  flex-shrink: 0;
+  margin: 8px 12px 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+  /* The fullscreen scroller above is touch-action: pan-y, which would
+     otherwise swallow sideways swipes on the gauges / timeframes row. */
+  touch-action: pan-x pan-y;
+}
+/* Sections keep their full height so the card scrolls; otherwise the flex
+   column squeezed the Signal Check panel (overflow: hidden) to one row. */
+.pv-card--advance > * { flex-shrink: 0; }
 .pv-card-title { font-size: 15px; font-weight: 700; }
 .pv-verdict {
   display: inline-flex;
@@ -9630,11 +9641,21 @@ html[data-theme="light"] .pvsb-cell--ghost { background: var(--k2); }
 /* Bigger, spread across half the panel: flow on the left, timeframes right. */
 .pvr .pvl-head-text { flex: 1 1 auto; }
 .pvr .pvl-meta {
-  width: calc(50% - 24px);
-  justify-content: space-between;
-  gap: 10px 24px;
+  width: auto;
+  max-width: 100%;
+  justify-content: flex-start;
+  gap: 32px;
+  margin-top: 8px;
   font-size: 15px;
+  /* One row; scrolls sideways on smaller desktops instead of wrapping. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  white-space: nowrap;
 }
+.pvr .pvl-meta::-webkit-scrollbar { display: none; }
+.pvr .pvl-meta > * { flex-shrink: 0; }
 .pvr .pvl-meta-flow { gap: 9px; }
 .pvr .pvl-gauge { width: 44px; height: 25px; }
 .pvr .pvl-meta-tfs { gap: 16px; }
@@ -9676,6 +9697,7 @@ html[data-theme="light"] .pvsb-cell--ghost { background: var(--k2); }
   }
   .pvr .pvl-meta::-webkit-scrollbar { display: none; }
   .pvr .pvl-meta > * { flex-shrink: 0; }
+  .pvr .pvl-meta { touch-action: pan-x pan-y; }
   .pvr .pvl-head-text { min-width: 0; max-width: 100%; }
   .pvr .pvr-side,
   .pvr .pvl-head { min-width: 0; max-width: 100%; }
@@ -10407,3 +10429,124 @@ html[data-theme="light"] .pv-stat-val--bear { color: #be123c; }
 /* Tile detail (BottomSheet / desktop modal). */
 .pv-detail { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 4px 16px 8px; }
 .pv-detail-text { margin: 0; font-size: 14px; line-height: 1.55; color: var(--color-text-secondary); }
+
+/* ══ ProVision locked notice (switch on, coin not unlocked) ══ */
+.pv-locked,
+.pv-locked:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.14), rgba(59, 130, 246, 0.1));
+}
+.pv-locked-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+}
+.pv-locked-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--color-text-secondary); }
+.pv-locked-text strong { font-size: 14px; color: var(--color-text); }
+.pv-locked-cta {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+}
+.pv-locked:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+
+/* ══ ProVision paywall (BottomSheet / desktop modal) ══ */
+.bs-sheet.pvp-sheet { max-width: 520px; }
+.pvp { display: flex; flex-direction: column; gap: 20px; padding: 4px 20px 12px; }
+.pvp-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.pvp-orb {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #a78bfa, #7c3aed 55%, #4c1d95);
+  box-shadow: 0 8px 28px rgba(124, 58, 237, 0.5);
+}
+.pvp-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8b5cf6;
+}
+.pvp-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(100deg, var(--color-text) 30%, #8b5cf6 60%, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.pvp-sub { margin: 0; max-width: 380px; font-size: 14px; line-height: 1.5; color: var(--color-text-secondary); }
+.pvp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.pvp-item { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.45; color: var(--color-text-secondary); }
+.pvp-item strong { color: var(--color-text); font-weight: 600; }
+.pvp-check {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+}
+.pvp-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; text-align: center; }
+.pvp-cta,
+.pvp-cta:hover {
+  all: unset;
+  box-sizing: border-box;
+  padding: 15px 18px;
+  border-radius: 14px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+}
+.pvp-cta:active { transform: scale(0.98); }
+.pvp-cta:disabled { opacity: 0.6; cursor: default; }
+.pvp-alt,
+.pvp-alt:hover {
+  all: unset;
+  box-sizing: border-box;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-text);
+  cursor: pointer;
+  background: rgba(127, 127, 127, 0.12);
+}
+.pvp-cta:focus-visible,
+.pvp-alt:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 3px; }
+.pvp-fine { font-size: 11.5px; color: var(--color-text-muted); }
+.pvp-error { font-size: 12.5px; color: #dc2626; }
+html[data-theme="light"] .pvp-kicker { color: #6d28d9; }
