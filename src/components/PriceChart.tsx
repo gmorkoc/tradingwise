@@ -77,50 +77,9 @@ function fmtPvPrice(p: number): string {
   return p.toPrecision(4);
 }
 
-// Stepped "square-wave" sparkline (rounded steps) in a 100×40 box: the
-// series averaged into `bins` levels, each a flat run joined to the next by
-// a short rounded step; the end dot sits just past the line's end.
-function pvStepSpark(series: number[], bins: number) {
-  if (!series.length) return { line: "", area: "", end: null as readonly [number, number] | null };
-  const XMAX = 90;
-  const lv: number[] = [];
-  for (let k = 0; k < bins; k++) {
-    const a = Math.floor((k * series.length) / bins), z = Math.max(a + 1, Math.floor(((k + 1) * series.length) / bins));
-    const part = series.slice(a, z);
-    lv.push(part.length ? part.reduce((p, q) => p + q, 0) / part.length : lv[lv.length - 1] ?? 0);
-  }
-  const lo = Math.min(...lv), hi = Math.max(...lv);
-  const span = hi - lo || 1;
-  const ys = lv.map((v) => 34 - ((v - lo) / span) * 28);
-  const bw = XMAX / bins;
-  const r = Math.min(2.2, bw / 3);
-  let line = `M0 ${ys[0].toFixed(1)}`;
-  ys.forEach((y, k) => {
-    const xe = (k + 1) * bw;
-    if (k < bins - 1) {
-      const yn = ys[k + 1];
-      line += ` L${(xe - r).toFixed(1)} ${y.toFixed(1)} C${xe.toFixed(1)} ${y.toFixed(1)} ${xe.toFixed(1)} ${yn.toFixed(1)} ${(xe + r).toFixed(1)} ${yn.toFixed(1)}`;
-    } else {
-      line += ` L${xe.toFixed(1)} ${y.toFixed(1)}`;
-    }
-  });
-  return { line, area: `${line} L${XMAX} 40 L0 40 Z`, end: [97, ys[bins - 1] + 3] as const };
-}
-
-// Pro Vision Signal check rows: one line icon + short description per check
-// (MA, DMI, Ichimoku, RSI, Stochastic, MACD, Volume).
-const pvIcon = (d: string) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
-);
-const PV_ROW_ICONS = [
-  pvIcon("M3 17l5-5 4 3 8-8M3 21h18"),
-  pvIcon("M4 20V10M10 20V4M16 20v-7M22 20H2"),
-  pvIcon("M6 18a4 4 0 0 1 .5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1 0 9H6z"),
-  pvIcon("M12 3v3M12 18v3M5 12H2M22 12h-3M7 7l-2-2M19 19l-2-2M7 17l-2 2M19 5l-2 2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"),
-  pvIcon("M3 12c3-6 6-6 9 0s6 6 9 0"),
-  pvIcon("M3 12h4l3-7 4 14 3-7h4"),
-  pvIcon("M5 20V12M10 20V6M15 20v-9M20 20V9"),
-];
+// Cells on each side of the Signal check segment bars.
+const PV_SEG = 10;
+// Short description per check (MA, DMI, Ichimoku, RSI, Stochastic, MACD, Volume).
 const PV_ROW_DESC = [
   "Price vs 20 & 200 averages",
   "Who's pushing, and how hard",
@@ -2333,6 +2292,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Recomputed whenever the chart's data reloads (chartGeneration bumps).
   const [proVisionOn, setProVisionOn] = useProVision();
   const pvActive = proVisionOn && isPaid && (prefsScope === "trade" || prefsScope === "advance");
+  // Short "preparing" intro each time Pro Vision is switched on (not on page
+  // load when it was already on).
+  const PV_INTRO_MS = 2800;
+  const [pvIntro, setPvIntro] = useState(false);
+  // ProVision paints candles (ribbon, trend colours, labels) — none of it
+  // shows on the line style, so switching it on moves Line → Candle.
+  // Only reacts to ProVision turning on; picking Line afterwards still works.
+  useEffect(() => {
+    if (pvActive && chartStyle === "line") setChartStyle("candle");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvActive]);
+  const pvWasActive = useRef(pvActive);
+  useEffect(() => {
+    const was = pvWasActive.current;
+    pvWasActive.current = pvActive;
+    if (!pvActive) { setPvIntro(false); return; }
+    if (was) return;
+    setPvIntro(true);
+    const id = window.setTimeout(() => setPvIntro(false), PV_INTRO_MS);
+    return () => clearTimeout(id);
+  }, [pvActive]);
   // Live loop: every 5s pull the newest 2 candles of this interval and fold
   // them into the read, so the Signal check updates in real time even on
   // intervals the chart itself only refreshes occasionally.
@@ -2443,17 +2423,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     return m;
   }, [pvResult]);
   const [pvTileOpen, setPvTileOpen] = useState<PvTile | null>(null);
-  // Signal check carousel: one indicator at a time, auto-advancing every
-  // 4.5s; pauses while hovered / touched / focused.
-  const PV_SLIDE_MS = 4500;
-  const [pvSlide, setPvSlide] = useState(0);
-  const [pvSlidePaused, setPvSlidePaused] = useState(false);
-  useEffect(() => {
-    if (!pvActive || pvSlidePaused) return;
-    const id = window.setInterval(() => setPvSlide((s) => (s + 1) % 7), PV_SLIDE_MS);
-    return () => clearInterval(id);
-  }, [pvActive, pvSlidePaused, pvSlide]);
-  const pvTouchX = useRef<number | null>(null);
   // Advance Chart fills the screen, so its Signal check starts collapsed
   // to one line (verdict + hit rate); Trade shows it open.
   const [pvCardOpen, setPvCardOpen] = useState(prefsScope !== "advance");
@@ -6479,18 +6448,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 className={`pv-toggle pv-toggle--toolbar${proVisionOn && isPaid ? " pv-toggle--on" : ""}`}
                 role="switch"
                 aria-checked={proVisionOn && isPaid}
-                aria-label="Pro Vision"
-                title={proVisionOn && isPaid ? "Pro Vision on — click to go back to the normal chart" : "Pro Vision: trend candles, buy/sell signals and a live signal check"}
+                aria-label="ProVision"
+                title={proVisionOn && isPaid ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
                 onClick={() => {
                   if (!isPaid) { onOpenUpgrade?.("pro"); return; }
                   setProVisionOn(!proVisionOn);
                 }}
               >
-                <svg className="pv-toggle-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-                </svg>
-                <span className="pv-toggle-label">Pro Vision</span>
-                <span className="pv-toggle-track" aria-hidden="true"><span className="pv-toggle-knob" /></span>
+                <span className="pv-toggle-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
+                <span className="pv-toggle-track" aria-hidden="true">
+                  <span className="pv-toggle-knob">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                  </span>
+                </span>
               </button>
             </div>
             <div className="chart-tv-toolbar-right">
@@ -7709,6 +7679,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <div className="adv-menu-scrim" onClick={() => setAdvMenuOpen(false)} />
               <div className="adv-menu" role="menu">
                 {([
+                  ...((prefsScope === "trade" || prefsScope === "advance")
+                    ? [[
+                        proVisionOn && isPaid ? "ProVision: On" : "ProVision: Off",
+                        () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setProVisionOn(!proVisionOn); },
+                        <path key="a" d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />,
+                      ] as const]
+                    : []),
                   ["Reset Chart", () => handleResetView(), <><path key="a" d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path key="b" d="M3 3v5h5" /></>],
                   ["Save", () => handleScreenshot(), <><path key="a" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle key="b" cx="12" cy="13" r="4" /></>],
                   ["Close", () => toggleFullscreen(), <><line key="a" x1="18" y1="6" x2="6" y2="18" /><line key="b" x1="6" y1="6" x2="18" y2="18" /></>],
@@ -7762,11 +7739,30 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             visible={!!pvResult && chartStyle !== "line"}
             generation={chartGeneration}
           />
+          {/* Pro Vision intro: a few seconds of "preparing" over the chart. */}
+          {pvIntro && ReactDOM.createPortal(
+            <div className="pvi" role="status" aria-label="Preparing ProVision" style={{ ["--pvi-ms" as string]: `${PV_INTRO_MS}ms` }}>
+              <div className="pvi-scan" aria-hidden="true" />
+              <div className="pvi-card">
+                <span className="pvi-orb" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                </span>
+                <span className="pvi-title">ProVision</span>
+                <span className="pvi-steps" aria-hidden="true">
+                  {["Scanning trend", "Reading momentum", "Checking order flow", "Aligning timeframes", "Calibrating signals"].map((t, i) => (
+                    <span key={t} className="pvi-step" style={{ animationDelay: `${i * (PV_INTRO_MS - 300) / 5}ms` }}>{t}…</span>
+                  ))}
+                </span>
+                <span className="pvi-bar" aria-hidden="true"><span className="pvi-bar-fill" /></span>
+              </div>
+            </div>,
+            document.body,
+          )}
           {pvResult && (
             <div className="pv-strength" aria-label={`Trend strength: bull ${pvResult.bullStrength}%`}>
               <span className="pv-strength-tag">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                Pro Vision
+                ProVision
               </span>
               <div className="pv-strength-track">
                 <div className="pv-strength-bull" style={{ width: `${pvResult.bullStrength}%` }} />
@@ -7939,7 +7935,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   {pvResult.verdict.bias === "bull" ? "Bullish" : pvResult.verdict.bias === "bear" ? "Bearish" : "Mixed"}
                   {" · "}{pvResult.verdict.agree} of {pvResult.verdict.total}
                   <span className="pvl-pill-sep">/</span>
-                  live
+                  <span className="pvl-pill-live">live</span>
                 </span>
                 <svg className="pv-card-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
               </span>
@@ -7947,7 +7943,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {pvCardOpen && (
               <button type="button" className="pv-howto" onClick={() => setPvGuideOpen(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
-                How to use Pro Vision
+                How to use ProVision
               </button>
             )}
             {pvCardOpen && pvResult.barSec <= 300 && (
@@ -8102,95 +8098,60 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         </span>
                       </span>
                     </div>
-                    {/* Cards: icon tile, title, big number + unit, and a filled
-                        sparkline of that check's last ~30 candles. */}
-                    <div className="pvs-grid">
-                      {/* The 7 checks as a carousel: one card at a time,
-                          auto-advancing; icon dots to jump; swipe on phones. */}
-                      {(() => {
-                        const r = pvSlide % ROWS.length;
-                        const name = ROWS[r];
+                    {/* The 7 checks as diverging segment bars: bearish cells
+                        light up to the left of centre, bullish to the right. */}
+                    <div className="pvsb" role="list" aria-label="Indicators">
+                      {ROWS.map((name, r) => {
                         const b = pvResult.checks[r];
-                        const v = tileVal(r).replace(/\s*[↑↓]$/, "");
-                        const ro = pvResult.checkReadout[r];
-                        const { line, area, end } = pvStepSpark(pvResult.checkSeries[r] ?? [], 14);
-                        const gid = `pvs-grad-car`;
-                        const go = (k: number) => setPvSlide(((k % ROWS.length) + ROWS.length) % ROWS.length);
+                        const s = pvResult.checkStrength[r] ?? 0.5;
+                        const d = (s - 0.5) * 2; // -1 … 1
+                        const lit = b === "neutral" ? 0 : Math.max(1, Math.round(Math.abs(d) * PV_SEG));
+                        const side = d < 0 ? "bear" : "bull";
+                        const v = tileVal(r).replace(/\s*[↑↓▲▼]$/, "");
+                        const label = r === 3 ? `RSI ${pvResult.checkReadout[3]?.big ?? ""}`.trim() : name;
                         return (
-                          <div
-                            className="pvk"
-                            onMouseEnter={() => setPvSlidePaused(true)}
-                            onMouseLeave={() => setPvSlidePaused(false)}
-                            onFocus={() => setPvSlidePaused(true)}
-                            onBlur={() => setPvSlidePaused(false)}
-                            onTouchStart={(e) => { pvTouchX.current = e.touches[0].clientX; setPvSlidePaused(true); }}
-                            onTouchEnd={(e) => {
-                              const x0 = pvTouchX.current;
-                              pvTouchX.current = null;
-                              if (x0 !== null) {
-                                const dx = e.changedTouches[0].clientX - x0;
-                                if (Math.abs(dx) > 40) go(r + (dx < 0 ? 1 : -1));
-                              }
-                              setPvSlidePaused(false);
-                            }}
-                            aria-roledescription="carousel"
-                            aria-label="Indicators"
+                          <button
+                            key={name}
+                            type="button"
+                            role="listitem"
+                            className={`pvsb-row pvsb-row--${b}`}
+                            onClick={() => openRow(r)}
+                            aria-label={`${label}: ${v}`}
+                            title={PV_ROW_DESC[r]}
                           >
-                            <button
-                              key={`slide:${r}`}
-                              type="button"
-                              className={`pvs pvk-card pvs--${b}`}
-                              onClick={() => openRow(r)}
-                              aria-label={`${name}: ${ro?.big} ${ro?.unit}, ${v}. ${r + 1} of ${ROWS.length}`}
-                            >
-                              <span className="pvs-icon" aria-hidden="true">{PV_ROW_ICONS[r]}</span>
-                              <span className="pvs-text">
-                                <span className="pvs-name">{name}</span>
-                                <span key={`${ro?.big}`} className="pvs-big">
-                                  {ro?.big}<span className="pvs-unit">{ro?.unit}</span>
-                                </span>
-                                <span className="pvk-desc">
-                                  {PV_ROW_DESC[r]} · <span className="pvk-state">{b === "bull" ? "▲ " : b === "bear" ? "▼ " : ""}{v}</span>
-                                </span>
-                              </span>
-                              <span className="pvs-spark pvk-spark" aria-hidden="true">
-                                <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                                  <defs>
-                                    <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
-                                      <stop offset="0%" style={{ stopColor: "var(--c)", stopOpacity: 0.3 }} />
-                                      <stop offset="100%" style={{ stopColor: "var(--c)", stopOpacity: 0 }} />
-                                    </linearGradient>
-                                  </defs>
-                                  {area && <path d={area} fill={`url(#${gid})`} />}
-                                  {line && <path d={line} className="pvs-line" vectorEffect="non-scaling-stroke" />}
-                                </svg>
-                                {end && <span className="pvs-end" style={{ left: `${end[0]}%`, top: `${(end[1] / 40) * 100}%` }} />}
-                              </span>
-                            </button>
-                            <div className="pvk-nav">
-                              <div className="pvk-dots" role="tablist" aria-label="Choose indicator">
-                                {ROWS.map((nm, k) => (
-                                  <button
-                                    key={nm}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={k === r}
-                                    aria-label={nm}
-                                    title={nm}
-                                    className={`pvk-dot pvk-dot--${pvResult.checks[k]}${k === r ? " pvk-dot--on" : ""}`}
-                                    onClick={() => go(k)}
-                                  >
-                                    {PV_ROW_ICONS[k]}
-                                  </button>
-                                ))}
-                              </div>
-                              <span className="pvk-progress" aria-hidden="true">
-                                <span key={`p:${r}:${pvSlidePaused}`} className={`pvk-progress-fill${pvSlidePaused ? " pvk-progress-fill--paused" : ""}`} style={{ animationDuration: `${PV_SLIDE_MS}ms` }} />
-                              </span>
-                            </div>
-                          </div>
+                            <span className="pvsb-name">{label}</span>
+                            <span className="pvsb-bar" aria-hidden="true" style={{ ["--row" as string]: r }}>
+                              {(() => {
+                                // k = distance from centre (1…PV_SEG). Lit cells ramp up in
+                                // brightness toward the tip; the tip pulses; the next cell
+                                // out flickers like a needle jittering.
+                                const cell = (k: number, half: "l" | "r") => {
+                                  const active = (half === "l" ? "bear" : "bull") === side;
+                                  const on = active && k <= lit;
+                                  const tip = on && k === lit;
+                                  const ghost = active && lit > 0 && k === lit + 1;
+                                  const cls = `pvsb-cell${on ? " pvsb-cell--on" : ""}${tip ? " pvsb-cell--tip" : ""}${ghost ? " pvsb-cell--ghost" : ""}`;
+                                  const st = on || ghost
+                                    ? { ["--i" as string]: on ? 0.45 + 0.55 * (k / lit) : 0, animationDelay: `${r * 60 + k * 35}ms` }
+                                    : undefined;
+                                  return <span key={`${half}${k}`} className={cls} style={st} />;
+                                };
+                                return (
+                                  <>
+                                    {Array.from({ length: PV_SEG }, (_, i) => cell(PV_SEG - i, "l"))}
+                                    <span className="pvsb-cell pvsb-cell--mid" />
+                                    {Array.from({ length: PV_SEG }, (_, i) => cell(i + 1, "r"))}
+                                    <span className="pvsb-sweep" />
+                                  </>
+                                );
+                              })()}
+                            </span>
+                            <span key={`${v}:${b}`} className="pvsb-val">
+                              {v}{b === "bull" ? " ▲" : b === "bear" ? " ▼" : ""}
+                            </span>
+                          </button>
                         );
-                      })()}
+                      })}
                     </div>
                   </div>
                 </div>

@@ -1736,6 +1736,11 @@ html[data-theme="light"] .coin-picker-menu--table {
   height: auto;
   padding: 8px 0 18px 0px;
 }
+/* 3-col: the column itself has no padding, so Order Flow / Order Book
+   gets the same 16px sides as Paper Trading above it. */
+.main-content .chart-three-col-mid .chart-right-col .ob-card {
+  padding: 8px 16px 18px;
+}
 /* Mobile only — matches .ptc-card's (Paper Trading) own padding, same
    specificity as the rule above so source order (this comes after) is
    what makes it win here instead of fighting over selector weight. */
@@ -2041,7 +2046,8 @@ html[data-theme="light"] .coin-picker-menu--table {
    -row--top/--bottom wrapper in between), so it has to be told to fill
    the column's full viewport height — otherwise it shrinks to its
    content and the Paper Trading promo / order book stop short. */
-.chart-two-col-right > .chart-right-col {
+.chart-two-col-right > .chart-right-col,
+.chart-three-col-mid > .chart-right-col {
   flex: 1;
 }
 .chart-two-col-right--expanded {
@@ -2311,6 +2317,9 @@ html[data-theme="light"] .coin-picker-menu--table {
 }
 .chart-three-col-mid {
   width: clamp(320px, 27vw, 440px);
+  /* No extra padding: Paper Trading brings its own, same as in 2-col. */
+  padding: 0;
+  gap: 0;
   /* Its only child, .chart-right-col, is itself the scroll container
      (see that rule) — not scrolling here too, to avoid nesting two
      scrollable boxes inside each other. */
@@ -4150,6 +4159,10 @@ html:not([data-theme="light"]) .top-nav-icon-btn--settings:hover {
    choice. */
 .top-nav-layout-wrap {
   position: relative;
+}
+/* Same rounded square as the bell / buy-signal / settings icons beside it. */
+.mch-search-btn.top-nav-layout-btn {
+  border-radius: 12px;
 }
 .top-nav-layout-btn--open {
   background: var(--color-border) !important;
@@ -7229,57 +7242,93 @@ html:not([data-theme="light"]) .ob-sheet-backdrop {
 }
 
 /* ── Pro Vision toggle (desktop top bar, Trade page) ───────────────────── */
+/* Same neutral pill as the neighbouring icon buttons; the switch carries
+   the colour (violet→blue gradient track, sparkle inside the knob). */
 .pv-toggle {
   all: unset;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   height: 40px;
-  padding: 0 8px 0 14px;
+  padding: 0 7px 0 15px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 html[data-theme="light"] .pv-toggle { background: rgba(15, 23, 42, 0.06); }
-.pv-toggle:hover { color: var(--color-text); }
-.pv-toggle-icon { color: #0a84ff; transition: transform 0.4s ease; }
-.pv-toggle--on {
-  color: var(--color-text);
-  background: rgba(10, 132, 255, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.45), 0 0 18px rgba(10, 132, 255, 0.25);
+.pv-toggle:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.12); }
+html[data-theme="light"] .pv-toggle:hover { background: rgba(15, 23, 42, 0.09); }
+.pv-toggle--on { color: var(--color-text); }
+.pv-toggle-label-accent { transition: color 0.25s ease; }
+.pv-toggle--on .pv-toggle-label-accent {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-html[data-theme="light"] .pv-toggle--on { background: rgba(10, 132, 255, 0.12); }
-.pv-toggle--on .pv-toggle-icon { transform: rotate(45deg) scale(1.1); }
+html[data-theme="light"] .pv-toggle--on .pv-toggle-label-accent {
+  background-image: linear-gradient(90deg, #7c3aed, #2563eb);
+}
 .pv-toggle-track {
   position: relative;
-  width: 34px;
-  height: 20px;
+  width: 40px;
+  height: 26px;
   border-radius: 999px;
-  background: rgba(127, 127, 127, 0.35);
-  transition: background 0.2s ease;
+  background: rgba(127, 127, 127, 0.3);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
 }
-.pv-toggle--on .pv-toggle-track { background: #0a84ff; }
+.pv-toggle--on .pv-toggle-track {
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.35);
+}
 .pv-toggle-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
+  color: #a1a1aa;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.22s cubic-bezier(0.34, 1.3, 0.64, 1);
+  transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1), color 0.25s ease;
 }
-.pv-toggle--on .pv-toggle-knob { transform: translateX(14px); }
+.pv-toggle-knob svg { transition: transform 0.4s ease; }
+.pv-toggle--on .pv-toggle-knob { transform: translateX(14px); color: #7c3aed; }
+.pv-toggle--on .pv-toggle-knob svg { transform: rotate(180deg) scale(1.15); }
 .pv-toggle:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 /* Smaller variant inside the Advance Chart's own toolbar. */
-.pv-toggle--toolbar { height: 32px; padding: 0 6px 0 11px; gap: 7px; font-size: 0.78rem; }
-.pv-toggle--toolbar .pv-toggle-track { width: 30px; height: 18px; }
-.pv-toggle--toolbar .pv-toggle-knob { width: 14px; height: 14px; }
+.pv-toggle--toolbar { height: 32px; padding: 0 5px 0 12px; gap: 8px; font-size: 0.78rem; }
+.pv-toggle--toolbar .pv-toggle-track { width: 34px; height: 22px; }
+.pv-toggle--toolbar .pv-toggle-knob { top: 3px; left: 3px; width: 16px; height: 16px; }
 .pv-toggle--toolbar.pv-toggle--on .pv-toggle-knob { transform: translateX(12px); }
+/* Mobile side nav row: sparkle icon, "ProVision" label, switch at the end. */
+.icon-strip-pv .pv-toggle--nav,
+.icon-strip-pv:hover .pv-toggle--nav {
+  height: auto;
+  padding: 0;
+  margin-left: 10px;
+  background: none;
+}
+.icon-strip-pv--on .nav-icon-wrap { color: #7c3aed; }
+.icon-strip-pv--on .pv-toggle-label-accent {
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.icon-strip-pv--on .pv-toggle-track {
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.35);
+}
+.icon-strip-pv--on .pv-toggle-knob { transform: translateX(14px); color: #7c3aed; }
+.icon-strip-pv--on .pv-toggle-knob svg { transform: rotate(180deg) scale(1.15); }

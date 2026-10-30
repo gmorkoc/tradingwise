@@ -1649,12 +1649,11 @@ function AppDashboard({
   // the top-nav-bar's .top-nav-layout-* dropdown and .chart-layout-- rules in App.css:
   //   "2col" — col1 chart, col2 stacks chart-right-col above Daily Brief.
   //   "3col" — three side-by-side columns, one block each.
-  //   "2row" — row1 chart (full width), row2 chart-right-col + Daily Brief
-  //            side by side.
-  // Persisted so the choice survives a reload.
-  const [chartLayoutMode, setChartLayoutMode] = useState<"2col" | "3col" | "2row">(() => {
+  // Persisted so the choice survives a reload (an old saved "2row" falls
+  // back to 2col).
+  const [chartLayoutMode, setChartLayoutMode] = useState<"2col" | "3col">(() => {
     const saved = localStorage.getItem("chartLayoutMode");
-    return saved === "3col" || saved === "2row" ? saved : "2col";
+    return saved === "3col" ? saved : "2col";
   });
   useEffect(() => {
     localStorage.setItem("chartLayoutMode", chartLayoutMode);
@@ -2947,23 +2946,39 @@ function AppDashboard({
                 />
               </div>
 
+              {/* ProVision switch — phones have no top bar, so it lives
+                  here (same shared setting as desktop's top-bar switch). */}
               <button
-                className="icon-strip-btn"
+                type="button"
+                className={`icon-strip-btn icon-strip-pv${proVision ? " icon-strip-pv--on" : ""}`}
+                role="switch"
+                aria-checked={proVision}
+                aria-label="ProVision"
                 onClick={() => {
-                  setDrawerOpen(true);
-                  setMobileNavOpen(false);
+                  hapticTap();
+                  if (!proVision && tier !== "pro" && tier !== "elite") {
+                    setMobileNavOpen(false);
+                    if (!user) onOpenAuth?.(); else onOpenUpgrade?.();
+                    return;
+                  }
+                  setProVision(!proVision);
+                  // Let the knob slide first, then close the menu.
+                  window.setTimeout(() => setMobileNavOpen(false), 280);
                 }}
-                title={t("drawer.settings")}
               >
                 <span className="nav-icon-wrap">
-                  <NavIcon
-                    d={[
-                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
-                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
-                    ]}
-                  />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+                  </svg>
                 </span>
-                <span className="icon-strip-label">{t("nav.settings")}</span>
+                <span className="icon-strip-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
+                <span className="pv-toggle pv-toggle--nav" aria-hidden="true">
+                  <span className="pv-toggle-track">
+                    <span className="pv-toggle-knob">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                    </span>
+                  </span>
+                </span>
               </button>
 
               <button
@@ -2987,6 +3002,25 @@ function AppDashboard({
                   <span className="icon-strip-support-dot" />
                   {t("nav.online", "Online")}
                 </span>
+              </button>
+
+              <button
+                className="icon-strip-btn"
+                onClick={() => {
+                  setDrawerOpen(true);
+                  setMobileNavOpen(false);
+                }}
+                title={t("drawer.settings")}
+              >
+                <span className="nav-icon-wrap">
+                  <NavIcon
+                    d={[
+                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
+                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+                    ]}
+                  />
+                </span>
+                <span className="icon-strip-label">{t("nav.settings")}</span>
               </button>
 
               {/* Signed in: Sign out. Signed out: Sign in / Register
@@ -3215,14 +3249,14 @@ function AppDashboard({
                   <HoverTip
                     className="top-nav-icon-tip"
                     placement="left"
-                    text={proVision ? "Pro Vision on — click to go back to the normal chart" : "Pro Vision: trend candles, buy/sell signals and a live signal check"}
+                    text={proVision ? "ProVision on — click to go back to the normal chart" : "ProVision: trend candles, buy/sell signals and a live signal check"}
                   >
                     <button
                       type="button"
                       className={`pv-toggle${proVision ? " pv-toggle--on" : ""}`}
                       role="switch"
                       aria-checked={proVision}
-                      aria-label="Pro Vision"
+                      aria-label="ProVision"
                       onClick={() => {
                         if (!proVision && tier !== "pro" && tier !== "elite") {
                           if (!user) onOpenAuth?.(); else onOpenUpgrade?.();
@@ -3231,11 +3265,12 @@ function AppDashboard({
                         setProVision(!proVision);
                       }}
                     >
-                      <svg className="pv-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-                      </svg>
-                      <span className="pv-toggle-label">Pro Vision</span>
-                      <span className="pv-toggle-track" aria-hidden="true"><span className="pv-toggle-knob" /></span>
+                      <span className="pv-toggle-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
+                      <span className="pv-toggle-track" aria-hidden="true">
+                        <span className="pv-toggle-knob">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                        </span>
+                      </span>
                     </button>
                   </HoverTip>
                 )}
@@ -3261,7 +3296,6 @@ function AppDashboard({
                         {([
                           { mode: "2col" as const, title: "2 columns" },
                           { mode: "3col" as const, title: "3 columns" },
-                          { mode: "2row" as const, title: "2 rows" },
                         ]).map(({ mode, title }) => (
                           <button
                             key={mode}
@@ -3287,13 +3321,6 @@ function AppDashboard({
                                   <rect x="1.5" y="2" width="4" height="12" rx="1" />
                                   <rect x="6" y="2" width="4" height="12" rx="1" />
                                   <rect x="10.5" y="2" width="4" height="12" rx="1" />
-                                </svg>
-                              )}
-                              {mode === "2row" && (
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                                  <rect x="1.5" y="2" width="13" height="5.3" rx="1" />
-                                  <rect x="1.5" y="8.7" width="6" height="5.3" rx="1" />
-                                  <rect x="8.5" y="8.7" width="6" height="5.3" rx="1" />
                                 </svg>
                               )}
                             </span>
@@ -3764,13 +3791,6 @@ function AppDashboard({
                         <div className="chart-three-col-right">{dailyBriefEl}</div>
                       </div>
                     )
-                  ) : chartLayoutMode === "2row" ? (
-                    <div className="chart-layout chart-layout--2row">
-                      <div className="chart-row-top">{chartColumnEl}</div>
-                      <div className="chart-row-bottom">
-                        <div className="chart-row-bottom-col">{chartRightColEl}</div>
-                      </div>
-                    </div>
                   ) : chartLayoutMode === "3col" ? (
                     <div className="chart-layout chart-layout--3col">
                       {chartColumnEl}

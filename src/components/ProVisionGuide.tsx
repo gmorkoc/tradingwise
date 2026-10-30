@@ -76,8 +76,8 @@ export function ProVisionGuide({ open, onClose }: { open: boolean; onClose: () =
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={<>How to use Pro Vision</>}
-      ariaLabel="How to use Pro Vision"
+      title={<>How to use ProVision</>}
+      ariaLabel="How to use ProVision"
       className="pvg-sheet"
       desktopModal
     >
