@@ -49,7 +49,7 @@ import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
 import { getIndicatorDef } from "../services/customIndicators";
 import { useProVisionGate, openProVisionPaywall } from "../hooks/useProVisionGate";
-import { computeProVision, mergeHigherTimeframe, type PvTile, type PvResult } from "../services/proVision";
+import { fetchProVision, fetchProVisionMtf, ProVisionLockedError, type PvTile, type PvResult } from "../services/proVision";
 import { ProVisionOverlay } from "./ProVisionOverlay";
 import { ProVisionGuide } from "./ProVisionGuide";
 import { getMacroEvents, eventShortName, EVENT_PAUSE_BEFORE_MS, EVENT_PAUSE_AFTER_MS, type MacroEvent } from "../services/macroEvents";
@@ -1786,7 +1786,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [intervalMenuOpen, setIntervalMenuOpen] = useState(false);
   const intervalBtnRef = useRef<HTMLButtonElement>(null);
   const [intervalMenuPos, setIntervalMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const [showCME, setShowCME] = useState(() => readChartPrefs(prefsScope).showCME ?? false);
+  // CME gaps no longer exist — kept off (ignores old saved prefs); no menu entry.
+  const [showCME, setShowCME] = useState(false);
   const [, setIsLive] = useState(false);
   const [dayHigh, setDayHigh] = useState<number | null>(null);
   const [dayLow, setDayLow] = useState<number | null>(null);
@@ -2297,12 +2298,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pvActive = pvGate.activeFor(coin) && pvScope;
   // Switch is on but this coin isn't unlocked (Pro's 4th coin, ended trial).
   const pvLocked = pvGate.on && pvScope && !pvGate.access.allowed(coin);
-  const pvLockReason = pvLocked ? pvGate.access.lockReason(coin) : null;
-  // Count this coin toward Pro's daily allowance once ProVision runs on it.
-  const { markUsed: pvMarkUsed } = pvGate.access;
-  useEffect(() => {
-    if (pvActive) pvMarkUsed(coin);
-  }, [pvActive, coin, pvMarkUsed]);
+  // Free accounts (and signed-out visitors) always see the ProVision banner
+  // on these pages, switch on or off — Pro only sees it when it's locked.
+  const pvFreeLocked = pvScope && pvGate.access.mode === "locked";
+  const pvLockReason = pvLocked || pvFreeLocked ? pvGate.access.lockReason(coin) : null;
+  // Free trial running: keep a banner up with the time left.
+  const pvTrialLeftMs = pvScope && pvGate.access.mode === "trial" && pvGate.access.trialEndsAt
+    ? Math.max(0, pvGate.access.trialEndsAt - Date.now())
+    : null;
+  // (Pro's coin count is claimed by the server when it computes the read.)
   // Short "preparing" intro each time Pro Vision is switched on (not on page
   // load when it was already on).
   const PV_INTRO_MS = 2800;
@@ -2339,63 +2343,92 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const id = window.setInterval(pull, 5000);
     return () => { alive = false; clearInterval(id); setPvLiveTail([]); };
   }, [pvActive, coin, interval]);
-  const pvLocal = useMemo(() => {
-    if (!pvActive) return null;
-    const base = lastCandlesRef.current;
-    if (!pvLiveTail.length || !base.length) return computeProVision(base);
-    // Replace the forming candle / append a just-opened one (never reorder).
-    const merged = base.slice();
-    for (const t of pvLiveTail) {
-      const lastT = merged[merged.length - 1].time;
-      if (t.time === lastT) merged[merged.length - 1] = t;
-      else if (t.time > lastT) merged.push(t);
-    }
-    return computeProVision(merged);
+  // Short charts (1s/1m/5m): signals come from the 15m chart instead — the
+  // short candles' own signals only broke even after fees in backtests.
+  // The app only fetches the 15m candles; the server does the merge.
+  const pvShortSec = interval === "1sec" ? 1 : interval === "1min" ? 60 : interval === "5min" ? 300 : 0;
+  const [pvHtfCandles, setPvHtfCandles] = useState<CandleDataPoint[] | null>(null);
+  useEffect(() => {
+    if (!pvActive || !pvShortSec) { setPvHtfCandles(null); return; }
+    let alive = true;
+    coinglass.getHistoricalCandles("15min", coin, 520 * 900)
+      .then((cs) => { if (alive) setPvHtfCandles(cs); })
+      .catch(() => { if (alive) setPvHtfCandles(null); });
+    return () => { alive = false; };
+    // Refetch when the chart reloads (cache keeps this cheap).
+  }, [pvActive, pvShortSec, coin, chartGeneration]);
+
+  // The ProVision read itself comes from the server (provision-compute),
+  // which checks access first. Recomputed when the chart reloads, and at
+  // most every 8s for the live forming candle.
+  const [pvBase, setPvBase] = useState<PvResult | null>(null);
+  // Server refused (Pro's 3 coins used up on another device, trial ended…).
+  const [pvServerLocked, setPvServerLocked] = useState(false);
+  // Banner reason: the app's own check, or the server's refusal (Pro limit).
+  const pvBannerReason = pvLockReason
+    ?? (pvServerLocked && pvGate.on && pvScope ? (pvGate.access.lockReason(coin) ?? "pro-limit") : null);
+  const pvLastCalc = useRef(0);
+  const pvCalcKey = `${coin}|${interval}|${chartGeneration}|${pvHtfCandles ? pvHtfCandles.length : 0}`;
+  const pvLastKey = useRef("");
+  useEffect(() => {
+    if (!pvActive) { setPvBase(null); setPvServerLocked(false); pvLastKey.current = ""; return; }
+    if (pvShortSec && !pvHtfCandles) return; // wait for the 15m candles
+    const keyChanged = pvLastKey.current !== pvCalcKey;
+    const wait = keyChanged ? 0 : Math.max(0, 8000 - (Date.now() - pvLastCalc.current));
+    let alive = true;
+    const id = window.setTimeout(() => {
+      const base = lastCandlesRef.current;
+      if (!base.length) return;
+      // Replace the forming candle / append a just-opened one (never reorder).
+      const merged = base.slice();
+      for (const t of pvLiveTail) {
+        const lastT = merged[merged.length - 1].time;
+        if (t.time === lastT) merged[merged.length - 1] = t;
+        else if (t.time > lastT) merged.push(t);
+      }
+      pvLastCalc.current = Date.now();
+      pvLastKey.current = pvCalcKey;
+      fetchProVision(coin, merged, pvShortSec && pvHtfCandles ? { candles: pvHtfCandles, shortSec: pvShortSec } : undefined)
+        .then((r) => { if (alive) { setPvBase(r); setPvServerLocked(false); } })
+        .catch((e) => {
+          if (!alive) return;
+          if (e instanceof ProVisionLockedError) {
+            setPvBase(null);
+            setPvServerLocked(true);
+            // Refresh the allowance so the banner shows the right coins.
+            window.dispatchEvent(new Event("provision-coins-change"));
+          }
+        });
+    }, wait);
+    return () => { alive = false; clearTimeout(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pvActive, chartGeneration, coin, interval, pvLiveTail]);
+  }, [pvActive, pvCalcKey, pvLiveTail]);
 
   // Multi-timeframe column: the verdict on 5m / 15m / 1h / 4h / 1D,
-  // refreshed every minute.
+  // refreshed every minute (one server call for all five).
   const [pvMtf, setPvMtf] = useState<{ label: string; iv: TimeInterval; bias: "bull" | "bear" | "neutral" | null; checks: ("bull" | "bear" | "neutral")[]; strength: number | null }[]>([]);
   useEffect(() => {
-    if (!pvActive) { setPvMtf([]); return; }
+    if (!pvActive || pvServerLocked) { setPvMtf([]); return; }
     let alive = true;
     const frames: [TimeInterval, string][] = [["5min", "5m"], ["15min", "15m"], ["1h", "1h"], ["4h", "4h"], ["1day", "1D"]];
     const load = async () => {
-      const out = await Promise.all(frames.map(async ([iv, label]) => {
-        try {
-          const cs = await coinglass.getHistoricalCandles(iv, coin);
-          const r = computeProVision(cs);
-          return { label, iv, bias: r ? r.verdict.bias : null, checks: r ? r.checks : [], strength: r ? r.bullStrength : null };
-        } catch { return { label, iv, bias: null, checks: [], strength: null }; }
+      const sets = await Promise.all(frames.map(async ([iv, label]) => {
+        try { return { label, iv, candles: await coinglass.getHistoricalCandles(iv, coin) }; }
+        catch { return { label, iv, candles: [] as CandleDataPoint[] }; }
       }));
-      if (alive) setPvMtf(out);
+      try {
+        const rows = await fetchProVisionMtf(coin, sets.map((s) => ({ label: s.label, candles: s.candles })));
+        if (!alive) return;
+        setPvMtf(sets.map((s) => {
+          const r = rows.find((x) => x.label === s.label);
+          return { label: s.label, iv: s.iv, bias: r?.bias ?? null, checks: r?.checks ?? [], strength: r?.strength ?? null };
+        }));
+      } catch { /* keep the last read */ }
     };
     load();
     const id = window.setInterval(load, 60_000);
     return () => { alive = false; clearInterval(id); };
-  }, [pvActive, coin]);
-  // Short charts (1s/1m/5m): signals come from the 15m chart instead — the
-  // short candles' own signals only broke even after fees in backtests.
-  const pvShortSec = interval === "1sec" ? 1 : interval === "1min" ? 60 : interval === "5min" ? 300 : 0;
-  const [pvHtf, setPvHtf] = useState<PvResult | null>(null);
-  useEffect(() => {
-    if (!pvActive || !pvShortSec) { setPvHtf(null); return; }
-    let alive = true;
-    coinglass.getHistoricalCandles("15min", coin, 520 * 900)
-      .then((cs) => { if (alive) setPvHtf(computeProVision(cs)); })
-      .catch(() => { if (alive) setPvHtf(null); });
-    return () => { alive = false; };
-    // Refetch when the chart reloads (cache keeps this cheap).
-  }, [pvActive, pvShortSec, coin, chartGeneration]);
-  const pvBase = useMemo<PvResult | null>(() => {
-    if (!pvActive) return null;
-    if (!pvShortSec || !pvHtf) return pvLocal;
-    // Too few short candles for a local read (e.g. 1m loads 60): use the
-    // 15m read alone, without local trend colors/spikes.
-    const base: PvResult = pvLocal ?? { ...pvHtf, trend: [], spikes: [], spikeGuard: null, rangeBox: null, rangeSignals: [], ribbon: { lines: [], bull: [] }, flips: [], barSec: pvShortSec };
-    return mergeHigherTimeframe(base, pvHtf, 900, "15m");
-  }, [pvActive, pvShortSec, pvHtf, pvLocal]);
+  }, [pvActive, pvServerLocked, coin]);
 
   // Scheduled macro events (FOMC, CPI, jobs…): warn ahead, and pause
   // signals from 30 min before to 1 h after each release.
@@ -4278,18 +4311,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         />
         <span>{t("chart.ma200")}</span>
       </label>
-      <label className="indicators-menu-item">
-        <input
-          type="checkbox"
-          checked={showCME}
-          onChange={(e) => setShowCME(e.target.checked)}
-        />
-        <span
-          className="indicators-menu-dot"
-          style={{ background: "rgba(251,191,36,0.85)" }}
-        />
-        <span>{t("chart.cmeGaps")}</span>
-      </label>
       {/* Gann Pivots indicator temporarily hidden from the menu (user
           request) — underlying detection/toggle state left intact below,
           just not reachable from the UI, so re-enabling is a one-line
@@ -4392,7 +4413,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     { key: "ma20", label: t("chart.ma20"), color: "#818cf8", checked: showMA20, onToggle: () => setShowMA20((v) => !v) },
     { key: "ma50", label: t("chart.ma50"), color: "#f472b6", checked: showMA50, onToggle: () => setShowMA50((v) => !v) },
     { key: "ma200", label: t("chart.ma200"), color: "#facc15", checked: showMA200, onToggle: () => setShowMA200((v) => !v) },
-    { key: "cme", label: t("chart.cmeGaps"), color: "rgba(251,191,36,0.85)", checked: showCME, onToggle: () => setShowCME((v) => !v) },
     { key: "fib", label: "Fibonacci Levels", color: "rgba(251,191,36,0.85)", checked: showFib, pro: true, onToggle: () => { if (!isPaid) { onOpenUpgrade?.("pro"); return; } setShowFib((v) => !v); } },
     { key: "sr", label: "Support / Resistance", color: "rgba(251,113,133,0.75)", checked: showSR, onToggle: () => setShowSR((v) => !v) },
     { key: "dayhl", label: "24H High/Low", color: "#facc15", checked: showDayHL, onToggle: () => setShowDayHL((v) => !v) },
@@ -6592,33 +6612,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </div>
         <span className="chart-bar-divider" />
               <div className="chart-bar-stats">
-                {/* 24H change as its own stat (was a line under the price). */}
-                <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Change</span>
-                  <span className={`chart-bar-stat-value${dayChangePercent === null ? "" : dayChangePercent >= 0 ? " up" : " down"}`}>
-                    {dayChangeAbs !== null && dayChangePercent !== null
-                      ? `${dayChangeAbs >= 0 ? "+" : "-"}${formatLivePrice(Math.abs(dayChangeAbs))} / ${dayChangePercent >= 0 ? "+" : ""}${dayChangePercent.toFixed(2)}%`
-                      : "—"}
-                    {dayChangePercent !== null && (
-                      <span className={`chart-bar-arrow ${dayChangePercent >= 0 ? "up" : "down"}`}>{dayChangePercent >= 0 ? "▲" : "▼"}</span>
-                    )}
-                  </span>
-                </div>
-                <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} {t("chart.high", "High")}</span>
-                  <span className="chart-bar-stat-value">{displayDayHigh !== null ? formatLivePrice(displayDayHigh) : "—"}<span className="chart-bar-arrow up">▲</span></span>
-                </div>
-                <div className="chart-bar-stat">
-                  <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} {t("chart.low", "Low")}</span>
-                  <span className="chart-bar-stat-value">{displayDayLow !== null ? formatLivePrice(displayDayLow) : "—"}<span className="chart-bar-arrow down">▼</span></span>
-                </div>
+                {/* Change / High / Low were removed from this row (still in
+                    the full stats sheet). 24h Vol sits last. */}
+                {headerStats}
                 {quoteVolume24h !== undefined && (
                   <div className="chart-bar-stat">
                     <span className="chart-bar-stat-label">24h Vol</span>
                     <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                   </div>
                 )}
-                {headerStats}
               </div>
             </div>
             {/* Mobile: visible scroll indicator for the stats row (iOS
@@ -7578,7 +7580,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <div className="chart-tv-ohlc-row">
                   {/* Coin icon + title: tap to switch coin. */}
                   <span
-                    className="chart-tv-ohlc-pick"
+                    className="chart-tv-ohlc-pick chart-coin-pick"
                     role="button"
                     tabIndex={0}
                     aria-label="Switch coin"
@@ -7594,7 +7596,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <span className="chart-tv-ohlc-title">
                       {COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar · {INTERVAL_SHORT[interval]} · CRYPTO
                     </span>
-                    <svg className="chart-tv-ohlc-pick-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                    <span className="chart-coin-pick-chev" aria-hidden="true">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                    </span>
                   </span>
                   <span className={`chart-tv-ohlc-dot${changeUp ? " up" : " down"}`} />
                   <span className="chart-tv-ohlc-values">
@@ -7642,7 +7646,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               height. */}
           {pageMode && !isDesktopWidth && (
             <div className="chart-mobile-top-header">
-              <div className="chart-mobile-top-row">
+              <div
+                className="chart-mobile-top-row chart-coin-pick"
+                role="button"
+                tabIndex={0}
+                aria-label="Switch coin"
+                onClick={(e) => { hapticTap(); onOpenCoinPicker?.(e.currentTarget); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenCoinPicker?.(e.currentTarget); } }}
+              >
                 <span
                   className="chart-mobile-top-icon"
                   style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}
@@ -7651,6 +7662,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
                 <span className="chart-mobile-top-name">{COIN_FULL_NAME[coin] ?? coin} / U.S. Dollar</span>
                 <span className="chart-mobile-top-live" aria-hidden="true" />
+                <span className="chart-coin-pick-chev" aria-hidden="true">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                </span>
               </div>
               {currentPrice !== null && (
                 <div className="chart-mobile-top-price-row">
@@ -7914,26 +7928,46 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {/* ProVision switched on but not unlocked for this coin (Pro's 4th
             coin today, or the free trial ended) — say so and offer the way in. */}
-        {pvLocked && pvLockReason && (
+        {pvTrialLeftMs !== null && (() => {
+          const h = Math.floor(pvTrialLeftMs / 3_600_000);
+          const left = h >= 24 ? `${Math.ceil(h / 24)} day${Math.ceil(h / 24) === 1 ? "" : "s"}` : h >= 1 ? `${h}h` : "under an hour";
+          return (
+            <button
+              type="button"
+              className="pv-locked pv-locked--trial"
+              onClick={() => openProVisionPaywall({ reason: "trial-active", coin })}
+            >
+              <span className="pv-locked-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+              </span>
+              <span className="pv-locked-text">
+                <strong>ProVision free trial · {left} left</strong>
+                <span>Keep every coin and timeframe for $99/year.</span>
+              </span>
+              <span className="pv-locked-cta">Keep it</span>
+            </button>
+          );
+        })()}
+        {pvBannerReason && (
           <button
             type="button"
             className="pv-locked"
-            onClick={() => openProVisionPaywall({ reason: pvLockReason, coin })}
+            onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}
           >
             <span className="pv-locked-icon" aria-hidden="true">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
             </span>
             <span className="pv-locked-text">
               <strong>
-                {pvLockReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvLockReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
+                {pvBannerReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvBannerReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
               </strong>
               <span>
-                {pvLockReason === "pro-limit"
+                {pvBannerReason === "pro-limit"
                   ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
-                  : pvLockReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
+                  : pvBannerReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
               </span>
             </span>
-            <span className="pv-locked-cta">{pvLockReason === "trial-available" || pvLockReason === "signin" ? "Start" : "Unlock"}</span>
+            <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? "Start" : "Unlock"}</span>
           </button>
         )}
 
@@ -8062,7 +8096,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     {/* Header: title + soft subtitle, status pill on the right. */}
                     <div className={`pvl-head pvs--${vb}`}>
                       <span className="pvl-head-text">
-                        <span className="pvl-sub">
+                        <span className="pvl-sub" data-cap="Indicators">
                           <span key={`lb:${leanBull}`} className="pvl-count pvl-count--bull">
                             <span className="pvl-count-arrow" aria-hidden="true">▲</span>
                             <span className="pvl-count-n">{leanBull}</span>
@@ -8078,6 +8112,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           )}
                           <span className="pvl-time">
                             <span className="pvl-time-dot" aria-hidden="true" />
+                            <span className="pvl-desc">Updated </span>
                             {pvUpdatedAt ? new Date(pvUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "connecting…"}
                           </span>
                         </span>
@@ -8085,6 +8120,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <span className="pvl-meta">
                           <span
                             className="pvl-meta-flow"
+                            data-cap="Order flow · last 20 candles"
                             title={pvResult.volume.real ? "Real market-buy vs market-sell volume, last 20 candles" : "Estimated from candle colour, last 20 candles"}
                           >
                             {/* Mini half-circle gauge: green = buyers share, red = sellers, needle at the split. */}
@@ -8109,9 +8145,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                             <span className={pvResult.volume.sellPct > pvResult.volume.buyPct ? "pvl-meta-down pvl-meta-lead" : "pvl-meta-down"}>
                               Sellers {pvResult.volume.sellPct}%
                             </span>
+                            <span className="pvl-desc pvl-desc--soft">
+                              {pvResult.volume.bias === "bull" ? "buyers in control" : pvResult.volume.bias === "bear" ? "sellers in control" : "evenly matched"}
+                            </span>
                           </span>
                           {pvMtf.length > 0 && (
-                            <span className="pvl-meta-tfs">
+                            <span className="pvl-meta-tfs" data-cap="Timeframes">
                               {pvMtf.map((m) => {
                                 const pct = m.strength === null ? 0 : m.bias === "bear" ? 100 - m.strength : m.bias === "bull" ? m.strength : 50;
                                 return (
@@ -8126,6 +8165,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                   </span>
                                 );
                               })}
+                              {(() => {
+                                const up = pvMtf.filter((m) => m.bias === "bull").length;
+                                const dn = pvMtf.filter((m) => m.bias === "bear").length;
+                                const txt = up > dn ? `${up} of ${pvMtf.length} bullish` : dn > up ? `${dn} of ${pvMtf.length} bearish` : "mixed";
+                                return <span className="pvl-desc pvl-desc--soft">{txt}</span>;
+                              })()}
                             </span>
                           )}
                         </span>
@@ -8393,13 +8438,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <span className="chart-bar-stat-label">{INTERVAL_SHORT[interval]} Low</span>
                   <span className="chart-bar-stat-value">{displayDayLow !== null ? formatLivePrice(displayDayLow) : "—"}</span>
                 </div>
+                {headerStats}
                 {quoteVolume24h !== undefined && (
                   <div className="chart-bar-stat">
                     <span className="chart-bar-stat-label">24h Vol</span>
                     <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
                   </div>
                 )}
-                {headerStats}
               </div>
           </BottomSheet>
         )}

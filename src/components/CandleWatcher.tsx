@@ -4722,7 +4722,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                     <div className="chart-tv-ohlc-row">
                       {/* Coin icon + title: tap to switch coin. */}
                       <span
-                        className="chart-tv-ohlc-pick"
+                        className="chart-tv-ohlc-pick chart-coin-pick"
                         role="button"
                         tabIndex={0}
                         aria-label="Switch coin"
@@ -4735,7 +4735,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         <span className="chart-tv-ohlc-title">
                           {name} / U.S. Dollar · {interval.label.toUpperCase()} · CRYPTO
                         </span>
-                        <svg className="chart-tv-ohlc-pick-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        <span className="chart-coin-pick-chev" aria-hidden="true">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                        </span>
                       </span>
                       <span className={`chart-tv-ohlc-dot${up ? " up" : " down"}`} />
                       <span className="chart-tv-ohlc-values">

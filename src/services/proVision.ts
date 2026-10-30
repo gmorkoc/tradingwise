@@ -1,11 +1,9 @@
-// Pro Vision — the Trade chart's signal layer (trend-colored candles,
-// buy/sell signals with an invalidation zone, the "Signal check" dashboard
-// and a track record of past signals). Everything is computed locally from
-// the chart's own candles; no network, no AI quota.
-//
-// Volume pressure uses REAL taker-buy volume when the candles come from
-// Binance (kline field 9: volume bought by market orders), and falls back to
-// an estimate (green candle = buying, red = selling) when they don't.
+// ProVision — client side. The signal engine itself runs ONLY on the server
+// (supabase/functions/provision-compute + _shared/proVisionEngine.ts), after
+// the server checks the user's access. This file has the result types, the
+// call to that function, and the EMA ribbon (a standard indicator the app
+// draws itself to keep responses small).
+import { supabase } from "./supabase";
 
 export interface PvCandle {
   time: number;
@@ -32,19 +30,10 @@ export interface PvSignal {
   time: number;
   side: "buy" | "sell";
   price: number;
-  /** Price that proves the signal wrong (swing high for a sell, low for a buy). */
   invalidation: number;
-  /** How many of the 7 checks agreed when it fired. */
   agree: number;
-  /** true = moved ≥1 ATR in its favour first; false = hit invalidation first; null = still open. */
   worked: boolean | null;
-  /**
-   * Simulated trade result in %, after fees: entry at the signal's close,
-   * stop at the invalidation line, take profit at +1 ATR, otherwise exit at
-   * the close 20 candles later. null while the trade is still open.
-   */
   pnlPct: number | null;
-  /** Where the simulated trade closed (for the "TP" marker when it won). */
   exitTime?: number;
   exitPrice?: number;
 }
@@ -60,140 +49,48 @@ export interface PvStats {
   worked: number;
   failed: number;
   open: number;
-  /** worked / (worked + failed), 0–100; null when nothing has resolved yet. */
   winRate: number | null;
-  /** Average winning / losing simulated trade, % after fees (loss is negative). */
   avgWinPct: number | null;
   avgLossPct: number | null;
-  /** Average result per trade, % after fees — positive means it paid off. */
   perTradePct: number | null;
-  /** Number of closed simulated trades behind the averages. */
   trades: number;
 }
 
 export interface PvResult {
-  /** Per-candle trend colour key, aligned with the input array. */
+  /** Per-candle trend colour key, aligned with the chart's candles. */
   trend: Bias[];
-  /** 0–100, share of bullish weight (100 = all bull). */
   bullStrength: number;
   tiles: PvTile[];
   volume: { buyPct: number; sellPct: number; bias: Bias; real: boolean; buyVol: number; sellVol: number };
   verdict: { bias: Bias; agree: number; total: number };
-  /** The 7 checks on the latest candle: MA, DMI, Ichimoku, RSI, Stochastic, MACD, Volume. */
   checks: Bias[];
-  /** Same 7 checks as 0–1 strengths (0 = strongly bearish, 0.5 = neutral, 1 = strongly bullish) — the radar's shape. */
   checkStrength: number[];
-  /** Each check's last ~30 candles of its underlying value (for sparklines). */
   checkSeries: number[][];
-  /** Each check's headline number + unit, e.g. { big: "48", unit: "RSI" }. */
   checkReadout: { big: string; unit: string }[];
-  /** The 0–100 score over the last ~30 candles (for the hero sparkline). */
   scoreSeries: number[];
-  /** Most recent signals to draw on the chart. */
   signals: PvSignal[];
-  /** Track record over the whole loaded history. */
   stats: PvStats;
-  /** The latest signal's live invalidation zone, if it's still valid. */
   zone: { from: number; side: "buy" | "sell"; entry: number; invalidation: number; deltaVolPct: number; real: boolean } | null;
-  /** Market regime right now: trending, or choppy/sideways (signals paused). */
   regime: { kind: "trend" | "range"; chop: number; adx: number };
-  /** Live range box while sideways: ceiling/floor and where it started. */
   rangeBox: { from: number; top: number; bottom: number } | null;
-  /** Range-mode signals (buy near the floor / sell near the ceiling). */
   rangeSignals: PvSignal[];
-  /** Track record of range-mode signals over the loaded history. */
   rangeStats: PvStats;
-  /** Recent shock candles (news-like spikes) to mark on the chart. */
   spikes: { time: number; up: boolean; size: number; volX: number }[];
-  /** Set while signals are paused after a spike. */
   spikeGuard: { barsLeft: number; up: boolean } | null;
-  /** Candle length in seconds (to warn on very short timeframes). */
   barSec: number;
-  /** Low-liquidity market (< $10M traded in 24h): signals switched off + warning. */
   liquidity: { thin: boolean; quoteVol24h: number };
-  /** Set when signals/track record come from a higher timeframe (e.g. "15m" on a 5m chart). */
   signalSource?: string;
-  /**
-   * Painted trend ribbon: one EMA series per PV_RIBBON_LENGTHS entry,
-   * aligned with the input candles, plus each candle's ribbon color
-   * (bull = fastest EMA above slowest).
-   */
+  /** EMA fan aligned with the chart's candles (drawn by the app). */
   ribbon: { lines: number[][]; bull: boolean[] };
-  /** Ribbon color flips (fast EMA crossing the slow one) — the chart's Buy / Sell labels. */
   flips: { time: number; side: "buy" | "sell" }[];
 }
 
-/**
- * Short charts (≤5m): take signals, zone, track record and the Signal check
- * from the 15m chart and place them on this chart. Each 15m signal is drawn
- * on the last short candle inside its 15m candle (when it actually fired).
- * Trend colors, regime, spikes and liquidity stay from the chart itself.
- */
-export function mergeHigherTimeframe(local: PvResult, htf: PvResult, htfBarSec: number, label: string): PvResult {
-  const shift = Math.max(0, htfBarSec - local.barSec);
-  const at = (t: number) => t + shift;
-  return {
-    ...local,
-    tiles: htf.tiles,
-    verdict: htf.verdict,
-    checks: htf.checks,
-    checkStrength: htf.checkStrength,
-    checkSeries: htf.checkSeries,
-    checkReadout: htf.checkReadout,
-    scoreSeries: htf.scoreSeries,
-    volume: htf.volume,
-    bullStrength: htf.bullStrength,
-    stats: htf.stats,
-    signals: htf.signals.map((s) => ({ ...s, time: at(s.time), ...(s.exitTime ? { exitTime: at(s.exitTime) } : {}) })),
-    zone: htf.zone ? { ...htf.zone, from: at(htf.zone.from) } : null,
-    signalSource: label,
-  };
-}
+export interface PvMtfRow { label: string; bias: Bias | null; checks: Bias[]; strength: number | null }
 
-export interface PvOptions {
-  /** Also grey candles + block signals in choppy markets (default false — see computeProVision). */
-  chopFilter?: boolean;
-  /** Block signals that fade a fresh news-like spike (default true). */
-  spikeGuard?: boolean;
-  /** Tuning (backtests): minimum ADX at the signal, EMA50 alignment, confirm bars, spike mode. */
-  minAdx?: number;
-  /** Cap the stop at this many ATRs from entry (floor 0.5 ATR). */
-  stopCapAtr?: number;
-  /** Take profit at this multiple of the risk (entry→stop); default 1 ATR. */
-  targetR?: number;
-  /** Higher-timeframe filter: trend of EMA(20×k) must agree (k ≈ HTF/current). */
-  htfK?: number;
-  /** Block signals while the market is sideways (Choppiness + ADX). */
-  rangeBlock?: boolean;
-  /** Require recent volume ≥ this × its 50-candle average. */
-  minVolX?: number;
-  /** Bars before a trade times out (default 20). */
-  maxBars?: number;
-  /** "target" = fixed take-profit; "trail" = ride the trend with a trailing ATR stop. */
-  exitMode?: "target" | "trail";
-  /** Trailing stop distance in ATRs (trail mode). */
-  trailAtr?: number;
-  /** Checks (of 7) that must agree for a signal (default 5). */
-  minAgree?: number;
-  /** Range mode: lookback for the box, edge zone (0–0.5 of its height), target ("mid" | "far"). */
-  rangeLookback?: number;
-  rangeEdge?: number;
-  rangeTarget?: "mid" | "far";
-  emaAlign?: boolean;
-  confirmBars?: number;
-  spikeMode?: "any" | "against";
-}
+/** Most candles sent per request (the server's cap). */
+const MAX_SEND = 1500;
 
-const MIN_AGREE = 5; // of 7 checks, in the signal's direction
-const N_CHECKS = 7;
-// Choppiness Index (14): above ~61.8 = sideways; below ~38.2 = trending.
-const CHOP_RANGE = 58;
-const ADX_RANGE = 20;
-// A "spike": candle range ≥ 3× the prior ATR, or volume ≥ 3.5× the prior
-// 20-candle average with a body ≥ 1.5× ATR.
-const SPIKE_RANGE_X = 3;
-const SPIKE_VOL_X = 3.5;
-const SPIKE_COOLDOWN = 5;
+const wire = (cs: PvCandle[]) => cs.map((b) => [b.time, b.open, b.high, b.low, b.close, b.volume ?? -1, b.takerBuyVolume ?? -1]);
 
 function ema(vals: number[], n: number): number[] {
   const k = 2 / (n + 1);
@@ -206,537 +103,64 @@ function ema(vals: number[], n: number): number[] {
   return out;
 }
 
-function hiLo(c: PvCandle[], from: number, to: number) {
-  let hi = -Infinity, lo = Infinity;
-  for (let j = Math.max(0, from); j <= to; j++) { hi = Math.max(hi, c[j].high); lo = Math.min(lo, c[j].low); }
-  return { hi, lo };
+/** The painted EMA ribbon over the chart's candles. */
+export function computeRibbon(cs: PvCandle[]): PvResult["ribbon"] {
+  const close = cs.map((b) => b.close);
+  const lines = PV_RIBBON_LENGTHS.map((len) => ema(close, len));
+  const fast = lines[0] ?? [], slow = lines[lines.length - 1] ?? [];
+  return { lines, bull: close.map((_, i) => fast[i] >= slow[i]) };
 }
 
-/** Buy / sell volume for one candle — real taker split when available. */
-function split(b: PvCandle): { buy: number; sell: number; real: boolean } {
-  const v = b.volume ?? 0;
-  const t = b.takerBuyVolume;
-  if (v > 0 && t !== undefined && Number.isFinite(t) && t >= 0 && t <= v * 1.0001) {
-    return { buy: t, sell: Math.max(0, v - t), real: true };
-  }
-  const w = v > 0 ? v : 1;
-  return b.close >= b.open ? { buy: w, sell: 0, real: false } : { buy: 0, sell: w, real: false };
+export class ProVisionLockedError extends Error {
+  constructor(public reason: "signin" | "locked", message: string) { super(message); }
 }
 
-export function computeProVision(c: PvCandle[], opts: PvOptions = {}): PvResult | null {
-  // Backtests: greying/blocking on the Choppiness Index cost good intraday
-  // signals (15m 68% → 59%), so it's off by default — sideways markets are
-  // instead flagged in the UI (regime), and intraday whipsaw is handled by
-  // the 3-candle confirmation + ADX ≥ 20 below.
-  const useChop = opts.chopFilter === true;
-  const useSpike = opts.spikeGuard !== false;
-  const n = c.length;
-  if (n < 60) return null;
-  const close = c.map((b) => b.close);
-  const last = n - 1;
-
-  // ── Shared series ──
-  const tr = c.map((b, i) => i === 0 ? b.high - b.low
-    : Math.max(b.high - b.low, Math.abs(b.high - c[i - 1].close), Math.abs(b.low - c[i - 1].close)));
-  const atr = ema(tr, 14);
-  const e20 = ema(close, 20);
-  const e200 = ema(close, Math.min(200, Math.max(50, Math.floor(n * 0.6))));
-
-  // DMI / ADX (14)
-  const pdm: number[] = [0], ndm: number[] = [0];
-  for (let i = 1; i < n; i++) {
-    const up = c[i].high - c[i - 1].high, dn = c[i - 1].low - c[i].low;
-    pdm.push(up > dn && up > 0 ? up : 0);
-    ndm.push(dn > up && dn > 0 ? dn : 0);
+async function call(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("provision-compute", { body });
+  if (error) {
+    // FunctionsHttpError carries the response — surface 401/403 as "locked".
+    const res = (error as { context?: Response }).context;
+    if (res && (res.status === 401 || res.status === 403)) {
+      let msg = "ProVision is locked";
+      try { msg = (await res.json()).error ?? msg; } catch { /* ignore */ }
+      throw new ProVisionLockedError(res.status === 401 ? "signin" : "locked", msg);
+    }
+    throw error;
   }
-  const sp = ema(pdm, 14), sn = ema(ndm, 14);
-  const pdi = sp.map((v, i) => (atr[i] ? (100 * v) / atr[i] : 0));
-  const ndi = sn.map((v, i) => (atr[i] ? (100 * v) / atr[i] : 0));
-  const adxArr = ema(pdi.map((p, i) => (p + ndi[i] ? (100 * Math.abs(p - ndi[i])) / (p + ndi[i]) : 0)), 14);
+  return data as { result?: (Omit<PvResult, "trend" | "ribbon"> & { trend: string }) | null; mtf?: PvMtfRow[] };
+}
 
-  // ── Regime: Choppiness Index (14) + ADX → trending vs sideways ──
-  const chopArr: number[] = c.map((_, i) => {
-    if (i < 14) return 50;
-    let sumTr = 0;
-    for (let j = i - 13; j <= i; j++) sumTr += tr[j];
-    const { hi, lo } = hiLo(c, i - 13, i);
-    return hi > lo ? (100 * Math.log10(sumTr / (hi - lo))) / Math.log10(14) : 50;
+const TREND_DECODE: Record<string, Bias> = { b: "bull", r: "bear", n: "neutral" };
+
+/**
+ * ProVision for the chart's candles (computed on the server). `htf` = 15m
+ * candles for short charts, whose signals come from 15m. Results are lined
+ * up with `candles` (older bars beyond the cap just get no trend colour).
+ */
+export async function fetchProVision(coin: string, candles: PvCandle[], htf?: { candles: PvCandle[]; shortSec: number }): Promise<PvResult | null> {
+  const sent = candles.slice(-MAX_SEND);
+  const offset = candles.length - sent.length;
+  const data = await call({
+    coin,
+    main: wire(sent),
+    ...(htf ? { htf: wire(htf.candles.slice(-MAX_SEND)), shortSec: htf.shortSec } : {}),
   });
-  const rangeRaw = (i: number) => chopArr[i] > CHOP_RANGE && adxArr[i] < ADX_RANGE + 5;
-  const isRange = (i: number) => useChop && rangeRaw(i);
-
-  // ── Spikes: outsized candle range, or a volume burst with a big body ──
-  const vols = c.map((b) => b.volume ?? 0);
-  const spikeAt: boolean[] = c.map((b, i) => {
-    if (i < 21 || !atr[i - 1]) return false;
-    const range = b.high - b.low;
-    let avgV = 0;
-    for (let j = i - 20; j < i; j++) avgV += vols[j];
-    avgV /= 20;
-    const body = Math.abs(b.close - b.open);
-    return range >= SPIKE_RANGE_X * atr[i - 1] || (avgV > 0 && vols[i] >= SPIKE_VOL_X * avgV && body >= 1.5 * atr[i - 1]);
-  });
-  // Interval-adaptive defaults (from backtests on BTC/ETH/SOL/XRP/DOGE):
-  // intraday (< 4h) whipsaws most, so it needs a 3-candle confirmation and
-  // ADX ≥ 20; 4h/1D signals were already clean and those extra filters only
-  // cost good signals there.
-  const gaps = c.slice(-50).map((b, i, a) => (i ? b.time - a[i - 1].time : 0)).filter((g) => g > 0).sort((a, b) => a - b);
-  const barSec = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 3600;
-  const intraday = barSec < 4 * 3600;
-  // Liquidity: dollar volume over the last 24h of candles. Below $10M the
-  // market is "thin" — noisier readings, so a stricter 6-of-7 agreement.
-  const bars24h = Math.max(1, Math.round(86400 / barSec));
-  let quoteVol24h = 0;
-  for (let i = Math.max(0, n - bars24h); i < n; i++) quoteVol24h += (c[i].volume ?? 0) * c[i].close;
-  const thin = quoteVol24h > 0 && quoteVol24h < 10_000_000;
-  opts = {
-    // Backtested defaults (10 coins × 5m–1D, profit after fees):
-    // ride winners with a 3-ATR trailing stop / trend-turn exit (≤60 candles)
-    // instead of a fixed small target, and require the higher-timeframe
-    // trend (EMA of 4× the length) to agree.
-    // …except 1m/5m, whose moves are too small to ride after fees: a quick
-    // fixed target (one ATR, ≤20 candles) did better there.
-    exitMode: barSec <= 300 ? "target" : "trail",
-    trailAtr: 3,
-    maxBars: barSec <= 300 ? 20 : 60,
-    htfK: 4,
-    confirmBars: intraday ? 3 : 2,
-    minAdx: intraday ? 20 : 0,
-    rangeBlock: intraday,
-    minAgree: MIN_AGREE,
-    ...opts,
-  };
-  const spikeMode = opts.spikeMode ?? "against";
-  // A recent spike blocks a signal — in "against" mode only when the signal
-  // goes the opposite way to the spike (a fade into a news move), so a
-  // breakout that starts with a big candle can still signal.
-  const spikeRecent = (i: number, side: "buy" | "sell") => {
-    if (!useSpike) return false;
-    for (let j = Math.max(0, i - SPIKE_COOLDOWN + 1); j <= i; j++) {
-      if (!spikeAt[j]) continue;
-      if (spikeMode === "any") return true;
-      const up = c[j].close >= c[j].open;
-      if ((side === "buy" && !up) || (side === "sell" && up)) return true;
-    }
-    return false;
-  };
-  const e50 = ema(close, 50);
-
-  // Trend-colored candles: EMA20 slope over 3 bars, scaled by ATR — grey
-  // whenever the market is choppy/sideways (no trend to color).
-  const trend: Bias[] = c.map((_, i) => {
-    if (i < 3 || !atr[i] || isRange(i)) return "neutral";
-    const s = (e20[i] - e20[i - 3]) / atr[i];
-    return s > 0.25 ? "bull" : s < -0.25 ? "bear" : "neutral";
-  });
-
-  // RSI (14, Wilder)
-  const rsiArr: number[] = [50];
-  let g = 0, l = 0;
-  for (let i = 1; i < n; i++) {
-    const d = close[i] - close[i - 1];
-    const gi = Math.max(d, 0), li = Math.max(-d, 0);
-    if (i <= 14) { g += gi / 14; l += li / 14; } else { g = (g * 13 + gi) / 14; l = (l * 13 + li) / 14; }
-    rsiArr.push(l === 0 ? 100 : 100 - 100 / (1 + g / l));
-  }
-
-  // Stochastic (14,3,3)
-  const rawK: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const { hi, lo } = hiLo(c, i - 13, i);
-    rawK.push(hi === lo ? 50 : ((close[i] - lo) / (hi - lo)) * 100);
-  }
-  const avg3 = (a: number[], i: number) => (a[i] + a[Math.max(0, i - 1)] + a[Math.max(0, i - 2)]) / 3;
-  const kArr = rawK.map((_, i) => avg3(rawK, i));
-  const dArr = kArr.map((_, i) => avg3(kArr, i));
-
-  // MACD (12,26,9)
-  const e12 = ema(close, 12), e26 = ema(close, 26);
-  const macd = e12.map((v, i) => v - e26[i]);
-  const sig = ema(macd, 9);
-  const hist = macd.map((v, i) => v - sig[i]);
-
-  // Ichimoku: price vs the cloud plotted 26 bars back.
-  const mid = (from: number, to: number) => { const { hi, lo } = hiLo(c, from, to); return (hi + lo) / 2; };
-  const cloudAt = (i: number) => {
-    const k = Math.max(0, i - 26);
-    const a = (mid(k - 8, k) + mid(k - 25, k)) / 2, b = mid(k - 51, k);
-    return { top: Math.max(a, b), bot: Math.min(a, b) };
-  };
-
-  // Volume pressure: rolling 20-bar buy share.
-  const sp20: { buy: number; sell: number }[] = [];
-  let anyReal = false; let rb = 0, rs = 0;
-  const parts = c.map((b) => { const s = split(b); if (s.real) anyReal = true; return s; });
-  for (let i = 0; i < n; i++) {
-    rb += parts[i].buy; rs += parts[i].sell;
-    if (i >= 20) { rb -= parts[i - 20].buy; rs -= parts[i - 20].sell; }
-    sp20.push({ buy: rb, sell: rs });
-  }
-
-  // ── Per-bar biases for the 7 checks ──
-  const biasesAt = (i: number): Bias[] => {
-    const px = close[i];
-    const ma: Bias = px > e20[i] && e20[i] > e200[i] ? "bull" : px < e20[i] && e20[i] < e200[i] ? "bear" : "neutral";
-    const dmi: Bias = adxArr[i] < 18 ? "neutral" : pdi[i] > ndi[i] ? "bull" : "bear";
-    const cl = cloudAt(i);
-    const ichi: Bias = px > cl.top ? "bull" : px < cl.bot ? "bear" : "neutral";
-    const r = rsiArr[i];
-    const rsi: Bias = r > 55 ? "bull" : r < 45 ? "bear" : "neutral";
-    const k = kArr[i];
-    const st: Bias = k >= 80 || k <= 20 ? "neutral" : k > dArr[i] ? "bull" : "bear";
-    const md: Bias = hist[i] > 0 ? "bull" : hist[i] < 0 ? "bear" : "neutral";
-    const t = sp20[i].buy + sp20[i].sell;
-    const bp = t ? sp20[i].buy / t : 0.5;
-    const vol: Bias = bp >= 0.55 ? "bull" : bp <= 0.45 ? "bear" : "neutral";
-    return [ma, dmi, ichi, rsi, st, md, vol];
-  };
-
-  // ── Current tiles (last bar) ──
-  const [maB, dmiB, ichiB, rsiB, stB, macdB, volB] = biasesAt(last);
-  const adx = adxArr[last], rsi = rsiArr[last], kS = kArr[last];
-  const histNow = hist[last], histPrev = hist[last - 1];
-  const tiles: PvTile[] = [
-    {
-      key: "ma", label: "MA 20/200", bias: maB,
-      value: maB === "bull" ? "Strong ↑" : maB === "bear" ? "Strong ↓" : "Mixed",
-      detail: "Price compared with the 20 and 200 moving averages. Price above a rising 20 that's above the 200 is a strong uptrend; the reverse is a strong downtrend.",
-    },
-    {
-      key: "dmi", label: "DMI", bias: dmiB,
-      value: dmiB === "neutral" ? "No trend" : `${adx > 25 ? "Strong" : "Weak"} ${dmiB === "bull" ? "↑" : "↓"}`,
-      detail: `Directional movement: which side is pushing harder (+DI ${pdi[last].toFixed(0)} vs −DI ${ndi[last].toFixed(0)}) and how strong the trend is (ADX ${adx.toFixed(0)}; above 25 is a strong trend).`,
-    },
-    {
-      key: "ichimoku", label: "Ichimoku", bias: ichiB,
-      value: ichiB === "bull" ? "Above cloud" : ichiB === "bear" ? "Below cloud" : "In cloud",
-      detail: "Ichimoku cloud: price above the cloud favours buyers, below it favours sellers, inside it means no clear trend.",
-    },
-    {
-      key: "rsi", label: `RSI ${rsi.toFixed(0)}`, bias: rsiB,
-      value: rsi >= 70 ? "Overbought" : rsi <= 30 ? "Oversold" : rsiB === "bull" ? "Bullish" : rsiB === "bear" ? "Bearish" : "Neutral",
-      detail: "Relative Strength Index (14): above 55 leans bullish, below 45 bearish. Above 70 is overbought, below 30 oversold — stretched, often near a turn.",
-    },
-    {
-      key: "stoch", label: "Stochastic", bias: stB,
-      value: kS >= 80 ? "Overbought" : kS <= 20 ? "Oversold" : stB === "bull" ? "Rising" : "Falling",
-      detail: `Stochastic (14,3): where the close sits in the recent range (${kS.toFixed(0)}/100). Above 80 overbought, below 20 oversold; otherwise its direction shows momentum.`,
-    },
-    {
-      key: "macd", label: "MACD", bias: macdB,
-      value: `${Math.abs(histNow) >= Math.abs(histPrev) ? "Strong" : "Fading"} ${macdB === "bull" ? "↑" : "↓"}`,
-      detail: "MACD (12,26,9): above its signal line is bullish momentum, below is bearish. A growing gap means momentum is strengthening; shrinking means it's fading.",
-    },
-  ];
-
-  const vt = sp20[last].buy + sp20[last].sell;
-  const buyPct = vt ? Math.round((sp20[last].buy / vt) * 100) : 50;
-
-  const all = [maB, dmiB, ichiB, rsiB, stB, macdB, volB];
-  const bulls = all.filter((b) => b === "bull").length, bears = all.filter((b) => b === "bear").length;
-  const verdictBias: Bias = bulls > bears && bulls >= 4 ? "bull" : bears > bulls && bears >= 4 ? "bear" : "neutral";
-  const bullStrength = Math.round(((bulls + (N_CHECKS - bulls - bears) * 0.5) / N_CHECKS) * 100);
-
-  // ── Signals: a trend flip that holds for 2 bars AND ≥5 of 7 checks agree ──
-  const signals: PvSignal[] = [];
-  const confirm = Math.max(2, opts.confirmBars ?? 2);
-  const maxBars = opts.maxBars ?? 20;
-  const htfK = opts.htfK ?? 0;
-  const eHtf = htfK > 1 ? ema(close, Math.round(20 * htfK)) : null;
-  const vol50 = (i: number) => {
-    let s = 0, k = 0;
-    for (let j = Math.max(0, i - 50); j < i; j++) { s += vols[j]; k++; }
-    return k ? s / k : 0;
-  };
-  // Thin markets (< $10M/24h) get no signals at all: the data is too
-  // sparse to trust, and a stricter rule on bad data is still bad data.
-  for (let i = 52; i < n && !thin; i++) {
-    const cur = trend[i];
-    if (cur === "neutral") continue;
-    // Trend must have just flipped and held for `confirm` candles.
-    let held = true;
-    for (let j = i - confirm + 1; j <= i; j++) if (trend[j] !== cur) { held = false; break; }
-    if (!held || trend[i - confirm] === cur) continue;
-    const side = cur === "bull" ? "buy" : "sell";
-    const lastSig = signals[signals.length - 1];
-    if (lastSig && (lastSig.side === side || i - lastSig.index < 5)) continue;
-    // Paused: sideways market, or within a few candles of a spike.
-    if (isRange(i) || spikeRecent(i, side)) continue;
-    if (opts.minAdx && adxArr[i] < opts.minAdx) continue;
-    if (opts.emaAlign && (side === "buy" ? !(close[i] > e50[i] && e20[i] > e50[i]) : !(close[i] < e50[i] && e20[i] < e50[i]))) continue;
-    if (opts.rangeBlock && rangeRaw(i)) continue;
-    // Higher-timeframe trend must point the same way.
-    if (eHtf && i > htfK) {
-      const slope = eHtf[i] - eHtf[i - Math.round(htfK)];
-      if (side === "buy" ? !(close[i] > eHtf[i] && slope > 0) : !(close[i] < eHtf[i] && slope < 0)) continue;
-    }
-    // Enough participation: recent volume vs its 50-candle average.
-    if (opts.minVolX) {
-      const v3 = (vols[i] + vols[i - 1] + vols[i - 2]) / 3;
-      const base = vol50(i);
-      if (base > 0 && v3 < opts.minVolX * base) continue;
-    }
-    const bi = biasesAt(i);
-    const agree = bi.filter((b) => b === cur).length;
-    if (agree < (opts.minAgree ?? MIN_AGREE)) continue;
-    const entry = c[i].close;
-    const dir = side === "buy" ? 1 : -1;
-    const { hi, lo } = hiLo(c, i - 10, i);
-    let inval = side === "sell" ? hi : lo;
-    // Keep the stop sensible: never tighter than 0.5 ATR, never wider than the cap.
-    if (opts.stopCapAtr) {
-      const maxD = opts.stopCapAtr * atr[i], minD = 0.5 * atr[i];
-      const d = Math.min(maxD, Math.max(minD, Math.abs(inval - entry)));
-      inval = entry - dir * d;
-    }
-    const risk = Math.abs(entry - inval);
-    const tgtDist = opts.targetR ? opts.targetR * risk : atr[i];
-    let worked: boolean | null = null;
-    let pnlPct: number | null = null;
-    let exitJ = -1, exitPrice: number | null = null;
-    if (opts.exitMode === "trail") {
-      // Ride the trend: stop starts at the invalidation line and trails the
-      // best close by `trailAtr` ATRs; also exit at the close when the
-      // trend color turns against the trade.
-      const tA = (opts.trailAtr ?? 2) * atr[i];
-      let stop = inval, best = entry, exitPx: number | null = null;
-      for (let j = i + 1; j <= Math.min(last, i + maxBars); j++) {
-        if (side === "sell" ? c[j].high > stop : c[j].low < stop) { exitPx = stop; exitJ = j; break; }
-        best = side === "sell" ? Math.min(best, c[j].close) : Math.max(best, c[j].close);
-        const trailStop = best - dir * tA;
-        stop = side === "sell" ? Math.min(stop, trailStop) : Math.max(stop, trailStop);
-        const opp = side === "sell" ? "bull" : "bear";
-        if (trend[j] === opp) { exitPx = c[j].close; exitJ = j; break; }
-      }
-      if (exitPx === null && last - i > maxBars) { exitPx = c[i + maxBars].close; exitJ = i + maxBars; }
-      if (exitPx !== null) {
-        exitPrice = exitPx;
-        pnlPct = ((exitPx - entry) * dir / entry) * 100;
-        worked = pnlPct > PV_FEE_PCT;
-      }
-    } else
-    for (let j = i + 1; j <= Math.min(last, i + maxBars); j++) {
-      // Stop first (conservative when both are touched in one candle).
-      if (side === "sell" ? c[j].high > inval : c[j].low < inval) {
-        worked = false; pnlPct = ((inval - entry) * dir / entry) * 100; exitJ = j; exitPrice = inval; break;
-      }
-      if (side === "sell" ? entry - c[j].low >= tgtDist : c[j].high - entry >= tgtDist) {
-        worked = true; pnlPct = (tgtDist / entry) * 100; exitJ = j; exitPrice = entry + dir * tgtDist; break;
-      }
-    }
-    // Ran out of the window without either: exit at that close.
-    if (worked === null && last - i > maxBars) {
-      const exit = c[i + maxBars].close;
-      pnlPct = ((exit - entry) * dir / entry) * 100;
-      worked = pnlPct > PV_FEE_PCT;
-      exitJ = i + maxBars; exitPrice = exit;
-    }
-    if (pnlPct !== null) pnlPct -= PV_FEE_PCT;
-    signals.push({
-      index: i, time: c[i].time, side, price: entry, invalidation: inval, agree, worked, pnlPct,
-      ...(exitJ >= 0 && exitPrice !== null ? { exitTime: c[exitJ].time, exitPrice } : {}),
-    });
-  }
-
-  // ── Range mode: while sideways, fade the edges of the box ──
-  // Box = high/low of the last `lb` candles. BUY when a candle dips into
-  // the bottom edge zone and closes green back above it with RSI < 45;
-  // SELL mirror at the top. Stop 0.5 ATR beyond the box; target the box
-  // middle (or far side); exit after `lb` candles otherwise.
-  // Backtests (10 coins): a 50-candle box paid on 1h (+0.72%/trade), 4h
-  // (+0.21%) and 1D (+2.12%) after fees, but lost on 5m–15m — so range
-  // signals only run from 1h up; the box itself shows on every chart.
-  const lb = opts.rangeLookback ?? 50;
-  const edge = opts.rangeEdge ?? 0.2;
-  const rangeOn = barSec >= 3600;
-  const rangeSignals: PvSignal[] = [];
-  for (let i = Math.max(lb + 1, 52); i < n && !thin && rangeOn; i++) {
-    if (!rangeRaw(i)) continue;
-    const { hi: top, lo: bot } = hiLo(c, i - lb, i - 1);
-    const h = top - bot;
-    if (h <= 0 || h < 1.5 * atr[i]) continue;
-    const lastR = rangeSignals[rangeSignals.length - 1];
-    if (lastR && i - lastR.index < 5) continue;
-    let side: "buy" | "sell" | null = null;
-    if (c[i].low <= bot + edge * h && c[i].close > bot + edge * h * 0.5 && c[i].close > c[i].open && rsiArr[i] < 45) side = "buy";
-    else if (c[i].high >= top - edge * h && c[i].close < top - edge * h * 0.5 && c[i].close < c[i].open && rsiArr[i] > 55) side = "sell";
-    if (!side) continue;
-    const entry = c[i].close, dir = side === "buy" ? 1 : -1;
-    const stop = side === "buy" ? bot - 0.5 * atr[i] : top + 0.5 * atr[i];
-    const target = (opts.rangeTarget ?? "mid") === "mid" ? (top + bot) / 2 : side === "buy" ? top : bot;
-    if ((target - entry) * dir <= 0) continue;
-    let worked: boolean | null = null, pnlPct: number | null = null;
-    for (let j = i + 1; j <= Math.min(last, i + lb); j++) {
-      if (side === "buy" ? c[j].low < stop : c[j].high > stop) { worked = false; pnlPct = ((stop - entry) * dir / entry) * 100; break; }
-      if (side === "buy" ? c[j].high >= target : c[j].low <= target) { worked = true; pnlPct = ((target - entry) * dir / entry) * 100; break; }
-    }
-    if (worked === null && last - i > lb) {
-      pnlPct = ((c[i + lb].close - entry) * dir / entry) * 100;
-      worked = pnlPct > PV_FEE_PCT;
-    }
-    if (pnlPct !== null) pnlPct -= PV_FEE_PCT;
-    rangeSignals.push({ index: i, time: c[i].time, side, price: entry, invalidation: stop, agree: 0, worked, pnlPct });
-  }
-  const statsOf = (list: PvSignal[]): PvStats => {
-    const res = list.filter((s) => s.worked !== null);
-    const w = res.filter((s) => s.worked).length;
-    const cl = list.filter((s) => s.pnlPct !== null).map((s) => s.pnlPct as number);
-    const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-    return {
-      total: list.length, worked: w, failed: res.length - w, open: list.length - res.length,
-      winRate: res.length ? Math.round((w / res.length) * 100) : null,
-      avgWinPct: avg(cl.filter((p) => p > 0)), avgLossPct: avg(cl.filter((p) => p <= 0)),
-      perTradePct: avg(cl), trades: cl.length,
-    };
-  };
-  const rangeStats = statsOf(rangeSignals);
-  let rangeBox: PvResult["rangeBox"] = null;
-  if (rangeRaw(last)) {
-    const { hi: top, lo: bot } = hiLo(c, last - lb, last);
-    let from = last;
-    while (from > 0 && rangeRaw(from - 1) && last - from < 200) from--;
-    rangeBox = { from: c[Math.max(from, last - lb)].time, top, bottom: bot };
-  }
-
-  const resolved = signals.filter((s) => s.worked !== null);
-  const workedN = resolved.filter((s) => s.worked).length;
-  const closed = signals.filter((s) => s.pnlPct !== null).map((s) => s.pnlPct as number);
-  const wins = closed.filter((p) => p > 0), losses = closed.filter((p) => p <= 0);
-  const mean = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
-  const stats: PvStats = {
-    total: signals.length,
-    worked: workedN,
-    failed: resolved.length - workedN,
-    open: signals.length - resolved.length,
-    winRate: resolved.length ? Math.round((workedN / resolved.length) * 100) : null,
-    avgWinPct: mean(wins),
-    avgLossPct: mean(losses),
-    perTradePct: mean(closed),
-    trades: closed.length,
-  };
-
-  // ── Live invalidation zone for the latest signal (if not yet broken) ──
-  let zone: PvResult["zone"] = null;
-  const ls = signals[signals.length - 1];
-  if (ls) {
-    let broken = false; let zb = 0, zs = 0, zReal = false;
-    for (let j = ls.index; j <= last; j++) {
-      if (j > ls.index && (ls.side === "sell" ? c[j].high > ls.invalidation : c[j].low < ls.invalidation)) { broken = true; break; }
-      zb += parts[j].buy; zs += parts[j].sell; if (parts[j].real) zReal = true;
-    }
-    if (!broken) {
-      zone = {
-        from: ls.time, side: ls.side, entry: ls.price, invalidation: ls.invalidation,
-        deltaVolPct: zb + zs ? ((zb - zs) / (zb + zs)) * 100 : 0, real: zReal,
-      };
-    }
-  }
-
-  // ── Regime + spikes for the UI ──
-  const regime: PvResult["regime"] = {
-    kind: rangeRaw(last) ? "range" : "trend",
-    chop: chopArr[last],
-    adx: adxArr[last],
-  };
-  const spikes: PvResult["spikes"] = [];
-  let avgV = 0;
-  for (let i = Math.max(21, n - 200); i < n; i++) {
-    if (!spikeAt[i]) continue;
-    avgV = 0;
-    for (let j = i - 20; j < i; j++) avgV += vols[j];
-    avgV /= 20;
-    spikes.push({
-      time: c[i].time,
-      up: c[i].close >= c[i].open,
-      size: (c[i].high - c[i].low) / (atr[i - 1] || 1),
-      volX: avgV ? vols[i] / avgV : 0,
-    });
-  }
-  let spikeGuard: PvResult["spikeGuard"] = null;
-  if (useSpike) {
-    for (let j = last; j >= Math.max(0, last - SPIKE_COOLDOWN + 1); j--) {
-      if (spikeAt[j]) { spikeGuard = { barsLeft: SPIKE_COOLDOWN - (last - j) - 1, up: c[j].close >= c[j].open }; break; }
-    }
-  }
-
-  // ── Painted ribbon: a fan of EMAs, colored by fastest vs slowest ──
-  const ribbonLines = PV_RIBBON_LENGTHS.map((len) => ema(close, len));
-  const fastL = ribbonLines[0], slowL = ribbonLines[ribbonLines.length - 1];
-  const ribbon = { lines: ribbonLines, bull: close.map((_, i) => fastL[i] >= slowL[i]) };
-  // Buy / Sell labels at each ribbon flip that holds for the next candle
-  // (the forming last candle counts as held), at least 4 candles apart.
-  const flips: PvResult["flips"] = [];
-  for (let i = 20; i < n; i++) {
-    const b = ribbon.bull[i];
-    if (b === ribbon.bull[i - 1]) continue;
-    if (i + 1 < n && ribbon.bull[i + 1] !== b) continue;
-    const prevF = flips[flips.length - 1];
-    if (prevF && (c.findIndex((x) => x.time === prevF.time) > i - 4)) continue;
-    flips.push({ time: c[i].time, side: b ? "buy" : "sell" });
-  }
-
+  const r = data.result;
+  if (!r) return null;
+  const trend: Bias[] = new Array(offset).fill("neutral");
+  for (const ch of r.trend) trend.push(TREND_DECODE[ch] ?? "neutral");
+  const shift = (s: PvSignal) => ({ ...s, index: s.index + offset });
   return {
-    barSec,
-    ribbon,
-    flips: flips.slice(-20),
-    liquidity: { thin, quoteVol24h },
-    rangeBox, rangeSignals: rangeSignals.slice(-12), rangeStats,
-    regime, spikes: spikes.slice(-8), spikeGuard,
-    trend, bullStrength, tiles,
-    volume: { buyPct, sellPct: 100 - buyPct, bias: volB, real: anyReal, buyVol: sp20[last].buy, sellVol: sp20[last].sell },
-    checks: all,
-    scoreSeries: (() => {
-      const out: number[] = [];
-      for (let i = Math.max(52, n - 30); i < n; i++) {
-        const bs = biasesAt(i);
-        const bu = bs.filter((x) => x === "bull").length, be = bs.filter((x) => x === "bear").length;
-        out.push(Math.round(((bu + (N_CHECKS - bu - be) * 0.5) / N_CHECKS) * 100));
-      }
-      return out;
-    })(),
-    checkSeries: (() => {
-      const from = Math.max(0, n - 30);
-      const idx = Array.from({ length: n - from }, (_, k) => from + k);
-      return [
-        idx.map((i) => (atr[i] ? (close[i] - e20[i]) / atr[i] : 0)),
-        idx.map((i) => pdi[i] - ndi[i]),
-        idx.map((i) => { const cl = cloudAt(i); const mid = (cl.top + cl.bot) / 2; return atr[i] ? (close[i] - mid) / atr[i] : 0; }),
-        idx.map((i) => rsiArr[i]),
-        idx.map((i) => kArr[i]),
-        idx.map((i) => hist[i]),
-        idx.map((i) => { const t = sp20[i].buy + sp20[i].sell; return t ? (sp20[i].buy / t) * 100 : 50; }),
-      ];
-    })(),
-    checkReadout: (() => {
-      const px = close[last];
-      const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(Math.abs(v) < 10 ? 1 : 0)}%`;
-      const cl = cloudAt(last);
-      const toCloud = px > cl.top ? ((px - cl.top) / px) * 100 : px < cl.bot ? ((px - cl.bot) / px) * 100 : 0;
-      return [
-        { big: pct(((px - e20[last]) / e20[last]) * 100), unit: "vs MA20" },
-        { big: adx.toFixed(0), unit: "ADX" },
-        { big: toCloud === 0 ? "0%" : pct(toCloud), unit: toCloud === 0 ? "in cloud" : "to cloud" },
-        { big: rsi.toFixed(0), unit: "RSI" },
-        { big: kArr[last].toFixed(0), unit: "%K" },
-        // Histogram in ATRs: how far momentum has pulled from its signal line.
-        { big: `${histNow >= 0 ? "+" : "−"}${Math.abs(atr[last] ? histNow / atr[last] : 0).toFixed(2)}`, unit: "MACD" },
-        { big: `${Math.max(buyPct, 100 - buyPct)}%`, unit: buyPct >= 50 ? "buyers" : "sellers" },
-      ];
-    })(),
-    checkStrength: (() => {
-      const cl = (v: number) => Math.max(0.04, Math.min(0.96, v));
-      const px = close[last];
-      const maS = px > e20[last] && e20[last] > e200[last] ? 0.88 : px < e20[last] && e20[last] < e200[last] ? 0.12 : px > e200[last] ? 0.62 : 0.38;
-      const dmiS = 0.5 + Math.sign(pdi[last] - ndi[last]) * Math.min(adx, 50) / 100;
-      const cl2 = cloudAt(last);
-      const ichiS = px > cl2.top ? 0.85 : px < cl2.bot ? 0.15 : 0.5;
-      const stS = 0.5 + Math.max(-0.4, Math.min(0.4, (kArr[last] - dArr[last]) / 25));
-      const macdS = 0.5 + Math.max(-0.42, Math.min(0.42, (atr[last] ? histNow / atr[last] : 0) * 0.8));
-      return [maS, dmiS, ichiS, rsi / 100, stS, macdS, buyPct / 100].map(cl);
-    })(),
-    verdict: { bias: verdictBias, agree: verdictBias === "bull" ? bulls : verdictBias === "bear" ? bears : Math.max(bulls, bears), total: N_CHECKS },
-    signals: signals.slice(-12),
-    stats,
-    zone,
+    ...r,
+    trend,
+    signals: r.signals.map(shift),
+    rangeSignals: r.rangeSignals.map(shift),
+    ribbon: computeRibbon(candles),
   };
+}
+
+/** Verdicts for several timeframes at once (the Timeframes row). */
+export async function fetchProVisionMtf(coin: string, sets: { label: string; candles: PvCandle[] }[]): Promise<PvMtfRow[]> {
+  const data = await call({ coin, mtf: sets.map((s) => ({ label: s.label, candles: wire(s.candles.slice(-MAX_SEND)) })) });
+  return data.mtf ?? [];
 }

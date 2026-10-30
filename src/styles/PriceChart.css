@@ -478,6 +478,8 @@ html[data-theme="light"]
   align-items: baseline;
   gap: 8px;
   margin-top: 4px;
+  /* Nudged right to sit under the coin name in the picker pill above. */
+  margin-left: 4px;
 }
 .chart-mobile-top-price {
   font-size: 0.78rem;
@@ -2382,6 +2384,46 @@ html[data-theme="light"] .chart-active
 .chart-tv-ohlc-pick:active { opacity: 0.6; }
 .chart-tv-ohlc-pick:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .chart-tv-ohlc-pick-chev { flex-shrink: 0; opacity: 0.7; color: var(--color-text); }
+
+/* Coin title on the Advance Chart (desktop + phones): reads as a picker —
+   soft pill, chevron in its own circle, hover / press feedback. */
+.chart-coin-pick {
+  pointer-events: auto !important;
+  cursor: pointer;
+  padding: 5px 6px 5px 5px;
+  margin: -5px 0 -5px -5px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.16);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+.chart-coin-pick:hover {
+  background: rgba(127, 127, 127, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.28);
+}
+.chart-coin-pick:active { transform: scale(0.97); opacity: 1; }
+.chart-coin-pick:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.chart-coin-pick-chev {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: 50%;
+  color: var(--color-text);
+  background: rgba(127, 127, 127, 0.18);
+  transition: transform 0.2s ease;
+}
+.chart-coin-pick:hover .chart-coin-pick-chev { transform: translateY(1px); }
+/* Phones (Advance Chart): pill sits on its own line with room under it,
+   its icon lined up with the price below. */
+.chart-mobile-top-row.chart-coin-pick {
+  display: inline-flex;
+  margin: 0 0 8px -4px;
+  padding: 4px 6px 4px 4px;
+}
 .chart-tv-ohlc-icon {
   flex-shrink: 0;
   display: flex;
@@ -2429,6 +2471,8 @@ html[data-theme="light"] .chart-active
   gap: 6px;
   pointer-events: auto;
 }
+/* Breathing room under the coin picker pill. */
+.chart-tv-ohlc-row:has(.chart-coin-pick) + .chart-tv-ticket-row { margin-top: 10px; }
 .chart-tv-sell-box,
 .chart-tv-buy-box {
   display: flex;
@@ -9663,6 +9707,68 @@ html[data-theme="light"] .pvsb-cell--ghost { background: var(--k2); }
 .pvr .pvl-ring { width: 18px; height: 18px; }
 @media (max-width: 900px) {
   .pvr .pvl-meta { width: 100%; }
+}
+/* Desktop: Indicators | Order flow | Timeframes side by side in one row,
+   each with a small caption above and a plain-English summary. */
+.pvl-desc { color: var(--color-text-muted); }
+.pvl-desc--soft { font-size: 12.5px; font-weight: 500; margin-left: 4px; }
+@media (min-width: 641px) {
+  .pvr .pvl-head-text {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0 28px;
+    container-type: inline-size;
+  }
+  /* Side by side: a light vertical divider between groups. */
+  .pvr .pvl-meta-flow,
+  .pvr .pvl-meta-tfs {
+    padding-left: 28px;
+    border-left: 1px solid rgba(127, 127, 127, 0.16);
+  }
+}
+/* Not enough room for one row: stack the groups, light divider between. */
+@container (max-width: 1180px) {
+  .pvr .pvl-sub,
+  .pvr .pvl-meta-flow,
+  .pvr .pvl-meta-tfs {
+    flex-basis: 100%;
+  }
+  .pvr .pvl-meta-flow,
+  .pvr .pvl-meta-tfs {
+    padding-left: 0;
+    border-left: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(127, 127, 127, 0.16);
+  }
+}
+@media (min-width: 641px) {
+  .pvr .pvl-meta { display: contents; }
+  .pvr .pvl-sub,
+  .pvr .pvl-meta-flow,
+  .pvr .pvl-meta-tfs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 0;
+    row-gap: 0;
+  }
+  .pvr .pvl-sub[data-cap]::before,
+  .pvr .pvl-meta-flow[data-cap]::before,
+  .pvr .pvl-meta-tfs[data-cap]::before {
+    content: attr(data-cap);
+    flex-basis: 100%;
+    margin-bottom: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+}
+@media (max-width: 640px) {
+  .pvl-desc { display: none; }
 }
 /* Phones: one-line title, smaller pill, tighter counts / gauges / rings. */
 @media (max-width: 640px) {

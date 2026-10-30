@@ -2661,50 +2661,7 @@ function AppDashboard({
                             : t("stats.sigShortsLead")}
                         </span>
                       </HoverTip>
-                      {(() => {
-                        const g = btcData.cmeGap;
-                        const fmt = (v: number) => `$${(v / 1000).toFixed(1)}K`;
-                        return (
-                          <>
-                            <HoverTip className="mch-stat" text={t("stats.cmeAboveDesc")}>
-                              <span className="mch-stat-label">
-                                {t("stats.cmeAbove")}
-                              </span>
-                              <span
-                                className="mch-stat-value"
-                                style={{ fontSize: "0.7rem" }}
-                              >
-                                {g?.above
-                                  ? `${fmt(g.above.low)}–${fmt(g.above.high)}`
-                                  : "—"}
-                              </span>
-                              <span className="mch-stat-signal mch-stat-signal--bull">
-                                {g?.above
-                                  ? t("stats.sigAbove")
-                                  : t("stats.sigNone")}
-                              </span>
-                            </HoverTip>
-                            <HoverTip className="mch-stat" text={t("stats.cmeBelowDesc")}>
-                              <span className="mch-stat-label">
-                                {t("stats.cmeBelow")}
-                              </span>
-                              <span
-                                className="mch-stat-value"
-                                style={{ fontSize: "0.7rem" }}
-                              >
-                                {g?.below
-                                  ? `${fmt(g.below.low)}–${fmt(g.below.high)}`
-                                  : "—"}
-                              </span>
-                              <span className="mch-stat-signal mch-stat-signal--bear">
-                                {g?.below
-                                  ? t("stats.sigBelow")
-                                  : t("stats.sigNone")}
-                              </span>
-                            </HoverTip>
-                          </>
-                        );
-                      })()}
+                      {/* CME gaps removed — they no longer exist. */}
                     </>
                   );
                 })()}

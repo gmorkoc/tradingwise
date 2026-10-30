@@ -59,7 +59,9 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
     if (!res) return;
     const ts = chart.timeScale();
     const xOf = (t: number) => ts.timeToCoordinate(t as Time);
-    const yOf = (p: number) => series.priceToCoordinate(p) as number | null;
+    // Non-finite = no value for that candle (older bars outside the slice the
+    // server computed) — skip instead of drawing to NaN.
+    const yOf = (p: number) => (Number.isFinite(p) ? (series.priceToCoordinate(p) as number | null) : null);
     // Right edge of the plotting area (left of the price axis).
     const plotRight = ts.width();
     const candles = candlesRef.current ?? [];

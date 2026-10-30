@@ -9,6 +9,15 @@ import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { CoinSymbol } from "../services/coinglass";
 import type { Ticker24h } from "../services/coinglass";
+import { fetchTopMarketCoins } from "../services/coinglass";
+
+/** $1.52T / $84.3B / $912M — compact dollar amounts for the coin row. */
+function fmtUsdCompact(v: number): string {
+  if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${Math.round(v).toLocaleString()}`;
+}
 import { AgentChartModal } from "./AgentChartModal";
 import { LiquidationGauge } from "./LiquidationGauge";
 import { formatLivePrice } from "./PriceChart";
@@ -535,8 +544,12 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
     <div className="ta-positions-list">
       <div className="ta-positions-list-head">
         <span className="ta-positions-list-label">{status === "open" ? "Open Positions" : "Closed Positions"}</span>
-        <span className="ta-positions-list-hint">Tap a position for full details</span>
+        <span className="ta-positions-list-hint">
+          {items.length > 8 ? `${items.length} positions · scroll for more` : "Tap a position for full details"}
+        </span>
       </div>
+      {/* Own scroll area so a long history scrolls instead of piling up. */}
+      <div className="ta-positions-list-body">
       {items.map((item, i) => {
         const isOpenRow = expanded === i;
         const livePrice = status === "open" ? coinTickers?.get(item.coin)?.price : undefined;
@@ -622,6 +635,7 @@ function PositionsListCard({ list, coinTickers, onClosePosition, closingKey }: {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -1166,7 +1180,49 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     (name) => `Hi${name ? ` ${name}` : ""}, how are you doing? Coin you're eyeing, or a budget you want me to keep in mind? No pressure — ask away whenever.`,
     (name) => `Hello${name ? `, ${name}` : ""}! How's it going? If there's a coin on your radar or a budget you want me working with, let me know. Or don't — we can figure it out as we go.`,
     (name) => `Hi${name ? ` ${name}` : ""}, how are you doing today? Got a coin you're thinking about, or a budget/trade size in mind? Happy to work with whatever you've got, or we can just dive straight in.`,
+    // Short ones, so it isn't always a paragraph.
+    (name) => `Hey${name ? ` ${name}` : ""}! Which coin are we looking at today?`,
+    (name) => `Hi${name ? ` ${name}` : ""} 👋 What's on your radar?`,
+    (name) => `Hey${name ? `, ${name}` : ""}! Pick a coin below or ask me anything.`,
   ];
+  // Top 5 by market cap — the logo row under the greeting of a new chat.
+  // Loaded live from CoinGecko (ranked by market cap, cached 5 min),
+  // skipping stablecoins and wrapped/staked tokens; this list is only the
+  // fallback if that fetch fails.
+  const [openerCoins, setOpenerCoins] = useState<{ symbol: string; name: string; image?: string | null; marketCap?: number; volume24h?: number }[]>([
+    { symbol: "BTC", name: "Bitcoin" },
+    { symbol: "ETH", name: "Ethereum" },
+    { symbol: "XRP", name: "XRP" },
+    { symbol: "BNB", name: "BNB" },
+    { symbol: "SOL", name: "Solana" },
+  ]);
+  const [openerCoinsLoading, setOpenerCoinsLoading] = useState(true);
+  // "Thinking…" shown for a beat before the opener greeting appears.
+  const [openerThinking, setOpenerThinking] = useState(false);
+  // The coin row shows under the greeting of a brand-new chat only.
+  const coinRowVisible = !sending && !openerThinking && messages.length > 0 && messages.length <= 1
+    && messages.every((m) => m.role !== "user");
+  // Scan each time the row appears, so the loader is actually seen.
+  useEffect(() => {
+    if (!coinRowVisible) return;
+    let alive = true;
+    setOpenerCoinsLoading(true);
+    const SKIP = new Set([
+      "USDT", "USDC", "USDE", "USDS", "DAI", "FDUSD", "TUSD", "PYUSD", "USDD", "USD1", "BUSD", "USDX",
+      "STETH", "WSTETH", "WBTC", "WETH", "WEETH", "CBBTC", "CBETH", "RETH", "WBETH", "BSC-USD", "LEO",
+    ]);
+    // Short "scanning" moment even when the data is cached, so the row
+    // reads as freshly picked rather than popping in.
+    Promise.all([
+      fetchTopMarketCoins(5, SKIP).catch(() => [] as Awaited<ReturnType<typeof fetchTopMarketCoins>>),
+      new Promise((r) => setTimeout(r, 2000)),
+    ]).then(([top]) => {
+      if (!alive) return;
+      if (top.length === 5) setOpenerCoins(top);
+      setOpenerCoinsLoading(false);
+    });
+    return () => { alive = false; };
+  }, [coinRowVisible]);
   // Fires once per brand-new, zero-message conversation (after consent is
   // already on file) — a warm, plain-spoken opener instead of the old
   // gated form, inviting a coin/budget but never blocking the composer on
@@ -1195,12 +1251,24 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
           setConversationId(reusable.id);
           return;
         }
+        // At the 10-chat cap: reopen the latest chat instead of starting one.
+        if (existing.length >= MAX_CHATS) {
+          setConversationId(existing[0].id);
+          return;
+        }
         const nickname = profile?.username?.trim() || null;
         const greeting = OPENER_GREETINGS[Math.floor(Math.random() * OPENER_GREETINGS.length)](nickname);
-        await addAgentNote(user.id, conversationId, greeting);
+        // A short "Thinking…" beat before the greeting lands.
+        setOpenerThinking(true);
+        await Promise.all([
+          addAgentNote(user.id, conversationId, greeting),
+          new Promise((r) => setTimeout(r, 1100)),
+        ]);
         await loadAll(conversationId);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setOpenerThinking(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1341,13 +1409,36 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     if (el) el.scrollLeft = el.scrollWidth;
   }, [draft, listening]);
 
-  const handleNewConversation = () => {
+  // Up to 10 chats per user (also enforced in the database). At the limit,
+  // "New chat" opens the chat list asking them to delete one first.
+  const MAX_CHATS = 10;
+  const [chatLimitHit, setChatLimitHit] = useState(false);
+  const startNewConversation = () => {
+    setChatLimitHit(false);
     setConversationId(newConversationId());
     setMessages([]);
     setShowHistory(false);
     setShowWatches(false);
     setShowPositions(false);
     openerSentRef.current = false;
+  };
+  const handleNewConversation = async () => {
+    if (user) {
+      try {
+        const list = await fetchConversations(user.id);
+        // The current chat doesn't count if it's still empty/greeting-only
+        // (it gets reused instead of adding a new one).
+        if (list.length >= MAX_CHATS) {
+          setConversations(list);
+          setChatLimitHit(true);
+          setShowWatches(false);
+          setShowPositions(false);
+          setShowHistory(true);
+          return;
+        }
+      } catch { /* fall through — the database still enforces the cap */ }
+    }
+    startNewConversation();
   };
 
   const handleOpenHistory = async () => {
@@ -1492,6 +1583,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     if (!user) return;
     try {
       await deleteConversation(user.id, id);
+      // Freed a slot after hitting the limit → go straight into the new chat.
+      if (chatLimitHit) { startNewConversation(); return; }
       if (id === conversationId) handleNewConversation();
       await loadConversations();
     } catch (e) {
@@ -2197,6 +2290,24 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
 
       {showHistory ? (
         <div className="ta-history">
+          {/* Always say how the 10-chat limit works, louder near / at it. */}
+          {(() => {
+            const n = sortedConversations.length;
+            const atLimit = chatLimitHit || n >= MAX_CHATS;
+            const near = !atLimit && n >= MAX_CHATS - 2;
+            return (
+              <div className={`ta-chat-limit${atLimit ? " ta-chat-limit--hit" : near ? " ta-chat-limit--near" : ""}`} role="status">
+                <strong>{n}/{MAX_CHATS} chats</strong>
+                <span>
+                  {atLimit
+                    ? "You've reached the 10-chat limit. To start a new chat, delete one below first."
+                    : near
+                      ? `Heads up: you can keep up to 10 chats. ${MAX_CHATS - n} left before you'll need to delete one to start a new chat.`
+                      : "You can keep up to 10 chats. Once you reach 10, delete one to start a new chat."}
+                </span>
+              </div>
+            );
+          })()}
           <div className="ta-history-list">
             {sortedConversations.length === 0 && (
               <p className="ta-empty">No past conversations yet.</p>
@@ -2912,6 +3023,87 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                 )}
               </div>
             ))}
+            {/* New chat: top-5 coins as tappable chips under the greeting —
+                tapping one carries the conversation on with that coin. */}
+            {coinRowVisible && (
+              <div className="ta-coin-pick">
+              {openerCoinsLoading ? (
+                <div className="ta-coin-scan" role="status">
+                  <p className="ta-coin-pick-cap">
+                    <span className="ta-coin-scan-spin" aria-hidden="true" />
+                    I'm checking the market for the best options for ya
+                    <span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
+                  </p>
+                  <div className="ta-coin-list" aria-hidden="true">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span key={i} className="ta-coin-row ta-coin-row--skel" style={{ animationDelay: `${i * 0.12}s` }}>
+                        <span className="ta-coin-skel-logo" />
+                        <span className="ta-coin-row-id">
+                          <span className="ta-coin-skel-line" />
+                          <span className="ta-coin-skel-line ta-coin-skel-line--short" />
+                        </span>
+                        <span className="ta-coin-skel-line ta-coin-skel-line--stat" />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+              <>
+              <p className="ta-coin-pick-cap">
+                Top 5 by market cap right now · tap one to start
+                <span className="ta-coin-pick-sub">Looking for something else? Just tell me which coin.</span>
+              </p>
+              <div className="ta-coin-list" role="list" aria-label="Top 5 coins by market cap">
+                {openerCoins.map((c, i) => (
+                  <button
+                    key={c.symbol}
+                    type="button"
+                    role="listitem"
+                    className="ta-coin-row"
+                    style={{ animationDelay: `${i * 0.06}s` }}
+                    aria-label={`Start with ${c.name}`}
+                    onClick={() => handleSend(c.name !== c.symbol ? `Let's look at ${c.name} (${c.symbol}). What's your read right now?` : `Let's look at ${c.symbol}. What's your read right now?`)}
+                  >
+                    <span className="ta-coin-row-rank">{i + 1}</span>
+                    <span className="ta-coin-chip-logo">
+                      <img
+                        src={c.image ?? `https://assets.coincap.io/assets/icons/${c.symbol.toLowerCase()}@2x.png`}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                      <span className="ta-coin-chip-fallback" aria-hidden="true">{c.symbol[0]}</span>
+                    </span>
+                    <span className="ta-coin-row-id">
+                      <span className="ta-coin-row-sym">{c.symbol}</span>
+                      <span className="ta-coin-row-name">{c.name}</span>
+                    </span>
+                    {c.marketCap ? (
+                      <span className="ta-coin-row-stats">
+                        <span className="ta-coin-row-cap">{fmtUsdCompact(c.marketCap)}</span>
+                        {c.volume24h ? <span className="ta-coin-row-vol">Vol {fmtUsdCompact(c.volume24h)}</span> : null}
+                      </span>
+                    ) : null}
+                    <svg className="ta-coin-row-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                  </button>
+                ))}
+              </div>
+              </>
+              )}
+              </div>
+            )}
+            {openerThinking && !sending && (
+              <div className="ta-msg ta-msg--agent">
+                <div className="ta-msg-text ta-typing" aria-label="Thinking">
+                  <span className="ta-thinking-orb" />
+                  <span className="ta-thinking-copy">
+                    <span className="ta-thinking-label">
+                      Thinking<span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
             {sending && (
               <div className="ta-msg ta-msg--agent">
                 <button
@@ -2923,7 +3115,8 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                   <span className="ta-thinking-orb" />
                   <span className="ta-thinking-copy">
                     <span className="ta-thinking-label">
-                      {liveThinking || "Thinking…"}
+                      {liveThinking ? liveThinking.replace(/(\.\.\.|…)\s*$/, "") : "Thinking"}
+                      <span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
                     </span>
                     <span className="ta-thinking-interrupt-hint">Tap to interrupt</span>
                   </span>

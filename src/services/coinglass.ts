@@ -1727,9 +1727,32 @@ const MARKET_CAP_TTL = 5 * 60 * 1000; // 5 min
 
 interface CoinGeckoMarket {
   symbol: string;
+  name?: string;
+  image?: string;
   market_cap: number;
+  total_volume?: number;
   current_price: number;
   price_change_percentage_24h: number;
+}
+let marketsRawCache: CoinGeckoMarket[] | null = null;
+
+export interface TopMarketCoin { symbol: string; name: string; image: string | null; marketCap: number; volume24h: number }
+
+/** Top coins by market cap (CoinGecko order), skipping `skip` symbols. Uses the same 5-min cache. */
+export async function fetchTopMarketCoins(count: number, skip: Set<string> = new Set()): Promise<TopMarketCoin[]> {
+  if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
+    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
+  }
+  return (marketsRawCache ?? [])
+    .filter((c) => !skip.has(c.symbol.toUpperCase()))
+    .slice(0, count)
+    .map((c) => ({
+      symbol: c.symbol.toUpperCase(),
+      name: c.name ?? c.symbol.toUpperCase(),
+      image: c.image ?? null,
+      marketCap: c.market_cap ?? 0,
+      volume24h: c.total_volume ?? 0,
+    }));
 }
 
 async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarket[]> {
@@ -1741,6 +1764,7 @@ async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarket[]> {
 }
 
 function populateCoinGeckoCaches(data: CoinGeckoMarket[]) {
+  if (Array.isArray(data)) marketsRawCache = data;
   const capMap = new Map<string, number>();
   const chgMap = new Map<string, number>();
   const priceMap = new Map<string, number>();

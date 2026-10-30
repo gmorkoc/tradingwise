@@ -57,12 +57,14 @@ export function ProVisionPaywall({
       ? { kicker: `${PV_PRO_COINS_PER_DAY} of ${PV_PRO_COINS_PER_DAY} coins used today`, title: "Unlimited ProVision" }
       : reason === "trial-ended"
         ? { kicker: "Your free trial has ended", title: "Keep ProVision" }
+        : reason === "trial-active"
+          ? { kicker: "Free trial running", title: "Keep ProVision" }
         : { kicker: `${PV_TRIAL_DAYS} days free`, title: "Try ProVision" };
 
   const sub =
     reason === "pro-limit"
       ? `Pro includes ProVision on ${PV_PRO_COINS_PER_DAY} coins a day${coin ? `, so ${coin} is locked for now` : ""}.${nextFreeAt ? ` A slot frees up in ${fmtWhen(nextFreeAt)}.` : ""}`
-      : reason === "trial-ended"
+      : reason === "trial-ended" || reason === "trial-active"
         ? "Get every coin and timeframe with the ProVision plan."
         : `Full ProVision on every coin and timeframe for ${PV_TRIAL_DAYS} days. No card needed.`;
 
@@ -106,7 +108,7 @@ export function ProVisionPaywall({
               {busy ? "Starting…" : `Start ${PV_TRIAL_DAYS}-day free trial`}
             </button>
           )}
-          {(reason === "trial-ended" || reason === "pro-limit") && (
+          {(reason === "trial-ended" || reason === "trial-active" || reason === "pro-limit") && (
             <button type="button" className="pvp-cta" onClick={onBuyPlan} disabled={busy}>
               {busy ? "Opening…" : <>Get ProVision · {PV_PLAN_PRICE}/year</>}
             </button>
