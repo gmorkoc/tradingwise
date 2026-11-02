@@ -42,6 +42,7 @@ import { ChartGoTo } from "./ChartGoTo";
 import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
 import { CompactPriceView } from "./CompactPriceView";
+import { MarketCapChart, MCAP_RANGES, fmtCap, type McapRange } from "./MarketCapChart";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { supabase } from "../services/supabase";
 import "../styles/PriceChart.css";
@@ -80,6 +81,11 @@ function fmtPvPrice(p: number): string {
 
 // Cells on each side of the Signal check segment bars.
 const PV_SEG = 10;
+// Desktop promo for signed-out / free users: "ghost" (blurred ProVision
+// teaser painted over the chart + center unlock button), "callout" (bubble
+// under the top-bar ProVision switch, rendered in App.tsx) or "float"
+// (glass card over the chart).
+export const PV_PROMO_STYLE = "callout" as string;
 // Short description per check (MA, DMI, Ichimoku, RSI, Stochastic, MACD, Volume).
 const PV_ROW_DESC = [
   "Price vs 20 & 200 averages",
@@ -246,6 +252,10 @@ interface PriceChartProps {
   // that group's own chart-fs-header-group--empty modifier, so this never
   // needs its own pageMode check here.
   headerStats?: React.ReactNode;
+  /** Trade page: section tab bar under the coin header, and the active
+   *  tab's panel (non-null = a tab other than Overview, chart hidden). */
+  pageTabBar?: React.ReactNode;
+  pageTabContent?: React.ReactNode;
   // Optional column rendered inside .price-chart-container, to the right of
   // the chart (header, canvas, range bar, AI read) — App.tsx's Order Book /
   // Order Flow column. Not shown in fullscreen. `children` still runs full
@@ -1548,6 +1558,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   children,
   sideColumn,
   headerStats,
+  pageTabBar,
+  pageTabContent,
 }) => {
   const prefsScope: ChartPrefsScope = prefsScopeProp ?? (pageMode ? "advance" : "trade");
   const { t, i18n } = useTranslation();
@@ -1821,6 +1833,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // who turned grid off elsewhere shouldn't land here with it off too;
   // they can still toggle it back off here if they want, same as always).
   const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs(prefsScope).showGrid ?? false));
+  // Desktop #trade: Price / Market cap switch above the chart.
+  const [chartMetric, setChartMetric] = useState<"price" | "mcap">("price");
+  const [mcapRange, setMcapRange] = useState<McapRange>("365");
+  const [mcapStats, setMcapStats] = useState<{ last: number; chg: number | null } | null>(null);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
@@ -1917,6 +1933,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, [isDesktopWidth]);
   const chartSectionRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(() => !!pageMode);
+  // #trade chart (phones + desktop, outside fullscreen): candle type and
+  // ProVision only — no indicators, grid, depth profile or volume. Anything
+  // switched on in fullscreen is cleared again when fullscreen closes.
+  const tradeChartLocked = prefsScope === "trade" && !pageMode && !isFullscreen;
+  useEffect(() => {
+    if (!tradeChartLocked) return;
+    setShowGrid(false);
+    setShowBB(false);
+    setShowRSI(false);
+    setShowMACD(false);
+    setShowEMA20(false);
+    setShowEMA50(false);
+    setShowEMA200(false);
+    setShowMA20(false);
+    setShowMA50(false);
+    setShowMA200(false);
+    setShowFib(false);
+    setShowSR(false);
+    setShowZones(false);
+    setShowDayHL(false);
+    setShowCME(false);
+    setShowDepthProfile(false);
+  }, [tradeChartLocked]);
   useEffect(() => {
     onFullscreenChange?.(isFullscreen);
   }, [isFullscreen, onFullscreenChange]);
@@ -2309,6 +2348,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pvTrialLeftMs = pvScope && pvGate.access.mode === "trial" && pvGate.access.trialEndsAt
     ? Math.max(0, pvGate.access.trialEndsAt - Date.now())
     : null;
+  // Exact time left ("2d 9h", "9h", "under an hour") — never rounds days up,
+  // so a trial started today no longer reads "3 days left" all day.
+  const pvTrialLeftLabel = (ms: number, compact = false) => {
+    const totalH = Math.floor(ms / 3_600_000);
+    const d = Math.floor(totalH / 24);
+    const h = totalH % 24;
+    if (d >= 1) return h > 0 ? `${d}d ${h}h` : compact ? `${d}d` : `${d} day${d === 1 ? "" : "s"}`;
+    if (totalH >= 1) return `${totalH}h`;
+    return compact ? "<1h" : "under an hour";
+  };
   // (Pro's coin count is claimed by the server when it computes the read.)
   // Short "preparing" intro each time Pro Vision is switched on (not on page
   // load when it was already on).
@@ -2369,6 +2418,63 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Server refused (Pro's 3 coins used up on another device, trial ended…).
   const [pvServerLocked, setPvServerLocked] = useState(false);
   // Banner reason: the app's own check, or the server's refusal (Pro limit).
+  // Free-trial strip ("3 days left · Keep it"): standalone above the Signal
+  // Check, or inside its card on the Advance Chart.
+  const pvTrialBannerEl = pvTrialLeftMs === null ? null : (() => {
+    const left = pvTrialLeftLabel(pvTrialLeftMs);
+    return (
+      <button
+        type="button"
+        className="pv-locked pv-locked--trial"
+        onClick={() => openProVisionPaywall({ reason: "trial-active", coin })}
+      >
+        <span className="pv-locked-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+        </span>
+        <span className="pv-locked-text">
+          <strong>
+            <span className="pv-trial-long">ProVision free trial · {left} left</span>
+            <span className="pv-trial-short">Free trial · {left} left</span>
+          </strong>
+          <span>
+            <span className="pv-trial-long">Every coin &amp; timeframe · $99/year</span>
+            <span className="pv-trial-short">then $99/year</span>
+          </span>
+        </span>
+        <span className="pv-locked-cta">Keep it</span>
+      </button>
+    );
+  })();
+  // Desktop promo card over the chart: dismissed for the rest of the session.
+  const [pvPromoDismissed, setPvPromoDismissed] = useState(() => {
+    try { return sessionStorage.getItem("pvPromoDismissed") === "1"; } catch { return false; }
+  });
+  // Ghost teaser has its own "Not now" memory (separate from the others).
+  const [pvGhostDismissed, setPvGhostDismissed] = useState(() => {
+    try { return sessionStorage.getItem("pvGhostDismissed") === "1"; } catch { return false; }
+  });
+  // "Enjoying ProVision? Keep it ›" chip for the Signal Check header.
+  const pvTrialChip = (extraClass: string) => {
+    if (pvTrialLeftMs === null) return null;
+    const long = pvTrialLeftLabel(pvTrialLeftMs);
+    const short = pvTrialLeftLabel(pvTrialLeftMs, true);
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        className={`pv-trial-chip ${extraClass}`}
+        onClick={(e) => { e.stopPropagation(); openProVisionPaywall({ reason: "trial-active", coin }); }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); openProVisionPaywall({ reason: "trial-active", coin }); } }}
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+        <span className="pv-trial-chip-long">Enjoying ProVision?</span>
+        <span className="pv-trial-chip-short">Enjoying it?</span>
+        <span className="pv-trial-chip-cta">Keep it ›</span>
+        <span className="pv-trial-chip-left pv-trial-chip-long">{long} left</span>
+        <span className="pv-trial-chip-left pv-trial-chip-short">{short}</span>
+      </span>
+    );
+  };
   const pvBannerReason = pvLockReason
     ?? (pvServerLocked && pvGate.on && pvScope ? (pvGate.access.lockReason(coin) ?? "pro-limit") : null);
   const pvLastCalc = useRef(0);
@@ -2489,7 +2595,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     chart: chartRef.current,
     mainSeries: candleRef.current,
     getCandles: () => lastCandlesRef.current,
-    enabled: libIndicators,
+    enabled: tradeChartLocked ? [] : libIndicators,
     isDark: !isLight,
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2755,11 +2861,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         },
       });
 
+      // Overlays start with their current on/off state — the visibility
+      // effects below only fire when a toggle changes, so a rebuilt chart
+      // (theme, fullscreen, Market cap ↔ Price…) would otherwise show them.
       const bbOpts = {
         lineWidth: 1 as const,
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
+        visible: showBB,
       };
       const maOpts = {
         lineWidth: 1 as const,
@@ -2781,6 +2891,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
+        visible: showBB,
       });
       bbFillLowerRef.current = chart.addSeries(AreaSeries, {
         lineVisible: false,
@@ -2789,6 +2900,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         priceLineVisible: false,
         lastValueVisible: false,
         crosshairMarkerVisible: false,
+        visible: showBB,
       });
 
       // Every view (desktop/mobile, fullscreen or not) paints its own
@@ -2821,6 +2933,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         priceLineVisible: false,
         lastValueVisible: false,
         color: "rgba(100,100,100,0.4)",
+        // #trade chart: no volume bars (candles + ProVision only).
+        visible: !tradeChartLocked,
       });
       chart
         .priceScale("volume")
@@ -2848,35 +2962,37 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         ...maOpts,
         color: "#4ade80",
         title: "EMA 20",
+        visible: showEMA20,
       });
       ema50Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
         color: "#fb923c",
         title: "EMA 50",
+        visible: showEMA50,
       });
       ema200Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
         color: "#c084fc",
         title: "EMA 200",
-        visible: false,
+        visible: showEMA200,
       });
       ma20Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
         color: "#818cf8",
         title: "MA 20",
-        visible: false,
+        visible: showMA20,
       });
       ma50Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
         color: "#f472b6",
         title: "MA 50",
-        visible: false,
+        visible: showMA50,
       });
       ma200Ref.current = chart.addSeries(LineSeries, {
         ...maOpts,
         color: "#facc15",
         title: "MA 200",
-        visible: false,
+        visible: showMA200,
       });
 
       chartRef.current = chart;
@@ -3283,7 +3399,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           setDivergence(div);
           if (candleRef.current) {
             const priceMarkers: SeriesMarker<number>[] = (div && isPaid && !forceHideIndicators)
-              ? div.pivots.map((p) => ({
+              ? div.pivots.map((p, pi, all) => ({
                   time: p.time,
                   position:
                     div.type === "bullish"
@@ -3295,7 +3411,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       : ("arrowDown" as const),
                   color: div.type === "bullish" ? "#4ade80" : "#fb7185",
                   size: 3,
-                  text: div.type === "bullish" ? "Bull Div" : "Bear Div",
+                  // Label once (latest pivot) — two labels side by side overlapped.
+                  text: pi === all.length - 1 ? (div.type === "bullish" ? "Bull Div" : "Bear Div") : "",
                 }))
               : [];
             if (!divMarkersRef.current) {
@@ -5015,10 +5132,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
       </svg>
       {mobileTabs && <span className="chart-tool-label">Fullscreen</span>}
+      {/* Desktop #trade only: text label beside the icon. */}
+      {isDesktopWidth && prefsScope === "trade" && !pageMode && (
+        <span className="chart-fs-label">{t("chart.fullChart", "Full Chart")}</span>
+      )}
     </button>
   );
+  // Desktop Trade page: a lean toolbar (chart style, grid, compact view,
+  // full screen only).
+  const tradeDesktopLean = isDesktopWidth && prefsScope === "trade" && !pageMode;
   const heroIconRow = (
     <div className="chart-hero-icon-row">
+      {/* Desktop #trade: the interval is a dropdown here, beside the icons
+          (the pill row is hidden there). */}
+      {tradeDesktopLean && fsIntervalButton}
       {/* Chart style (candle/line/area) picker — mobile and
           desktop both now; it already has its own mobile
           bottom-sheet branch built in (isDesktopWidth ? portal
@@ -5042,7 +5169,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </button>
       )}
       {gridStyleControls}
-      {isDesktopWidth && (
+      {/* Desktop #trade keeps only chart style, grid, compact view and full
+          screen — indicators, depth profile and screenshot are hidden there. */}
+      {isDesktopWidth && !tradeDesktopLean && (
         <button
           type="button"
           className={`chart-depth-btn chart-fx-btn${toolsIndOpen ? " chart-depth-btn--active" : ""}`}
@@ -5057,7 +5186,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           )}
         </button>
       )}
-      {isDesktopWidth && gridToggleButton}
+      {isDesktopWidth && !tradeDesktopLean && gridToggleButton}
+      {!tradeDesktopLean && (
       <button
         className={`chart-depth-btn${showDepthProfile ? " chart-depth-btn--active" : ""}`}
         onClick={() => setShowDepthProfile((v) => !v)}
@@ -5072,11 +5202,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </svg>
         {mobileTabs && <span className="chart-tool-label">Depth</span>}
       </button>
+      )}
       {/* Desktop only — mobile goes back to its own text link
           below the header instead (chart-compact-link, right
           after this row closes), not merged into this icon
           set. */}
       {isDesktopWidth && chartViewSwitchRow}
+      {!tradeDesktopLean && (
       <button
         type="button"
         className="chart-depth-btn"
@@ -5090,6 +5222,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         </svg>
         {mobileTabs && <span className="chart-tool-label">Save</span>}
       </button>
+      )}
       {/* Fullscreen: in this row on desktop; on the mobile toolbar it's
           pinned at the right end instead (fullscreenToolBtn). */}
       {isDesktopWidth && fullscreenToolBtn}
@@ -5146,7 +5279,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             ))}
           </div>
-          {/* "Indicators" row → opens its own sheet with the list. */}
+          {/* "Indicators" row → opens its own sheet with the list.
+              Not on the #trade chart (candle type + ProVision only). */}
+          {!tradeChartLocked && (
           <button
             type="button"
             className="date-range-sheet-item cts-row"
@@ -5163,6 +5298,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             <span className="cts-row-chev">›</span>
           </button>
+          )}
           <div className="cts-section-label">Tools</div>
           <button
             type="button"
@@ -5185,6 +5321,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             {toolsSwitch(aiReadOpen)}
           </button>
+          {!tradeChartLocked && (<>
           <button
             type="button"
             className="date-range-sheet-item cts-row"
@@ -5217,6 +5354,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
             {toolsSwitch(showGrid)}
           </button>
+          </>)}
           <button
             type="button"
             className="date-range-sheet-item cts-row"
@@ -6457,7 +6595,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}`}
+      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}${(pageTabContent || (tradeDesktopLean && pageTabBar && chartMetric === "mcap")) && !isFullscreen ? " price-chart-container--ctab" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
@@ -6681,6 +6819,64 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             )}
             </div>
+            {/* Trade page section tabs (Overview · News · … · ETFs) + the
+                active tab's panel, which takes the chart's place. */}
+            {pageTabBar && <div className="cpt-row">{pageTabBar}</div>}
+            {pageTabContent}
+            {/* Desktop #trade: Price / Market cap switch + chart tools,
+                right above the chart. */}
+            {tradeDesktopLean && pageTabBar && !pageTabContent && !isFullscreen && (
+              <div className="cpt-chart-head">
+                <div className="cpt-metric" role="tablist">
+                  {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      role="tab"
+                      aria-selected={chartMetric === k}
+                      className={`cpt-metric-btn${chartMetric === k ? " cpt-metric-btn--on" : ""}`}
+                      onClick={() => setChartMetric(k)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {chartMetric === "mcap" && (
+                  <div className="cpt-mcap-stat">
+                    <span className="cpt-mcap-stat-label">{coin} market cap</span>
+                    <strong>{mcapStats ? fmtCap(mcapStats.last) : "—"}</strong>
+                    {mcapStats?.chg != null && (
+                      <span className={`cpt-mcap-stat-chg ${mcapStats.chg >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"}`}>
+                        {mcapStats.chg >= 0 ? "▲" : "▼"} {Math.abs(mcapStats.chg).toFixed(2)}%
+                        <span className="cpt-mcap-stat-range">{MCAP_RANGES.find((r) => r.id === mcapRange)?.label}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+                {chartMetric === "price" ? heroIconRow : (
+                  <div className="cpt-mcap-tools">
+                    <div className="cpt-seg" role="tablist" aria-label="Range">
+                      {MCAP_RANGES.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={mcapRange === r.id}
+                          className={`cpt-seg-btn${mcapRange === r.id ? " cpt-seg-btn--on" : ""}`}
+                          onClick={() => setMcapRange(r.id)}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="chart-hero-icon-row">{fullscreenToolBtn}</div>
+                  </div>
+                )}
+              </div>
+            )}
+            {tradeDesktopLean && pageTabBar && !pageTabContent && !isFullscreen && chartMetric === "mcap" && (
+              <MarketCapChart coin={coin} theme={theme} range={mcapRange} onStats={setMcapStats} />
+            )}
             {mobileTabs && (
               <div className={`chart-mview-tabs chart-mview-tabs--${mobileView}`} role="tablist">
                 {([["chart", "Chart"], ["orderbook", "Order Book"], ["trades", "Trades"]] as const).map(([k, label]) => (
@@ -6703,8 +6899,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <OrderBook coin={coin} embedded view={mobileView} />
               </div>
             )}
+            {/* Desktop #trade with the tab row: tools live in the tab row. */}
+            {!(tradeDesktopLean && pageTabBar) && (
             <div className={`chart-bar-toolbar${isDesktopWidth ? "" : " chart-bar-toolbar--actions"}`}>
-              {quickIntervalPills}
+              {!tradeDesktopLean && quickIntervalPills}
               <span className="chart-bar-toolbar-spacer" />
               {isDesktopWidth ? heroIconRow : showToolsButton}
               {!isDesktopWidth && (
@@ -6735,6 +6933,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
               )}
             </div>
+            )}
           </>
           ) : (
           <>
@@ -7805,6 +8004,102 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             visible={!!pvResult && chartStyle !== "line"}
             generation={chartGeneration}
           />
+          {/* Desktop, signed-out / free: a fancy glass promo card floating
+              in the chart's top-left corner (dismissible for the session). */}
+          {/* "ghost": a blurred ProVision teaser painted over the chart. */}
+          {PV_PROMO_STYLE === "ghost" && isDesktopWidth && !pvGhostDismissed && (pvBannerReason === "signin" || pvBannerReason === "trial-available") && (
+            <div className="pv-ghost" aria-label="ProVision preview">
+              <svg className="pv-ghost-art" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="pvg-band" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="#fb7185" />
+                    <stop offset="30%" stopColor="#fb7185" />
+                    <stop offset="42%" stopColor="#facc15" />
+                    <stop offset="52%" stopColor="#4ade80" />
+                    <stop offset="78%" stopColor="#4ade80" />
+                    <stop offset="88%" stopColor="#fb7185" />
+                    <stop offset="100%" stopColor="#fb7185" />
+                  </linearGradient>
+                </defs>
+                {[0, 9, 18, 27, 36, 45].map((o, i) => (
+                  <path
+                    key={o}
+                    className="pv-ghost-line"
+                    style={{ opacity: 0.85 - i * 0.12 }}
+                    d={`M0 ${250 + o} C120 ${270 + o} 220 ${300 + o} 330 ${250 + o} S520 ${120 + o} 640 ${130 + o} S820 ${210 + o} 1000 ${190 + o}`}
+                  />
+                ))}
+              </svg>
+              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "31%", top: "62%" }}>STRONG BUY</span>
+              <span className="pv-ghost-pill pv-ghost-pill--sell" style={{ left: "62%", top: "18%" }}>Sell</span>
+              <span className="pv-ghost-pill pv-ghost-pill--buy" style={{ left: "84%", top: "38%" }}>Buy</span>
+              <div className="pv-ghost-center">
+                <button type="button" className="pv-ghost-btn" onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}>
+                  <span className="pv-float-border" aria-hidden="true" />
+                  <span className="pv-ghost-btn-inner">
+                    <svg className="pv-float-spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                    <span className="pv-ghost-btn-text">
+                      <strong>Unlock ProVision</strong>
+                      <span>See this on the real chart · 3 days free · no card</span>
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="pv-ghost-dismiss"
+                  onClick={() => {
+                    setPvGhostDismissed(true);
+                    try { sessionStorage.setItem("pvGhostDismissed", "1"); } catch { /* ignore */ }
+                  }}
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          )}
+          {PV_PROMO_STYLE === "float" && isDesktopWidth && !pvPromoDismissed && (pvBannerReason === "signin" || pvBannerReason === "trial-available") && (
+            <div className="pv-float" role="complementary" aria-label="ProVision free trial">
+              <span className="pv-float-border" aria-hidden="true" />
+              <button
+                type="button"
+                className="pv-float-close"
+                aria-label="Dismiss"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPvPromoDismissed(true);
+                  try { sessionStorage.setItem("pvPromoDismissed", "1"); } catch { /* ignore */ }
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+              <button type="button" className="pv-float-body" onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}>
+                <span className="pv-float-preview" aria-hidden="true">
+                  <svg viewBox="0 0 120 64" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="pvf-band" x1="0" x2="1" y1="0" y2="0">
+                        <stop offset="0%" stopColor="#fb7185" />
+                        <stop offset="45%" stopColor="#facc15" />
+                        <stop offset="60%" stopColor="#4ade80" />
+                        <stop offset="100%" stopColor="#4ade80" />
+                      </linearGradient>
+                    </defs>
+                    <path className="pv-float-ribbon pv-float-ribbon--3" d="M0 46 C25 50 40 52 58 40 S95 16 120 10" />
+                    <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
+                    <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
+                  </svg>
+                  <span className="pv-float-buy">▲ BUY</span>
+                </span>
+                <span className="pv-float-text">
+                  <span className="pv-float-title">
+                    <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                    Unlock ProVision
+                  </span>
+                  <span className="pv-float-sub">Pro signals · 3 days free · no card</span>
+                </span>
+                <span className="pv-float-cta">Try free</span>
+              </button>
+            </div>
+          )}
           {/* Pro Vision intro: a few seconds of "preparing" over the chart. */}
           {pvIntro && ReactDOM.createPortal(
             <div className="pvi" role="status" aria-label="Preparing ProVision" style={{ ["--pvi-ms" as string]: `${PV_INTRO_MS}ms` }}>
@@ -7972,30 +8267,77 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {/* ProVision switched on but not unlocked for this coin (Pro's 4th
             coin today, or the free trial ended) — say so and offer the way in. */}
-        {pvTrialLeftMs !== null && (() => {
-          const h = Math.floor(pvTrialLeftMs / 3_600_000);
-          const left = h >= 24 ? `${Math.ceil(h / 24)} day${Math.ceil(h / 24) === 1 ? "" : "s"}` : h >= 1 ? `${h}h` : "under an hour";
-          return (
-            <button
-              type="button"
-              className="pv-locked pv-locked--trial"
-              onClick={() => openProVisionPaywall({ reason: "trial-active", coin })}
-            >
-              <span className="pv-locked-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+        {/* The trial strip lives inside the Signal Check card once it's loaded. */}
+        {!pvResult && pvTrialBannerEl}
+        {/* Phones (not Advance Chart): trial banner in the same fancy card
+            as "Unlock ProVision". */}
+        {!pvResult && pvTrialLeftMs !== null && (
+          <button type="button" className="pv-mpromo pv-mpromo--trial" onClick={() => openProVisionPaywall({ reason: "trial-active", coin })}>
+            <span className="pv-float-border" aria-hidden="true" />
+            <span className="pv-mpromo-body">
+              <span className="pv-float-preview pv-mpromo-preview" aria-hidden="true">
+                <svg viewBox="0 0 120 64" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="pvm-band-trial" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stopColor="#fb7185" />
+                      <stop offset="45%" stopColor="#facc15" />
+                      <stop offset="60%" stopColor="#4ade80" />
+                      <stop offset="100%" stopColor="#4ade80" />
+                    </linearGradient>
+                  </defs>
+                  <path className="pv-float-ribbon pv-float-ribbon--3" d="M0 46 C25 50 40 52 58 40 S95 16 120 10" />
+                  <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
+                  <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
+                </svg>
+                <span className="pv-float-buy">▲ BUY</span>
               </span>
-              <span className="pv-locked-text">
-                <strong>ProVision free trial · {left} left</strong>
-                <span>Keep every coin and timeframe for $99/year.</span>
+              <span className="pv-mpromo-text">
+                <span className="pv-float-title">
+                  <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                  ProVision free trial
+                </span>
+                <span className="pv-float-sub">{pvTrialLeftLabel(pvTrialLeftMs)} left · then $99/year</span>
               </span>
-              <span className="pv-locked-cta">Keep it</span>
-            </button>
-          );
-        })()}
+              <span className="pv-float-cta pv-mpromo-cta">Keep it</span>
+            </span>
+          </button>
+        )}
+        {/* Phones, signed-out / free: the fancy promo (same look as desktop). */}
+        {(pvBannerReason === "signin" || pvBannerReason === "trial-available") && (
+          <button type="button" className="pv-mpromo" onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}>
+            <span className="pv-float-border" aria-hidden="true" />
+            <span className="pv-mpromo-body">
+              <span className="pv-float-preview pv-mpromo-preview" aria-hidden="true">
+                <svg viewBox="0 0 120 64" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="pvm-band" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stopColor="#fb7185" />
+                      <stop offset="45%" stopColor="#facc15" />
+                      <stop offset="60%" stopColor="#4ade80" />
+                      <stop offset="100%" stopColor="#4ade80" />
+                    </linearGradient>
+                  </defs>
+                  <path className="pv-float-ribbon pv-float-ribbon--3" d="M0 46 C25 50 40 52 58 40 S95 16 120 10" />
+                  <path className="pv-float-ribbon pv-float-ribbon--2" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
+                  <path className="pv-float-ribbon pv-float-ribbon--1" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
+                </svg>
+                <span className="pv-float-buy">▲ BUY</span>
+              </span>
+              <span className="pv-mpromo-text">
+                <span className="pv-float-title">
+                  <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                  Unlock ProVision
+                </span>
+                <span className="pv-float-sub">3 days free · no card</span>
+              </span>
+              <span className="pv-float-cta pv-mpromo-cta">Try free</span>
+            </span>
+          </button>
+        )}
         {pvBannerReason && (
           <button
             type="button"
-            className="pv-locked"
+            className={`pv-locked${pvBannerReason === "signin" || pvBannerReason === "trial-available" ? " pv-locked--promo" : ""}`}
             onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}
           >
             <span className="pv-locked-icon" aria-hidden="true">
@@ -8038,6 +8380,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </span>
               </span>
               <span className="pv-card-head-right">
+                {/* Trial chip in the header row (desktop; phones get it on
+                    its own line below so the title stays whole). */}
+                {pvTrialChip("pv-trial-chip--head")}
                 {!pvCardOpen && pvResult.stats.winRate !== null && (
                   <span className="pv-card-mini">Hit rate {pvResult.stats.winRate}% · {pvResult.stats.total} signals</span>
                 )}
@@ -8057,6 +8402,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 How to use ProVision
               </button>
             )}
+            {/* Trial strip combined into the card (Trade + Advance Chart). */}
             {pvCardOpen && pvResult.barSec <= 300 && (
               <div className="pv-alert" role="status">
                 <span className="pv-alert-icon" aria-hidden="true">⏱</span>
@@ -8280,6 +8626,23 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               );
             })()}
             {pvCardOpen && (<>
+            {/* Phones: a slim trial line just above the track record
+                (the header stays exactly as it was). */}
+            {pvTrialLeftMs !== null && (() => {
+              const left = pvTrialLeftLabel(pvTrialLeftMs);
+              return (
+                <button type="button" className="pv-trial-line" onClick={() => openProVisionPaywall({ reason: "trial-active", coin })}>
+                  <span className="pv-trial-line-icon" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                  </span>
+                  <span className="pv-trial-line-text">
+                    <strong>Enjoying ProVision?</strong>
+                    <em>{left} left · then $99/year</em>
+                  </span>
+                  <span className="pv-trial-line-cta">Keep it</span>
+                </button>
+              );
+            })()}
             {/* Track record: every signal on the loaded history. A signal
                 "worked" if price moved one average candle range its way
                 before touching its invalidation level (within 20 candles). */}
@@ -8310,7 +8673,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     <span className="pvt-kv"><span className="pvt-k">Won / lost</span><span className="pvt-v"><span className="pvt-g">{st.worked}</span> / <span className="pvt-r">{st.failed}</span>{st.open ? <span className="pvt-dim"> · {st.open} open</span> : null}</span></span>
                     <span className="pvt-kv"><span className="pvt-k">Avg win</span><span className="pvt-v pvt-g">{fmtP(st.avgWinPct)}</span></span>
                     <span className="pvt-kv"><span className="pvt-k">Avg loss</span><span className="pvt-v pvt-r">{fmtP(st.avgLossPct, false)}</span></span>
-                    <span className="pvt-kv"><span className="pvt-k">Win : loss size</span><span className="pvt-v">{ratio === null ? "—" : `${ratio.toFixed(1)} : 1`}</span></span>
+                    <span className="pvt-kv"><span className="pvt-k" title="Average win size vs average loss size">Win : loss</span><span className="pvt-v">{ratio === null ? "—" : `${ratio.toFixed(1)} : 1`}</span></span>
                   </div>
 
                   {recent.length > 0 && (

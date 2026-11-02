@@ -250,12 +250,27 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
     // Pill with a pointer toward the candle (Buy below the low, Sell above
     // the high; TP above a long's exit high / below a short's exit low).
     // Large, bold labels (Buy / Sell bigger than TP) with a soft glow.
-    const pill = (x: number, anchor: number, below: boolean, text: string, bg: string, fg: string, big: boolean) => {
+    // Labels never overlap: each one checks the boxes already placed and, if
+    // it would collide, moves further from its candle (up to two steps) —
+    // otherwise it's skipped. Drawn in priority order: STRONG, TP, Buy/Sell.
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
+    const hits = (r: { x: number; y: number; w: number; h: number }) =>
+      placed.some((p) => r.x < p.x + p.w + 4 && r.x + r.w + 4 > p.x && r.y < p.y + p.h + 4 && r.y + r.h + 4 > p.y);
+    const pill = (x: number, anchor: number, below: boolean, text: string, bg: string, fg: string, big: boolean): boolean => {
       const fs = big ? 16 : 13;
       ctx.font = `800 ${fs}px Inter, system-ui, sans-serif`;
       const padX = big ? 14 : 10;
-      const pw = ctx.measureText(text).width + padX * 2, ph = big ? 32 : 26, gap = big ? 14 : 12, tip = big ? 8 : 6;
-      const py = below ? anchor + gap : anchor - gap - ph;
+      const pw = ctx.measureText(text).width + padX * 2, ph = big ? 32 : 26, gap0 = big ? 14 : 12, tip = big ? 8 : 6;
+      let gap = gap0;
+      let py = below ? anchor + gap : anchor - gap - ph;
+      let tries = 0;
+      while (hits({ x: x - pw / 2, y: py, w: pw, h: ph }) && tries < 2) {
+        tries++;
+        gap = gap0 + tries * (ph + 6);
+        py = below ? anchor + gap : anchor - gap - ph;
+      }
+      if (hits({ x: x - pw / 2, y: py, w: pw, h: ph })) return false;
+      placed.push({ x: x - pw / 2, y: py, w: pw, h: ph });
       ctx.save();
       ctx.shadowColor = bg;
       ctx.shadowBlur = big ? 16 : 8;
@@ -272,6 +287,7 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
       ctx.textBaseline = "middle";
       ctx.fillText(text, x - pw / 2 + padX, py + ph / 2 + 1);
       ctx.textBaseline = "alphabetic";
+      return true;
     };
     // Buy / Sell at every ribbon flip — skipped when a STRONG signal sits
     // within 3 candles (that one gets the label instead).
@@ -279,16 +295,9 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
     const idxOf = new Map(candles.map((cd, i) => [cd.time, i]));
     for (const s of res.signals) { const k = idxOf.get(s.time); if (k !== undefined) strongIdx.add(k); }
     const nearStrong = (k: number) => [...strongIdx].some((j) => Math.abs(j - k) <= 3);
-    for (const f of res.flips) {
-      const k = idxOf.get(f.time);
-      const x = xOf(f.time);
-      const c = byTime.get(f.time);
-      if (k === undefined || x === null || !c || x < -30 || x > plotRight + 30 || nearStrong(k)) continue;
-      const isSell = f.side === "sell";
-      const anchor = yOf(isSell ? c.high : c.low);
-      if (anchor !== null) pill(x, anchor, !isSell, isSell ? "Sell" : "Buy", isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
-    }
-    for (const s of res.signals) {
+    // 1) STRONG signals — most important, placed first (newest first so the
+    //    latest one always gets its natural spot).
+    for (const s of [...res.signals].reverse()) {
       const x = xOf(s.time);
       const c = byTime.get(s.time);
       if (x !== null && c && x > -30 && x < plotRight + 30) {
@@ -298,16 +307,27 @@ export function ProVisionOverlay({ chartRef, seriesRef, candlesRef, result, visi
           pill(x, anchor, !isSell, isSell ? "STRONG SELL" : "STRONG BUY", isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
         }
       }
-      // TP marker where the trade closed in profit.
-      if (s.worked && s.exitTime !== undefined) {
-        const xe = xOf(s.exitTime);
-        const ce = byTime.get(s.exitTime);
-        if (xe !== null && ce && xe > -30 && xe < plotRight + 30) {
-          const isSell = s.side === "sell";
-          const anchor = yOf(isSell ? ce.low : ce.high);
-          if (anchor !== null) pill(xe, anchor, isSell, "TP", "#facc15", "#1a1400", false);
-        }
+    }
+    // 2) TP markers where a trade closed in profit.
+    for (const s of res.signals) {
+      if (!s.worked || s.exitTime === undefined) continue;
+      const xe = xOf(s.exitTime);
+      const ce = byTime.get(s.exitTime);
+      if (xe !== null && ce && xe > -30 && xe < plotRight + 30) {
+        const isSell = s.side === "sell";
+        const anchor = yOf(isSell ? ce.low : ce.high);
+        if (anchor !== null) pill(xe, anchor, isSell, "TP", "#facc15", "#1a1400", false);
       }
+    }
+    // 3) Plain Buy / Sell at ribbon flips (newest first) — skipped if no room.
+    for (const f of [...res.flips].reverse()) {
+      const k = idxOf.get(f.time);
+      const x = xOf(f.time);
+      const c = byTime.get(f.time);
+      if (k === undefined || x === null || !c || x < -30 || x > plotRight + 30 || nearStrong(k)) continue;
+      const isSell = f.side === "sell";
+      const anchor = yOf(isSell ? c.high : c.low);
+      if (anchor !== null) pill(x, anchor, !isSell, isSell ? "Sell" : "Buy", isSell ? "#e5484d" : "#30a46c", "#ffffff", true);
     }
   }, [chartRef, seriesRef, candlesRef]);
 

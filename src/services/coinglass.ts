@@ -1726,6 +1726,7 @@ let marketCapFetchedAt = 0;
 const MARKET_CAP_TTL = 5 * 60 * 1000; // 5 min
 
 interface CoinGeckoMarket {
+  id?: string;
   symbol: string;
   name?: string;
   image?: string;
@@ -1735,6 +1736,15 @@ interface CoinGeckoMarket {
   price_change_percentage_24h: number;
 }
 let marketsRawCache: CoinGeckoMarket[] | null = null;
+
+/** CoinGecko id for a symbol (from the cached top-250 market list), e.g. BTC → "bitcoin". */
+export async function getCoinGeckoId(symbol: string): Promise<string | null> {
+  if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
+    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
+  }
+  const s = symbol.toLowerCase();
+  return marketsRawCache?.find((c) => c.symbol.toLowerCase() === s)?.id ?? null;
+}
 
 export interface TopMarketCoin { symbol: string; name: string; image: string | null; marketCap: number; volume24h: number }
 

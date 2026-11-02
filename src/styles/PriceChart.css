@@ -372,6 +372,16 @@ html[data-theme="light"]
   .price-chart-container--page .chart-tv-bottom-bar {
     flex-shrink: 0;
   }
+  /* ProVision banner on the Advance Chart: a flat strip flush with the
+     bottom of the page — full width, no rounding, no outer gaps. */
+  .price-chart-container--page .pv-locked,
+  .price-chart-container--page .pv-locked:hover {
+    flex-shrink: 0;
+    width: 100%;
+    margin: 0;
+    margin-top: auto;
+    border-radius: 0;
+  }
   /* Reference-match (TradingView desktop chart): the drawing-tools rail
      (ChartDrawingTools, .cdt-toolbar) is position:fixed, floating at
      chartRect.left + 8px — i.e. INSIDE the chart's own left edge, not
@@ -6850,7 +6860,12 @@ html:not([data-theme="light"]) .ai-read-chip--bearish { color: #fb7185; }
   opacity: 1;
   animation: none;
 }
-.chart-bar-stats > .chart-bar-stat:first-child {
+.chart-bar-stats > .chart-bar-stat:first-child,
+/* The row now starts with App.tsx's stats (Change/High/Low removed), so
+   their first one also skips its left line — the coin block's divider
+   already separates it (otherwise two lines sat side by side). */
+.chart-bar-stats > :first-child .mch-stat:first-child,
+.chart-bar-stats > .mch-stat:first-child {
   padding-left: 0 !important;
   border-left: none !important;
 }
@@ -8247,6 +8262,167 @@ html[data-theme="light"] .pv-card { background: #fff; border-color: rgba(15, 23,
 /* Sections keep their full height so the card scrolls; otherwise the flex
    column squeezed the Signal Check panel (overflow: hidden) to one row. */
 .pv-card--advance > * { flex-shrink: 0; }
+/* Phones (Advance Chart): edge to edge, 16px inside. */
+@media (max-width: 640px) {
+  .pv-card.pv-card--advance,
+  html[data-theme="light"] .pv-card.pv-card--advance { margin: 0; padding: 16px; border: none; border-radius: 0; box-shadow: none; }
+  /* The card scrolls on its own — made smooth on iOS: momentum scrolling,
+     the swipe stays inside the card (no hand-off to the page mid-swipe),
+     and it renders on its own layer so the animated bars don't stutter it. */
+  .pv-card.pv-card--advance {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-x pan-y;
+    transform: translateZ(0);
+    will-change: scroll-position;
+  }
+  .pv-card.pv-card--advance .pvr,
+  .pv-card.pv-card--advance .pvt,
+  html[data-theme="light"] .pv-card.pv-card--advance .pvr,
+  html[data-theme="light"] .pv-card.pv-card--advance .pvt { padding: 0; border: none; border-radius: 0; box-shadow: none; }
+}
+/* Advance Chart: no outline around the Signal Check card. */
+.pv-card.pv-card--advance,
+html[data-theme="light"] .pv-card.pv-card--advance { border: none; box-shadow: none; }
+/* Header never overlaps: title side truncates, right side stays intact. */
+.pv-card-head > .pvl-title { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.pv-card-head .pvl-score { flex-shrink: 0; }
+.pv-card-head .pvl-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pv-card-head-right { flex-shrink: 0; }
+@media (max-width: 640px) {
+  /* No room for the hit-rate summary next to the title on phones. */
+  .pv-card-head .pv-card-mini { display: none; }
+}
+
+/* Collapsed card: compact trial chip in the header. */
+.pv-trial-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #6d28d9;
+  background: rgba(124, 58, 237, 0.12);
+  cursor: pointer;
+}
+.pv-trial-chip:hover { background: rgba(124, 58, 237, 0.2); }
+.pv-trial-chip:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+html:not([data-theme="light"]) .pv-trial-chip { color: #c4b5fd; }
+/* Header trial chip — "Enjoying ProVision? Keep it ›": a fun gradient pill
+   with a slow shimmer and a twinkling sparkle; days left in small print. */
+.pv-trial-chip,
+html:not([data-theme="light"]) .pv-trial-chip {
+  position: relative;
+  overflow: hidden;
+  gap: 6px;
+  padding: 6px 13px 6px 11px;
+  color: #ffffff;
+  background: linear-gradient(100deg, #7c3aed, #6366f1 55%, #3b82f6);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+.pv-trial-chip:hover { background: linear-gradient(100deg, #6d28d9, #4f46e5 55%, #2563eb); }
+.pv-trial-chip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: pv-trial-shimmer 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pv-trial-shimmer {
+  0% { background-position: 150% 0; }
+  60%, 100% { background-position: -100% 0; }
+}
+.pv-trial-chip > svg { animation: pv-trial-twinkle 1.8s ease-in-out infinite; }
+@keyframes pv-trial-twinkle {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.35) rotate(45deg); opacity: 0.8; }
+}
+.pv-trial-chip-cta { font-weight: 800; }
+.pv-trial-chip-left {
+  margin-left: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+}
+.pv-trial-chip-short { display: none; }
+/* Wider screens: chip in the header row. Phones: header as before, and a
+   slim line at the bottom of the expanded card instead. */
+.pv-trial-line { display: none; }
+@media (max-width: 640px) {
+  .pv-trial-chip--head { display: none; }
+  .pv-trial-line,
+  .pv-trial-line:hover {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 14px;
+    background: linear-gradient(100deg, rgba(124, 58, 237, 0.12), rgba(59, 130, 246, 0.08));
+    font-size: 12.5px;
+    color: var(--color-text);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pv-trial-line:active { transform: scale(0.99); }
+  .pv-trial-line-icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: #ffffff;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  }
+  .pv-trial-line-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .pv-trial-line-text strong { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv-trial-line-text em { font-style: normal; font-size: 11.5px; font-weight: 500; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv-trial-line-cta {
+    flex-shrink: 0;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  }
+  /* Track record: flat on phones — no border, background or padding. */
+  html .pv-card .pvt.pvt,
+  html[data-theme="light"] .pv-card .pvt.pvt {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .pvt::before,
+  .pvt::after { content: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-trial-chip::after,
+  .pv-trial-chip > svg { animation: none; }
+}
+/* Trial strip inside the card: rounded tile, not the page-edge strip. */
+.pv-card-trial .pv-locked,
+.pv-card-trial .pv-locked:hover,
+.price-chart-container--page .pv-card-trial .pv-locked,
+.price-chart-container--page .pv-card-trial .pv-locked:hover {
+  margin: 0;
+  width: 100%;
+  border-radius: 12px;
+}
 .pv-card-title { font-size: 15px; font-weight: 700; }
 .pv-verdict {
   display: inline-flex;
@@ -9283,6 +9459,14 @@ html[data-theme="light"] .pvt { background: #ffffff; border-color: rgba(15, 23, 
   border-left: 1px solid rgba(127, 127, 127, 0.16);
 }
 .pvt-kv:first-child { padding-left: 0; border-left: none; }
+/* Phones: all five stats side by side in one row, always — compact. */
+@media (max-width: 640px) {
+  .pvt-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+  .pvt-kv { min-width: 0; padding: 0 6px; gap: 3px; }
+  .pvt-kv:first-child { padding-left: 0; }
+  .pvt-k { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pvt-v { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+}
 .pvt-k { font-size: 11px; color: var(--color-text-muted); }
 .pvt-v { font-size: 15px; font-weight: 500; color: var(--color-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pvt-g { color: var(--pvt-g); }
@@ -9617,6 +9801,17 @@ html[data-theme="light"] .pvi-orb::after { border-color: rgba(109, 40, 217, 0.75
 @media (prefers-reduced-motion: reduce) {
   .pvsb-cell--on, .pvsb-cell--tip, .pvsb-cell--mid, .pvsb-sweep { animation: none; }
   .pvsb-cell--ghost { animation: none; opacity: 0; }
+}
+/* Phones: keep the bars lively but cheap to draw so scrolling stays smooth
+   on iOS — no blended light sweep (repainted every row every frame), and a
+   tip pulse that only fades instead of animating glow/brightness. */
+@media (max-width: 640px) {
+  .pvsb-sweep { display: none; }
+  .pvsb-cell--on { box-shadow: none; }
+  @keyframes pvsb-tip-fade { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .pvsb-cell--tip { animation: pvsb-rev 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) both, pvsb-tip-fade 1.1s ease-in-out 0.6s infinite; }
 }
 .pvsb-val {
   justify-self: end;
@@ -10607,6 +10802,411 @@ html[data-theme="light"] .pv-stat-val--bear { color: #be123c; }
   background: linear-gradient(90deg, #7c3aed, #3b82f6);
 }
 .pv-locked:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+/* Phones: each line stays on one row (trims with … if it must). */
+@media (max-width: 640px) {
+  .pv-locked { gap: 10px; padding: 10px 12px; }
+  .pv-locked-text strong,
+  .pv-locked-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pv-locked-text strong { font-size: 13.5px; }
+  .pv-locked-text { font-size: 12px; }
+  .pv-locked-icon { width: 30px; height: 30px; }
+  .pv-locked-cta { padding: 7px 12px; font-size: 12.5px; }
+}
+/* Free-trial banner wording: full everywhere except the Advance Chart on
+   phones, which gets the short line. */
+.pv-trial-short { display: none; }
+@media (max-width: 640px) {
+  .price-chart-container--page .pv-trial-long { display: none; }
+  .price-chart-container--page .pv-trial-short { display: inline; }
+}
+/* Advance Chart on phones only: minimal trial banner — one quiet line,
+   small sparkle, text link. Every other page keeps the regular banner. */
+@media (max-width: 640px) {
+.price-chart-container--page .pv-locked.pv-locked--trial,
+.price-chart-container--page .pv-locked.pv-locked--trial:hover {
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.07);
+}
+.price-chart-container--page .pv-locked--trial .pv-locked-icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: #8b5cf6;
+}
+.price-chart-container--page .pv-locked--trial .pv-locked-icon svg { width: 13px; height: 13px; }
+.price-chart-container--page .pv-locked--trial .pv-locked-text {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.price-chart-container--page .pv-locked--trial .pv-locked-text > strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: visible;
+}
+.price-chart-container--page .pv-locked--trial .pv-locked-text > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-muted);
+}
+.price-chart-container--page .pv-locked--trial .pv-locked-cta {
+  padding: 0;
+  background: none;
+  color: #7c3aed;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+html:not([data-theme="light"]) .price-chart-container--page .pv-locked--trial .pv-locked-cta { color: #a78bfa; }
+.price-chart-container--page .pv-locked--trial .pv-locked-cta::after { content: " ›"; }
+}
+
+/* Desktop #trade: no full-width trial strip — the trial only shows as the
+   "Enjoying ProVision? Keep it" chip in Signal Check, i.e. while it's on. */
+@media (min-width: 641px) {
+  .price-chart-container:not(.price-chart-container--page) .pv-locked--trial { display: none; }
+}
+
+/* Desktop: flat strip sitting flush at the bottom (no rounding, no gap). */
+@media (min-width: 641px) {
+  .pv-locked,
+  .pv-locked:hover {
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* ══ ProVision promo — phones (signed-out / free): fancy card replacing
+   the plain strip. Desktop keeps its own promo (callout / ghost / float). */
+.pv-mpromo { display: none; }
+@media (max-width: 640px) {
+  .pv-locked--promo { display: none; }
+  .pv-mpromo,
+  .pv-mpromo:hover {
+    all: unset;
+    box-sizing: border-box;
+    position: relative;
+    display: block;
+    width: 100%;
+    margin: 12px 0 4px;
+    padding: 1px;
+    border-radius: 18px;
+    overflow: hidden;
+    isolation: isolate;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(76, 29, 149, 0.25);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pv-mpromo:active { transform: scale(0.99); }
+  .pv-mpromo-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px 10px 10px;
+    border-radius: 17px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+  }
+  html:not([data-theme="light"]) .pv-mpromo-body { background: rgba(14, 14, 17, 0.9); }
+  .pv-mpromo-preview.pv-float-preview { width: 74px; height: 46px; }
+  .pv-mpromo .pv-float-ribbon { stroke: url(#pvm-band); }
+  .pv-mpromo-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .pv-mpromo .pv-float-title { font-size: 14.5px; }
+  .pv-mpromo .pv-float-sub { font-size: 11.5px; }
+  .pv-mpromo-cta.pv-float-cta { padding: 8px 14px; font-size: 12.5px; }
+  /* Advance Chart on phones: flat — no gradient border, shadow or rounding. */
+  .price-chart-container--page .pv-mpromo,
+  .price-chart-container--page .pv-mpromo:hover {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .price-chart-container--page .pv-mpromo > .pv-float-border { display: none; }
+  .price-chart-container--page .pv-mpromo-body { border-radius: 0; }
+  .pv-mpromo--trial .pv-float-ribbon { stroke: url(#pvm-band-trial); }
+  /* Trial: fancy card everywhere on phones except the Advance Chart,
+     which keeps its minimal one-line banner. */
+  .price-chart-container:not(.price-chart-container--page) .pv-locked--trial { display: none; }
+  .price-chart-container--page .pv-mpromo--trial { display: none; }
+}
+
+/* ══ ProVision promo — "ghost": a blurred teaser painted over the chart
+   (ribbon + labels, gently shimmering) with a glass unlock button. ══ */
+.pv-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+  overflow: hidden;
+  animation: pv-ghost-in 0.8s ease both;
+}
+@keyframes pv-ghost-in { from { opacity: 0; } to { opacity: 1; } }
+.pv-ghost-art {
+  position: absolute;
+  inset: 8% 6% 18% 0;
+  width: 94%;
+  height: 74%;
+  filter: blur(3px);
+  opacity: 0.55;
+  animation: pv-ghost-breathe 4s ease-in-out infinite;
+}
+@keyframes pv-ghost-breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.65; } }
+.pv-ghost-line {
+  fill: none;
+  stroke: url(#pvg-band);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.pv-ghost-pill {
+  position: absolute;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+  filter: blur(2.5px);
+  opacity: 0.7;
+  animation: pv-ghost-pill 4s ease-in-out infinite;
+}
+.pv-ghost-pill--buy { background: #30a46c; box-shadow: 0 0 18px rgba(48, 164, 108, 0.7); }
+.pv-ghost-pill--sell { background: #e5484d; box-shadow: 0 0 18px rgba(229, 72, 77, 0.7); animation-delay: 1.2s; }
+@keyframes pv-ghost-pill { 0%, 100% { opacity: 0.45; transform: translateY(0); } 50% { opacity: 0.8; transform: translateY(-3px); } }
+/* Shimmer passing over the whole teaser. */
+.pv-ghost::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+  background-size: 250% 100%;
+  animation: pv-trial-shimmer 4.5s ease-in-out infinite;
+}
+.pv-ghost-center {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 2;
+}
+.pv-ghost-btn,
+.pv-ghost-btn:hover {
+  all: unset;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 1.5px;
+  border-radius: 18px;
+  cursor: pointer;
+  box-shadow: 0 16px 44px rgba(76, 29, 149, 0.35);
+  transition: transform 0.15s ease;
+}
+.pv-ghost-btn:hover { transform: scale(1.03); }
+.pv-ghost-btn:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 3px; }
+.pv-ghost-btn-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  border-radius: 16.5px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+}
+html:not([data-theme="light"]) .pv-ghost-btn-inner { background: rgba(12, 12, 15, 0.82); }
+.pv-ghost-btn-text { display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.pv-ghost-btn-text strong {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html:not([data-theme="light"]) .pv-ghost-btn-text strong { background-image: linear-gradient(90deg, #c4b5fd, #93c5fd); }
+.pv-ghost-btn-text span { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; }
+.pv-ghost-btn .pv-float-spark { width: 18px; height: 18px; }
+.pv-ghost-dismiss,
+.pv-ghost-dismiss:hover {
+  all: unset;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: rgba(127, 127, 127, 0.12);
+  cursor: pointer;
+}
+.pv-ghost-dismiss:hover { color: var(--color-text); }
+@media (prefers-reduced-motion: reduce) {
+  .pv-ghost, .pv-ghost-art, .pv-ghost-pill, .pv-ghost::after { animation: none; }
+}
+
+/* ══ ProVision promo — floating glass card over the chart (desktop,
+   signed-out / free). Replaces the full-width strip there; phones keep it. */
+@media (min-width: 641px) {
+  .pv-locked--promo { display: none; }
+}
+.pv-float {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 45;
+  border-radius: 18px;
+  padding: 1.5px;
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(76, 29, 149, 0.28);
+  animation: pv-float-in 0.6s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+.price-chart-container--page .pv-float { top: 72px; left: 70px; }
+@keyframes pv-float-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+/* Rotating violet→blue→green gradient border. */
+.pv-float-border {
+  position: absolute;
+  inset: -60%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, #7c3aed, #3b82f6, #22c55e, #a78bfa, #7c3aed);
+  animation: pv-float-spin 4s linear infinite;
+}
+@keyframes pv-float-spin { to { transform: rotate(360deg); } }
+.pv-float-body,
+.pv-float-body:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 16.5px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  cursor: pointer;
+}
+html:not([data-theme="light"]) .pv-float-body { background: rgba(14, 14, 17, 0.86); }
+.pv-float-body:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+.pv-float-close,
+.pv-float-close:hover {
+  all: unset;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  background: rgba(127, 127, 127, 0.14);
+  cursor: pointer;
+}
+.pv-float-close:hover { color: var(--color-text); }
+
+/* Mini live chart: ribbon draws itself in, then a BUY tag pops on. */
+.pv-float-preview {
+  position: relative;
+  flex-shrink: 0;
+  width: 96px;
+  height: 54px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(120% 120% at 80% 0%, #1b1430, #08080a 70%);
+}
+.pv-float-preview svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pv-float-ribbon {
+  fill: none;
+  stroke: url(#pvf-band);
+  stroke-linecap: round;
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: pv-float-draw 3.6s ease-in-out infinite;
+}
+.pv-float-ribbon--1 { stroke-width: 3; }
+.pv-float-ribbon--2 { stroke-width: 2.4; opacity: 0.6; animation-delay: 0.12s; }
+.pv-float-ribbon--3 { stroke-width: 2; opacity: 0.35; animation-delay: 0.24s; }
+@keyframes pv-float-draw {
+  0% { stroke-dashoffset: 160; }
+  45%, 85% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -160; }
+}
+.pv-float-buy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: #22a55b;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.7);
+  animation: pv-float-buy 3.6s ease-in-out infinite;
+}
+@keyframes pv-float-buy {
+  0%, 38% { opacity: 0; transform: scale(0.6) translateY(4px); }
+  48% { opacity: 1; transform: scale(1.12); }
+  55%, 85% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+.pv-float-text { display: flex; flex-direction: column; gap: 3px; padding-right: 8px; }
+.pv-float-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html:not([data-theme="light"]) .pv-float-title { background-image: linear-gradient(90deg, #c4b5fd, #93c5fd); }
+.pv-float-spark { color: #8b5cf6; animation: pv-trial-twinkle 1.8s ease-in-out infinite; }
+.pv-float-sub { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; }
+.pv-float-cta {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.45);
+}
+.pv-float-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: pv-trial-shimmer 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-float, .pv-float-border, .pv-float-ribbon, .pv-float-buy, .pv-float-spark, .pv-float-cta::after { animation: none; }
+  .pv-float-ribbon { stroke-dashoffset: 0; }
+  .pv-float-buy { opacity: 1; }
+}
 
 /* ══ ProVision paywall (BottomSheet / desktop modal) ══ */
 .bs-sheet.pvp-sheet { max-width: 520px; }

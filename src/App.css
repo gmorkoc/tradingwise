@@ -7137,6 +7137,329 @@ html:not([data-theme="light"]) .mss-chart-frozen .price-chart-container {
 
 
 /* Header Paper Trade icon: green "new" dot until opened once (no size change). */
+/* ── Desktop: glowing callout under the top-bar ProVision switch ──
+   Reuses the promo pieces (.pv-float-*) from PriceChart.css. */
+.pv-callout-anchor { position: relative; display: inline-flex; }
+.pv-callout {
+  position: absolute;
+  top: calc(100% + 14px);
+  /* Opens to the LEFT of the switch (over the chart), not down over the
+     Paper Trading column on the right. */
+  right: calc(100% - 44px);
+  z-index: 260;
+  width: 270px;
+  padding: 1.5px;
+  border-radius: 18px;
+  isolation: isolate;
+  box-shadow: 0 18px 44px rgba(76, 29, 149, 0.32);
+  animation: pv-callout-in 0.55s cubic-bezier(0.22, 1.3, 0.36, 1) both, pv-callout-bob 3s ease-in-out 0.6s infinite;
+}
+.pv-callout > .pv-float-border { border-radius: 18px; }
+.pv-callout { overflow: visible; }
+.pv-callout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 18px;
+  overflow: hidden;
+}
+@keyframes pv-callout-in {
+  from { opacity: 0; transform: translate(10px, -10px) scale(0.92); transform-origin: top right; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pv-callout-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+/* Pointer up at the switch. */
+.pv-callout-arrow {
+  position: absolute;
+  top: -7px;
+  right: 18px;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+  border-radius: 3px;
+  background: #7c3aed;
+  z-index: -2;
+}
+/* The rotating gradient border needs its own clipped box. */
+.pv-callout .pv-float-border {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: none;
+  animation: none;
+}
+.pv-callout .pv-float-border::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(from 0deg, #7c3aed, #3b82f6, #22c55e, #a78bfa, #7c3aed);
+  animation: pv-float-spin 4s linear infinite;
+}
+.pv-callout-body,
+.pv-callout-body:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 16.5px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  cursor: pointer;
+}
+html:not([data-theme="light"]) .pv-callout-body { background: rgba(14, 14, 17, 0.9); }
+.pv-callout-head { display: flex; align-items: center; gap: 6px; }
+.pv-callout-free {
+  margin-left: auto;
+  margin-right: 18px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.14);
+}
+.pv-callout-preview.pv-float-preview { width: 100%; height: 76px; }
+.pv-callout .pv-float-ribbon { stroke: url(#pvc-band); }
+.pv-callout .pv-float-sub { white-space: normal; line-height: 1.45; }
+.pv-callout-cta.pv-float-cta { text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .pv-callout, .pv-callout .pv-float-border::before { animation: none; }
+}
+
+/* ── Market ⇄ Paper switch splash (Coinbase Advanced style) ── */
+.mode-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0b;
+  color: #ffffff;
+  animation: mode-splash-veil 1.15s ease both;
+}
+html[data-theme="light"] .mode-splash { background: #ffffff; color: #0a0a0b; }
+@keyframes mode-splash-veil {
+  0% { opacity: 0; }
+  18%, 72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.mode-splash-logo {
+  display: grid;
+  place-items: center;
+  animation: mode-splash-pop 1.15s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+@keyframes mode-splash-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  30% { transform: scale(1); opacity: 1; }
+  72% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
+.mode-splash-p {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffffff;
+  background: radial-gradient(circle at 35% 30%, #a78bfa, #7c3aed 60%, #5b21b6);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.45);
+}
+.mode-splash-word {
+  position: absolute;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  animation: mode-splash-word 1.15s ease both;
+}
+@keyframes mode-splash-word {
+  0%, 15% { opacity: 0; transform: translateY(6px); }
+  35%, 72% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+.mode-splash-brand { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.mode-splash-z { color: #4ade80; }
+.mode-splash-mode { font-size: 12px; font-weight: 600; letter-spacing: normal; opacity: 0.85; }
+.mode-splash--paper .mode-splash-mode { color: #a78bfa; opacity: 1; }
+html[data-theme="light"] .mode-splash--paper .mode-splash-mode { color: #6d28d9; }
+@media (prefers-reduced-motion: reduce) {
+  .mode-splash, .mode-splash-logo, .mode-splash-word { animation-duration: 0.01s; }
+}
+
+/* ── Mobile header paper-wallet chip (sketch #3) ── */
+.wallet-chip,
+.wallet-chip:hover {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 14px 0 9px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.18);
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.wallet-chip:active { transform: scale(0.97); }
+html[data-theme="light"] .wallet-chip { background: rgba(124, 58, 237, 0.1); }
+.wallet-chip--back,
+.wallet-chip--back:hover { padding-left: 6px; background: rgba(255, 255, 255, 0.08); }
+html[data-theme="light"] .wallet-chip--back { background: rgba(15, 23, 42, 0.06); }
+.wallet-chip-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #7c3aed;
+}
+.wallet-chip-badge { width: 30px; height: 30px; }
+.wallet-chip-text { display: flex; flex-direction: column; line-height: 1.12; }
+.wallet-chip-title { font-size: 13.5px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wallet-chip-sub { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; color: #c4b5fd; white-space: nowrap; }
+html[data-theme="light"] .wallet-chip-sub { color: #6d28d9; }
+.wallet-chip--back .wallet-chip-sub { font-weight: 500; letter-spacing: 0; font-size: 10.5px; color: var(--color-text-muted); }
+.wallet-chip .chart-mobile-tab-dot { top: 2px; right: 2px; }
+
+/* ── Mobile header account switcher (Live market ⇄ Paper trading) ── */
+.mode-switch { position: relative; }
+/* Centered in the phone header (between the menu button and the icons). */
+.main-coin-header .mode-switch {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+}
+.main-coin-header .mode-switch-menu {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  animation-name: mode-switch-in-center;
+}
+@keyframes mode-switch-in-center {
+  from { opacity: 0; transform: translate(-50%, -6px) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.mode-switch-pill,
+.mode-switch-pill:hover {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  max-width: 190px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.mode-switch-pill:active { transform: scale(0.97); }
+.mode-switch-pill--paper { background: rgba(124, 58, 237, 0.2); }
+html[data-theme="light"] .mode-switch-pill { background: rgba(15, 23, 42, 0.06); }
+html[data-theme="light"] .mode-switch-pill--paper { background: rgba(124, 58, 237, 0.12); }
+.mode-switch-badge {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+}
+/* Inside the badge, drop the logo's own circle + outline ring — just the C
+   sits on the badge's blue (no ring around it). */
+.mode-switch-badge--c .st-logo-icon circle,
+.wallet-chip-badge .st-logo-icon circle { fill: none; stroke: none; }
+.mode-switch-badge--c .st-logo-icon { transform: scale(1.25); }
+/* Same blue as the logo's own circle, so badge + logo read as one blue disc. */
+.mode-switch-badge--c,
+html[data-theme="light"] .mode-switch-badge--c {
+  background: linear-gradient(135deg, #4f46e5, #2563eb);
+  color: #ffffff;
+}
+.mode-switch-badge--p { background: #7c3aed; color: #ffffff; }
+.mode-switch-badge--lg { width: 34px; height: 34px; font-size: 14px; }
+.mode-switch-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.mode-switch-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-switch-sub { font-size: 10.5px; color: var(--color-text-muted); white-space: nowrap; }
+.mode-switch-pill--paper .mode-switch-sub { color: #c4b5fd; }
+html[data-theme="light"] .mode-switch-pill--paper .mode-switch-sub { color: #6d28d9; }
+.mode-switch-chev { flex-shrink: 0; color: var(--color-text-muted); }
+.mode-switch-pill .chart-mobile-tab-dot { top: 2px; right: 2px; }
+
+.mode-switch-scrim { position: fixed; inset: 0; z-index: 290; }
+.mode-switch-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 300;
+  width: 272px;
+  padding: 8px;
+  border-radius: 18px;
+  background: #1c1c1e;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: mode-switch-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-theme="light"] .mode-switch-menu { background: #ffffff; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06); }
+@keyframes mode-switch-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+.mode-switch-item,
+.mode-switch-item:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mode-switch-item--on { background: rgba(255, 255, 255, 0.08); }
+html[data-theme="light"] .mode-switch-item--on { background: rgba(15, 23, 42, 0.05); }
+.mode-switch-item:active { background: rgba(127, 127, 127, 0.14); }
+.mode-switch-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mode-switch-item-title { font-size: 14px; font-weight: 600; }
+.mode-switch-item-sub { font-size: 11.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-switch-new {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #7c3aed;
+}
+
 .chart-mobile-tab-dot {
   position: absolute;
   top: 4px;

@@ -65,11 +65,13 @@ import { EliteUpsellModal } from "./components/EliteUpsellModal";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
 import { useProVisionGate } from "./hooks/useProVisionGate";
+import { fetchPortfolio } from "./services/paperTrading";
+import { CoinPageTabBar, CoinPageTabContent, type CoinPageTab } from "./components/CoinPageTabs";
 import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
-import { PriceChart, formatLivePrice } from "./components/PriceChart";
+import { PriceChart, formatLivePrice, PV_PROMO_STYLE } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
 // landing section now, needed immediately on load, same reasoning as the
@@ -1046,6 +1048,27 @@ function AppDashboard({
   // trial / Pro's 3 coins a day). `proVision` = actually running here.
   const pvGate = useProVisionGate();
   const proVision = pvGate.activeFor(coin);
+  // Desktop callout under the top-bar ProVision switch (signed-out / free).
+  // Closing it snoozes it for 2 hours (remembered across reloads); it comes
+  // back after that until the user has ProVision (trial / plan / Elite).
+  const PV_CALLOUT_SNOOZE_MS = 2 * 3600 * 1000;
+  const readCalloutSnoozed = () => {
+    try {
+      const at = Number(localStorage.getItem("pvCalloutSnoozedAt") || 0);
+      return at > 0 && Date.now() - at < PV_CALLOUT_SNOOZE_MS;
+    } catch { return false; }
+  };
+  const [pvCalloutDismissed, setPvCalloutDismissedState] = useState(readCalloutSnoozed);
+  const setPvCalloutDismissed = (v: boolean) => {
+    if (v) { try { localStorage.setItem("pvCalloutSnoozedAt", String(Date.now())); } catch { /* ignore */ } }
+    setPvCalloutDismissedState(v);
+  };
+  useEffect(() => {
+    if (!pvCalloutDismissed) return;
+    const id = window.setInterval(() => { if (!readCalloutSnoozed()) setPvCalloutDismissedState(false); }, 60_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvCalloutDismissed]);
   // AI Usage card — same used/limit useAIQuota computes for ProfilePage's
   // own AI Usage section, so they never drift. Desktop sidebar only.
   const aiUsageCardEl = (
@@ -1402,60 +1425,204 @@ function AppDashboard({
   // remounts and replays each time, instead of only firing once on mount.
   const [chartTabSpinKey, setChartTabSpinKey] = useState(0);
   const [paperTabSpinKey, setPaperTabSpinKey] = useState(0);
+  // Trade page section tab (Overview · News · Community · …). Always opens on
+  // Overview (the chart); kept while you browse within the visit.
+  const [coinTab, setCoinTab] = useState<CoinPageTab>("overview");
+  // Header mode menu + the paper balance it shows (loaded when it opens).
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const [paperSummary, setPaperSummary] = useState<{ cash: number; open: number } | null>(null);
+  // Kept fresh for the header's paper-wallet chip: on load, whenever you
+  // switch between market and paper, when the menu opens, and every minute.
+  useEffect(() => {
+    if (!user) { setPaperSummary(null); return; }
+    let alive = true;
+    const load = () => fetchPortfolio(user.id)
+      .then((p) => { if (alive) setPaperSummary({ cash: p.cashBalance, open: p.positions.length }); })
+      .catch(() => { /* chip falls back to "Practice $50K" */ });
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [modeMenuOpen, user, mobileChartTab]);
+  useEffect(() => { setModeMenuOpen(false); }, [activeSection]);
+  // Coinbase-Advanced-style switch: a short full-screen splash with the
+  // destination's big logo + wordmark; the view swaps behind it.
+  const [modeSplash, setModeSplash] = useState<"chart" | "orderbook" | null>(null);
+  const modeSplashTimers = useRef<number[]>([]);
+  const switchMode = (target: "chart" | "orderbook") => {
+    setModeMenuOpen(false);
+    if (target === mobileChartTab) return;
+    modeSplashTimers.current.forEach((id) => clearTimeout(id));
+    setModeSplash(target);
+    modeSplashTimers.current = [
+      window.setTimeout(() => {
+        setMobileChartTab(target);
+        if (target === "chart") setChartTabSpinKey((k) => k + 1); else setPaperTabSpinKey((k) => k + 1);
+      }, 380),
+      window.setTimeout(() => setModeSplash(null), 1150),
+    ];
+  };
+  useEffect(() => () => modeSplashTimers.current.forEach((id) => clearTimeout(id)), []);
   // Simple two-icon segmented switch, mounted once in the top bar
   // (.mch-right) at every width. First icon always represents — and
   // returns to — whatever page is actually active (its own NAV_ITEMS
   // icon; the branded logo + spin only for "chart" itself, same special
   // treatment it always had).
   const onChartPage = activeSection === "chart";
-  const chartModeToggle = (
-    <div className="chart-mobile-tabs" data-active={mobileChartTab}>
-      <span className="chart-mobile-indicator" aria-hidden="true" />
+  // Mobile header "account switcher" (sketch #1, Revolut/Robinhood style):
+  // one pill saying where you are — "Live market" (C) or "Paper trading"
+  // (P) — that opens a small menu explaining both, with the paper balance.
+  const liveLabel = onChartPage
+    ? "Live market"
+    : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection);
+  const inPaper = mobileChartTab === "orderbook";
+  // Sketch #3 (TradingView / Webull): no toggle — a paper-wallet chip that
+  // says what Paper is (your practice money), how it's doing, and opens it.
+  // In Paper it turns into a "Back to market" chip.
+  const paperWalletChip = inPaper ? (
+    <button
+      type="button"
+      className="wallet-chip wallet-chip--back"
+      onClick={() => { hapticTap(); switchMode("chart"); }}
+      aria-label={`Back to ${liveLabel}`}
+    >
+      <span key={chartTabSpinKey} className={`mode-switch-badge mode-switch-badge--c wallet-chip-badge${chartTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">
+        <LogoIcon size={16} />
+      </span>
+      <span className="wallet-chip-text">
+        <span className="wallet-chip-title">Back to market</span>
+        <span className="wallet-chip-sub">Leave paper trading</span>
+      </span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      className="wallet-chip"
+      onClick={() => { hapticTap(); switchMode("orderbook"); }}
+      aria-label={paperSummary ? `Paper trading: $${Math.round(paperSummary.cash).toLocaleString()} practice money, ${paperSummary.open} open` : "Open paper trading, practice with $50,000"}
+    >
+      <span key={paperTabSpinKey} className={`wallet-chip-icon${paperTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">
+        {paperSummary ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6M10 3v6L4 19a2 2 0 0 0 1.7 3h12.6A2 2 0 0 0 20 19l-6-10V3" /></svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        )}
+      </span>
+      <span className="wallet-chip-text">
+        {paperSummary ? (
+          <>
+            <span className="wallet-chip-title">${paperSummary.cash >= 1000 ? `${(paperSummary.cash / 1000).toFixed(1)}K` : Math.round(paperSummary.cash)}</span>
+            <span className="wallet-chip-sub">PAPER{paperSummary.open ? ` · ${paperSummary.open} OPEN` : ""}</span>
+          </>
+        ) : (
+          <>
+            <span className="wallet-chip-title">Practice $50K</span>
+            <span className="wallet-chip-sub">PAPER TRADING</span>
+          </>
+        )}
+      </span>
+      {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
+    </button>
+  );
+  // "account-switcher" (sketch #1) or "wallet-chip" (sketch #3).
+  const HEADER_MODE_STYLE = "account-switcher" as string;
+  const accountSwitcher = (
+    <div className="mode-switch">
       <button
         type="button"
-        className={`chart-mobile-tab${mobileChartTab === "chart" ? " active" : ""}`}
-        title={onChartPage ? t("chart.tabLabel", "Chart") : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection)}
+        className={`mode-switch-pill${inPaper ? " mode-switch-pill--paper" : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={modeMenuOpen}
         onClick={() => {
-          setMobileChartTab("chart");
-          setChartTabSpinKey((k) => k + 1);
+          hapticTap();
+          setModeMenuOpen((v) => !v);
+          if (inPaper) setPaperTabSpinKey((k) => k + 1); else setChartTabSpinKey((k) => k + 1);
         }}
       >
-        {/* The round "C" logo on every page. While the page loads / data
-            refreshes it spins like desktop's sidebar logo (ring + the
-            "C" drawing itself in); a tap spins it once. */}
-        {loading || refreshing ? (
-          <span className="ptr-logo-wrap chart-tab-logo-loading">
+        {inPaper ? (
+          <span key={paperTabSpinKey} className={`mode-switch-badge mode-switch-badge--p${paperTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">P</span>
+        ) : loading || refreshing ? (
+          <span className="ptr-logo-wrap chart-tab-logo-loading mode-switch-badge mode-switch-badge--c" aria-hidden="true">
             <span className="ptr-logo-glow" />
             <span className="ptr-logo-ring" />
             <LogoIcon size={18} animated />
           </span>
         ) : (
-          <span key={chartTabSpinKey} className={chartTabSpinKey > 0 ? "chart-tab-logo-spin" : "chart-tab-logo-static"}>
+          <span key={chartTabSpinKey} className={`mode-switch-badge mode-switch-badge--c${chartTabSpinKey > 0 ? " chart-tab-logo-spin" : ""}`} aria-hidden="true">
             <LogoIcon size={18} />
           </span>
         )}
-      </button>
-      <button
-        type="button"
-        className={`chart-mobile-tab${mobileChartTab === "orderbook" ? " active" : ""}`}
-        title={t("orderBook.title")}
-        onClick={() => {
-          setMobileChartTab("orderbook");
-          setPaperTabSpinKey((k) => k + 1);
-        }}
-      >
-        {/* "P" — plain when not selected; selected gets the C's black
-            circle + white letter and the same spin on tap. */}
-        <span
-          key={paperTabSpinKey}
-          className={`${paperTabSpinKey > 0 ? "chart-tab-logo-spin " : ""}chart-mobile-tab-p`}
-          aria-hidden="true"
-        >
-          P
+        <span className="mode-switch-text">
+          <span className="mode-switch-title">{inPaper ? "Paper trading" : liveLabel}</span>
+          <span className="mode-switch-sub">Tap to switch</span>
         </span>
+        <svg className="mode-switch-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
         {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
       </button>
+      {modeMenuOpen && (
+        <>
+          <div className="mode-switch-scrim" onClick={() => setModeMenuOpen(false)} />
+          <div className="mode-switch-menu" role="menu">
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={!inPaper}
+              className={`mode-switch-item${!inPaper ? " mode-switch-item--on" : ""}`}
+              onClick={() => { hapticTap(); switchMode("chart"); }}
+            >
+              <span className="mode-switch-badge mode-switch-badge--c mode-switch-badge--lg" aria-hidden="true"><LogoIcon size={20} /></span>
+              <span className="mode-switch-item-text">
+                <span className="mode-switch-item-title">{liveLabel}</span>
+                <span className="mode-switch-item-sub">Charts, signals and real prices</span>
+              </span>
+              {!inPaper && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+              )}
+            </button>
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={inPaper}
+              className={`mode-switch-item${inPaper ? " mode-switch-item--on" : ""}`}
+              onClick={() => { hapticTap(); switchMode("orderbook"); }}
+            >
+              <span className="mode-switch-badge mode-switch-badge--p mode-switch-badge--lg" aria-hidden="true">P</span>
+              <span className="mode-switch-item-text">
+                <span className="mode-switch-item-title">Paper trading</span>
+                <span className="mode-switch-item-sub">
+                  {paperSummary
+                    ? `Practice money · $${Math.round(paperSummary.cash).toLocaleString()}${paperSummary.open ? ` · ${paperSummary.open} open` : ""}`
+                    : "Practice with fake money, no risk"}
+                </span>
+              </span>
+              {inPaper ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+              ) : !paperTabSeen ? (
+                <span className="mode-switch-new">New</span>
+              ) : null}
+            </button>
+          </div>
+        </>
+      )}
     </div>
+  );
+  // Which header control is live (sketch #3 now; flip to compare with #1).
+  const modeSplashEl = modeSplash && ReactDOM.createPortal(
+    <div className={`mode-splash mode-splash--${modeSplash === "orderbook" ? "paper" : "market"}`} role="status" aria-label={modeSplash === "orderbook" ? "Switching to Paper trading" : "Switching to Live market"}>
+      <span className="mode-splash-logo" aria-hidden="true">
+        {modeSplash === "orderbook" ? <span className="mode-splash-p">P</span> : <LogoIcon size={96} />}
+      </span>
+      <span className="mode-splash-word" aria-hidden="true">
+        <span className="mode-splash-brand">coinhint<span className="mode-splash-z">z</span></span>
+        <span className="mode-splash-mode">{modeSplash === "orderbook" ? "PAPER" : "MARKET"}</span>
+      </span>
+    </div>,
+    document.body,
+  );
+  const chartModeToggle = (
+    <>
+      {HEADER_MODE_STYLE === "wallet-chip" ? paperWalletChip : accountSwitcher}
+      {modeSplashEl}
+    </>
   );
   const [obSize, setObSize] = useState({ h: 380, w: 135 });
   const [obResizeIntro, setObResizeIntro] = useState(false);
@@ -3207,6 +3374,52 @@ function AppDashboard({
                     (trend-colored candles, signals + invalidation zone,
                     Signal check). Pro/Elite only; others get the plan picker. */}
                 {(activeSection === "chart" || activeSection === "advance-chart") && (
+                  <span className="pv-callout-anchor">
+                  {/* Signed-out / free: a glowing callout pointing at the
+                      switch (dismissible for the session). */}
+                  {PV_PROMO_STYLE === "callout" && !proVision && !pvCalloutDismissed && (() => {
+                    const r = pvGate.access.lockReason(coin);
+                    if (r !== "signin" && r !== "trial-available") return null;
+                    return (
+                      <div className="pv-callout" role="complementary" aria-label="Try ProVision">
+                        <span className="pv-callout-arrow" aria-hidden="true" />
+                        <span className="pv-float-border" aria-hidden="true" />
+                        <button
+                          type="button"
+                          className="pv-float-close"
+                          aria-label="Dismiss"
+                          onClick={() => setPvCalloutDismissed(true)}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                        <button type="button" className="pv-callout-body" onClick={() => pvGate.toggle(coin)}>
+                          <span className="pv-callout-head">
+                            <svg className="pv-float-spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                            <span className="pv-float-title">Turn me on</span>
+                            <span className="pv-callout-free">3 days free</span>
+                          </span>
+                          <span className="pv-float-preview pv-callout-preview" aria-hidden="true">
+                            <svg viewBox="0 0 120 64" preserveAspectRatio="none">
+                              <defs>
+                                <linearGradient id="pvc-band" x1="0" x2="1" y1="0" y2="0">
+                                  <stop offset="0%" stopColor="#fb7185" />
+                                  <stop offset="45%" stopColor="#facc15" />
+                                  <stop offset="60%" stopColor="#4ade80" />
+                                  <stop offset="100%" stopColor="#4ade80" />
+                                </linearGradient>
+                              </defs>
+                              <path className="pv-float-ribbon pv-float-ribbon--3" stroke="url(#pvc-band)" d="M0 46 C25 50 40 52 58 40 S95 16 120 10" />
+                              <path className="pv-float-ribbon pv-float-ribbon--2" stroke="url(#pvc-band)" d="M0 50 C25 54 40 56 58 44 S95 20 120 14" />
+                              <path className="pv-float-ribbon pv-float-ribbon--1" stroke="url(#pvc-band)" d="M0 54 C25 58 40 60 58 48 S95 24 120 18" />
+                            </svg>
+                            <span className="pv-float-buy">▲ BUY</span>
+                          </span>
+                          <span className="pv-float-sub">Trend colors, buy/sell signals and a live signal check. No card needed.</span>
+                          <span className="pv-float-cta pv-callout-cta">Try ProVision free</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
                   <HoverTip
                     className="top-nav-icon-tip"
                     placement="left"
@@ -3228,6 +3441,7 @@ function AppDashboard({
                       </span>
                     </button>
                   </HoverTip>
+                  </span>
                 )}
                 {(activeSection === "chart" || activeSection === "advance-chart") && isWideDesktop && !distractionFree && (
                   <div className="top-nav-layout-wrap" ref={layoutMenuWrapRef}>
@@ -3311,7 +3525,8 @@ function AppDashboard({
                     </button>
                   </HoverTip>
                 )}
-                {activeSection === "chart" && chartModeToggle}
+                {/* No Market/Paper switch on desktop: the chart and Paper
+                    Trading are already side by side on this screen. */}
                 {activeSection !== "chart" && activeSection !== "advance-chart" && (
                   <HoverTip className="top-nav-icon-tip" placement="left" text={t("paperTrading.title", "Paper Trading")}>
                     <button
@@ -3649,6 +3864,10 @@ function AppDashboard({
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                         headerStats={mchBodyEl}
+                        pageTabBar={activeSection === "chart" ? <CoinPageTabBar tab={coinTab} onChange={setCoinTab} /> : undefined}
+                        pageTabContent={activeSection === "chart" && coinTab !== "overview" ? (
+                          <CoinPageTabContent tab={coinTab} coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
+                        ) : undefined}
                         onOpenDrawingTools={() => {
                           advanceChartPushedRef.current = true;
                           setActiveSection("advance-chart");
