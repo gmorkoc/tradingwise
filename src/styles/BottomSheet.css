@@ -105,6 +105,51 @@
 .bs-body .indicators-menu--sheet,
 .bs-body .date-range-sheet-list { overflow: visible; max-height: none; }
 
+/* floating (phones): Daily News look — a rounded card resting just above
+   the floating nav bar (same 16px insets / 20 + 62 + 8px gap as .db-sheet),
+   with the nav left visible and undimmed underneath. */
+@media (max-width: 640px) {
+  .bs-backdrop--float {
+    bottom: calc(20px + 62px + 8px);
+    background: rgba(0, 0, 0, 0.25);
+  }
+  html:not([data-theme="light"]) .bs-backdrop--float { background: rgba(0, 0, 0, 0.45); }
+  .bs-sheet.bs-sheet--float {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(20px + 62px + 8px);
+    width: auto;
+    max-height: 62vh;
+    padding-bottom: 0;
+    border-radius: 18px;
+    background: var(--color-surface-alt, var(--color-surface));
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    animation: bs-float-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  html[data-theme="light"] .bs-sheet.bs-sheet--float { box-shadow: 0 4px 14px rgba(30, 27, 75, 0.1); }
+  .bs-sheet--float .bs-header { background: var(--color-surface-alt, var(--color-surface)); }
+  html:not([data-theme="light"]) .bs-sheet.bs-sheet--float {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+  }
+}
+/* floating + dragged up: fill the space between the status bar and the
+   nav (still above the nav, never past the top of the screen). Comes
+   after the generic full rule, so it wins. */
+@media (max-width: 900px) {
+  .bs-sheet.bs-sheet--float.bs-sheet--full {
+    top: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 8px);
+    height: auto;
+    max-height: none;
+    padding-top: 0;
+    border-radius: 18px;
+  }
+  .bs-sheet.bs-sheet--float.bs-sheet--full .bs-scroll { flex: 1 1 auto; min-height: 0; }
+}
+@keyframes bs-float-in { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: none; } }
+
 /* desktopModal: on desktop the sheet becomes a centered modal. */
 @media (min-width: 901px) {
   .bs-backdrop--modal { align-items: center; justify-content: center; padding: 24px; }

@@ -4672,7 +4672,7 @@ html[data-theme="light"] .mch-coin-btn:not(:hover) {
    header's own white background (--color-surface, #ffffff) in light
    theme — an explicit, clearly visible tint instead. */
 html[data-theme="light"] .mch-search-btn {
-  background: rgb(15 23 42 / 3%);
+  background: rgb(15 23 42 / 4%);
 }
 .mch-search-btn:hover {
   background: var(--color-border);
@@ -7379,8 +7379,51 @@ html[data-theme="light"] .wallet-chip-sub { color: #6d28d9; }
   transition: background 0.15s ease, transform 0.12s ease;
 }
 .mode-switch-pill:active { transform: scale(0.97); }
+/* Live market: every few minutes the Unlock ProVision card's moving
+   border — built the same way: an oversized conic gradient spinning
+   behind an inner fill, so light streaks travel along the edge — shows
+   for ~5s, then fades out. */
+.mode-switch-pill--glint { overflow: hidden; isolation: isolate; }
+.mode-switch-pill--glint::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, #7c3aed, #3b82f6, #22c55e, #a78bfa, #7c3aed);
+  pointer-events: none;
+  opacity: 0;
+  animation:
+    mode-glint-spin 4s linear infinite,
+    mode-glint-show 180s ease-in-out 6s infinite;
+}
+/* Inner fill (the pill's own colour, opaque) leaves a 1.5px rim. */
+.mode-switch-pill--glint::after {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  z-index: 0;
+  border-radius: inherit;
+  background: #141414;
+  pointer-events: none;
+}
+html[data-theme="light"] .mode-switch-pill--glint::after { background: #f5f6f7; }
+.mode-switch-pill--glint > .mode-switch-badge,
+.mode-switch-pill--glint > .mode-switch-text,
+.mode-switch-pill--glint > .mode-switch-chev { position: relative; z-index: 1; }
+/* Unread dot: above the fill, nudged inside the rounded clip. */
+.mode-switch-pill--glint > .chart-mobile-tab-dot { z-index: 2; top: 5px; right: 10px; }
+@keyframes mode-glint-spin { to { transform: rotate(360deg); } }
+@keyframes mode-glint-show {
+  0% { opacity: 0; }
+  0.5% { opacity: 1; }
+  2.5% { opacity: 1; }
+  3.2% { opacity: 0; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .mode-switch-pill--glint::before { animation: none; } }
 .mode-switch-pill--paper { background: rgba(124, 58, 237, 0.2); }
-html[data-theme="light"] .mode-switch-pill { background: rgba(15, 23, 42, 0.06); }
+/* Same fill as the header's icon buttons (bell etc.). */
+html[data-theme="light"] .mode-switch-pill { background: rgb(15 23 42 / 4%); }
 html[data-theme="light"] .mode-switch-pill--paper { background: rgba(124, 58, 237, 0.12); }
 .mode-switch-badge {
   flex-shrink: 0;
@@ -7403,8 +7446,7 @@ html[data-theme="light"] .mode-switch-badge--c {
   background: linear-gradient(135deg, #4f46e5, #2563eb);
   color: #ffffff;
 }
-.mode-switch-badge--p { background: #7c3aed; color: #ffffff; }
-.mode-switch-badge--lg { width: 34px; height: 34px; font-size: 14px; }
+.mode-switch-badge--p { background: #7c3aed; color: #ffffff; }.mode-switch-badge--lg { width: 34px; height: 34px; font-size: 14px; }
 .mode-switch-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .mode-switch-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mode-switch-sub { font-size: 10.5px; color: var(--color-text-muted); white-space: nowrap; }

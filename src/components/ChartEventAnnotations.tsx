@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IChartApi, Time } from "lightweight-charts";
 import { CandleDataPoint, COINS, CoinSymbol } from "../services/coinglass";
@@ -324,9 +324,50 @@ interface Props {
   // cards, just also handed up to a sibling panel that has no other way
   // to reach PriceChart.tsx's internal candles/srLevels/zone state.
   onEventsChange?: (events: ChartEvent[]) => void;
+  /** Optional first slide (e.g. the ProVision Signal Check summary). */
+  leadCard?: LeadCard | null;
 }
 
-export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevels, zone, coin, visible, cardsSlotRef, onEventsChange }: Props) {
+export interface LeadCard {
+  tone: "bullish" | "bearish" | "neutral";
+  title: string;
+  value?: string;
+  body: string;
+  side: string;
+  onOpen: () => void;
+}
+const LEAD_ID = "__lead";
+
+// First slide: same strip look as an event, with its own copy + action.
+function LeadEventCard({ card }: { card: LeadCard }) {
+  return (
+    <div
+      className={`chart-event-card cec cec--${card.tone} cec--lead`}
+      role="button"
+      tabIndex={0}
+      onClick={card.onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") card.onOpen(); }}
+    >
+      <span className="cec-badge" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 12h4l3-7 4 14 3-7h4" />
+        </svg>
+      </span>
+      <span className="cec-main">
+        <span className="cec-line1">
+          <b>{card.title}</b>
+          {card.value && <><span className="cec-sep">·</span><span className="cec-price">{card.value}</span></>}
+        </span>
+        <span className="cec-line2">{card.body}</span>
+      </span>
+      <span className="cec-side">
+        <span className="cec-cta">{card.side}</span>
+      </span>
+    </div>
+  );
+}
+
+export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevels, zone, coin, visible, cardsSlotRef, onEventsChange, leadCard }: Props) {
   const [events, setEvents] = useState<ChartEvent[]>([]);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -443,33 +484,43 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
   // Tapping a dot scrolls the card carousel to the matching card
   // (smooth, snaps via CSS scroll-snap); swiping the cards directly is
   // handled by native scroll + the listener below instead.
+  // Slide order: a LIVE event (happening now) first, then the lead card
+  // (ProVision + Consensus), then the rest of the events.
+  const slideIds = useMemo(() => {
+    const ids = events.map((e) => e.id);
+    if (!leadCard) return ids;
+    const liveIdx = ids.indexOf("current");
+    if (liveIdx >= 0) return ["current", LEAD_ID, ...ids.filter((id) => id !== "current")];
+    return [LEAD_ID, ...ids];
+  }, [events, leadCard]);
+
   const selectEvent = useCallback((id: string) => {
     setSelectedId(id);
     const container = cardsRef.current;
     const step = cardStep();
     if (!container || !step) return;
-    const index = events.findIndex((e) => e.id === id);
+    const index = slideIds.indexOf(id);
     if (index < 0) return;
     programmaticScrollRef.current = true;
     container.scrollTo({ left: index * step, behavior: "smooth" });
     window.setTimeout(() => { programmaticScrollRef.current = false; }, 400);
-  }, [events, cardStep]);
+  }, [slideIds, cardStep]);
 
   const handleCardsScroll = useCallback(() => {
     if (programmaticScrollRef.current) return;
     const container = cardsRef.current;
     const step = cardStep();
     if (!container || !step) return;
-    const index = Math.round(container.scrollLeft / step);
-    const ev = events[index];
-    if (ev && ev.id !== selectedId) setSelectedId(ev.id);
-  }, [events, selectedId, cardStep]);
+    const id = slideIds[Math.round(container.scrollLeft / step)];
+    if (id && id !== selectedId) setSelectedId(id);
+  }, [slideIds, selectedId, cardStep]);
 
   // Tapped strip → its full details in a bottom sheet.
   const [sheetEvent, setSheetEvent] = useState<ChartEvent | null>(null);
-  if (!visible || events.length === 0) return null;
+  if (!visible || (events.length === 0 && !leadCard)) return null;
 
-  const selected = events.find((e) => e.id === selectedId) ?? events[0];
+  // The first slide starts selected.
+  const activeId = selectedId && slideIds.includes(selectedId) ? selectedId : slideIds[0];
 
   const dotsLayer = (
     <div ref={layerRef} className="chart-event-dots-layer">
@@ -480,7 +531,7 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
           <button
             key={ev.id}
             type="button"
-            className={`chart-event-dot${ev.id === selected.id ? " chart-event-dot--active" : ""}`}
+            className={`chart-event-dot${ev.id === activeId ? " chart-event-dot--active" : ""}`}
             style={{ left: pos.x, top: pos.y }}
             onClick={() => selectEvent(ev.id)}
             aria-label={ev.title}
@@ -493,19 +544,21 @@ export function ChartEventAnnotations({ chartRef, seriesRef, candlesRef, srLevel
   const cardsAndPager = (
     <>
       <div ref={cardsRef} className="chart-event-cards" onScroll={handleCardsScroll}>
-        {events.map((ev) => (
-          <EventCard key={ev.id} ev={ev} onOpen={() => setSheetEvent(ev)} />
-        ))}
+        {slideIds.map((id) => {
+          if (id === LEAD_ID) return leadCard ? <LeadEventCard key={id} card={leadCard} /> : null;
+          const ev = events.find((e) => e.id === id);
+          return ev ? <EventCard key={id} ev={ev} onOpen={() => setSheetEvent(ev)} /> : null;
+        })}
       </div>
-      {events.length > 1 && (
+      {slideIds.length > 1 && (
         <div className="chart-event-dots-pager">
-          {events.map((ev) => (
+          {slideIds.map((id) => (
             <button
-              key={ev.id}
+              key={id}
               type="button"
-              className={`chart-event-pager-dot${ev.id === selected.id ? " chart-event-pager-dot--active" : ""}`}
-              onClick={() => selectEvent(ev.id)}
-              aria-label={`Show ${ev.title}`}
+              className={`chart-event-pager-dot${id === activeId ? " chart-event-pager-dot--active" : ""}`}
+              onClick={() => selectEvent(id)}
+              aria-label={id === LEAD_ID ? `Show ${leadCard?.title ?? "summary"}` : `Show ${events.find((e) => e.id === id)?.title ?? "event"}`}
             />
           ))}
         </div>

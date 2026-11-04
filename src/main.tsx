@@ -38,9 +38,14 @@ if ('scrollRestoration' in history) {
 // theme's colors. Same stored/matchMedia logic App.tsx's own theme state
 // initializer uses — keep both in sync if that one ever changes.
 {
-  const storedTheme = localStorage.getItem('theme');
-  const theme = storedTheme === 'dark' || storedTheme === 'light'
-    ? storedTheme
+  // Desktop web: a saved pick wins; otherwise (and always on phones /
+  // native) the device's theme. Keep in sync with App.tsx's initializer.
+  const isNative = !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+  const desktop = !isNative && window.matchMedia('(min-width: 641px)').matches;
+  let saved: string | null = null;
+  try { saved = localStorage.getItem('theme'); } catch { /* ignore */ }
+  const theme = desktop && (saved === 'dark' || saved === 'light')
+    ? saved
     : (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', theme);
   // Browser bars / safe areas match the app background.

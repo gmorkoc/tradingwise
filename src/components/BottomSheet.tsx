@@ -21,9 +21,12 @@ interface Props {
   desktopModal?: boolean;
   /** Pinned under the title inside the sticky header (e.g. a search box) — doesn't scroll. */
   headerExtra?: ReactNode;
+  /** Phones: a floating card resting just above the bottom nav (Daily
+   *  News look) instead of an edge-to-edge sheet; the nav stays visible. */
+  floating?: boolean;
 }
 
-export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra }: Props) {
+export function BottomSheet({ open, onClose, title, children, className, bodyClassName, ariaLabel, desktopModal, headerExtra, floating }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number } | null>(null);
@@ -61,10 +64,10 @@ export function BottomSheet({ open, onClose, title, children, className, bodyCla
   };
 
   return ReactDOM.createPortal(
-    <div className={`bs-backdrop${desktopModal ? " bs-backdrop--modal" : ""}`} onClick={onClose}>
+    <div className={`bs-backdrop${desktopModal ? " bs-backdrop--modal" : ""}${floating ? " bs-backdrop--float" : ""}`} onClick={onClose}>
       <div
         ref={sheetRef}
-        className={`bs-sheet${full ? " bs-sheet--full" : ""}${className ? ` ${className}` : ""}`}
+        className={`bs-sheet${full ? " bs-sheet--full" : ""}${floating ? " bs-sheet--float" : ""}${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
         onClick={(e) => e.stopPropagation()}

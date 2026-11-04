@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { coinglass, fetchBn, getCoinGeckoId, COINS, type CandleDataPoint } from "../services/coinglass";
 import { calcEMA, calcRSIArray } from "../services/indicators";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
+import { BottomSheet } from "./BottomSheet";
 import "../styles/CoinPageTabs.css";
 
 export type CoinPageTab = "overview" | "news" | "technicals" | "seasonals" | "markets" | "fundamentals";
@@ -54,6 +55,106 @@ export function CoinPageTabBar({ tab, onChange }: { tab: CoinPageTab; onChange: 
         </button>
       ))}
     </div>
+  );
+}
+
+const SECTION_META: Record<CoinPageTab, { sub: string; icon: React.ReactNode }> = {
+  overview: { sub: "Live chart, stats and ProVision", icon: <><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></> },
+  news: { sub: "Latest headlines for this coin", icon: <><path d="M4 22h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M10 6h6M10 10h6M10 14h4" /></> },
+  technicals: { sub: "Buy/sell read from oscillators & averages", icon: <><path d="M12 20a8 8 0 1 1 8-8" /><path d="M12 12l4-4" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></> },
+  seasonals: { sub: "How every month did, year by year", icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" /></> },
+  markets: { sub: "Where it trades and at what volume", icon: <><path d="M3 21h18" /><path d="M5 21V10l7-6 7 6v11" /><path d="M9 21v-6h6v6" /></> },
+  fundamentals: { sub: "Market cap, supply and about", icon: <><circle cx="12" cy="12" r="9" /><path d="M12 3v9l6.5 4" /></> },
+};
+
+// Sheet title: coin logo + text (logo hides itself if it fails to load).
+function CoinSheetTitle({ coin, text }: { coin: string; text: string }) {
+  return (
+    <span className="cps-coin-title">
+      <img
+        className="cps-coin-logo"
+        src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+        alt=""
+        onError={(e) => { e.currentTarget.style.display = "none"; }}
+      />
+      {text}
+    </span>
+  );
+}
+
+// Phones: "More ▾" at the end of the Chart / Order Book / Trades row opens
+// the Explore list; each section opens in its own bottom sheet.
+export function CoinPagePicker({ coin }: { coin: string }) {
+  const [listOpen, setListOpen] = useState(false);
+  const [section, setSection] = useState<CoinPageTab | null>(null);
+  const label = (t: CoinPageTab) => COIN_PAGE_TABS.find((x) => x.id === t)?.label ?? "";
+  // Opened from elsewhere (e.g. the Consensus card's Technicals row).
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: CoinPageTab }>).detail?.tab;
+      if (!tab || tab === "overview") return;
+      setSection(tab);
+      setListOpen(true);
+    };
+    window.addEventListener("open-coin-section", onOpen);
+    return () => window.removeEventListener("open-coin-section", onOpen);
+  }, []);
+  return (
+    <>
+      <button type="button" className="cpt-picker cpt-picker--more" onClick={() => setListOpen(true)} aria-haspopup="dialog">
+        More
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {/* One sheet with in-sheet navigation: the list, or a section with a
+          ‹ back button to the list. ✕ closes the whole thing. */}
+      <BottomSheet
+        open={listOpen}
+        onClose={() => { setListOpen(false); setSection(null); }}
+        title={section ? (
+          <span className="cps-nav-title">
+            <button type="button" className="cps-back" onClick={() => setSection(null)} aria-label="Back to sections">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+            <CoinSheetTitle coin={coin} text={`${coinName(coin)} · ${label(section)}`} />
+          </span>
+        ) : <CoinSheetTitle coin={coin} text={`Explore ${coinName(coin)}`} />}
+        ariaLabel={section ? `${coinName(coin)} ${label(section)}` : `Explore ${coinName(coin)}`}
+        className={section ? "cpt-sheet" : undefined}
+        floating
+      >
+        {section ? (
+          <div key={section} className="cps-page">
+            <CoinPageTabContent tab={section} coin={coin} />
+          </div>
+        ) : (
+        <div className="cps-list" role="listbox" aria-label="Coin sections">
+          {COIN_PAGE_TABS.filter((t) => t.id !== "overview").map((t, i) => {
+            const meta = SECTION_META[t.id];
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="option"
+                aria-selected={false}
+                className={`cps-row cps-row--${t.id}`}
+                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => setSection(t.id)}
+              >
+                <span className="cps-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{meta.icon}</svg>
+                </span>
+                <span className="cps-text">
+                  <span className="cps-title">{t.label}</span>
+                  <span className="cps-sub">{meta.sub}</span>
+                </span>
+                <svg className="cps-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18" /></svg>
+              </button>
+            );
+          })}
+        </div>
+        )}
+      </BottomSheet>
+    </>
   );
 }
 
@@ -114,7 +215,7 @@ function NewsTab({ coin }: { coin: string }) {
   if (!rows.length) return <Empty title="No news right now" text="Check back in a bit — headlines refresh every few minutes." />;
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h">{matched.length ? `${name} news` : "Latest crypto news"}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} · News`} /></h2>
       {!matched.length && <p className="cpt-note">No {name}-specific headlines right now — here's the latest across crypto.</p>}
       <div className="cpt-news">
         {rows.map((n) => (
@@ -207,6 +308,20 @@ function verdictOf(rows: TechRow[]) {
   return { b, s, n, score, label };
 }
 const toneOfScore = (score: number): Signal => (score > 0.1 ? "buy" : score < -0.1 ? "sell" : "neutral");
+
+/** Technicals' overall lean for the Consensus strip: score −1…1 plus a
+ *  descriptive label (never "buy"/"sell" wording). Null if too few candles. */
+export function technicalsLean(c: CandleDataPoint[]): { score: number; tone: "bull" | "bear" | "neutral"; label: string } | null {
+  if (c.length < 30) return null;
+  const d = technicalsFor(c);
+  const v = verdictOf([...d.oscillators, ...d.mas]);
+  const s = toneOfScore(v.score);
+  return {
+    score: v.score,
+    tone: s === "buy" ? "bull" : s === "sell" ? "bear" : "neutral",
+    label: s === "buy" ? "Lean bullish" : s === "sell" ? "Lean bearish" : "Mixed",
+  };
+}
 const sigLabel = (s: Signal) => (s === "buy" ? "Buy" : s === "sell" ? "Sell" : "Neutral");
 
 // Overall verdict on a 5-step sell→buy scale, a plain-language read, and
@@ -412,7 +527,7 @@ function TechnicalsTab({ coin }: { coin: string }) {
   return (
     <div className="cpt-section">
       <div className="cpt-row-head">
-        <h2 className="cpt-h">Technicals · {coinName(coin)}</h2>
+        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Technicals`} /></h2>
         <div className="cpt-seg" role="tablist" aria-label="Timeframe">
           {TECH_FRAMES.map((f) => (
             <button key={f.id} type="button" role="tab" aria-selected={frame === f.id} className={`cpt-seg-btn${frame === f.id ? " cpt-seg-btn--on" : ""}`} onClick={() => setFrame(f.id)}>{f.label}</button>
@@ -466,7 +581,7 @@ function SeasonalsTab({ coin }: { coin: string }) {
   const nowM = new Date().getUTCMonth();
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h">Seasonals · {coinName(coin)}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Seasonals`} /></h2>
       <p className="cpt-note">Monthly return (open → close) for each year. This month: <strong>{MONTHS[nowM]}</strong> averaged <strong className={avg[nowM] !== null && avg[nowM]! >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"}>{avg[nowM] === null ? "—" : `${avg[nowM]! >= 0 ? "+" : ""}${avg[nowM]!.toFixed(1)}%`}</strong> historically.</p>
       <div className="cpt-heat-wrap">
         <table className="cpt-heat">
@@ -520,7 +635,7 @@ function MarketsTab({ coin }: { coin: string }) {
   if (!rows) return <Loading label="Finding where it trades…" />;
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h">Markets · {coinName(coin)}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Markets`} /></h2>
       <div className="cpt-table-wrap cpt-table-wrap--scroll">
         <table className="cpt-table">
           <thead><tr><th>#</th><th>Exchange</th><th>Pair</th><th className="cpt-num">Price</th><th className="cpt-num">24h volume</th><th>Trust</th></tr></thead>
@@ -590,7 +705,7 @@ function FundamentalsTab({ coin }: { coin: string }) {
   const date = (s?: string) => (s ? new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h">Fundamentals · {data.name}{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Fundamentals`} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
       <div className="cpt-stats">
         <Stat label="Market cap" value={fmtUsd(m.market_cap?.usd)} />
         <Stat label="Fully diluted value" value={fmtUsd(m.fully_diluted_valuation?.usd)} />

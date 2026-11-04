@@ -1,0 +1,432 @@
+/* ProVision Signal Check on the chart (desktop #trade) — frosted card,
+   top-left of the plot area; never blocks the chart outside its own box. */
+.pvh {
+  --pvh-c: #8e8e93;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 46;
+  width: 228px;
+  box-sizing: border-box;
+  padding: 10px 10px 9px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-surface, #fff) 82%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+  font-family: inherit;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  animation: pvh-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html:not([data-theme="light"]) .pvh {
+  background: rgba(14, 14, 16, 0.78);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+@keyframes pvh-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+.pvh--bull { --pvh-c: #16a34a; }
+.pvh--bear { --pvh-c: #dc2626; }
+html:not([data-theme="light"]) .pvh--bull { --pvh-c: #30d158; }
+html:not([data-theme="light"]) .pvh--bear { --pvh-c: #ff453a; }
+.pvh button { all: unset; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pvh button:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 4px; }
+
+.pvh-head { display: flex; align-items: center; gap: 6px; }
+.pvh-icon {
+  display: inline-grid; place-items: center;
+  width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+  color: #fff; background: var(--pvh-c);
+}
+.pvh-title { font-size: 12.5px; font-weight: 700; flex: 1; min-width: 0; }
+.pvh-score { font-size: 14px; font-weight: 800; color: var(--pvh-c); }
+.pvh-score span { font-size: 10px; font-weight: 600; color: var(--color-text-muted); }
+.pvh .pvh-close { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; color: var(--color-text-muted); }
+.pvh .pvh-close:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-text); }
+.pvh-verdict { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--pvh-c); }
+.pvh-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pvh-c); }
+
+.pvh-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; }
+.pvh .pvh-row { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 11px; min-width: 0; }
+.pvh-row-name { flex: 1; min-width: 0; color: var(--color-text-secondary, var(--color-text)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvh .pvh-row:hover .pvh-row-name { color: var(--color-text); }
+.pvh-bar { display: flex; gap: 1.5px; flex-shrink: 0; }
+.pvh-bar i { width: 5px; height: 8px; border-radius: 1.5px; background: color-mix(in srgb, var(--color-text) 12%, transparent); }
+.pvh-row--bull .pvh-bar i.on { background: #22c55e; }
+.pvh-row--bear .pvh-bar i.on { background: #ef4444; }
+/* Lively bars: cells fill in one by one (rows staggered), the tip cell
+   breathes, and a soft light sweeps across now and then. */
+.pvh-bar { position: relative; overflow: hidden; border-radius: 2px; }
+.pvh-bar i.on {
+  animation: pvh-cell-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--row, 0) * 70ms + var(--k, 0) * 45ms);
+}
+.pvh-bar i.on.tip {
+  animation:
+    pvh-cell-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both,
+    pvh-tip-pulse 1.8s ease-in-out infinite;
+  animation-delay:
+    calc(var(--row, 0) * 70ms + var(--k, 0) * 45ms),
+    calc(var(--row, 0) * 70ms + 600ms);
+}
+.pvh-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-120%);
+  animation: pvh-bar-sweep 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--row, 0) * 260ms + 1s);
+  pointer-events: none;
+}
+html:not([data-theme="light"]) .pvh-bar::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent); }
+@keyframes pvh-cell-in { from { opacity: 0; transform: scaleY(0.3); } to { opacity: 1; transform: none; } }
+@keyframes pvh-tip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes pvh-bar-sweep { 0% { transform: translateX(-120%); } 45%, 100% { transform: translateX(120%); } }
+/* Lively order-flow bar: buyers' share grows in, the split point breathes,
+   a soft light sweeps across now and then. */
+.pvh-flow-bar { position: relative; overflow: hidden; }
+.pvh-flow-bar i { position: relative; animation: pvh-flow-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: left center; }
+.pvh-flow-bar i::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  animation: pvh-tip-pulse 1.8s ease-in-out infinite;
+}
+.pvh-flow-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-120%);
+  animation: pvh-bar-sweep 4.2s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+html:not([data-theme="light"]) .pvh-flow-bar::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent); }
+@keyframes pvh-flow-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pvh-bar i.on, .pvh-bar i.on.tip, .pvh-bar::after,
+  .pvh-flow-bar i, .pvh-flow-bar i::after, .pvh-flow-bar::after { animation: none !important; }
+}
+.pvh-arrow { width: 9px; font-size: 8px; text-align: center; flex-shrink: 0; color: var(--color-text-muted); }
+.pvh-row--bull .pvh-arrow { color: #22c55e; }
+.pvh-row--bear .pvh-arrow { color: #ef4444; }
+
+.pvh-flow { display: flex; align-items: center; gap: 7px; }
+.pvh-flow-bar { flex: 1; height: 4px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, #ef4444 55%, transparent); }
+.pvh-flow-bar i { display: block; height: 100%; background: #22c55e; transition: width 0.6s ease; }
+.pvh-flow-txt { font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
+
+.pvh-tf { display: flex; flex-wrap: wrap; gap: 4px 9px; }
+.pvh-tf-item { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); }
+.pvh-tf-item i { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--color-text) 25%, transparent); }
+.pvh-tf--bull i { background: #22c55e; }
+.pvh-tf--bear i { background: #ef4444; }
+
+.pvh-track { display: flex; flex-direction: column; gap: 5px; padding-top: 7px; border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+.pvh-track-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; }
+.pvh-track-n { font-weight: 500; color: var(--color-text-muted); }
+.pvh-track-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.pvh-track-grid > span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pvh-track-grid em { font-style: normal; font-size: 9.5px; color: var(--color-text-muted); white-space: nowrap; }
+.pvh-track-grid b { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pvh-track-grid i { font-style: normal; }
+.pvh-up { color: #16a34a; }
+.pvh-dn { color: #dc2626; }
+html:not([data-theme="light"]) .pvh-up { color: #30d158; }
+html:not([data-theme="light"]) .pvh-dn { color: #ff453a; }
+
+.pvh-foot { display: flex; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+.pvh .pvh-link { font-size: 10.5px; font-weight: 600; color: var(--color-text-muted); }
+.pvh .pvh-link:hover { color: var(--color-text); }
+.pvh .pvh-link--keep { color: #7c3aed; }
+/* "How it works": a real link — blue, with a help icon. */
+.pvh .pvh-link--how { display: inline-flex; align-items: center; gap: 4px; color: #2563eb; }
+.pvh .pvh-link--how:hover { color: #1d4ed8; text-decoration: underline; text-underline-offset: 2px; }
+html:not([data-theme="light"]) .pvh .pvh-link--how { color: #60a5fa; }
+html:not([data-theme="light"]) .pvh .pvh-link--keep { color: #a78bfa; }
+
+/* Minimised: one pill. */
+.pvh.pvh--pill {
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.pvh--pill .pvh-score { font-size: 13px; }
+/* Above the chart (in the page flow), like the strip. */
+.pvh.pvh--pill { position: relative; top: auto; left: auto; display: inline-flex; align-self: flex-start; margin: 4px 0 6px; }
+.pvh-word { font-size: 12px; font-weight: 700; color: var(--pvh-c); }
+
+/* Horizontal: a strip attached to the top edge of the chart (stops at the
+   price axis), every section on one line — wraps on narrower screens. */
+.pvh.pvh--bar {
+  top: 0;
+  left: 0;
+  right: 0;
+  width: auto;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 0;
+  padding: 7px 10px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: none;
+  animation-name: pvh-bar-in;
+}
+html:not([data-theme="light"]) .pvh.pvh--bar { box-shadow: none; border-bottom-color: rgba(255, 255, 255, 0.08); }
+/* Sits right above the chart in the page flow (not over the candles). */
+.pvh.pvh--bar,
+html:not([data-theme="light"]) .pvh.pvh--bar {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  /* Own space: clear of the row above, divider lines top and bottom. */
+  z-index: auto;
+  margin: 8px 0 6px;
+  padding: 9px 34px 9px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  animation: none;
+}
+@keyframes pvh-bar-in { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: none; } }
+/* Two deliberate lines; sections side by side with hairline dividers. */
+.pvh.pvh--bar { flex-direction: column; align-items: stretch; gap: 7px; }
+.pvh-line { display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px; min-width: 0; }
+.pvh-line > * {
+  flex-shrink: 0;
+  padding: 0 12px;
+  border-left: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+.pvh-line > :first-child { padding-left: 0; border-left: none; }
+.pvh--bar .pvh-head { gap: 6px; }
+.pvh--bar .pvh-head .pvh-close { order: 9; margin-left: 2px; }
+.pvh--bar .pvh-title { flex: none; }
+.pvh--bar .pvh-rows { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.pvh--bar .pvh-row-name { flex: none; }
+.pvh--bar .pvh-flow-bar { flex: none; width: 56px; }
+.pvh--bar .pvh-track {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding-top: 0;
+  border-top: none;
+}
+.pvh--bar .pvh-track-head { gap: 6px; }
+.pvh--bar .pvh-track-grid { display: flex; gap: 10px; }
+.pvh--bar .pvh-track-grid > span { flex-direction: row; align-items: baseline; gap: 4px; }
+.pvh--bar .pvh-foot { padding-top: 0; border-top: none; margin-left: auto; gap: 12px; border-left: none; }
+/* The minimise button lives at the far right of the strip. */
+.pvh--bar .pvh-head .pvh-close { position: absolute; top: 6px; right: 8px; }
+.pvh--bar { padding-right: 34px; }
+
+.pvh-notice { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvh-notice--hot { color: #d97706; }
+html:not([data-theme="light"]) .pvh-notice--hot { color: #fbbf24; }
+
+/* Line 1 (score → timeframes): one line that scrolls sideways.
+   Line 2 (track record + links): its own row underneath. */
+.pvh.pvh--bar { flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; max-width: 100%; }
+.pvh--bar .pvh-line:not(.pvh-line--2) { width: 100%; box-sizing: border-box; cursor: grab; }
+.pvh--bar .pvh-line:not(.pvh-line--2) {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 34px;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent calc(100% - 26px));
+  mask-image: linear-gradient(90deg, #000 calc(100% - 64px), transparent calc(100% - 26px));
+}
+.pvh--bar .pvh-line:not(.pvh-line--2)::-webkit-scrollbar { display: none; }
+.pvh--bar .pvh-line--2 { flex-wrap: wrap; }
+.pvh--bar .pvh-rows { flex-wrap: nowrap; }
+/* Strip: no icon tile; the title never wraps. */
+.pvh--bar .pvh-icon { display: none; }
+.pvh--bar .pvh-title { white-space: nowrap; }
+/* Every item on a line shares one 20px row, centred — text, icon, score,
+   verdict and the bars all sit on the same middle line. */
+.pvh--bar .pvh-line { align-items: center; height: 20px; }
+.pvh--bar .pvh-line > * { display: flex; align-items: center; height: 20px; line-height: 20px; }
+.pvh--bar .pvh-head,
+.pvh--bar .pvh-verdict { align-items: center; }
+.pvh--bar .pvh-title,
+.pvh--bar .pvh-verdict,
+.pvh--bar .pvh-row,
+.pvh--bar .pvh-flow-txt,
+.pvh--bar .pvh-tf-item,
+.pvh--bar .pvh-link { line-height: 20px; }
+/* Score: "21" and "/100" share the same line box, so it centres with the rest. */
+.pvh--bar .pvh-score { display: inline-flex; align-items: center; line-height: 20px; }
+.pvh--bar .pvh-score span { line-height: 20px; margin-left: 1px; }
+.pvh--bar .pvh-line--2,
+.pvh--bar .pvh-line--3 { height: auto; }
+.pvh--bar .pvh-tf { flex-wrap: nowrap; }
+.pvh--bar .pvh-foot { margin-left: auto; }
+.pvh--bar .pvh-notice { max-width: none; }
+.pvh--bar > .pvh-line > * , .pvh--bar .pvh-head, .pvh--bar .pvh-verdict { white-space: nowrap; }
+/* Shell: holds the scrolling line + the pinned minimise button; carries
+   the spacing and divider lines (the scroller inside has none). */
+.pvh-shell {
+  position: relative;
+  /* Never wider than the page — so line 1 has something to scroll in. */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 8px 0 6px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+html:not([data-theme="light"]) .pvh-shell { border-color: rgba(255, 255, 255, 0.08); }
+.pvh-shell > .pvh.pvh--bar,
+html:not([data-theme="light"]) .pvh-shell > .pvh.pvh--bar {
+  margin: 0;
+  border: none;
+  padding: 9px 0;
+  border-radius: 0;
+}
+.pvh-shell > .pvh-close--shell,
+.pvh-shell > .pvh-close--shell:hover {
+  all: unset;
+  position: absolute;
+  /* Centred on line 1 (9px padding + half of its 20px height). */
+  top: 19px;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.pvh-shell > .pvh-close--shell:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); color: var(--color-text); }
+
+/* Card layout (phone Consensus sheet): plain stacked sections, no chrome. */
+.pvh-shell.pvh-shell--card { margin: 0; border: none; overflow: visible; }
+.pvh.pvh--card,
+html:not([data-theme="light"]) .pvh.pvh--card {
+  position: static;
+  width: 100%;
+  padding: 4px 0 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-radius: 0;
+  gap: 10px;
+  animation: none;
+}
+.pvh--card .pvh-line { display: contents; }
+.pvh--card .pvh-line > * { padding: 0; border-left: none; }
+.pvh--card .pvh-head { display: none; } /* the sheet row already says ProVision + verdict */
+.pvh--card .pvh-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 16px; }
+.pvh--card .pvh-row { font-size: 12.5px; padding: 3px 0; }
+.pvh--card .pvh-bar i { width: 6px; height: 9px; }
+.pvh--card .pvh-tf { gap: 6px 12px; }
+.pvh--card .pvh-tf-item { font-size: 12px; }
+.pvh--card .pvh-track-grid em { font-size: 10.5px; }
+.pvh--card .pvh-track-grid b { font-size: 13px; }
+.pvh--card .pvh-link { font-size: 12px; }
+/* Order-flow section header, styled like "Track record" (card only). */
+.pvh-sec-head { display: none; }
+/* Desktop strip: the item after the (hidden) header still starts the row. */
+.pvh--bar .pvh-sec-head + * { padding-left: 0; border-left: none; }
+.pvh--card .pvh-sec-head {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+}
+/* Track record: clear separation from the timeframes above. */
+.pvh--card .pvh-track { margin-top: 6px; padding-top: 12px; gap: 8px; }
+.pvh--card .pvh-foot { border-top: none; padding-top: 0; }
+
+/* Phones #trade: only the Signal Check header bar shows; tapping it opens
+   the Consensus sheet (details live there). */
+.pv-card--tapsheet > :not(.pv-card-head) { display: none !important; }
+
+/* Phones #trade: the stacked Signal Check right on the page — plain,
+   with a quiet title line (no icon tile). */
+/* Breathing room above the Trade button (it follows the Signal Check card
+   or the slider). */
+.chart-event-slot + .pv-inline + .chart-trade-cta,
+.chart-event-slot + .chart-trade-cta { margin-top: 24px !important; }
+
+/* Same container as the "what's happening" cards. */
+.pv-inline {
+  margin: 4px 0 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fbfbfc;
+}
+html:not([data-theme="light"]) .pv-inline { background: #121214; }
+.pv-inline .pvh--card .pvh-head { display: flex !important; align-items: center; gap: 8px; }
+/* Title + score and the verdict share the first row; the rest stack. */
+.pv-inline .pvh.pvh--card { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; }
+.pv-inline .pvh--card .pvh-line > * { grid-column: 1 / -1; }
+.pv-inline .pvh--card .pvh-line > .pvh-head { grid-column: 1; }
+.pv-inline .pvh--card .pvh-line > .pvh-verdict { grid-column: 2; justify-self: end; }
+.pv-inline .pvh--card .pvh-icon { display: none; }
+.pv-inline .pvh--card .pvh-title { font-size: 14px; font-weight: 600; flex: none; }
+.pv-inline .pvh--card .pvh-score { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.pv-inline .pvh--card .pvh-verdict { font-size: 13px; font-weight: 600; }
+/* …and it's quiet: no icon tile, pulse, pill fill or colour wash — plain
+   text, with only a small dot carrying the verdict colour. */
+html .pv-card.pv-card--tapsheet,
+html .pv-card.pv-card--tapsheet > .pv-card-head {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+html .pv-card.pv-card--tapsheet { margin: 6px 0 2px; padding: 10px 0; border-radius: 0; }
+html .pv-card--tapsheet .pvl-title-icon { display: none !important; }
+html .pv-card--tapsheet .pvl-title-text { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+html .pv-card--tapsheet .pvl-score { font-size: 14px; font-weight: 600; color: var(--color-text) !important; animation: none !important; }
+html .pv-card--tapsheet .pvl-score-of { color: var(--color-text-muted); }
+html .pv-card--tapsheet .pvl-meter { display: none !important; }
+html .pv-card--tapsheet .pvl-pill,
+html .pv-card--tapsheet .pvl-pill:hover {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted) !important;
+  animation: none !important;
+}
+html .pv-card--tapsheet .pvl-pill-dot { animation: none !important; box-shadow: none !important; width: 6px; height: 6px; }
+html .pv-card--tapsheet .pv-trial-chip { display: none !important; }
+html .pv-card--tapsheet .pv-card-chev { transform: rotate(-90deg) !important; opacity: 0.5; }
+
+/* Below the chart, while Signal Check is on the chart: nothing left —
+   its notices moved into the strip. */
+.pv-card--hud { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { .pvh { animation: none; } }

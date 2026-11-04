@@ -66,7 +66,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
 import { useProVisionGate } from "./hooks/useProVisionGate";
 import { fetchPortfolio } from "./services/paperTrading";
-import { CoinPageTabBar, CoinPageTabContent, type CoinPageTab } from "./components/CoinPageTabs";
+import { CoinPageTabBar, CoinPageTabContent, CoinPagePicker, type CoinPageTab } from "./components/CoinPageTabs";
 import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
@@ -509,6 +509,8 @@ function AppDashboard({
   // whenever something there changes it) via onUnreadCountChange, rather
   // than this component owning its own fetch too.
   const [notificationsCenterOpen, setNotificationsCenterOpen] = useState(false);
+  // Desktop: where the notifications dropdown hangs (under its bell icon).
+  const [notifAnchor, setNotifAnchor] = useState<{ top: number; right: number } | null>(null);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   // Mirrors TradingAgent's own internal `unread` state (dispatched via a
   // plain event, same convention as the rest of this cross-component
@@ -1326,7 +1328,21 @@ function AppDashboard({
   const [navPeek, setNavPeek] = useState(false);
   const navPeekTimer = useRef<number | undefined>(undefined);
   useEffect(() => { if (!navCollapsed) setNavPeek(false); }, [navCollapsed]);
+  // Smaller desktops (MacBook-size, up to 1512px wide): always start with
+  // the side nav collapsed, and collapse it again whenever the window is
+  // resized down into that range. The user can still expand it by hand.
+  const SMALL_DESKTOP_MQ = "(min-width: 641px) and (max-width: 1512px)";
   useEffect(() => {
+    const mql = window.matchMedia(SMALL_DESKTOP_MQ);
+    const apply = () => { if (mql.matches) setNavCollapsed(true); };
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
+  useEffect(() => {
+    // The forced collapse on small desktops isn't saved as the user's
+    // preference, so wide screens keep whatever they chose.
+    if (window.matchMedia(SMALL_DESKTOP_MQ).matches && navCollapsed) return;
     localStorage.setItem("navCollapsed", navCollapsed ? "1" : "0");
   }, [navCollapsed]);
   // Drag-to-collapse handle on the rail's own right edge instead of a
@@ -1428,6 +1444,19 @@ function AppDashboard({
   // Trade page section tab (Overview · News · Community · …). Always opens on
   // Overview (the chart); kept while you browse within the visit.
   const [coinTab, setCoinTab] = useState<CoinPageTab>("overview");
+  // Desktop: other parts of the page (the Consensus meter) can switch the
+  // Trade page's section tab. Phones handle the same event in their sheet.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      if (!window.matchMedia("(min-width: 641px)").matches) return;
+      const tab = (e as CustomEvent<{ tab?: CoinPageTab }>).detail?.tab;
+      if (!tab) return;
+      setCoinTab(tab);
+      requestAnimationFrame(() => document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    };
+    window.addEventListener("open-coin-section", onOpen);
+    return () => window.removeEventListener("open-coin-section", onOpen);
+  }, []);
   // Header mode menu + the paper balance it shows (loaded when it opens).
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [paperSummary, setPaperSummary] = useState<{ cash: number; open: number } | null>(null);
@@ -1529,7 +1558,7 @@ function AppDashboard({
     <div className="mode-switch">
       <button
         type="button"
-        className={`mode-switch-pill${inPaper ? " mode-switch-pill--paper" : ""}`}
+        className={`mode-switch-pill${inPaper ? " mode-switch-pill--paper" : " mode-switch-pill--glint"}`}
         aria-haspopup="menu"
         aria-expanded={modeMenuOpen}
         onClick={() => {
@@ -2059,7 +2088,6 @@ function AppDashboard({
             style={{ transform: `translateX(${flowHighlight.left}px)`, width: flowHighlight.width }}
           />
         )}
-        <span className="ptc-live-badge crc-tabs-live"><span className="ptc-pulse-dot" />LIVE</span>
       </div>
       <div className="crc-tab-panel" style={{ display: "flex" }}>
         <OrderFlowPanel coin={coin} events={chartEvents} view={flowColTab} hideLiveBadge />
@@ -2116,7 +2144,6 @@ function AppDashboard({
             {paperColTab === key && <span className="crc-tab-underline" />}
           </button>
         ))}
-        <span className="ptc-live-badge crc-tabs-live"><span className="ptc-pulse-dot" />LIVE</span>
       </div>
       <div className="crc-tab-panel crc-tab-panel-enter" style={{ display: paperColTab === "paper" ? "flex" : "none" }}>
         <PaperTradingCard
@@ -3546,7 +3573,13 @@ function AppDashboard({
                 <HoverTip className="top-nav-icon-tip" placement="left" text="Notifications">
                   <button
                     className="mch-search-btn mch-notif-feed-btn"
-                    onClick={() => (user ? setNotificationsCenterOpen(true) : onOpenAuth())}
+                    onClick={(e) => {
+                      if (!user) { onOpenAuth(); return; }
+                      // Desktop: drop the feed down under this bell.
+                      const r = e.currentTarget.getBoundingClientRect();
+                      setNotifAnchor({ top: Math.round(r.bottom + 8), right: Math.max(8, Math.round(window.innerWidth - r.right)) });
+                      setNotificationsCenterOpen((v) => !v);
+                    }}
                   >
                     <svg
                       width="16"
@@ -3864,8 +3897,10 @@ function AppDashboard({
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
                         headerStats={mchBodyEl}
-                        pageTabBar={activeSection === "chart" ? <CoinPageTabBar tab={coinTab} onChange={setCoinTab} /> : undefined}
-                        pageTabContent={activeSection === "chart" && coinTab !== "overview" ? (
+                        pageTabBar={activeSection !== "chart" ? undefined : isDesktopWidth
+                          ? <CoinPageTabBar tab={coinTab} onChange={setCoinTab} />
+                          : <CoinPagePicker coin={coin} />}
+                        pageTabContent={activeSection === "chart" && isDesktopWidth && coinTab !== "overview" ? (
                           <CoinPageTabContent tab={coinTab} coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
                         ) : undefined}
                         onOpenDrawingTools={() => {
@@ -3902,7 +3937,13 @@ function AppDashboard({
                           <div className="chart-below-full">
                             <ChartBottomPanel
                               coin={coin}
-                              onSelectCoin={(symbol) => { openChartCoin(symbol); }}
+                              onSelectCoin={(symbol) => {
+                                openChartCoin(symbol);
+                                // Glide back up to the chart for the picked coin.
+                                requestAnimationFrame(() => {
+                                  document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                });
+                              }}
                               onOpenAuth={onOpenAuth}
                               onOpenPaperTrading={() => setActiveSection("riskcalc")}
                             />
@@ -4525,6 +4566,7 @@ function AppDashboard({
       <NotificationsCenter
         open={notificationsCenterOpen}
         onClose={() => setNotificationsCenterOpen(false)}
+        anchor={isDesktopWidth && !Capacitor.isNativePlatform() ? notifAnchor : null}
         onUnreadCountChange={setUnreadNotifCount}
       />
       {/* News (Daily Brief) — the original draggable bottom sheet, same as
@@ -4575,8 +4617,11 @@ function AppDashboard({
             setDailyBriefPanelOpen(false);
             setChartAnalyzeOpen(false);
             setActiveSection("chart");
+            // Always back to Live market (from Paper trading too) — with
+            // the same switch splash as the header switcher.
+            switchMode("chart");
           }}
-          homeActive={activeSection === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
+          homeActive={activeSection === "chart" && mobileChartTab === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
           showAgentShowcase={showAgentShowcase}
         />
       )}
@@ -4692,9 +4737,18 @@ function AppGate() {
     return () => window.removeEventListener("open-upgrade-modal", onOpenUpgradeEvent);
   }, [openUpgrade]);
 
+  // Theme: phones / native always follow the device (light/dark), live.
+  // Desktop web follows the system too, until the user picks a theme in the
+  // app — that choice is saved and kept across refreshes (even against the
+  // system setting).
+  const themeChoiceAllowed = () =>
+    !Capacitor.isNativePlatform() && window.matchMedia("(min-width: 641px)").matches;
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "dark" || stored === "light") return stored;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (themeChoiceAllowed() && (saved === "dark" || saved === "light")) return saved;
+      if (!themeChoiceAllowed()) localStorage.removeItem("theme");
+    } catch { /* ignore */ }
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
 
@@ -4704,19 +4758,30 @@ function AppGate() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
   }, [theme]);
 
-  // Follow the OS theme live until the user makes an explicit choice
+  // Follow the OS theme live — switching the phone's appearance switches
+  // the app right away. Also re-checks when the app comes back to the
+  // foreground, in case the change happened while it was in the background.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem("theme")) setThemeState(e.matches ? "dark" : "light");
+    // Desktop with a saved choice: the user's pick wins over the system.
+    const hasChoice = () => {
+      try { return themeChoiceAllowed() && !!localStorage.getItem("theme"); } catch { return false; }
     };
+    const sync = () => { if (!hasChoice()) setThemeState(mq.matches ? "dark" : "light"); };
+    const handleChange = (e: MediaQueryListEvent) => { if (!hasChoice()) setThemeState(e.matches ? "dark" : "light"); };
+    const onVisible = () => { if (document.visibilityState === "visible") sync(); };
     mq.addEventListener("change", handleChange);
-    return () => mq.removeEventListener("change", handleChange);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      mq.removeEventListener("change", handleChange);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const setTheme = (t: "dark" | "light") => {
-    localStorage.setItem("theme", t);
     setThemeState(t);
+    // Desktop: remember the pick (survives refresh, overrides the system).
+    if (themeChoiceAllowed()) { try { localStorage.setItem("theme", t); } catch { /* ignore */ } }
   };
 
   // Sync pending terms agreement to DB once user is authenticated

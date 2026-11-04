@@ -2293,6 +2293,34 @@ html[data-theme="light"] .chart-active
   touch-action: pan-y;
   position: relative;
 }
+/* #trade: faint coinhintz watermark centred on the chart (TradingView-
+   style) — never blocks touches or clicks. */
+.chart-watermark {
+  position: absolute;
+  inset: 0 64px 28px 0; /* keep clear of the price axis (right) and time axis (bottom) */
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0.08;
+}
+.chart-watermark img { width: 40px; height: 40px; filter: grayscale(1); }
+.chart-watermark span {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+}
+html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
+@media (max-width: 640px) {
+  .chart-watermark { inset: 0 52px 24px 0; gap: 7px; }
+  .chart-watermark img { width: 28px; height: 28px; }
+  .chart-watermark span { font-size: 24px; }
+}
 /* Desktop #chart's Full/Compact switch, "Compact" side — covers just
    this chart area (the dblclick-wrap it's a sibling of) instead of the
    full viewport, so switching reads as the chart itself changing, not
@@ -7958,8 +7986,8 @@ html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .chart-dept
   padding: 0 4px !important;
   gap: 4px;
 }
-html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .ctb-full { padding: 0 0 0 5px !important; justify-content: flex-end; }
-html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ctb-full svg { width: 18px !important; height: 18px !important; }
+html .chart-bar-toolbar.chart-bar-toolbar.chart-bar-toolbar--actions .ctb-full { padding: 0 0 0 10px !important; gap: 5px; justify-content: flex-end; }
+html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ctb-full svg { width: 16px !important; height: 16px !important; }
 /* Chart tools sheet: indicator rows (dot + name + switch). */
 .cts-ind-dot { width: 10px; height: 10px; border-radius: 50%; }
 /* Desktop indicators dropdown: link to the full shared picker. */
@@ -8160,8 +8188,11 @@ html .chart-bar-toolbar.chart-bar-toolbar .chart-tool-pinned .chart-depth-btn.ct
 /* Strength bar, bottom-left of the chart above the time axis. */
 .pv-strength {
   position: absolute;
-  left: 12px;
-  bottom: 38px;
+  left: 0;
+  /* Top-left of the chart: the bottom edge of this wrapper also holds
+     the range/date bar, so anchoring there kept landing on the dates. */
+  top: 10px;
+  bottom: auto;
   z-index: 7;
   display: flex;
   align-items: center;
@@ -11210,6 +11241,31 @@ html:not([data-theme="light"]) .pv-float-title { background-image: linear-gradie
 
 /* ══ ProVision paywall (BottomSheet / desktop modal) ══ */
 .bs-sheet.pvp-sheet { max-width: 520px; }
+/* Desktop: no header bar — the ✕ floats top-right over the content, so
+   the hero starts right at the top. Phones keep the regular sheet header. */
+@media (min-width: 901px) {
+  .bs-sheet.pvp-sheet .bs-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0;
+    background: transparent !important;
+    border-bottom: none !important;
+  }
+  .bs-sheet.pvp-sheet .bs-header-row { position: static; min-height: 0; padding: 0; }
+  .bs-sheet.pvp-sheet .bs-title { display: none; }
+  .bs-sheet.pvp-sheet .bs-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    transform: none;
+    z-index: 4;
+    border-radius: 50%;
+  }
+  .bs-sheet.pvp-sheet .bs-close:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+  .bs-sheet.pvp-sheet .bs-body { padding-top: 28px; }
+}
 .pvp { display: flex; flex-direction: column; gap: 20px; padding: 4px 20px 12px; }
 .pvp-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .pvp-orb {
@@ -11290,3 +11346,201 @@ html:not([data-theme="light"]) .pv-float-title { background-image: linear-gradie
 .pvp-fine { font-size: 11.5px; color: var(--color-text-muted); }
 .pvp-error { font-size: 12.5px; color: #dc2626; }
 html[data-theme="light"] .pvp-kicker { color: #6d28d9; }
+
+/* ══ Signal Check, collapsed — desktop: one refined line. Gradient icon
+   tile, title, score + thin meter, verdict as plain coloured text with a
+   pulsing dot, a quiet outline trial chip and a soft round chevron. The
+   card takes a faint tint of the verdict colour. ══ */
+.pvl-meter { display: none; }
+@media (min-width: 641px) {
+  html .pv-card.pv-card--collapsed {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  /* Expanded too: no border. */
+  html .pv-card.pv-card { border: none !important; }
+  html .pv-card.pv-card--collapsed > .pv-card-head {
+    gap: 16px;
+    padding: 10px 0;
+    background: transparent;
+  }
+  html .pv-card .pvl-title { gap: 10px; align-items: center; }
+  html .pv-card .pvl-title-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    color: #fff;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--c) 75%, #fff), var(--c));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--c) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  html .pv-card .pvl-title-icon svg { width: 15px; height: 15px; }
+  /* Heartbeat: ring pulse in the verdict colour + the line tracing
+     itself, at a speed set by how clear the signal is. */
+  html .pv-card .pvl-title-icon { position: relative; overflow: visible; }
+  html .pv-card .pvl-title-icon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    animation: pvl-icon-ring var(--pv-pulse-dur, 2s) ease-out infinite;
+  }
+  html .pv-card .pvl-title-icon svg path {
+    stroke-dasharray: 44;
+    animation: pvl-icon-beat var(--pv-pulse-dur, 2s) ease-in-out infinite;
+  }
+  html .pv-card .pvs--neutral .pvl-title-icon::after { animation-timing-function: ease-in-out; opacity: 0.7; }
+  html .pv-card .pvl-title-text { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  html .pv-card .pvl-score {
+    margin-left: 4px;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--c);
+    font-variant-numeric: tabular-nums;
+  }
+  html .pv-card .pvl-score-of { font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  /* Live score bar: shimmer sweeping the fill, glowing pulsing tip, a 50
+     midpoint tick; hover thickens it and shows what the score means. */
+  html .pv-card .pvl-meter {
+    display: inline-block;
+    position: relative;
+    width: 84px;
+    height: 5px;
+    margin-left: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text) 10%, transparent);
+    transition: height 0.18s ease;
+  }
+  html .pv-card .pv-card-head:hover .pvl-meter { height: 7px; }
+  html .pv-card .pvl-meter-mid {
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    bottom: -2px;
+    width: 1px;
+    background: color-mix(in srgb, var(--color-text) 28%, transparent);
+    z-index: 2;
+  }
+  html .pv-card .pvl-meter i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--c) 50%, transparent), var(--c));
+    transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* Moving shimmer. */
+  html .pv-card .pvl-meter i::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: translateX(-100%);
+    animation: pvl-meter-sweep 2.4s ease-in-out infinite;
+  }
+  /* Glowing tip, pulsing at the heartbeat speed. */
+  html .pv-card .pvl-meter i::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c);
+    transform: translate(35%, -50%);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent);
+    animation: pvl-meter-tip var(--pv-pulse-dur, 2s) ease-out infinite;
+  }
+  html .pv-card .pvl-meter i { overflow: visible; }
+  html .pv-card .pvl-meter i::before { border-radius: inherit; clip-path: inset(0 round 999px); }
+  html .pv-card .pv-card-head-right { gap: 14px; align-items: center; }
+  /* Verdict: no pill — dot + coloured text, muted count. */
+  html .pv-card .pvl-pill {
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--c);
+    gap: 6px;
+  }
+  html .pv-card .pvl-pill-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--c);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 50%, transparent);
+    animation: pvl-dot-pulse 2s ease-out infinite;
+  }
+  html .pv-card .pvl-pill-sep { color: var(--color-text-muted); opacity: 0.6; }
+  html .pv-card .pvl-pill-live { color: var(--color-text-muted); font-weight: 600; }
+  /* Trial chip: quiet outline instead of a filled gradient pill. */
+  html .pv-card .pv-trial-chip--head {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, #8b5cf6 35%, transparent);
+    color: #7c3aed;
+    box-shadow: none;
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+  html:not([data-theme="light"]) .pv-card--collapsed .pv-trial-chip--head { color: #a78bfa; }
+  html .pv-card .pv-trial-chip--head .pv-trial-chip-left {
+    background: color-mix(in srgb, #8b5cf6 12%, transparent);
+    color: inherit;
+  }
+  html .pv-card .pv-trial-chip--head:hover { background: color-mix(in srgb, #8b5cf6 8%, transparent); }
+  /* Chevron in a soft round button. */
+  html .pv-card .pv-card-chev {
+    box-sizing: content-box;
+    padding: 6px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-text) 6%, transparent);
+    color: var(--color-text-muted);
+    transition: background 0.15s ease;
+  }
+  html .pv-card .pv-card-head:hover .pv-card-chev { background: color-mix(in srgb, var(--color-text) 11%, transparent); }
+}
+@keyframes pvl-dot-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 55%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes pvl-icon-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 55%, transparent); }
+  60% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes pvl-meter-sweep {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+@keyframes pvl-meter-tip {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes pvl-icon-beat {
+  0% { stroke-dashoffset: 44; }
+  45% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pvl-pill-dot,
+  .pvl-title-icon::after,
+  .pvl-title-icon svg path,
+  .pvl-meter i::before,
+  .pvl-meter i::after { animation: none !important; }
+}
+
+/* Signal Check indicators panel, desktop: clean — no red/purple colour
+   glows or tinted fill behind it (phones already had none). */
+@media (min-width: 641px) {
+  html .pv-card .pvr.pvr {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html .pv-card .pvr.pvr::before,
+  html .pv-card .pvr.pvr::after { content: none !important; }
+}

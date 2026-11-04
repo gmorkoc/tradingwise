@@ -130,17 +130,31 @@
 .price-chart-container--ctab .chart-mview-tabs,
 .price-chart-container--ctab .chart-mview-book,
 .price-chart-container--ctab .chart-bar-toolbar,
-.price-chart-container--ctab .chart-dblclick-wrap,
 .price-chart-container--ctab .sub-charts,
 .price-chart-container--ctab .chart-mobile-interval-fs-row,
 .price-chart-container--ctab .chart-trade-cta,
 .price-chart-container--ctab .pv-card,
 .price-chart-container--ctab .pv-locked,
 .price-chart-container--ctab .pv-mpromo,
-.price-chart-container--ctab .chart-below-full,
+.price-chart-container--ctab .cns-meter,
+.price-chart-container--ctab .cns-line,
+.price-chart-container--ctab .cns-card,
 .price-chart-container--ctab .chart-range-bar,
 .price-chart-container--ctab .chart-tv-bottom-bar {
   display: none !important;
+}
+
+/* The chart itself is kept at its real size but invisible and out of the
+   layout (not display:none), so coming back to Price is instant — no
+   resize/redraw from zero width. */
+.pcc-main:has(.cpt-row) { position: relative; }
+.price-chart-container--ctab .chart-dblclick-wrap {
+  position: absolute !important;
+  left: 0;
+  right: 0;
+  top: 0;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .cpt-panel { padding: 18px 0 24px; animation: cpt-in 0.25s ease both; }
@@ -403,6 +417,109 @@ html:not([data-theme="light"]) .cpt-seg-btn--on { background: #2c2c2e; }
 .cpt-about { display: flex; flex-direction: column; gap: 8px; }
 .cpt-about p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--color-text-secondary, var(--color-text)); }
 .cpt-about a { font-size: 13px; font-weight: 600; color: #7c3aed; text-decoration: none; }
+
+/* Phones: single "Overview ▾" picker (sections list opens in a bottom sheet). */
+.cpt-picker,
+.cpt-picker:hover {
+  all: unset;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 0 11px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cpt-picker::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-text);
+}
+.cpt-picker:active { opacity: 0.6; }
+/* Phones: "More ▾" at the end of the Chart / Order Book / Trades row. */
+.chart-mview-tabs--more { align-items: center; }
+/* Four equal columns: the three tabs (3 parts) + More (1 part). */
+.chart-mview-tabs-main { position: relative; display: flex; flex: 3; min-width: 0; }
+.chart-mview-tabs--more .cpt-picker--more {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  padding: 11px 0;
+  color: var(--color-text-muted);
+}
+.chart-mview-tabs--more .cpt-picker--more::after { display: none; }
+.cpt-picker svg { color: var(--color-text-muted); }
+.cpt-sheet .cpt-panel { padding: 4px 16px 16px; }
+/* The sheet title already names the section — no second heading. */
+.cpt-sheet .cpt-h { display: none; }
+
+/* Phones: "Explore {coin}" section list — icon tile, title + one-liner,
+   chevron; rows rise in one after another. */
+/* In-sheet navigation: ‹ back + title; pages slide in. */
+.cps-nav-title { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.cps-back,
+.cps-back:hover {
+  all: unset;
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: -8px;
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cps-back:active { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+.cps-page { animation: cps-page-in 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes cps-page-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.cps-coin-title { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.cps-coin-logo { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+.cps-list { display: flex; flex-direction: column; padding: 0 0 14px; }
+.cps-row,
+.cps-row:hover {
+  all: unset;
+  --cps-c: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  -webkit-tap-highlight-color: transparent;
+  animation: cps-rise 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: opacity 0.12s ease;
+}
+.cps-row:last-child { border-bottom: none; }
+.cps-row:active { opacity: 0.55; }
+@keyframes cps-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.cps-row--news { --cps-c: #f97316; }
+.cps-row--technicals { --cps-c: #8b5cf6; }
+.cps-row--seasonals { --cps-c: #10b981; }
+.cps-row--markets { --cps-c: #0ea5e9; }
+.cps-row--fundamentals { --cps-c: #ec4899; }
+.cps-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--cps-c);
+}
+.cps-icon svg { width: 22px; height: 22px; }
+.cps-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cps-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
+.cps-sub { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cps-chev { flex-shrink: 0; color: var(--color-text-muted); opacity: 0.7; }
+@media (prefers-reduced-motion: reduce) { .cps-row { animation: none; } }
 
 @media (max-width: 640px) {
   .cpt-bar { gap: 18px; }

@@ -853,7 +853,10 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
       {user && !loading && portfolio?.consentAcceptedAt && (
         <>
           <div className="ptc-stats">
-            <div className="ptc-stat">
+            <div className="ptc-stat ptc-stat--cash">
+              <span className="ptc-stat-icon" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h15V7" /><circle cx="16" cy="14" r="1.4" fill="currentColor" /></svg>
+              </span>
               {editingCash ? (
                 <span className="ptc-cash-edit">
                   <span className="ptc-cash-edit-prefix">$</span>
@@ -882,7 +885,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
             {/* Tappable when there are open positions: jumps to the
                 Current Positions list, expanded. */}
             <div
-              className={`ptc-stat${openCount > 0 ? " ptc-stat--link" : ""}`}
+              className={`ptc-stat ptc-stat--open${openCount > 0 ? " ptc-stat--link" : ""}`}
               role={openCount > 0 ? "button" : undefined}
               tabIndex={openCount > 0 ? 0 : undefined}
               aria-label={openCount > 0 ? `Show ${openCount} open position${openCount === 1 ? "" : "s"}` : undefined}
@@ -892,6 +895,9 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               }}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showOpenPositions(); } }}
             >
+              <span className="ptc-stat-icon" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z" /><path d="m2 17 10 5 10-5" /><path d="m2 12 10 5 10-5" /></svg>
+              </span>
               <span className="ptc-stat-value">{openCount}</span>
               <span className="ptc-stat-label">Open<InfoTip text={PTC_TIPS["Open"]} />
                 {openCount > 0 && (
@@ -899,7 +905,14 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
                 )}
               </span>
             </div>
-            <div className="ptc-stat">
+            <div className={`ptc-stat ptc-stat--pnl${perf && perf.totalPnl !== 0 ? (perf.totalPnl > 0 ? " ptc-stat--pos" : " ptc-stat--neg") : ""}`}>
+              <span className="ptc-stat-icon" aria-hidden="true">
+                {perf && perf.totalPnl < 0 ? (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></svg>
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>
+                )}
+              </span>
               <span className={`ptc-stat-value${perf && perf.totalPnl !== 0 ? (perf.totalPnl > 0 ? " ptc-up" : " ptc-down") : ""}`}>
                 {perf ? fmtUsd(perf.totalPnl) : "—"}
               </span>

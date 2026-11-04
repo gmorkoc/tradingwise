@@ -1,0 +1,239 @@
+/* coinhintz consensus — desktop meter (.cns-meter) and phone card (.cns-card). */
+.cns-meter, .cns-card {
+  --cns-bear: #dc2626;
+  --cns-bull: #16a34a;
+  --cns-mid: #94a3b8;
+  --cns-lock: #7c3aed;
+  font-variant-numeric: tabular-nums;
+}
+html:not([data-theme="light"]) .cns-meter,
+html:not([data-theme="light"]) .cns-card {
+  --cns-bear: #f87171;
+  --cns-bull: #4ade80;
+  --cns-mid: #71717a;
+  --cns-lock: #a78bfa;
+}
+.cns-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
+.cns-note { margin: 0; font-size: 11.5px; color: var(--color-text-muted); }
+.cns-val--bear { color: var(--cns-bear); }
+.cns-val--bull { color: var(--cns-bull); }
+.cns-val--neutral, .cns-val--none { color: var(--color-text-muted); }
+.cns-val--locked { color: var(--cns-lock); }
+.cns--bear .cns-meter-lead, .cns--bear .cns-headline { color: var(--cns-bear); }
+.cns--bull .cns-meter-lead, .cns--bull .cns-headline { color: var(--cns-bull); }
+
+/* ── Desktop meter ─────────────────────────────────────────────────── */
+.cns-meter { display: flex; flex-direction: column; gap: 10px; padding: 16px 0 14px; }
+.cns-meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cns-meter-title { display: flex; align-items: baseline; gap: 10px; }
+.cns-meter-coin { font-size: 13px; font-weight: 600; color: var(--color-text-secondary, var(--color-text)); }
+.cns-meter-lead { font-size: 14px; font-weight: 800; color: var(--color-text); }
+.cns-meter-count { font-weight: 600; color: var(--color-text-muted); }
+.cns-track-wrap { position: relative; height: 92px; margin: 0 4px; }
+.cns-track {
+  position: absolute; left: 0; right: 0; top: 42px; height: 8px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--cns-bear), color-mix(in srgb, var(--cns-bear) 40%, transparent) 35%, color-mix(in srgb, var(--color-text) 12%, transparent) 50%, color-mix(in srgb, var(--cns-bull) 40%, transparent) 65%, var(--cns-bull));
+}
+.cns-mid { position: absolute; left: 50%; top: 36px; width: 2px; height: 20px; background: color-mix(in srgb, var(--color-text) 25%, transparent); }
+.cns-pin,
+.cns-pin:hover {
+  all: unset;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+button.cns-pin { cursor: pointer; }
+.cns-pin-label { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 700; color: var(--color-text); line-height: 1.2; white-space: nowrap; }
+.cns-pin-val { font-size: 10.5px; font-weight: 600; }
+.cns-pin-dot {
+  width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box;
+  background: var(--color-surface, #fff); border: 4px solid var(--cns-mid);
+  transition: transform 0.15s ease;
+}
+.cns-pin-dot--bear { border-color: var(--cns-bear); }
+.cns-pin-dot--bull { border-color: var(--cns-bull); }
+button.cns-pin:hover .cns-pin-dot { transform: scale(1.2); }
+button.cns-pin:focus-visible .cns-pin-dot { outline: 2px solid #0a84ff; outline-offset: 2px; }
+/* Close neighbours: label below the track instead. */
+.cns-pin--below { flex-direction: column-reverse; top: 38px; }
+.cns-pin--below .cns-pin-dot { margin-top: 0; }
+.cns-scale { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--color-text-muted); margin-top: -2px; }
+.cns-meter-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cns-extras { display: flex; gap: 8px; flex-wrap: wrap; }
+.cns-extra,
+.cns-extra:hover {
+  all: unset;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 999px;
+  font-size: 12px; color: var(--color-text-muted);
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+button.cns-extra { cursor: pointer; }
+.cns-extra b { font-weight: 700; color: var(--color-text); }
+.cns-extra--locked, .cns-extra--locked:hover { color: var(--cns-lock); border-style: dashed; border-color: color-mix(in srgb, var(--cns-lock) 45%, transparent); }
+.cns-extra--locked b { color: var(--cns-lock); }
+button.cns-extra:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+
+/* ── Desktop line (matches the Signal Check strip) ─────────────────── */
+.cns-line {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  margin: 6px 0;
+  padding: 9px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  font-size: 12px;
+  color: var(--color-text);
+}
+.cns-line::-webkit-scrollbar { display: none; }
+html:not([data-theme="light"]) .cns-line { border-color: rgba(255, 255, 255, 0.08); }
+.cns-seg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  white-space: nowrap;
+  border-left: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+.cns-seg:first-child { padding-left: 0; border-left: none; }
+.cns-line-title { font-size: 12.5px; font-weight: 700; }
+.cns-line-coin { font-size: 11.5px; font-weight: 600; color: var(--color-text-muted); }
+.cns-line-lead { font-weight: 700; color: var(--color-text); }
+.cns--bear .cns-line-lead { color: var(--cns-bear); }
+.cns--bull .cns-line-lead { color: var(--cns-bull); }
+.cns-line-count { font-weight: 500; color: var(--color-text-muted); }
+.cns-line-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.cns-mini {
+  position: relative;
+  display: block;
+  width: 150px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cns-bear) 75%, transparent), color-mix(in srgb, var(--color-text) 12%, transparent) 50%, color-mix(in srgb, var(--cns-bull) 75%, transparent));
+}
+.cns-mini-mid { position: absolute; left: 50%; top: -3px; width: 1px; height: 10px; background: color-mix(in srgb, var(--color-text) 30%, transparent); }
+.cns-mini-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  background: var(--color-surface, #fff);
+  border: 2.5px solid var(--cns-mid);
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cns-mini-dot--bear { border-color: var(--cns-bear); }
+.cns-mini-dot--bull { border-color: var(--cns-bull); }
+.cns-tools { gap: 14px; }
+.cns-tool,
+.cns-tool:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+button.cns-tool { cursor: pointer; }
+.cns-tool-name { color: var(--color-text-secondary, var(--color-text)); }
+button.cns-tool:hover .cns-tool-name { color: var(--color-text); }
+.cns-tool-val { font-weight: 600; }
+.cns-tool--locked, .cns-tool--locked .cns-tool-name, .cns-tool--locked .cns-tool-val { color: var(--cns-lock); }
+.cns-tool--locked .cns-tool-val { font-weight: 500; opacity: 0.8; }
+button.cns-tool--locked:hover .cns-tool-name { color: var(--cns-lock); text-decoration: underline; text-underline-offset: 2px; }
+button.cns-tool:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 4px; }
+
+/* ── Phone card ────────────────────────────────────────────────────── */
+.cns-card {
+  display: flex; flex-direction: column; gap: 12px;
+  margin: 12px 0 4px; padding: 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.cns-card-head { display: flex; align-items: center; gap: 14px; }
+.cns-ring { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
+.cns-ring-track { fill: none; stroke: color-mix(in srgb, var(--color-text) 12%, transparent); stroke-width: 7; }
+.cns-ring-fill { fill: none; stroke: var(--cns-mid); stroke-width: 7; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+.cns--bear .cns-ring-fill { stroke: var(--cns-bear); }
+.cns--bull .cns-ring-fill { stroke: var(--cns-bull); }
+.cns-ring-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 16px; font-weight: 800; color: var(--color-text); }
+.cns-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cns-headline { font-size: 18px; font-weight: 800; color: var(--color-text); }
+.cns-sub { font-size: 12px; color: var(--color-text-muted); }
+.cns-rows { display: flex; flex-direction: column; }
+.cns-row,
+.cns-row:hover {
+  all: unset;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  font-size: 14px; color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+}
+button.cns-row { cursor: pointer; }
+button.cns-row:active { opacity: 0.6; }
+.cns-row-name { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.cns-row-val { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.cns-chev { color: var(--color-text-muted); font-size: 16px; line-height: 1; }
+.cns-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cns-mid); }
+.cns-dot--bear { background: var(--cns-bear); }
+.cns-dot--bull { background: var(--cns-bull); }
+.cns-dot--none { background: transparent; border: 1.5px solid var(--cns-mid); box-sizing: border-box; }
+.cns-lock { display: inline-grid; place-items: center; width: 8px; color: var(--cns-lock); }
+.cns-row--locked .cns-row-name { color: var(--cns-lock); }
+
+/* Phones: only under the Chart tab (not Order Book / Trades). */
+.price-chart-container--mview-book .cns-card,
+.price-chart-container--mview-book .cns-line { display: none; }
+/* Phones: edge to edge, scrolls sideways with the finger, right edge
+   fades so it reads as scrollable; tapping opens the full breakdown. */
+@media (max-width: 640px) {
+  .cns-line {
+    margin: 8px -16px 4px;
+    padding: 10px 16px;
+    max-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 72px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 72px), transparent);
+  }
+  .cns-line > .cns-seg:last-child { padding-right: 56px; }
+  .cns-mini { width: 110px; }
+}
+.cns-line--tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cns-line--tap:active { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+/* Sheet rows that expand in place (Signal Check, events). */
+.cns-row-wrap { border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent); }
+.cns-row-wrap > .cns-row { border-top: none; }
+.cns-chev--down { display: inline-block; transform: rotate(90deg); transition: transform 0.2s ease; }
+.cns-row-wrap--open .cns-chev--down { transform: rotate(-90deg); }
+.cns-detail { padding: 2px 0 14px; animation: cns-detail-in 0.22s ease; }
+@keyframes cns-detail-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.cns-events { display: flex; flex-direction: column; gap: 10px; }
+.cns-event { display: flex; flex-direction: column; gap: 2px; }
+.cns-event-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-text); }
+.cns-event-time { flex-shrink: 0; font-size: 11.5px; font-weight: 500; color: var(--color-text-muted); }
+.cns-event-body { font-size: 12.5px; line-height: 1.4; color: var(--color-text-muted); }
+
+/* Inside the sheet: no card chrome of its own. */
+.cns-card.cns-card--sheet { margin: 0; padding: 4px 16px 12px; border: none; border-radius: 0; background: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cns-pin, .cns-ring-fill { transition: none; }
+}

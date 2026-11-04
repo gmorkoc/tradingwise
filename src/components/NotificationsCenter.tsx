@@ -11,6 +11,8 @@ import "../styles/NotificationsCenter.css";
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Desktop: drop down under the bell (viewport px: top edge, right gap). */
+  anchor?: { top: number; right: number } | null;
   // Lets FloatingNavBar's badge stay accurate even before this panel has
   // ever been opened (mount-time count) and the instant something here
   // changes it (opened/marked read) — not just while open.
@@ -45,7 +47,7 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function NotificationsCenter({ open, onClose, onUnreadCountChange }: Props) {
+export function NotificationsCenter({ open, onClose, onUnreadCountChange, anchor }: Props) {
   const { user } = useAuth();
   const [items, setItems] = useState<UserNotification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,10 @@ export function NotificationsCenter({ open, onClose, onUnreadCountChange }: Prop
     // click, the ✕ button is the only close affordance.
     <>
       <div className="notif-backdrop" onClick={onClose} />
-      <div className="notif-panel">
+      <div
+        className={`notif-panel${anchor ? " notif-panel--drop" : ""}`}
+        style={anchor ? { top: anchor.top, right: anchor.right } : undefined}
+      >
         <div className="notif-panel-header">
           <div>
             <span className="notif-panel-title">Notifications</span>

@@ -164,11 +164,22 @@
   box-shadow: 0 6px 18px -14px rgba(15, 23, 42, 0.25);
   animation: cec-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-html:not([data-theme="light"]) .chart-event-card.cec {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: var(--color-surface);
+/* No borders — a soft fill sets each card off the page instead
+   (matches the Signal Check card). */
+.chart-event-card.cec {
+  border: none;
+  background: #fbfbfc;
   box-shadow: none;
 }
+html:not([data-theme="light"]) .chart-event-card.cec {
+  border: none;
+  background: #121214;
+  box-shadow: none;
+}
+/* Badge stays visible on the grey card fill (light theme). */
+html[data-theme="light"] .chart-event-card.cec .cec-badge { background: #ffffff; }
+html:not([data-theme="light"]) .chart-event-pager-dot::before { background: rgba(255, 255, 255, 0.28); }
+html:not([data-theme="light"]) .chart-event-pager-dot--active::before { background: #ffffff; }
 @keyframes cec-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }
@@ -323,3 +334,16 @@ html:not([data-theme="light"]) .cec-sheet-meta {
 }
 .cec-sheet-tone i { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
 .cec--bearish .cec-sheet-tone i { background: #e11d48; }
+
+/* First slide: ProVision + Consensus summary, "Tap to see ›". */
+.cec--neutral .cec-badge { color: #3478f6; }
+.cec--lead .cec-price { font-weight: 700; }
+.cec--bullish.cec--lead .cec-price { color: #16a34a; }
+.cec--bearish.cec--lead .cec-price { color: #e11d48; }
+.cec-cta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #7c3aed;
+  white-space: nowrap;
+}
+html:not([data-theme="light"]) .cec-cta { color: #a78bfa; }

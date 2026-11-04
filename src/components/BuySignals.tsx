@@ -114,6 +114,10 @@ export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) 
   const { tier, user, profile, refreshProfile } = useAuth();
   const isPaid = hasAccess(tier, "pro");
   const [open, setOpen] = useState(false);
+  // Desktop: set when opened from the top-bar icon — the panel then hangs
+  // under that icon (viewport px) instead of opening as a side column.
+  const [dropAnchor, setDropAnchor] = useState<{ top: number; right: number } | null>(null);
+  useEffect(() => { if (!open) setDropAnchor(null); }, [open]);
   // Lets FloatingNavBar's Signals icon drop its active/selected state the
   // moment this panel actually closes (however it closes — the ✕ button,
   // backdrop click, Escape), instead of staying highlighted purely because
@@ -227,6 +231,11 @@ export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) 
   const handleClick = () => {
     if (!isPaid) { onOpenUpgrade(); return; }
     setHighlightCoin(null); // opening via the bell, not a specific toast — no stale target from last time
+    // Desktop: drop the panel down under this icon instead of a column.
+    const r = bellRef.current?.getBoundingClientRect();
+    if (r && window.matchMedia("(min-width: 641px)").matches) {
+      setDropAnchor({ top: Math.round(r.bottom + 8), right: Math.max(8, Math.round(window.innerWidth - r.right)) });
+    }
     setOpen((v) => !v);
   };
 
@@ -369,8 +378,13 @@ export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) 
                   the page shouldn't close just because you clicked into
                   that page, only the panel's own close button/toggle
                   should dismiss it (same call as Paper Trading's column). */}
-              {!columnTarget && <div className="buysig-backdrop" onClick={() => setOpen(false)} />}
-              <div className={`buysig-panel${columnTarget ? " buysig-panel--column" : ""}`}>
+              {(!columnTarget || dropAnchor) && (
+                <div className={`buysig-backdrop${dropAnchor ? " buysig-backdrop--clear" : ""}`} onClick={() => setOpen(false)} />
+              )}
+              <div
+                className={`buysig-panel${dropAnchor ? " buysig-panel--drop" : columnTarget ? " buysig-panel--column" : ""}`}
+                style={dropAnchor ? { top: dropAnchor.top, right: dropAnchor.right } : undefined}
+              >
                 <div className="buysig-panel-header">
                   <div>
                     <span className="buysig-panel-title">{t("buySignals.title", "Buy & Sell Signals")}</span>
@@ -465,7 +479,7 @@ export function BuySignals({ onOpenUpgrade, hideTrigger, columnTarget }: Props) 
             </>
           )}
         </>,
-        columnTarget ?? document.body
+        dropAnchor ? document.body : columnTarget ?? document.body
       )}
     </>
   );

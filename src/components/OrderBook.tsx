@@ -424,7 +424,9 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
     setPrecision(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coin]);
-  const activePrecision = precision ?? ladder[0];
+  // BTC defaults to a $1 grouping (0.01 is too fine to read at ~$77k).
+  const defaultPrecision = coin === "BTC" ? (ladder.find((v) => v >= 1) ?? ladder[0]) : ladder[0];
+  const activePrecision = precision ?? defaultPrecision;
 
   // Deeper fetch (up to 1000 levels) → cap what's drawn per side so a fine
   // tick doesn't render hundreds of rows on every 2.5s poll.
