@@ -22,6 +22,8 @@ interface Props {
   notice?: { icon: string; text: string; hot?: boolean } | null;
   /** "bar" = the desktop strip above the chart; "card" = stacked (phones). */
   layout?: "bar" | "card";
+  /** ProVisionSignalPanel only: one wide row of columns (Advance Chart desktop). */
+  wide?: boolean;
 }
 
 const ROWS = ["MA", "DMI", "Ichimoku", "RSI", "Stoch", "MACD", "Volume"];
@@ -189,7 +191,7 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
 // Full ProVision Signal panel (phone analysis sheet): score ring + verdict,
 // a readable indicator list, buyers vs sellers, timeframes, track record.
 const ROW_NAMES = ["MA 20/200", "DMI", "Ichimoku", "RSI", "Stochastic", "MACD", "Volume"];
-export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, onHowTo }: Props) {
+export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, onHowTo, wide }: Props) {
   const vb = result.verdict.bias as Bias;
   const score = Math.round(Math.max(0, Math.min(100, result.bullStrength)));
   const buy = result.volume.buyPct;
@@ -203,7 +205,7 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
   const bearN = result.checks.filter((c) => c === "bear").length;
   const neutN = result.checks.length - bullN - bearN;
   return (
-    <div className={`pvp2 pvp2--${vb}`}>
+    <div className={`pvp2 pvp2--${vb}${wide ? " pvp2--wide" : ""}`}>
       {/* Summary: score meter + verdict, like a terminal technicals gauge */}
       <div className="pvp2-hero">
         <div className="pvp2-hero-top">
@@ -249,6 +251,8 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
         </div>
       </section>
 
+      {/* Order flow + timeframes share a column in the wide layout. */}
+      <div className="pvp2-col">
       <section className="pvp2-sec">
         <h4>Order flow <span>20 bars</span></h4>
         <div className="pvp2-flow">
@@ -275,6 +279,7 @@ export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, on
           </div>
         </section>
       )}
+      </div>
 
       <section className="pvp2-sec">
         <h4>Track record <span>{st.total} signal{st.total === 1 ? "" : "s"}</span></h4>

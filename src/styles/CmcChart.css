@@ -309,10 +309,102 @@ html:not([data-theme="light"]) .cmcc-analyze { color: #c4b5fd; }
    ("24H"); chart type, Compact and Full Chart are icon-only. */
 html body .cmct .chart-fs-label,
 html body .cmct .chart-depth-btn:not(.chart-fs-interval-btn) .chart-icon-label { display: none !important; }
+/* Toolbar dropdowns (more intervals ⌄, settings ⚙): open on hover/click,
+   right below the button; an invisible bridge keeps hover alive on the
+   way down into the menu. */
+.cmct-dd { position: relative; display: inline-flex; }
+.cmct-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--color-background, #fff);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  animation: cmct-menu-in 0.14s ease both;
+}
+html:not([data-theme="light"]) .cmct-menu { background: #1a1a1d; }
+.cmct-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
+.cmct-menu--right { left: auto; right: -4px; transform: none; min-width: 200px; }
+@keyframes cmct-menu-in { from { opacity: 0; margin-top: -4px; } to { opacity: 1; margin-top: 0; } }
+.cmct-menu-label { padding: 6px 10px 4px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+.cmct-menu-sep { height: 1px; margin: 4px 6px; background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+.cmct-menu-item,
+.cmct-menu-item:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cmct-menu-item:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.cmct-menu-item > :last-child:not(.cmct-menu-ic) { margin-left: auto; }
+.cmct-menu-item--on { color: #3861fb; font-weight: 600; }
+html:not([data-theme="light"]) .cmct-menu-item--on { color: #6188ff; }
+.cmct-menu-ic { display: inline-flex; color: var(--color-text-muted); }
+.cmct-menu-ic svg { width: 15px; height: 15px; }
+.cmct-menu-pro { margin-left: auto; padding: 1px 6px; border-radius: 5px; background: color-mix(in srgb, #7c3aed 12%, transparent); color: #7c3aed; font-size: 10px; font-weight: 700; }
+
+/* Indicators button (CMC): its own gray pill, icon + label + count. */
+button.cmct-indbtn,
+button.cmct-indbtn:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  background: var(--cmct-track);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--cmct-on-text);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+button.cmct-indbtn:hover,
+button.cmct-indbtn--on { background: color-mix(in srgb, var(--cmct-track) 75%, var(--color-text) 8%); }
+button.cmct-indbtn:focus-visible { outline: 2px solid #3861fb; outline-offset: 2px; }
+.cmct-indcount {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #3861fb;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* A bit wider: more room per tool and around the divider. */
+html body .cmct .chart-hero-icon-row.cmct-tools { gap: 4px; }
+html body .cmct .cmct-tools .chart-depth-btn:not(.chart-fs-interval-btn) { width: 34px !important; }
+html body .cmct .cmct-tools .chart-fs-interval-btn { padding: 0 12px !important; }
+.cmct-seg > .cmct-div { margin: 0 6px; }
+
+/* Lighter tool icons (thin strokes, a touch smaller). */
+html body .cmct .cmct-tools svg { width: 14px; height: 14px; stroke-width: 1.6; }
+html body .cmct .cmct-tools svg [fill="currentColor"] { opacity: 0.85; }
 html body .cmct .chart-fs-interval-btn .chart-icon-label {
   display: inline !important;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   color: inherit;
@@ -444,7 +536,8 @@ html:not([data-theme="light"]) .pv-pill {
 .chart-ohlc {
   position: absolute;
   top: 8px;
-  left: 12px;
+  /* Clear of the 40px drawing-tools strip on the left. */
+  left: 52px;
   z-index: 4;
   display: flex;
   align-items: baseline;

@@ -2373,6 +2373,14 @@ html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
 .price-chart-container:fullscreen .chart-canvas-wrap {
   pointer-events: auto;
 }
+/* Desktop chart page: the chart takes the mouse (drag to pan, wheel to
+   zoom, drag the axes) — the phone touch-scroll concern above doesn't
+   apply with a mouse. Double-click still bubbles up to the wrapper. */
+@media (min-width: 641px) {
+  .price-chart-container:not(.price-chart-container--page) .chart-canvas-wrap {
+    pointer-events: auto;
+  }
+}
 
 /* Reference-match (TradingView desktop chart) — OHLC readout + Buy/Sell
    boxes, overlaid on the chart canvas's own top-left corner instead of a
@@ -2588,8 +2596,19 @@ html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
   transition: opacity 0.2s ease;
   z-index: 5;
 }
+/* Shows when the mouse enters the chart, then fades out after ~2s (each
+   new hover replays it) instead of staying up the whole time. */
 .chart-dblclick-wrap:hover::after {
-  opacity: 1;
+  animation: chart-dbl-hint 2.4s ease forwards;
+}
+@keyframes chart-dbl-hint {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  83% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chart-dblclick-wrap:hover::after { animation: none; opacity: 0; }
 }
 .price-chart-container--fs .chart-dblclick-wrap::after,
 .price-chart-container:fullscreen .chart-dblclick-wrap::after {

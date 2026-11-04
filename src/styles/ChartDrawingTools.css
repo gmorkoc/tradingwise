@@ -124,3 +124,26 @@ html[data-theme="light"] .cdt-toolbar {
 html[data-theme="light"] .cdt-btn:hover {
   background: var(--color-primary-soft) !important;
 }
+
+/* Embedded rail (desktop chart page, TradingView view): a flush strip on
+   the chart's left edge — no floating card, just a hairline on its right. */
+/* (html … prefix + !important: beats the light-theme card rule above.) */
+html .cdt-toolbar.cdt-toolbar--embedded {
+  box-sizing: border-box;
+  width: 40px;
+  padding: 8px 4px;
+  gap: 4px;
+  align-items: center;
+  border: none !important;
+  border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--color-background, #fff) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  overflow-y: auto;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+.cdt-toolbar.cdt-toolbar--embedded::-webkit-scrollbar { display: none; }
+.cdt-toolbar--embedded .cdt-btn { width: 30px; height: 30px; border-radius: 6px; }

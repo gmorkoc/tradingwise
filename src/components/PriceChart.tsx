@@ -327,6 +327,17 @@ export const INTERVAL_SHORT: Record<TimeInterval, string> = {
 
 // Intervals that require at least Pro
 const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
+// Desktop chart page toolbar (CMC): main interval buttons + the rest in a ⌄ menu.
+const TV_MAIN_INTERVALS: TimeInterval[] = ["15min", "1h", "4h", "1day"];
+const TV_MORE_INTERVALS: TimeInterval[] = ["1sec", "1min", "5min", "6h", "1week", "1month", "all"];
+const TV_INTERVAL_LABEL: Record<TimeInterval, string> = {
+  "1sec": "1s", "1min": "1m", "5min": "5m", "15min": "15m", "1h": "1h", "4h": "4h", "6h": "6h",
+  "1day": "24h", "1week": "1W", "1month": "1M", "all": "All",
+};
+const TV_INTERVAL_NAME: Record<TimeInterval, string> = {
+  "1sec": "1 second", "1min": "1 minute", "5min": "5 minutes", "15min": "15 minutes", "1h": "1 hour",
+  "4h": "4 hours", "6h": "6 hours", "1day": "1 day", "1week": "1 week", "1month": "1 month", "all": "All time",
+};
 
 // Live clock for the right end of the range bar ("14:01:15 (UTC-4)").
 // Its own component so the once-a-second tick only re-renders this span,
@@ -1859,12 +1870,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Desktop chart page: the AI Chart Read card stays hidden until the
   // chart's "Analyze Chart" button asks for it.
   const [aiCtaOn, setAiCtaOn] = useState(false);
+  // TradingView-view toolbar menus: "int" = more intervals, "set" = settings.
+  const [tvMenu, setTvMenu] = useState<null | "int" | "set">(null);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
-  const [chartStyle, setChartStyle] = useState<ChartStyle>(
-    () => readChartPrefs(prefsScope).chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line"),
-  );
+  const [chartStyle, setChartStyle] = useState<ChartStyle>(() => {
+    // Desktop chart page (TradingView view): always opens on Candle.
+    if (prefsScope === "trade" && !pageMode && window.matchMedia("(min-width: 641px)").matches) return "candle";
+    return readChartPrefs(prefsScope).chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line");
+  });
   useEffect(() => {
     if (requestChartStyle && requestChartStyle !== chartStyle) setChartStyle(requestChartStyle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1959,6 +1974,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ProVision only — no indicators, grid, depth profile or volume. Anything
   // switched on in fullscreen is cleared again when fullscreen closes.
   const tradeChartLocked = prefsScope === "trade" && !pageMode && !isFullscreen;
+  // Pan / zoom / axis-drag: fullscreen everywhere, and always on the
+  // desktop chart page.
+  const chartInteractive = isFullscreen || (isDesktopWidth && prefsScope === "trade" && !pageMode);
   // Desktop chart page: volume is back as a light band along the bottom,
   // colored like the candles; phones keep the trade chart candles-only.
   const faintVolRef = useRef(false);
@@ -1989,9 +2007,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     return () => ro.disconnect();
   }, []);
   useEffect(() => {
-    if (!tradeChartLocked) return;
-    // Desktop TradingView view keeps its grid (always on); phones: off.
-    setShowGrid(isDesktopWidth);
+    // Desktop keeps the user's indicators (Indicators button) and its grid;
+    // the lock (everything off) is phones-only now.
+    if (!tradeChartLocked || isDesktopWidth) return;
+    setShowGrid(false);
     setShowBB(false);
     setShowRSI(false);
     setShowMACD(false);
@@ -2746,7 +2765,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     chart: chartRef.current,
     mainSeries: candleRef.current,
     getCandles: () => lastCandlesRef.current,
-    enabled: tradeChartLocked ? [] : libIndicators,
+    // Phones' trade chart stays candles-only; desktop has an Indicators button.
+    enabled: tradeChartLocked && !isDesktopWidth ? [] : libIndicators,
     isDark: !isLight,
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -3320,11 +3340,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       // this gesture to compete with there; a single-finger vertical drag
       // now pans/zooms the price scale, same as TradingView. Compact view
       // still needs it off, since that page does scroll normally.
-      handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
+      // Desktop chart page: always draggable / zoomable (TradingView-like);
+      // elsewhere only in fullscreen, as before.
+      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartInteractive },
       handleScale: {
-        mouseWheel: isFullscreen,
-        pinch: isFullscreen,
-        axisPressedMouseMove: isFullscreen,
+        mouseWheel: chartInteractive,
+        pinch: chartInteractive,
+        axisPressedMouseMove: chartInteractive,
       },
     };
     const chart = chartRef.current;
@@ -3389,7 +3411,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // deps, so its reference is provably stable across renders; including
   // it would need a forward reference this effect can't take (it's
   // declared further down the component).
-  }, [theme, isFullscreen, showGrid, bgColor, textColor, gridColor, interval]);
+  }, [theme, isFullscreen, showGrid, bgColor, textColor, gridColor, interval, chartInteractive]);
 
   // ── Fetch candles ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -4182,11 +4204,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       },
       // vertTouchDrag follows isFullscreen here too — same reasoning as
       // the main chart above.
-      handleScroll: { mouseWheel: isFullscreen, pressedMouseMove: isFullscreen, horzTouchDrag: isFullscreen, vertTouchDrag: isFullscreen },
+      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartInteractive },
       handleScale: {
-        axisPressedMouseMove: isFullscreen,
-        mouseWheel: isFullscreen,
-        pinch: isFullscreen,
+        axisPressedMouseMove: chartInteractive,
+        mouseWheel: chartInteractive,
+        pinch: chartInteractive,
       },
     };
 
@@ -5327,6 +5349,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // chart's place (Market cap always; Price unless "TradingView" is picked).
   const cmcHidesCandles = tradeDesktopLean && !!pageTabBar && (chartMetric === "mcap" || cmcStyle === "line");
   const cmcLineView = cmcHidesCandles && !pageTabContent && !isFullscreen;
+  // Desktop TradingView view: drawing tools rail on the chart's left edge.
+  const tvDrawRail = tradeDesktopLean && !cmcHidesCandles && !pageTabContent && !isFullscreen;
   // Desktop chart page: floating "Analyze this chart with ProVision" prompt
   // over the chart on load (CMC's "Agentic Charts" pill) — the way into
   // ProVision (Advance Chart) from here; ✕ dismisses it for good.
@@ -5407,12 +5431,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   };
   // Signal Check (ProVisionHud): "bar" = desktop strip above the chart,
   // "card" = stacked, inside the phone Consensus sheet.
-  const renderPvHud = (layout: "bar" | "card" | "pro") => {
+  const renderPvHud = (layout: "bar" | "card" | "pro" | "pro-wide") => {
     if (!pvResult) return null;
-    const PvView = layout === "pro" ? ProVisionSignalPanel : ProVisionHud;
+    const isPro = layout === "pro" || layout === "pro-wide";
+    const PvView = isPro ? ProVisionSignalPanel : ProVisionHud;
     return (
     <PvView
-      layout={layout === "pro" ? "card" : layout}
+      wide={layout === "pro-wide"}
+      layout={isPro ? "card" : layout}
       result={pvResult}
       mtf={pvMtf.map((m) => ({ label: m.label, bias: m.bias }))}
       onRow={(r) => {
@@ -7255,15 +7281,143 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     // TradingView (candle) view, CMC layout:
                     // [ProVision] [15m 1h 4h 24h 1W 1M | type · compact · fullscreen]
                     <>
-                      <div className="cmct-seg" aria-label="Chart tools">
-                        {/* Interval as a dropdown (the chart's own picker). */}
-                        <div className="chart-hero-icon-row cmct-tools">{fsIntervalButton}</div>
+                      {/* Indicators (desktop): the chart's own indicator picker. */}
+                      <button
+                        type="button"
+                        className={`cmct-indbtn${toolsIndOpen ? " cmct-indbtn--on" : ""}`}
+                        onClick={() => setToolsIndOpen(true)}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 20h18" />
+                          <path d="M5 16l4-5 4 3 6-8" />
+                          <path d="M6 20v-3M10 20v-5M14 20v-4M18 20v-7" opacity="0.5" />
+                        </svg>
+                        Indicators
+                        {libIndicators.length > 0 && <span className="cmct-indcount">{libIndicators.length}</span>}
+                      </button>
+                      {/* CMC: [15m 1h 4h 24h 1W 1M ⌄ | ⚙] — ⌄ = the other
+                          intervals, ⚙ = chart type / compact / full screen
+                          (each opens on hover or click). */}
+                      <div className="cmct-seg" aria-label="Interval">
+                        {TV_MAIN_INTERVALS.map((iv) => (
+                          <button
+                            key={iv}
+                            type="button"
+                            className={`cmct-btn${interval === iv ? " cmct-btn--on" : ""}`}
+                            aria-pressed={interval === iv}
+                            onClick={() => setInterval(iv)}
+                          >
+                            {TV_INTERVAL_LABEL[iv]}
+                          </button>
+                        ))}
+                        <span
+                          className="cmct-dd"
+                          onMouseEnter={() => setTvMenu("int")}
+                          onMouseLeave={() => setTvMenu((m) => (m === "int" ? null : m))}
+                        >
+                          <button
+                            type="button"
+                            className={`cmct-btn cmct-btn--icon${TV_MORE_INTERVALS.includes(interval) ? " cmct-btn--on" : ""}`}
+                            aria-label="More intervals"
+                            aria-expanded={tvMenu === "int"}
+                            onClick={() => setTvMenu((m) => (m === "int" ? null : "int"))}
+                          >
+                            {TV_MORE_INTERVALS.includes(interval) ? TV_INTERVAL_LABEL[interval] : (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                            )}
+                          </button>
+                          {tvMenu === "int" && (
+                            <div className="cmct-menu" role="menu">
+                              {TV_MORE_INTERVALS.map((iv) => {
+                                const pro = PRO_INTERVALS.has(iv) && !isPaid;
+                                return (
+                                  <button
+                                    key={iv}
+                                    type="button"
+                                    role="menuitem"
+                                    className={`cmct-menu-item${interval === iv ? " cmct-menu-item--on" : ""}`}
+                                    onClick={() => {
+                                      setTvMenu(null);
+                                      if (pro) { onOpenUpgrade?.("pro"); return; }
+                                      setInterval(iv);
+                                    }}
+                                  >
+                                    {TV_INTERVAL_NAME[iv]}
+                                    {pro ? <span className="cmct-menu-pro">PRO</span> : interval === iv ? <span aria-hidden="true">✓</span> : null}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </span>
                         <span className="cmct-div" aria-hidden="true" />
-                        <div className="chart-hero-icon-row cmct-tools">
-                          {gridStyleControls}
-                          {chartViewSwitchRow}
-                          {fullscreenToolBtn}
-                        </div>
+                        <span
+                          className="cmct-dd"
+                          onMouseEnter={() => setTvMenu("set")}
+                          onMouseLeave={() => setTvMenu((m) => (m === "set" ? null : m))}
+                        >
+                          <button
+                            type="button"
+                            className={`cmct-btn cmct-btn--icon${tvMenu === "set" ? " cmct-btn--on" : ""}`}
+                            aria-label="Chart settings"
+                            aria-expanded={tvMenu === "set"}
+                            onClick={() => setTvMenu((m) => (m === "set" ? null : "set"))}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                              <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" />
+                              <circle cx="16" cy="7" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="17" r="2" />
+                            </svg>
+                          </button>
+                          {tvMenu === "set" && (
+                            <div className="cmct-menu cmct-menu--right" role="menu">
+                              <span className="cmct-menu-label">Chart type</span>
+                              {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  role="menuitemradio"
+                                  aria-checked={chartStyle === s}
+                                  className={`cmct-menu-item${chartStyle === s ? " cmct-menu-item--on" : ""}`}
+                                  onClick={() => { setChartStyle(s); setTvMenu(null); }}
+                                >
+                                  <span className="cmct-menu-ic" aria-hidden="true">{CHART_STYLE_ICONS[s]}</span>
+                                  {CHART_STYLE_LABELS[s]}
+                                  {chartStyle === s && <span aria-hidden="true">✓</span>}
+                                </button>
+                              ))}
+                              <span className="cmct-menu-sep" aria-hidden="true" />
+                              <button
+                                type="button"
+                                role="menuitemcheckbox"
+                                aria-checked={showCompactView}
+                                className="cmct-menu-item"
+                                onClick={() => {
+                                  setTvMenu(null);
+                                  if (showCompactView) { setShowCompactView(false); return; }
+                                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                                  setShowCompactView(true);
+                                }}
+                              >
+                                <span className="cmct-menu-ic" aria-hidden="true">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 10v10" /></svg>
+                                </span>
+                                {showCompactView ? "Full chart view" : "Compact view"}
+                                {!isPaid && !showCompactView && <span className="cmct-menu-pro">PRO</span>}
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="cmct-menu-item"
+                                onClick={() => { setTvMenu(null); toggleFullscreen(); }}
+                              >
+                                <span className="cmct-menu-ic" aria-hidden="true">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                                </span>
+                                Full screen
+                              </button>
+                            </div>
+                          )}
+                        </span>
                       </div>
                     </>
                   )}
@@ -8633,16 +8787,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             candlesRef={lastCandlesRef}
             // Also on while drawing / showing an "Explain Zone" zone — the
             // drawing layer must exist for the finger/mouse to draw on.
-            visible={(pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen) || awaitingZoneDraw || hasZone}
+            // Desktop chart page (TradingView view): the drawing rail is
+            // always there, inside the chart (CMC/TradingView layout).
+            visible={tvDrawRail || (pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen) || awaitingZoneDraw || hasZone}
             // Zone-only (tools panel not open): just the drawing layer, no rail.
-            hideToolbar={!(pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen)}
+            hideToolbar={!tvDrawRail && !(pageMode && !isDesktopWidth ? fsDrawPanelOpen : isFullscreen)}
+            contained={tvDrawRail}
             persistRef={drawingsPersistRef}
             onZoneComplete={handleZoneComplete}
             // No Save/Reset in the rail: Save is in the mobile bottom bar
             // (desktop: top toolbar), Reset is top-right on the chart.
             fullHeightRail={pageMode && isDesktopWidth}
             // Mobile: start below the coin name / price block.
-            topOffset={pageMode && !isDesktopWidth ? 80 : undefined}
+            // Desktop TradingView view: just under the OHLC line.
+            topOffset={pageMode && !isDesktopWidth ? 80 : tvDrawRail ? 36 : undefined}
           />
           <button
             className="chart-reset-view-btn chart-save-view-btn"
@@ -9024,7 +9182,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         {/* Pro Vision: Signal check — trend + momentum tiles, buyers vs
             sellers, and an overall verdict. Tap a tile to see what it means. */}
         {pvResult && (
-          <div className={`pv-card${(pvCardOpen && !pvAdvSheetMode) || pvHudOn ? "" : " pv-card--collapsed"}${prefsScope === "advance" ? " pv-card--advance" : ""}${pvHudOn || pvInSheet || pvAdvSheetMode ? " pv-card--hud" : ""}`}>
+          <div className={`pv-card${(pvCardOpen && !pvAdvSheetMode) || pvHudOn ? "" : " pv-card--collapsed"}${prefsScope === "advance" ? " pv-card--advance" : ""}${pvHudOn || pvInSheet || pvAdvSheetMode ? " pv-card--hud" : ""}${prefsScope === "advance" && isDesktopWidth ? " pv-card--pro" : ""}`}>
             <button
               type="button"
               className={`pv-card-head pvs--${pvResult.verdict.bias}`}
@@ -9080,6 +9238,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <svg className="pv-card-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
               </span>
             </button>
+            {/* Advance Chart (desktop): pro trading panel as a vertical
+                sidebar right of the chart (signal · indicators · flow ·
+                timeframes · track record); the old card body is hidden. */}
+            {pvCardOpen && prefsScope === "advance" && isDesktopWidth && renderPvHud("pro")}
             {pvCardOpen && (
               <button type="button" className="pv-howto" onClick={() => setPvGuideOpen(true)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
