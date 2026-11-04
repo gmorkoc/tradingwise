@@ -11,6 +11,10 @@
   margin: 2px 0 0;
 }
 .cpt-row > .chart-hero-icon-row { flex-shrink: 0; margin-left: auto; }
+/* Desktop #trade: lighter lines under the coin header and the tab row
+   (match the Signal Check strip's borders). */
+.cpt-row { border-bottom-color: color-mix(in srgb, var(--color-text) 5%, transparent) !important; }
+.pcc-main:has(.cpt-row) .chart-bar-header { border-bottom-color: color-mix(in srgb, var(--color-text) 5%, transparent); }
 /* Desktop #trade: Price / Market cap pills on the left, bordered tool
    buttons on the right, right above the chart. */
 .cpt-chart-head {

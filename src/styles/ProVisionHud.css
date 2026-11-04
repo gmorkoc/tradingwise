@@ -292,10 +292,10 @@ html:not([data-theme="light"]) .pvh-notice--hot { color: #fbbf24; }
   max-width: 100%;
   overflow: hidden;
   margin: 8px 0 6px;
-  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
 }
-html:not([data-theme="light"]) .pvh-shell { border-color: rgba(255, 255, 255, 0.08); }
+html:not([data-theme="light"]) .pvh-shell { border-color: rgba(255, 255, 255, 0.05); }
 .pvh-shell > .pvh.pvh--bar,
 html:not([data-theme="light"]) .pvh-shell > .pvh.pvh--bar {
   margin: 0;
@@ -351,8 +351,50 @@ html:not([data-theme="light"]) .pvh.pvh--card {
 .pvh--card .pvh-link { font-size: 12px; }
 /* Order-flow section header, styled like "Track record" (card only). */
 .pvh-sec-head { display: none; }
-/* Desktop strip: the item after the (hidden) header still starts the row. */
-.pvh--bar .pvh-sec-head + * { padding-left: 0; border-left: none; }
+/* Desktop strip: same look as "Track record" — small bold title with the
+   grey "last 20 candles" right after it. */
+.pvh--bar .pvh-sec-head {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pvh--bar .pvh-sec-head .pvh-track-n { font-weight: 500; }
+/* Desktop strip: all three section titles match — Signal Check,
+   Buyers vs sellers, Track record (same size/weight; grey notes alike). */
+.pvh--bar .pvh-title,
+.pvh--bar .pvh-sec-head,
+.pvh--bar .pvh-track-head { font-size: 12.5px !important; font-weight: 700 !important; letter-spacing: 0; }
+.pvh--bar .pvh-sec-head .pvh-track-n,
+.pvh--bar .pvh-track-head .pvh-track-n { font-size: 11.5px; font-weight: 500; }
+/* Desktop: details dropdown under the strip (opened with ⌄). */
+.pvh-shell.pvh-shell--open { overflow: visible; z-index: 60; }
+.pvh-expand svg { transition: transform 0.2s ease; }
+.pvh-shell--open .pvh-expand svg { transform: rotate(180deg); }
+.pvh-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.14);
+  animation: pvh-drop-in 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html:not([data-theme="light"]) .pvh-drop {
+  background: #121214;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+@keyframes pvh-drop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.pvh-drop .pvh--card .pvh-sec-head { margin-top: 0; padding-top: 0; border-top: none; }
 .pvh--card .pvh-sec-head {
   display: flex;
   justify-content: space-between;

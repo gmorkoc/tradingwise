@@ -2866,3 +2866,23 @@ html:not([data-theme="light"]) .ptc-stats .ptc-stat {
   padding-bottom: 1px;
 }
 .ptc-stats .ptc-cash-error { grid-area: err; }
+
+/* Plain, serious look: no icon chips, tints, glows or coloured borders —
+   neutral boxes, label over value (P&L keeps its green/red number). */
+.ptc-stats .ptc-stat,
+.ptc-stats .ptc-stat--pos,
+.ptc-stats .ptc-stat--neg {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "label" "value" "err";
+  row-gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  box-shadow: none;
+}
+.ptc-stats .ptc-stat-icon { display: none; }
+.ptc-stats .ptc-stat--link:hover,
+.ptc-stats .ptc-stat--cash:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+  box-shadow: none;
+}
