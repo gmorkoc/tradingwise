@@ -6,7 +6,8 @@
     { "source": "/bnf-api/:path*",     "destination": "https://fapi.binance.com/:path*" },
     { "source": "/coinbase-api/:path*","destination": "https://api.international.coinbase.com/:path*" },
     { "source": "/gecko-api/:path*",  "destination": "https://api.coingecko.com/:path*" },
-    { "source": "/fred-api/:path*",   "destination": "https://fred.stlouisfed.org/:path*" }
+    { "source": "/fred-api/:path*",   "destination": "https://fred.stlouisfed.org/:path*" },
+    { "source": "/((?!.*\\.).*)",      "destination": "/index.html" }
   ],
   "headers": [
     {

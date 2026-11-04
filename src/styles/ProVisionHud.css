@@ -412,6 +412,134 @@ html:not([data-theme="light"]) .pvh-drop {
    the Consensus sheet (details live there). */
 .pv-card--tapsheet > :not(.pv-card-head) { display: none !important; }
 
+/* Phones, Advance Chart: Signal Check entry — score ring + verdict. */
+.pv-ring-entry,
+.pv-ring-entry:hover {
+  all: unset;
+  --rc: #8e8e93;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* No grey press highlight. Docking: shrink + slide down-left + fade out. */
+.pv-ring-entry--leaving {
+  animation: pv-ring-leave 0.38s cubic-bezier(0.55, 0, 0.25, 1) forwards;
+  transform-origin: left bottom;
+  pointer-events: none;
+}
+@keyframes pv-ring-leave {
+  from { transform: none; opacity: 1; }
+  to { transform: translate(-6%, 48px) scale(0.28); opacity: 0; }
+}
+.pv-ring-entry--bull { --rc: #16a34a; }
+.pv-ring-entry--bear { --rc: #dc2626; }
+html:not([data-theme="light"]) .pv-ring-entry--bull { --rc: #30d158; }
+html:not([data-theme="light"]) .pv-ring-entry--bear { --rc: #ff453a; }
+.pv-ring { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+.pv-ring svg { display: block; }
+.pv-ring-track { fill: none; stroke: color-mix(in srgb, var(--color-text) 10%, transparent); stroke-width: 4; }
+.pv-ring-fill {
+  fill: none;
+  stroke: var(--rc);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: pv-ring-draw 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pv-ring-draw { from { stroke-dashoffset: 107; } to { stroke-dashoffset: 0; } }
+.pv-ring-num {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--rc);
+  font-variant-numeric: tabular-nums;
+}
+.pv-ring-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pv-ring-verdict { font-size: 14.5px; font-weight: 700; color: var(--rc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-ring-sub { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-ring-chev { flex-shrink: 0; color: var(--color-text-muted); }
+/* Grab handle at the top of the card: tap or swipe the card down to dock
+   it in the bottom bar. Generous invisible hit area around the bar. */
+.pv-ring-entry { position: relative; padding-top: 16px; }
+.pv-ring-handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+}
+.pv-ring-handle::before {
+  content: "";
+  width: 32px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+}
+.pv-ring-handle:active::before { background: color-mix(in srgb, var(--color-text) 32%, transparent); }
+/* Swipe hint (first few visits): nudge up, then down, once. */
+/* "backwards", not "both": once done it must let go of transform so the
+   live swipe and the dock animation (inline transforms) still work. */
+.pv-ring-entry--hint { animation: pv-ring-hint 1.4s cubic-bezier(0.45, 0, 0.25, 1) 0.9s backwards; }
+.pv-ring-entry--hint .pv-ring-handle::before { animation: pv-ring-handle-glow 1.4s ease-in-out 0.9s both; }
+@keyframes pv-ring-hint {
+  0%, 100% { transform: none; }
+  22% { transform: translateY(-7px); }
+  44% { transform: none; }
+  66% { transform: translateY(7px); }
+  86% { transform: none; }
+}
+@keyframes pv-ring-handle-glow {
+  0%, 100% { background: color-mix(in srgb, var(--color-text) 18%, transparent); width: 32px; }
+  22%, 66% { background: color-mix(in srgb, var(--color-text) 40%, transparent); width: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-ring-entry--hint, .pv-ring-entry--hint .pv-ring-handle::before { animation: none; }
+}
+/* Coming back from the bar: rise up into place. */
+.pv-ring-entry--restored { animation: pv-ring-restore 0.42s cubic-bezier(0.22, 1, 0.36, 1); transform-origin: left bottom; }
+@keyframes pv-ring-restore { from { opacity: 0; transform: translateY(40px) scale(0.6); } to { opacity: 1; transform: none; } }
+/* Docked in the bottom bar, far left. */
+.fs-bar-btn.pv-ring-dock {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  animation: pv-ring-dock-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pv-ring-dock svg { position: absolute; inset: 2px; }
+.pv-ring-dock .pv-ring-track { stroke-width: 3; }
+.pv-ring-dock .pv-ring-fill { stroke-width: 3; animation: none; }
+.pv-ring-dock-num { position: relative; font-size: 10.5px; font-weight: 800; color: var(--rc); }
+@keyframes pv-ring-dock-in { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pv-ring-fill { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pv-ring-entry--restored, .fs-bar-btn.pv-ring-dock { animation: none; } }
+
+/* Phones, Advance Chart: Signal Check details in a bottom sheet — show
+   the score + verdict row too, on one line like the Trade card. */
+.pv-adv-sheet-body { padding: 0 16px 12px; }
+.pv-adv-sheet-body .pvh--card .pvh-head { display: flex !important; align-items: center; gap: 8px; }
+.pv-adv-sheet-body .pvh--card .pvh-icon { display: none; }
+.pv-adv-sheet-body .pvh--card .pvh-title { font-size: 14px; font-weight: 600; flex: none; }
+.pv-adv-sheet-body .pvh--card .pvh-score { font-size: 14px; font-weight: 600; }
+.pv-adv-sheet-body .pvh.pvh--card { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; }
+.pv-adv-sheet-body .pvh--card .pvh-line > * { grid-column: 1 / -1; }
+.pv-adv-sheet-body .pvh--card .pvh-line > .pvh-head { grid-column: 1; }
+.pv-adv-sheet-body .pvh--card .pvh-line > .pvh-verdict { grid-column: 2; justify-self: end; }
+
 /* Phones #trade: the stacked Signal Check right on the page — plain,
    with a quiet title line (no icon tile). */
 /* Breathing room above the Trade button (it follows the Signal Check card
@@ -439,18 +567,44 @@ html:not([data-theme="light"]) .pv-inline { background: #121214; }
 .pv-inline .pvh--card .pvh-verdict { font-size: 13px; font-weight: 600; }
 /* …and it's quiet: no icon tile, pulse, pill fill or colour wash — plain
    text, with only a small dot carrying the verdict colour. */
-html .pv-card.pv-card--tapsheet,
-html .pv-card.pv-card--tapsheet > .pv-card-head {
+html .pv-card.pv-card--tapsheet {
   background: none !important;
   border: none !important;
   box-shadow: none !important;
   animation: none !important;
 }
 html .pv-card.pv-card--tapsheet { margin: 6px 0 2px; padding: 10px 0; border-radius: 0; }
-html .pv-card--tapsheet .pvl-title-icon { display: none !important; }
-html .pv-card--tapsheet .pvl-title-text { font-size: 14px; font-weight: 600; letter-spacing: 0; }
-html .pv-card--tapsheet .pvl-score { font-size: 14px; font-weight: 600; color: var(--color-text) !important; animation: none !important; }
-html .pv-card--tapsheet .pvl-score-of { color: var(--color-text-muted); }
+/* Advance Chart (edge-to-edge page): keep the side inset. */
+html .pv-card.pv-card--advance.pv-card--tapsheet { margin: 0; padding: 12px 16px; }
+/* Fancy + elegant: a softly tinted card in the verdict colour, gradient
+   icon tile with its heartbeat ring, coloured score + verdict text (no
+   pill), chevron in a small round button. */
+html .pv-card.pv-card--tapsheet > .pv-card-head {
+  padding: 12px 12px 12px 12px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--c) 9%, transparent), transparent 70%) !important;
+  border: 1px solid color-mix(in srgb, var(--c) 18%, transparent) !important;
+}
+html .pv-card--tapsheet .pvl-title-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 9px !important;
+  color: #fff !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--c) 72%, #fff), var(--c)) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--c) 32%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+html .pv-card--tapsheet .pvl-title-icon svg { width: 14px !important; height: 14px !important; }
+html .pv-card--tapsheet .pv-card-chev {
+  box-sizing: content-box;
+  padding: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  opacity: 1 !important;
+  color: var(--color-text-muted);
+}
+html .pv-card--tapsheet .pvl-title-text { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+html .pv-card--tapsheet .pvl-score { font-size: 15px; font-weight: 700; color: var(--c) !important; animation: none !important; }
+html .pv-card--tapsheet .pvl-score-of { color: var(--color-text-muted); font-weight: 500; }
 html .pv-card--tapsheet .pvl-meter { display: none !important; }
 html .pv-card--tapsheet .pvl-pill,
 html .pv-card--tapsheet .pvl-pill:hover {
@@ -459,16 +613,678 @@ html .pv-card--tapsheet .pvl-pill:hover {
   box-shadow: none !important;
   padding: 0 !important;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-muted) !important;
+  font-weight: 600;
+  color: var(--c) !important;
   animation: none !important;
 }
-html .pv-card--tapsheet .pvl-pill-dot { animation: none !important; box-shadow: none !important; width: 6px; height: 6px; }
+html .pv-card--tapsheet .pvl-pill-dot { animation: none !important; box-shadow: none !important; width: 6px; height: 6px; background: var(--c) !important; }
 html .pv-card--tapsheet .pv-trial-chip { display: none !important; }
-html .pv-card--tapsheet .pv-card-chev { transform: rotate(-90deg) !important; opacity: 0.5; }
+html .pv-card--tapsheet .pv-card-chev { transform: rotate(-90deg) !important; }
 
 /* Below the chart, while Signal Check is on the chart: nothing left —
    its notices moved into the strip. */
 .pv-card--hud { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) { .pvh { animation: none; } }
+
+/* ── Phones #trade: Kalshi-style market card ─────────────────────────
+   A question, one big probability, a history line, two soft outcome
+   pills, then quiet links. Clean white/near-black, no mascots. */
+.sb-wrap { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 8px; }
+.km {
+  --kb: #16a34a;
+  --kr: #dc2626;
+  --kc: var(--kr);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.km--bull { --kc: var(--kb); }
+html:not([data-theme="light"]) .km {
+  --kb: #22c55e;
+  --kr: #f04d4d;
+  background: #121214;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.km-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.km-q { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text); }
+.km-tf { flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+.km-big { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; }
+.km-big b { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: var(--kc); font-variant-numeric: tabular-nums; }
+.km-big-label { font-size: 14px; font-weight: 600; color: var(--kc); }
+.km-agree { margin-left: auto; font-size: 12px; color: var(--color-text-muted); }
+.km-spark { display: block; width: 100%; height: 56px; overflow: visible; }
+.km-spark-mid { stroke: color-mix(in srgb, var(--color-text) 14%, transparent); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.km-spark-line { fill: none; stroke: var(--kc); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.km-spark-area { fill: color-mix(in srgb, var(--kc) 10%, transparent); stroke: none; }
+.km-spark-dot { fill: var(--kc); stroke: var(--color-surface, #fff); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.km-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.km-out {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+}
+.km-out b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.km-out--bull { color: var(--kb); background: color-mix(in srgb, var(--kb) 10%, transparent); }
+.km-out--bear { color: var(--kr); background: color-mix(in srgb, var(--kr) 10%, transparent); }
+.km-out--lead { box-shadow: inset 0 0 0 1.5px currentColor; }
+.km-links { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.km-link,
+.km-link:hover {
+  all: unset;
+  font-size: 13px; font-weight: 600; color: var(--color-text);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.km-link--on { color: #2563eb; }
+html:not([data-theme="light"]) .km-link--on { color: #60a5fa; }
+/* Links row: Signal Check (left) · latest moment (centre) · Consensus (right). */
+.km-links { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.km-news { min-width: 0; text-align: center; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.km-link--end { justify-self: end; }
+/* Fancy layer: lead-colour wash from the top, logo + live dot, the big %
+   eases in, the history line draws itself and its end dot glows, the
+   outcome pills fill like progress bars, the leading one softly glows. */
+/* Rim light: a thin streak of the lead colour slowly circling the edge
+   (oversized spinning conic behind a 1px-inset fill), no solid border. */
+.km,
+html:not([data-theme="light"]) .km {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: none;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  box-shadow: 0 12px 34px -20px color-mix(in srgb, var(--kc) 50%, transparent);
+}
+.km::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  z-index: -2;
+  background: conic-gradient(from 0deg, transparent 0 62%, color-mix(in srgb, var(--kc) 85%, transparent) 80%, transparent 92%);
+  animation: km-rim 7s linear infinite;
+}
+.km::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: 15px;
+  background:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--kc) 10%, transparent), transparent 60%),
+    #ffffff;
+}
+html:not([data-theme="light"]) .km::after {
+  background:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--kc) 16%, transparent), transparent 60%),
+    #121214;
+}
+@keyframes km-rim { to { transform: rotate(360deg); } }
+.km-q { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.km-logo { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; }
+.km-tf { display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.04em; }
+.km-live {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--kc);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--kc) 60%, transparent);
+  animation: km-live 2s ease-out infinite;
+}
+@keyframes km-live {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--kc) 60%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.km-big b { animation: km-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; text-shadow: 0 6px 24px color-mix(in srgb, var(--kc) 30%, transparent); }
+@keyframes km-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.km-spark-line { stroke-width: 2.4; stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: km-draw 1.4s cubic-bezier(0.45, 0, 0.25, 1) 0.15s forwards; filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--kc) 45%, transparent)); }
+@keyframes km-draw { to { stroke-dashoffset: 0; } }
+.km-spark-area { fill: url(#km-grad); fill: color-mix(in srgb, var(--kc) 12%, transparent); animation: km-fade 0.8s ease 0.6s both; }
+@keyframes km-fade { from { opacity: 0; } to { opacity: 1; } }
+.km-spark-dot { animation: km-dot 2s ease-in-out 1.5s infinite; filter: drop-shadow(0 0 6px var(--kc)); }
+@keyframes km-dot { 0%, 100% { r: 3.5; } 50% { r: 5; } }
+.km-out { position: relative; overflow: hidden; isolation: isolate; background: color-mix(in srgb, currentColor 7%, transparent) !important; }
+.km-out::before {
+  content: "";
+  position: absolute; inset: 0 auto 0 0; z-index: -1;
+  width: var(--p, 0%);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: inherit;
+  animation: km-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  transform-origin: left;
+}
+@keyframes km-fill { from { transform: scaleX(0); } to { transform: none; } }
+/* Combined outcome bar: green share left, red share right, labels at
+   each end; the leading side is a little stronger and softly glows. */
+.km-split {
+  display: flex;
+  gap: 3px;
+  height: 44px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.km-split > span {
+  min-width: 96px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.km-split b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.km-split-bull { justify-content: space-between; color: var(--kb); background: color-mix(in srgb, var(--kb) 12%, transparent); }
+.km-split-bear { justify-content: space-between; color: var(--kr); background: color-mix(in srgb, var(--kr) 12%, transparent); }
+.km-split-bull.km-split--lead { background: color-mix(in srgb, var(--kb) 22%, transparent); }
+.km-split-bear.km-split--lead { background: color-mix(in srgb, var(--kr) 22%, transparent); }
+
+/* Elegant gauge: labels above, a slim green→red line with a glowing
+   marker at the split that slides into place. */
+.km-gauge { display: flex; flex-direction: column; gap: 9px; }
+.km-gauge-labels { display: flex; justify-content: space-between; align-items: baseline; }
+.km-gauge-side { font-size: 12.5px; font-weight: 500; color: var(--color-text-muted); letter-spacing: 0.01em; }
+.km-gauge-side b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 0 2px; }
+.km-gauge-side--bull b { color: var(--kb); }
+.km-gauge-side--bear b { color: var(--kr); }
+.km-gauge-side--lead { color: var(--color-text); font-weight: 600; }
+.km-gauge-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    var(--kb) 0%,
+    color-mix(in srgb, var(--kb) 70%, transparent) calc(var(--split) - 6%),
+    color-mix(in srgb, var(--kr) 70%, transparent) calc(var(--split) + 6%),
+    var(--kr) 100%);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.08);
+}
+.km-gauge-marker {
+  position: absolute;
+  top: 50%;
+  left: var(--split);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kc) 30%, transparent), 0 2px 8px rgba(0, 0, 0, 0.25);
+  animation: km-marker-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+@keyframes km-marker-in { from { left: 50%; opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .km-gauge-marker { animation: none; } }
+
+/* Leading outcome: no outline — a stronger fill and a soft glow. */
+.km-out--lead { box-shadow: 0 8px 22px -10px currentColor; }
+.km-out--lead::before { background: color-mix(in srgb, currentColor 24%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .km-live, .km-big b, .km-spark-line, .km-spark-area, .km-spark-dot, .km-out::before, .km::before { animation: none !important; }
+  .km-spark-line { stroke-dashoffset: 0; }
+}
+
+.sb-detail {
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  padding-top: 12px;
+  animation: it-body-in 0.3s ease both;
+}
+html:not([data-theme="light"]) .sb-detail { background: #121214; border-color: rgba(255, 255, 255, 0.08); }
+.sb-detail .cns-x { padding-top: 0; }
+
+/* ── Kalshi calm pass (overrides the fancy layer above) ───────────────
+   Plain card + hairline, dark text, colour only on the data, thin lines,
+   no glows / washes / moving rim. */
+.km,
+html:not([data-theme="light"]) .km {
+  background: #ffffff;
+  border: 1px solid #eceef1;
+  box-shadow: none;
+}
+html:not([data-theme="light"]) .km { background: #111113; border-color: rgba(255, 255, 255, 0.08); }
+.km::before, .km::after { content: none !important; }
+.km-q { font-size: 15.5px; font-weight: 600; letter-spacing: -0.01em; }
+.km-logo { width: 20px; height: 20px; }
+.km-tf { font-size: 11.5px; font-weight: 500; letter-spacing: 0.02em; }
+.km-live { width: 5px; height: 5px; animation: none !important; box-shadow: none; }
+.km-big { gap: 4px 8px; }
+.km-big b {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  text-shadow: none;
+  animation: none;
+}
+.km-big-label { font-size: 13.5px; font-weight: 500; color: var(--color-text-muted); }
+.km-agree { font-size: 12px; }
+.km-spark { height: 48px; }
+.km-spark-line { stroke-width: 1.6; filter: none; animation-duration: 1s; }
+.km-spark-area { display: none; }
+.km-spark-dot { r: 3; filter: none; animation: none !important; }
+.km-spark-mid { stroke: color-mix(in srgb, var(--color-text) 10%, transparent); }
+/* Narrower than the card, centred. */
+.km-gauge { gap: 8px; width: 82%; align-self: center; }
+.km-gauge-side { font-size: 12.5px; font-weight: 500; color: var(--color-text-muted); }
+.km-gauge-side b { font-size: 13.5px; font-weight: 600; }
+.km-gauge-side--lead { color: var(--color-text-muted); font-weight: 500; }
+.km-gauge-track {
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--kb) 0, var(--kb) calc(var(--split) - 1px),
+    transparent calc(var(--split) - 1px), transparent calc(var(--split) + 1px),
+    var(--kr) calc(var(--split) + 1px), var(--kr) 100%);
+  box-shadow: none;
+}
+.km-gauge-marker {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 25%, transparent);
+}
+/* Kalshi-style buttons: two equal soft-grey buttons, the latest moment
+   centred on its own line above them. */
+.km-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "news news" "pv cns";
+  gap: 8px;
+}
+.km-news { grid-area: news; font-size: 12px; text-align: center; }
+.km-news:empty { display: none; }
+.km-links > .km-link:not(.km-link--end) { grid-area: pv; }
+.km-links > .km-link--end { grid-area: cns; justify-self: stretch; }
+.km-link,
+.km-link:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+  /* Solid pills, white text (Signal Check blue; Consensus takes the
+     tools' lean — red bearish / green bullish / slate mixed). */
+  background: #1d4ed8;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+.km-link:active { filter: brightness(0.94); transform: scale(0.98); }
+/* Calm, muted tones by each button's own read (specific enough to beat
+   the :hover reset above, which was forcing everything blue). */
+/* Both buttons: the coinhintz purple → blue brand gradient, white text
+   (same family as the Unlock ProVision card). */
+.km-links .km-link,
+.km-links .km-link:hover,
+html:not([data-theme="light"]) .km-links .km-link {
+  background: linear-gradient(110deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 16px -8px rgba(79, 70, 229, 0.6);
+}
+/* The open one gets a soft ring. */
+.km-links .km-link.km-link--on { box-shadow: 0 0 0 2px var(--color-surface, #fff), 0 0 0 4px #6d5cf0; }
+/* Open: a ring, colour unchanged. */
+.km-link--on { box-shadow: 0 0 0 2px var(--color-surface, #fff), 0 0 0 4px currentColor; }
+
+/* Card foot: latest moment (left) + one quiet "See full analysis ›". */
+.km-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.km-foot .km-news { min-width: 0; text-align: left; flex: 1; }
+.km-more,
+.km-more:hover {
+  all: unset;
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .km-more { color: #60a5fa; }
+.km-more:active { opacity: 0.6; }
+/* The analysis sheet. */
+.km-sheet { display: flex; flex-direction: column; gap: 14px; padding: 0 16px 8px; }
+.km-sheet .pv-inline--tile { padding: 0; }
+.km-sheet .cns-x { padding: 0 0 12px; }
+.km-sheet-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 8px 0 16px; }
+
+/* ProVision Signal in the analysis sheet: full width, stacked sections in
+   soft panels, refined type, lively bars. (Undo the inline card's grid +
+   centring, which squeezed everything and collapsed the flow bar.) */
+.km-sheet .pv-inline--tile .pvh.pvh--card {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch !important;
+  gap: 12px;
+  width: 100%;
+}
+.km-sheet .pvh--card .pvh-rows {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.km-sheet .pvh--card .pvh-row { padding: 6px 0; font-size: 13px; }
+.km-sheet .pvh--card .pvh-bar i { width: 7px; height: 10px; border-radius: 2px; }
+/* Each section header (Buyers vs sellers, Track record): title left,
+   note right, a fine divider above. */
+.km-sheet .pvh--card .pvh-sec-head,
+.km-sheet .pvh--card .pvh-track-head {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.km-sheet .pvh--card .pvh-sec-head .pvh-track-n,
+.km-sheet .pvh--card .pvh-track-head .pvh-track-n { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12px; }
+/* Buyers vs sellers: a proper 8px split bar, full width. */
+.km-sheet .pvh--card .pvh-flow { display: flex; align-items: center; gap: 10px; width: 100%; }
+.km-sheet .pvh--card .pvh-flow-bar { flex: 1; width: auto; height: 8px; border-radius: 999px; }
+.km-sheet .pvh--card .pvh-flow-txt { font-size: 13px; font-weight: 700; color: var(--color-text); }
+/* Timeframes as soft chips. */
+.km-sheet .pvh--card .pvh-tf { display: flex; flex-wrap: wrap; gap: 6px; }
+.km-sheet .pvh--card .pvh-tf-item {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+/* Track record: four stats in a soft panel. */
+.km-sheet .pvh--card .pvh-track { gap: 8px; margin: 0; padding: 0; border: none; }
+.km-sheet .pvh--card .pvh-track-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.km-sheet .pvh--card .pvh-track-grid em { font-size: 11px; }
+.km-sheet .pvh--card .pvh-track-grid b { font-size: 16px; font-weight: 700; }
+.km-sheet .pvh--card .pvh-foot { justify-content: flex-end; padding-top: 4px; }
+.km-sheet-empty p { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--color-text-secondary, var(--color-text)); }
+
+/* Market card loader: skeleton blocks + a small spinner until data is in. */
+.km--loading { display: flex; flex-direction: column; gap: 12px; }
+.km-skel {
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--color-text) 5%, transparent) 25%,
+    color-mix(in srgb, var(--color-text) 10%, transparent) 50%,
+    color-mix(in srgb, var(--color-text) 5%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: km-shimmer 1.2s linear infinite;
+}
+.km-skel--big { width: 46%; height: 30px; }
+.km-skel--spark { width: 100%; height: 56px; }
+.km-skel--bar { width: 82%; height: 6px; margin: 4px auto 0; border-radius: 999px; }
+.km-loading-foot { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--color-text-muted); }
+.km-spinner {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  border-top-color: var(--color-text-muted);
+  animation: km-spin 0.8s linear infinite;
+}
+@keyframes km-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes km-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .km-skel, .km-spinner { animation-duration: 3s; } }
+
+/* Analysis sheet (light): plain white sheet, icy glass-gray boxes. */
+html[data-theme="light"] .bs-sheet--float:has(.km-sheet),
+html[data-theme="light"] .bs-sheet--float:has(.km-sheet) .bs-header { background: #fff; }
+html[data-theme="light"] .km-sheet .pvp2-hero {
+  background: linear-gradient(180deg, rgba(241, 244, 248, 0.9) 0%, rgba(246, 248, 251, 0.75) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.035);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* ── ProVision Signal panel (analysis sheet) ───────────────────────── */
+.pvp2 {
+  --pc: #8e8e93;
+  --up: #16a34a;
+  --dn: #dc2626;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 6px;
+}
+html:not([data-theme="light"]) .pvp2 { --up: #4ade80; --dn: #f87171; }
+.pvp2--bull { --pc: var(--up); }
+.pvp2--bear { --pc: var(--dn); }
+.pvp2-up { color: var(--up); font-style: normal; }
+.pvp2-dn { color: var(--dn); font-style: normal; }
+/* Pro-trader look: hairline-divided data tables, mono numerics, BUY/SELL tags. */
+.pvp2 {
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --hair: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --tint: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+.pvp2-hero {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; border-radius: 12px; background: var(--tint);
+}
+.pvp2-hero-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.pvp2-hero-l, .pvp2-hero-r { display: flex; flex-direction: column; gap: 2px; }
+.pvp2-hero-r { align-items: flex-end; }
+.pvp2-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted); }
+.pvp2-verdict { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--pc); }
+.pvp2-score { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.pvp2-score small { font-size: 11px; font-weight: 500; color: var(--color-text-muted); margin-left: 2px; }
+.pvp2-sub { font-family: var(--mono); font-size: 11px; color: var(--color-text-muted); }
+.pvp2-meter { display: flex; flex-direction: column; gap: 6px; }
+.pvp2-meter-track {
+  position: relative; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--dn) 0%, color-mix(in srgb, var(--dn) 35%, transparent) 30%, color-mix(in srgb, var(--color-text) 18%, transparent) 50%, color-mix(in srgb, var(--up) 35%, transparent) 70%, var(--up) 100%);
+}
+.pvp2-meter-dot {
+  position: absolute; top: 50%; width: 3px; height: 14px; border-radius: 2px;
+  background: var(--color-text); transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--color-surface, #fff);
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pvp2-meter-scale { display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted); }
+.pvp2-tally { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--hair); padding-top: 10px; }
+.pvp2-tally span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pvp2-tally span + span { border-left: 1px solid var(--hair); }
+.pvp2-tally em { font-style: normal; font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
+.pvp2-tally b { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--color-text); }
+.pvp2-sec { display: flex; flex-direction: column; gap: 8px; }
+.pvp2-sec h4 {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-muted);
+}
+.pvp2-sec h4 span { font-family: var(--mono); text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 11px; }
+.pvp2-table { display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
+.pvp2-th,
+.pvp2-row,
+.pvp2-row:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 72px 40px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--hair);
+}
+.pvp2-th { padding: 7px 0; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
+.pvp2-th span:nth-child(2), .pvp2-th span:last-child { text-align: right; }
+.pvp2-th span:nth-child(3) { text-align: center; }
+.pvp2-row { padding: 9px 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pvp2-row:active { background: var(--tint); }
+.pvp2-row-name { font-size: 13.5px; font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvp2-row-val { font-family: var(--mono); font-size: 11.5px; color: var(--color-text-muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvp2-div { position: relative; height: 6px; border-radius: 1px; background: var(--tint); }
+.pvp2-div::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: color-mix(in srgb, var(--color-text) 22%, transparent); }
+.pvp2-div i { position: absolute; top: 0; bottom: 0; border-radius: 1px; animation: pvp2-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pvp2-div i.r { left: 50%; background: var(--up); transform-origin: left; }
+.pvp2-div i.l { right: 50%; background: var(--dn); transform-origin: right; }
+@keyframes pvp2-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.pvp2-act { font-family: var(--mono); font-size: 11px; font-weight: 700; text-align: right; color: var(--color-text-muted); }
+.pvp2-row--bull .pvp2-act { color: var(--up); }
+.pvp2-row--bear .pvp2-act { color: var(--dn); }
+.pvp2-flow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.pvp2-flow-bar { display: flex; gap: 2px; height: 6px; border-radius: 1px; overflow: hidden; }
+.pvp2-flow-bar i { display: block; height: 100%; transition: width 0.6s ease; animation: pvp2-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: left; }
+.pvp2-flow-buy { background: var(--up); }
+.pvp2-flow-sell { background: var(--dn); transform-origin: right !important; }
+.pvp2-flow-cap { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-muted); }
+.pvp2-flow-cap span:nth-child(2) { font-family: var(--mono); letter-spacing: 0; text-transform: none; }
+.pvp2-tf { display: grid; border: 1px solid var(--hair); border-radius: 10px; overflow: hidden; }
+.pvp2-tf-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 0; }
+.pvp2-tf-cell + .pvp2-tf-cell { border-left: 1px solid var(--hair); }
+.pvp2-tf-cell em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--color-text-muted); }
+.pvp2-tf-cell b { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--color-text-muted); }
+.pvp2-tf--bull { background: color-mix(in srgb, var(--up) 7%, transparent); }
+.pvp2-tf--bear { background: color-mix(in srgb, var(--dn) 7%, transparent); }
+.pvp2-tf--bull b { color: var(--up); }
+.pvp2-tf--bear b { color: var(--dn); }
+.pvp2-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.pvp2-stats > span { display: flex; flex-direction: column; gap: 3px; padding: 10px 0 10px 10px; }
+.pvp2-stats > span:first-child { padding-left: 0; }
+.pvp2-stats > span + span { border-left: 1px solid var(--hair); }
+.pvp2-stats em { font-style: normal; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-muted); white-space: nowrap; }
+.pvp2-stats b { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pvp2-stats b i { font-style: normal; }
+.pvp2-foot { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+.pvp2-how,
+.pvp2-how:hover,
+.pvp2-keep,
+.pvp2-keep:hover { all: unset; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pvp2-how { color: #2563eb; }
+.pvp2-keep { color: #7c3aed; margin-right: auto; }
+html:not([data-theme="light"]) .pvp2-how { color: #60a5fa; }
+html:not([data-theme="light"]) .pvp2-keep { color: #a78bfa; }
+@media (prefers-reduced-motion: reduce) { .pvp2-div i, .pvp2-flow-bar i { animation: none; } }
+
+/* Segmented control (iOS-style): one rounded grey track, the open view
+   sits on a white chip. */
+.km-news--top { display: block; text-align: center; font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Terminal-style tabs: plain text, hairline base, a thin underline that
+   slides to the open tab. */
+.km-seg {
+  position: relative;
+  display: flex;
+  gap: 22px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+.km-seg-btn,
+.km-seg-btn:hover {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+.km-seg-btn::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-text);
+  transform: scaleX(0);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.km-seg-btn:active { opacity: 0.6; }
+.km-seg-btn--on,
+.km-seg-btn--on:hover { color: var(--color-text); }
+.km-seg-btn--on::after { transform: scaleX(1); }
+
+/* ── Phones #trade: Signal Check / Consensus tiles (Coinbase-style) ──── */
+.it-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 6px 0 8px;
+}
+.it-wrap--open { grid-template-columns: minmax(0, 1fr); }
+.it-tile {
+  border-radius: 16px;
+  background: #fafbfc;
+  border: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent);
+  overflow: hidden;
+  min-width: 0;
+}
+html:not([data-theme="light"]) .it-tile {
+  background: #141416;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+/* Tapped: grows from its own corner to the full card. */
+.it-tile--open.it-tile--left { animation: it-grow-left 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.it-tile--open.it-tile--right { animation: it-grow-right 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes it-grow-left { from { clip-path: inset(0 50% 60% 0 round 18px); } to { clip-path: inset(0 0 0 0 round 18px); } }
+@keyframes it-grow-right { from { clip-path: inset(0 0 60% 50% round 18px); } to { clip-path: inset(0 0 0 0 round 18px); } }
+.it-head,
+.it-head:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 14px 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.it-head:active { opacity: 0.75; }
+.it-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.it-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-text-muted); white-space: nowrap; }
+.it-value { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.it-value--bull { color: #16a34a; }
+.it-value--bear { color: #dc2626; }
+html:not([data-theme="light"]) .it-value--bull { color: #4ade80; }
+html:not([data-theme="light"]) .it-value--bear { color: #f87171; }
+.it-note { font-size: 11.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.it-ring { position: relative; flex-shrink: 0; display: block; width: 42px; height: 42px; }
+.it-ring svg { display: block; }
+.it-ring-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 700; color: var(--color-text);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+}
+.it-ring-track { fill: none; stroke: color-mix(in srgb, var(--color-text) 9%, transparent); stroke-width: 3.5; }
+.it-ring-fill { fill: none; stroke: var(--color-text-muted); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dasharray 0.6s ease; }
+.it-ring--bull .it-ring-fill { stroke: #16a34a; }
+.it-ring--bear .it-ring-fill { stroke: #dc2626; }
+html:not([data-theme="light"]) .it-ring--bull .it-ring-fill { stroke: #2f9e64; }
+html:not([data-theme="light"]) .it-ring--bear .it-ring-fill { stroke: #e05252; }
+.it-ring--loading svg { animation: it-spin 1s linear infinite; }
+@keyframes it-spin { to { transform: rotate(360deg); } }
+.it-body { padding: 0 2px 6px; animation: it-body-in 0.3s ease 0.12s both; }
+@keyframes it-body-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* Signal Check inside the tile: no card chrome of its own. */
+.pv-inline.pv-inline--tile { margin: 0; padding: 0 16px 12px; background: none !important; border-radius: 0; }
+/* The tile header already says Signal Check + verdict — skip that row. */
+.pv-inline--tile .pvh--card .pvh-head,
+.pv-inline--tile .pvh--card .pvh-verdict { display: none !important; }
+.pv-inline--tile .pvh.pvh--card { display: flex; }
+.it-body .cns-x { padding-top: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .it-tile--open, .it-body, .it-ring--loading svg { animation: none !important; }
+}

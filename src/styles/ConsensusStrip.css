@@ -1,5 +1,5 @@
 /* coinhintz consensus — desktop meter (.cns-meter) and phone card (.cns-card). */
-.cns-meter, .cns-card {
+.cns-meter, .cns-card, .cns-line, .cns-x {
   --cns-bear: #dc2626;
   --cns-bull: #16a34a;
   --cns-mid: #94a3b8;
@@ -7,6 +7,8 @@
   font-variant-numeric: tabular-nums;
 }
 html:not([data-theme="light"]) .cns-meter,
+html:not([data-theme="light"]) .cns-line,
+html:not([data-theme="light"]) .cns-x,
 html:not([data-theme="light"]) .cns-card {
   --cns-bear: #f87171;
   --cns-bull: #4ade80;
@@ -230,6 +232,51 @@ button.cns-row:active { opacity: 0.6; }
 .cns-event-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-text); }
 .cns-event-time { flex-shrink: 0; font-size: 11.5px; font-weight: 500; color: var(--color-text-muted); }
 .cns-event-body { font-size: 12.5px; line-height: 1.4; color: var(--color-text-muted); }
+
+/* ── Phone sheet: "What's next for …?" — consensus explained ───────── */
+.cns-x { display: flex; flex-direction: column; gap: 22px; padding: 6px 20px 18px; box-sizing: border-box; }
+.cns-x .cns-ring { width: 64px; height: 64px; }
+.cns-x .cns-ring svg { width: 64px; height: 64px; }
+.cns-x .cns-ring-track { stroke: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.cns-x .cns-headline { font-size: 18px; }
+.cns-x-hero { display: flex; align-items: center; gap: 14px; }
+.cns-x-sentence { font-size: 13px; line-height: 1.45; color: var(--color-text-secondary, var(--color-text)); }
+.cns-x-block { display: flex; flex-direction: column; gap: 8px; }
+.cns-x-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
+/* Gauge: labels above the line (or below when two dots are close); the
+   line sits in the middle band so neither row overlaps it. */
+.cns-x-map { position: relative; height: 84px; margin: 0 8px; }
+.cns-x-track {
+  position: absolute; left: 0; right: 0; top: 39px; height: 6px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--cns-bear), color-mix(in srgb, var(--cns-bear) 35%, transparent) 35%, color-mix(in srgb, var(--color-text) 12%, transparent) 50%, color-mix(in srgb, var(--cns-bull) 35%, transparent) 65%, var(--cns-bull));
+}
+.cns-x-mid { position: absolute; left: 50%; top: 33px; width: 1.5px; height: 18px; background: color-mix(in srgb, var(--color-text) 30%, transparent); }
+/* Dot centred on the line; name 6px above it (or below). */
+.cns-x-pin {
+  position: absolute; top: 15px; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  animation: cns-x-pin-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cns-x-pin--below { flex-direction: column-reverse; top: 35px; }
+.cns-x-pin-name { font-size: 10.5px; font-weight: 700; color: var(--color-text); white-space: nowrap; }
+.cns-x-pin-dot { width: 14px; height: 14px; border-radius: 50%; box-sizing: border-box; background: var(--color-surface, #fff); border: 3.5px solid var(--cns-mid); }
+.cns-x-pin-dot.cns-pin-dot--bear { border-color: var(--cns-bear); }
+.cns-x-pin-dot.cns-pin-dot--bull { border-color: var(--cns-bull); }
+@keyframes cns-x-pin-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translateX(-50%); } }
+.cns-x-scale { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--color-text-muted); margin: 0 2px; }
+.cns-x-split { display: flex; gap: 3px; height: 10px; border-radius: 999px; overflow: hidden; }
+.cns-x-split > span { min-width: 6px; animation: cns-x-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: left; }
+.cns-x-split-bear { background: var(--cns-bear); }
+.cns-x-split-neutral { background: color-mix(in srgb, var(--color-text) 20%, transparent); }
+.cns-x-split-bull { background: var(--cns-bull); }
+@keyframes cns-x-grow { from { transform: scaleX(0); } to { transform: none; } }
+.cns-x-legend { display: flex; gap: 14px; font-size: 12px; color: var(--color-text-muted); }
+.cns-x-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cns-dot--neutral { background: color-mix(in srgb, var(--color-text) 35%, transparent); }
+.cns-x-row { align-items: center; }
+.cns-x-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cns-x-about { padding-left: 18px; font-size: 11.5px; font-weight: 400; color: var(--color-text-muted); }
+@media (prefers-reduced-motion: reduce) { .cns-x-pin, .cns-x-split > span { animation: none; } }
 
 /* Inside the sheet: no card chrome of its own. */
 .cns-card.cns-card--sheet { margin: 0; padding: 4px 16px 12px; border: none; border-radius: 0; background: none; }

@@ -11,7 +11,7 @@ import { useSort, SortTh } from "./SortableTh";
 // from GlobalMarkets' cgFetch cache when Markets loaded it recently).
 
 const COINS_URL =
-  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=7d,30d,1y&sparkline=true";
+  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=1h,7d,30d,1y&sparkline=true";
 
 const TRENDING_URL = "https://api.coingecko.com/api/v3/search/trending";
 const WATCH_KEY = "watchlistCoins_v1";

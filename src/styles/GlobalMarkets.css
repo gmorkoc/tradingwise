@@ -4,7 +4,7 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 16px;
 }
 /* Icy glossy page backdrop — light theme only (the app is dark by
    default; a light/icy wash reads wrong against the dark theme's own
@@ -1400,7 +1400,7 @@ html[data-theme="light"] .gm-marketstatus-tile {
   /* Tightened from 16px 16px 36px / gap 20px — narrow-screen real estate
      is the scarce resource here, and that was a lot of dead space
      compounding across every one of this page's ~8 stacked sections. */
-  .gm-wrap { padding: 12px 16px 28px; gap: 14px; }
+  .gm-wrap { padding: 12px 16px 28px; gap: 10px; }
   /* Each .gm-status-col is its own separate card now (own bg/border/
      radius/shadow, same as every other section on this page) at every
      width — just stacks to 1 column here, same as any other grid. No

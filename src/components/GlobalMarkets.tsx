@@ -7,6 +7,7 @@ import {
 import "../styles/GlobalMarkets.css";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
 import { deribit } from "../services/deribit";
+import { MarketSignalTable } from "./MarketSignalTable";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface GlobalData {
@@ -30,6 +31,9 @@ export interface CoinRow {
   price_change_percentage_7d_in_currency: number;
   price_change_percentage_30d_in_currency?: number;
   price_change_percentage_1y_in_currency?: number;
+  price_change_percentage_1h_in_currency?: number;
+  circulating_supply?: number | null;
+  max_supply?: number | null;
   market_cap: number; total_volume: number;
   sparkline_in_7d?: { price: number[] };
 }
@@ -107,6 +111,10 @@ function fmtDate(ts: number, days: number): string {
 
 // ── Cache ──────────────────────────────────────────────────────────────────────
 const cache: Record<string, { data: unknown; ts: number }> = {};
+// The top-250 coin list (one cached request, shared by Markets, the coin
+// table and the chart page's info column).
+export const COINS_MARKETS_URL =
+  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=1h,7d,30d,1y&sparkline=true";
 export const TTL = { global: 60_000, chart: 120_000, coins: 90_000, trending: 300_000, fng: 300_000, oi: 60_000, fngHistory: 600_000 };
 // alternative.me's full Fear & Greed history (back to Feb 2018) in one
 // request — limit=0 means "no limit", not "zero rows". Small per-row
@@ -333,9 +341,13 @@ interface Props {
   // roster recognizes — App.tsx's openChartCoin shows the "coming soon"
   // sheet (CoinUnavailableSheet) for coins the chart has no data for.
   onSelectCoin?: (symbol: string) => void;
+  // Logged-out "Sign up" taps in the coin table's signal column.
+  onOpenAuth?: () => void;
+  // Coin table's Trade button → that coin's paper-trading ticket.
+  onTradeCoin?: (symbol: string) => void;
 }
 
-export function GlobalMarkets({ onSelectCoin }: Props = {}) {
+export function GlobalMarkets({ onSelectCoin, onOpenAuth, onTradeCoin }: Props = {}) {
   // Desktop gets a bigger dominance donut (taller chart here + a wider
   // .gm-dom-donut box in GlobalMarkets.css); mobile keeps 300px.
   const [isDesktopDonut, setIsDesktopDonut] = useState(() => window.matchMedia("(min-width: 641px)").matches);
@@ -444,10 +456,7 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
       // 250 is CoinGecko's own hard per_page cap on this endpoint (asking
       // for more just gets silently clamped back to it) — the real "all
       // of them" within a single request.
-      cgFetch<CoinRow[]>(
-        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&price_change_percentage=7d,30d,1y&sparkline=true",
-        TTL.coins
-      ),
+      cgFetch<CoinRow[]>(COINS_MARKETS_URL, TTL.coins),
     ])
       .then(([g, c]) => {
         if (!mountedRef.current) return;
@@ -991,6 +1000,9 @@ export function GlobalMarkets({ onSelectCoin }: Props = {}) {
         );
         return hero;
       })()}
+
+      {/* Coin table with a signal column, right under the hero row. */}
+      <MarketSignalTable coins={coins} onSelectCoin={onSelectCoin} onOpenAuth={onOpenAuth} onTradeCoin={onTradeCoin} />
 
       <div className="gm-hero">
         <span className="gm-hero-glow" />

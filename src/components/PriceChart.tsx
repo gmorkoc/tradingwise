@@ -42,8 +42,8 @@ import { ChartGoTo } from "./ChartGoTo";
 import { analyseLiquidations, LEVERAGES_ALL } from "../utils/liquidationClusters";
 import { AstroSuggestions } from "./AstroSuggestions";
 import { CompactPriceView } from "./CompactPriceView";
-import { MarketCapChart, MCAP_RANGES, fmtCap, type McapRange } from "./MarketCapChart";
-import { ProVisionHud } from "./ProVisionHud";
+import { CmcChart, CMC_RANGES, type CmcRange } from "./CmcChart";
+import { ProVisionHud, ProVisionSignalPanel } from "./ProVisionHud";
 import { useAIQuota } from "../hooks/useAIQuota";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../contexts/AuthContext";
@@ -1839,8 +1839,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs(prefsScope).showGrid ?? false));
   // Desktop #trade: Price / Market cap switch above the chart.
   const [chartMetric, setChartMetric] = useState<"price" | "mcap">("price");
-  const [mcapRange, setMcapRange] = useState<McapRange>("365");
-  const [mcapStats, setMcapStats] = useState<{ last: number; chg: number | null } | null>(null);
+  // CoinMarketCap-style chart: line (default) or our candle chart
+  // ("TradingView" button, where ProVision lives); range + Log for the line.
+  const [cmcStyle, setCmcStyleState] = useState<"line" | "candles">(() => {
+    try { return localStorage.getItem("cmcChartStyle") === "candles" ? "candles" : "line"; } catch { return "line"; }
+  });
+  const setCmcStyle = (s: "line" | "candles") => {
+    setCmcStyleState(s);
+    try { localStorage.setItem("cmcChartStyle", s); } catch { /* ignore */ }
+  };
+  const [cmcRange, setCmcRange] = useState<CmcRange>("1");
+  const [cmcLog, setCmcLog] = useState(false);
+  // Desktop chart page: the AI Chart Read card stays hidden until the
+  // chart's "Analyze Chart" button asks for it.
+  const [aiCtaOn, setAiCtaOn] = useState(false);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
@@ -2361,6 +2373,18 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const pvGate = useProVisionGate();
   const pvScope = prefsScope === "trade" || prefsScope === "advance";
   const pvActive = pvGate.activeFor(coin) && pvScope;
+  // Desktop chart page: turning ProVision on jumps to the candle chart
+  // ("TradingView"), where ProVision is drawn. Only on the off → on switch,
+  // so picking the line view afterwards still sticks.
+  const pvWasOnRef = useRef(pvGate.on);
+  useEffect(() => {
+    if (pvGate.on && !pvWasOnRef.current && prefsScope === "trade") {
+      setChartMetric("price");
+      setCmcStyle("candles");
+    }
+    pvWasOnRef.current = pvGate.on;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvGate.on]);
   // ProVision strength pill: sits bottom-left, just above the time axis's
   // top border. Measured (chart bottom − axis height, relative to the pill's
   // own positioned parent) since that parent also holds bars below the chart.
@@ -2649,6 +2673,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     const zone = pvBase.zone && pvEventInfo.inWindow(pvBase.zone.from * 1000) ? null : pvBase.zone;
     return { ...pvBase, signals, zone };
   }, [pvBase, pvEvents, pvEventInfo]);
+  // Phone #trade market card: hold a loader until the chart and the signal
+  // read are in. Safety valve: give up waiting on the signal after 10s.
+  const [kmWaitedOut, setKmWaitedOut] = useState(false);
+  useEffect(() => {
+    setKmWaitedOut(false);
+    const t = window.setTimeout(() => setKmWaitedOut(true), 10000);
+    return () => window.clearTimeout(t);
+  }, [coin, interval]);
   const pvColorMap = useMemo(() => {
     if (!pvResult) return null;
     const m = new Map<number, string>();
@@ -5234,17 +5266,61 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Desktop Trade page: a lean toolbar (chart style, grid, compact view,
   // full screen only).
   const tradeDesktopLean = isDesktopWidth && prefsScope === "trade" && !pageMode;
+  // Desktop chart page: the CoinMarketCap line chart takes the candle
+  // chart's place (Market cap always; Price unless "TradingView" is picked).
+  const cmcHidesCandles = tradeDesktopLean && !!pageTabBar && (chartMetric === "mcap" || cmcStyle === "line");
+  const cmcLineView = cmcHidesCandles && !pageTabContent && !isFullscreen;
   // Desktop #trade: Signal Check shows as a card on the chart; below the
   // chart only the track record (and alerts) stay.
   const pvHudOn = tradeDesktopLean && pvActive && !isFullscreen;
   // Phones #trade: Signal Check + event cards live inside the Consensus
   // sheet instead of stacking under the chart.
   const pvInSheet = consensusOn && !isDesktopWidth && !isFullscreen;
+  // Phones, Advance Chart: the Signal Check header opens its details in a
+  // bottom sheet (the card itself stays collapsed).
+  const pvAdvSheetMode = prefsScope === "advance" && !isDesktopWidth;
+  const [pvAdvSheetOpen, setPvAdvSheetOpen] = useState(false);
+  // Score-ring card: always starts minimised (just the ring icon in the
+  // bottom bar) on every load; tap the icon to bring the card up.
+  const [pvRingMin, setPvRingMin] = useState(true);
+  const [pvRingRestored, setPvRingRestored] = useState(false);
+  const pvRingRef = useRef<HTMLButtonElement | null>(null);
+  const pvRingTouchY = useRef<number | null>(null);
+  const pvRingSwipeRef = useRef(false);
+  // First few visits: a one-off up/down nudge hinting at the swipes.
+  const [pvRingHint] = useState(() => {
+    try {
+      const n = Number(localStorage.getItem("pvRingHintSeen") || "0");
+      if (n >= 3) return false;
+      localStorage.setItem("pvRingHintSeen", String(n + 1));
+      return true;
+    } catch { return false; }
+  });
+  const setRingMin = (v: boolean) => setPvRingMin(v);
+  // Phones #trade: Signal Check / Consensus tiles; one can be expanded.
+  const consensusItemsRef = useRef<ConsensusItem[]>([]);
+  const [insightOpen, setInsightOpen] = useState<null | "pv" | "cns">(null);
+  // Bumped when the details sheet closes, to replay the docked icon's pop.
+  const [pvDockPop, setPvDockPop] = useState(0);
+  // Shrink + glide the card down into the far left of the bottom bar,
+  // then dock it there as a small ring.
+  // Self-contained (no measuring): a CSS class shrinks + slides it down-left
+  // and fades it out, then the small ring docks in the bar.
+  const [pvRingLeaving, setPvRingLeaving] = useState(false);
+  const minimizeRing = () => {
+    const el = pvRingRef.current;
+    if (el) { el.style.transition = ""; el.style.transform = ""; el.style.opacity = ""; }
+    setPvRingLeaving(true);
+    window.setTimeout(() => { setPvRingLeaving(false); setPvRingRestored(false); setRingMin(true); }, 380);
+  };
   // Signal Check (ProVisionHud): "bar" = desktop strip above the chart,
   // "card" = stacked, inside the phone Consensus sheet.
-  const renderPvHud = (layout: "bar" | "card") => pvResult ? (
-    <ProVisionHud
-      layout={layout}
+  const renderPvHud = (layout: "bar" | "card" | "pro") => {
+    if (!pvResult) return null;
+    const PvView = layout === "pro" ? ProVisionSignalPanel : ProVisionHud;
+    return (
+    <PvView
+      layout={layout === "pro" ? "card" : layout}
       result={pvResult}
       mtf={pvMtf.map((m) => ({ label: m.label, bias: m.bias }))}
       onRow={(r) => {
@@ -5272,7 +5348,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         return null;
       })()}
     />
-  ) : null;
+    );
+  };
   const heroIconRow = (
     <div className="chart-hero-icon-row">
       {/* Desktop #trade: the interval is a dropdown here, beside the icons
@@ -6445,6 +6522,29 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }}
         >
           <div className="fs-bar-scroll">
+            {/* Minimised Signal Check: a small score ring docked far left;
+                tap brings the card back. */}
+            {pvAdvSheetMode && pvRingMin && pvActive && pvResult && (() => {
+              const b = pvResult.verdict.bias;
+              const score = Math.max(0, Math.min(100, pvResult.bullStrength));
+              const C = 2 * Math.PI * 11;
+              return (
+                <button
+                  key={`dock:${pvDockPop}`}
+                  type="button"
+                  className={`fs-bar-btn pv-ring-dock pv-ring-entry--${b}`}
+                  // Tap → the full Signal Check, fully expanded.
+                  onClick={(e) => { e.stopPropagation(); hapticTap(); setPvAdvSheetOpen(true); }}
+                  aria-label={`Signal Check ${score}. Open details`}
+                >
+                  <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+                    <circle cx="14" cy="14" r="11" className="pv-ring-track" />
+                    <circle cx="14" cy="14" r="11" className="pv-ring-fill" strokeDasharray={`${((score / 100) * C).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 14 14)" />
+                  </svg>
+                  <span className="pv-ring-dock-num">{score}</span>
+                </button>
+              );
+            })()}
             <button
               type="button"
               className="fs-bar-btn fs-bar-interval"
@@ -6740,7 +6840,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}${(pageTabContent || (tradeDesktopLean && pageTabBar && chartMetric === "mcap")) && !isFullscreen ? " price-chart-container--ctab" : ""}`}
+      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}${(pageTabContent || cmcHidesCandles) && !isFullscreen ? " price-chart-container--ctab" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
@@ -6748,7 +6848,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         style={
           pageMode && !isDesktopWidth
             ? ({ "--fs-dock-clearance": `${fsDockClearance}px` } as React.CSSProperties)
-            : (pageTabContent || (tradeDesktopLean && pageTabBar && chartMetric === "mcap")) && !isFullscreen && overviewH > 0
+            : (pageTabContent || cmcHidesCandles) && !isFullscreen && overviewH > 0
               ? { minHeight: overviewH }
               : undefined
         }
@@ -6974,57 +7074,117 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {pageTabContent}
             {/* Desktop #trade: Price / Market cap switch + chart tools,
                 right above the chart. */}
+            {/* Desktop chart page: CoinMarketCap toolbar —
+                [Price | Market cap] [line | TradingView] … [24h 1W 1M 1Y All | Log].
+                Line view = CmcChart; TradingView = our candle chart (ProVision). */}
             {tradeDesktopLean && pageTabBar && !pageTabContent && !isFullscreen && (
-              <div className="cpt-chart-head">
-                <div className="cpt-metric" role="tablist">
-                  {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+              <div className="cmct">
+                <div className="cmct-l">
+                  <div className="cmct-seg" role="tablist" aria-label="Metric">
+                    {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        role="tab"
+                        aria-selected={chartMetric === k}
+                        className={`cmct-btn${chartMetric === k ? " cmct-btn--on" : ""}`}
+                        onClick={() => setChartMetric(k)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="cmct-seg" role="tablist" aria-label="Chart type">
                     <button
-                      key={k}
                       type="button"
                       role="tab"
-                      aria-selected={chartMetric === k}
-                      className={`cpt-metric-btn${chartMetric === k ? " cpt-metric-btn--on" : ""}`}
-                      onClick={() => setChartMetric(k)}
+                      aria-selected={cmcLineView}
+                      aria-label="Line chart"
+                      className={`cmct-btn${cmcLineView ? " cmct-btn--on" : ""}`}
+                      onClick={() => setCmcStyle("line")}
                     >
-                      {label}
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="m7 15 4-5 3 3 5-7" /></svg>
                     </button>
-                  ))}
-                </div>
-                {chartMetric === "mcap" && (
-                  <div className="cpt-mcap-stat">
-                    <span className="cpt-mcap-stat-label">{coin} market cap</span>
-                    <strong>{mcapStats ? fmtCap(mcapStats.last) : "—"}</strong>
-                    {mcapStats?.chg != null && (
-                      <span className={`cpt-mcap-stat-chg ${mcapStats.chg >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"}`}>
-                        {mcapStats.chg >= 0 ? "▲" : "▼"} {Math.abs(mcapStats.chg).toFixed(2)}%
-                        <span className="cpt-mcap-stat-range">{MCAP_RANGES.find((r) => r.id === mcapRange)?.label}</span>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={!cmcLineView}
+                      className={`cmct-btn${!cmcLineView ? " cmct-btn--on" : ""}`}
+                      onClick={() => {
+                        // ProVision: the candle chart with ProVision on (the
+                        // gate opens the sales sheet when it's locked).
+                        setChartMetric("price");
+                        setCmcStyle("candles");
+                        if (!pvGate.on) pvGate.toggle(coin);
+                      }}
+                    >
+                      {/* Same sparkle knob as the old header toggle. */}
+                      <span className="cmct-pv-ic" aria-hidden="true">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                       </span>
-                    )}
+                      <span>Pro<span className="pv-toggle-label-accent">Vision</span></span>
+                    </button>
                   </div>
-                )}
-                {chartMetric === "price" ? heroIconRow : (
-                  <div className="cpt-mcap-tools">
-                    <div className="cpt-seg" role="tablist" aria-label="Range">
-                      {MCAP_RANGES.map((r) => (
+                </div>
+                <div className="cmct-r">
+                  {cmcLineView ? (
+                    <>
+                      <div className="cmct-seg" role="tablist" aria-label="Range">
+                        {CMC_RANGES.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={cmcRange === r.id}
+                            className={`cmct-btn${cmcRange === r.id ? " cmct-btn--on" : ""}`}
+                            onClick={() => setCmcRange(r.id)}
+                          >
+                            {r.label}
+                          </button>
+                        ))}
+                        <span className="cmct-div" aria-hidden="true" />
                         <button
-                          key={r.id}
                           type="button"
-                          role="tab"
-                          aria-selected={mcapRange === r.id}
-                          className={`cpt-seg-btn${mcapRange === r.id ? " cpt-seg-btn--on" : ""}`}
-                          onClick={() => setMcapRange(r.id)}
+                          aria-pressed={cmcLog}
+                          className={`cmct-btn${cmcLog ? " cmct-btn--on" : ""}`}
+                          onClick={() => setCmcLog((v) => !v)}
                         >
-                          {r.label}
+                          Log
                         </button>
-                      ))}
-                    </div>
-                    <div className="chart-hero-icon-row">{fullscreenToolBtn}</div>
-                  </div>
-                )}
+                        <span className="cmct-div" aria-hidden="true" />
+                        {/* Fullscreen sits inside the same group (CMC's settings slot). */}
+                        <button
+                          type="button"
+                          className="cmct-btn cmct-btn--icon"
+                          onClick={toggleFullscreen}
+                          aria-label={t("chart.fullscreen", "Fullscreen")}
+                          title={t("chart.fullscreen", "Fullscreen")}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                        </button>
+                      </div>
+                    </>
+                  ) : heroIconRow}
+                </div>
               </div>
             )}
-            {tradeDesktopLean && pageTabBar && !pageTabContent && !isFullscreen && chartMetric === "mcap" && (
-              <MarketCapChart coin={coin} theme={theme} range={mcapRange} onStats={setMcapStats} />
+            {cmcLineView && (
+              <CmcChart
+                coin={coin}
+                theme={theme}
+                metric={chartMetric}
+                range={cmcRange}
+                log={cmcLog}
+                onAnalyze={() => {
+                  // Run the AI Chart Read right away (paid) — free users get
+                  // the upgrade card — under the chart, scrolled into view.
+                  setAiCtaOn(true);
+                  if (isPaid && !aiReadOpen) openAiRead();
+                  window.setTimeout(() => {
+                    document.querySelector(".ai-read-cta, .ai-read, .chart-ai-placeholder")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  }, 60);
+                }}
+              />
             )}
             {mobileTabs && (
               <div className={`chart-mview-tabs chart-mview-tabs--${mobileView}${pageTabBar ? " chart-mview-tabs--more" : ""}`}>
@@ -8329,26 +8489,24 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             onEventsChange={(evs) => { setChartEvts(evs); onChartEventsChange?.(evs); }}
             // Phones #trade: first slide = ProVision + Consensus; tap opens
             // the full Consensus sheet (Signal Check inside).
-            // ProVision on → its header bar is shown instead, so no lead slide.
-            leadCard={pvInSheet && !(pvActive && pvResult) ? (() => {
-              const b = pvResult && pvActive ? pvResult.verdict.bias : null;
-              const lead = b ?? consensusSummary?.lead ?? "neutral";
+            // Always the first slide on phones #trade (ProVision on or off).
+            leadCard={pvInSheet ? (() => {
+              // Colour follows the consensus (not ProVision alone).
+              const lead = consensusSummary?.lead ?? "neutral";
               const tone = lead === "bull" ? "bullish" as const : lead === "bear" ? "bearish" as const : "neutral" as const;
-              const word = b === "bull" ? "Bullish" : b === "bear" ? "Bearish" : "Mixed";
               return {
                 tone,
-                title: b ? `ProVision · ${word}` : `What's next for ${COINS.find((c) => c.symbol === coin)?.name ?? coin}?`,
-                value: b && pvResult ? `${pvResult.bullStrength}/100` : undefined,
+                // Always the question; ProVision's read goes in the line below.
+                title: `What's next for ${COINS.find((c) => c.symbol === coin)?.name ?? coin}?`,
+                value: undefined,
                 // Second line supports the first instead of competing with
                 // it: "3 of 5 tools agree" when they match, "tools are split"
                 // / "other tools lean …" when they don't.
                 body: (() => {
                   const s = consensusSummary;
                   if (!s) return "See what every coinhintz tool says";
-                  if (!b) return `${s.headline} · ${s.countLine}`;
-                  if (s.lead === b) return s.countLine.replace(/ (bullish|bearish)$/, " agree");
-                  if (s.lead === "neutral") return "Other tools are split";
-                  return `Other tools lean ${s.lead === "bull" ? "bullish" : "bearish"}`;
+                  // Consensus only (ProVision has its own card below).
+                  return `${s.headline} · ${s.countLine}`;
                 })(),
                 side: "Tap to see ›",
                 onOpen: () => window.dispatchEvent(new Event("open-consensus-sheet")),
@@ -8565,6 +8723,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               detail: { prompt: `What do coinhintz's tools say about ${coin} on the ${tf} chart right now, and why?` },
             })),
           });
+          // Reused further down by the phone insight tiles (same render).
+          consensusItemsRef.current = items;
           return (
             <ConsensusStrip
               coinName={COINS.find((c) => c.symbol === coin)?.name ?? coin}
@@ -8669,16 +8829,101 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </button>
         )}
 
+        {/* Phones, Advance Chart: Signal Check entry — score ring + verdict;
+            tap opens the details sheet. */}
+        {pvAdvSheetMode && pvActive && pvResult && !pvRingMin && (() => {
+          const b = pvResult.verdict.bias;
+          const word = b === "bull" ? "Bullish" : b === "bear" ? "Bearish" : "Mixed";
+          const score = Math.max(0, Math.min(100, pvResult.bullStrength));
+          const C = 2 * Math.PI * 17;
+          return (
+            <button
+              ref={pvRingRef}
+              type="button"
+              className={`pv-ring-entry pv-ring-entry--${b}${pvRingRestored ? " pv-ring-entry--restored" : ""}${pvRingHint && !pvRingRestored && !pvRingLeaving ? " pv-ring-entry--hint" : ""}${pvRingLeaving ? " pv-ring-entry--leaving" : ""}`}
+              onClick={() => { if (pvRingSwipeRef.current) { pvRingSwipeRef.current = false; return; } setPvAdvSheetOpen(true); }}
+              // Swipe the card down → dock it in the bottom bar.
+              onTouchStart={(e) => {
+                pvRingTouchY.current = e.touches[0].clientY;
+                const el = pvRingRef.current;
+                if (el) el.style.transition = "none";
+              }}
+              // Follows the finger a little (resisted), so the swipe feels live.
+              onTouchMove={(e) => {
+                const start = pvRingTouchY.current;
+                const el = pvRingRef.current;
+                if (start === null || !el) return;
+                const dy = e.touches[0].clientY - start;
+                const eased = Math.sign(dy) * Math.min(28, Math.abs(dy) * 0.35);
+                el.style.transform = `translateY(${eased}px)`;
+                el.style.opacity = String(1 - Math.min(0.25, Math.abs(eased) / 112));
+              }}
+              onTouchEnd={(e) => {
+                const start = pvRingTouchY.current;
+                pvRingTouchY.current = null;
+                const el = pvRingRef.current;
+                if (start === null) return;
+                const dy = e.changedTouches[0].clientY - start;
+                // Spring back unless this swipe docks the card (the dock
+                // animation takes over the transform itself).
+                if (el && !(dy > 30)) {
+                  el.style.transition = "transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease";
+                  el.style.transform = "";
+                  el.style.opacity = "";
+                }
+                if (dy > 30) {
+                  // Swipe down → dock it in the bottom bar.
+                  pvRingSwipeRef.current = true;
+                  hapticTap();
+                  minimizeRing();
+                } else if (dy < -30) {
+                  // Swipe up → expand into the details sheet.
+                  pvRingSwipeRef.current = true;
+                  hapticTap();
+                  setPvAdvSheetOpen(true);
+                }
+              }}
+              aria-haspopup="dialog"
+            >
+              <span className="pv-ring" aria-hidden="true">
+                <svg width="44" height="44" viewBox="0 0 44 44">
+                  <circle cx="22" cy="22" r="17" className="pv-ring-track" />
+                  <circle cx="22" cy="22" r="17" className="pv-ring-fill" strokeDasharray={`${((score / 100) * C).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 22 22)" />
+                </svg>
+                <span className="pv-ring-num">{score}</span>
+              </span>
+              <span className="pv-ring-text">
+                <span className="pv-ring-verdict">{word} · {pvResult.verdict.agree} of {pvResult.verdict.total} indicators agree</span>
+                <span className="pv-ring-sub">ProVision Signal Check · tap for details</span>
+              </span>
+              {/* Grab handle: tap (or swipe the card down) to dock it in the
+                  bottom bar; swipe up to expand into the details sheet. */}
+              <span
+                role="button"
+                tabIndex={0}
+                className="pv-ring-handle"
+                aria-label="Minimise to the bottom bar"
+                onClick={(e) => { e.stopPropagation(); hapticTap(); minimizeRing(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); minimizeRing(); } }}
+              />
+            </button>
+          );
+        })()}
         {/* Pro Vision: Signal check — trend + momentum tiles, buyers vs
             sellers, and an overall verdict. Tap a tile to see what it means. */}
         {pvResult && (
-          <div className={`pv-card${pvCardOpen || pvHudOn ? "" : " pv-card--collapsed"}${prefsScope === "advance" ? " pv-card--advance" : ""}${pvHudOn || pvInSheet ? " pv-card--hud" : ""}`}>
+          <div className={`pv-card${(pvCardOpen && !pvAdvSheetMode) || pvHudOn ? "" : " pv-card--collapsed"}${prefsScope === "advance" ? " pv-card--advance" : ""}${pvHudOn || pvInSheet || pvAdvSheetMode ? " pv-card--hud" : ""}`}>
             <button
               type="button"
               className={`pv-card-head pvs--${pvResult.verdict.bias}`}
               // Phones #trade: the header opens the Consensus sheet (full
               // Signal Check inside) instead of expanding here.
-              onClick={() => (pvInSheet ? window.dispatchEvent(new Event("open-consensus-sheet")) : setPvCardOpen((v) => !v))}
+              onClick={() => (
+                pvInSheet ? window.dispatchEvent(new Event("open-consensus-sheet"))
+                  // Phones, Advance Chart: details open in a bottom sheet.
+                  : pvAdvSheetMode ? setPvAdvSheetOpen(true)
+                  : setPvCardOpen((v) => !v)
+              )}
               aria-expanded={pvCardOpen}
               // Heartbeat speed: the further the score sits from 50 (a
               // clearer signal), the faster the icon pulses (2.6s → 1s).
@@ -9066,6 +9311,19 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         )}
         <ProVisionGuide open={pvGuideOpen && pvActive} onClose={() => setPvGuideOpen(false)} />
+        {/* Phones, Advance Chart: Signal Check details in a bottom sheet. */}
+        {pvAdvSheetMode && (
+          <BottomSheet
+            open={pvAdvSheetOpen && !!pvResult}
+            // ✕ or swipe down → back to the minimised icon (which pops).
+            onClose={() => { setPvAdvSheetOpen(false); setPvDockPop((k) => k + 1); }}
+            title={`${COINS.find((c) => c.symbol === coin)?.name ?? coin} · Signal Check`}
+            ariaLabel="ProVision Signal Check"
+            className="pv-adv-sheet"
+          >
+            <div className="pv-adv-sheet-body">{renderPvHud("card")}</div>
+          </BottomSheet>
+        )}
         <BottomSheet
           open={!!pvTileOpen}
           onClose={() => setPvTileOpen(null)}
@@ -9109,9 +9367,173 @@ export const PriceChart: React.FC<PriceChartProps> = ({
 
         {/* Phones #trade: Signal Check content right on the page, under the
             "what's happening" slider — calm, stacked, no card chrome. */}
-        {pvInSheet && pvActive && pvResult && (
-          <div className="pv-inline">{renderPvHud("card")}</div>
-        )}
+        {/* Two tiles side by side — Signal Check and Consensus, each a
+            title, one line and a small ring; tapping one grows it to full
+            width and opens its full view in place (tap the header again
+            to shrink back). */}
+        {pvInSheet && (() => {
+          const items = consensusItemsRef.current;
+          const read = items.filter((i) => !i.locked && i.tone !== null);
+          const bearN = read.filter((i) => i.tone === "bear").length;
+          const bullN = read.filter((i) => i.tone === "bull").length;
+          const lead = bearN > bullN ? "bear" : bullN > bearN ? "bull" : "neutral";
+          const agree = lead === "bear" ? bearN : lead === "bull" ? bullN : read.length - bearN - bullN;
+          const pvOn = !!(pvActive && pvResult);
+          const pvScore = pvOn ? Math.max(0, Math.min(100, pvResult!.bullStrength)) : 0;
+          const pvReason = pvGate.access.lockReason(coin);
+          // ── Kalshi-style market card ──
+          // Headline probability: ProVision's bull strength (or the tools'
+          // split without it), shown as the chance of the leading side.
+          const bullPct = pvOn ? pvScore : read.length ? Math.round((bullN / read.length) * 100) : 50;
+          const bearPct = 100 - bullPct;
+          const leadSide: "bull" | "bear" = bullPct >= 50 ? "bull" : "bear";
+          const chance = leadSide === "bull" ? bullPct : bearPct;
+          const latest = [...chartEvts].sort((a, b) => b.time - a.time)[0];
+          // History line: ProVision's bull strength over recent candles.
+          const series = pvOn ? (pvResult!.scoreSeries ?? []).slice(-60) : [];
+          const spark = (() => {
+            if (series.length < 2) return null;
+            const W = 300, H = 56;
+            const x = (i: number) => (i / (series.length - 1)) * W;
+            const y = (v: number) => 4 + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - 8);
+            const d = series.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+            return (
+              <svg className="km-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+                <line x1="0" x2={W} y1={y(50)} y2={y(50)} className="km-spark-mid" />
+                <path d={`${d} L${W} ${H} L0 ${H} Z`} className="km-spark-area" />
+                <path d={d} className="km-spark-line" />
+                <circle cx={x(series.length - 1)} cy={y(series[series.length - 1])} r="3.5" className="km-spark-dot" />
+              </svg>
+            );
+          })();
+          const coinName = COINS.find((c) => c.symbol === coin)?.name ?? coin;
+          const kmReady = !loading && (!pvActive || !!pvResult || kmWaitedOut);
+          if (!kmReady) {
+            return (
+              <div className="sb-wrap">
+                <div className="km km--loading" role="status" aria-label={`Loading ${coinName} signals`}>
+                  <div className="km-head">
+                    <span className="km-q">
+                      <img
+                        className="km-logo"
+                        src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                        alt=""
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                      What's next for {coinName}?
+                    </span>
+                    <span className="km-tf">{INTERVAL_SHORT[interval]}</span>
+                  </div>
+                  <div className="km-skel km-skel--big" />
+                  <div className="km-skel km-skel--spark" />
+                  <div className="km-skel km-skel--bar" />
+                  <div className="km-loading-foot">
+                    <span className="km-spinner" aria-hidden="true" />
+                    Reading the chart…
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          const scoreboard = (
+            <div className={`km km--${leadSide}`}>
+              <div className="km-head">
+                <span className="km-q">
+                  <img
+                    className="km-logo"
+                    src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  What's next for {coinName}?
+                </span>
+                <span className="km-tf"><i className="km-live" aria-hidden="true" />LIVE · {INTERVAL_SHORT[interval]}</span>
+              </div>
+              <div className="km-big">
+                <b>{chance}%</b>
+                <span className="km-big-label">chance {leadSide === "bull" ? "bullish" : "bearish"}</span>
+                {read.length > 0 && <span className="km-agree">{agree} of {read.length} tools agree</span>}
+              </div>
+              {spark}
+              {/* One split bar: bullish share (left) vs bearish (right). */}
+              <div className="km-gauge" role="img" aria-label={`Bullish ${bullPct}%, bearish ${bearPct}%`} style={{ ["--split" as string]: `${bullPct}%` }}>
+                <div className="km-gauge-labels">
+                  <span className={`km-gauge-side km-gauge-side--bull${leadSide === "bull" ? " km-gauge-side--lead" : ""}`}>
+                    Bullish <b>{bullPct}%</b>
+                  </span>
+                  <span className={`km-gauge-side km-gauge-side--bear${leadSide === "bear" ? " km-gauge-side--lead" : ""}`}>
+                    <b>{bearPct}%</b> Bearish
+                  </span>
+                </div>
+                <div className="km-gauge-track" aria-hidden="true">
+                  <span className="km-gauge-marker" />
+                </div>
+              </div>
+              {/* Foot: the latest chart moment, and one quiet link that opens
+                  the full analysis (Signal Check + Consensus tabs). */}
+              <div className="km-foot">
+                <span className="km-news">{latest ? latest.title : ""}</span>
+                <button
+                  type="button"
+                  className="km-more"
+                  onClick={() => { hapticTap(); setInsightOpen(pvOn ? "pv" : "cns"); }}
+                >
+                  See full analysis ›
+                </button>
+              </div>
+            </div>
+          );
+          return (
+            <div className="sb-wrap">
+              {scoreboard}
+              {/* Full analysis: one sheet, Signal Check / Consensus tabs. */}
+              <BottomSheet
+                open={insightOpen !== null}
+                onClose={() => setInsightOpen(null)}
+                title={`What's next for ${coinName}?`}
+                ariaLabel="Full analysis"
+                floating
+              >
+                <div className="km-sheet">
+                  <div className="km-seg" role="tablist" aria-label="Analysis">
+                    <button type="button" role="tab" aria-selected={insightOpen === "pv"} className={`km-seg-btn${insightOpen === "pv" ? " km-seg-btn--on" : ""}`} onClick={() => setInsightOpen("pv")}>
+                      ProVision Signal
+                    </button>
+                    <button type="button" role="tab" aria-selected={insightOpen === "cns"} className={`km-seg-btn${insightOpen === "cns" ? " km-seg-btn--on" : ""}`} onClick={() => setInsightOpen("cns")}>
+                      Consensus
+                    </button>
+                  </div>
+                  {insightOpen === "pv" && (pvOn ? (
+                    renderPvHud("pro")
+                  ) : (
+                    <div className="km-sheet-empty">
+                      <p>Signal Check is part of ProVision: trend, 7 indicators and a scored track record.</p>
+                      <button
+                        type="button"
+                        className="km-more"
+                        onClick={() => {
+                          setInsightOpen(null);
+                          if (pvReason && !pvActive) openProVisionPaywall({ reason: pvReason, coin });
+                          else if (!pvActive) pvGate.toggle(coin);
+                        }}
+                      >
+                        {pvReason ? "Try ProVision ›" : "Turn on ProVision ›"}
+                      </button>
+                    </div>
+                  ))}
+                  {insightOpen === "cns" && (
+                    <ConsensusStrip
+                      coinName={coinName}
+                      timeframe={INTERVAL_SHORT[interval]}
+                      items={items}
+                      variant="panel"
+                    />
+                  )}
+                </div>
+              </BottomSheet>
+            </div>
+          );
+        })()}
 
         {/* …then the big "Trade BTC" button → Paper Trade (mobile). */}
         {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && (
@@ -9298,7 +9720,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </div>
         </div>
 
-        {isFullscreen ? null : (!isDesktopWidth && !aiReadOpen) ? null : !isPaid ? (
+        {isFullscreen ? null : (!isDesktopWidth && !aiReadOpen) ? null
+          // Desktop chart page: hidden until "Analyze Chart" (under the chart) is clicked.
+          : (tradeDesktopLean && !aiCtaOn && !aiReadOpen) ? null : !isPaid ? (
           <div className="chart-ai-placeholder">
             <div className="chart-ai-placeholder-preview" aria-hidden="true">
               <div className="chart-ai-placeholder-header">
@@ -9378,7 +9802,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                 )}
                 <span className="aiqw-live-badge"><span className="aiqw-live-dot" />LIVE</span>
-                <button type="button" className="ai-read-close" aria-label="Hide AI Chart Read" onClick={() => setAiReadOpen(false)}>✕</button>
+                <button type="button" className="ai-read-close" aria-label="Hide AI Chart Read" onClick={() => { setAiReadOpen(false); setAiCtaOn(false); }}>✕</button>
               </span>
             </div>
 

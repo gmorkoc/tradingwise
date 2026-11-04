@@ -71,6 +71,7 @@ import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
+import { CoinInfoPanel } from "./components/CoinInfoPanel";
 import { PriceChart, formatLivePrice, PV_PROMO_STYLE } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
@@ -205,13 +206,50 @@ const NAV_CATEGORIES: { id: NavCategoryId; labelKey: string; d: string | string[
   },
 ];
 
-// The Trade page is section "chart" internally but lives at #trade in the
-// URL. Old #chart links still open it.
+// Old #hash links: the chart page used to be #trade (and before that
+// #chart); both still map to section "chart".
 function hashToSection(hash: string): SectionId {
   return (hash === "trade" ? "chart" : hash) as SectionId;
 }
-function sectionToHash(section: SectionId): string {
-  return section === "chart" ? "trade" : section;
+
+// ── SEO URLs ──────────────────────────────────────────────────────────────
+// Real paths, no "#" (search engines ignore everything after it): Markets
+// (home) is "/", the coin chart page is /chart/<coin-name> (e.g.
+// /chart/bitcoin, one indexable page per coin), every other page is
+// /<section> (e.g. /heatmap). Old #hash links still work and get rewritten.
+const coinSlug = (sym: string): string => {
+  const name = COINS.find((c) => c.symbol === sym)?.name ?? sym;
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+};
+function slugToCoin(slug: string): string | null {
+  const s = decodeURIComponent(slug).toLowerCase();
+  const hit = COINS.find((c) => coinSlug(c.symbol) === s || c.symbol.toLowerCase() === s);
+  return hit ? hit.symbol : null;
+}
+const isSection = (s: string): s is SectionId => NAV_ITEMS.some((n) => n.id === s) || s === "advance-chart";
+/** Section + coin from the current URL: an old #hash link wins (so it can
+ *  be rewritten), then the path. */
+function readLocation(): { section: SectionId | null; coin: string | null } {
+  const raw = window.location.hash.slice(1);
+  if (raw) {
+    const hashSec = hashToSection(raw);
+    if (isSection(hashSec)) return { section: hashSec, coin: null };
+  }
+  const path = window.location.pathname.replace(/\/+$/, "");
+  const m = path.match(/^\/chart\/([^/]+)$/);
+  if (m) return { section: "chart", coin: slugToCoin(m[1]) };
+  const seg = path.slice(1);
+  if (seg === "chart" || seg === "trade") return { section: "chart", coin: null };
+  if (seg && !seg.includes("/") && isSection(seg)) return { section: seg, coin: null };
+  return { section: null, coin: null };
+}
+function pathFor(section: SectionId, coin: string): string {
+  if (section === "markets") return "/";
+  if (section === "chart") return `/chart/${coinSlug(coin)}`;
+  return `/${section}`;
+}
+function urlFor(section: SectionId, coin: string): string {
+  return `${pathFor(section, coin)}${window.location.search}`;
 }
 
 // Pages that are fully paywalled (BlurGate around the whole page). Tapping
@@ -235,10 +273,25 @@ const NAV_ITEMS: {
   category?: NavCategoryId;
 }[] = [
   {
-    // Shown as "Trade" (nav.chart) — first item, candlestick icon.
+    // Markets is the home page — first in the nav.
+    id: "markets",
+    labelKey: "nav.markets",
+    d: [
+      "M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0",
+      "M3.6 9h16.8",
+      "M3.6 15h16.8",
+      "M11.5 3a17 17 0 0 0 0 18",
+      "M12.5 3a17 17 0 0 1 0 18",
+    ],
+  },
+  {
+    // "Trade" (nav.chart) — not in the nav any more: each coin's chart
+    // opens from Markets (/chart/<coin>). Kept here so the page and its
+    // URL stay valid.
     id: "chart",
     labelKey: "nav.chart",
     requiredTier: "pro",
+    hidden: true,
     d: [
       "M8 3v4", "M6 7h4v9H6z", "M8 16v5",
       "M16 4v5", "M14 9h4v6h-4z", "M16 15v4",
@@ -249,17 +302,6 @@ const NAV_ITEMS: {
     labelKey: "nav.candleai",
     requiredTier: "elite",
     d: ["M3 3v18h18", "M7 7h2v10H7z", "M13 11h2v6h-2z", "M10 13h2v4h-2z"],
-  },
-  {
-    id: "markets",
-    labelKey: "nav.markets",
-    d: [
-      "M3 12a9 9 0 1 0 18 0 9 9 0 0 0 -18 0",
-      "M3.6 9h16.8",
-      "M3.6 15h16.8",
-      "M11.5 3a17 17 0 0 0 0 18",
-      "M12.5 3a17 17 0 0 1 0 18",
-    ],
   },
   {
     id: "heatmap",
@@ -488,11 +530,9 @@ function AppDashboard({
 }: DashboardProps) {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<SectionId>(() => {
-    const hash = hashToSection(window.location.hash.slice(1));
-    // "advance-chart" has no NAV_ITEMS entry (no nav icon) but is still a
-    // valid section reachable via hash — accept it explicitly.
-    // Default landing is the Trade page (section "chart", URL #trade).
-    return NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart" ? hash : "chart";
+    // /chart/<coin> or a #hash ("advance-chart" has no NAV_ITEMS entry but
+    // is still reachable). Default landing is Markets (the home page).
+    return readLocation().section ?? "markets";
   });
   // Tapping Agent Ready while locked (non-elite) opens this instead of the
   // generic onOpenUpgrade — see the render block below, near TradingAgent.
@@ -644,8 +684,9 @@ function AppDashboard({
   // collapsed, same as every other transient UI toggle in this file.
   const [chatExpanded, setChatExpanded] = useState(false);
 
+  // A /chart/<coin> URL picks the coin; otherwise the last one used.
   const [coin, setCoin] = useState<CoinSymbol>(
-    () => (localStorage.getItem("coin") as CoinSymbol) || "BTC",
+    () => (readLocation().coin as CoinSymbol) || (localStorage.getItem("coin") as CoinSymbol) || "BTC",
   );
 
   useEffect(() => {
@@ -1500,7 +1541,8 @@ function AppDashboard({
   // Mobile header "account switcher" (sketch #1, Revolut/Robinhood style):
   // one pill saying where you are — "Live market" (C) or "Paper trading"
   // (P) — that opens a small menu explaining both, with the paper balance.
-  const liveLabel = onChartPage
+  // Markets (home) and the coin chart both read "Live market".
+  const liveLabel = onChartPage || activeSection === "markets"
     ? "Live market"
     : t(NAV_ITEMS.find((n) => n.id === activeSection)?.labelKey ?? "chart.tabLabel", activeSection);
   const inPaper = mobileChartTab === "orderbook";
@@ -2024,35 +2066,35 @@ function AppDashboard({
       )}
     </div>
   );
-  // Chart page "2col" layout (wide desktop): Order Flow Pressure / Order
-  // Book get their own tabbed column between the chart and Paper Trading,
-  // and Paper Trading gets a column to itself. Own tab state + highlight
-  // refs, separate from rightColTab above, since that one still drives
-  // the 3-tab version used by mobile and the other pages' flyout.
-  // Order Book is the default (and first) tab. Storage key bumped from
-  // "flowColTab" so everyone starts on Order Book once, instead of keeping
-  // a previously saved "flow".
-  const [flowColTab, setFlowColTab] = useState<"flow" | "orderbook">(() => {
-    return localStorage.getItem("flowColTabV2") === "flow" ? "flow" : "orderbook";
+  // Chart page (desktop, CoinMarketCap layout): right column with two
+  // tabs — Paper Trading | Order Book (CMC's "Community | Trade" look).
+  // Both panels stay mounted so each keeps its live state across switches.
+  type TradeColTab = "paper" | "posintel" | "orderbook" | "flow";
+  const [tradeColTab, setTradeColTab] = useState<TradeColTab>(() => {
+    const v = localStorage.getItem("tradeColTab");
+    return v === "posintel" || v === "orderbook" || v === "flow" ? v : "paper";
   });
-  useEffect(() => {
-    localStorage.setItem("flowColTabV2", flowColTab);
-  }, [flowColTab]);
-  const flowTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [flowHighlight, setFlowHighlight] = useState<{ left: number; width: number } | null>(null);
-  useLayoutEffect(() => {
-    const el = flowTabRefs.current[flowColTab];
-    if (el) setFlowHighlight({ left: el.offsetLeft, width: el.offsetWidth });
-  }, [flowColTab, activeSection, chartLayoutMode, isWideDesktop]);
-  const chartFlowColEl = (
-    <div className="chart-right-col chart-right-col--tabbed">
-      <div className="crc-tabs" role="tablist" aria-label="Order Book / Order Flow">
+  useEffect(() => { localStorage.setItem("tradeColTab", tradeColTab); }, [tradeColTab]);
+  const chartTradeColEl = (
+    <div className="cmc-rcol">
+      <div className="cmc-rtabs" role="tablist" aria-label="Paper Trading, Position Intelligence, Order Book, Order Flow Pressure">
         {([
+          {
+            key: "paper" as const,
+            label: "Paper Trading",
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="2" y="6" width="20" height="13" rx="3" />
+                <path d="M2 10.5h20" />
+                <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
           {
             key: "orderbook" as const,
             label: "Order Book",
             icon: (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="4" y1="7" x2="20" y2="7" />
                 <line x1="4" y1="12" x2="20" y2="12" />
                 <line x1="4" y1="17" x2="14" y2="17" />
@@ -2060,10 +2102,21 @@ function AppDashboard({
             ),
           },
           {
+            key: "posintel" as const,
+            label: "Position Intelligence",
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="5" />
+                <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+            ),
+          },
+          {
             key: "flow" as const,
             label: "Order Flow Pressure",
             icon: (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 17l5-6 4 3 5-8 4 5" />
               </svg>
             ),
@@ -2071,26 +2124,34 @@ function AppDashboard({
         ]).map(({ key, label, icon }) => (
           <button
             key={key}
-            ref={(el) => { flowTabRefs.current[key] = el; }}
             type="button"
             role="tab"
-            aria-selected={flowColTab === key}
-            className={`crc-tab${flowColTab === key ? " active" : ""}`}
-            onClick={() => setFlowColTab(key)}
+            aria-selected={tradeColTab === key}
+            className={`cmc-rtab${tradeColTab === key ? " cmc-rtab--on" : ""}`}
+            onClick={() => setTradeColTab(key)}
+            title={label}
+            aria-label={label}
           >
-            <span className="crc-tab-icon">{icon}</span>
-            {label}
+            {icon}
+            {/* Only the open tab shows its name; the rest collapse to icons. */}
+            <span className="cmc-rtab-label">{label}</span>
           </button>
         ))}
-        {flowHighlight && (
-          <div
-            className="crc-tab-highlight"
-            style={{ transform: `translateX(${flowHighlight.left}px)`, width: flowHighlight.width }}
-          />
-        )}
       </div>
-      <div className="crc-tab-panel" style={{ display: "flex" }}>
-        <OrderFlowPanel coin={coin} events={chartEvents} view={flowColTab} hideLiveBadge />
+      <div className="cmc-rbody" style={{ display: tradeColTab === "paper" ? "flex" : "none" }}>
+        <PaperTradingCard
+          coin={coin}
+          onOpen={() => setActiveSection("riskcalc")}
+          onOpenAuth={onOpenAuth}
+          inTabRow
+          onViewClosed={() => window.dispatchEvent(new CustomEvent("chart-bottom-tab", { detail: { tab: "history" } }))}
+        />
+      </div>
+      <div className="cmc-rbody" style={{ display: tradeColTab === "posintel" ? "flex" : "none" }}>
+        <PositionIntelligence coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} showHeader={false} />
+      </div>
+      <div className="cmc-rbody cmc-rbody--ob" style={{ display: tradeColTab === "orderbook" || tradeColTab === "flow" ? "flex" : "none" }}>
+        <OrderFlowPanel coin={coin} events={chartEvents} view={tradeColTab === "flow" ? "flow" : "orderbook"} hideLiveBadge />
       </div>
     </div>
   );
@@ -2231,45 +2292,86 @@ function AppDashboard({
   // Position in the app's own page history (0 = the page the app opened
   // on) — lets the edge swipe know whether there's anything to go back to.
   const historyIdxRef = useRef(0);
+  // The chart page's URL is /chart/<coin> (see urlFor), so it follows the
+  // coin too: switching coins on the chart page replaces the entry (no
+  // extra Back step per coin); changing page pushes a new one.
+  const lastHistorySectionRef = useRef(activeSection);
   useEffect(() => {
+    const want = urlFor(activeSection, coin);
+    const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     if (isFirstHistorySyncRef.current) {
       isFirstHistorySyncRef.current = false;
       // Normalize the landing URL in place (no extra history entry): a bare
-      // URL or an old #chart link shows as #trade.
-      const want = `#${sectionToHash(activeSection)}`;
+      // URL, or an old #trade / #chart link, gets its canonical address.
       historyIdxRef.current = 0;
-      window.history.replaceState({ appIdx: 0 }, "", `${window.location.search}${want}`);
+      lastHistorySectionRef.current = activeSection;
+      // Leave sign-in callbacks alone (Supabase reads its tokens from the
+      // #fragment itself and cleans the URL afterwards).
+      if (/access_token|refresh_token|error_description|type=/.test(window.location.hash)) return;
+      if (here !== want) window.history.replaceState({ appIdx: 0 }, "", want);
       return;
     }
+    const sectionChanged = lastHistorySectionRef.current !== activeSection;
+    lastHistorySectionRef.current = activeSection;
     if (skipNextHistoryPushRef.current) {
       skipNextHistoryPushRef.current = false;
       return;
     }
-    // Same page as the current entry (e.g. a section alias settling on
-    // load) — don't stack a duplicate, or Back/swipe-back would need an
-    // extra press to actually go anywhere.
-    if (window.location.hash === `#${sectionToHash(activeSection)}`) return;
+    // Same address as the current entry — don't stack a duplicate, or
+    // Back/swipe-back would need an extra press to actually go anywhere.
+    if (here === want) return;
+    if (!sectionChanged) {
+      window.history.replaceState(window.history.state, "", want);
+      return;
+    }
     historyIdxRef.current += 1;
-    window.history.pushState({ appIdx: historyIdxRef.current }, "", `${window.location.search}#${sectionToHash(activeSection)}`);
-  }, [activeSection]);
+    window.history.pushState({ appIdx: historyIdxRef.current }, "", want);
+  }, [activeSection, coin]);
 
-  // Handle browser back/forward
+  // Handle browser back/forward (path and #hash changes both fire popstate).
   useEffect(() => {
-    const onHashChange = () => {
+    const onPop = () => {
       const idx = (window.history.state as { appIdx?: number } | null)?.appIdx;
       historyIdxRef.current = typeof idx === "number" ? idx : 0;
-      const hash = hashToSection(window.location.hash.slice(1));
-      // Same "advance-chart" allowance as the initial-state reader above —
-      // without it, pressing Forward back into the page after Back would
-      // silently fail (hash changes but activeSection doesn't follow).
-      if (NAV_ITEMS.some((n) => n.id === hash) || hash === "advance-chart") {
-        skipNextHistoryPushRef.current = true;
-        setActiveSection(hash);
+      const loc = readLocation();
+      const sec = loc.section ?? "markets";
+      skipNextHistoryPushRef.current = true;
+      setActiveSection(sec);
+      if (loc.coin) {
+        setCoin(loc.coin as CoinSymbol);
+        clearCandleCache();
       }
     };
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Per-page title + description, so each coin's chart page reads well in
+  // search results and browser tabs.
+  useEffect(() => {
+    const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
+    const title = activeSection === "chart"
+      ? `${name} (${coin}) Price Chart, Live Signals & Analysis | coinhintz`
+      : "coinhintz | Crypto Trading Intelligence";
+    const desc = activeSection === "chart"
+      ? `Live ${name} (${coin}) price chart with ProVision signals, technical analysis, order book and market consensus on coinhintz.`
+      : "Real-time crypto charts, AI signals, liquidation heatmaps and more. Trade smarter with coinhintz.";
+    document.title = title;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = desc;
+    let canon = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canon) {
+      canon = document.createElement("link");
+      canon.rel = "canonical";
+      document.head.appendChild(canon);
+    }
+    canon.href = `${window.location.origin}${pathFor(activeSection, coin)}`;
+  }, [activeSection, coin]);
 
   // Global search keyboard shortcut (Cmd+K / Ctrl+K) — routed through the
   // same openGlobalSearch() the nav button uses (not a bare setGlobalSearch
@@ -3400,7 +3502,9 @@ function AppDashboard({
                 {/* Pro Vision — switches the Trade chart into its signal mode
                     (trend-colored candles, signals + invalidation zone,
                     Signal check). Pro/Elite only; others get the plan picker. */}
-                {(activeSection === "chart" || activeSection === "advance-chart") && (
+                {/* The chart page has its own ProVision button in the chart
+                    toolbar now; this header toggle stays for Advance Chart. */}
+                {activeSection === "advance-chart" && (
                   <span className="pv-callout-anchor">
                   {/* Signed-out / free: a glowing callout pointing at the
                       switch (dismissible for the session). */}
@@ -3850,6 +3954,14 @@ function AppDashboard({
                       instead of refetching every time. */}
                   <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
                     <GlobalMarkets
+                      onOpenAuth={onOpenAuth}
+                      onTradeCoin={(symbol) => {
+                        openChartCoin(symbol, { recent: true, navigate: true });
+                        // Phones: switch to Paper trading mode. Desktop: the
+                        // Paper Trading card is beside the chart — bring it into view.
+                        if (!isWideDesktop) switchMode("orderbook");
+                        else window.setTimeout(() => document.querySelector(".ptc-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 450);
+                      }}
                       onSelectCoin={(symbol) => { openChartCoin(symbol, { recent: true, navigate: true }); }}
                     />
                   </div>
@@ -3882,7 +3994,9 @@ function AppDashboard({
                         // Order Flow column lives inside the price chart's
                         // own container, beside the chart, instead of as a
                         // separate page column.
-                        sideColumn={isWideDesktop && !distractionFree && chartLayoutMode === "2col" ? chartFlowColEl : undefined}
+                        // CoinMarketCap layout ("2col"): the Order Book is a tab
+                        // in the right column now, not beside the chart.
+                        sideColumn={undefined}
                         quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
                         onZoneChange={(zone, price) => {
                           setChartZone(zone);
@@ -4012,11 +4126,19 @@ function AppDashboard({
                       <div className="chart-three-col-mid">{chartRightColEl}</div>
                     </div>
                   ) : (
-                    <div className="chart-layout chart-layout--2col">
-                      {chartColumnEl}
-                      <div className="chart-two-col-right chart-two-col-right--paper">
-                        {chartPaperColEl}
+                    // CoinMarketCap-style: coin info column (left), chart +
+                    // tabs (middle), Paper Trading | Order Book (right).
+                    <div className="chart-layout chart-layout--cmc">
+                      <div className="chart-cmc-left">
+                        <CoinInfoPanel
+                          coin={coin}
+                          ticker={coinTickers.get(coin)}
+                          // "Paper trade" button → open the Paper Trading tab on the right.
+                          onTrade={() => setTradeColTab("paper")}
+                        />
                       </div>
+                      {chartColumnEl}
+                      {chartTradeColEl}
                     </div>
                   )
                 ) : (
@@ -4616,12 +4738,13 @@ function AppDashboard({
             setGlobalSearch(false);
             setDailyBriefPanelOpen(false);
             setChartAnalyzeOpen(false);
-            setActiveSection("chart");
+            // Home = the Markets page.
+            setActiveSection("markets");
             // Always back to Live market (from Paper trading too) — with
             // the same switch splash as the header switcher.
             switchMode("chart");
           }}
-          homeActive={activeSection === "chart" && mobileChartTab === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
+          homeActive={activeSection === "markets" && mobileChartTab === "chart" && !signalsOpen && !assetPanelOpen && !globalSearch && !profileOpen && !dailyBriefPanelOpen}
           showAgentShowcase={showAgentShowcase}
         />
       )}

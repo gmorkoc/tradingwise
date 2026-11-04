@@ -185,3 +185,116 @@ export function ProVisionHud({ result, mtf, onRow, trialLeft, onKeep, onHowTo, n
     </div>
   );
 }
+
+// Full ProVision Signal panel (phone analysis sheet): score ring + verdict,
+// a readable indicator list, buyers vs sellers, timeframes, track record.
+const ROW_NAMES = ["MA 20/200", "DMI", "Ichimoku", "RSI", "Stochastic", "MACD", "Volume"];
+export function ProVisionSignalPanel({ result, mtf, onRow, trialLeft, onKeep, onHowTo }: Props) {
+  const vb = result.verdict.bias as Bias;
+  const score = Math.round(Math.max(0, Math.min(100, result.bullStrength)));
+  const buy = result.volume.buyPct;
+  const sell = result.volume.sellPct;
+  const st = result.stats;
+  const pct = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`);
+  const value = (r: number) =>
+    r < 6 ? (result.tiles[r]?.value ?? "").replace(/\s*[↑↓▲▼]$/, "") : `${buy >= sell ? "Buyers" : "Sellers"} ${Math.max(buy, sell)}%`;
+  const tag = (b: Bias | null | undefined) => (b === "bull" ? "BUY" : b === "bear" ? "SELL" : "—");
+  const bullN = result.checks.filter((c) => c === "bull").length;
+  const bearN = result.checks.filter((c) => c === "bear").length;
+  const neutN = result.checks.length - bullN - bearN;
+  return (
+    <div className={`pvp2 pvp2--${vb}`}>
+      {/* Summary: score meter + verdict, like a terminal technicals gauge */}
+      <div className="pvp2-hero">
+        <div className="pvp2-hero-top">
+          <div className="pvp2-hero-l">
+            <span className="pvp2-kicker">Signal</span>
+            <span className="pvp2-verdict">{vb === "bull" ? "Long bias" : vb === "bear" ? "Short bias" : "Neutral"}</span>
+          </div>
+          <div className="pvp2-hero-r">
+            <span className="pvp2-score">{score}<small>/100</small></span>
+            <span className="pvp2-sub">{result.verdict.agree}/{result.verdict.total} confluence</span>
+          </div>
+        </div>
+        <div className="pvp2-meter" aria-hidden="true">
+          <div className="pvp2-meter-track"><i className="pvp2-meter-dot" style={{ left: `${score}%` }} /></div>
+          <div className="pvp2-meter-scale"><span>Strong sell</span><span>Sell</span><span>Neutral</span><span>Buy</span><span>Strong buy</span></div>
+        </div>
+        <div className="pvp2-tally">
+          <span><em>Buy</em><b className="pvp2-up">{bullN}</b></span>
+          <span><em>Neutral</em><b>{neutN}</b></span>
+          <span><em>Sell</em><b className="pvp2-dn">{bearN}</b></span>
+        </div>
+      </div>
+
+      <section className="pvp2-sec">
+        <h4>Indicators</h4>
+        <div className="pvp2-table">
+          <div className="pvp2-th"><span>Name</span><span>Value</span><span>Strength</span><span>Action</span></div>
+          {ROW_NAMES.map((name, r) => {
+            const b = (result.checks[r] ?? "neutral") as Bias;
+            const s = result.checkStrength[r] ?? 0.5;
+            const mag = b === "neutral" ? 0 : Math.max(0.12, Math.min(1, Math.abs((s - 0.5) * 2)));
+            return (
+              <button key={name} type="button" className={`pvp2-row pvp2-row--${b}`} onClick={() => onRow(r)}>
+                <span className="pvp2-row-name">{name}</span>
+                <span className="pvp2-row-val">{value(r) || "—"}</span>
+                <span className="pvp2-div" aria-hidden="true">
+                  <i className={b === "bear" ? "l" : "r"} style={{ width: `${(mag * 50).toFixed(1)}%` }} />
+                </span>
+                <span className="pvp2-act">{tag(b)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="pvp2-sec">
+        <h4>Order flow <span>20 bars</span></h4>
+        <div className="pvp2-flow">
+          <span className="pvp2-up">{buy}%</span>
+          <div className="pvp2-flow-bar" aria-hidden="true">
+            <i className="pvp2-flow-buy" style={{ width: `${buy}%` }} />
+            <i className="pvp2-flow-sell" style={{ width: `${sell}%` }} />
+          </div>
+          <span className="pvp2-dn">{sell}%</span>
+        </div>
+        <div className="pvp2-flow-cap"><span>Buy vol</span><span>Δ {buy - sell > 0 ? "+" : ""}{buy - sell}%</span><span>Sell vol</span></div>
+      </section>
+
+      {mtf.length > 0 && (
+        <section className="pvp2-sec">
+          <h4>Multi-timeframe</h4>
+          <div className="pvp2-tf" style={{ gridTemplateColumns: `repeat(${mtf.length}, minmax(0, 1fr))` }}>
+            {mtf.map((m) => (
+              <span key={m.label} className={`pvp2-tf-cell pvp2-tf--${m.bias ?? "none"}`}>
+                <em>{m.label}</em>
+                <b>{tag(m.bias as Bias | null)}</b>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="pvp2-sec">
+        <h4>Track record <span>{st.total} signal{st.total === 1 ? "" : "s"}</span></h4>
+        <div className="pvp2-stats">
+          <span><em>Win rate</em><b>{st.winRate === null ? "—" : `${st.winRate}%`}</b></span>
+          <span><em>W / L</em><b><i className="pvp2-up">{st.worked}</i>/<i className="pvp2-dn">{st.failed}</i></b></span>
+          <span><em>Avg win</em><b className="pvp2-up">{pct(st.avgWinPct)}</b></span>
+          <span><em>Avg loss</em><b className="pvp2-dn">{pct(st.avgLossPct)}</b></span>
+        </div>
+      </section>
+
+      <div className="pvp2-foot">
+        {trialLeft && onKeep && <button type="button" className="pvp2-keep" onClick={onKeep}>Enjoying? Keep it · {trialLeft} left ›</button>}
+        {onHowTo && (
+          <button type="button" className="pvp2-how" onClick={onHowTo}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+            How it works
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

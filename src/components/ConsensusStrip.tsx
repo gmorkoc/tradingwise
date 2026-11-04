@@ -28,7 +28,8 @@ interface Props {
   coinName: string;
   timeframe: string;
   items: ConsensusItem[];
-  variant: "meter" | "card";
+  /** "panel" = the explained consensus view inline (phone tiles). */
+  variant: "meter" | "card" | "panel";
   /** Phones: the line is one tap target that opens the full breakdown. */
   tapToOpen?: boolean;
   /** Phones: no line on the page — only the sheet, opened from elsewhere
@@ -133,6 +134,120 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
   };
   if (variant === "card") return renderCard();
 
+  // Phones' sheet: consensus only, explained — summary ring + sentence,
+  // a sell↔buy map with one dot per tool, an agreement bar, and each tool
+  // with what it measures. `close` runs before a tool's own action.
+  const renderSheet = (close: () => void) => {
+    const pct = read.length ? agree / read.length : 0;
+    const C = 2 * Math.PI * 26;
+    const neutralN = read.length - bear - bull;
+    const pv = items.find((i) => i.id === "pv");
+    const pvNote = pv && !pv.locked && pv.tone
+      ? pv.tone === lead
+        ? " ProVision, the main signal, agrees."
+        : lead === "neutral" ? ` ProVision leans ${pv.tone === "bull" ? "bullish" : pv.tone === "bear" ? "bearish" : "neutral"}.` : " ProVision reads it differently."
+      : "";
+    const sentence = !read.length
+      ? `No reads yet for the ${timeframe} chart.`
+      : lead === "neutral"
+        ? `Tools are split on the ${timeframe} chart — no clear side yet.${pvNote}`
+        : `${agree} of ${read.length} tools lean ${leadWord} on the ${timeframe} chart.${pvNote}`;
+    const placed = items.filter((i) => !i.locked && i.pos !== null).sort((a, b) => a.pos! - b.pos!);
+    let last = -100;
+    let flip = false;
+    const pins = placed.map((it) => {
+      const close2 = it.pos! - last < 14;
+      flip = close2 ? !flip : false;
+      last = it.pos!;
+      return { it, below: flip };
+    });
+    const ABOUT: Record<string, string> = {
+      pv: "Trend + 7 indicators, scored after fees",
+      sig: "Market-wide setup scanner (4h)",
+      tech: "Classic oscillators & moving averages",
+      ai: "Candle patterns, read by AI",
+      ev: "Price zones & recent key moments",
+      agent: "Ask an AI analyst why",
+    };
+    return (
+      <section className={`cns-x cns--${lead}`} aria-label="Consensus">
+        <div className="cns-x-hero">
+          <div className="cns-ring">
+            <svg width="60" height="60" viewBox="0 0 64 64" aria-hidden="true">
+              <circle cx="32" cy="32" r="26" className="cns-ring-track" />
+              <circle cx="32" cy="32" r="26" className="cns-ring-fill" strokeDasharray={`${(pct * C).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 32 32)" />
+            </svg>
+            <span className="cns-ring-num">{read.length ? `${agree}/${read.length}` : "–"}</span>
+          </div>
+          <div className="cns-card-text">
+            <span className="cns-headline">{headline}</span>
+            <span className="cns-x-sentence">{sentence}</span>
+          </div>
+        </div>
+
+        <div className="cns-x-block">
+          <span className="cns-x-label">Where each tool lands</span>
+          <div className="cns-x-map">
+            <div className="cns-x-track" />
+            <span className="cns-x-mid" />
+            {pins.map(({ it, below }) => (
+              <span key={it.id} className={`cns-x-pin${below ? " cns-x-pin--below" : ""}`} style={{ left: `${Math.max(4, Math.min(96, it.pos!))}%` }}>
+                <span className="cns-x-pin-name">{it.name}</span>
+                <span className={`cns-x-pin-dot cns-pin-dot--${it.tone ?? "none"}`} />
+              </span>
+            ))}
+          </div>
+          <div className="cns-x-scale"><span>Sell</span><span>Neutral</span><span>Buy</span></div>
+        </div>
+
+        {read.length > 0 && (
+          <div className="cns-x-block">
+            <span className="cns-x-label">How much they agree</span>
+            <div className="cns-x-split" aria-hidden="true">
+              {bear > 0 && <span className="cns-x-split-bear" style={{ flex: bear }} />}
+              {neutralN > 0 && <span className="cns-x-split-neutral" style={{ flex: neutralN }} />}
+              {bull > 0 && <span className="cns-x-split-bull" style={{ flex: bull }} />}
+            </div>
+            <div className="cns-x-legend">
+              <span><i className="cns-dot cns-dot--bear" />{bear} bearish</span>
+              <span><i className="cns-dot cns-dot--neutral" />{neutralN} neutral</span>
+              <span><i className="cns-dot cns-dot--bull" />{bull} bullish</span>
+            </div>
+          </div>
+        )}
+
+        <div className="cns-x-block">
+          <span className="cns-x-label">The tools</span>
+          <div className="cns-rows">
+            {items.map((it) => {
+              const tap = it.onClick ? () => { close(); it.onClick!(); } : undefined;
+              const Tag = tap ? "button" : "div";
+              return (
+                <Tag key={it.id} {...(tap ? { type: "button" as const, onClick: tap } : {})} className={`cns-row cns-x-row${it.locked ? " cns-row--locked" : ""}`}>
+                  <span className="cns-x-row-main">
+                    <span className="cns-row-name">
+                      {it.locked ? <span className="cns-lock"><LockIcon /></span> : <span className={`cns-dot cns-dot--${it.tone ?? "none"}`} />}
+                      {it.name}
+                    </span>
+                    {ABOUT[it.id] && <span className="cns-x-about">{ABOUT[it.id]}</span>}
+                  </span>
+                  <span className={`cns-row-val cns-val--${it.locked ? "locked" : it.tone ?? "none"}`}>
+                    {it.label}{tap && <span className="cns-chev" aria-hidden="true">›</span>}
+                  </span>
+                </Tag>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="cns-note">
+          How to read this: each dot is one coinhintz tool's read, from sell (left) to buy (right). The more tools on one side, the stronger the agreement. Not financial advice.
+        </p>
+      </section>
+    );
+  };
+  if (variant === "panel") return renderSheet(() => {});
+
   // Desktop: one compact line in the Signal Check strip's style — title,
   // verdict, a small inline meter with one dot per tool, each tool's read
   // as plain text, locked tools as quiet purple links. Scrolls sideways if
@@ -210,11 +325,11 @@ export function ConsensusStrip({ coinName, timeframe, items, variant, tapToOpen 
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title={`${coinName} · Consensus · ${timeframe}`}
-        ariaLabel="coinhintz consensus"
+        title={`What's next for ${coinName}?`}
+        ariaLabel={`What's next for ${coinName}?`}
         floating
       >
-        {renderCard(() => setSheetOpen(false), true)}
+        {renderSheet(() => setSheetOpen(false))}
       </BottomSheet>
     </>
   );

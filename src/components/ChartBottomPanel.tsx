@@ -5,7 +5,6 @@ import {
   PaperPortfolio, PaperPosition, PositionsListItem, AgentPerformance,
 } from "../services/paperTrading";
 import { fetchBinancePrices } from "../services/binancePrices";
-import { TopCryptoTable, TopCryptoFilter, Filter, FILTERS } from "./TopCryptoTable";
 import { TopTradersTable, TopTradersFilter } from "./TopTradersTable";
 import { fmtPrice } from "./GlobalMarkets";
 import "../styles/GlobalMarkets.css";
@@ -18,9 +17,9 @@ import { useSort, SortTh } from "./SortableTh";
 // balance and performance. Account tabs need a signed-in user who has
 // activated paper trading.
 
-type Tab = "markets" | "toptraders" | "positions" | "history" | "balance" | "performance";
+// The coin list (Cryptocurrencies) lives on Markets now, not here.
+type Tab = "toptraders" | "positions" | "history" | "balance" | "performance";
 const MARKET_TABS: { key: Tab; label: string }[] = [
-  { key: "markets", label: "Cryptocurrencies" },
   { key: "toptraders", label: "Top Traders" },
 ];
 const ACCOUNT_TABS: { key: Tab; label: string }[] = [
@@ -60,8 +59,8 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
   const [tab, setTab] = useState<Tab>(() => {
     try {
       const v = localStorage.getItem("chartBottomTab") as Tab | null;
-      return v && [...MARKET_TABS, ...ACCOUNT_TABS].some((t) => t.key === v) ? v : "markets";
-    } catch { return "markets"; }
+      return v && [...MARKET_TABS, ...ACCOUNT_TABS].some((t) => t.key === v) ? v : "toptraders";
+    } catch { return "toptraders"; }
   });
   useEffect(() => { try { localStorage.setItem("chartBottomTab", tab); } catch { /* ignore */ } }, [tab]);
   // Other parts of the Chart page (Paper Trading card's "View all closed
@@ -102,14 +101,6 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
     const id = window.setTimeout(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 600);
     return () => window.clearTimeout(id);
   }, []);
-  // Market table filter lives here so its dropdown can sit in the tab row.
-  const [filter, setFilter] = useState<Filter>(() => {
-    try {
-      const v = localStorage.getItem("topCryptoFilter");
-      return (FILTERS.some((f) => f.key === v) ? v : "all") as Filter;
-    } catch { return "all"; }
-  });
-  useEffect(() => { try { localStorage.setItem("topCryptoFilter", filter); } catch { /* ignore */ } }, [filter]);
   const [ttFilter, setTtFilter] = useState<TopTradersFilter>("winners");
 
   const [portfolio, setPortfolio] = useState<PaperPortfolio | null>(null);
@@ -139,7 +130,7 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
 
   // Account data only while an account tab is open.
   useEffect(() => {
-    if (tab === "markets" || !user) return;
+    if (!user) return;
     loadAccount();
     const id = window.setInterval(loadAccount, REFRESH_MS);
     return () => window.clearInterval(id);
@@ -374,11 +365,6 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         {ACCOUNT_TABS.map(tabBtn)}
         </div>
         </div>
-        {tab === "markets" && (
-          <div className="cbp-tabs-right">
-            <TopCryptoFilter filter={filter} onChange={setFilter} />
-          </div>
-        )}
         {tab === "toptraders" && user && (
           <div className="cbp-tabs-right">
             <select
@@ -395,7 +381,6 @@ export function ChartBottomPanel({ coin, onSelectCoin, onOpenAuth, onOpenPaperTr
         )}
       </div>
       <div className="cbp-body">
-        {tab === "markets" && <TopCryptoTable filterable filter={filter} onSelectCoin={onSelectCoin} />}
         {tab === "toptraders" && (user ? <TopTradersTable coin={coin} filter={ttFilter} /> : (
           // Top Traders needs an account (free).
           <div className="cbp-gate">
