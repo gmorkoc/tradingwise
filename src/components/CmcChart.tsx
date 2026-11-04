@@ -3,19 +3,22 @@
 // dotted opening line with its value on the left, volume bars underneath,
 // a faint coinhintz watermark, and an all-time overview strip below.
 // Data: CoinGecko market_chart (prices / market caps / volumes).
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createChart, ColorType, BaselineSeries, HistogramSeries, AreaSeries, LineStyle, PriceScaleMode, TickMarkType,
   type IChartApi, type ISeriesApi, type UTCTimestamp, type Time,
 } from "lightweight-charts";
 
 // Axis labels like CMC: "2:00 AM", "4 Nov", "Jan", "2024".
+// Year / month / day marks sit on UTC midnights — read them in UTC, or
+// west-of-UTC viewers see "Dec 31" and every year labelled one early.
+// Clock times stay local.
 const tickFmt = (time: Time, type: TickMarkType) => {
   const d = new Date((time as number) * 1000);
   switch (type) {
-    case TickMarkType.Year: return String(d.getFullYear());
-    case TickMarkType.Month: return d.toLocaleString("en-US", { month: "short" });
-    case TickMarkType.DayOfMonth: return `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
+    case TickMarkType.Year: return String(d.getUTCFullYear());
+    case TickMarkType.Month: return d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+    case TickMarkType.DayOfMonth: return `${d.getUTCDate()} ${d.toLocaleString("en-US", { month: "short", timeZone: "UTC" })}`;
     default: return d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" });
   }
 };
@@ -77,24 +80,29 @@ async function geckoChart(coin: string, q: string) {
 
 // Older price history (free, no key): Bitstamp (BTC daily back to 2011),
 // falling back to Binance klines (2017+) for coins Bitstamp doesn't list.
+// Bitstamp returns the last `limit` candles up to `end` (it ignores `start`
+// when `end` is given). Each page's end is known up front, so all pages
+// are fetched at once (Bitstamp is slow; one after another took ages).
 async function bitstamp(coin: string, step: number, from: number, to: number) {
+  const PAGE = 1000 * step;
+  const pages = Math.min(12, Math.max(1, Math.ceil((to - from) / PAGE)));
+  type Row = { timestamp: string; close: string; volume: string };
+  const results = await Promise.all(
+    Array.from({ length: pages }, (_, i) => to - i * PAGE).map(async (end) => {
+      const res = await fetch(`https://www.bitstamp.net/api/v2/ohlc/${coin.toLowerCase()}usd/?step=${step}&limit=1000&end=${end}`);
+      if (!res.ok) throw new Error(String(res.status));
+      const j = (await res.json()) as { data?: { ohlc?: Row[] } };
+      return j.data?.ohlc ?? [];
+    }),
+  );
   const price: Pt[] = [], vol: Pt[] = [];
-  let start = from;
-  for (let i = 0; i < 12 && start < to; i++) {
-    const res = await fetch(`https://www.bitstamp.net/api/v2/ohlc/${coin.toLowerCase()}usd/?step=${step}&limit=1000&start=${start}&end=${to}`);
-    if (!res.ok) throw new Error(String(res.status));
-    const j = (await res.json()) as { data?: { ohlc?: { timestamp: string; close: string; volume: string }[] } };
-    const rows = j.data?.ohlc ?? [];
-    if (!rows.length) break;
-    rows.forEach((r) => {
-      const t = +r.timestamp as UTCTimestamp, c = +r.close;
-      price.push({ time: t, value: c });
-      vol.push({ time: t, value: +r.volume * c });
-    });
-    const last = +rows[rows.length - 1].timestamp;
-    if (last <= start) break;
-    start = last + step;
-  }
+  results.flat().forEach((r) => {
+    const t = +r.timestamp;
+    if (t < from || t > to) return;
+    const c = +r.close;
+    price.push({ time: t as UTCTimestamp, value: c });
+    vol.push({ time: t as UTCTimestamp, value: +r.volume * c });
+  });
   if (price.length < 2) throw new Error("no bitstamp data");
   return { price: dedupe(price), vol: dedupe(vol) };
 }
@@ -195,11 +203,12 @@ export function CmcChart({ coin, theme, metric, range, log, onAnalyze }: {
     let alive = true;
     setData(null);
     setError(false);
-    const load = () => loadSeries(coin, range, endTs).then((d) => { if (alive) setData(d); }).catch(() => { if (alive) setError(true); });
+    // "All": always the full history — the picked end just trims it locally.
+    const load = () => loadSeries(coin, range, range === "max" ? null : endTs).then((d) => { if (alive) setData(d); }).catch(() => { if (alive) setError(true); });
     load();
     const id = range === "1" && endTs == null ? window.setInterval(load, 60_000) : 0;
     return () => { alive = false; if (id) window.clearInterval(id); };
-  }, [coin, range, endTs]);
+  }, [coin, range, range === "max" ? null : endTs]);
   // All-time price history for the overview strip.
   useEffect(() => {
     let alive = true;
@@ -208,7 +217,11 @@ export function CmcChart({ coin, theme, metric, range, log, onAnalyze }: {
     return () => { alive = false; };
   }, [coin]);
 
-  const pts = data ? (metric === "price" ? data.price : data.mcap) : null;
+  // "All" with a picked end: the history up to that moment.
+  const pts = useMemo(() => {
+    const p = data ? (metric === "price" ? data.price : data.mcap) : null;
+    return p && range === "max" && endTs != null ? p.filter((x) => x.time <= endTs) : p;
+  }, [data, metric, range, endTs]);
   const base = pts && pts.length ? pts[0].value : null;
 
   // Main chart.
@@ -359,18 +372,19 @@ export function CmcChart({ coin, theme, metric, range, log, onAnalyze }: {
   };
   const nowTs = Math.floor(Date.now() / 1000);
   const shownEnd = endTs ?? nowTs;
-  const span = range === "max" ? 0 : RANGE_SECS[range];
+  // "All": the window runs from the very first day to the handle.
+  const span = range === "max" ? Math.max(0, shownEnd - navFirstRef.current) : RANGE_SECS[range];
+  const minSpan = range === "max" ? 30 * DAY : span;
   void navTick; // re-render when the strip resizes / redraws
-  const handleX = range === "max" ? null : dragX ?? timeToX(shownEnd);
-  const bandL = range === "max" || handleX == null ? null : timeToX(shownEnd - span);
+  const handleX = dragX ?? timeToX(shownEnd);
+  const bandL = handleX == null ? null : range === "max" ? 0 : timeToX(shownEnd - span);
   const pickAt = (x: number) => {
     const t = xToTime(x);
     const w = navRef.current?.clientWidth ?? 1;
     // Released at the far right → back to live.
-    setEndTs(x >= w - 6 || t >= nowTs - 3600 ? null : Math.max(t, navFirstRef.current + span));
+    setEndTs(x >= w - 6 || t >= nowTs - 3600 ? null : Math.max(t, navFirstRef.current + minSpan));
   };
   const onNavDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (range === "max") return;
     const box = e.currentTarget.getBoundingClientRect();
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragX(e.clientX - box.left);
@@ -423,7 +437,7 @@ export function CmcChart({ coin, theme, metric, range, log, onAnalyze }: {
         {/* Timeline picker: drag the handle (or click the strip) to view that
             moment; release at the far right to go back to live. */}
         <div
-          className={`cmcc-nav-hit${range === "max" ? " cmcc-nav-hit--off" : ""}${dragX != null ? " cmcc-nav-hit--drag" : ""}`}
+          className={`cmcc-nav-hit${dragX != null ? " cmcc-nav-hit--drag" : ""}`}
           onPointerDown={onNavDown}
           onPointerMove={onNavMove}
           onPointerUp={onNavUp}
@@ -435,11 +449,11 @@ export function CmcChart({ coin, theme, metric, range, log, onAnalyze }: {
           aria-valuemax={navLastRef.current}
           aria-valuenow={shownEnd}
           aria-valuetext={pickedLabel ?? "Now"}
-          tabIndex={range === "max" ? -1 : 0}
+          tabIndex={0}
           onKeyDown={(e) => {
-            if (range === "max") return;
-            const step = Math.max(span, 86400);
-            if (e.key === "ArrowLeft") setEndTs(Math.max(navFirstRef.current + span, shownEnd - step));
+            // "All" steps a month at a time; other ranges by their own length.
+            const step = range === "max" ? 30 * DAY : Math.max(span, DAY);
+            if (e.key === "ArrowLeft") setEndTs(Math.max(navFirstRef.current + minSpan, shownEnd - step));
             if (e.key === "ArrowRight") setEndTs(shownEnd + step >= nowTs ? null : shownEnd + step);
             if (e.key === "End") setEndTs(null);
           }}
