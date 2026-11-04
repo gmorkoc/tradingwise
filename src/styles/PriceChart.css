@@ -2309,6 +2309,7 @@ html[data-theme="light"] .chart-active
   opacity: 0.08;
 }
 .chart-watermark img { width: 40px; height: 40px; filter: grayscale(1); }
+.chart-watermark svg { width: 34px; height: 34px; color: var(--color-text); flex-shrink: 0; }
 .chart-watermark span {
   font-size: 34px;
   font-weight: 800;
@@ -2318,7 +2319,7 @@ html[data-theme="light"] .chart-active
 html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
 @media (max-width: 640px) {
   .chart-watermark { inset: 0 52px 24px 0; gap: 7px; }
-  .chart-watermark img { width: 28px; height: 28px; }
+  .chart-watermark img, .chart-watermark svg { width: 28px; height: 28px; }
   .chart-watermark span { font-size: 24px; }
 }
 /* Desktop #chart's Full/Compact switch, "Compact" side — covers just
@@ -7199,6 +7200,8 @@ button.chart-range-select {
    The whole row — coin block + stats — scrolls sideways; a thin
    always-visible indicator sits under it; ⋮ stays pinned at the right. */
 .chart-bar-header-wrap { position: relative; }
+/* Desktop chart page (CMC layout): coin/price/stats are in the left column. */
+.chart-bar-header-wrap--off { display: none; }
 .chart-bar-header-wrap--mobile {
   margin-left: -16px;
   margin-right: -16px;

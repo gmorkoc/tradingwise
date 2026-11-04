@@ -1,0 +1,261 @@
+/* Chart page right column, under Paper Trading: "<COIN> Insights" card +
+   "Why paper trade" tiles (CoinMarketCap's layout, our data). */
+.tix {
+  --tix-up: #16c784;
+  --tix-dn: #ea3943;
+  --tix-blue: #3861fb;
+  --tix-hair: color-mix(in srgb, var(--color-text) 9%, transparent);
+  --tix-tint: color-mix(in srgb, var(--color-text) 3.5%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px;
+  color: var(--color-text);
+}
+/* Under the Paper Trading ticket: only as tall as its content, and never
+   wider than the column (long text wraps instead of being cut off). */
+.cmc-rbody > .tix { flex: 0 0 auto; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+.tix-card, .tix-steps, .tix-step { min-width: 0; max-width: 100%; }
+.tix-step-text { flex: 1 1 auto; overflow-wrap: anywhere; }
+.tix-toggle { min-width: 0; }
+.tix-toggle > b, .tix-toggle > span:not(.tix-show) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tix-show { flex-shrink: 0; }
+/* Blends into the column: no tinted background, no card border, faint
+   dividers; a single hairline separates it from the ticket below. */
+.tix-card {
+  gap: 7px;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: none !important;
+}
+/* Paper Trading ticket under it (chart page right column): tighter —
+   less space above and around, smaller gaps between its sections. */
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-card {
+  /* Only as tall as its content, so Insights follows right below it. */
+  flex: 0 0 auto !important;
+  padding: 10px 16px 14px !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+}
+/* Paper stats, compact (right column only): cash as the headline on the
+   left (tiny CASH label over a bold balance), then two small pills on the
+   right — "1 Open ›" and the realized P&L tinted green/red. One row. */
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+}
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat {
+  flex: none;
+  min-width: 0;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  overflow: visible;
+}
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--cash {
+  display: flex !important;
+  flex-direction: column;
+  align-items: flex-start;
+}
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat-icon,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat .ptc-info { display: none; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat-label { letter-spacing: 0.04em; }
+/* Cash: label over value */
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--cash { flex-direction: column; gap: 1px; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--cash .ptc-stat-label { order: -1; font-size: 9.5px; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--cash .ptc-stat-value,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--cash .ptc-stat-value--editable {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border-bottom: none;
+  text-decoration: underline dotted color-mix(in srgb, var(--color-text) 30%, transparent);
+  text-underline-offset: 4px;
+}
+/* Open + P&L: pills */
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--open,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--pnl {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  align-items: center !important;
+  gap: 5px;
+  height: auto;
+  padding: 5px 10px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  white-space: nowrap;
+}
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--open .ptc-stat-value,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--pnl .ptc-stat-value { font-size: 12.5px; font-weight: 700; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--open .ptc-stat-label,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--pnl .ptc-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--pnl .ptc-stat-label { order: -1; font-size: 0; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stat--pnl .ptc-stat-label::before { content: "P&L"; font-size: 11.5px; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--pos { background: color-mix(in srgb, var(--pc-success, #16a34a) 10%, transparent); }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--neg { background: color-mix(in srgb, var(--pc-danger, #dc2626) 9%, transparent); }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--link { cursor: pointer; }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat--link:hover { background: color-mix(in srgb, var(--color-text) 9%, transparent); }
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat-value,
+:is(.cmc-rbody, .chart-right-col--paper) .ptc-stats .ptc-stat-label { grid-area: auto; white-space: nowrap; }
+/* Hairline between the insights and the ticket below. */
+/* One light gray divider between the insights and the ticket below. */
+/* Inset to the content (16px each side), not edge to edge. */
+.cmc-rbody > .tix { position: relative; }
+.cmc-rbody > .tix::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+/* No divider lines inside the insights — spacing separates rows. */
+.tix .tix-line,
+.tix .tix-q,
+.tix .tix-foot { border-top: none !important; padding-top: 2px !important; }
+.tix-card { gap: 9px !important; }
+.tix { --tix-hair: color-mix(in srgb, var(--color-text) 6%, transparent); }
+.tix-title { font-size: 13.5px !important; }
+.tix-title svg { width: 15px; height: 15px; }
+.tix-time { font-size: 11px !important; }
+.tix-struct .tix-time { margin-left: auto; color: var(--color-text-muted); font-weight: 400; }
+/* Structure line = the Show/Hide toggle. */
+.tix-toggle,
+.tix-toggle:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 11.5px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.tix-toggle:focus-visible { outline: 2px solid #3861fb; outline-offset: 2px; border-radius: 4px; }
+.tix-show { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; color: #3861fb; }
+html:not([data-theme="light"]) .tix-show { color: #6188ff; }
+.tix-chev { transition: transform 0.2s ease; }
+.tix-chev--open { transform: rotate(180deg); }
+.tix-time--row { display: block; margin-top: -2px; }
+
+/* Live Hintz steps — Paper Trading's step-list look (PaperTradingCard
+   .ptc-activate-step): short accent bar · icon tile · bold line + detail. */
+.tix-steps { list-style: none; margin: 4px 0 2px; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.tix-step { display: flex; align-items: flex-start; gap: 12px; }
+.tix-step-bar { flex-shrink: 0; width: 2px; align-self: stretch; border-radius: 1px; background: color-mix(in srgb, var(--color-text) 10%, transparent); }
+.tix-step--on .tix-step-bar { background: var(--color-text); }
+.tix-step-ic {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--color-background, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  color: var(--color-text);
+  animation: tix-step-in 0.45s ease-out both;
+}
+.tix-step:nth-child(2) .tix-step-ic { animation-delay: 0.1s; }
+.tix-step:nth-child(3) .tix-step-ic { animation-delay: 0.2s; }
+.tix-step:nth-child(4) .tix-step-ic { animation-delay: 0.3s; }
+@keyframes tix-step-in { from { opacity: 0; transform: translateY(5px) scale(0.94); } to { opacity: 1; transform: none; } }
+.tix-step--on .tix-step-ic { border-color: transparent; color: #fff; background: #8e8e93; }
+.tix-step--on.tix-step--bull .tix-step-ic { background: #22c55e; }
+.tix-step--on.tix-step--bear .tix-step-ic { background: #ef4444; }
+.tix-step-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.tix-step-t { font-size: 13.5px; font-weight: 700; line-height: 1.3; color: var(--color-text); }
+.tix-step-s { font-size: 12px; line-height: 1.45; color: var(--color-text-muted); }
+.tix-step-link { text-decoration: none; }
+.tix-step-link:hover { color: var(--color-text); text-decoration: underline; }
+.tix-step-link em { font-style: normal; opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) { .tix-step-ic { animation: none; } }
+.tix-struct { font-size: 11.5px !important; }
+.tix-news li { font-size: 11.5px !important; line-height: 1.35 !important; }
+.tix-news svg { width: 12px; height: 12px; }
+.tix-line { font-size: 11.5px !important; padding-top: 7px !important; gap: 5px !important; }
+.tix-q { font-size: 12px !important; padding-top: 7px !important; }
+.tix-foot { font-size: 10.5px !important; padding-top: 7px !important; }
+.tix-more, .tix-more:hover { font-size: 12px !important; }
+html:not([data-theme="light"]) .tix { --tix-blue: #6188ff; }
+.tix-up { color: var(--tix-up); }
+.tix-dn { color: var(--tix-dn); }
+.tix-blue { color: var(--tix-blue); }
+
+/* Insights card — soft lavender like CMC's AI card */
+.tix-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #7c3aed 22%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #7c3aed 6%, transparent), color-mix(in srgb, #7c3aed 2%, transparent));
+}
+.tix-head { display: flex; align-items: center; justify-content: space-between; }
+.tix-title { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; }
+.tix-title svg { color: #7c3aed; }
+html:not([data-theme="light"]) .tix-title svg { color: #a78bfa; }
+.tix-time { font-size: 12px; color: var(--color-text-muted); }
+.tix-struct { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; }
+.tix-struct i { width: 10px; height: 10px; border-radius: 50%; background: var(--color-text-muted); flex-shrink: 0; }
+.tix-struct--bull i { background: var(--tix-up); }
+.tix-struct--bear i { background: var(--tix-dn); }
+.tix-struct b { font-weight: 700; letter-spacing: 0.01em; }
+.tix-struct span { color: var(--color-text-muted); }
+
+.tix-news { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tix-news li { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.4; }
+.tix-news svg { flex-shrink: 0; margin-top: 2px; color: var(--color-text-muted); }
+.tix-news a { color: var(--color-text); text-decoration: none; }
+.tix-news a:hover { text-decoration: underline; }
+.tix-news em { font-style: normal; color: var(--color-text-muted); }
+
+.tix-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 9px;
+  border-top: 1px solid var(--tix-hair);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tix-k { font-weight: 500; color: var(--color-text-muted); }
+.tix-skel { width: 60%; height: 12px; border-radius: 4px; background: var(--tix-tint); animation: tix-pulse 1.1s ease-in-out infinite; }
+@keyframes tix-pulse { 50% { opacity: 0.5; } }
+.tix-q { display: flex; justify-content: space-between; align-items: center; padding-top: 9px; border-top: 1px solid var(--tix-hair); font-size: 13px; font-weight: 600; }
+.tix-q b { font-weight: 700; }
+.tix-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding-top: 9px; border-top: 1px solid var(--tix-hair); font-size: 11.5px; line-height: 1.5; color: var(--color-text-muted); }
+.tix-more,
+.tix-more:hover { all: unset; display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; color: var(--tix-blue); cursor: pointer; white-space: nowrap; }
+
+/* Why paper trade */
+.tix-why { display: flex; flex-direction: column; gap: 10px; }
+.tix-why h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.tix-why h3 svg { color: var(--tix-blue); }
+.tix-why p { margin: 0; font-size: 13px; color: var(--color-text-muted); }
+.tix-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.tix-tiles > div { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 12px; background: var(--tix-tint); }
+.tix-tiles b { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.tix-tiles span { font-size: 12px; line-height: 1.4; color: var(--color-text-muted); }
+.tix-start,
+.tix-start:hover { all: unset; align-self: center; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--tix-blue); cursor: pointer; }

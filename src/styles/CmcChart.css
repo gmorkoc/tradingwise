@@ -45,6 +45,8 @@
   font-size: 13px;
   color: var(--color-text-muted);
 }
+.cmcc-retry,
+.cmcc-retry:hover { all: unset; margin-left: 8px; font-weight: 600; color: #3861fb; cursor: pointer; }
 .cmcc-spin {
   width: 14px;
   height: 14px;
@@ -77,6 +79,65 @@
   border-radius: 2px;
   pointer-events: none;
 }
+/* Event icons on the line (CMC): round badges, blue flag = milestone,
+   green page = news; "+N" when more share the spot. */
+.cmcc-ev-wrap {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+}
+.cmcc-ev,
+.cmcc-ev:hover {
+  all: unset;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--color-background, #fff), 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition: transform 0.15s ease;
+}
+.cmcc-ev:hover, .cmcc-ev:focus-visible { transform: scale(1.12); }
+.cmcc-ev--milestone { background: #3861fb; }
+.cmcc-ev--news { background: #16c784; }
+.cmcc-ev--macro { background: #f59e0b; }
+.cmcc-ev--moment { background: #8b5cf6; }
+.cmcc-ev-tip-b { font-size: 11.5px; line-height: 1.4; color: var(--color-text-muted); }
+.cmcc-ev-more {
+  margin-top: 3px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 8%, var(--color-background, #fff));
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 15px;
+}
+.cmcc-ev-tip {
+  position: absolute;
+  z-index: 6;
+  width: 240px;
+  transform: translate(14px, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-card-bg, var(--color-surface));
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  pointer-events: none;
+}
+html[data-theme="light"] .cmcc-ev-tip { background: #fff; }
+.cmcc-ev-tip--left { transform: translate(calc(-100% - 14px), -50%); }
+.cmcc-ev-tip-k { font-size: 11px; color: var(--color-text-muted); }
+.cmcc-ev-tip-t { font-size: 12.5px; font-weight: 600; line-height: 1.35; color: var(--color-text); }
+.cmcc-ev-tip-a { font-size: 11.5px; font-weight: 600; color: #3861fb; }
+
 /* Logo + name watermark, bottom-right of the plot, above the volume. */
 .cmcc-mark {
   position: absolute;
@@ -244,7 +305,43 @@ html:not([data-theme="light"]) .cmcc-analyze { color: #c4b5fd; }
 .cmct-btn--icon, .cmct-btn--icon:hover { width: 30px; padding: 0; justify-content: center; }
 /* Candle mode keeps our own tools on the right; line them up too. */
 .cmct-r > .chart-hero-icon-row { margin: 0; align-items: center; }
-.cmct .chart-fs-label { display: none; }
+/* Desktop chart toolbar (candle view): only the interval shows its label
+   ("24H"); chart type, Compact and Full Chart are icon-only. */
+html body .cmct .chart-fs-label,
+html body .cmct .chart-depth-btn:not(.chart-fs-interval-btn) .chart-icon-label { display: none !important; }
+html body .cmct .chart-fs-interval-btn .chart-icon-label {
+  display: inline !important;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: inherit;
+}
+html body .cmct .chart-hero-icon-row .chart-depth-btn {
+  width: auto !important;
+  height: 30px !important;
+  gap: 6px;
+  padding: 0 10px !important;
+  min-width: 30px;
+  justify-content: center;
+  border-radius: 7px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--cmct-text, var(--color-text-muted)) !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+/* Icon-only buttons: square. */
+html body .cmct .chart-hero-icon-row .chart-depth-btn:not(.chart-fs-interval-btn) {
+  width: 30px !important;
+  padding: 0 !important;
+}
+/* Hover / open: the toolbar's own soft gray, same corners as its groups. */
+html body .cmct .chart-hero-icon-row .chart-depth-btn:hover,
+html body .cmct .chart-hero-icon-row .chart-depth-btn--active {
+  background: var(--cmct-track, color-mix(in srgb, var(--color-text) 5%, transparent)) !important;
+  color: var(--cmct-on-text, var(--color-text)) !important;
+}
 /* ProVision button: the old header toggle's sparkle knob (purple disc). */
 .cmct-pv-ic {
   display: grid;
@@ -259,3 +356,44 @@ html:not([data-theme="light"]) .cmcc-analyze { color: #c4b5fd; }
 .cmct-btn--on .pv-toggle-label-accent { color: #7c3aed; }
 html:not([data-theme="light"]) .cmct-btn--on .pv-toggle-label-accent { color: #a78bfa; }
 .cmct-div { width: 1px; height: 16px; margin: 0 2px; background: color-mix(in srgb, var(--color-text) 15%, transparent); }
+
+/* CMC's exact segmented look (overrides the above): #eff2f5 track,
+   #58667e semibold labels, white active pill with near-black text,
+   #cfd6e4 dividers. Dark theme: CMC's dark equivalents. */
+.cmct {
+  --cmct-track: #eff2f5;
+  --cmct-text: #58667e;
+  --cmct-on-bg: #ffffff;
+  --cmct-on-text: #0d1421;
+  --cmct-div: #cfd6e4;
+}
+html:not([data-theme="light"]) .cmct {
+  --cmct-track: #222531;
+  --cmct-text: #a1a7bb;
+  --cmct-on-bg: #323546;
+  --cmct-on-text: #ffffff;
+  --cmct-div: #3a3f52;
+}
+.cmct-seg { gap: 0; padding: 3px; border-radius: 7px; background: var(--cmct-track); height: 30px; }
+.cmct-btn,
+.cmct-btn:hover {
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cmct-text);
+}
+.cmct-btn:hover { color: var(--cmct-on-text); }
+.cmct-btn--on,
+.cmct-btn--on:hover {
+  background: var(--cmct-on-bg);
+  color: var(--cmct-on-text);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(88, 102, 126, 0.12), 0 4px 12px rgba(88, 102, 126, 0.08);
+}
+.cmct-btn--icon, .cmct-btn--icon:hover { width: 32px; padding: 0; justify-content: center; }
+.cmct-btn > svg { width: 13px; height: 13px; }
+.cmct-pv-ic { width: 16px; height: 16px; }
+.cmct-div { height: 14px; margin: 0 5px; background: var(--cmct-div); }
+.cmct { min-height: 30px; }

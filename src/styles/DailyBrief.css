@@ -1283,6 +1283,17 @@ html:not([data-theme="light"]) .db-page {
    A heartbeat line that draws itself on a loop beside the title (it's
    called Market *Pulse*), and a green shimmer that sweeps across the
    title once every couple of beats. */
+/* Desktop title (no longer a button): title + pulse on one line, with
+   room between them. */
+.db-head-title-static {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
 .db-head-pulse {
   --db-pulse: #22c55e;
   display: inline-flex;

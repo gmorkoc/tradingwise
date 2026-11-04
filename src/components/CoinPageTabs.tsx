@@ -12,7 +12,7 @@ import "../styles/CoinPageTabs.css";
 export type CoinPageTab = "overview" | "news" | "technicals" | "seasonals" | "markets" | "fundamentals";
 
 export const COIN_PAGE_TABS: { id: CoinPageTab; label: string }[] = [
-  { id: "overview", label: "Overview" },
+  { id: "overview", label: "Chart" },
   { id: "news", label: "News" },
   { id: "technicals", label: "Technicals" },
   { id: "seasonals", label: "Seasonals" },

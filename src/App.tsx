@@ -72,6 +72,7 @@ import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { CoinInfoPanel } from "./components/CoinInfoPanel";
+import { TradeInsights } from "./components/TradeInsights";
 import { PriceChart, formatLivePrice, PV_PROMO_STYLE } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
@@ -519,7 +520,7 @@ interface DashboardProps {
   onOpenAuth: () => void;
   onOpenUpgrade: () => void;
   theme: "dark" | "light";
-  setTheme: (t: "dark" | "light") => void;
+  setTheme: (t: "dark" | "light" | "system") => void;
 }
 
 function AppDashboard({
@@ -1894,35 +1895,11 @@ function AppDashboard({
   //   "3col" — three side-by-side columns, one block each.
   // Persisted so the choice survives a reload (an old saved "2row" falls
   // back to 2col).
-  const [chartLayoutMode, setChartLayoutMode] = useState<"2col" | "3col">(() => {
-    const saved = localStorage.getItem("chartLayoutMode");
-    return saved === "3col" ? saved : "2col";
-  });
-  useEffect(() => {
-    localStorage.setItem("chartLayoutMode", chartLayoutMode);
-  }, [chartLayoutMode]);
-  // Top-nav dropdown version of the layout picker (desktop web only) —
-  // the trigger always shows the 2-col glyph regardless of which mode is
-  // actually active (per explicit "main icon should be the two col
-  // icon"), not the current selection's own icon.
-  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
-  // Markets desktop only has the one fixed chart+Daily Brief arrangement
-  // (no 2row/3col/2col picker — see chartColumnEl's markets branch), but
-  // still wants a way to go full width and close Daily Brief entirely,
-  // same spirit as Chart's own layout picker just without the choice of
-  // three arrangements.
-  const [marketsSingleColumn, setMarketsSingleColumn] = useState(false);
-  const layoutMenuWrapRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!layoutMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (layoutMenuWrapRef.current && !layoutMenuWrapRef.current.contains(e.target as Node)) {
-        setLayoutMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [layoutMenuOpen]);
+  // Layout pickers removed (top-bar icons gone): the chart page always uses
+  // the CoinMarketCap layout ("2col" branch), Markets always shows Daily
+  // Brief beside it.
+  const chartLayoutMode = "2col" as "2col" | "3col";
+  const marketsSingleColumn = false as boolean;
   // Shared mount point for both Paper Trading's column (rendered directly
   // below) and Buy Signals' own portaled column (BuySignals.tsx's
   // columnTarget prop) — :empty in CSS collapses this to nothing when
@@ -2145,6 +2122,11 @@ function AppDashboard({
           onOpenAuth={onOpenAuth}
           inTabRow
           onViewClosed={() => window.dispatchEvent(new CustomEvent("chart-bottom-tab", { detail: { tab: "history" } }))}
+        />
+        {/* CMC-style "<COIN> Insights" (Show/Hide), below the ticket. */}
+        <TradeInsights
+          coin={coin}
+          onAsk={(prompt) => window.dispatchEvent(new CustomEvent("open-trading-agent-with-prompt", { detail: { prompt } }))}
         />
       </div>
       <div className="cmc-rbody" style={{ display: tradeColTab === "posintel" ? "flex" : "none" }}>
@@ -3445,29 +3427,66 @@ function AppDashboard({
         <div className="main-panel">
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
             <div className="top-nav-bar">
+              {/* Logo beside the search bar while the side menu is collapsed
+                  (the expanded menu shows its own logo). Click → Markets. */}
+              {navCollapsed && !navPeek && (
+                <button
+                  type="button"
+                  className="top-nav-logo"
+                  onClick={() => setActiveSection("markets")}
+                  aria-label="coinhintz — Markets"
+                  title="Markets"
+                >
+                  {/* Wordmark only (no icon). */}
+                  <span className="top-nav-logo-text">coinhint<span className="top-nav-logo-z">z</span></span>
+                </button>
+              )}
+              {/* Portfolio → the asset calculator (CMC's "Portfolio" link). */}
+              <button
+                type="button"
+                className={`top-nav-link${assetPanelOpen ? " top-nav-link--on" : ""}`}
+                // Sign-in required (account feature).
+                onClick={() => { if (!user) { onOpenAuth(); return; } setAssetPanelOpen(true); }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M11 2.05A10 10 0 1 0 21.95 13H11z" opacity="0.55" />
+                  <path d="M13 2.05V11h8.95A10 10 0 0 0 13 2.05z" />
+                </svg>
+                Portfolio
+              </button>
+              {/* Watchlist (icon + label) → Markets on its Watchlist tab. */}
+              <button
+                type="button"
+                className="top-nav-link top-nav-link--watch"
+                onClick={() => {
+                  // Sign-in required (account feature).
+                  if (!user) { onOpenAuth(); return; }
+                  try { localStorage.setItem("mstTab", "watchlist"); } catch { /* ignore */ }
+                  window.dispatchEvent(new CustomEvent("markets-tab", { detail: { tab: "watchlist" } }));
+                  setActiveSection("markets");
+                  window.setTimeout(() => document.querySelector(".mst")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3 6.6 7 .7-5.3 4.7 1.6 7L12 17.3 5.7 21l1.6-7L2 9.3l7-.7z" /></svg>
+                Watchlist
+              </button>
               <button
                 ref={topNavSearchRef}
                 className="top-nav-search"
                 onClick={openGlobalSearch}
                 title="Search (⌘K)"
               >
+                {/* Modern search field: icon · placeholder · ⌘K chip. */}
+                <span className="top-nav-search-ic" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <circle cx="11" cy="11" r="7.5" />
+                    <line x1="20.5" y1="20.5" x2="16.4" y2="16.4" />
+                  </svg>
+                </span>
                 <span className="top-nav-search-text">
                   {t("search.placeholder", "Search coins, sections, features…")}
                 </span>
-                <span className="top-nav-search-btn">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </span>
+                <kbd className="top-nav-search-kbd" aria-hidden="true">⌘K</kbd>
               </button>
               <div className="top-nav-icons">
                 {/* Every icon-button moved up here from .mch-right (the
@@ -3574,88 +3593,6 @@ function AppDashboard({
                   </HoverTip>
                   </span>
                 )}
-                {(activeSection === "chart" || activeSection === "advance-chart") && isWideDesktop && !distractionFree && (
-                  <div className="top-nav-layout-wrap" ref={layoutMenuWrapRef}>
-                    <HoverTip className="top-nav-icon-tip" placement="left" text="Chart layout">
-                    <button
-                      type="button"
-                      className={`mch-search-btn top-nav-layout-btn${layoutMenuOpen ? " top-nav-layout-btn--open" : ""}`}
-                      onClick={() => setLayoutMenuOpen((v) => !v)}
-                      aria-haspopup="true"
-                      aria-expanded={layoutMenuOpen}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                        <rect x="1.5" y="2" width="7" height="12" rx="1" />
-                        <rect x="10" y="2" width="4.5" height="5.3" rx="1" />
-                        <rect x="10" y="8.7" width="4.5" height="5.3" rx="1" />
-                      </svg>
-                    </button>
-                    </HoverTip>
-                    {layoutMenuOpen && (
-                      <div className="top-nav-layout-menu" role="radiogroup" aria-label="Chart page layout">
-                        {([
-                          { mode: "2col" as const, title: "2 columns" },
-                          { mode: "3col" as const, title: "3 columns" },
-                        ]).map(({ mode, title }) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            role="radio"
-                            aria-checked={chartLayoutMode === mode}
-                            className={`top-nav-layout-option${chartLayoutMode === mode ? " active" : ""}`}
-                            onClick={() => {
-                              setChartLayoutMode(mode);
-                              setLayoutMenuOpen(false);
-                            }}
-                          >
-                            <span className="top-nav-layout-option-icon">
-                              {mode === "2col" && (
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                                  <rect x="1.5" y="2" width="7" height="12" rx="1" />
-                                  <rect x="10" y="2" width="4.5" height="5.3" rx="1" />
-                                  <rect x="10" y="8.7" width="4.5" height="5.3" rx="1" />
-                                </svg>
-                              )}
-                              {mode === "3col" && (
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                                  <rect x="1.5" y="2" width="4" height="12" rx="1" />
-                                  <rect x="6" y="2" width="4" height="12" rx="1" />
-                                  <rect x="10.5" y="2" width="4" height="12" rx="1" />
-                                </svg>
-                              )}
-                            </span>
-                            {title}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {activeSection === "markets" && isWideDesktop && !distractionFree && (
-                  <HoverTip
-                    className="top-nav-icon-tip"
-                    placement="left"
-                    text={marketsSingleColumn ? "Show Daily Brief" : "Full width (close Daily Brief)"}
-                  >
-                    <button
-                      type="button"
-                      className={`mch-search-btn top-nav-layout-btn${marketsSingleColumn ? " top-nav-layout-btn--open" : ""}`}
-                      onClick={() => setMarketsSingleColumn((v) => !v)}
-                      aria-pressed={marketsSingleColumn}
-                    >
-                      {marketsSingleColumn ? (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                          <rect x="1.5" y="2" width="13" height="12" rx="1" />
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                          <rect x="1.5" y="2" width="7" height="12" rx="1" />
-                          <rect x="10" y="2" width="4.5" height="12" rx="1" />
-                        </svg>
-                      )}
-                    </button>
-                  </HoverTip>
-                )}
                 {/* No Market/Paper switch on desktop: the chart and Paper
                     Trading are already side by side on this screen. */}
                 {activeSection !== "chart" && activeSection !== "advance-chart" && (
@@ -3730,6 +3667,7 @@ function AppDashboard({
                   onOpenUpgrade={onOpenUpgrade}
                   onOpenProfile={() => setProfileOpen(true)}
                   onOpenSettings={() => setDrawerOpen(true)}
+                  onSetTheme={setTheme}
                   iconFallback
                   dropdown
                 />
@@ -4010,7 +3948,9 @@ function AppDashboard({
                         onFullscreenChange={setChartFullscreen}
                         coinChatOpen={SHOW_COIN_CHAT && showCoinChat}
                         onToggleCoinChat={SHOW_COIN_CHAT ? () => setShowCoinChat((v) => !v) : undefined}
-                        headerStats={mchBodyEl}
+                        // Desktop CMC layout: these stats sit in the left info
+                        // column (same compact row) instead of the chart header.
+                        headerStats={isWideDesktop && !distractionFree && chartLayoutMode === "2col" ? undefined : mchBodyEl}
                         pageTabBar={activeSection !== "chart" ? undefined : isDesktopWidth
                           ? <CoinPageTabBar tab={coinTab} onChange={setCoinTab} />
                           : <CoinPagePicker coin={coin} />}
@@ -4133,6 +4073,8 @@ function AppDashboard({
                         <CoinInfoPanel
                           coin={coin}
                           ticker={coinTickers.get(coin)}
+                          stats={mchBodyEl}
+                          onPickCoin={(el) => openCoinPicker(el)}
                           // "Paper trade" button → open the Paper Trading tab on the right.
                           onTrade={() => setTradeColTab("paper")}
                         />
@@ -4901,7 +4843,13 @@ function AppGate() {
     };
   }, []);
 
-  const setTheme = (t: "dark" | "light") => {
+  // "system": forget the saved pick and follow the device again.
+  const setTheme = (t: "dark" | "light" | "system") => {
+    if (t === "system") {
+      try { localStorage.removeItem("theme"); } catch { /* ignore */ }
+      setThemeState(window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      return;
+    }
     setThemeState(t);
     // Desktop: remember the pick (survives refresh, overrides the system).
     if (themeChoiceAllowed()) { try { localStorage.setItem("theme", t); } catch { /* ignore */ } }

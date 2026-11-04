@@ -348,7 +348,8 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   // version auto-corrected this on every resize event, which fought a
   // deliberate manual pick (or this new default) the moment the window
   // moved by a pixel — not what either is for.
-  const [sectionCols, setSectionCols] = useState<1 | 2 | 3>(1);
+  // Column picker removed — always one column.
+  const sectionCols = 1 as 1 | 2 | 3;
   // Drives .chart-three-col-right's own width (App.css) — that's an
   // ancestor App.tsx renders, not this component, so a CSS custom
   // property on the document root is the simplest way to reach it
@@ -364,24 +365,6 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     };
     document.documentElement.style.setProperty("--db-page-width", widths[sectionCols]);
   }, [sectionCols, variant]);
-  // Column picker shows only the current choice; tapping it reveals the
-  // other options beside it (fading in one by one). Closes on pick, on a
-  // click anywhere else, or on Escape.
-  const [colsOpen, setColsOpen] = useState(false);
-  const colsRef = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!colsOpen) return;
-    const onDown = (e: PointerEvent) => {
-      if (colsRef.current && !colsRef.current.contains(e.target as Node)) setColsOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setColsOpen(false); };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [colsOpen]);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [scrollHidden, setScrollHidden] = useState(false);
@@ -868,16 +851,9 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     return (
       <aside className="db-page">
         <div className="db-page-head">
-          <span ref={colsRef} className="db-page-head-left">
-            {/* The title itself opens the column picker (no separate
-                icon) — the 1/2/3 options fade in beside it one by one. */}
-            <button
-              type="button"
-              className={`db-head-title db-head-title-btn${colsOpen ? " open" : ""}`}
-              aria-expanded={colsOpen}
-              aria-label={`${t("dailyBrief.title")} — change columns`}
-              onClick={() => setColsOpen((o) => !o)}
-            >
+          <span className="db-page-head-left">
+            {/* Plain title (the 1/2/3 column picker was removed). */}
+            <span className="db-head-title db-head-title-static">
               {/* Same heartbeat line + shimmer as the mobile sheet header,
                   with the heartbeat after the title here. */}
               <span className="db-head-title--fancy">{t("dailyBrief.title")}</span>
@@ -887,37 +863,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                   <polyline className="db-head-pulse-line" points="0,8 8,8 11,3 15,13 18,6 20,8 32,8" />
                 </svg>
               </span>
-            </button>
-            {colsOpen && (
-            <span
-              className="db-section-cols db-section-cols--open"
-              role="radiogroup"
-              aria-label="Topic section columns"
-            >
-              {([1, 2, 3] as const).map((n, i) => (
-                <button
-                  key={n}
-                  type="button"
-                  role="radio"
-                  aria-checked={sectionCols === n}
-                  className={`db-section-cols-btn db-section-cols-btn--reveal${sectionCols === n ? " active" : ""}`}
-                  style={{ animationDelay: `${i * 70}ms` }}
-                  title={`${n} column${n > 1 ? "s" : ""}`}
-                  onClick={() => {
-                    setSectionCols(n);
-                    setColsOpen(false);
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-                    {Array.from({ length: n }).map((_, j) => {
-                      const w = 13 / n - (n > 1 ? 1.2 : 0);
-                      return <rect key={j} x={1.5 + j * (w + 1.2)} y="2" width={w} height="12" rx="1" />;
-                    })}
-                  </svg>
-                </button>
-              ))}
             </span>
-            )}
           </span>
           <span className="db-live">
             <span className="db-live-bars">

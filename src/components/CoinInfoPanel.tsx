@@ -79,7 +79,16 @@ function readWatch(): string[] {
   try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) ?? "null"); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function CoinInfoPanel({ coin, ticker, onTrade }: { coin: string; ticker?: Ticker24h; onTrade?: () => void }) {
+export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin }: {
+  coin: string;
+  ticker?: Ticker24h;
+  onTrade?: () => void;
+  /** Coin name block → the coin picker (anchored to it). */
+  onPickCoin?: (anchor: HTMLElement) => void;
+  /** Market stats (liquidations, OI, funding, RSI, MACD, L/S) — shown in the
+   *  chart header's exact compact row style, scrolling sideways. */
+  stats?: ReactNode;
+}) {
   const name = COINS.find((c) => c.symbol === coin)?.name ?? coin;
 
   // Top-250 list (shared cache with Markets) + global stats (dominance).
@@ -204,7 +213,15 @@ export function CoinInfoPanel({ coin, ticker, onTrade }: { coin: string; ticker?
     <aside className="cip" aria-label={`${name} overview`}>
       {/* Name row + star / share */}
       <div className="cip-top">
-        <div className="cip-head">
+        {/* Coin name block: opens the coin picker. */}
+        <button
+          type="button"
+          className="cip-head"
+          onClick={(e) => onPickCoin?.(e.currentTarget)}
+          disabled={!onPickCoin}
+          aria-label={`${name} — switch coin`}
+          title="Switch coin"
+        >
           <img
             className="cip-logo"
             src={r?.image ?? `https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`}
@@ -214,7 +231,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade }: { coin: string; ticker?
           <h1 className="cip-name">{name}</h1>
           <span className="cip-sym">{coin}</span>
           {r?.market_cap_rank ? <span className="cip-rank">#{r.market_cap_rank}</span> : null}
-        </div>
+          {onPickCoin && <span className="cip-head-chev" aria-hidden="true"><Down /></span>}
+        </button>
         <div className="cip-actions">
           <button type="button" className={`cip-act${watched ? " cip-act--on" : ""}`} onClick={toggleWatch} aria-pressed={watched} title={watched ? "Remove from watchlist" : "Add to watchlist"}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill={watched ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 2l3 6.6 7 .7-5.3 4.7 1.6 7L12 17.3 5.7 21l1.6-7L2 9.3l7-.7z" /></svg>
@@ -233,6 +251,24 @@ export function CoinInfoPanel({ coin, ticker, onTrade }: { coin: string; ticker?
         <strong>{price != null ? fmtPrice(price) : "—"}</strong>
         {chg != null && <span className={`cip-chg ${chg >= 0 ? "cip-up" : "cip-dn"}`}>{chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(2)}% (24h)</span>}
       </div>
+
+      {/* Market stats: the chart header's own row (.chart-bar-stats), so
+          size and spacing match it exactly; scrolls sideways. */}
+      {stats && (
+        <div className="cip-xstats">
+          <div className="chart-bar-stats">
+            {stats}
+            {/* One exchange's spot volume (the live ticker) — the stats card
+                below has the all-exchange total. */}
+            {ticker?.quoteVolume != null && (
+              <div className="chart-bar-stat" title={`24h spot volume on Binance (${coin}/USDT). The stats card below shows all exchanges combined.`}>
+                <span className="chart-bar-stat-label">Binance 24h Vol</span>
+                <span className="chart-bar-stat-value">{fmtUsd(ticker.quoteVolume)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats card: Spot | Derivatives */}
       <div className="cip-card">

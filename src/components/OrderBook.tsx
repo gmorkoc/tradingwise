@@ -456,7 +456,6 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
           onClick={() => setActiveTab("orderbook")}
         >
           {t("orderBook.title", "Order book")}
-          {activeTab === "orderbook" && <span className="ob-tab-close" aria-hidden="true">✕</span>}
         </button>
         <button
           type="button"
@@ -464,11 +463,7 @@ export function OrderBook({ coin, onHide, embedded, view }: OrderBookProps) {
           onClick={() => setActiveTab("trades")}
         >
           Recent trades
-          {activeTab === "trades" && <span className="ob-tab-close" aria-hidden="true">✕</span>}
         </button>
-        {/* Visual parity with the reference design only — this app doesn't
-            have a generic multi-panel tab system to add a new one into. */}
-        <button type="button" className="ob-tab-add" title="Add panel" aria-label="Add panel">+</button>
         <button type="button" className="ob-expand-btn" title="Expand" aria-label="Expand">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />

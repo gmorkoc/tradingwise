@@ -229,6 +229,8 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
       return (TABS.some((t) => t.key === v) ? v : "all") as Tab;
     } catch { return "all"; }
   });
+  // Signed out on a saved Watchlist tab → back to All (watchlist needs an account).
+  useEffect(() => { if (!user && tab === "watchlist") setTab("all"); }, [user, tab]);
   const [shown, setShown] = useState(PAGE);
   const [watched, setWatched] = useState<string[]>(readWatchlist);
   const [trendingIds, setTrendingIds] = useState<string[] | null>(null);
@@ -247,6 +249,15 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
     try { localStorage.setItem("mstTab", tab); } catch { /* ignore */ }
     setShown(PAGE);
   }, [tab]);
+  // Top bar's Watchlist icon (while already on Markets) switches the tab.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const t = (e as CustomEvent<{ tab?: Tab }>).detail?.tab;
+      if (t && TABS.some((x) => x.key === t)) setTab(t);
+    };
+    window.addEventListener("markets-tab", on);
+    return () => window.removeEventListener("markets-tab", on);
+  }, []);
   useEffect(() => { setShown(PAGE); }, [capIdx, volIdx, sigF, chgF, hideStables, sort.key, sort.dir]);
   useEffect(() => {
     try { localStorage.setItem(COLS_KEY, JSON.stringify(cols)); } catch { /* ignore */ }
@@ -310,6 +321,8 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   }, [coins, tab, watched, trendingIds, capIdx, volIdx, chgF, hideStables, sigF, sigOpen, sort]);
 
   const toggleWatch = (id: string) => {
+    // Watchlist needs an account.
+    if (!user) { onOpenAuth?.(); return; }
     setWatched((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       try { localStorage.setItem(WATCH_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -522,7 +535,11 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
                 type="button"
                 className={`mst-tab${tab === t.key ? " mst-tab--on" : ""}`}
                 aria-pressed={tab === t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => {
+                  // Watchlist needs an account.
+                  if (t.key === "watchlist" && !user) { onOpenAuth?.(); return; }
+                  setTab(t.key);
+                }}
               >
                 {t.label}
               </button>

@@ -1,8 +1,8 @@
 /* ── Chart page desktop layout: info (left) · chart · trade tabs (right) ── */
 .chart-layout--cmc { align-items: flex-start; }
 .chart-cmc-left {
-  flex: 0 0 clamp(320px, 24vw, 420px);
-  width: clamp(320px, 24vw, 420px);
+  flex: 0 0 clamp(360px, 27vw, 470px);
+  width: clamp(360px, 27vw, 470px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -95,6 +95,9 @@ html:not([data-theme="light"]) .cmc-rcol { --cmc-blue: #60a5fa; }
   padding: 0;
 }
 .cmc-rbody--ob { padding: 4px 6px 8px; }
+/* Nothing in the column may be wider than the column itself. */
+.cmc-rbody { overflow-x: hidden; }
+.cmc-rbody > * { min-width: 0; max-width: 100%; }
 /* Position Intelligence: the group rows (Smart Money / Whales / Retail)
    padded themselves on top of the card's own 16px — their panel isn't
    visible here, so line them up with the card edge and the footnote. */
@@ -122,7 +125,35 @@ html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
 
 /* Name row */
 .cip-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.cip-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cip-head,
+.cip-head:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: -4px 0 -4px -6px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cip-head:hover { background: var(--cip-tint); }
+.cip-head:focus-visible { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cip-blue) 40%, transparent); }
+.cip-head:disabled { cursor: default; background: none; }
+.cip-head-chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  border-radius: 6px;
+  background: var(--cip-tint);
+  color: var(--cip-muted);
+}
+.cip-head:hover .cip-head-chev { color: var(--color-text); }
 .cip-logo { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; margin-right: 2px; }
 .cip-name { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cip-sym { font-size: 13px; color: var(--cip-muted); }
@@ -149,6 +180,17 @@ html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
 .cip-price { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
 .cip-price strong { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .cip-chg { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+
+/* Market stats: the cells themselves use the chart header's own
+   .chart-bar-stats styles (PriceChart.css) for an exact match; this only
+   spaces the row and fades its right edge (no border line). */
+.cip-xstats {
+  margin-top: 14px;
+  padding: 4px 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+}
+.cip-xstats .chart-bar-stats { padding-right: 24px; }
 
 /* Stats card */
 .cip-card {

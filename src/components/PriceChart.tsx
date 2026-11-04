@@ -6972,7 +6972,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 same stat row, restyled to match (PriceChart.css). */}
             {/* Exchange-style bar header (reference: Hyperliquid): coin +
                 price + change, a divider, then label-over-value stats. */}
-            <div className={`chart-bar-header-wrap${mobileTabs ? " chart-bar-header-wrap--mobile" : ""}`}>
+            {/* Desktop CMC layout (no headerStats passed): the coin, price and
+                stats live in the left info column, so this header is hidden. */}
+            <div className={`chart-bar-header-wrap${mobileTabs ? " chart-bar-header-wrap--mobile" : ""}${tradeDesktopLean && !headerStats && !isFullscreen ? " chart-bar-header-wrap--off" : ""}`}>
             <div className="chart-bar-header" ref={barStatsRef} onScroll={updateBarScroll}>
               <div
                 className="chart-bar-id chart-bar-id--tap"
@@ -7044,7 +7046,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 {/* Change / High / Low were removed from this row (still in
                     the full stats sheet). 24h Vol sits last. */}
                 {headerStats}
-                {quoteVolume24h !== undefined && (
+                {/* Desktop CMC layout passes no headerStats: this volume moved
+                    to the left info column's stats row too. */}
+                {quoteVolume24h !== undefined && (headerStats || !tradeDesktopLean) && (
                   <div className="chart-bar-stat">
                     <span className="chart-bar-stat-label">24h Vol</span>
                     <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
@@ -7175,6 +7179,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 metric={chartMetric}
                 range={cmcRange}
                 log={cmcLog}
+                moments={chartEvts}
                 onAnalyze={() => {
                   // Run the AI Chart Read right away (paid) — free users get
                   // the upgrade card — under the chart, scrolled into view.
@@ -7744,10 +7749,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }`}
           ref={dblClickWrapRef}
         >
-            {/* #trade: faint coinhintz watermark in the middle of the chart. */}
-            {prefsScope === "trade" && !pageMode && (
+            {/* #trade, phones only: faint coinhintz watermark (removed from
+                both desktop charts). */}
+            {prefsScope === "trade" && !pageMode && !isDesktopWidth && (
               <div className="chart-watermark" aria-hidden="true">
-                <img src="/icon.svg" alt="" draggable={false} />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M15.5 9a4 4 0 1 0 0 6" /></svg>
                 <span>coinhintz</span>
               </div>
             )}

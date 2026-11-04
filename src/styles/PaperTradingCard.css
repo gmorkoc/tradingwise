@@ -322,6 +322,7 @@ html:not([data-theme="light"]) .ptc-activate {
 .ptc-activate-step:nth-child(1) .ptc-activate-step-icon { animation-delay: 0.1s; }
 .ptc-activate-step:nth-child(2) .ptc-activate-step-icon { animation-delay: 0.35s; }
 .ptc-activate-step:nth-child(3) .ptc-activate-step-icon { animation-delay: 0.6s; }
+.ptc-activate-step:nth-child(4) .ptc-activate-step-icon { animation-delay: 0.85s; }
 @keyframes ptc-step-icon-fade-in {
   from { opacity: 0; transform: translateY(6px) scale(0.92); }
   to { opacity: 1; transform: translateY(0) scale(1); }

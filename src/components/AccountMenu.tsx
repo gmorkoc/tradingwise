@@ -49,7 +49,23 @@ interface Props {
   // this off and keeps going straight to Profile (unchanged) since the
   // drawer it's already inside has its own separate Settings/Sign out rows.
   dropdown?: boolean;
+  /** Theme row (Light / Dark / System) in the dropdown. */
+  onSetTheme?: (t: "dark" | "light" | "system") => void;
 }
+
+// Languages the app ships (src/locales).
+const LANGS = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+  { code: "tr", label: "Türkçe" },
+  { code: "it", label: "Italiano" },
+];
+const readThemeMode = (): "light" | "dark" | "system" => {
+  try {
+    const s = localStorage.getItem("theme");
+    return s === "light" || s === "dark" ? s : "system";
+  } catch { return "system"; }
+};
 
 export const AccountMenu: React.FC<Props> = ({
   onOpenAuth,
@@ -58,8 +74,21 @@ export const AccountMenu: React.FC<Props> = ({
   onOpenSettings,
   iconFallback,
   dropdown,
+  onSetTheme,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [langOpen, setLangOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState(readThemeMode);
+  const pickTheme = (m: "light" | "dark" | "system") => {
+    setThemeMode(m);
+    onSetTheme?.(m);
+  };
+  const pickLang = (code: string) => {
+    i18n.changeLanguage(code);
+    try { localStorage.setItem("lang", code); } catch { /* ignore */ }
+    setLangOpen(false);
+  };
+  const curLang = LANGS.find((l) => i18n.language?.startsWith(l.code)) ?? LANGS[0];
   const { user, profile, tier, signOut } = useAuth();
   const { used, limit, exceeded, isPaid } = useAIQuota();
   const [open, setOpen] = useState(false);
@@ -75,8 +104,8 @@ export const AccountMenu: React.FC<Props> = ({
     if (avatarRef.current) {
       const r = avatarRef.current.getBoundingClientRect();
       const vh = window.innerHeight;
-      const DROPDOWN_W = 240;
-      const DROPDOWN_H = 280;
+      const DROPDOWN_W = 280;
+      const DROPDOWN_H = 440;
 
       let left = r.right - DROPDOWN_W;
       let top = r.bottom + 10;
@@ -106,6 +135,23 @@ export const AccountMenu: React.FC<Props> = ({
   }, [dropdown]);
 
   if (!user) {
+    // Desktop top bar: an icon button like its neighbours (person outline).
+    if (dropdown) {
+      return (
+        <button
+          type="button"
+          className="mch-search-btn acct-signin-icon"
+          onClick={onOpenAuth}
+          aria-label={t("account.signin")}
+          title={t("account.signin")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </button>
+      );
+    }
     return (
       <button className="acct-signin-btn" onClick={onOpenAuth}>
         {t("account.signin")}
@@ -154,17 +200,19 @@ export const AccountMenu: React.FC<Props> = ({
             style={{ top: dropPos.top, left: dropPos.left }}
           >
             {/* User info header */}
+            {/* Name + email — the email only once (some sign-ups save it as
+                the name too). The plan shows on the Profile row below. */}
             <div className="acct-dd-header">
-              <div className="acct-dd-name">
-                {profile?.full_name || t("account.myAccount")}
-              </div>
-              <div className="acct-dd-email">{user.email}</div>
-              <span
-                className="acct-dd-tier-badge"
-                style={{ color: tm.text, background: tm.bg }}
-              >
-                {t("account.tierPlan", { tier: tm.label })}
-              </span>
+              {(() => {
+                const name = profile?.full_name?.trim();
+                const hasName = !!name && !name.includes("@") && name !== user.email;
+                return (
+                  <>
+                    <div className="acct-dd-name">{hasName ? name : (user.email ?? t("account.myAccount"))}</div>
+                    {hasName && user.email && <div className="acct-dd-email">{user.email}</div>}
+                  </>
+                );
+              })()}
             </div>
 
             <div className="acct-dd-divider" />
@@ -241,6 +289,63 @@ export const AccountMenu: React.FC<Props> = ({
             >
               <span>{t("account.accountSettings")}</span>
             </button>
+
+            <div className="acct-dd-divider" />
+
+            {/* Preferences: Language · Currency · Theme */}
+            <div className="acct-dd-pref">
+              <button type="button" className="acct-dd-pref-row" onClick={() => setLangOpen((v) => !v)} aria-expanded={langOpen}>
+                <span>Language</span>
+                <span className="acct-dd-pref-val">
+                  {curLang.label}
+                  <svg className={`acct-dd-chev${langOpen ? " acct-dd-chev--open" : ""}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                </span>
+              </button>
+              {langOpen && (
+                <div className="acct-dd-langs" role="listbox" aria-label="Language">
+                  {LANGS.map((l) => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      role="option"
+                      aria-selected={l.code === curLang.code}
+                      className={`acct-dd-lang${l.code === curLang.code ? " acct-dd-lang--on" : ""}`}
+                      onClick={() => pickLang(l.code)}
+                    >
+                      {l.label}
+                      {l.code === curLang.code && <span aria-hidden="true">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Prices are in US dollars everywhere for now. */}
+              <div className="acct-dd-pref-row acct-dd-pref-row--static" title="Prices are shown in US dollars">
+                <span>Currency</span>
+                <span className="acct-dd-pref-val">
+                  <span className="acct-dd-usd" aria-hidden="true">$</span>
+                  USD
+                </span>
+              </div>
+              {onSetTheme && (
+                <div className="acct-dd-pref-row acct-dd-pref-row--static">
+                  <span>Theme</span>
+                  <div className="acct-dd-seg" role="radiogroup" aria-label="Theme">
+                    {(["light", "dark", "system"] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={themeMode === m}
+                        className={`acct-dd-seg-btn${themeMode === m ? " acct-dd-seg-btn--on" : ""}`}
+                        onClick={() => pickTheme(m)}
+                      >
+                        {m === "light" ? "Light" : m === "dark" ? "Dark" : "System"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="acct-dd-divider" />
 

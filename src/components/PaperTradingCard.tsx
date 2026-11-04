@@ -215,7 +215,7 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           {
             n: 1,
             label: "Create your free account",
-            sub: "Sign up in seconds, no credit card needed. It unlocks a full practice trading environment instantly — no commitment, no hidden strings.",
+            sub: "Sign up in seconds, no credit card needed — your practice account is ready instantly.",
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="4" />
@@ -227,7 +227,7 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           {
             n: 2,
             label: "Get $100,000 in virtual cash",
-            sub: "Start with a six-figure virtual balance you can reset anytime. It's real buying power to test sizing, risk management and entries exactly like a live account would.",
+            sub: "A practice balance you can reset anytime to test sizing and entries like a real account.",
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12V7H5a2 2 0 010-4h14v4" />
@@ -239,7 +239,7 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
           {
             n: 3,
             label: "Trade spot & futures, live",
-            sub: "Every price is pulled from the real market in real time. Go long or short, use up to 20x leverage, and set take-profit/stop-loss orders — with zero dollars of real risk.",
+            sub: "Live market prices. Go long or short with up to 20x leverage and TP/SL — zero real risk.",
             icon: (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="6" y1="3" x2="6" y2="9" />
@@ -251,6 +251,17 @@ function PtcPromo({ cta }: { cta: React.ReactNode }) {
                 <line x1="20" y1="5" x2="20" y2="10" />
                 <rect x="18" y="10" width="4" height="6" rx="1" />
                 <line x1="20" y1="16" x2="20" y2="19" />
+              </svg>
+            ),
+          },
+          {
+            n: 4,
+            label: "Live Hintz on every coin",
+            sub: "Each coin's structure, momentum and the headlines moving it — updated live beside your trades.",
+            icon: (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
+                <path d="M19 17l.8 1.9L22 20l-2.2 1L19 23l-.8-2L16 20l2.2-1.1z" />
               </svg>
             ),
           },
@@ -811,7 +822,7 @@ export function PaperTradingCard({ coin, onOpen, onOpenAuth, inTabRow, onViewClo
               <>
                 <button type="button" className="ptc-activate-cta" onClick={onOpenAuth}>
                   <span className="ptc-activate-cta-shine" />
-                  <span className="ptc-activate-cta-label">Start paper trading</span>
+                  <span className="ptc-activate-cta-label">Activate Paper Trading</span>
                 </button>
                 <p className="ptc-activate-sub ptc-activate-sub--muted">
                   Free account required ·{" "}

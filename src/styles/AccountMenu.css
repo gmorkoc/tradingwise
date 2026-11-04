@@ -114,6 +114,92 @@ img.acct-initial-icon {
   overflow-y: auto;
 }
 
+/* Solid, not see-through (the light card colour is 90% opaque). */
+.acct-dropdown { background: #ffffff; }
+html:not([data-theme="light"]) .acct-dropdown { background: #111113; }
+.acct-dropdown--portal { width: 280px; }
+
+/* Preferences: Language · Currency · Theme */
+.acct-dd-pref { display: flex; flex-direction: column; padding: 4px 0; }
+.acct-dd-pref-row,
+.acct-dd-pref-row:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 13.5px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+button.acct-dd-pref-row:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.acct-dd-pref-row--static { cursor: default; }
+.acct-dd-pref-val { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-muted); font-size: 13px; }
+.acct-dd-chev { transition: transform 0.2s ease; }
+.acct-dd-chev--open { transform: rotate(90deg); }
+.acct-dd-usd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.acct-dd-langs { display: flex; flex-direction: column; padding: 2px 8px 6px; }
+.acct-dd-lang,
+.acct-dd-lang:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.acct-dd-lang:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.acct-dd-lang--on { font-weight: 600; color: #2563eb; }
+html:not([data-theme="light"]) .acct-dd-lang--on { color: #60a5fa; }
+.acct-dd-seg {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.acct-dd-seg-btn,
+.acct-dd-seg-btn:hover {
+  all: unset;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-align: center;
+}
+.acct-dd-seg-btn:hover { color: var(--color-text); }
+.acct-dd-seg-btn--on,
+.acct-dd-seg-btn--on:hover {
+  background: #ffffff;
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+html:not([data-theme="light"]) .acct-dd-seg-btn--on { background: #2c2c30; box-shadow: none; }
+
 @keyframes acct-pop {
   from { opacity: 0; transform: translateY(-6px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }

@@ -4014,6 +4014,125 @@ html[data-theme="light"] .top-nav-bar {
 /* Search pill — a plain light-gray field with no border, and a solid
    teal submit button seamlessly flush at its right edge (same border
    radius as the pill itself, not floating inset). */
+/* ── Top bar, CMC sizes: [logo] … [Portfolio] [Search /] [icons] [avatar] ──
+   32px-tall controls, a compact 240px gray search with 8px corners. */
+.top-nav-link,
+.top-nav-link:hover {
+  all: unset;
+  box-sizing: border-box;
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.top-nav-link svg { color: #a6b0c3; }
+.top-nav-link:hover, .top-nav-link--on { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+.top-nav-link:focus-visible { outline: 2px solid #3861fb; outline-offset: 2px; }
+/* Search field — modern/elegant: soft fill + hairline edge, icon left,
+   ⌘K chip right, a gentle focus-style ring on hover. */
+.top-nav-bar .top-nav-search {
+  height: 40px;
+  max-width: 560px;
+  padding: 0 8px 0 14px;
+  gap: 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 7%, transparent);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+.top-nav-bar .top-nav-search:hover {
+  background: var(--color-background, #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 12%, transparent), 0 0 0 4px color-mix(in srgb, #3861fb 8%, transparent);
+}
+html:not([data-theme="light"]) .top-nav-bar .top-nav-search { background: rgba(255, 255, 255, 0.05); }
+html:not([data-theme="light"]) .top-nav-bar .top-nav-search:hover { background: rgba(255, 255, 255, 0.08); }
+.top-nav-search-ic { display: inline-flex; flex-shrink: 0; color: var(--color-text-muted); transition: color 0.18s ease; }
+.top-nav-bar .top-nav-search:hover .top-nav-search-ic { color: var(--color-text); }
+.top-nav-bar .top-nav-search-text { padding: 0; font-size: 14px; letter-spacing: -0.005em; }
+.top-nav-search-kbd {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-background, #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 10%, transparent), 0 1px 0 color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+html:not([data-theme="light"]) .top-nav-search-kbd { background: rgba(255, 255, 255, 0.06); }
+/* Accent: brand green (the old search button's colour) on the icon, the
+   ⌘K chip and the hover ring. */
+.top-nav-bar .top-nav-search { --search-accent: #2f6f5e; }
+html:not([data-theme="light"]) .top-nav-bar .top-nav-search { --search-accent: #4ade80; }
+.top-nav-search-ic,
+.top-nav-bar .top-nav-search:hover .top-nav-search-ic { color: var(--search-accent); }
+.top-nav-search-kbd {
+  color: var(--search-accent);
+  background: color-mix(in srgb, var(--search-accent) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--search-accent) 22%, transparent);
+}
+html:not([data-theme="light"]) .top-nav-search-kbd { background: color-mix(in srgb, var(--search-accent) 12%, transparent); }
+.top-nav-bar .top-nav-search:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--search-accent) 35%, transparent), 0 0 0 4px color-mix(in srgb, var(--search-accent) 12%, transparent);
+}
+
+/* Order: logo · search · (push) Portfolio · icons. */
+.top-nav-bar > .top-nav-logo { order: 0; }
+.top-nav-bar > .top-nav-search { order: 1; }
+.top-nav-bar > .top-nav-link { order: 2; }
+/* Watchlist sits right after Portfolio (only Portfolio pushes right). */
+.top-nav-bar > .top-nav-link--watch { margin-left: 0; }
+/* Buy/Sell Signals: same box as the other top-bar icon buttons. */
+.top-nav-bar .top-nav-icons .buysig-bell {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="light"] .top-nav-bar .top-nav-icons .buysig-bell { background: rgb(15 23 42 / 4%); }
+.top-nav-bar .top-nav-icons .buysig-bell svg { width: 16px; height: 16px; }
+.top-nav-bar > .top-nav-icons { order: 3; }
+.top-nav-bar .top-nav-icons { margin-left: 0; gap: 8px; }
+.top-nav-bar .top-nav-icons .mch-search-btn,
+.top-nav-bar .top-nav-icons .top-nav-icon-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 8px;
+}
+.top-nav-bar .top-nav-icons .acct-avatar,
+.top-nav-bar .top-nav-icons .acct-avatar .nav-icon-wrap { width: 32px; height: 32px; }
+
+/* Logo left of the search bar — only while the side menu is collapsed. */
+.top-nav-logo,
+.top-nav-logo:hover {
+  all: unset;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding-right: 4px;
+  cursor: pointer;
+  animation: top-nav-logo-in 0.25s ease both;
+}
+.top-nav-logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; color: #4f46e5; line-height: 1; }
+.top-nav-logo-z { color: #4ade80; }
+.top-nav-logo:focus-visible { outline: 2px solid #4f46e5; outline-offset: 4px; border-radius: 8px; }
+@keyframes top-nav-logo-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 .top-nav-search {
   display: flex;
   align-items: center;
