@@ -292,10 +292,10 @@ html:not([data-theme="light"]) .pvh-notice--hot { color: #fbbf24; }
   max-width: 100%;
   overflow: hidden;
   margin: 8px 0 6px;
-  border-top: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
 }
-html:not([data-theme="light"]) .pvh-shell { border-color: rgba(255, 255, 255, 0.05); }
+html:not([data-theme="light"]) .pvh-shell { border-color: rgba(255, 255, 255, 0.08); }
 .pvh-shell > .pvh.pvh--bar,
 html:not([data-theme="light"]) .pvh-shell > .pvh.pvh--bar {
   margin: 0;

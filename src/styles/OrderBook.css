@@ -422,7 +422,6 @@
   scrollbar-width: thin;
   scrollbar-color: var(--pc-border) transparent;
 }
-
 .ob-row {
   position: relative;
   display: grid;

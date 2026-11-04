@@ -2049,6 +2049,9 @@ html[data-theme="light"] .coin-picker-menu--table {
 .chart-two-col-right--paper {
   width: clamp(310px, 22vw, 400px);
 }
+/* No gap between the Order Book column and Paper Trading — they meet at
+   one divider line instead of leaving an empty strip between them. */
+.chart-layout--2col > .chart-two-col-right--paper { margin-left: 0; }
 /* The column's tabbed .chart-right-col is now a direct child (no
    -row--top/--bottom wrapper in between), so it has to be told to fill
    the column's full viewport height — otherwise it shrinks to its
