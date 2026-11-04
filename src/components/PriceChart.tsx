@@ -1836,7 +1836,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // the shared saved preference other chart instances read/write (a user
   // who turned grid off elsewhere shouldn't land here with it off too;
   // they can still toggle it back off here if they want, same as always).
-  const [showGrid, setShowGrid] = useState(() => (pageMode ? true : readChartPrefs(prefsScope).showGrid ?? false));
+  // Grid on by default for the Advance page and the desktop chart page's
+  // TradingView view (CMC look); elsewhere the saved preference.
+  // Desktop chart page: always on (no toggle there any more).
+  const [showGrid, setShowGrid] = useState(() =>
+    pageMode || (prefsScope === "trade" && window.matchMedia("(min-width: 641px)").matches)
+      ? true
+      : !!(readChartPrefs(prefsScope).showGrid ?? false));
   // Desktop #trade: Price / Market cap switch above the chart.
   const [chartMetric, setChartMetric] = useState<"price" | "mcap">("price");
   // CoinMarketCap-style chart: line (default) or our candle chart
@@ -1953,6 +1959,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // ProVision only — no indicators, grid, depth profile or volume. Anything
   // switched on in fullscreen is cleared again when fullscreen closes.
   const tradeChartLocked = prefsScope === "trade" && !pageMode && !isFullscreen;
+  // Desktop chart page: volume is back as a light band along the bottom,
+  // colored like the candles; phones keep the trade chart candles-only.
+  const faintVolRef = useRef(false);
+  faintVolRef.current = prefsScope === "trade" && !pageMode && isDesktopWidth;
+  // Desktop: the candles' TradingView green/red, light (background band).
+  const volColor = (up: boolean) =>
+    faintVolRef.current
+      ? up ? "rgba(8,153,129,0.32)" : "rgba(242,54,69,0.32)"
+      : up ? "rgba(74,222,128,0.45)" : "rgba(251,113,133,0.45)";
   // Section tabs (News, Technicals… and Market cap): remember how tall the
   // chart view is and keep at least that height on the other tabs, so the
   // page below doesn't jump. Not a fixed height — longer content still grows.
@@ -1975,7 +1990,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   }, []);
   useEffect(() => {
     if (!tradeChartLocked) return;
-    setShowGrid(false);
+    // Desktop TradingView view keeps its grid (always on); phones: off.
+    setShowGrid(isDesktopWidth);
     setShowBB(false);
     setShowRSI(false);
     setShowMACD(false);
@@ -2233,7 +2249,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       : "#5b616e"
     // Dark: neutral grey on #trade (the lavender read as purple there).
     : prefsScope === "trade" && !pageMode ? "#8e8e93" : "#9490c0";
-  const gridColor = isLight ? "#f0f1f3" : "#2b2748";
+  // Desktop chart page (TradingView view): TradingView's own faint grid —
+  // #f0f3fa in light, a near-invisible white tint in dark.
+  const gridColor = prefsScope === "trade" && isDesktopWidth && !pageMode
+    ? (isLight ? "#f0f3fa" : "rgba(240, 243, 250, 0.06)")
+    : isLight ? "#f0f1f3" : "#2b2748";
   // Light is #ffffff (--color-background) in BOTH modes — compact
   // already was; the old code had fullscreen light backwards at
   // "#f8fafc" (--color-surface-alt), the exact same grayish mismatch
@@ -2338,6 +2358,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // subscribeCrosshairMove (not React state) so it updates every mouse-move
   // tick without triggering a re-render.
   const crosshairTooltipRef = useRef<HTMLDivElement>(null);
+  // Desktop chart page: TradingView-style OHLC line (top-left of the chart).
+  const ohlcRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candleRef = useRef<any>(null);
@@ -2371,7 +2393,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Who may run it on this coin: ProVision plan / Elite (unlimited), free
   // trial, or Pro's 3 coins a day — see useProVisionGate.
   const pvGate = useProVisionGate();
-  const pvScope = prefsScope === "trade" || prefsScope === "advance";
+  // Desktop chart page shows the plain (non-ProVision) chart always —
+  // ProVision lives on Advance Chart there. Phones' trade chart and the
+  // Advance page keep it.
+  const pvScope = (prefsScope === "trade" && !(isDesktopWidth && !pageMode)) || prefsScope === "advance";
   const pvActive = pvGate.activeFor(coin) && pvScope;
   // Desktop chart page: turning ProVision on jumps to the candle chart
   // ("TradingView"), where ProVision is drawn. Only on the off → on switch,
@@ -2695,7 +2720,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Advance Chart fills the screen, so its Signal check starts collapsed
   // to one line (verdict + hit rate); Trade shows it open.
   // Expanded by default — except the Advance Chart on phones.
-  const [pvCardOpen, setPvCardOpen] = useState(prefsScope !== "advance" || isDesktopWidth);
+  // Advance Chart: starts collapsed (one line: score · verdict · hit rate) —
+  // the full card took too much room; your open/closed choice is kept.
+  const [pvCardOpen, setPvCardOpenState] = useState(() => {
+    if (prefsScope !== "advance") return true;
+    try { return localStorage.getItem("pvAdvCardOpen") === "1"; } catch { return false; }
+  });
+  const setPvCardOpen = (v: boolean | ((p: boolean) => boolean)) => setPvCardOpenState((p) => {
+    const n = typeof v === "function" ? v(p) : v;
+    if (prefsScope === "advance") { try { localStorage.setItem("pvAdvCardOpen", n ? "1" : "0"); } catch { /* ignore */ } }
+    return n;
+  });
   // "How to use Pro Vision": opens once, the first time Pro Vision is on
   // (remembered), and from the card's "How to use" link after that.
   const [pvGuideOpen, setPvGuideOpen] = useState(false);
@@ -3049,8 +3084,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         priceLineVisible: false,
         lastValueVisible: false,
         color: "rgba(100,100,100,0.4)",
-        // #trade chart: no volume bars (candles + ProVision only).
-        visible: !tradeChartLocked,
+        // #trade chart: no volume bars on phones (candles + ProVision only);
+        // desktop shows a faint gray band.
+        visible: !tradeChartLocked || isDesktopWidth,
       });
       chart
         .priceScale("volume")
@@ -3059,7 +3095,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // volume bars entirely (bottom:0 ran them right to the canvas
         // edge); a bottom margin lifts them clear of it. Desktop
         // fullscreen and compact (no dock overlay) keep bottom:0.
-        .applyOptions({ scaleMargins: { top: 0.8, bottom: isFullscreen && !isDesktopWidth && !pageMode ? 0.14 : 0 } });
+        .applyOptions({ scaleMargins: { top: faintVolRef.current ? 0.86 : 0.8, bottom: isFullscreen && !isDesktopWidth && !pageMode ? 0.14 : 0 } });
 
       bbUpperRef.current = chart.addSeries(LineSeries, {
         ...bbOpts,
@@ -3155,6 +3191,36 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       // mobile keep the library's default axis-only crosshair labels.
       // Written straight to the DOM (not React state) since this fires on
       // every mouse-move tick.
+      // Desktop chart page (TradingView view): O H L C + change, top-left —
+      // the hovered candle, else the latest one. Written to the DOM directly.
+      if (!pageMode && isDesktopWidth) {
+        const fmt = (v: number) => v.toLocaleString("en-US", { minimumFractionDigits: v >= 1 ? 2 : 4, maximumFractionDigits: v >= 1 ? 2 : 6 });
+        const renderOhlc = (d: { open: number; high: number; low: number; close: number } | null) => {
+          const el = ohlcRef.current;
+          if (!el || !d) return;
+          const chg = d.close - d.open;
+          const pct = d.open ? (chg / d.open) * 100 : 0;
+          const cls = chg >= 0 ? "up" : "dn";
+          el.innerHTML =
+            `<span>O</span><b class="${cls}">${fmt(d.open)}</b><span>H</span><b class="${cls}">${fmt(d.high)}</b>` +
+            `<span>L</span><b class="${cls}">${fmt(d.low)}</b><span>C</span><b class="${cls}">${fmt(d.close)}</b>` +
+            `<b class="${cls}">${chg >= 0 ? "" : "−"}${fmt(Math.abs(chg))} (${chg >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(2)}%)</b>`;
+        };
+        const latest = () => {
+          const c = lastCandlesRef.current;
+          return c.length ? c[c.length - 1] : null;
+        };
+        chart.subscribeCrosshairMove((param) => {
+          const s = candleRef.current;
+          const d = s ? (param.seriesData.get(s) as { open?: number; high?: number; low?: number; close?: number } | undefined) : undefined;
+          if (d && d.open != null && d.high != null && d.low != null && d.close != null) {
+            renderOhlc({ open: d.open, high: d.high, low: d.low, close: d.close });
+          } else {
+            renderOhlc(latest());
+          }
+        });
+        requestAnimationFrame(() => renderOhlc(latest()));
+      }
       if (!pageMode && isDesktopWidth) {
         chart.subscribeCrosshairMove((param) => {
           const tooltipEl = crosshairTooltipRef.current;
@@ -3367,10 +3433,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             fake.map((c) => ({
               time: c.time,
               value: c.volume ?? 0,
-              color:
-                c.close >= c.open
-                  ? "rgba(74,222,128,0.45)"
-                  : "rgba(251,113,133,0.45)",
+              color: volColor(c.close >= c.open),
             })),
           );
           chartRef.current?.timeScale().fitContent();
@@ -3428,10 +3491,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             data.map((c) => ({
               time: c.time,
               value: c.volume ?? 0,
-              color:
-                c.close >= c.open
-                  ? "rgba(74,222,128,0.45)"
-                  : "rgba(251,113,133,0.45)",
+              color: volColor(c.close >= c.open),
             })),
           );
           const { upper, middle, lower } = calcBollingerBands(data);
@@ -3701,7 +3761,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     volumeRef.current?.update({
       time: candle.time as UTCTimestamp,
       value: candle.volume,
-      color: candle.close >= candle.open ? "rgba(74,222,128,0.45)" : "rgba(251,113,133,0.45)",
+      color: volColor(candle.close >= candle.open),
     });
     const now = Date.now();
     if (now - liveLastPriceAt.current >= 1000) {
@@ -3748,10 +3808,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             volumeRef.current?.update({
               time: candle.time,
               value: candle.volume,
-              color:
-                candle.close >= candle.open
-                  ? "rgba(74,222,128,0.45)"
-                  : "rgba(251,113,133,0.45)",
+              color: volColor(candle.close >= candle.open),
             });
           }
         }
@@ -5270,6 +5327,41 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // chart's place (Market cap always; Price unless "TradingView" is picked).
   const cmcHidesCandles = tradeDesktopLean && !!pageTabBar && (chartMetric === "mcap" || cmcStyle === "line");
   const cmcLineView = cmcHidesCandles && !pageTabContent && !isFullscreen;
+  // Desktop chart page: floating "Analyze this chart with ProVision" prompt
+  // over the chart on load (CMC's "Agentic Charts" pill) — the way into
+  // ProVision (Advance Chart) from here; ✕ dismisses it for good.
+  const [pvPillGone, setPvPillGone] = useState(() => {
+    try { return localStorage.getItem("pvPromoPillDismissed") === "1"; } catch { return false; }
+  });
+  const pvPromoPill = tradeDesktopLean && !pvPillGone ? (
+    <div className="pv-pill" role="region" aria-label="ProVision">
+      <button
+        type="button"
+        className="pv-pill-main"
+        // Off → turn it on (the app then opens Advance Chart); already on →
+        // straight to Advance Chart, where ProVision is drawn.
+        onClick={() => (pvGate.on ? onOpenDrawingTools?.() : pvGate.toggle(coin))}
+      >
+        <span className="pv-pill-ic" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+        </span>
+        <span>Analyze this chart with <b className="pv-pill-brand">ProVision</b></span>
+        <svg className="pv-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+      </button>
+      <span className="pv-pill-sep" aria-hidden="true" />
+      <button
+        type="button"
+        className="pv-pill-x"
+        aria-label="Dismiss"
+        onClick={() => {
+          setPvPillGone(true);
+          try { localStorage.setItem("pvPromoPillDismissed", "1"); } catch { /* ignore */ }
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+  ) : null;
   // Desktop #trade: Signal Check shows as a card on the chart; below the
   // chart only the track record (and alerts) stay.
   const pvHudOn = tradeDesktopLean && pvActive && !isFullscreen;
@@ -7114,19 +7206,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       role="tab"
                       aria-selected={!cmcLineView}
                       className={`cmct-btn${!cmcLineView ? " cmct-btn--on" : ""}`}
-                      onClick={() => {
-                        // ProVision: the candle chart with ProVision on (the
-                        // gate opens the sales sheet when it's locked).
-                        setChartMetric("price");
-                        setCmcStyle("candles");
-                        if (!pvGate.on) pvGate.toggle(coin);
-                      }}
+                      onClick={() => { setChartMetric("price"); setCmcStyle("candles"); }}
                     >
-                      {/* Same sparkle knob as the old header toggle. */}
-                      <span className="cmct-pv-ic" aria-hidden="true">
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                      </span>
-                      <span>Pro<span className="pv-toggle-label-accent">Vision</span></span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v4M6 7h4v9H6zM8 16v5M16 4v5M14 9h4v6h-4zM16 15v4" /></svg>
+                      TradingView
                     </button>
                   </div>
                 </div>
@@ -7168,7 +7251,22 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         </button>
                       </div>
                     </>
-                  ) : heroIconRow}
+                  ) : (
+                    // TradingView (candle) view, CMC layout:
+                    // [ProVision] [15m 1h 4h 24h 1W 1M | type · compact · fullscreen]
+                    <>
+                      <div className="cmct-seg" aria-label="Chart tools">
+                        {/* Interval as a dropdown (the chart's own picker). */}
+                        <div className="chart-hero-icon-row cmct-tools">{fsIntervalButton}</div>
+                        <span className="cmct-div" aria-hidden="true" />
+                        <div className="chart-hero-icon-row cmct-tools">
+                          {gridStyleControls}
+                          {chartViewSwitchRow}
+                          {fullscreenToolBtn}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -7180,6 +7278,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 range={cmcRange}
                 log={cmcLog}
                 moments={chartEvts}
+                overlay={pvPromoPill}
                 onAnalyze={() => {
                   // Run the AI Chart Read right away (paid) — free users get
                   // the upgrade card — under the chart, scrolled into view.
@@ -7749,6 +7848,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           }`}
           ref={dblClickWrapRef}
         >
+            {/* Desktop chart page (TradingView view): OHLC line, top-left. */}
+            {tradeDesktopLean && !isFullscreen && <div className="chart-ohlc" ref={ohlcRef} aria-live="off" />}
+            {!isFullscreen && !cmcHidesCandles && pvPromoPill}
             {/* #trade, phones only: faint coinhintz watermark (removed from
                 both desktop charts). */}
             {prefsScope === "trade" && !pageMode && !isDesktopWidth && (
@@ -8309,13 +8411,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             chartRef={chartRef}
             seriesRef={candleRef}
             candlesRef={lastCandlesRef}
-            upColor="#4ade80"
-            downColor="#fb7185"
+            // Desktop chart page: TradingView's own candle colors.
+            upColor={prefsScope === "trade" && !pageMode && isDesktopWidth ? "#089981" : "#4ade80"}
+            downColor={prefsScope === "trade" && !pageMode && isDesktopWidth ? "#f23645" : "#fb7185"}
             style={chartStyle === "hollow" ? "hollow" : chartStyle === "heikinAshi" ? "heikinAshi" : "candle"}
             generation={chartGeneration}
             visible={chartStyle !== "line"}
             colorMap={pvColorMap}
-            depth={prefsScope === "trade" && !pageMode}
+            // Desktop chart page (TradingView look): flat, square candles.
+            // Phones keep the soft 3D, rounded style.
+            depth={prefsScope === "trade" && !pageMode && !isDesktopWidth}
+            sharp={prefsScope === "trade" && !pageMode && isDesktopWidth}
           />
           <ProVisionOverlay
             chartRef={chartRef}

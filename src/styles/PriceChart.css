@@ -11547,3 +11547,93 @@ html[data-theme="light"] .pvp-kicker { color: #6d28d9; }
   html .pv-card .pvr.pvr::before,
   html .pv-card .pvr.pvr::after { content: none !important; }
 }
+
+/* ── Advance Chart (desktop): compact expanded Signal Check ──
+   Indicators in 4 short columns instead of 2 page-wide bars, a tighter
+   summary row, and the track record as one slim line (no box). */
+@media (min-width: 901px) {
+  .price-chart-container--page .pv-card .pvl-head { padding-bottom: 8px; gap: 10px; }
+  .price-chart-container--page .pv-card .pvr .pvl-sub { font-size: 12px; gap: 4px 14px; }
+  .price-chart-container--page .pv-card .pvsb {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px 28px;
+    padding-top: 8px;
+  }
+  .price-chart-container--page .pv-card .pvsb-row,
+  .price-chart-container--page .pv-card .pvsb-row:hover,
+  .price-chart-container--page .pv-card .pvsb-row:focus {
+    grid-template-columns: 72px minmax(0, 1fr) 64px;
+    gap: 8px;
+    min-height: 18px;
+  }
+  .price-chart-container--page .pv-card .pvsb-name { font-size: 12px; }
+  .price-chart-container--page .pv-card .pvsb-bar { gap: 2px; }
+  .price-chart-container--page .pv-card .pvsb-cell { height: 9px; border-radius: 2px; }
+  .price-chart-container--page .pv-card .pvsb-val { font-size: 10px; }
+  .price-chart-container--page .pv-card .pvt {
+    margin-top: 8px;
+    padding: 8px 0 0;
+    border: none;
+    border-top: 1px solid rgba(127, 127, 127, 0.14);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+  }
+  /* Everything in the track record starts at the left edge (something
+     upstream centred it — forced here) — and sits on ONE line:
+     title · stats · "How this is measured". */
+  html .price-chart-container--page .pv-card .pvt.pvt {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    column-gap: 22px !important;
+    row-gap: 4px !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  html .price-chart-container--page .pv-card .pvt > * { margin-left: 0 !important; margin-right: 0 !important; align-self: center !important; text-align: left !important; }
+  html .price-chart-container--page .pv-card .pvt-head { flex-direction: column; gap: 0; }
+  html .price-chart-container--page .pv-card .pvt-how { margin-top: 0 !important; }
+  html .price-chart-container--page .pv-card .pvt-how summary { font-size: 11.5px; }
+
+  /* Tighter card overall. */
+  html .price-chart-container--page .pv-card { padding: 10px 14px 12px; position: relative; }
+  html .price-chart-container--page .pv-card .pvl-meta { gap: 4px 16px; }
+  html .price-chart-container--page .pv-card .pvl-gauge { width: 30px; height: 18px; }
+  html .price-chart-container--page .pv-card .pvl-count-n { font-size: 15px; }
+  /* "How to use ProVision": off its own line, into the bottom-right
+     corner (on the track record's line). */
+  html .price-chart-container--page .pv-card .pv-howto {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    margin: 0 !important;
+    font-size: 11.5px;
+  }
+  html .price-chart-container--page .pv-card .pvt-head,
+  html .price-chart-container--page .pv-card .pvt-title { justify-content: flex-start !important; text-align: left !important; }
+  html .price-chart-container--page .pv-card .pvt-tile { padding: 0; gap: 2px; align-items: flex-start !important; text-align: left !important; }
+  /* Each stat on one line: label then value ("Hit rate —"). */
+  html .price-chart-container--page .pv-card .pvt-kv {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 6px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: 0 !important;
+  }
+  html .price-chart-container--page .pv-card .pvt-kv .pvt-k { font-size: 12px !important; }
+  html .price-chart-container--page .pv-card .pvt-kv .pvt-v { font-size: 13.5px !important; line-height: 1.2 !important; }
+  html .price-chart-container--page .pv-card .pvt-strip { gap: 18px; margin: 0; padding: 0; justify-content: flex-start !important; }
+  html .price-chart-container--page .pv-card .pvt-strip > :first-child { padding-left: 0 !important; margin-left: 0 !important; }
+  .price-chart-container--page .pv-card .pvt-dim,
+  .price-chart-container--page .pv-card .pvt-k { font-size: 11px; }
+}

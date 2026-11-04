@@ -405,12 +405,14 @@ function paintRoundedCandles(
   hollowUp: boolean,
   colorMap?: Map<number, string> | null,
   depth = false,
+  sharp = false,
 ) {
   ctx.clearRect(0, 0, width, height);
   if (!candles.length || barSpacing <= 0) return;
 
   const bodyWidth = Math.max(2, barSpacing * 0.68);
-  const radius = Math.min(bodyWidth / 2, 4);
+  // sharp: square bodies + square wick ends (TradingView look, desktop).
+  const radius = sharp ? 0 : Math.min(bodyWidth / 2, 4);
   // 3D: soft drop shadow + cylinder shading, only when bodies are wide
   // enough to show it (skips the work on zoomed-out charts).
   const use3d = depth && bodyWidth >= 4;
@@ -429,8 +431,8 @@ function paintRoundedCandles(
     const color = colorMap?.get(c.time) ?? (up ? upColor : downColor);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 1.2;
-    ctx.lineCap = "round";
+    ctx.lineWidth = sharp ? 1 : 1.2;
+    ctx.lineCap = sharp ? "butt" : "round";
     ctx.beginPath();
     ctx.moveTo(x, highY);
     ctx.lineTo(x, lowY);
@@ -439,7 +441,7 @@ function paintRoundedCandles(
     const bodyTop = Math.min(openY, closeY);
     const bodyHeight = Math.max(Math.abs(closeY - openY), 1.5);
     const bodyPath = new Path2D();
-    if (typeof ctx.roundRect === "function") {
+    if (radius > 0 && typeof ctx.roundRect === "function") {
       bodyPath.roundRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight, radius);
     } else {
       bodyPath.rect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
@@ -492,11 +494,13 @@ interface RoundedCandleOverlayProps {
   colorMap?: Map<number, string> | null;
   /** 3D look: shaded, raised candle bodies with a soft shadow. */
   depth?: boolean;
+  /** Square bodies and wick ends (no rounding). */
+  sharp?: boolean;
 }
 
-export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor, downColor, style, generation, visible, colorMap, depth = false }: RoundedCandleOverlayProps) {
+export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor, downColor, style, generation, visible, colorMap, depth = false, sharp = false }: RoundedCandleOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const colorsRef = useRef({ upColor, downColor, style, colorMap, depth });
+  const colorsRef = useRef({ upColor, downColor, style, colorMap, depth, sharp });
   const renderRef = useRef<(() => void) | null>(null);
   const subCleanupRef = useRef<(() => void) | null>(null);
   const subscribedChartRef = useRef<IChartApi | null>(null);
@@ -552,15 +556,15 @@ export function RoundedCandleOverlay({ chartRef, seriesRef, candlesRef, upColor,
     const timeToX = (t: number) => (chart.timeScale().timeToCoordinate(t as Time) ?? -9999) as number;
     const priceToY = (p: number) => (series.priceToCoordinate(p) ?? -9999) as number;
 
-    paintRoundedCandles(ctx, logW, logH, visible, barSpacing, timeToX, priceToY, colorsRef.current.upColor, colorsRef.current.downColor, colorsRef.current.style === "hollow", colorsRef.current.style === "heikinAshi" ? null : colorsRef.current.colorMap, colorsRef.current.depth);
+    paintRoundedCandles(ctx, logW, logH, visible, barSpacing, timeToX, priceToY, colorsRef.current.upColor, colorsRef.current.downColor, colorsRef.current.style === "hollow", colorsRef.current.style === "heikinAshi" ? null : colorsRef.current.colorMap, colorsRef.current.depth, colorsRef.current.sharp);
   }, [chartRef, seriesRef, candlesRef]);
 
   renderRef.current = render;
 
   useEffect(() => {
-    colorsRef.current = { upColor, downColor, style, colorMap, depth };
+    colorsRef.current = { upColor, downColor, style, colorMap, depth, sharp };
     if (visible) render();
-  }, [upColor, downColor, style, generation, visible, render, colorMap, depth]);
+  }, [upColor, downColor, style, generation, visible, render, colorMap, depth, sharp]);
 
   useEffect(() => () => { subCleanupRef.current?.(); }, []);
 

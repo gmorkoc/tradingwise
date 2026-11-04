@@ -274,8 +274,10 @@ export function CmcChart(props: Parameters<typeof CmcChartInner>[0]) {
   );
 }
 
-function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments }: {
+function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, overlay }: {
   coin: string;
+  /** Floating element over the plot (e.g. the ProVision prompt). */
+  overlay?: ReactNode;
   /** Price moments the main chart detected (time in unix seconds). */
   moments?: { time: number; title: string; body?: string }[];
   theme: "dark" | "light";
@@ -649,6 +651,7 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments }: 
           </div>
         ) : null}
         <div ref={boxRef} className="cmcc-box" />
+        {overlay}
         {frame && pts && (
           <span className="cmcc-frame" aria-hidden="true" style={{ right: frame.right, bottom: frame.bottom }} />
         )}

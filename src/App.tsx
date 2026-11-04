@@ -1092,6 +1092,19 @@ function AppDashboard({
   // trial / Pro's 3 coins a day). `proVision` = actually running here.
   const pvGate = useProVisionGate();
   const proVision = pvGate.activeFor(coin);
+  // Desktop: switching ProVision on while on the chart page jumps to the
+  // Advance Chart page (only on the off → on change).
+  // Keyed on the switch itself (not activeFor), so changing coins never
+  // triggers the jump.
+  const pvPrevRef = useRef(pvGate.on);
+  useEffect(() => {
+    const was = pvPrevRef.current;
+    pvPrevRef.current = pvGate.on;
+    if (!was && pvGate.on && activeSection === "chart" && window.matchMedia("(min-width: 641px)").matches) {
+      setActiveSection("advance-chart");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pvGate.on]);
   // Desktop callout under the top-bar ProVision switch (signed-out / free).
   // Closing it snoozes it for 2 hours (remembered across reloads); it comes
   // back after that until the user has ProVision (trial / plan / Elite).
@@ -3521,8 +3534,10 @@ function AppDashboard({
                 {/* Pro Vision — switches the Trade chart into its signal mode
                     (trend-colored candles, signals + invalidation zone,
                     Signal check). Pro/Elite only; others get the plan picker. */}
-                {/* The chart page has its own ProVision button in the chart
-                    toolbar now; this header toggle stays for Advance Chart. */}
+                {/* ProVision switch in the header: Advance Chart only. The
+                    chart page uses the floating "Analyze this chart with
+                    ProVision" prompt instead (turning it on opens Advance
+                    Chart — see the effect next to `proVision`). */}
                 {activeSection === "advance-chart" && (
                   <span className="pv-callout-anchor">
                   {/* Signed-out / free: a glowing callout pointing at the

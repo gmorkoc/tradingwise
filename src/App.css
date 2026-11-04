@@ -4107,6 +4107,8 @@ html[data-theme="light"] .top-nav-bar .top-nav-icons .buysig-bell { background: 
 .top-nav-bar .top-nav-icons .buysig-bell svg { width: 16px; height: 16px; }
 .top-nav-bar > .top-nav-icons { order: 3; }
 .top-nav-bar .top-nav-icons { margin-left: 0; gap: 8px; }
+/* ProVision switch: first (leftmost) in the icon group. */
+.top-nav-bar .top-nav-icons > .pv-callout-anchor { order: -1; }
 .top-nav-bar .top-nav-icons .mch-search-btn,
 .top-nav-bar .top-nav-icons .top-nav-icon-btn {
   width: 32px;
