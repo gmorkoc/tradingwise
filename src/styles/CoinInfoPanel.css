@@ -95,6 +95,12 @@ html:not([data-theme="light"]) .cmc-rcol { --cmc-blue: #60a5fa; }
   padding: 0;
 }
 .cmc-rbody--ob { padding: 4px 6px 8px; }
+/* Position Intelligence: the group rows (Smart Money / Whales / Retail)
+   padded themselves on top of the card's own 16px — their panel isn't
+   visible here, so line them up with the card edge and the footnote. */
+.cmc-rbody .pi-gc { padding: 12px 0 14px; background: transparent; border-radius: 0; }
+.cmc-rbody .pi-gc + .pi-gc { border-top: 1px solid var(--cmc-hair); }
+.cmc-rbody .pi-foot { line-height: 1.5; }
 .cmc-rbody > * { flex: 1 0 auto; }
 
 /* ── Left info column (CoinMarketCap's coin sidebar) ── */
