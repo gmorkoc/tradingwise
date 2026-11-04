@@ -1682,18 +1682,36 @@ html:not([data-theme="light"]) .gmh-pill--ask { color: #bfdbfe; }
    Markets column is wide enough, otherwise a 2×2 grid. */
 .gmh-block { container-type: inline-size; container-name: gmh; display: flex; flex-direction: column; gap: 12px; }
 .gmh { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 0; }
-@container gmh (min-width: 1560px) {
-  .gmh { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* Four across from 1000px of column width — 14" MacBooks (1512px screen)
+   included — with tighter cards between 1000 and 1559px. */
+@container gmh (min-width: 1000px) {
+  .gmh { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+}
+@container gmh (min-width: 1000px) and (max-width: 1559px) {
+  .gmh-card { padding: 12px; gap: 8px; height: 216px; }
+  .gmh-head { font-size: 0.86rem; }
+  .gmh-ms, .gmh-ms-col { gap: 5px; }
+  .gmh-ms .gmh-tile { padding: 5px 8px; }
+  .gmh-label { font-size: 0.68rem; }
+  .gmh-ms .gmh-val strong, .gmh-alt strong { font-size: 0.8rem; }
+  .gmh-tile--fng > :not(.gmh-label) { transform: scale(0.72); margin-bottom: -20px; }
+  .gmh-trend-row { gap: 8px; }
+  .gmh-trend-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gmh-deriv-stats { gap: 10px; }
+  .gmh-row2 { gap: 6px; }
+  .gmh-row2 .gmh-tile { padding: 5px 8px; }
+  .gmh-post { padding: 7px 9px; }
+  .gmh-post-text { font-size: 0.74rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
 /* Narrow cards (just in case): compact derivatives stats. */
 @container gmh (max-width: 760px) {
   .gmh { grid-template-columns: minmax(0, 1fr); }
 }
 .gmh-deriv-stats { flex-wrap: wrap; row-gap: 6px; }
-/* 1200–1512px screens: keep all four cards in ONE row — the column is
-   only ~550–860px there, so the row scrolls sideways (snap, faded edge)
-   instead of squeezing each card below a readable width. */
-@media (min-width: 1200px) and (max-width: 1512px) {
+/* Desktop column narrower than 1000px (e.g. Daily Brief open beside it):
+   still ONE row — it scrolls sideways (snap, faded edge) instead of
+   squeezing each card below a readable width. */
+@container gmh (min-width: 761px) and (max-width: 999px) {
   .gmh-block .gmh {
     display: grid;
     grid-template-columns: none;
