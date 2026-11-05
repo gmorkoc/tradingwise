@@ -46,7 +46,8 @@
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(20px + 62px + 8px);
+  /* On top of the floating nav with a 1px gap. */
+  bottom: calc(20px + 62px + 1px);
   z-index: 400;
   margin: 0 auto;
   /* Matches .db-card's own background/box-shadow exactly, not its own

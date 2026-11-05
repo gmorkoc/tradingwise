@@ -15,6 +15,8 @@ import {
   fetchCoin24hTickers,
   Ticker24h,
   fetchBn,
+  getGlobalDerivs,
+  type GlobalDerivs,
 } from "./services/coinglass";
 import { CATALOG } from "./services/coinCatalog";
 // Cash is an Asset Calculator-only concept — deliberately NOT added to the
@@ -78,7 +80,7 @@ import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
 // Static, not lazy, like PriceChart above — "markets" is the default
 // landing section now, needed immediately on load, same reasoning as the
 // comment on the lazy block below.
-import { GlobalMarkets } from "./components/GlobalMarkets";
+import { GlobalMarkets, COINS_MARKETS_URL, TTL, cgFetch } from "./components/GlobalMarkets";
 
 // Desktop Focus mode (moon) button — hidden for now; flip to bring it back.
 const SHOW_FOCUS_BUTTON = false;
@@ -791,6 +793,28 @@ function AppDashboard({
       return null;
     }
   });
+  // Global (all-exchange) stats for the selected coin: open interest,
+  // funding, long/short (Coinalyze) and 24h volume (CoinGecko). Refreshed
+  // every minute; the stats row falls back to single-venue values until loaded.
+  const [globalDerivs, setGlobalDerivs] = useState<GlobalDerivs | null>(null);
+  const [globalVol, setGlobalVol] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setGlobalDerivs(null);
+    setGlobalVol(null);
+    const load = () => {
+      getGlobalDerivs(coin).then((v) => { if (alive) setGlobalDerivs(v); }).catch(() => {});
+      cgFetch<{ symbol: string; total_volume: number }[]>(COINS_MARKETS_URL, TTL.coins)
+        .then((rows) => {
+          const r = rows.find((x) => x.symbol?.toUpperCase() === coin);
+          if (alive) setGlobalVol(r?.total_volume ?? null);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = window.setInterval(load, 60_000);
+    return () => { alive = false; window.clearInterval(id); };
+  }, [coin]);
   const [loading, setLoading] = useState(() => {
     try {
       const storedCoin = (localStorage.getItem("coin") as CoinSymbol) || "BTC";
@@ -2821,10 +2845,13 @@ function AppDashboard({
                   // ?? only falls back on null/undefined — NaN slips through
                   // and, unlike other falsy values, React renders a bare NaN
                   // as the literal text "NaN" instead of just being falsy.
-                  const fr = Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0;
+                  // Funding / L/S / OI: global (all exchanges) when loaded,
+                  // else the single-venue value from btcData.
+                  const fr = globalDerivs?.funding ?? (Number.isFinite(btcData.fundingRate) ? btcData.fundingRate! : 0);
                   const rsi = Number.isFinite(btcData.rsi) ? btcData.rsi! : 50;
                   const macd = Number.isFinite(btcData.macd) ? btcData.macd! : 0;
-                  const ls = Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1;
+                  const ls = globalDerivs?.lsRatio ?? (Number.isFinite(btcData.longShortRatio) ? btcData.longShortRatio! : 1);
+                  const oiAll = globalDerivs?.oiUsd ?? btcData.openInterest;
                   const frSignal =
                     fr > 0.0005 ? "bear" : fr < -0.0001 ? "bull" : "neutral";
                   const rsiSignal =
@@ -2870,8 +2897,8 @@ function AppDashboard({
                           {t("stats.openInterest")}
                         </span>
                         <span className="mch-stat-value">
-                          {btcData.openInterest
-                            ? `$${(btcData.openInterest / 1e9).toFixed(2)}B`
+                          {oiAll
+                            ? `$${(oiAll / 1e9).toFixed(2)}B`
                             : "—"}
                         </span>
                         <span className="mch-stat-signal mch-stat-signal--neutral">
@@ -3950,7 +3977,8 @@ function AppDashboard({
                         // CoinMarketCap layout ("2col"): the Order Book is a tab
                         // in the right column now, not beside the chart.
                         sideColumn={undefined}
-                        quoteVolume24h={coinTickers.get(coin)?.quoteVolume}
+                        // 24h Vol: all exchanges (CoinGecko), Binance until loaded.
+                        quoteVolume24h={globalVol ?? coinTickers.get(coin)?.quoteVolume}
                         onZoneChange={(zone, price) => {
                           setChartZone(zone);
                           setChartPrice(price);
@@ -4002,6 +4030,11 @@ function AppDashboard({
                         {/* Every screen size now (mobile included) — the
                             old Watchlist + Trending lists are replaced by the
                             same panel; Watchlist lives in its filter. */}
+                        {/* Phones: CoinMarketCap-style coin stats, above the
+                            coin table (desktop has them in the left column). */}
+                        {activeSection === "chart" && !isDesktopWidth && (
+                          <CoinInfoPanel phone coin={coin} ticker={coinTickers.get(coin)} />
+                        )}
                         {!distractionFree ? (
                           <div className="chart-below-full">
                             <ChartBottomPanel

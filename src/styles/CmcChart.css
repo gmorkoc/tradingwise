@@ -533,6 +533,32 @@ html:not([data-theme="light"]) .pv-pill {
 
 /* TradingView-style OHLC line, floating top-left over the candle chart:
    gray O/H/L/C letters, values green/red, change at the end. */
+/* ↺ reset view: bottom-centre of the plot (the 400px chart, above its
+   time axis), shown once the user drags / zooms (CMC). */
+.chart-view-reset,
+.chart-view-reset:hover {
+  all: unset;
+  position: absolute;
+  top: 336px;
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--color-background, #fff);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  cursor: pointer;
+  animation: chart-view-reset-in 0.2s ease both;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .chart-view-reset { background: #1a1a1d; }
+.chart-view-reset:active { transform: translateX(-50%) scale(0.92); }
+@keyframes chart-view-reset-in { from { opacity: 0; } to { opacity: 1; } }
 .chart-ohlc {
   position: absolute;
   top: 8px;
@@ -680,3 +706,246 @@ html:not([data-theme="light"]) .cmct {
 .cmct-pv-ic { width: 16px; height: 16px; }
 .cmct-div { height: 14px; margin: 0 5px; background: var(--cmct-div); }
 .cmct { min-height: 30px; }
+
+/* ── Phones: chart page, Chart tab ─────────────────────────────────── */
+/* The line view hides most of the candle chrome (--ctab), but the
+   Chart / Order Book / Trades tabs stay. */
+.price-chart-container--phonecmc.price-chart-container--ctab .chart-mview-tabs { display: flex !important; }
+.cmct.cmct--phone {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+.cmct-phone-row { display: flex; gap: 8px; }
+.cmct--phone .cmct-seg { height: 36px; border-radius: 8px; }
+.cmct--phone .cmct-seg--grow { flex: 1 1 auto; }
+.cmct--phone .cmct-seg--grow .cmct-btn { flex: 1 1 0; justify-content: center; }
+.cmct--phone .cmct-btn,
+.cmct--phone .cmct-btn:hover { height: 30px; border-radius: 6px; gap: 5px; }
+/* Full-width Indicators button (CMC app). */
+.cmct-phone-ind,
+.cmct-phone-ind:hover {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--cmct-track);
+  color: var(--cmct-on-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmct-phone-ind:active { opacity: 0.7; }
+/* Phone header (CMC app): "Bitcoin price BTC" + actions, big price. */
+.cmch { display: flex; flex-direction: column; gap: 4px; padding: 4px 0 10px; }
+.cmch-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cmch-id,
+.cmch-id:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmch-logo { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; }
+/* Spins on every price tick — the same flat 360° turn as the header's C
+   logo (.chart-tab-logo-spin); the wrapper is re-keyed per price. */
+.cmch-logo-spin { display: inline-flex; flex-shrink: 0; }
+.cmch-logo-spin--on > .cmch-logo { animation: cmch-coin-spin 0.8s ease; }
+@keyframes cmch-coin-spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
+@media (prefers-reduced-motion: reduce) { .cmch-logo-spin--on > .cmch-logo { animation: none; } }
+.cmch-logo--glyph { display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+.cmch-name { font-size: 16px; font-weight: 700; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmch-sym { font-size: 13px; font-weight: 500; color: var(--color-text-muted); }
+.cmch-caret { color: var(--color-text-muted); flex-shrink: 0; }
+.cmch-acts { display: flex; gap: 8px; flex-shrink: 0; }
+.cmch-act,
+.cmch-act:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eff2f5;
+  color: #58667e;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .cmch-act { background: #222531; color: #a1a7bb; }
+.cmch-act:active { opacity: 0.7; }
+.cmch-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cmch-price strong { font-size: 25px; font-weight: 700; letter-spacing: -0.02em; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.cmch-chg { font-size: 13px; font-weight: 600; }
+.cmch-chg.up { color: #16c784; }
+.cmch-chg.down { color: #ea3943; }
+/* Loading (phones): price shimmer bar + a plain spinner over a hidden
+   (not blurred) chart. */
+.cmch-skel {
+  display: inline-block;
+  width: 150px;
+  height: 26px;
+  margin: 3px 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eff2f5 25%, #f8fafd 50%, #eff2f5 75%);
+  background-size: 200% 100%;
+  animation: cmch-shimmer 1.2s ease-in-out infinite;
+}
+html:not([data-theme="light"]) .cmch-skel { background: linear-gradient(90deg, #222531 25%, #2c3040 50%, #222531 75%); background-size: 200% 100%; }
+@keyframes cmch-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+html .price-chart-container--phonecmc.price-chart-container--loading .chart-canvas-wrap {
+  filter: none;
+  opacity: 0;
+}
+.cmch-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2.5px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-top-color: #3861fb;
+  animation: cmch-spin 0.8s linear infinite;
+}
+@keyframes cmch-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cmch-skel, .cmch-spinner { animation-duration: 2.4s; } }
+
+/* Header sits under the Chart / Order Book / Trades tabs (CMC app). */
+.cmch { padding: 14px 0 4px; }
+/* Market stats row under the price: scrolls sideways, no scrollbar. */
+.cmch-stats {
+  margin: 8px -16px 0;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cmch-stats::-webkit-scrollbar { display: none; }
+.cmch-stats > .chart-bar-stats { display: flex; flex-wrap: nowrap; gap: 0; width: max-content; overflow: visible; }
+.cmch-stats .chart-bar-stat { flex-shrink: 0; }
+/* Divider centred between stats: equal 13px each side, no extra gap. */
+html .cmch-stats .chart-bar-stats :is(.chart-bar-stat, .mch-stat) { padding: 0 13px !important; }
+html .cmch-stats .chart-bar-stats > :first-child .mch-stat:first-child,
+html .cmch-stats .chart-bar-stats > .mch-stat:first-child,
+html .cmch-stats .chart-bar-stats > .chart-bar-stat:first-child { padding-left: 0 !important; }
+/* Green "Trade BTC  P" under the price — stays visible in the line view
+   too (the --ctab rule hides the old copy below the chart). */
+html .price-chart-container .chart-trade-cta.cmch-cta { display: flex !important; margin: 14px 0 0; }
+
+/* The old interval / Tools / Full Chart row is replaced by the CMC row
+   (Tools + Full chart live in its ⚙ sheet). */
+html .price-chart-container--phonecmc .chart-bar-toolbar { display: none !important; }
+/* Interval row: [15m 1h 4h 24h 1W 1M | ⚙] in one grey track. */
+.cmct-ivdiv { flex: 0 0 1px; width: 1px; height: 16px; margin: 0 4px; background: #cfd6e4; }
+html:not([data-theme="light"]) .cmct-ivdiv { background: #3a3f52; }
+html .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 40px; display: inline-flex; align-items: center; justify-content: center; }
+/* Section label inside the Chart settings sheet. */
+.cmct-sheet-label { display: block; padding: 14px 4px 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
+
+/* Phones: price labels inside the plot, right edge (CMC app). */
+.cmcc-ytick {
+  position: absolute;
+  right: 6px;
+  z-index: 3;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: #616e85;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  white-space: nowrap;
+}
+html:not([data-theme="light"]) .cmcc-ytick { color: #a1a7bb; }
+
+/* Phones, line view: purple candles icon bottom-right (CMC app). */
+.cmct-tvjump-row { display: flex; justify-content: flex-end; margin: 2px 0 4px; }
+.cmct-tvjump,
+.cmct-tvjump:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #7c3aed 10%, transparent);
+  color: #7c3aed;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .cmct-tvjump { color: #a78bfa; background: color-mix(in srgb, #a78bfa 14%, transparent); }
+.cmct-tvjump:active { opacity: 0.7; }
+
+/* "Bitcoin to USD Chart" title above the chart. */
+.cmct-title { margin: 16px 0 10px; font-size: 15px; font-weight: 700; color: var(--color-text); letter-spacing: -0.01em; }
+.cmct--phone .cmct-btn,
+.cmct--phone .cmct-btn:hover { padding: 0 11px; font-size: 12px; }
+.cmct--phone .cmct-btn--icon,
+.cmct--phone .cmct-btn--icon:hover { width: 34px; padding: 0; }
+.cmct--phone .cmct-btn > svg { width: 15px; height: 15px; }
+@media (max-width: 640px) {
+  .price-chart-container--phonecmc .cmcc-main { height: 300px; }
+  /* CMC app line chart: just the line, baseline, volume and frame — no
+     event icons, timeline strip or Analyze button. */
+  /* Event icons (milestones, news, macro, moments) stay; the tooltip is
+     kept inside the screen width. */
+  .price-chart-container--phonecmc :is(.cmcc-analyze, .cmcc-usd) { display: none !important; }
+  .price-chart-container--phonecmc .cmcc-ev-tip,
+  .price-chart-container--phonecmc .cmcc-ev-tip--left {
+    left: 50% !important;
+    width: calc(100% - 32px);
+    max-width: 320px;
+    transform: translate(-50%, 18px);
+  }
+  /* Timeline strip with its two drag handles — finger-sized on phones. */
+  .price-chart-container--phonecmc .cmcc-foot { height: 52px; margin-top: 18px; }
+  /* Edge to edge (past the page's 16px side padding), no frames. */
+  .price-chart-container--phonecmc .cmcc { width: auto; margin: 0 -16px; }
+  .price-chart-container--phonecmc :is(.cmcc-frame, .cmcc-nav-frame) { display: none !important; }
+  .price-chart-container--phonecmc .cmcc-nav-handle { width: 14px; height: 28px; border-radius: 5px; }
+}
+/* Range chips under the line chart (CMC app style). */
+.cmct-ranges {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 3px;
+  border-radius: 8px;
+  box-sizing: border-box;
+  background: var(--cmct-track, color-mix(in srgb, var(--color-text) 5%, transparent));
+  --cmct-track: #eff2f5;
+}
+html:not([data-theme="light"]) .cmct-ranges { --cmct-track: #222531; }
+.cmct-rbtn,
+.cmct-rbtn:hover {
+  all: unset;
+  flex: 1 1 0;
+  text-align: center;
+  height: 30px;
+  line-height: 30px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #58667e;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .cmct-rbtn { color: #a1a7bb; }
+.cmct-rbtn--on,
+.cmct-rbtn--on:hover {
+  background: #fff;
+  color: #0d1421;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(88, 102, 126, 0.12), 0 4px 12px rgba(88, 102, 126, 0.08);
+}
+html:not([data-theme="light"]) .cmct-rbtn--on { background: #323546; color: #fff; }

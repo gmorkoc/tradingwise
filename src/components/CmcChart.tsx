@@ -294,6 +294,8 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
   const [all, setAll] = useState<Pt[] | null>(null);
   const [error, setError] = useState(false);
   const [baseY, setBaseY] = useState<number | null>(null);
+  // Phones (CMC app): price labels drawn inside the plot, right edge.
+  const [yTicks, setYTicks] = useState<{ y: number; label: string }[]>([]);
   // Plot-area frame (CMC boxes the plot; price + time axes sit outside).
   const [frame, setFrame] = useState<{ right: number; bottom: number } | null>(null);
 
@@ -347,6 +349,20 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
   const placeRef = useRef<(() => void) | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
   const [hover, setHover] = useState<Mark | null>(null);
+  // Touch taps on event icons: was it a finger, and which icon's tooltip is up.
+  const touchTapRef = useRef(false);
+  const tappedRef = useRef<Mark["ev"] | null>(null);
+  // Touch: a tap anywhere outside the event icons closes the tooltip.
+  useEffect(() => {
+    if (!hover) return;
+    const close = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" || (e.target as Element).closest?.(".cmcc-ev")) return;
+      tappedRef.current = null;
+      setHover(null);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [hover]);
   useEffect(() => {
     eventsRef.current = events;
     placeRef.current?.();
@@ -395,6 +411,10 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
     const el = boxRef.current;
     if (!el || !pts || pts.length < 2 || base == null) return;
     const light = theme === "light";
+    // Phones (CMC app): no separate price column — the plot runs full width
+    // and the price labels sit inside it (drawn below as yTicks).
+    const phone = !window.matchMedia("(min-width: 641px)").matches;
+    const fmtP = (v: number) => (metric === "price" && v < 1 ? v.toPrecision(4) : compact(v));
     const chart = createChart(el, {
       autoSize: true,
       layout: {
@@ -408,6 +428,7 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
         horzLines: { color: light ? "rgba(15,23,42,0.035)" : "rgba(255,255,255,0.04)" },
       },
       rightPriceScale: {
+        visible: !phone,
         borderColor: "transparent",
         mode: log ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
         scaleMargins: { top: 0.08, bottom: 0.16 },
@@ -424,7 +445,7 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
         vertLine: { color: light ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.25)", style: LineStyle.Dashed, labelBackgroundColor: light ? "#58667e" : "#323546" },
         horzLine: { color: light ? "rgba(15,23,42,0.25)" : "rgba(255,255,255,0.25)", style: LineStyle.Dashed, labelBackgroundColor: light ? "#58667e" : "#323546" },
       },
-      localization: { priceFormatter: (v: number) => (metric === "price" && v < 1 ? v.toPrecision(4) : compact(v)) },
+      localization: { priceFormatter: fmtP },
       handleScroll: false,
       handleScale: false,
     });
@@ -438,7 +459,8 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
       bottomFillColor2: "rgba(234,57,67,0.28)",
       lineWidth: 2,
       priceLineVisible: false,
-      lastValueVisible: true,
+      // Phones (CMC app): no last-price tag on the axis.
+      lastValueVisible: window.matchMedia("(min-width: 641px)").matches,
     });
     series.setData(pts);
     // Dotted opening line.
@@ -471,7 +493,28 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
     };
     const placeInner = () => {
       setBaseY(series.priceToCoordinate(base));
-      setFrame({ right: chart.priceScale("right").width(), bottom: chart.timeScale().height() });
+      setFrame({ right: phone ? 0 : chart.priceScale("right").width(), bottom: chart.timeScale().height() });
+      if (phone) {
+        // ~4 round-number price labels across the plot, kept above the
+        // volume band, right-aligned inside the frame.
+        const plotH = el.clientHeight - chart.timeScale().height();
+        const hi = series.coordinateToPrice(0);
+        const lo = series.coordinateToPrice(plotH);
+        if (hi != null && lo != null && hi > lo) {
+          const raw = (hi - lo) / 4;
+          const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+          const n = raw / mag;
+          const step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+          const ticks: { y: number; label: string }[] = [];
+          for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) {
+            const y = series.priceToCoordinate(v);
+            if (y != null && y > 10 && y < plotH * 0.82) ticks.push({ y, label: fmtP(v) });
+          }
+          setYTicks(ticks);
+        }
+      } else {
+        setYTicks([]);
+      }
       // Event icons: on the line at their time (nearest point), clustered
       // by x — up to 2 stacked, the rest as "+N".
       const evs = eventsRef.current;
@@ -511,6 +554,10 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
       disposed = true;
       if (placeRef.current === place) placeRef.current = null;
       ro.disconnect();
+      // Labels belong to this chart — clear them so a reload (new coin,
+      // range or metric) never shows the previous chart's prices.
+      setYTicks([]);
+      setBaseY(null);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
@@ -616,8 +663,10 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
     const box = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - box.left;
     e.currentTarget.setPointerCapture(e.pointerId);
-    // Grab whichever handle is closer (within 14px of the left one → left).
-    const side = leftX != null && Math.abs(x - leftX) <= 14 && Math.abs(x - leftX) < Math.abs(x - (rightX ?? Infinity)) ? "l" : "r";
+    // Grab whichever handle is closer (within 14px of the left one → left;
+    // 26px for a finger).
+    const reach = e.pointerType === "touch" ? 26 : 14;
+    const side = leftX != null && Math.abs(x - leftX) <= reach && Math.abs(x - leftX) < Math.abs(x - (rightX ?? Infinity)) ? "l" : "r";
     setDragSide(side);
     setDragX(x);
   };
@@ -666,7 +715,16 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
               onMouseLeave={() => setHover((h) => (h === m ? null : h))}
               onFocus={() => setHover(m)}
               onBlur={() => setHover((h) => (h === m ? null : h))}
-              onClick={() => { if (m.ev.url) window.open(m.ev.url, "_blank", "noopener,noreferrer"); }}
+              onPointerDown={(e) => { touchTapRef.current = e.pointerType === "touch"; }}
+              onClick={() => {
+                // Touch: first tap shows the tooltip, a second tap on the
+                // same icon opens the story. Mouse: click opens right away.
+                if (touchTapRef.current) {
+                  if (tappedRef.current !== m.ev) { tappedRef.current = m.ev; setHover(m); return; }
+                  tappedRef.current = null;
+                }
+                if (m.ev.url) window.open(m.ev.url, "_blank", "noopener,noreferrer");
+              }}
             >
               {m.ev.kind === "milestone" ? (
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 21V4" /><path d="M5 4h11l-2 4 2 4H5" /></svg>
@@ -705,6 +763,9 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
         {base != null && baseY != null && pts && (
           <span className="cmcc-base" style={{ top: baseY }}>{compact(base)}</span>
         )}
+        {pts && yTicks.map((t) => (
+          <span key={t.label} className="cmcc-ytick" style={{ top: t.y }}>{t.label}</span>
+        ))}
         <span className="cmcc-usd" style={frame ? { bottom: frame.bottom + 4 } : undefined}>USD</span>
       </div>
       <div className="cmcc-foot">

@@ -120,6 +120,15 @@ html:not([data-theme="light"]) .cmc-rcol { --cmc-blue: #60a5fa; }
   font-variant-numeric: tabular-nums;
 }
 html:not([data-theme="light"]) .cip { --cip-blue: #6188ff; }
+/* Phones: under the chart; name + price already sit in the chart header. */
+.cip.cip--phone { padding: 8px 0 24px; }
+.cip--phone > .cip-top,
+.cip--phone > .cip-price { display: none; }
+.cip-phone-h { margin: 22px 0 0; font-size: 15px; font-weight: 700; color: var(--color-text); }
+/* Phones: no converter; "Bitcoin statistics" + the card first. */
+.cip--phone > .cip-sec:has(.cip-conv) { display: none; }
+.cip--phone > .cip-phone-h { order: -1; }
+.cip--phone > .cip-card { margin-top: 10px; }
 .cip-up { color: var(--cip-up); }
 .cip-dn { color: var(--cip-dn); }
 

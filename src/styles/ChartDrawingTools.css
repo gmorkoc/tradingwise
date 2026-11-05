@@ -131,9 +131,10 @@ html[data-theme="light"] .cdt-btn:hover {
 html .cdt-toolbar.cdt-toolbar--embedded {
   box-sizing: border-box;
   width: 40px;
-  padding: 8px 4px;
-  gap: 4px;
+  padding: 6px 4px;
+  gap: 1px;
   align-items: center;
+  justify-content: space-between;
   border: none !important;
   border-right: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent) !important;
   border-radius: 0 !important;
@@ -146,4 +147,10 @@ html .cdt-toolbar.cdt-toolbar--embedded {
   pointer-events: auto;
 }
 .cdt-toolbar.cdt-toolbar--embedded::-webkit-scrollbar { display: none; }
-.cdt-toolbar--embedded .cdt-btn { width: 30px; height: 30px; border-radius: 6px; }
+/* Phones (chart page): no divider line beside the strip (CMC app). */
+html .price-chart-container--phonecmc .cdt-toolbar.cdt-toolbar--embedded { border-right: none !important; }
+/* Buttons share the strip's full height (the price plot's height): each
+   grows between 26–40px so the tools fill it top to bottom. */
+.cdt-toolbar--embedded .cdt-btn { width: 30px; height: auto; flex: 1 1 0; min-height: 26px; max-height: 40px; border-radius: 6px; }
+/* No divider lines between the tool groups in the embedded strip. */
+.cdt-toolbar--embedded .cdt-separator { display: none; }

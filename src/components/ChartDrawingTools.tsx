@@ -785,7 +785,8 @@ export const ChartDrawingTools = forwardRef<ChartDrawingToolsHandle, Props>(func
           // Contained (embedded in the chart): a full-height strip on the
           // chart's left edge, above every chart layer.
           host
-            ? { position: "absolute" as const, top: 0, left: 0, height: box.height, zIndex: 60 }
+            // Stops at the bottom of the price plot — not over the date axis.
+            ? { position: "absolute" as const, top: 0, left: 0, height: Math.max(80, box.height - (chartRef.current?.timeScale().height() ?? 0)), zIndex: 60 }
             : fullHeightRail
             ? // height (not bottom:0) — chartRect is the CHART CANVAS's
               // own rect, which already excludes the bottom interval bar

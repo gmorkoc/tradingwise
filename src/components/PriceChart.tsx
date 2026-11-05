@@ -330,6 +330,9 @@ const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
 // Desktop chart page toolbar (CMC): main interval buttons + the rest in a ⌄ menu.
 const TV_MAIN_INTERVALS: TimeInterval[] = ["15min", "1h", "4h", "1day"];
 const TV_MORE_INTERVALS: TimeInterval[] = ["1sec", "1min", "5min", "6h", "1week", "1month", "all"];
+// Phones (CMC app row): six in the row, the rest in the ⚙ sheet.
+const PHONE_IVS: TimeInterval[] = ["15min", "1h", "4h", "1day", "1week", "1month"];
+const PHONE_MORE_IVS: TimeInterval[] = ["1sec", "1min", "5min", "6h", "all"];
 const TV_INTERVAL_LABEL: Record<TimeInterval, string> = {
   "1sec": "1s", "1min": "1m", "5min": "5m", "15min": "15m", "1h": "1h", "4h": "4h", "6h": "6h",
   "1day": "24h", "1week": "1W", "1month": "1M", "all": "All",
@@ -1851,19 +1854,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // TradingView view (CMC look); elsewhere the saved preference.
   // Desktop chart page: always on (no toggle there any more).
   const [showGrid, setShowGrid] = useState(() =>
-    pageMode || (prefsScope === "trade" && window.matchMedia("(min-width: 641px)").matches)
+    // Chart page (desktop and phones) and Advance Chart: grid on by default.
+    pageMode || prefsScope === "trade"
       ? true
       : !!(readChartPrefs(prefsScope).showGrid ?? false));
   // Desktop #trade: Price / Market cap switch above the chart.
   const [chartMetric, setChartMetric] = useState<"price" | "mcap">("price");
   // CoinMarketCap-style chart: line (default) or our candle chart
   // ("TradingView" button, where ProVision lives); range + Log for the line.
+  // Phones keep their own choice and default to candles (CMC's app does).
+  const cmcStyleKey = window.matchMedia("(min-width: 641px)").matches ? "cmcChartStyle" : "cmcChartStyleM";
   const [cmcStyle, setCmcStyleState] = useState<"line" | "candles">(() => {
-    try { return localStorage.getItem("cmcChartStyle") === "candles" ? "candles" : "line"; } catch { return "line"; }
+    try {
+      const v = localStorage.getItem(cmcStyleKey);
+      return v === "candles" || v === "line" ? v : cmcStyleKey === "cmcChartStyleM" ? "candles" : "line";
+    } catch { return "line"; }
   });
   const setCmcStyle = (s: "line" | "candles") => {
     setCmcStyleState(s);
-    try { localStorage.setItem("cmcChartStyle", s); } catch { /* ignore */ }
+    try { localStorage.setItem(cmcStyleKey, s); } catch { /* ignore */ }
   };
   const [cmcRange, setCmcRange] = useState<CmcRange>("1");
   const [cmcLog, setCmcLog] = useState(false);
@@ -1872,12 +1881,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [aiCtaOn, setAiCtaOn] = useState(false);
   // TradingView-view toolbar menus: "int" = more intervals, "set" = settings.
   const [tvMenu, setTvMenu] = useState<null | "int" | "set">(null);
+  // Phones, chart page: last tap on the chart (double-tap → Advance Chart).
+  const phoneTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
   const [chartStyle, setChartStyle] = useState<ChartStyle>(() => {
     // Desktop chart page (TradingView view): always opens on Candle.
     if (prefsScope === "trade" && !pageMode && window.matchMedia("(min-width: 641px)").matches) return "candle";
+    // Phone chart page: candles unless the user picked another style.
+    if (prefsScope === "trade" && !pageMode) return readChartPrefs(prefsScope).chartStyle ?? "candle";
     return readChartPrefs(prefsScope).chartStyle ?? (window.matchMedia("(min-width: 901px)").matches ? "candle" : "line");
   });
   useEffect(() => {
@@ -1952,7 +1965,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // true on purpose (see its own useState initializer above) regardless
     // of width, a different page this complaint isn't about.
     if (isDesktopWidth || pageMode) return;
-    setShowGrid(false);
+    // Phone chart page keeps its grid (CMC/TradingView look).
+    setShowGrid(prefsScope === "trade");
     setShowBB(false);
     setShowRSI(false);
     setShowMACD(false);
@@ -1976,7 +1990,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const tradeChartLocked = prefsScope === "trade" && !pageMode && !isFullscreen;
   // Pan / zoom / axis-drag: fullscreen everywhere, and always on the
   // desktop chart page.
-  const chartInteractive = isFullscreen || (isDesktopWidth && prefsScope === "trade" && !pageMode);
+  // Desktop and phone chart page: drag to pan, pinch / wheel to zoom.
+  const chartInteractive = isFullscreen || (prefsScope === "trade" && !pageMode);
+  // Phones (not fullscreen): vertical swipes keep scrolling the page.
+  const chartVertDrag = chartInteractive && (isDesktopWidth || isFullscreen);
   // Desktop chart page: volume is back as a light band along the bottom,
   // colored like the candles; phones keep the trade chart candles-only.
   const faintVolRef = useRef(false);
@@ -2010,7 +2027,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // Desktop keeps the user's indicators (Indicators button) and its grid;
     // the lock (everything off) is phones-only now.
     if (!tradeChartLocked || isDesktopWidth) return;
-    setShowGrid(false);
+    setShowGrid(prefsScope === "trade" && !pageMode);
     setShowBB(false);
     setShowRSI(false);
     setShowMACD(false);
@@ -2270,7 +2287,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     : prefsScope === "trade" && !pageMode ? "#8e8e93" : "#9490c0";
   // Desktop chart page (TradingView view): TradingView's own faint grid —
   // #f0f3fa in light, a near-invisible white tint in dark.
-  const gridColor = prefsScope === "trade" && isDesktopWidth && !pageMode
+  const gridColor = prefsScope === "trade" && !pageMode
     ? (isLight ? "#f0f3fa" : "rgba(240, 243, 250, 0.06)")
     : isLight ? "#f0f1f3" : "#2b2748";
   // Light is #ffffff (--color-background) in BOTH modes — compact
@@ -3301,8 +3318,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         // the bottom; every other chart keeps a flat background.
         // #trade: light theme gets the soft fade; dark theme has no chart
         // background at all (transparent — sits straight on the page).
+        // Phones (chart page): no chart background at all — sits on the page.
         background: prefsScope === "trade" && !pageMode
-          ? isLight
+          ? isLight && isDesktopWidth
             ? { type: ColorType.VerticalGradient, topColor: bgColor, bottomColor: "#fcfcfd" }
             : { type: ColorType.Solid, color: "transparent" }
           : { type: ColorType.Solid, color: bgColor },
@@ -3342,7 +3360,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       // still needs it off, since that page does scroll normally.
       // Desktop chart page: always draggable / zoomable (TradingView-like);
       // elsewhere only in fullscreen, as before.
-      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartInteractive },
+      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartVertDrag },
       handleScale: {
         mouseWheel: chartInteractive,
         pinch: chartInteractive,
@@ -4204,7 +4222,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       },
       // vertTouchDrag follows isFullscreen here too — same reasoning as
       // the main chart above.
-      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartInteractive },
+      handleScroll: { mouseWheel: chartInteractive, pressedMouseMove: chartInteractive, horzTouchDrag: chartInteractive, vertTouchDrag: chartVertDrag },
       handleScale: {
         axisPressedMouseMove: chartInteractive,
         mouseWheel: chartInteractive,
@@ -4539,6 +4557,15 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     rsiChartRef.current?.timeScale().fitContent();
     macdChartRef.current?.timeScale().fitContent();
   };
+  // Chart page (desktop + phones): once the user drags / zooms the chart, a
+  // small ↺ appears at the bottom of the plot to snap the view back (CMC).
+  const [viewMoved, setViewMoved] = useState(false);
+  useEffect(() => { setViewMoved(false); }, [coin, interval]);
+  const resetMovedView = () => {
+    handleResetView();
+    try { chartRef.current?.priceScale("right").applyOptions({ autoScale: true }); } catch { /* chart gone */ }
+    setViewMoved(false);
+  };
   // Mobile toolbar "Reset": the whole chart back to its defaults — every
   // indicator off (this chart's own + the shared catalog), no grid,
   // Line style (the mobile default), normal auto-fit price scale, no date
@@ -4549,13 +4576,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     setShowMA20(false); setShowMA50(false); setShowMA200(false);
     setShowFib(false); setShowSR(false); setShowZones(false); setShowDayHL(false); setShowCME(false);
     clearLibIndicators();
-    setShowGrid(false);
-    setChartStyle("line");
+    // Chart page (desktop + phones): its defaults are grid on + candles.
+    const chartPage = prefsScope === "trade" && !pageMode;
+    setShowGrid(chartPage);
+    setChartStyle(chartPage ? "candle" : "line");
     setScaleMode("normal");
     setAutoScale(true);
     setRangePreset(null);
     setShowDepthProfile(false);
     setShowCompactView(false);
+    setViewMoved(false);
     requestAnimationFrame(() => {
       chartRef.current?.priceScale("right").applyOptions({ autoScale: true });
       handleResetView();
@@ -5347,24 +5377,30 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const tradeDesktopLean = isDesktopWidth && prefsScope === "trade" && !pageMode;
   // Desktop chart page: the CoinMarketCap line chart takes the candle
   // chart's place (Market cap always; Price unless "TradingView" is picked).
-  const cmcHidesCandles = tradeDesktopLean && !!pageTabBar && (chartMetric === "mcap" || cmcStyle === "line");
+  // Phones (chart page, Chart tab): same CoinMarketCap line chart, with its
+  // own compact toolbar under the Chart / Order Book / Trades tabs.
+  const phoneCmcPage = mobileTabs && prefsScope === "trade" && !pageMode;
+  const phoneCmc = phoneCmcPage && mobileView === "chart" && !pageTabContent;
+  const cmcHidesCandles = ((tradeDesktopLean && !!pageTabBar) || phoneCmc) && (chartMetric === "mcap" || cmcStyle === "line");
   const cmcLineView = cmcHidesCandles && !pageTabContent && !isFullscreen;
   // Desktop TradingView view: drawing tools rail on the chart's left edge.
-  const tvDrawRail = tradeDesktopLean && !cmcHidesCandles && !pageTabContent && !isFullscreen;
+  // Desktop TradingView view and the phone chart page's candle view (CMC app).
+  const tvDrawRail = (tradeDesktopLean || phoneCmc) && !cmcHidesCandles && !pageTabContent && !isFullscreen;
   // Desktop chart page: floating "Analyze this chart with ProVision" prompt
   // over the chart on load (CMC's "Agentic Charts" pill) — the way into
   // ProVision (Advance Chart) from here; ✕ dismisses it for good.
   const [pvPillGone, setPvPillGone] = useState(() => {
     try { return localStorage.getItem("pvPromoPillDismissed") === "1"; } catch { return false; }
   });
-  const pvPromoPill = tradeDesktopLean && !pvPillGone ? (
+  const pvPromoPill = (tradeDesktopLean || phoneCmc) && !pvPillGone ? (
     <div className="pv-pill" role="region" aria-label="ProVision">
       <button
         type="button"
         className="pv-pill-main"
         // Off → turn it on (the app then opens Advance Chart); already on →
         // straight to Advance Chart, where ProVision is drawn.
-        onClick={() => (pvGate.on ? onOpenDrawingTools?.() : pvGate.toggle(coin))}
+        // Phones: always straight to the Advance Chart page.
+        onClick={() => (pvGate.on || !isDesktopWidth ? onOpenDrawingTools?.() : pvGate.toggle(coin))}
       >
         <span className="pv-pill-ic" aria-hidden="true">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
@@ -6954,11 +6990,125 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     ? rawZoneDivergenceSentence.charAt(0).toUpperCase() + rawZoneDivergenceSentence.slice(1).toLowerCase()
     : null;
 
+  // Phones, chart page: CoinMarketCap app header, under the tabs —
+  // "Bitcoin price BTC" (opens the coin picker) + stats / share, the big
+  // price and its change, the "Why is BTC's price up today?" AI chip, then
+  // the green "Trade BTC  P" button.
+  const phoneHeaderEl = phoneCmcPage ? (
+    <div className="cmch">
+      <div className="cmch-top">
+        <button type="button" className="cmch-id" onClick={(e) => onOpenCoinPicker?.(e.currentTarget)} aria-label="Change coin">
+          {/* Flips (spins) every time the live price ticks — keyed on the
+              price so the animation restarts on each change. */}
+          <span key={`spin:${currentPrice ?? ""}`} className={`cmch-logo-spin${currentPrice !== null ? " cmch-logo-spin--on" : ""}`}>
+            {!heroLogoError ? (
+              <img className="cmch-logo" src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`} alt="" onError={() => setHeroLogoError(true)} />
+            ) : (
+              <span className="cmch-logo cmch-logo--glyph" style={{ background: COIN_COLORS[coin] ?? "var(--pc-accent)" }}>{COIN_GLYPHS[coin] ?? coin[0]}</span>
+            )}
+          </span>
+          <span className="cmch-name">{COIN_FULL_NAME[coin] ?? coin} price</span>
+          <span className="cmch-sym">{coin}</span>
+          <svg className="cmch-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+        </button>
+        <div className="cmch-acts">
+          <button type="button" className="cmch-act" onClick={() => setStatsSheetOpen(true)} aria-label="All stats">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></svg>
+          </button>
+          <button
+            type="button"
+            className="cmch-act"
+            aria-label="Share"
+            onClick={() => {
+              const url = window.location.href;
+              const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
+              if (nav.share) nav.share({ title: `${COIN_FULL_NAME[coin] ?? coin} price`, url }).catch(() => {});
+              else navigator.clipboard?.writeText(url).catch(() => {});
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></svg>
+          </button>
+        </div>
+      </div>
+      <div className="cmch-price">
+        {currentPrice !== null
+          ? <strong>{formatLivePrice(currentPrice)}</strong>
+          : <span className="cmch-skel" aria-label="Loading price" />}
+        {dayChangePercent !== null && (
+          <span className={`cmch-chg${dayChangePercent >= 0 ? " up" : " down"}`}>
+            {dayChangePercent >= 0 ? "▲" : "▼"} {Math.abs(dayChangePercent).toFixed(2)}%
+          </span>
+        )}
+      </div>
+      {/* Market stats (liquidations, OI, funding, RSI, MACD, L/S, 24h vol) —
+          one row under the price, scrolls sideways. */}
+      {(headerStats || quoteVolume24h !== undefined) && (
+        <div className="cmch-stats">
+          <div className="chart-bar-stats">
+            {headerStats}
+            {quoteVolume24h !== undefined && (
+              <div className="chart-bar-stat">
+                <span className="chart-bar-stat-label">24h Vol</span>
+                <span className="chart-bar-stat-value">{formatCompactVolume(quoteVolume24h)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* The green "Trade BTC  P" button → Paper Trade. */}
+      {onOpenPaperTrade && (
+        <button type="button" className="chart-trade-cta cmch-cta" onClick={onOpenPaperTrade}>
+          Trade {coin}
+          <span className="chart-trade-cta-p" aria-hidden="true">P</span>
+        </button>
+      )}
+    </div>
+  ) : null;
+
+  // Phones, chart page: two quick taps on the chart (within 300ms, close
+  // together, single finger) open the Advance Chart page. Taps on buttons,
+  // the drawing rail, the timeline handles or the banner don't count.
+  const onPhoneChartTap = (e: React.TouchEvent) => {
+    if (e.changedTouches.length !== 1 || e.touches.length > 0) { phoneTapRef.current = null; return; }
+    if ((e.target as Element).closest("button, a, .cdt-toolbar, .pv-pill, .cmcc-foot")) return;
+    const t = e.changedTouches[0];
+    const now = Date.now();
+    const prev = phoneTapRef.current;
+    if (prev && now - prev.t < 300 && Math.hypot(t.clientX - prev.x, t.clientY - prev.y) < 30) {
+      phoneTapRef.current = null;
+      onOpenDrawingTools?.();
+      return;
+    }
+    phoneTapRef.current = { t: now, x: t.clientX, y: t.clientY };
+  };
+
+  // CoinMarketCap line chart (desktop toolbar view and the phone Chart tab).
+  const cmcChartEl = cmcLineView ? (
+    <CmcChart
+      coin={coin}
+      theme={theme}
+      metric={chartMetric}
+      range={cmcRange}
+      log={cmcLog}
+      moments={chartEvts}
+      overlay={pvPromoPill}
+      onAnalyze={() => {
+        // Run the AI Chart Read right away (paid) — free users get
+        // the upgrade card — under the chart, scrolled into view.
+        setAiCtaOn(true);
+        if (isPaid && !aiReadOpen) openAiRead();
+        window.setTimeout(() => {
+          document.querySelector(".ai-read-cta, .ai-read, .chart-ai-placeholder")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 60);
+      }}
+    />
+  ) : null;
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div
       ref={chartSectionRef}
-      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}${(pageTabContent || cmcHidesCandles) && !isFullscreen ? " price-chart-container--ctab" : ""}`}
+      className={`price-chart-container${mobileTabs && mobileView !== "chart" ? " price-chart-container--mview-book" : ""}${sideColumn && !isFullscreen ? " price-chart-container--split" : ""}${isFullscreen ? " price-chart-container--fs" : ""}${loading ? " price-chart-container--loading" : ""}${pageMode ? " price-chart-container--page" : ""}${(pageTabContent || cmcHidesCandles) && !isFullscreen ? " price-chart-container--ctab" : ""}${phoneCmc ? " price-chart-container--phonecmc" : ""}`}
     >
       <div
         ref={isFullscreen ? fsScrollRef : undefined}
@@ -6966,7 +7116,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         style={
           pageMode && !isDesktopWidth
             ? ({ "--fs-dock-clearance": `${fsDockClearance}px` } as React.CSSProperties)
-            : (pageTabContent || cmcHidesCandles) && !isFullscreen && overviewH > 0
+            // (Not on phones: the line view is shorter and would leave a gap.)
+            : (pageTabContent || cmcHidesCandles) && !isFullscreen && overviewH > 0 && !phoneCmc
               ? { minHeight: overviewH }
               : undefined
         }
@@ -7092,7 +7243,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 price + change, a divider, then label-over-value stats. */}
             {/* Desktop CMC layout (no headerStats passed): the coin, price and
                 stats live in the left info column, so this header is hidden. */}
-            <div className={`chart-bar-header-wrap${mobileTabs ? " chart-bar-header-wrap--mobile" : ""}${tradeDesktopLean && !headerStats && !isFullscreen ? " chart-bar-header-wrap--off" : ""}`}>
+            {/* Phones: the CMC header (phoneHeaderEl) renders under the tabs. */}
+            <div className={`chart-bar-header-wrap${mobileTabs ? " chart-bar-header-wrap--mobile" : ""}${tradeDesktopLean && !headerStats && !isFullscreen ? " chart-bar-header-wrap--off" : ""}${phoneCmcPage ? " chart-bar-header-wrap--off" : ""}`}>
             <div className="chart-bar-header" ref={barStatsRef} onScroll={updateBarScroll}>
               <div
                 className="chart-bar-id chart-bar-id--tap"
@@ -7424,26 +7576,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </div>
               </div>
             )}
-            {cmcLineView && (
-              <CmcChart
-                coin={coin}
-                theme={theme}
-                metric={chartMetric}
-                range={cmcRange}
-                log={cmcLog}
-                moments={chartEvts}
-                overlay={pvPromoPill}
-                onAnalyze={() => {
-                  // Run the AI Chart Read right away (paid) — free users get
-                  // the upgrade card — under the chart, scrolled into view.
-                  setAiCtaOn(true);
-                  if (isPaid && !aiReadOpen) openAiRead();
-                  window.setTimeout(() => {
-                    document.querySelector(".ai-read-cta, .ai-read, .chart-ai-placeholder")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                  }, 60);
-                }}
-              />
-            )}
+            {cmcLineView && !phoneCmc && cmcChartEl}
             {mobileTabs && (
               <div className={`chart-mview-tabs chart-mview-tabs--${mobileView}${pageTabBar ? " chart-mview-tabs--more" : ""}`}>
                 <div className="chart-mview-tabs-main" role="tablist">
@@ -7463,6 +7596,84 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </div>
                 {/* Phones #trade: "More ▾" opens the Explore sections sheet. */}
                 {pageTabBar}
+              </div>
+            )}
+            {phoneHeaderEl}
+            {/* Phones, Chart tab: "Bitcoin to USD Chart" title (CMC app). */}
+            {phoneCmc && <h3 className="cmct-title">{COIN_FULL_NAME[coin] ?? coin} to USD Chart</h3>}
+            {/* Phones, line view: range chips above the chart (CMC app). */}
+            {phoneCmc && cmcLineView && (
+              <div className="cmct-ranges" role="tablist" aria-label="Range">
+                {CMC_RANGES.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={cmcRange === r.id}
+                    className={`cmct-rbtn${cmcRange === r.id ? " cmct-rbtn--on" : ""}`}
+                    onClick={() => setCmcRange(r.id)}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-pressed={cmcLog}
+                  className={`cmct-rbtn${cmcLog ? " cmct-rbtn--on" : ""}`}
+                  onClick={() => setCmcLog((v) => !v)}
+                >
+                  Log
+                </button>
+              </div>
+            )}
+            {phoneCmc && cmcLineView && <div onTouchEnd={onPhoneChartTap}>{cmcChartEl}</div>}
+            {/* Phones, line view: CMC's small purple candles icon under the
+                time axis, bottom-right → TradingView (candle) view. */}
+            {phoneCmc && cmcLineView && (
+              <div className="cmct-tvjump-row">
+                <button
+                  type="button"
+                  className="cmct-tvjump"
+                  aria-label="Switch to TradingView candles"
+                  onClick={() => { setChartMetric("price"); setCmcStyle("candles"); }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v4M6 7h4v9H6zM8 16v5M16 4v5M14 9h4v6h-4zM16 15v4" /></svg>
+                </button>
+              </div>
+            )}
+            {/* Phones, candle view (CMC app): [15m 1h 4h 24h 1W 1M | ⚙] —
+                ⚙ opens Chart settings (Tools, Full chart, other intervals). */}
+            {phoneCmc && !cmcLineView && (
+              <div className="cmct-ranges cmct-ivrow" role="tablist" aria-label="Interval">
+                {PHONE_IVS.map((iv) => {
+                  const pro = PRO_INTERVALS.has(iv) && !isPaid;
+                  return (
+                    <button
+                      key={iv}
+                      type="button"
+                      role="tab"
+                      aria-selected={interval === iv}
+                      className={`cmct-rbtn${interval === iv ? " cmct-rbtn--on" : ""}`}
+                      onClick={() => { if (pro) { onOpenUpgrade?.("pro"); return; } setInterval(iv); }}
+                    >
+                      {TV_INTERVAL_LABEL[iv]}
+                    </button>
+                  );
+                })}
+                <span className="cmct-ivdiv" aria-hidden="true" />
+                <button
+                  type="button"
+                  className={`cmct-rbtn cmct-rbtn--icon${PHONE_MORE_IVS.includes(interval) ? " cmct-rbtn--on" : ""}`}
+                  onClick={() => setToolsSheetOpen(true)}
+                  aria-label="Chart tools"
+                >
+                  {PHONE_MORE_IVS.includes(interval) ? TV_INTERVAL_LABEL[interval] : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                      <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" />
+                      <circle cx="16" cy="7" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="17" r="2" />
+                    </svg>
+                  )}
+                </button>
               </div>
             )}
             {mobileTabs && mobileView !== "chart" && (
@@ -7995,6 +8206,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           // Double-click toggles fullscreen.
           // Desktop (mouse) only — no double-tap gesture on mobile.
           onDoubleClick={isDesktopWidth ? toggleFullscreen : undefined}
+          // Phones, chart page: double-tap the chart → Advance Chart.
+          onTouchEnd={phoneCmc ? onPhoneChartTap : undefined}
           className={`chart-dblclick-wrap${
             Capacitor.isNativePlatform() && !isFullscreen ? " chart-dblclick-wrap--no-hint" : ""
           }${
@@ -8005,13 +8218,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {/* Desktop chart page (TradingView view): OHLC line, top-left. */}
             {tradeDesktopLean && !isFullscreen && <div className="chart-ohlc" ref={ohlcRef} aria-live="off" />}
             {!isFullscreen && !cmcHidesCandles && pvPromoPill}
-            {/* #trade, phones only: faint coinhintz watermark (removed from
-                both desktop charts). */}
-            {prefsScope === "trade" && !pageMode && !isDesktopWidth && (
-              <div className="chart-watermark" aria-hidden="true">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M15.5 9a4 4 0 1 0 0 6" /></svg>
-                <span>coinhintz</span>
-              </div>
+            {/* ↺ reset view — after the user moves / zooms the chart. */}
+            {viewMoved && (tvDrawRail || phoneCmc) && !isFullscreen && (
+              <button type="button" className="chart-view-reset" onClick={resetMovedView} aria-label="Reset chart view" title="Reset chart view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+              </button>
             )}
             {swipeHint !== "gone" && pageMode && !isDesktopWidth && (
               <div className={`chart-swipe-hint${swipeHint === "fade" ? " chart-swipe-hint--out" : ""}`} aria-hidden="true">
@@ -8238,7 +8449,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             </div>
             )}
-          {loading && (
+          {/* Phones, chart page: a clean spinner (the chart is hidden, not blurred). */}
+          {loading && phoneCmc && (
+            <div className="chart-loading-overlay">
+              <span className="cmch-spinner" role="status" aria-label="Loading chart" />
+            </div>
+          )}
+          {loading && !phoneCmc && (
             <div className="chart-loading-overlay">
               <span className="chart-loading-label">
                 {t("chart.loading")}
@@ -8263,6 +8480,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <div
             ref={containerRef}
             className="chart-canvas-wrap chart-main-wrap"
+            // Chart page: any drag / pinch / wheel on the plot → show ↺.
+            onPointerDown={(tvDrawRail || phoneCmc) && !viewMoved ? (e) => {
+              // Taps on the drawing rail / banner / ↺ don't count as moving the chart.
+              if (!(e.target as Element).closest(".cdt-toolbar, .pv-pill, .chart-view-reset")) setViewMoved(true);
+            } : undefined}
+            onWheel={(tvDrawRail || phoneCmc) && !viewMoved ? () => setViewMoved(true) : undefined}
             style={
               pageMode
                 ? // Advance Price Chart page (mobile AND desktop) —
@@ -8756,7 +8979,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             // Phones #trade: first slide = ProVision + Consensus; tap opens
             // the full Consensus sheet (Signal Check inside).
             // Always the first slide on phones #trade (ProVision on or off).
-            leadCard={pvInSheet ? (() => {
+            // (Not on the CMC-style phone chart page.)
+            leadCard={pvInSheet && !phoneCmcPage ? (() => {
               // Colour follows the consensus (not ProVision alone).
               const lead = consensusSummary?.lead ?? "neutral";
               const tone = lead === "bull" ? "bullish" as const : lead === "bear" ? "bearish" as const : "neutral" as const;
@@ -8883,6 +9107,62 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </div>
           )}
         </div>
+
+        {/* Phones, Chart tab, under the chart (CMC app):
+            [Price | Market cap] [line | TradingView], then Indicators. */}
+        {phoneCmc && (
+          <div className="cmct cmct--phone">
+            <div className="cmct-phone-row">
+              <div className="cmct-seg cmct-seg--grow" role="tablist" aria-label="Metric">
+                {([["price", "Price"], ["mcap", "Market cap"]] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={chartMetric === k}
+                    className={`cmct-btn${chartMetric === k ? " cmct-btn--on" : ""}`}
+                    onClick={() => setChartMetric(k)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="cmct-seg" role="tablist" aria-label="Chart type">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={cmcLineView}
+                  aria-label="Line chart"
+                  className={`cmct-btn cmct-btn--icon${cmcLineView ? " cmct-btn--on" : ""}`}
+                  onClick={() => setCmcStyle("line")}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="m7 15 4-5 3 3 5-7" /></svg>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!cmcLineView}
+                  className={`cmct-btn${!cmcLineView ? " cmct-btn--on" : ""}`}
+                  onClick={() => { setChartMetric("price"); setCmcStyle("candles"); }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v4M6 7h4v9H6zM8 16v5M16 4v5M14 9h4v6h-4zM16 15v4" /></svg>
+                  TradingView
+                </button>
+              </div>
+            </div>
+            {!cmcLineView && (
+              <button type="button" className="cmct-phone-ind" onClick={() => setToolsIndOpen(true)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 20h18" />
+                  <path d="M5 16l4-5 4 3 6-8" />
+                  <path d="M6 20v-3M10 20v-5M14 20v-4M18 20v-7" opacity="0.5" />
+                </svg>
+                Indicators
+                {libIndicators.length > 0 && <span className="cmct-indcount">{libIndicators.length}</span>}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* coinhintz consensus (#trade): every tool's read on this coin +
             timeframe — meter on desktop, card on phones. */}
@@ -9810,7 +10090,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         })()}
 
         {/* …then the big "Trade BTC" button → Paper Trade (mobile). */}
-        {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && (
+        {!isDesktopWidth && !isFullscreen && !pageMode && onOpenPaperTrade && !phoneCmcPage && (
           <button type="button" className="chart-trade-cta" onClick={onOpenPaperTrade}>
             Trade {coin}
             <span className="chart-trade-cta-p" aria-hidden="true">P</span>

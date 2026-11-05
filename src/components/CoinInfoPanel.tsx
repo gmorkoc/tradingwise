@@ -79,8 +79,11 @@ function readWatch(): string[] {
   try { const v = JSON.parse(localStorage.getItem(WATCH_KEY) ?? "null"); return Array.isArray(v) ? v : []; } catch { return []; }
 }
 
-export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin }: {
+export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone }: {
   coin: string;
+  /** Phones: shown under the chart — skips the name/price rows (the chart
+   *  header already has them) and lays the cards out full width. */
+  phone?: boolean;
   ticker?: Ticker24h;
   onTrade?: () => void;
   /** Coin name block → the coin picker (anchored to it). */
@@ -210,7 +213,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin }: {
   const tags = (details?.categories ?? []).filter(Boolean);
 
   return (
-    <aside className="cip" aria-label={`${name} overview`}>
+    <aside className={`cip${phone ? " cip--phone" : ""}`} aria-label={`${name} overview`}>
+      {phone && <h2 className="cip-phone-h">{name} statistics</h2>}
       {/* Name row + star / share */}
       <div className="cip-top">
         {/* Coin name block: opens the coin picker. */}

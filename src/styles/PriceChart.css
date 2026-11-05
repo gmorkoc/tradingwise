@@ -2381,6 +2381,9 @@ html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
     pointer-events: auto;
   }
 }
+/* Phones, chart page: same — swipe sideways to pan, pinch to zoom
+   (vertical swipes still scroll the page; vertTouchDrag is off there). */
+.price-chart-container--phonecmc .chart-canvas-wrap { pointer-events: auto; }
 
 /* Reference-match (TradingView desktop chart) — OHLC readout + Buy/Sell
    boxes, overlaid on the chart canvas's own top-left corner instead of a

@@ -1172,6 +1172,9 @@ html:not([data-theme="light"]) .pvp2 { --up: #4ade80; --dn: #f87171; }
 html:not([data-theme="light"]) .pvp2-how { color: #60a5fa; }
 html:not([data-theme="light"]) .pvp2-keep { color: #a78bfa; }
 @media (prefers-reduced-motion: reduce) { .pvp2-div i, .pvp2-flow-bar i { animation: none; } }
+/* Bottom sheet: "Enjoying? Keep it" + "How it works" sit right under the
+   sheet's tabs (top of the panel) instead of at the very bottom. */
+.km-sheet .pvp2 > .pvp2-foot { order: -1; justify-content: space-between; margin: -6px 0 -4px; }
 
 /* ── Advance Chart (desktop): wide terminal strip ──────────────────────
    One compact row of panels separated by hairlines:

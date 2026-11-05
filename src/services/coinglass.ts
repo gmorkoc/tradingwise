@@ -1971,3 +1971,49 @@ export async function fetchFundingRate(coin: string): Promise<number | null> {
 }
 
 export type { BTCData, PriceDataPoint, CandleDataPoint };
+
+// ── Global (all-exchange) derivatives stats via Coinalyze ─────────────────
+// Open interest summed in USD across the big perp venues; funding as an
+// OI-weighted average (8h basis); long/short as an OI-weighted average of
+// the venues that publish it (Binance + Bybit). Unknown symbols are just
+// skipped by Coinalyze, so the same list works for every coin.
+export type GlobalDerivs = { oiUsd: number | null; funding: number | null; lsRatio: number | null };
+const globalDerivsCache = new Map<string, { t: number; v: GlobalDerivs }>();
+export async function getGlobalDerivs(coin: string): Promise<GlobalDerivs> {
+  const c = coin.toUpperCase();
+  const hit = globalDerivsCache.get(c);
+  if (hit && Date.now() - hit.t < 60_000) return hit.v;
+  // Binance, Bybit, OKX, Huobi (8h funding) + Hyperliquid (1h funding).
+  const syms8h = [`${c}USDT_PERP.A`, `${c}USD_PERP.A`, `${c}USDT.6`, `${c}USD.6`, `${c}USDT_PERP.3`, `${c}USD_PERP.3`, `${c}USDT_PERP.4`];
+  const symHl = `${c}.H`;
+  const all = [...syms8h, symHl].join(",");
+  const now = Math.floor(Date.now() / 1000);
+  const [oiRes, frRes, lsRes] = await Promise.all([
+    fetch(`/coinalyze-api/v1/open-interest?symbols=${all}&convert_to_usd=true`).then((r) => r.json()).catch(() => null),
+    fetch(`/coinalyze-api/v1/funding-rate?symbols=${all}`).then((r) => r.json()).catch(() => null),
+    fetch(`/coinalyze-api/v1/long-short-ratio-history?symbols=${c}USDT_PERP.A,${c}USDT.6&interval=1hour&from=${now - 21600}&to=${now}`).then((r) => r.json()).catch(() => null),
+  ]);
+  const oi = new Map<string, number>();
+  if (Array.isArray(oiRes)) for (const r of oiRes) if (typeof r?.value === "number" && r.value > 0) oi.set(r.symbol, r.value);
+  const oiUsd = oi.size ? [...oi.values()].reduce((a, b) => a + b, 0) : null;
+  // Funding (Coinalyze gives percent) → fraction per 8h, weighted by OI.
+  let fw = 0, fsum = 0;
+  if (Array.isArray(frRes)) for (const r of frRes) {
+    const w = oi.get(r?.symbol);
+    if (typeof r?.value !== "number" || !w) continue;
+    const per8h = (r.symbol === symHl ? r.value * 8 : r.value) / 100;
+    fsum += per8h * w; fw += w;
+  }
+  const funding = fw > 0 ? fsum / fw : null;
+  let lw = 0, lsum = 0;
+  if (Array.isArray(lsRes)) for (const e of lsRes) {
+    const last = Array.isArray(e?.history) && e.history.length ? e.history[e.history.length - 1] : null;
+    const w = oi.get(e?.symbol) ?? 0;
+    if (typeof last?.r !== "number" || !w) continue;
+    lsum += last.r * w; lw += w;
+  }
+  const lsRatio = lw > 0 ? Math.round((lsum / lw) * 100) / 100 : null;
+  const v = { oiUsd, funding, lsRatio };
+  globalDerivsCache.set(c, { t: Date.now(), v });
+  return v;
+}
