@@ -7456,6 +7456,46 @@ html:not([data-theme="light"]) .chart-bar-more {
   color: var(--action-green);
   background: color-mix(in srgb, var(--action-green) 8%, transparent);
 }
+/* Chart tools → Interval: every interval as compact chips (same look as
+   the Chart style tiles), PRO tag on the paid ones. */
+.cts-ivs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 0 20px 14px;
+}
+.cts-iv {
+  all: unset;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cts-iv.active {
+  border-color: var(--action-green);
+  color: var(--action-green);
+  background: color-mix(in srgb, var(--action-green) 8%, transparent);
+}
+.cts-iv-pro {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 13px;
+}
 .date-range-sheet-item.cts-row {
   grid-template-columns: 36px 1fr auto;
   border-top: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);

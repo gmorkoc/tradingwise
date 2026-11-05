@@ -1,0 +1,80 @@
+/* Phones, coin page: "Bitcoin News" (CoinMarketCap app layout). */
+.cnews { display: flex; flex-direction: column; gap: 14px; padding: 8px 0 24px; }
+.cnews-h { margin: 8px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text); }
+
+/* Top | Latest — the same grey track / white chip as the chart controls. */
+.cnews-seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 8px; background: #eff2f5; }
+html:not([data-theme="light"]) .cnews-seg { background: #222531; }
+.cnews-seg-btn,
+.cnews-seg-btn:hover {
+  all: unset;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #58667e;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html:not([data-theme="light"]) .cnews-seg-btn { color: #a1a7bb; }
+.cnews-seg-btn--on,
+.cnews-seg-btn--on:hover {
+  background: #fff;
+  color: #0d1421;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(88, 102, 126, 0.12), 0 4px 12px rgba(88, 102, 126, 0.08);
+}
+html:not([data-theme="light"]) .cnews-seg-btn--on { background: #323546; color: #fff; }
+
+/* Lead story: big picture, headline, source · time. */
+.cnews-lead,
+.cnews-row { display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.cnews-lead-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: #eff2f5; }
+html:not([data-theme="light"]) .cnews-lead-img { background: #222531; }
+.cnews-title { font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--color-text); }
+.cnews-lead .cnews-title { font-size: 18px; }
+.cnews-meta { font-size: 12.5px; color: var(--color-text-muted); }
+.cnews-meta b { font-weight: 500; color: #3861fb; }
+html:not([data-theme="light"]) .cnews-meta b { color: #6188ff; }
+.cnews-lead:active,
+.cnews-row:active { opacity: 0.7; }
+
+.cnews-note,
+.cnews-empty { margin: 0; font-size: 12.5px; color: var(--color-text-muted); }
+
+.cnews-more,
+.cnews-more:hover {
+  all: unset;
+  align-self: stretch;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eff2f5;
+  color: #0d1421;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+html:not([data-theme="light"]) .cnews-more { background: #222531; color: #fff; }
+
+/* Loading */
+.cnews-skel { display: flex; flex-direction: column; gap: 8px; }
+.cnews-skel-img,
+.cnews-skel-line {
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eff2f5 25%, #f8fafd 50%, #eff2f5 75%);
+  background-size: 200% 100%;
+  animation: cnews-shimmer 1.2s ease-in-out infinite;
+}
+.cnews-skel-img { aspect-ratio: 16 / 9; }
+.cnews-skel-line { height: 16px; border-radius: 6px; }
+.cnews-skel-line--short { width: 55%; }
+html:not([data-theme="light"]) :is(.cnews-skel-img, .cnews-skel-line) { background: linear-gradient(90deg, #222531 25%, #2c3040 50%, #222531 75%); background-size: 200% 100%; }
+@keyframes cnews-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { :is(.cnews-skel-img, .cnews-skel-line) { animation: none; } }

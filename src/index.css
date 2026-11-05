@@ -143,6 +143,13 @@ textarea {
   --action-green-text: #ffffff;
 }
 
+/* Phones: nothing may widen the page past the screen (no sideways drag on
+   iOS). `clip` — unlike `hidden` — doesn't turn these into scroll
+   containers, so position: sticky keeps working. */
+@media (max-width: 768px) {
+  html, body, #root { max-width: 100%; overflow-x: clip; }
+}
+
 /* Portrait-only on phones (mobile web): a touch phone held sideways gets a
    "turn your phone upright" screen over the app (browsers can't lock
    rotation; the native app is locked in Info.plist). Desktop windows and

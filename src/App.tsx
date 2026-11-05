@@ -74,6 +74,7 @@ import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { CoinInfoPanel } from "./components/CoinInfoPanel";
+import { CoinNews } from "./components/CoinNews";
 import { TradeInsights } from "./components/TradeInsights";
 import { PriceChart, formatLivePrice, PV_PROMO_STYLE } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
@@ -4033,7 +4034,11 @@ function AppDashboard({
                         {/* Phones: CoinMarketCap-style coin stats, above the
                             coin table (desktop has them in the left column). */}
                         {activeSection === "chart" && !isDesktopWidth && (
-                          <CoinInfoPanel phone coin={coin} ticker={coinTickers.get(coin)} />
+                          <>
+                            <CoinInfoPanel phone coin={coin} ticker={coinTickers.get(coin)} />
+                            {/* "Bitcoin News" (CMC app layout). */}
+                            <CoinNews coin={coin} />
+                          </>
                         )}
                         {!distractionFree ? (
                           <div className="chart-below-full">

@@ -846,7 +846,9 @@ html .price-chart-container--phonecmc .chart-bar-toolbar { display: none !import
 /* Interval row: [15m 1h 4h 24h 1W 1M | ⚙] in one grey track. */
 .cmct-ivdiv { flex: 0 0 1px; width: 1px; height: 16px; margin: 0 4px; background: #cfd6e4; }
 html:not([data-theme="light"]) .cmct-ivdiv { background: #3a3f52; }
-html .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 40px; display: inline-flex; align-items: center; justify-content: center; }
+/* Last slot: ⚙ (opens Chart tools), or the interval picked there (e.g.
+   "1m") shown selected in its place — always fully visible. */
+html .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 38px; display: inline-flex; align-items: center; justify-content: center; }
 /* Section label inside the Chart settings sheet. */
 .cmct-sheet-label { display: block; padding: 14px 4px 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 
@@ -883,6 +885,56 @@ html:not([data-theme="light"]) .cmcc-ytick { color: #a1a7bb; }
 }
 html:not([data-theme="light"]) .cmct-tvjump { color: #a78bfa; background: color-mix(in srgb, #a78bfa 14%, transparent); }
 .cmct-tvjump:active { opacity: 0.7; }
+
+/* ProVision locked / trial banner, phone chart page: CMC-style card —
+   flat, hairline border, tinted icon, blue CTA (no gradient wash). */
+html .price-chart-container--phonecmc .pv-locked,
+html .price-chart-container--phonecmc .pv-locked:hover {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 12px 0;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: var(--color-background, #fff) !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent) !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+html .price-chart-container--phonecmc .pv-locked-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #7c3aed 10%, transparent) !important;
+  background-image: none !important;
+  color: #7c3aed !important;
+  box-shadow: none !important;
+}
+html:not([data-theme="light"]) .price-chart-container--phonecmc .pv-locked-icon { color: #a78bfa !important; }
+html .price-chart-container--phonecmc .pv-locked-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+html .price-chart-container--phonecmc .pv-locked-text strong { font-size: 14px; font-weight: 700; color: var(--color-text); }
+html .price-chart-container--phonecmc .pv-locked-text > span { font-size: 12.5px; font-weight: 400; color: var(--color-text-muted); line-height: 1.35; }
+html .price-chart-container--phonecmc .pv-locked-cta {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: #3861fb !important;
+  background-image: none !important;
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none !important;
+}
 
 /* "Bitcoin to USD Chart" title above the chart. */
 .cmct-title { margin: 16px 0 10px; font-size: 15px; font-weight: 700; color: var(--color-text); letter-spacing: -0.01em; }
@@ -922,6 +974,10 @@ html:not([data-theme="light"]) .cmct-tvjump { color: #a78bfa; background: color-
   padding: 3px;
   border-radius: 8px;
   box-sizing: border-box;
+  /* Never wider than the screen (iOS let it push the page sideways). */
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
   background: var(--cmct-track, color-mix(in srgb, var(--color-text) 5%, transparent));
   --cmct-track: #eff2f5;
 }
@@ -930,7 +986,9 @@ html:not([data-theme="light"]) .cmct-ranges { --cmct-track: #222531; }
 .cmct-rbtn:hover {
   all: unset;
   flex: 1 1 0;
+  min-width: 0;
   text-align: center;
+  white-space: nowrap;
   height: 30px;
   line-height: 30px;
   border-radius: 6px;

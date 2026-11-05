@@ -330,9 +330,8 @@ const PRO_INTERVALS = new Set<TimeInterval>(["1sec", "all"]);
 // Desktop chart page toolbar (CMC): main interval buttons + the rest in a ⌄ menu.
 const TV_MAIN_INTERVALS: TimeInterval[] = ["15min", "1h", "4h", "1day"];
 const TV_MORE_INTERVALS: TimeInterval[] = ["1sec", "1min", "5min", "6h", "1week", "1month", "all"];
-// Phones (CMC app row): six in the row, the rest in the ⚙ sheet.
+// Phones (CMC app row): six in the row, the rest in Chart tools (⚙).
 const PHONE_IVS: TimeInterval[] = ["15min", "1h", "4h", "1day", "1week", "1month"];
-const PHONE_MORE_IVS: TimeInterval[] = ["1sec", "1min", "5min", "6h", "all"];
 const TV_INTERVAL_LABEL: Record<TimeInterval, string> = {
   "1sec": "1s", "1min": "1m", "5min": "5m", "15min": "15m", "1h": "1h", "4h": "4h", "6h": "6h",
   "1day": "24h", "1week": "1W", "1month": "1M", "all": "All",
@@ -1883,6 +1882,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [tvMenu, setTvMenu] = useState<null | "int" | "set">(null);
   // Phones, chart page: last tap on the chart (double-tap → Advance Chart).
   const phoneTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  // Phones, chart page: an interval picked outside the visible row (e.g. 5m
+  // from Chart tools) takes the row's last slot until another one is picked.
+  const [phoneExtraIv, setPhoneExtraIv] = useState<TimeInterval | null>(null);
+  useEffect(() => {
+    if (!PHONE_IVS.slice(0, -1).includes(interval)) setPhoneExtraIv(interval === PHONE_IVS[PHONE_IVS.length - 1] ? null : interval);
+  }, [interval]);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
   // Default style: Line on phones, candles on desktop (a saved choice wins).
@@ -5642,6 +5647,28 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </button>
             ))}
           </div>
+          {/* Every interval (1s … All) — PRO ones open the upgrade. */}
+          <div className="cts-section-label">Interval</div>
+          <div className="cts-ivs">
+            {(["1sec", "1min", "5min", "15min", "1h", "4h", "6h", "1day", "1week", "1month", "all"] as TimeInterval[]).map((iv) => {
+              const pro = PRO_INTERVALS.has(iv) && !isPaid;
+              return (
+                <button
+                  type="button"
+                  key={iv}
+                  className={`cts-iv${interval === iv ? " active" : ""}`}
+                  onClick={() => {
+                    hapticTap();
+                    if (pro) { setToolsSheetOpen(false); onOpenUpgrade?.("pro"); return; }
+                    setInterval(iv);
+                  }}
+                >
+                  {TV_INTERVAL_LABEL[iv]}
+                  {pro && <span className="cts-iv-pro">PRO</span>}
+                </button>
+              );
+            })}
+          </div>
           {/* "Indicators" row → opens its own sheet with the list.
               Not on the #trade chart (candle type + ProVision only). */}
           {!tradeChartLocked && (
@@ -7642,10 +7669,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               </div>
             )}
             {/* Phones, candle view (CMC app): [15m 1h 4h 24h 1W 1M | ⚙] —
-                ⚙ opens Chart settings (Tools, Full chart, other intervals). */}
+                ⚙ opens Chart tools. An interval picked there (e.g. 5m) takes
+                the last visible slot (1M) and stays until another is picked;
+                ⚙ always stays. */}
             {phoneCmc && !cmcLineView && (
               <div className="cmct-ranges cmct-ivrow" role="tablist" aria-label="Interval">
-                {PHONE_IVS.map((iv) => {
+                {[...PHONE_IVS.slice(0, -1), phoneExtraIv ?? PHONE_IVS[PHONE_IVS.length - 1]].map((iv) => {
                   const pro = PRO_INTERVALS.has(iv) && !isPaid;
                   return (
                     <button
@@ -7663,16 +7692,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="cmct-ivdiv" aria-hidden="true" />
                 <button
                   type="button"
-                  className={`cmct-rbtn cmct-rbtn--icon${PHONE_MORE_IVS.includes(interval) ? " cmct-rbtn--on" : ""}`}
+                  className="cmct-rbtn cmct-rbtn--icon"
                   onClick={() => setToolsSheetOpen(true)}
                   aria-label="Chart tools"
                 >
-                  {PHONE_MORE_IVS.includes(interval) ? TV_INTERVAL_LABEL[interval] : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
-                      <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" />
-                      <circle cx="16" cy="7" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="17" r="2" />
-                    </svg>
-                  )}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
+                    <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" />
+                    <circle cx="16" cy="7" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="17" r="2" />
+                  </svg>
                 </button>
               </div>
             )}
