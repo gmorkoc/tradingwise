@@ -7545,6 +7545,8 @@ html[data-theme="light"] .mode-switch-pill--glint::after { background: #f5f6f7; 
   100% { opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .mode-switch-pill--glint::before { animation: none; } }
+/* No moving rim while its menu is open — it fought with the menu. */
+.mode-switch-pill--glint[aria-expanded="true"]::before { animation: none; opacity: 0; }
 .mode-switch-pill--paper { background: rgba(124, 58, 237, 0.2); }
 /* Same fill as the header's icon buttons (bell etc.). */
 html[data-theme="light"] .mode-switch-pill { background: rgb(15 23 42 / 4%); }

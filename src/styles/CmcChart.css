@@ -818,6 +818,22 @@ html .price-chart-container--phonecmc.price-chart-container--loading .chart-canv
 @keyframes cmch-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cmch-skel, .cmch-spinner { animation-duration: 2.4s; } }
 
+/* Top bar toggle (phones, chart page): once the page's price row has
+   scrolled away, its "Tap to switch" line shows price + change. */
+.mode-switch-sub.mode-switch-sub--price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+  animation: hdr-price-in 0.22s ease both;
+}
+.mode-switch-sub--price b { font-weight: 600; color: var(--color-text); }
+.mode-switch-sub--price i { font-style: normal; font-weight: 500; }
+.hdr-price-up { color: #16c784; }
+.hdr-price-dn { color: #ea3943; }
+@keyframes hdr-price-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hdr-price { animation: none; } }
+
 /* Header sits under the Chart / Order Book / Trades tabs (CMC app). */
 .cmch { padding: 14px 0 4px; }
 /* Market stats row under the price: scrolls sideways, no scrollbar. */

@@ -1885,6 +1885,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Phones, chart page: an interval picked outside the visible row (e.g. 5m
   // from Chart tools) takes the row's last slot until another one is picked.
   const [phoneExtraIv, setPhoneExtraIv] = useState<TimeInterval | null>(null);
+  // Phones, chart page: the header price row, and whether it's scrolled away.
+  const cmchPriceRef = useRef<HTMLDivElement>(null);
+  const [priceOff, setPriceOff] = useState(false);
   useEffect(() => {
     if (!PHONE_IVS.slice(0, -1).includes(interval)) setPhoneExtraIv(interval === PHONE_IVS[PHONE_IVS.length - 1] ? null : interval);
   }, [interval]);
@@ -7021,6 +7024,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // "Bitcoin price BTC" (opens the coin picker) + stats / share, the big
   // price and its change, the "Why is BTC's price up today?" AI chip, then
   // the green "Trade BTC  P" button.
+  // Phones, chart page: when the price row scrolls up under the top bar,
+  // App shows the price there instead ("coin-header-price"); it goes away
+  // once the row is back in view.
+  useEffect(() => {
+    const el = cmchPriceRef.current;
+    if (!el || !phoneCmcPage) { setPriceOff(false); return; }
+    const root = el.closest(".main-content") as HTMLElement | null;
+    const io = new IntersectionObserver(
+      ([en]) => setPriceOff(!en.isIntersecting && en.boundingClientRect.top < (en.rootBounds?.top ?? 0) + 10),
+      { root, rootMargin: root ? "0px" : "-64px 0px 0px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [phoneCmcPage, coin]);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("coin-header-price", {
+      detail: priceOff && currentPrice !== null ? { coin, price: formatLivePrice(currentPrice), chg: dayChangePercent } : null,
+    }));
+  }, [priceOff, currentPrice, dayChangePercent, coin]);
+  useEffect(() => () => { window.dispatchEvent(new CustomEvent("coin-header-price", { detail: null })); }, []);
+
   const phoneHeaderEl = phoneCmcPage ? (
     <div className="cmch">
       <div className="cmch-top">
@@ -7057,7 +7081,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           </button>
         </div>
       </div>
-      <div className="cmch-price">
+      <div className="cmch-price" ref={cmchPriceRef}>
         {currentPrice !== null
           ? <strong>{formatLivePrice(currentPrice)}</strong>
           : <span className="cmch-skel" aria-label="Loading price" />}

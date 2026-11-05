@@ -1633,6 +1633,16 @@ function AppDashboard({
       {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
     </button>
   );
+  // Phones, chart page: once the page's price row scrolls under the top bar,
+  // the toggle's "Tap to switch" line shows the live price + change instead,
+  // until the row is back in view (PriceChart sends "coin-header-price").
+  const [hdrPrice, setHdrPrice] = useState<{ coin: string; price: string; chg: number | null } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setHdrPrice((e as CustomEvent).detail ?? null);
+    window.addEventListener("coin-header-price", on);
+    return () => window.removeEventListener("coin-header-price", on);
+  }, []);
+  const showHdrPrice = !!hdrPrice && activeSection === "chart" && !inPaper && !isDesktopWidth;
   // "account-switcher" (sketch #1) or "wallet-chip" (sketch #3).
   const HEADER_MODE_STYLE = "account-switcher" as string;
   const accountSwitcher = (
@@ -1663,7 +1673,18 @@ function AppDashboard({
         )}
         <span className="mode-switch-text">
           <span className="mode-switch-title">{inPaper ? "Paper trading" : liveLabel}</span>
-          <span className="mode-switch-sub">Tap to switch</span>
+          {showHdrPrice ? (
+            <span className="mode-switch-sub mode-switch-sub--price">
+              <b>{hdrPrice!.price}</b>
+              {hdrPrice!.chg !== null && (
+                <i className={hdrPrice!.chg >= 0 ? "hdr-price-up" : "hdr-price-dn"}>
+                  {hdrPrice!.chg >= 0 ? "▲" : "▼"}{Math.abs(hdrPrice!.chg).toFixed(2)}%
+                </i>
+              )}
+            </span>
+          ) : (
+            <span className="mode-switch-sub">Tap to switch</span>
+          )}
         </span>
         <svg className="mode-switch-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
         {!paperTabSeen && <span className="chart-mobile-tab-dot" aria-hidden="true" />}
