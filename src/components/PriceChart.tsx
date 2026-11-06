@@ -8272,7 +8272,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {/* ↺ reset view — after the user moves / zooms the chart. */}
             {viewMoved && (tvDrawRail || phoneCmc) && !isFullscreen && (
               <button type="button" className="chart-view-reset" onClick={resetMovedView} aria-label="Reset chart view" title="Reset chart view">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
               </button>
             )}
             {swipeHint !== "gone" && pageMode && !isDesktopWidth && (
@@ -8303,11 +8303,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 swapping the chart in place rather than leaving the page.
                 Mobile and desktop compact both use this now — only
                 fullscreen/pageMode still get the standalone modal. */}
-            {showCompactView && !pageMode && !isFullscreen && (
-              <div className="chart-compact-inline">
-                <CompactPriceView inline coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
-              </div>
-            )}
             {/* Advance Price Chart page, mobile — this whole icon row
                 (Save/Reset/depth/Exit-fullscreen etc.) moves into the
                 dock's peek row instead (fsDockSheet below), so the chart
@@ -10501,7 +10496,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       {/* #chart (compact, non-fullscreen) renders its own inline version
           above instead (chart-compact-inline), mobile and desktop both —
           this modal only stays for pageMode/fullscreen now. */}
-      {showCompactView && !(!pageMode && !isFullscreen) && (
+      {/* Compact view: a full-screen 15-min Over / Under round (practice
+          money) — same everywhere it's opened from. */}
+      {showCompactView && (
         <CompactPriceView coin={coin} theme={theme} onClose={() => setShowCompactView(false)} />
       )}
 

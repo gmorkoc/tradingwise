@@ -14,6 +14,7 @@ import Capacitor
 /// WKWebView.isLoading, which fires independent of delegate ownership.
 class MainViewController: CAPBridgeViewController {
     private var isLoadingObservation: NSKeyValueObservation?
+    private var contentOffsetObservation: NSKeyValueObservation?
 
     // Capacitor only auto-registers plugins that are real installed npm
     // packages, discovered by `cap sync` and listed in the bundled
@@ -40,6 +41,23 @@ class MainViewController: CAPBridgeViewController {
         // can leave the webview's own scroll view offset stuck non-zero,
         // exposing black space above the content until the app restarts.
         webView?.scrollView.contentInsetAdjustmentBehavior = .never
+
+        // The app is a fixed-width, portrait page: the web view must never
+        // pan sideways or zoom. No horizontal bounce, no pinch zoom, and any
+        // horizontal offset (e.g. from content briefly wider than the
+        // screen) is snapped straight back to x = 0.
+        if let sv = webView?.scrollView {
+            sv.alwaysBounceHorizontal = false
+            sv.showsHorizontalScrollIndicator = false
+            sv.minimumZoomScale = 1
+            sv.maximumZoomScale = 1
+            sv.pinchGestureRecognizer?.isEnabled = false
+            contentOffsetObservation = sv.observe(\.contentOffset, options: [.new]) { scrollView, _ in
+                if scrollView.contentOffset.x != 0 {
+                    scrollView.contentOffset = CGPoint(x: 0, y: scrollView.contentOffset.y)
+                }
+            }
+        }
         NotificationCenter.default.addObserver(
             self, selector: #selector(resetWebViewScrollOffset),
             name: UIResponder.keyboardDidHideNotification, object: nil

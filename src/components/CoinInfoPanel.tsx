@@ -213,8 +213,8 @@ export function CoinInfoPanel({ coin, ticker, onTrade, stats, onPickCoin, phone 
   const tags = (details?.categories ?? []).filter(Boolean);
 
   return (
-    <aside className={`cip${phone ? " cip--phone" : ""}`} aria-label={`${name} overview`}>
-      {phone && <h2 className="cip-phone-h">{name} statistics</h2>}
+    <aside id={phone ? "coin-sec-stats" : undefined} className={`cip${phone ? " cip--phone" : ""}`} aria-label={`${name} overview`}>
+      {phone && <h2 className="cip-phone-h">{name} Statistics</h2>}
       {/* Name row + star / share */}
       <div className="cip-top">
         {/* Coin name block: opens the coin picker. */}

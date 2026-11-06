@@ -144,10 +144,17 @@ textarea {
 }
 
 /* Phones: nothing may widen the page past the screen (no sideways drag on
-   iOS). `clip` — unlike `hidden` — doesn't turn these into scroll
-   containers, so position: sticky keeps working. */
+   iOS). */
 @media (max-width: 768px) {
-  html, body, #root { max-width: 100%; overflow-x: clip; }
+  /* iOS WebKit doesn't reliably honour `clip` on the page itself — use
+     hidden there (the page doesn't scroll; .main-content does). */
+  html, body { max-width: 100%; overflow-x: hidden; }
+  #root { max-width: 100%; overflow-x: clip; }
+  /* The scrolling area's own children clip sideways overflow, so nothing
+     inside can make .main-content wider than the screen (iOS let it be
+     panned sideways even with overflow-x: hidden). */
+  .main-content > * { max-width: 100%; overflow-x: clip; }
+  .price-chart-container { overflow-x: clip; }
 }
 
 /* Portrait-only on phones (mobile web): a touch phone held sideways gets a

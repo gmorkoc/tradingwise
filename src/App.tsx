@@ -68,13 +68,14 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
 import { useProVisionGate } from "./hooks/useProVisionGate";
 import { fetchPortfolio } from "./services/paperTrading";
-import { CoinPageTabBar, CoinPageTabContent, CoinPagePicker, type CoinPageTab } from "./components/CoinPageTabs";
+import { CoinPageTabBar, CoinPageTabContent, CoinPagePicker, CoinPageSections, type CoinPageTab } from "./components/CoinPageTabs";
 import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
 import { ChartBottomPanel } from "./components/ChartBottomPanel";
 import { CoinInfoPanel } from "./components/CoinInfoPanel";
 import { CoinNews } from "./components/CoinNews";
+import { MarketCycles } from "./components/MarketCycles";
 import { TradeInsights } from "./components/TradeInsights";
 import { PriceChart, formatLivePrice, PV_PROMO_STYLE } from "./components/PriceChart";
 import { MobileSymbolSheet } from "./components/MobileSymbolSheet";
@@ -1770,6 +1771,19 @@ function AppDashboard({
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
+  // Phones: the page and its scrolling area must never sit shifted
+  // sideways (iOS could pan .main-content horizontally despite
+  // overflow-x: hidden) — snap any horizontal offset straight back to 0.
+  useEffect(() => {
+    if (isDesktopWidth) return;
+    const el = mainContentRef.current;
+    const fixEl = () => { if (el && el.scrollLeft !== 0) el.scrollLeft = 0; };
+    const fixWin = () => { if (window.scrollX !== 0) window.scrollTo(0, window.scrollY); };
+    el?.addEventListener("scroll", fixEl, { passive: true });
+    window.addEventListener("scroll", fixWin, { passive: true });
+    fixEl(); fixWin();
+    return () => { el?.removeEventListener("scroll", fixEl); window.removeEventListener("scroll", fixWin); };
+  }, [isDesktopWidth]);
 
   const onResizePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -4057,8 +4071,13 @@ function AppDashboard({
                         {activeSection === "chart" && !isDesktopWidth && (
                           <>
                             <CoinInfoPanel phone coin={coin} ticker={coinTickers.get(coin)} />
+                            {/* Bitcoin only: Puell Multiple, Pi Cycle Top, Rainbow. */}
+                            <MarketCycles coin={coin} theme={theme} />
                             {/* "Bitcoin News" (CMC app layout). */}
                             <CoinNews coin={coin} />
+                            {/* Technicals, Seasonals, Markets, Fundamentals —
+                                on the page; "More ▾" scrolls to them. */}
+                            <CoinPageSections coin={coin} />
                           </>
                         )}
                         {!distractionFree ? (

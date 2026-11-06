@@ -157,6 +157,40 @@
 }
 
 .cpt-panel { padding: 18px 0 24px; animation: cpt-in 0.25s ease both; }
+/* ── Phone coin page: ONE layout system for every section below the chart
+   (Statistics, Market Cycles, News, Technicals, Seasonals, Markets,
+   Fundamentals). Same title, same spacing between sections, same inner
+   gap, no dividers, no extra side padding (the page gives 16px). ── */
+.cps-inline { display: flex; flex-direction: column; }
+html .cip.cip--phone,
+html .mcyc,
+html .cnews,
+html .cps-inline-sec {
+  margin: 0 !important;
+  padding: 32px 0 0 !important;
+  border: none !important;
+  background: none;
+  scroll-margin-top: 8px;
+}
+html .cps-inline-sec:last-child { padding-bottom: 32px !important; }
+html .cps-inline .cpt-panel { animation: none; padding: 0 !important; }
+html .mcyc, html .cnews, html .cps-inline .cpt-section { gap: 14px; }
+/* Section titles */
+html .cip-phone-h,
+html .mcyc-h,
+html .cnews-h,
+html .cps-inline .cpt-h {
+  margin: 0 0 14px !important;
+  font-size: 20px !important;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+html .mcyc-h, html .cnews-h, html .cps-inline .cpt-h { margin-bottom: 0 !important; } /* their flex gap adds the 14px */
+html .cps-inline .cps-coin-logo { display: none; }
+/* Statistics: title, then its card right under it. */
+html .cip--phone > .cip-card { margin-top: 0 !important; }
 @keyframes cpt-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .cpt-section { display: flex; flex-direction: column; gap: 14px; }
 .cpt-h { margin: 0; font-size: 18px; font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 8px; }
@@ -486,7 +520,8 @@ html:not([data-theme="light"]) .cpt-seg-btn--on { background: #2c2c2e; }
 .cps-row,
 .cps-row:hover {
   all: unset;
-  --cps-c: #64748b;
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -500,11 +535,9 @@ html:not([data-theme="light"]) .cpt-seg-btn--on { background: #2c2c2e; }
 .cps-row:last-child { border-bottom: none; }
 .cps-row:active { opacity: 0.55; }
 @keyframes cps-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.cps-row--news { --cps-c: #f97316; }
-.cps-row--technicals { --cps-c: #8b5cf6; }
-.cps-row--seasonals { --cps-c: #10b981; }
-.cps-row--markets { --cps-c: #0ea5e9; }
-.cps-row--fundamentals { --cps-c: #ec4899; }
+/* Every section row looks the same: one icon colour (the page's blue). */
+.cps-row { --cps-c: #3861fb; }
+html:not([data-theme="light"]) .cps-row { --cps-c: #6188ff; }
 .cps-icon {
   flex-shrink: 0;
   display: inline-flex;

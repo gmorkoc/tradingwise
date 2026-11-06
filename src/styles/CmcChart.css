@@ -546,17 +546,18 @@ html:not([data-theme="light"]) .pv-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: var(--color-background, #fff);
-  color: var(--color-text);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12), 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  /* CMC's: white square, soft drop shadow, no outline, dark icon. */
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #fff;
+  color: #0d1421;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
   cursor: pointer;
   animation: chart-view-reset-in 0.2s ease both;
   -webkit-tap-highlight-color: transparent;
 }
-html:not([data-theme="light"]) .chart-view-reset { background: #1a1a1d; }
+html:not([data-theme="light"]) .chart-view-reset { background: #222531; color: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .chart-view-reset:active { transform: translateX(-50%) scale(0.92); }
 @keyframes chart-view-reset-in { from { opacity: 0; } to { opacity: 1; } }
 .chart-ohlc {
@@ -718,7 +719,12 @@ html:not([data-theme="light"]) .cmct {
   gap: 8px;
   margin: 12px 0 8px;
 }
-.cmct-phone-row { display: flex; gap: 8px; }
+/* Never wider than the screen (iOS fonts run wider — it pushed the page
+   sideways): every piece may shrink, text never wraps. */
+.cmct.cmct--phone { width: 100%; min-width: 0; overflow: hidden; }
+.cmct-phone-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; }
+.cmct--phone .cmct-seg { min-width: 0; flex-shrink: 1; }
+.cmct--phone .cmct-btn { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cmct--phone .cmct-seg { height: 36px; border-radius: 8px; }
 .cmct--phone .cmct-seg--grow { flex: 1 1 auto; }
 .cmct--phone .cmct-seg--grow .cmct-btn { flex: 1 1 0; justify-content: center; }

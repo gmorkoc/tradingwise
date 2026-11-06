@@ -1,223 +1,239 @@
-/* Portaled to document.body (see the component) — the highest z-index
-   anywhere else in the app is 300001 (Drawer/AccountMenu/GlobalSearch),
-   so this needs to clear that comfortably to actually win regardless of
-   what else happens to be open (Daily Brief, the CoinChat dock, etc.). */
+/* Compact view: full-screen 15-min Over / Under round (practice money).
+   Portaled to <body>. z-index sits just under the shared BottomSheet
+   (200030) so its stake picker / rules sheet open on top of it. */
 .cpv-overlay {
   position: fixed;
   inset: 0;
-  z-index: 400000;
-  background: var(--color-background);
+  z-index: 200020;
   display: flex;
   flex-direction: column;
-  padding-top: var(--native-safe-area-top, env(safe-area-inset-top));
-  padding-bottom: var(--native-safe-area-bottom, env(safe-area-inset-bottom));
-  animation: cpv-fade-in 0.18s ease;
-}
-@keyframes cpv-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.cpv-root {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  background: var(--color-background);
-  padding: 16px;
-  gap: 16px;
-}
-/* Rendered directly inside .chart-compact-inline (position:absolute;
-   inset:0) instead of .cpv-overlay's fixed-viewport flex column — needs
-   its own explicit height to fill that parent instead of flex:1, which
-   has nothing to flex within here. */
-.cpv-root--inline {
-  /* .chart-compact-inline is a row-direction flex container — flex:none
-     here left width at content-size (shrink-to-fit) since width is the
-     main axis there, only height stretched via the cross-axis default.
-     flex:1 plus explicit width/height makes it fill regardless of which
-     axis is which. */
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-}
-
-.cpv-header {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.cpv-header-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.cpv-coin-logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  padding: calc(var(--native-safe-area-top, env(safe-area-inset-top)) + 6px) 16px calc(var(--native-safe-area-bottom, env(safe-area-inset-bottom)) + 14px);
+  background: #fff;
+  color: #0d1421;
   overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-input-bg);
+  animation: cpv-fade-in 0.18s ease;
+  --cpr-up: #16a34a;
+  --cpr-dn: #dc2626;
+  --cpr-line: rgba(13, 20, 33, 0.1);
+  --cpr-chip: rgba(13, 20, 33, 0.05);
+  --cpr-muted: #58667e;
 }
-.cpv-coin-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.cpv-overlay.cpv-round--dark {
+  background: #000;
+  color: #fff;
+  --cpr-up: #5ac85a;
+  --cpr-dn: #ef4444;
+  --cpr-line: rgba(255, 255, 255, 0.18);
+  --cpr-chip: rgba(255, 255, 255, 0.08);
+  --cpr-muted: rgba(255, 255, 255, 0.72);
 }
-.cpv-coin-logo-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: var(--color-text-muted);
-}
-.cpv-subtitle {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  opacity: 0.9;
-  margin: -18px 0 0 52px;
-}
-@media (min-width: 900px) {
-  .cpv-subtitle { margin-left: 52px; }
-}
-.cpv-back {
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 10px;
-  display: flex;
+@keyframes cpv-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.cpr-up { color: var(--cpr-up); }
+.cpr-dn { color: var(--cpr-dn); }
+
+/* Top bar */
+.cpr-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0 10px; }
+.cpr-circle,
+.cpr-circle:hover,
+.cpr-pair button,
+.cpr-pair button:hover {
+  all: unset;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
-.cpv-back svg { flex-shrink: 0; }
-.cpv-back:hover { color: var(--color-text); }
-.cpv-coin {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: 0.01em;
-}
-
-.cpv-live-badge {
+.cpr-circle { width: 46px; height: 46px; border-radius: 50%; background: var(--cpr-chip); }
+.cpr-pair { display: inline-flex; align-items: center; gap: 2px; height: 46px; padding: 0 8px; border-radius: 999px; background: var(--cpr-chip); }
+.cpr-pair button { width: 38px; height: 38px; }
+.cpr-pair button.cpr-on { color: #f5a623; }
+/* Countdown pill with a progress ring drawn as its border. */
+.cpr-clock {
+  --cpr-p: 0;
+  position: relative;
+  min-width: 78px;
+  height: 36px;
+  padding: 0 14px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px 3px 6px;
-  border-radius: 99px;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #22c55e;
-}
-.cpv-live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #22c55e;
-  animation: cpv-live-pulse 1.8s ease-in-out infinite;
-}
-@keyframes cpv-live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.4; transform: scale(0.75); }
-}
-
-.cpv-price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.cpv-price {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-}
-.cpv-change {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-.cpv-change-abs {
-  font-size: 0.78rem;
-  font-weight: 600;
-  opacity: 0.75;
-}
-.cpv-change-window {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: var(--color-input-bg);
-  color: var(--color-text-muted);
-}
-.cpv-up { color: #22c55e; }
-.cpv-down { color: #fb7185; }
-
-.cpv-chart-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-}
-.cpv-chart {
-  width: 100%;
-  height: 100%;
-}
-
-/* Live trade-size ticker — small colored ticks along the left edge,
-   newest at top, fading toward the bottom (matches the reference's
-   compact tape treatment without any of its wager UI). */
-.cpv-ticks {
-  position: absolute;
-  top: 8px;
-  left: 4px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  pointer-events: none;
-}
-.cpv-tick {
-  font-size: 0.7rem;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  opacity: 0.9;
+  background:
+    linear-gradient(var(--cpr-bg, #fff), var(--cpr-bg, #fff)) padding-box,
+    conic-gradient(currentColor calc(var(--cpr-p) * 360deg), var(--cpr-line) 0) border-box;
+  border: 2.5px solid transparent;
 }
-.cpv-tick:nth-child(n+4) { opacity: 0.55; }
-.cpv-tick:nth-child(n+6) { opacity: 0.3; }
+.cpv-round--dark .cpr-clock { --cpr-bg: #000; }
+.cpr-clock--locked { color: var(--cpr-dn); }
 
-@media (max-width: 640px) {
-  .cpv-price { font-size: 1.7rem; }
-  .cpv-subtitle { font-size: 0.68rem; }
+/* Title + wallet */
+.cpr-title { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 18px; font-weight: 700; }
+.cpr-title img,
+.cpr-logo-fb { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; }
+.cpr-logo-fb { display: inline-flex; align-items: center; justify-content: center; background: #f7931a; color: #fff; }
+.cpr-wallet { margin-left: auto; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cpr-wallet em { font-style: normal; font-weight: 500; color: var(--cpr-muted); }
+
+/* Current | Price to beat */
+.cpr-prices { display: flex; align-items: stretch; gap: 16px; margin-top: 10px; }
+.cpr-prices > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cpr-prices > i { width: 1px; background: var(--cpr-line); }
+.cpr-prices strong { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cpr-prices span { font-size: 15px; color: var(--cpr-muted); }
+.cpr-prices span b { font-weight: 600; margin-left: 4px; }
+
+/* Chart */
+.cpr-chart { position: relative; flex: 1 1 auto; min-height: 220px; margin: 14px -16px 0 0; }
+.cpr-chart-box { position: absolute; inset: 0; }
+.cpr-ticks {
+  position: absolute;
+  left: 4px;
+  bottom: 34px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.cpr-ticks span { animation: cpr-tick-in 0.25s ease both; }
+.cpr-ticks span:nth-child(n + 4) { opacity: 0.55; }
+@keyframes cpr-tick-in { from { opacity: 0; transform: translateY(-4px); } }
+.cpr-beat-pill {
+  position: absolute;
+  right: 6px;
+  z-index: 3;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #0d1421;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
 }
 
-/* Desktop web — a full-bleed 1s tick chart just gets sparse and hard to
-   read at real monitor widths, so this caps and centers the content
-   instead of letting it stretch edge to edge like the phone layout does. */
-@media (min-width: 900px) {
-  .cpv-root {
-    width: min(100%, 760px);
-    margin: 0 auto;
-    padding: 32px 0 40px;
-  }
-  .cpv-price { font-size: 2.6rem; }
-  .cpv-chart-wrap { border-radius: 16px; overflow: hidden; }
+/* Past rounds + rules */
+.cpr-hist { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.cpr-hist-dots { display: inline-flex; gap: 6px; }
+.cpr-hist-dots i { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; }
+.cpr-hist-up { background: color-mix(in srgb, var(--cpr-up) 22%, transparent); color: var(--cpr-up); }
+.cpr-hist-dn { background: color-mix(in srgb, var(--cpr-dn) 22%, transparent); color: var(--cpr-dn); }
+.cpr-rules,
+.cpr-rules:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--cpr-muted);
+  cursor: pointer;
 }
+.cpr-mybets { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 13px; font-weight: 600; }
+
+/* Over / Under */
+.cpr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.cpr-actions > div { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cpr-btn,
+.cpr-btn:hover {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+.cpr-btn span { font-weight: 600; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.cpr-btn--over { background: #5ac85a; }
+.cpr-btn--under { background: #e03434; }
+.cpr-btn:active { transform: scale(0.97); }
+.cpr-btn:disabled { opacity: 0.4; cursor: default; }
+.cpr-mult { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cpr-lock { margin: 10px 0 0; text-align: center; font-size: 13px; color: var(--cpr-muted); }
+
+.cpr-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--native-safe-area-bottom, env(safe-area-inset-bottom)) + 120px);
+  transform: translateX(-50%);
+  z-index: 10;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #0d1421;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: cpv-fade-in 0.2s ease;
+}
+.cpv-round--dark .cpr-toast { background: #fff; color: #0d1421; }
+
+/* Stake / rules sheets */
+.cpr-sheet { display: flex; flex-direction: column; gap: 14px; padding: 4px 4px 12px; }
+.cpr-sheet-sub { margin: 0; font-size: 14px; color: var(--color-text-muted); }
+.cpr-stakes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cpr-stake,
+.cpr-stake:hover {
+  all: unset;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1.5px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.cpr-stake--on { border-color: #3861fb; color: #3861fb; background: color-mix(in srgb, #3861fb 8%, transparent); }
+.cpr-stake:disabled { opacity: 0.35; cursor: default; }
+.cpr-sheet-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--color-text-muted); }
+.cpr-sheet-row b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.cpr-sheet-row b.cpr-up { color: #16a34a; }
+.cpr-confirm,
+.cpr-confirm:hover {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #5ac85a;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cpr-confirm--under { background: #e03434; }
+.cpr-confirm:disabled { opacity: 0.45; cursor: default; }
+.cpr-sheet-note { margin: 0; text-align: center; font-size: 12px; color: var(--color-text-muted); }
+.cpr-rules-body p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--color-text); }
+.cpr-rules-body .cpr-up { color: #16a34a; }
+.cpr-rules-body .cpr-dn { color: #dc2626; }
+@media (prefers-reduced-motion: reduce) { .cpv-overlay, .cpr-ticks span, .cpr-toast { animation: none; } }

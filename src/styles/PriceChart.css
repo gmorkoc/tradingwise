@@ -2355,6 +2355,12 @@ html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
   width: calc(100% + 24px);
   background: transparent;
 }
+/* Phone chart page (CMC layout): no bleed — it ran 8px past the right
+   edge on iOS and let the page drag sideways. */
+.price-chart-container--phonecmc .chart-dblclick-wrap--ios-bleed {
+  left: 0;
+  width: 100%;
+}
 /* touch-action alone wasn't enough — lightweight-charts' canvas attaches
    its own non-passive touch listeners directly to the canvas element, and
    those still raced with native scroll and with our own double-tap

@@ -46,7 +46,7 @@ export function CoinNews({ coin }: { coin: string }) {
   const shown = all ? rest : rest.slice(0, SHOW - (lead ? 1 : 0));
 
   return (
-    <section className="cnews" aria-label={`${name} news`}>
+    <section id="coin-sec-news" className="cnews" aria-label={`${name} news`}>
       <h2 className="cnews-h">{name} News</h2>
       <div className="cnews-seg" role="tablist" aria-label="News">
         {(["top", "latest"] as const).map((k) => (

@@ -84,17 +84,61 @@ function CoinSheetTitle({ coin, text }: { coin: string; text: string }) {
 
 // Phones: "More ▾" at the end of the Chart / Order Book / Trades row opens
 // the Explore list; each section opens in its own bottom sheet.
+// Phones: every section lives on the page itself (CoinPageSections, the
+// news / stats / cycles sections, ids "coin-sec-<id>"); the "More" list
+// just scrolls to it.
+type PageOnlySection = "chart" | "stats" | "cycles";
+const PAGE_ONLY_ROWS: { id: PageOnlySection; label: string; sub: string; icon: React.ReactNode }[] = [
+  { id: "chart", label: "Chart", sub: "Price, intervals and drawing tools", icon: <><path d="M3 3v18h18" /><path d="m7 15 4-5 3 3 5-7" /></> },
+  { id: "stats", label: "Statistics", sub: "Market cap, volume, supply and links", icon: <><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></> },
+  { id: "cycles", label: "Market Cycles", sub: "Puell Multiple, Pi Cycle Top, Rainbow", icon: <><path d="M3 12a9 9 0 0 1 15.5-6.2" /><path d="M21 12a9 9 0 0 1-15.5 6.2" /><path d="M18 2v4h-4M6 22v-4h4" /></> },
+];
+
+export function CoinPageSections({ coin }: { coin: string }) {
+  return (
+    <div className="cps-inline">
+      {(["technicals", "seasonals", "markets", "fundamentals"] as CoinPageTab[]).map((t) => (
+        <section key={t} id={`coin-sec-${t}`} className="cps-inline-sec">
+          <CoinPageTabContent tab={t} coin={coin} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export function CoinPagePicker({ coin }: { coin: string }) {
   const [listOpen, setListOpen] = useState(false);
   const [section, setSection] = useState<CoinPageTab | null>(null);
   const label = (t: CoinPageTab) => COIN_PAGE_TABS.find((x) => x.id === t)?.label ?? "";
+  // A section row: scroll to it on the page (after the sheet closes); only
+  // if it isn't on the page does it open inside the sheet as before.
+  const go = (t: CoinPageTab | PageOnlySection) => {
+    if (t === "chart") {
+      setListOpen(false);
+      setSection(null);
+      window.setTimeout(() => {
+        document.querySelector(".main-content")?.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 260);
+      return;
+    }
+    if (document.getElementById(`coin-sec-${t}`)) {
+      setListOpen(false);
+      setSection(null);
+      window.setTimeout(() => document.getElementById(`coin-sec-${t}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 260);
+      return;
+    }
+    if (t === "stats" || t === "cycles") return;
+    // Not on the page (e.g. another layout): show it inside the sheet.
+    setSection(t);
+    setListOpen(true);
+  };
   // Opened from elsewhere (e.g. the Consensus card's Technicals row).
   useEffect(() => {
     const onOpen = (e: Event) => {
       const tab = (e as CustomEvent<{ tab?: CoinPageTab }>).detail?.tab;
       if (!tab || tab === "overview") return;
-      setSection(tab);
-      setListOpen(true);
+      go(tab);
     };
     window.addEventListener("open-coin-section", onOpen);
     return () => window.removeEventListener("open-coin-section", onOpen);
@@ -128,8 +172,13 @@ export function CoinPagePicker({ coin }: { coin: string }) {
           </div>
         ) : (
         <div className="cps-list" role="listbox" aria-label="Coin sections">
-          {COIN_PAGE_TABS.filter((t) => t.id !== "overview").map((t, i) => {
-            const meta = SECTION_META[t.id];
+          {/* Page order: Statistics, Market Cycles (when on the page), then
+              News … Fundamentals. */}
+          {[
+            ...PAGE_ONLY_ROWS.filter((r) => r.id !== "chart" && !!document.getElementById(`coin-sec-${r.id}`)),
+            ...COIN_PAGE_TABS.filter((t) => t.id !== "overview").map((t) => ({ id: t.id as CoinPageTab | PageOnlySection, label: t.label, ...SECTION_META[t.id] })),
+          ].map((t, i) => {
+            const meta = t;
             return (
               <button
                 key={t.id}
@@ -138,7 +187,7 @@ export function CoinPagePicker({ coin }: { coin: string }) {
                 aria-selected={false}
                 className={`cps-row cps-row--${t.id}`}
                 style={{ animationDelay: `${i * 40}ms` }}
-                onClick={() => setSection(t.id)}
+                onClick={() => go(t.id)}
               >
                 <span className="cps-icon" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{meta.icon}</svg>
@@ -215,7 +264,7 @@ function NewsTab({ coin }: { coin: string }) {
   if (!rows.length) return <Empty title="No news right now" text="Check back in a bit — headlines refresh every few minutes." />;
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} · News`} /></h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} News`} /></h2>
       {!matched.length && <p className="cpt-note">No {name}-specific headlines right now — here's the latest across crypto.</p>}
       <div className="cpt-news">
         {rows.map((n) => (
@@ -527,7 +576,7 @@ function TechnicalsTab({ coin }: { coin: string }) {
   return (
     <div className="cpt-section">
       <div className="cpt-row-head">
-        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Technicals`} /></h2>
+        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Technicals`} /></h2>
         <div className="cpt-seg" role="tablist" aria-label="Timeframe">
           {TECH_FRAMES.map((f) => (
             <button key={f.id} type="button" role="tab" aria-selected={frame === f.id} className={`cpt-seg-btn${frame === f.id ? " cpt-seg-btn--on" : ""}`} onClick={() => setFrame(f.id)}>{f.label}</button>
@@ -581,7 +630,7 @@ function SeasonalsTab({ coin }: { coin: string }) {
   const nowM = new Date().getUTCMonth();
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Seasonals`} /></h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Seasonals`} /></h2>
       <p className="cpt-note">Monthly return (open → close) for each year. This month: <strong>{MONTHS[nowM]}</strong> averaged <strong className={avg[nowM] !== null && avg[nowM]! >= 0 ? "cpt-tone--buy" : "cpt-tone--sell"}>{avg[nowM] === null ? "—" : `${avg[nowM]! >= 0 ? "+" : ""}${avg[nowM]!.toFixed(1)}%`}</strong> historically.</p>
       <div className="cpt-heat-wrap">
         <table className="cpt-heat">
@@ -635,7 +684,7 @@ function MarketsTab({ coin }: { coin: string }) {
   if (!rows) return <Loading label="Finding where it trades…" />;
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Markets`} /></h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Markets`} /></h2>
       <div className="cpt-table-wrap cpt-table-wrap--scroll">
         <table className="cpt-table">
           <thead><tr><th>#</th><th>Exchange</th><th>Pair</th><th className="cpt-num">Price</th><th className="cpt-num">24h volume</th><th>Trust</th></tr></thead>
@@ -705,7 +754,7 @@ function FundamentalsTab({ coin }: { coin: string }) {
   const date = (s?: string) => (s ? new Date(s).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "");
   return (
     <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} · Fundamentals`} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
+      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Fundamentals`} />{data.market_cap_rank ? <span className="cpt-rank">#{data.market_cap_rank}</span> : null}</h2>
       <div className="cpt-stats">
         <Stat label="Market cap" value={fmtUsd(m.market_cap?.usd)} />
         <Stat label="Fully diluted value" value={fmtUsd(m.fully_diluted_valuation?.usd)} />
