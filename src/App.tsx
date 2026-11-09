@@ -59,7 +59,6 @@ import { PushToast } from "./components/PushToast";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { FloatingNavBar } from "./components/FloatingNavBar";
 import { NotificationsCenter } from "./components/NotificationsCenter";
-import { WhaleAlerts } from "./components/WhaleAlerts";
 import { AuthModal } from "./components/AuthModal";
 import { BlurGate } from "./components/MembershipGate";
 import { PaywallPromo } from "./components/PaywallPromo";
@@ -115,7 +114,8 @@ import { HoverTip } from "./components/HoverTip";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { BtcMoveToast } from "./components/BtcMoveToast";
 import { useBtcMoveAlert } from "./hooks/useBtcMoveAlert";
-import { useNotificationsEnabled } from "./hooks/useNotificationsEnabled";
+import { useNotificationsEnabled, useWhaleAlertsEnabled } from "./hooks/useNotificationsEnabled";
+import { useWhaleToast } from "./hooks/useWhaleToast";
 import { usePictureInPictureWindow } from "./hooks/usePictureInPictureWindow";
 import { ZoneResult } from "./components/PriceChart.types";
 import { Tier, hasAccess, saveTermsAgreement, supabase } from "./services/supabase";
@@ -648,6 +648,13 @@ function AppDashboard({
     return () => mql.removeEventListener("change", handler);
   }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useNotificationsEnabled();
+  // The only switch that mutes alerts is the (hidden) Focus button, so a
+  // "muted" left over from when it was visible would silence price toasts,
+  // whale and price alerts for good with no way back. Unmute while hidden.
+  useEffect(() => {
+    if (!SHOW_FOCUS_BUTTON && !notificationsEnabled) setNotificationsEnabled(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [showOnboarding, setShowOnboarding] = useState(false);
   // showWhatsNew (the read) dropped — only its setter is still called below
   // (the 3s-delay trigger), since the card itself is commented out/paused.
@@ -753,6 +760,10 @@ function AppDashboard({
   // Follows the selected coin (not hardcoded to BTC) so the toast is
   // relevant to whatever chart is actually open.
   const { alert: btcMoveAlert, dismiss: dismissBtcAlert } = useBtcMoveAlert(coin);
+  // Whale transfers share the price toast (Whale Activity switch in
+  // Notification Settings). A price move shows first; whales wait behind it.
+  const [whaleAlertsOn] = useWhaleAlertsEnabled();
+  const { alert: whaleToast, dismiss: dismissWhaleToast } = useWhaleToast(notificationsEnabled && whaleAlertsOn);
 
   // Tapping a coin-mention push (pushNotifications.ts) jumps straight to
   // that comment: switch to its coin, open the chart + chat dock, and
@@ -4885,10 +4896,7 @@ function AppDashboard({
         {/* Price signal banner (bullish/bearish) hidden for now — see
             priceAlert state above, logic left intact to re-enable easily. */}
 
-        {/* Mobile: whale alerts only on the Trade page (#trade). Desktop unchanged. */}
-        {(isWideDesktop || activeSection === "chart") && (
-          <WhaleAlerts btcPrice={btcData?.price} coinChatOpen={activeSection === "chart" && showCoinChat} />
-        )}
+        {/* Whale alerts now show in the price toast (BtcMoveToast below). */}
 
         <div ref={backSwipeRef} className="back-swipe" aria-hidden="true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
@@ -5046,7 +5054,10 @@ function AppDashboard({
             />
           ))}
     </div>
-    <BtcMoveToast alert={notificationsEnabled && !chartFullscreen ? btcMoveAlert : null} onDismiss={dismissBtcAlert} />
+    <BtcMoveToast
+      alert={notificationsEnabled && !chartFullscreen ? (btcMoveAlert ?? whaleToast) : null}
+      onDismiss={btcMoveAlert ? dismissBtcAlert : dismissWhaleToast}
+    />
     {focusToast && ReactDOM.createPortal(
       <div className="focus-toast" role="status">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">

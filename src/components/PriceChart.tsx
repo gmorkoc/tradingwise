@@ -54,6 +54,7 @@ import { IndicatorPicker, type PickerItem } from "./IndicatorPicker";
 import { useChartIndicators, useIndicatorSelection } from "../hooks/useChartIndicators";
 import { getIndicatorDef } from "../services/customIndicators";
 import { useProVisionGate, openProVisionPaywall } from "../hooks/useProVisionGate";
+import { useStorePrices } from "../hooks/useStorePrices";
 import { useLiveKline, binanceKlineInterval } from "../hooks/useLiveKline";
 import { fetchProVision, fetchProVisionMtf, ProVisionLockedError, type PvTile, type PvResult } from "../services/proVision";
 import { ProVisionOverlay } from "./ProVisionOverlay";
@@ -2594,6 +2595,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [pvBase, setPvBase] = useState<PvResult | null>(null);
   // Server refused (Pro's 3 coins used up on another device, trial ended…).
   const [pvServerLocked, setPvServerLocked] = useState(false);
+  // ProVision yearly price: App Store price on iOS, $99 on the web.
+  const pvPrice = useStorePrices().provision;
   // Banner reason: the app's own check, or the server's refusal (Pro limit).
   // Free-trial strip ("3 days left · Keep it"): standalone above the Signal
   // Check, or inside its card on the Advance Chart.
@@ -2614,8 +2617,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <span className="pv-trial-short">Free trial · {left} left</span>
           </strong>
           <span>
-            <span className="pv-trial-long">Every coin &amp; timeframe · $99/year</span>
-            <span className="pv-trial-short">then $99/year</span>
+            <span className="pv-trial-long">Every coin &amp; timeframe · {pvPrice}/year</span>
+            <span className="pv-trial-short">then {pvPrice}/year</span>
           </span>
         </span>
         <span className="pv-locked-cta">Keep it</span>
@@ -7255,7 +7258,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <span className="chart-tv-pvbar-sub">
               {pvBannerReason === "pro-limit"
                 ? `You've used today's ${pvGate.access.usedCoins.length} coins. Go unlimited.`
-                : pvBannerReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
+                : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
             </span>
             <span className="chart-tv-pvbar-cta">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
@@ -9493,7 +9496,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <svg className="pv-float-spark" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
                   ProVision free trial
                 </span>
-                <span className="pv-float-sub">{pvTrialLeftLabel(pvTrialLeftMs)} left · then $99/year</span>
+                <span className="pv-float-sub">{pvTrialLeftLabel(pvTrialLeftMs)} left · then {pvPrice}/year</span>
               </span>
               <span className="pv-float-cta pv-mpromo-cta">Keep it</span>
             </span>
@@ -9548,7 +9551,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <span>
                 {pvBannerReason === "pro-limit"
                   ? `You've used today's ${pvGate.access.usedCoins.length} coins (${pvGate.access.usedCoins.join(", ")}). Go unlimited.`
-                  : pvBannerReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
+                  : pvBannerReason === "trial-ended" ? `Keep every coin and timeframe for ${pvPrice}/year.` : "Every coin and timeframe. No card needed."}
               </span>
             </span>
             <span className="pv-locked-cta">{pvBannerReason === "trial-available" || pvBannerReason === "signin" ? "Start" : "Unlock"}</span>
@@ -9939,7 +9942,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                   <span className="pv-trial-line-text">
                     <strong>Enjoying ProVision?</strong>
-                    <em>{left} left · then $99/year</em>
+                    <em>{left} left · then {pvPrice}/year</em>
                   </span>
                   <span className="pv-trial-line-cta">Keep it</span>
                 </button>

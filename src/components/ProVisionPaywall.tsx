@@ -12,11 +12,14 @@ import { onProVisionPaywall, useProVisionGate } from "../hooks/useProVisionGate"
 import { useAuth } from "../contexts/AuthContext";
 import { startProVisionTrial } from "../services/supabase";
 import { PROVISION_PRICE_ID, redirectToCheckout } from "../services/stripeService";
-import { getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
+import { getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, restoreProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
+import { useStorePrices } from "../hooks/useStorePrices";
+import { useTranslation } from "react-i18next";
 import "../styles/MembershipGate.css";
 import "../styles/PaywallPromo.css";
 
-export const PV_PLAN_PRICE = "$99";
+// Terms / Privacy pages exist in these languages (same as UpgradeModal).
+const LOCALIZED_LEGAL_LANGS = ["es", "it", "tr"];
 
 const FEATURES: { title: string; text: string; icon: React.ReactNode }[] = [
   { title: "Trend-painted chart", text: "Candles and an EMA ribbon coloured by trend, so direction is obvious at a glance.", icon: <><path d="M3 17l5-5 4 3 8-8" /><path d="M15 7h5v5" /></> },
@@ -41,6 +44,8 @@ interface Props {
   onBuyPlan: () => void;
   onUpgradeElite: () => void;
   onSignIn: () => void;
+  /** iOS: restore an earlier App Store purchase. */
+  onRestore?: () => void;
 }
 
 function fmtWhen(ms: number): string {
@@ -52,8 +57,13 @@ function fmtWhen(ms: number): string {
 
 export function ProVisionPaywall({
   open, onClose, reason, nextFreeAt, coin, busy, error,
-  onStartTrial, onBuyPlan, onUpgradeElite, onSignIn,
+  onStartTrial, onBuyPlan, onUpgradeElite, onSignIn, onRestore,
 }: Props) {
+  // App Store price in the user's currency on iOS; $99 elsewhere.
+  const PV_PLAN_PRICE = useStorePrices().provision;
+  const { i18n } = useTranslation();
+  const legalSuffix = LOCALIZED_LEGAL_LANGS.includes(i18n.language) ? `.${i18n.language}` : "";
+  const iap = isIAPAvailable();
   const head =
     reason === "pro-limit"
       ? { kicker: `${PV_PRO_COINS_PER_DAY} of ${PV_PRO_COINS_PER_DAY} coins used today`, title: "Unlimited ProVision" }
@@ -142,9 +152,9 @@ export function ProVisionPaywall({
               <span>
                 {reason === "signin" || reason === "trial-available"
                   ? `${PV_TRIAL_DAYS} days free · then ${PV_PLAN_PRICE}/year`
-                  : isIAPAvailable()
+                  : iap
                     // App Store: Apple handles billing and refunds.
-                    ? "Billed yearly via your Apple ID · cancel anytime in Settings"
+                    ? `${PV_PLAN_PRICE}/year, billed via your Apple ID · renews automatically unless cancelled at least 24 hours before the period ends · cancel anytime in Settings`
                     : "Billed once a year · non-refundable"}
               </span>
               {reason === "pro-limit" ? (
@@ -153,6 +163,19 @@ export function ProVisionPaywall({
                 </button>
               ) : (
                 <span>Signals are tools, not financial advice.</span>
+              )}
+            </p>
+            {/* Required on subscription screens (App Store 3.1.2): Terms,
+                Privacy, and on iOS a way to restore an earlier purchase. */}
+            <p className="bg-card-trust bg-pv-legal">
+              <a href={`https://coinhintz.io/terms${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">Terms of Use</a>
+              {" · "}
+              <a href={`https://coinhintz.io/privacy${legalSuffix}.html`} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+              {iap && onRestore && (
+                <>
+                  {" · "}
+                  <button type="button" className="bg-pv-restore" onClick={onRestore} disabled={busy}>Restore purchases</button>
+                </>
               )}
             </p>
           </div>
@@ -216,9 +239,26 @@ export function ProVisionPaywallHost({ onOpenAuth, onOpenUpgrade }: { onOpenAuth
     }
   };
 
+  const restore = async () => {
+    setBusy(true); setError(null);
+    try {
+      const res = await restoreProVisionIAP();
+      if (!res.success) throw new Error(res.error ?? "Nothing to restore.");
+      await syncIAPEntitlement();
+      await refreshProfile();
+      setOn(true);
+      setReq(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't restore. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <ProVisionPaywall
       open={!!req}
+      onRestore={restore}
       onClose={close}
       reason={req?.reason ?? "trial-available"}
       coin={req?.coin}

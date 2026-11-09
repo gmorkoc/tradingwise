@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { subscribeWhaleAlerts, type WhaleTx } from "../services/whaleAlerts";
-import { useNotificationsEnabled } from "../hooks/useNotificationsEnabled";
+import { useNotificationsEnabled, useWhaleAlertsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/WhaleAlerts.css";
 
 const DISMISS_MS = 4_000;
@@ -65,7 +65,10 @@ interface Props {
 // behind the current one), instead of stacking or resizing.
 export function WhaleAlerts({ btcPrice, coinChatOpen }: Props) {
   const { t } = useTranslation();
-  const [notificationsEnabled] = useNotificationsEnabled();
+  const [globalEnabled] = useNotificationsEnabled();
+  // "Whale Activity" switch in Notification Settings.
+  const [whaleEnabled] = useWhaleAlertsEnabled();
+  const notificationsEnabled = globalEnabled && whaleEnabled;
   const notificationsEnabledRef = useRef(notificationsEnabled);
   notificationsEnabledRef.current = notificationsEnabled;
   const [current, setCurrent] = useState<WhaleTx | null>(null);

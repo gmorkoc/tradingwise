@@ -246,7 +246,12 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
       .finally(() => { if (alive) setNewsDone(true); });
     // Never hold the placeholders forever if the news is slow.
     const giveUp = window.setTimeout(() => { if (alive) setNewsDone(true); }, 8000);
-    const loadOddsNow = () => loadOdds().then((o) => { if (alive && o.length) setOdds(o); }).catch(() => {});
+    // No Polymarket odds in the iOS app: they link to real-money betting
+    // markets, which App Review treats as gambling (guideline 5.3).
+    const loadOddsNow = () => {
+      if (Capacitor.isNativePlatform()) return;
+      loadOdds().then((o) => { if (alive && o.length) setOdds(o); }).catch(() => {});
+    };
     const loadCoins = () => cgFetch<CgCoin[]>(COINS_MARKETS_URL, TTL.coins).then((c) => { if (alive && Array.isArray(c)) setCoins(c); }).catch(() => {});
     loadNews(); loadOddsNow(); loadCoins();
     const a = window.setInterval(loadNews, 10 * 60_000);

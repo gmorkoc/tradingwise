@@ -589,7 +589,7 @@
           "desc": "Her şeyi sor — strateji, kurulum, risk — ve kurumsal düzeyde yanıtlar al."
         }
       ],
-      "cta": "Pro'yu Aç — $10,99/ay",
+      "cta": "Pro'yu Aç — {{price}}/ay",
       "trust": "Haftada 35 YZ isteği · Anında erişim"
     },
     "elite": {
@@ -637,11 +637,11 @@
           "desc": "Full heatmap with AI commentary on cascade zones."
         }
       ],
-      "cta": "Elite'i Aç — $59.99/ay",
+      "cta": "Elite'i Aç — {{price}}/ay",
       "trust": "Sınırsız YZ · Pro'daki her şeyi içerir",
       "pro_headline": "Elite'e Bir Adım Uzaklıkta",
       "pro_sub": "Pro'daki her şeye sahipsin. Ayda sadece $29 daha fazla ile 8 özel Elite aracı ekle.",
-      "pro_cta": "Pro'dan Yükselt — $59.99/ay",
+      "pro_cta": "Pro'dan Yükselt — {{price}}/ay",
       "pro_trust": "+$29/ay · Pro özelliklerini koru"
     },
     "blurGate": {
@@ -671,14 +671,14 @@
         }
       ],
       "signInBtn": "Yükseltmek için giriş yap",
-      "upgradeBtn": "Elite'i Aç — $59.99/ay",
+      "upgradeBtn": "Elite'i Aç — {{price}}/ay",
       "redirecting": "Yönlendiriliyor…",
       "trust": "Anında erişim · Pro'daki her şeyi içerir",
       "free_headline": "Agent Ready'nin Kilidini Aç",
       "free_sub": "Elite sana canlı YZ trading ajanını ve her özellikte sınırsız YZ isteğini verir.",
       "pro_headline": "Agent Ready'ye Bir Adım",
       "pro_sub": "Pro'dasın. Agent Ready ve sınırsız YZ bir yükseltme uzağında — ayda $29 daha.",
-      "pro_upgradeBtn": "Pro'dan Yükselt — $59.99/ay",
+      "pro_upgradeBtn": "Pro'dan Yükselt — {{price}}/ay",
       "pro_trust": "+$29/ay · Pro özelliklerini koru"
     }
   },

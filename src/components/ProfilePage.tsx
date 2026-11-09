@@ -21,6 +21,7 @@ import { isIAPAvailable, openManageSubscriptions } from "../services/revenuecat"
 import { isPushAvailable, completePushPriming } from "../services/pushNotifications";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { useWhaleAlertsEnabled } from "../hooks/useNotificationsEnabled";
 import "../styles/ProfilePage.css";
 
 interface ProfilePageProps {
@@ -129,6 +130,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
   const { t } = useTranslation();
   const { user, profile: authProfile, tier, refreshProfile, session, signOut } = useAuth();
   const { used, limit, isPaid } = useAIQuota();
+  // Whale Activity: in-app banners, saved on this device (not a push pref).
+  const [whaleEnabled, setWhaleEnabled] = useWhaleAlertsEnabled();
 
   // Stripe (web) and Apple IAP (iOS) are separate billing systems with no
   // visibility into each other — billing actions only work from the
@@ -881,6 +884,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                 <div className="pp-notif-row">
                   <div>
+                    <p className="pp-notif-label">{t("profile.notifications.whaleActivity.label", "Whale Activity")}</p>
+                    <p className="pp-notif-desc">{t("profile.notifications.whaleActivity.desc", "A banner when a large BTC transfer moves on-chain, while you're in the app.")}</p>
+                  </div>
+                  <button type="button" role="switch" aria-checked={whaleEnabled}
+                    className={`pp-switch${whaleEnabled ? " pp-switch--on" : ""}`}
+                    onClick={() => setWhaleEnabled(!whaleEnabled)}>
+                    <span className="pp-switch-thumb" />
+                  </button>
+                </div>
+
+                <div className="pp-notif-row">
+                  <div>
                     <p className="pp-notif-label">{t("profile.notifications.strategyAlerts.label", "Strategy Alerts")}</p>
                     <p className="pp-notif-desc">{t("profile.notifications.strategyAlerts.desc", "A push whenever one of your deployed strategies fires.")}</p>
                   </div>
@@ -929,11 +944,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
                       </button>
                     </div>
 
-                    <h3 className="pp-pane-title">{t("profile.signalConfidence.title", "Minimum Signal Confidence")}</h3>
-                    <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                    <h3 className="pp-pane-title pp-sec-title">{t("profile.signalConfidence.title", "Minimum Signal Confidence")}</h3>
+                    <p className="pp-upgrade-hint pp-sec-hint">
                       {t("profile.signalConfidence.hint", "Only notify for buy/sell signals at or above this confidence.")}
                     </p>
-                    <div className="pp-stat-row">
+                    <div className="pp-stat-row pp-chip-row">
                       {(["low", "medium", "high"] as const).map((level) => (
                         <button
                           key={level}
@@ -949,11 +964,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ isOpen, onClose, onOpe
 
                     {(authProfile?.signal_muted_coins ?? []).length > 0 && (
                       <>
-                        <h3 className="pp-pane-title" style={{ marginTop: 14 }}>{t("profile.mutedCoins.title", "Muted Coins")}</h3>
-                        <p className="pp-upgrade-hint" style={{ marginBottom: 8 }}>
+                        <h3 className="pp-pane-title pp-sec-title">{t("profile.mutedCoins.title", "Muted Coins")}</h3>
+                        <p className="pp-upgrade-hint pp-sec-hint">
                           {t("profile.mutedCoins.hint", "No buy/sell signal alerts for these, even above your confidence threshold.")}
                         </p>
-                        <div className="pp-stat-row" style={{ flexWrap: "wrap" }}>
+                        <div className="pp-stat-row pp-chip-row">
                           {(authProfile?.signal_muted_coins ?? []).map((coin) => (
                             <button
                               key={coin}

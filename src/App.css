@@ -4138,7 +4138,6 @@ html:not([data-theme="light"]) .top-nav-search-kbd { background: color-mix(in sr
   padding: 0 56px;
   overflow: hidden;
   background: #f6f7f9;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
   /* Slides open, then the message morphs in (same motion as the
      ProVision trial-ended banner). */
   animation: top-nav-promo-open 0.55s cubic-bezier(0.22, 1, 0.36, 1) 4s both;

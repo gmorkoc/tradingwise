@@ -589,7 +589,7 @@
           "desc": "Chiedi qualsiasi cosa — strategia, setup, rischio — e ottieni risposte di livello istituzionale."
         }
       ],
-      "cta": "Sblocca Pro — $10,99/mese",
+      "cta": "Sblocca Pro — {{price}}/mese",
       "trust": "35 richieste IA/settimana · Accesso immediato"
     },
     "elite": {
@@ -637,11 +637,11 @@
           "desc": "Full heatmap with AI commentary on cascade zones."
         }
       ],
-      "cta": "Sblocca Elite — $59.99/mese",
+      "cta": "Sblocca Elite — {{price}}/mese",
       "trust": "IA illimitata · Include tutto di Pro",
       "pro_headline": "Un Passo da Elite",
       "pro_sub": "Hai già tutto ciò che è in Pro. Aggiungi 8 strumenti Elite esclusivi per soli $29 in più al mese.",
-      "pro_cta": "Aggiorna da Pro — $59.99/mese",
+      "pro_cta": "Aggiorna da Pro — {{price}}/mese",
       "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     },
     "blurGate": {
@@ -671,14 +671,14 @@
         }
       ],
       "signInBtn": "Accedi per aggiornare",
-      "upgradeBtn": "Sblocca Elite — $59.99/mese",
+      "upgradeBtn": "Sblocca Elite — {{price}}/mese",
       "redirecting": "Reindirizzamento…",
       "trust": "Accesso immediato · Include tutto di Pro",
       "free_headline": "Sblocca Agent Ready",
       "free_sub": "Elite ti dà l'agente di trading IA in diretta, più richieste IA illimitate su ogni funzione.",
       "pro_headline": "A un Passo da Agent Ready",
       "pro_sub": "Sei su Pro. Agent Ready e l'IA illimitata sono a un aggiornamento di distanza — $29 in più al mese.",
-      "pro_upgradeBtn": "Aggiorna da Pro — $59.99/mese",
+      "pro_upgradeBtn": "Aggiorna da Pro — {{price}}/mese",
       "pro_trust": "+$29/mese · Mantieni tutte le funzioni Pro"
     }
   },

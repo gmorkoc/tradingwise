@@ -177,6 +177,20 @@ export async function syncIAPEntitlement(): Promise<{ tier: Tier | null; error?:
   }
 }
 
+/** Restore for the ProVision paywall: succeeds if the Apple ID has either
+ *  the ProVision plan or a Pro/Elite tier (Elite includes ProVision). */
+export async function restoreProVisionIAP(): Promise<{ success: boolean; error?: string }> {
+  if (!isIAPAvailable()) return { success: false, error: "Not available" };
+  try {
+    const { customerInfo } = await Purchases.restorePurchases();
+    const active = Object.keys(customerInfo.entitlements.active);
+    if (active.includes(PROVISION_ENTITLEMENT) || active.some((id) => !!ENTITLEMENT_TIER[id])) return { success: true };
+    return { success: false, error: "No active purchases found for this Apple ID" };
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? "Restore failed" };
+  }
+}
+
 export async function restorePurchases(): Promise<PurchaseResult> {
   if (!isIAPAvailable()) return { success: false, cancelled: false, error: "Not available" };
   try {

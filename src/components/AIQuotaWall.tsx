@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { redirectToCheckout, PRICE_IDS } from "../services/stripeService";
 import { isIAPAvailable } from "../services/revenuecat";
+import { useStorePrices } from "../hooks/useStorePrices";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/AIQuotaWall.css";
 
@@ -40,6 +41,9 @@ const PLANS = [
 
 export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUpgrade, planId, featureTitle, featureDesc }) => {
   const { t } = useTranslation();
+  // App Store price on iOS (user's currency); list price on the web.
+  const prices = useStorePrices();
+  const priceOf = (id: string) => (id === "elite" ? prices.elite : prices.pro);
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const isFreeBlock = limit === 0;
@@ -92,7 +96,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUp
         </div>
         <div className="aiqw-gate-right">
           <span className="aiqw-gate-price">
-            {plan.price}<span className="aiqw-gate-per">{plan.per}</span>
+            {priceOf(plan.id)}<span className="aiqw-gate-per">{plan.per}</span>
           </span>
           <button
             className="aiqw-gate-btn"
@@ -152,7 +156,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUp
               <div className="aiqw-plan-header">
                 <span className="aiqw-plan-label" style={{ color: plan.color }}>{plan.label}</span>
                 <span className="aiqw-plan-price">
-                  {plan.price}<span className="aiqw-plan-per">{plan.per}</span>
+                  {priceOf(plan.id)}<span className="aiqw-plan-per">{plan.per}</span>
                 </span>
               </div>
               <ul className="aiqw-plan-features">

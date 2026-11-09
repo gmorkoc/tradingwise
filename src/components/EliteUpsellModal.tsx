@@ -107,7 +107,9 @@ export function EliteUpsellModal({ onClose, onOpenAuth }: Props) {
 
   const headline = isProUser ? t("membershipGate.blurGate.pro_headline") : t("membershipGate.blurGate.free_headline");
   const sub      = isProUser ? t("membershipGate.blurGate.pro_sub")      : t("membershipGate.blurGate.free_sub");
-  const ctaLabel = isProUser ? t("membershipGate.blurGate.pro_upgradeBtn") : t("membershipGate.blurGate.upgradeBtn");
+  const ctaLabel = isProUser
+    ? t("membershipGate.blurGate.pro_upgradeBtn", { price: planPrice })
+    : t("membershipGate.blurGate.upgradeBtn", { price: planPrice });
   const trustLine= isProUser ? t("membershipGate.blurGate.pro_trust")    : t("membershipGate.blurGate.trust");
 
   return (

@@ -81,6 +81,11 @@
   font-size: 1.1rem;
   font-weight: 800;
 }
+/* Whale alert: whale emoji in the icon circle, USD next to the BTC amount,
+   "from → to" on one line. */
+.btc-toast-whale { font-size: 1.6rem; line-height: 1; }
+.btc-toast-usd { font-size: 0.85rem; font-weight: 700; color: rgba(255, 255, 255, 0.7); letter-spacing: 0; }
+.btc-toast-transfer { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 .btc-toast-arrow {
   color: var(--btc-color, #22c55e);

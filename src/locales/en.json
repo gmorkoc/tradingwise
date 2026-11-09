@@ -645,7 +645,7 @@
           "desc": "Ask anything — strategy, setups, risk — and get institutional-grade answers."
         }
       ],
-      "cta": "Unlock Pro — $30.99/mo",
+      "cta": "Unlock Pro — {{price}}/mo",
       "trust": "100 AI requests/week · Instant access",
       "eliteLinkPre": "Go",
       "eliteLinkPost": "for unlimited AI and access to Agent Ready"
@@ -690,11 +690,11 @@
           "desc": "Full heatmap with AI commentary on where leveraged positions will cascade next."
         }
       ],
-      "cta": "Unlock Elite — $59.99/mo",
+      "cta": "Unlock Elite — {{price}}/mo",
       "trust": "Unlimited AI · Includes everything in Pro",
       "pro_headline": "One Upgrade Away From Elite",
       "pro_sub": "You already have everything in Pro. Add 7 exclusive Elite tools for just $29 more per month.",
-      "pro_cta": "Upgrade from Pro — $59.99/mo",
+      "pro_cta": "Upgrade from Pro — {{price}}/mo",
       "pro_trust": "+$29/mo · Keep all your Pro features"
     },
     "blurGate": {
@@ -731,7 +731,7 @@
       "free_sub": "Elite gives you the live AI trading agent, plus unlimited AI requests across every feature.",
       "pro_headline": "One Step From Agent Ready",
       "pro_sub": "You're on Pro. Agent Ready and unlimited AI are one upgrade away — $29 more per month.",
-      "pro_upgradeBtn": "Upgrade from Pro — $59.99/mo",
+      "pro_upgradeBtn": "Upgrade from Pro — {{price}}/mo",
       "pro_trust": "+$29/mo · Keep all Pro features"
     }
   },

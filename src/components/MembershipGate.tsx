@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Tier, hasAccess } from "../services/supabase";
 import { redirectToCheckout, previewUpgrade, upgradePlan, PRICE_IDS } from "../services/stripeService";
 import { isIAPAvailable } from "../services/revenuecat";
+import { useStorePrices } from "../hooks/useStorePrices";
 import "../styles/AIQuotaWall.css";
 import "../styles/MembershipGate.css";
 
@@ -42,6 +43,7 @@ export const MembershipGate: React.FC<Props> = ({
 }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
+  const prices = useStorePrices();
 
   if (loading) return <div className="mg-loading">{t("membershipGate.loading")}</div>;
 
@@ -129,7 +131,9 @@ export const MembershipGate: React.FC<Props> = ({
             style={{ "--mg-color": color } as React.CSSProperties}
             onClick={onOpenUpgrade}
           >
-            {isPro ? t("membershipGate.elite.pro_cta") : t(`membershipGate.${ns}.cta`)}
+            {isPro
+              ? t("membershipGate.elite.pro_cta", { price: prices.elite })
+              : t(`membershipGate.${ns}.cta`, { price: ns === "pro" ? prices.pro : prices.elite })}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
           <p className="mg-trust">
@@ -156,6 +160,7 @@ function formatAmount(cents: number, currency: string) {
 export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
+  const prices = useStorePrices();
   const [loadingPlan,     setLoadingPlan]     = useState(false);
   const [prorationData,   setProrationData]   = useState<{ amountDue: number; currency: string } | null>(null);
   const [upgrading,       setUpgrading]       = useState(false);
@@ -248,7 +253,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
   const features: Array<{ icon: ReactNode; title: string; desc: string }> =
     extraFeature ? [extraFeature, ...baseFeatures] : baseFeatures;
 
-  const planPrice = isProGate ? "$30.99" : t("membershipGate.blurGate.planPrice");
+  const planPrice = isProGate ? prices.pro : prices.elite;
 
   let headline: string;
   let sub: string;
@@ -258,17 +263,17 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
   if (isProGate) {
     headline = t("membershipGate.pro.headline");
     sub = t("membershipGate.pro.sub");
-    ctaLabel = t("membershipGate.pro.cta");
+    ctaLabel = t("membershipGate.pro.cta", { price: prices.pro });
     trustLine = t("membershipGate.pro.trust");
   } else if (isProUser) {
     headline = t("membershipGate.blurGate.pro_headline");
     sub = t("membershipGate.blurGate.pro_sub");
-    ctaLabel = t("membershipGate.blurGate.pro_upgradeBtn");
+    ctaLabel = t("membershipGate.blurGate.pro_upgradeBtn", { price: prices.elite });
     trustLine = t("membershipGate.blurGate.pro_trust");
   } else {
     headline = t("membershipGate.blurGate.free_headline");
     sub = t("membershipGate.blurGate.free_sub");
-    ctaLabel = t("membershipGate.blurGate.upgradeBtn");
+    ctaLabel = t("membershipGate.blurGate.upgradeBtn", { price: prices.elite });
     trustLine = t("membershipGate.blurGate.trust");
   }
 
@@ -314,7 +319,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
-              <span>You're on <strong>Pro</strong> · $30.99/mo — all features carry over</span>
+              <span>You're on <strong>Pro</strong> · {prices.pro}/mo — all features carry over</span>
             </div>
           )}
 

@@ -117,7 +117,15 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
     }
   };
   (window as unknown as { __fakeWhales: typeof fire }).__fakeWhales = fire;
+  // ?fakewhales → one fake whale every 8s (8 in total), each a new sample.
   if (new URLSearchParams(window.location.search).has("fakewhales")) {
-    setTimeout(() => fire(3), 2500);
+    let n = 0;
+    const one = () => {
+      const s = samples[n % samples.length];
+      const hash = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      listeners.forEach(cb => cb({ ...s, id: `fake-${hash}`, hash, time: Date.now(), fromRaw: s.from, toRaw: s.to }));
+      if (++n < 8) setTimeout(one, 8000);
+    };
+    setTimeout(one, 3000);
   }
 }

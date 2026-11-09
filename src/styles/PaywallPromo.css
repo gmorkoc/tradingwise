@@ -66,6 +66,19 @@ html:not([data-theme="light"]) .bg-elite-card--pv :is(.bg-elite-eyebrow, .bg-eli
   color: transparent;
 }
 .bg-pv-error { margin: 8px 0 0; text-align: center; font-size: 12.5px; color: #dc2626; }
+/* Terms · Privacy · Restore purchases line under the ProVision paywall. */
+.bg-pv-legal { margin-top: 6px; text-align: center; }
+.bg-pv-legal a,
+.bg-pv-legal a:hover,
+.bg-pv-restore,
+.bg-pv-restore:hover {
+  all: unset;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.bg-pv-restore:disabled { opacity: 0.5; cursor: default; }
 .bg-elite-card:not(.bg-elite-card--pro) .bg-elite-eyebrow { color: #8b5cf6; }
 
 /* ── Desktop popup: bigger, and the whole popup is the card ─────────────

@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import type { BtcMoveAlert } from "../hooks/useBtcMoveAlert";
+import type { WhaleToastAlert } from "../hooks/useWhaleToast";
 import { formatLivePrice } from "./PriceChart";
 import "../styles/BtcMoveToast.css";
 
 const DURATION = 6000;
+// Whale alerts are quick glances: 2 seconds each.
+const WHALE_DURATION = 2000;
 const SWIPE_THRESHOLD = 48;
 
+const fmtUsdShort = (n: number) =>
+  n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${Math.round(n).toLocaleString("en-US")}`;
+const fmtBtc = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(2)}K` : n.toFixed(1));
+
 interface Props {
-  alert: BtcMoveAlert | null;
+  /** A price move or a whale transfer — both use this one toast. */
+  alert: BtcMoveAlert | WhaleToastAlert | null;
   onDismiss: () => void;
 }
 
@@ -34,7 +42,8 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
 
     const tick = () => {
       const elapsed = performance.now() - startRef.current;
-      const pct = Math.max(0, 100 - (elapsed / DURATION) * 100);
+      const total = "kind" in alert && alert.kind === "whale" ? WHALE_DURATION : DURATION;
+      const pct = Math.max(0, 100 - (elapsed / total) * 100);
       setProgress(pct);
       if (pct > 0) rafRef.current = requestAnimationFrame(tick);
       else { setVisible(false); onDismiss(); }
@@ -46,13 +55,19 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
 
   if (!alert) return null;
 
-  const isUp = alert.direction === "up";
-  const color = isUp ? "#22c55e" : "#ef4444";
+  const whale = "kind" in alert && alert.kind === "whale" ? alert : null;
+  const move = whale ? null : (alert as BtcMoveAlert);
+  // Whale: green when coins leave exchanges (bullish), red when they go in
+  // (bearish), blue when it's wallet to wallet.
+  const isUp = whale ? whale.sentiment !== "bearish" : move!.direction === "up";
+  const color = whale
+    ? whale.sentiment === "bullish" ? "#22c55e" : whale.sentiment === "bearish" ? "#ef4444" : "#3b82f6"
+    : isUp ? "#22c55e" : "#ef4444";
   // Whole-dollar rounding read fine for BTC ($84,231) but rounded a coin
   // like NEAR ($4.43) down to a bare "$4" — reuse the same adaptive-decimal
   // formatting the header price pill already uses instead of a fixed 0.
-  const fmtPrice = formatLivePrice(alert.price).replace(/^\$/, "");
-  const fmtChange = formatLivePrice(Math.abs(alert.change)).replace(/^\$/, "");
+  const fmtPrice = move ? formatLivePrice(move.price).replace(/^\$/, "") : "";
+  const fmtChange = move ? formatLivePrice(Math.abs(move.change)).replace(/^\$/, "") : "";
 
   const dismiss = () => { setVisible(false); onDismiss(); };
 
@@ -102,36 +117,53 @@ export function BtcMoveToast({ alert, onDismiss }: Props) {
         {/* Left: coin icon + direction */}
         <div className="btc-toast-left">
           <div className="btc-toast-btc-icon">
-            {!logoError ? (
+            {whale ? (
+              <span className="btc-toast-whale" aria-hidden="true">🐋</span>
+            ) : !logoError ? (
               <img
-                src={`https://assets.coincap.io/assets/icons/${alert.coin.toLowerCase()}@2x.png`}
+                src={`https://assets.coincap.io/assets/icons/${move!.coin.toLowerCase()}@2x.png`}
                 alt=""
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <span className="btc-toast-icon-fallback">{alert.coin[0] ?? "?"}</span>
+              <span className="btc-toast-icon-fallback">{move!.coin[0] ?? "?"}</span>
             )}
           </div>
-          <div className="btc-toast-arrow">
+          {!whale && <div className="btc-toast-arrow">
             {isUp ? (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 8H4z"/></svg>
             ) : (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20l-8-8h16z"/></svg>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* Center: info */}
-        <div className="btc-toast-body">
-          <div className="btc-toast-label">
-            <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
-            <span className="btc-toast-tag">{alert.coin} PRICE ALERT</span>
+        {whale ? (
+          <div className="btc-toast-body">
+            <div className="btc-toast-label">
+              <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
+              <span className="btc-toast-tag">
+                WHALE ALERT{whale.sentiment !== "neutral" ? ` · ${whale.sentiment === "bullish" ? "BULLISH" : "BEARISH"}` : ""}
+              </span>
+            </div>
+            <div className="btc-toast-price">
+              {fmtBtc(whale.amount)} BTC{whale.usd ? <span className="btc-toast-usd"> ≈ {fmtUsdShort(whale.usd)}</span> : null}
+            </div>
+            <div className="btc-toast-change btc-toast-transfer">{whale.from} → {whale.to}</div>
           </div>
-          <div className="btc-toast-price">${fmtPrice}</div>
-          <div className="btc-toast-change">
-            {isUp ? "▲" : "▼"} {isUp ? "+" : "−"}${fmtChange} ({alert.changePct.toFixed(2)}%) in last move
+        ) : (
+          <div className="btc-toast-body">
+            <div className="btc-toast-label">
+              <span className="btc-toast-live"><span className="btc-toast-live-dot" />LIVE</span>
+              <span className="btc-toast-tag">{move!.coin} PRICE ALERT</span>
+            </div>
+            <div className="btc-toast-price">${fmtPrice}</div>
+            <div className="btc-toast-change">
+              {isUp ? "▲" : "▼"} {isUp ? "+" : "−"}${fmtChange} ({move!.changePct.toFixed(2)}%) in last move
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Close */}
         <button

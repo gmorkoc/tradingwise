@@ -20,6 +20,29 @@ function setStoredNotificationsEnabled(enabled: boolean) {
   window.dispatchEvent(new CustomEvent<boolean>(EVENT, { detail: enabled }));
 }
 
+// ── Whale Activity (in-app whale banners), on by default, per device ──
+const WHALE_KEY = "whaleAlertsEnabled";
+const WHALE_EVENT = "whale-alerts-enabled-change";
+
+function getWhaleAlertsEnabled(): boolean {
+  try { return localStorage.getItem(WHALE_KEY) !== "0"; } catch { return true; }
+}
+
+export function useWhaleAlertsEnabled(): [boolean, (enabled: boolean) => void] {
+  const [enabled, setEnabled] = useState(getWhaleAlertsEnabled);
+  useEffect(() => {
+    const onChange = (e: Event) => setEnabled((e as CustomEvent<boolean>).detail);
+    window.addEventListener(WHALE_EVENT, onChange);
+    return () => window.removeEventListener(WHALE_EVENT, onChange);
+  }, []);
+  const update = useCallback((next: boolean) => {
+    try { localStorage.setItem(WHALE_KEY, next ? "1" : "0"); } catch { /* quota */ }
+    setEnabled(next);
+    window.dispatchEvent(new CustomEvent<boolean>(WHALE_EVENT, { detail: next }));
+  }, []);
+  return [enabled, update];
+}
+
 // Shared across every notification source (whale alerts, price alerts, big
 // BTC move toasts) so one switch in the header can silence all of them,
 // even though each lives in its own component tree.
