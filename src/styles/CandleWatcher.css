@@ -3752,6 +3752,8 @@ body.cw-chart-fullscreen-active .fnb-bar {
   font-size: 0.7rem;
   color: var(--color-text-muted);
 }
+/* Why nothing ran (cooldown / failed call): amber, centred, wraps. */
+.cw-ai-start-note--warn { color: #f59e0b; text-align: center; line-height: 1.45; max-width: 360px; }
 /* Desktop AI tab: Read → Trade plan → MM narration, stacked. */
 @media (min-width: 901px) {
   .cw-ai-sec { display: flex; flex-direction: column; gap: 8px; }
@@ -4645,10 +4647,11 @@ body.cw-chart-fullscreen-active .fnb-bar {
 /* Desktop ƒx menu: link to the shared indicator picker. */
 .cw-tb-menu-all { color: var(--color-primary) !important; font-weight: 600; border-top: 1px solid var(--color-border); margin-top: 4px; }
 
-/* Desktop: the price/OHLC line stays at the chart's left edge even with
-   drawing tools on — their rail starts below it (topOffset), so no clash. */
+/* Desktop: with drawing tools on, the price/OHLC line and Sell/Buy boxes
+   start to the right of the tools rail (which runs from the top of the
+   chart), so nothing sits underneath it. */
 @media (min-width: 901px) {
-  .cw-chart-wrap--draw .cw-ohlc-overlay { left: 12px; }
+  .cw-chart-wrap--draw .cw-ohlc-overlay { left: 56px; }
 }
 
 /* 1200–1512px screens: a narrower right panel (max 360px, even if it was

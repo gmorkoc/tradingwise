@@ -1676,14 +1676,16 @@ Respond ONLY with valid JSON (the "thinking" field is your scratchpad — fill i
   }
 }`;
 
+  // A failed request (AI limit reached, signed out, network) throws so the
+  // caller can tell the user why; only an unreadable answer returns null.
+  const data = await callOpenAI({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.3,
+    max_tokens: 1400,
+  });
   try {
-    const data = await callOpenAI({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_tokens: 1400,
-    });
     const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}") as AIRead;
     if (!parsed.mmReading) return null;
     if (!parsed.mmAction) parsed.mmAction = "consolidation";
@@ -2083,6 +2085,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     if (rightTab === "fractal") setRightTab("signals");
   }, [rightTab]);
   const [aiLoading, setAiLoading] = useState(false);
+  // Why "Run AI analysis" produced nothing (cooldown or a failed call),
+  // shown under the button instead of silently doing nothing.
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
   const aiCancelledRef = useRef(false);
   const aiScanIctRef = useRef<ICTResult | null>(null);
   const [scanStep, setScanStep] = useState(-1);
@@ -3228,6 +3233,21 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       return all[`${c}|${iv}`] ?? null;
     } catch { return null; }
   };
+  // MM narration history, kept per coin + interval (last 20) so a reload or
+  // an interval switch shows it again instead of an empty "watching" box.
+  const loadPersistedMmFeed = (c: string, iv: string): MMFeedEntry[] => {
+    try {
+      const all = JSON.parse(localStorage.getItem("cwMmFeed") ?? "{}") as Record<string, MMFeedEntry[]>;
+      return Array.isArray(all[`${c}|${iv}`]) ? all[`${c}|${iv}`] : [];
+    } catch { return []; }
+  };
+  const savePersistedMmFeed = (c: string, iv: string, feed: MMFeedEntry[]) => {
+    try {
+      const all = JSON.parse(localStorage.getItem("cwMmFeed") ?? "{}") as Record<string, MMFeedEntry[]>;
+      all[`${c}|${iv}`] = feed.slice(-20);
+      localStorage.setItem("cwMmFeed", JSON.stringify(all));
+    } catch { /* ignore */ }
+  };
   const savePersistedAiRead = (c: string, iv: string, read: AIRead) => {
     try {
       const raw = localStorage.getItem("cwLastAiRead");
@@ -3283,7 +3303,8 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // hasn't loaded yet. A fresh call only replaces it once the
     // cache/cooldown checks below actually allow one.
     setAiRead(loadPersistedAiRead(coin as string, interval.value));
-    setMmFeed([]);
+    setAiNotice(null);
+    setMmFeed(loadPersistedMmFeed(coin as string, interval.value));
     setLastCandleTime(null);
 
     // A kept date range that doesn't fit the new interval is dropped.
@@ -3540,6 +3561,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     // every page refresh look like a fresh analysis was running, even when
     // the AI API wasn't being touched at all.
     if (!cached && !inCooldown) setAiLoading(true);
+    if (inCooldown) {
+      const leftSec = Math.ceil((AI_COOLDOWN_MS - (Date.now() - (lastAiCallAtRef.current.get(throttleKey) ?? 0))) / 1000);
+      setAiNotice(`Next AI read for ${coin} in ${Math.floor(leftSec / 60)}:${String(leftSec % 60).padStart(2, "0")} — one read per coin every 5 minutes.`);
+    } else {
+      setAiNotice(null);
+    }
 
     // Fetch HTF candles for multi-timeframe liquidity pockets
     const HTF_FRAMES = [
@@ -3563,7 +3590,25 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
       : inCooldown ? Promise.resolve<AIRead | null>(null)
       : (lastAiCallAtRef.current.set(throttleKey, Date.now()),
          persistAiCooldown(),
-         getMMAnalysis(coin as string, interval.label, aiCandles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current));
+         getMMAnalysis(coin as string, interval.label, aiCandles, ind, pattern, wyckoff, ict, sessionLevelsRef.current, volumeProfileRef.current, fractalAnalogsRef.current)
+           .then((r) => {
+             if (!r) {
+               // Nothing usable came back: don't hold the cooldown for it.
+               lastAiCallAtRef.current.delete(throttleKey); persistAiCooldown();
+               setAiNotice("The AI didn't return a read this time. Please try again.");
+             }
+             return r;
+           })
+           .catch((e: unknown) => {
+             lastAiCallAtRef.current.delete(throttleKey); persistAiCooldown();
+             const msg = e instanceof Error ? e.message : "";
+             setAiNotice(
+               /auth/i.test(msg) ? "Sign in to run the AI read."
+                 : /limit|quota|429/i.test(msg) ? msg || "You've used all your AI requests for now."
+                 : "Couldn't reach the AI. Check your connection and try again.",
+             );
+             return null;
+           }));
 
     Promise.all([
       mmPromise,
@@ -3586,10 +3631,11 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             bias: res.bias,
             confidence: res.confidence,
           };
-          if (prev.length && prev[prev.length - 1].time === entry.time) {
-            return [...prev.slice(0, -1), entry];
-          }
-          return [...prev.slice(-49), entry];
+          const next = prev.length && prev[prev.length - 1].time === entry.time
+            ? [...prev.slice(0, -1), entry]
+            : [...prev.slice(-49), entry];
+          savePersistedMmFeed(coin as string, interval.value, next);
+          return next;
         });
         if (!cached) aiCacheRef.current.set(cacheKey, { aiRead: res, predData: null });
       }
@@ -5687,7 +5733,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                   >
                     {refreshSpinning ? "Starting…" : "✦ Run AI analysis"}
                   </button>
-                  <span className="cw-ai-start-note">Uses up to 1 AI request</span>
+                  {aiNotice
+                    ? <span className="cw-ai-start-note cw-ai-start-note--warn" role="status">{aiNotice}</span>
+                    : <span className="cw-ai-start-note">Uses up to 1 AI request</span>}
                 </div>
               )}
             </div>
