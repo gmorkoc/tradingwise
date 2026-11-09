@@ -1,6 +1,6 @@
-// Compact view → a full-screen 15-minute "Over / Under" round, with
+// Predict → a full-screen "Over / Under" round (1, 5 or 15 minutes), with
 // practice money only (layout modelled on a prediction app the user shared):
-//   • the round is the current 15-min window (:00 / :15 / :30 / :45 UTC);
+//   • the round is the current 1/5/15-min window (UTC);
 //     "Price to beat" = the price when it opened, countdown to its end
 //   • a live 1-second smooth line, green above the price to beat / red below,
 //     with the price to beat as a dashed line + a pill on the right
@@ -29,17 +29,23 @@ interface Props {
 
 interface Tick { id: number; usd: number; isBuy: boolean }
 type Side = "over" | "under";
-interface Bet { id: string; coin: string; round: number; side: Side; stake: number; mult: number; beat: number; settled?: boolean; won?: boolean | null; payout?: number }
+// `len` = round length in seconds (older bets without it were 15-min rounds).
+interface Bet { id: string; coin: string; round: number; len?: number; side: Side; stake: number; mult: number; beat: number; settled?: boolean; won?: boolean | null; payout?: number }
 
-const ROUND = 15 * 60;
-const LOCK_SEC = 15;
+// Round lengths the user can pick: 1, 5 or 15 minutes.
+type RoundLen = 60 | 300 | 900;
+const ROUND_LENS: RoundLen[] = [60, 300, 900];
+const CANDLE_OF: Record<RoundLen, "1min" | "5min" | "15min"> = { 60: "1min", 300: "5min", 900: "15min" };
+// Predictions close this many seconds before the round ends.
+const lockOf = (len: RoundLen) => (len === 60 ? 5 : 15);
 const MAX_TICKS = 5;
 const START_BALANCE = 1000;
 const STAKES = [10, 25, 50, 100];
 const LS_WALLET = "predWalletV1";
 const LS_BETS = "predBetsV1";
+const LS_LEN = "predRoundLen";
 
-const roundStartOf = (sec: number) => Math.floor(sec / ROUND) * ROUND;
+const roundStartOf = (sec: number, len: number) => Math.floor(sec / len) * len;
 const nowSec = () => Math.floor(Date.now() / 1000);
 const fmtPrice = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtAxis = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: n >= 100 ? 0 : 4 })}`;
@@ -76,14 +82,33 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
   const [pick, setPick] = useState<Side | null>(null);
   const [stake, setStake] = useState(STAKES[1]);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
+  const [lenOpen, setLenOpen] = useState(false);
+  const lenDdRef = useRef<HTMLSpanElement>(null);
+  // Close the round-length dropdown on any tap outside it.
+  useEffect(() => {
+    if (!lenOpen) return;
+    const off = (e: PointerEvent) => { if (!lenDdRef.current?.contains(e.target as Node)) setLenOpen(false); };
+    document.addEventListener("pointerdown", off);
+    return () => document.removeEventListener("pointerdown", off);
+  }, [lenOpen]);
   const [toast, setToast] = useState<string | null>(null);
-  const [starred, setStarred] = useState(false);
   const tickIdRef = useRef(0);
+  const [roundLen, setRoundLen] = useState<RoundLen>(() => {
+    const v = readLS<number>(LS_LEN, 900);
+    return (ROUND_LENS as number[]).includes(v) ? (v as RoundLen) : 900;
+  });
+  const ROUND = roundLen;
+  const LOCK_SEC = lockOf(roundLen);
+  const mins = roundLen / 60;
 
-  const round = roundStartOf(now);
+  const round = roundStartOf(now, ROUND);
   const left = Math.max(0, round + ROUND - now);
   const locked = left <= LOCK_SEC;
 
+  useEffect(() => writeLS(LS_LEN, roundLen), [roundLen]);
+  // New round length → the old price to beat / history no longer apply.
+  useEffect(() => { setBeat(null); setHistory([]); setPick(null); }, [roundLen]);
   useEffect(() => writeLS(LS_WALLET, { balance }), [balance]);
   useEffect(() => writeLS(LS_BETS, bets.slice(-200)), [bets]);
   useEffect(() => setLogoError(false), [coin]);
@@ -96,20 +121,34 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
 
   // ── Round data: price to beat, last 5 results; settles finished bets ──
   const loadRounds = useCallback(async () => {
-    const c15: CandleDataPoint[] = await coinglass.getHistoricalCandles("15min", coin).catch(() => []);
-    if (!c15.length) return;
-    const r = roundStartOf(nowSec());
-    const cur = c15.find((c) => c.time === r);
-    setBeat(cur ? cur.open : c15[c15.length - 1].close);
-    const done = c15.filter((c) => c.time < r).slice(-5);
-    setHistory(done.map((c) => c.close >= c.open));
+    // Candles for the picked length, plus any other length that still has
+    // open bets on this coin (so switching lengths never strands a bet).
+    const t = nowSec();
+    const lens = new Set<RoundLen>([roundLen]);
+    readLS<Bet[]>(LS_BETS, []).forEach((b) => {
+      const l = (b.len ?? 900) as RoundLen;
+      if (!b.settled && b.coin === coin && b.round + l <= t && ROUND_LENS.includes(l)) lens.add(l);
+    });
+    const byLen = new Map<RoundLen, CandleDataPoint[]>();
+    await Promise.all([...lens].map(async (l) => {
+      byLen.set(l, await coinglass.getHistoricalCandles(CANDLE_OF[l], coin).catch(() => []));
+    }));
+    const cs = byLen.get(roundLen) ?? [];
+    if (cs.length) {
+      const r = roundStartOf(t, roundLen);
+      const cur = cs.find((c) => c.time === r);
+      setBeat(cur ? cur.open : cs[cs.length - 1].close);
+      setHistory(cs.filter((c) => c.time < r).slice(-5).map((c) => c.close >= c.open));
+    }
     // Settle any of this coin's open bets whose round has ended.
-    const closeAt = new Map(c15.map((c) => [c.time, c.close]));
+    const closeAt = new Map<string, number>();
+    byLen.forEach((list, l) => list.forEach((c) => closeAt.set(`${l}:${c.time}`, c.close)));
     setBets((prev) => {
       let won = 0, lost = 0, credit = 0;
       const next = prev.map((b) => {
-        if (b.settled || b.coin !== coin || b.round >= r) return b;
-        const close = closeAt.get(b.round);
+        const l = b.len ?? 900;
+        if (b.settled || b.coin !== coin || b.round + l > t) return b;
+        const close = closeAt.get(`${l}:${b.round}`);
         if (close === undefined) return b;
         if (close === b.beat) { credit += b.stake; return { ...b, settled: true, won: null, payout: b.stake }; }
         const win = b.side === "over" ? close > b.beat : close < b.beat;
@@ -121,13 +160,13 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
       if (won || lost) setToast(won && !lost ? `You won — +${fmtPrice(credit)} practice money` : !won ? "Round over — your prediction missed" : `Round settled — ${fmtPrice(credit)} back`);
       return next;
     });
-  }, [coin]);
+  }, [coin, roundLen]);
   useEffect(() => { loadRounds(); }, [loadRounds, round]);
   // Late close data: re-check a few seconds into each round.
   useEffect(() => {
-    const id = window.setTimeout(() => loadRounds(), 6000);
+    const id = window.setTimeout(() => loadRounds(), roundLen === 60 ? 3000 : 6000);
     return () => window.clearTimeout(id);
-  }, [loadRounds, round]);
+  }, [loadRounds, round, roundLen]);
   useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), 4000);
@@ -241,14 +280,14 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
   const overMult = multOf(pOver);
   const underMult = multOf(1 - pOver);
 
-  const myRoundBets = bets.filter((b) => b.coin === coin && b.round === round && !b.settled);
+  const myRoundBets = bets.filter((b) => b.coin === coin && b.round === round && (b.len ?? 900) === roundLen && !b.settled);
   const diff = current !== null && beat !== null ? current - beat : null;
   const up = (diff ?? 0) >= 0;
 
   const placeBet = () => {
     if (!pick || beat === null || locked || stake > balance) return;
     const mult = pick === "over" ? overMult : underMult;
-    setBets((p) => [...p, { id: `${Date.now()}`, coin, round, side: pick, stake, mult, beat }]);
+    setBets((p) => [...p, { id: `${Date.now()}`, coin, round, len: roundLen, side: pick, stake, mult, beat }]);
     setBalance((x) => Math.round((x - stake) * 100) / 100);
     setToast(`${pick === "over" ? "Over" : "Under"} ${fmtPrice(beat)} · ${fmtPrice(stake)} at ${mult}x`);
     setPick(null);
@@ -257,15 +296,36 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
   const share = () => {
     const url = window.location.href;
     const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
-    if (nav.share) nav.share({ title: `15 min ${name}`, url }).catch(() => {});
+    if (nav.share) nav.share({ title: `${mins} min ${name}`, url }).catch(() => {});
     else navigator.clipboard?.writeText(url).catch(() => {});
   };
 
   const ringPct = 1 - left / ROUND;
 
+  // My predictions: newest first, with a win/loss summary of settled ones.
+  const myHistory = useMemo(() => [...bets].sort((a, b) => Number(b.id) - Number(a.id)), [bets]);
+  const histStats = useMemo(() => {
+    let wins = 0, losses = 0, net = 0;
+    for (const b of bets) {
+      if (!b.settled) continue;
+      if (b.won === true) wins++;
+      else if (b.won === false) losses++;
+      net += (b.payout ?? 0) - b.stake;
+    }
+    return { wins, losses, net: Math.round(net * 100) / 100 };
+  }, [bets]);
+  const fmtWhen = (id: string) => {
+    const d = new Date(Number(id));
+    if (isNaN(d.getTime())) return "";
+    const today = new Date().toDateString() === d.toDateString();
+    return today
+      ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : d.toLocaleDateString([], { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+
   return createPortal(
     <div className={`cpv-overlay cpv-round${isLight ? "" : " cpv-round--dark"}`}>
-      {/* Top bar: back · countdown · star + share */}
+      {/* Top bar: back · countdown · history + share */}
       <div className="cpr-top">
         <button type="button" className="cpr-circle" onClick={onClose} aria-label="Close">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
@@ -274,8 +334,8 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
           {fmtClock(left)}
         </span>
         <span className="cpr-pair">
-          <button type="button" className={starred ? "cpr-on" : ""} onClick={() => setStarred((s) => !s)} aria-label="Favourite">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill={starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M12 2l3 6.6 7 .7-5.3 4.7 1.6 7L12 17.3 5.7 21l1.6-7L2 9.3l7-.7z" /></svg>
+          <button type="button" onClick={() => setHistOpen(true)} aria-label="My predictions">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l3 2" /></svg>
           </button>
           <button type="button" onClick={share} aria-label="Share">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg>
@@ -288,7 +348,40 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
         {!logoError ? (
           <img src={`https://assets.coincap.io/assets/icons/${coin.toLowerCase()}@2x.png`} alt="" onError={() => setLogoError(true)} />
         ) : <span className="cpr-logo-fb">{coin[0]}</span>}
-        <span>15 min {name}</span>
+        <span>{name}</span>
+        {/* Round length dropdown: 1 / 5 / 15 min */}
+        <span className="cpr-lendd" ref={lenDdRef}>
+          <button
+            type="button"
+            className={`cpr-lenbtn${lenOpen ? " cpr-lenbtn--open" : ""}`}
+            aria-haspopup="listbox"
+            aria-expanded={lenOpen}
+            aria-label={`Round length: ${mins} minutes`}
+            onClick={() => setLenOpen((o) => !o)}
+          >
+            {mins} min
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          {lenOpen && (
+            <span className="cpr-lenmenu" role="listbox" aria-label="Round length">
+              {ROUND_LENS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="option"
+                  aria-selected={roundLen === l}
+                  className={`cpr-lenopt${roundLen === l ? " cpr-lenopt--on" : ""}`}
+                  onClick={() => { setRoundLen(l); setLenOpen(false); }}
+                >
+                  {l / 60} min round
+                  {roundLen === l && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                  )}
+                </button>
+              ))}
+            </span>
+          )}
+        </span>
         <span className="cpr-wallet">{fmtPrice(balance)} <em>practice</em></span>
       </div>
 
@@ -346,7 +439,20 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
         </div>
       )}
 
-      {/* Over / Under */}
+      {/* Out of practice money (less than the smallest stake, nothing still
+          in play): one tap refills the wallet instead of Over / Under. */}
+      {balance < STAKES[0] && !bets.some((b) => !b.settled) ? (
+        <div className="cpr-broke">
+          <p>You're out of practice money.</p>
+          <button
+            type="button"
+            className="cpr-confirm"
+            onClick={() => { setBalance(START_BALANCE); setToast(`Wallet reset — ${fmtPrice(START_BALANCE)} practice money`); }}
+          >
+            Reset to {fmtPrice(START_BALANCE)}
+          </button>
+        </div>
+      ) : (
       <div className="cpr-actions">
         <div>
           <button type="button" className="cpr-btn cpr-btn--over" disabled={locked || beat === null} onClick={() => setPick("over")}>
@@ -361,6 +467,7 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
           <span className="cpr-mult cpr-dn">{underMult.toFixed(1)}x</span>
         </div>
       </div>
+      )}
       {locked && <p className="cpr-lock">Predictions closed — next round in {fmtClock(left)}</p>}
 
       {toast && <div className="cpr-toast" role="status">{toast}</div>}
@@ -397,10 +504,53 @@ export function CompactPriceView({ coin, theme, onClose }: Props) {
         </div>
       </BottomSheet>
 
+      {/* My predictions */}
+      <BottomSheet open={histOpen} onClose={() => setHistOpen(false)} title={<>My predictions</>} ariaLabel="My predictions">
+        <div className="cpr-sheet cpr-histlist">
+          <div className="cpr-hstats">
+            <div><b className="cpr-up">{histStats.wins}</b><span>Won</span></div>
+            <div><b className="cpr-dn">{histStats.losses}</b><span>Lost</span></div>
+            <div>
+              <b className={histStats.net >= 0 ? "cpr-up" : "cpr-dn"}>{histStats.net >= 0 ? "+" : "−"}{fmtPrice(Math.abs(histStats.net))}</b>
+              <span>Net</span>
+            </div>
+          </div>
+          {myHistory.length === 0 ? (
+            <p className="cpr-hempty">No predictions yet. Pick Over or Under to make your first one.</p>
+          ) : (
+            <ul className="cpr-hlist">
+              {myHistory.map((b) => {
+                const len = (b.len ?? 900) / 60;
+                const result = !b.settled
+                  ? <span className="cpr-hres cpr-hres--open">In play</span>
+                  : b.won === null
+                    ? <span className="cpr-hres">Tie · {fmtPrice(b.stake)} back</span>
+                    : b.won
+                      ? <span className="cpr-hres cpr-up">+{fmtPrice((b.payout ?? 0) - b.stake)}</span>
+                      : <span className="cpr-hres cpr-dn">−{fmtPrice(b.stake)}</span>;
+                return (
+                  <li key={b.id}>
+                    <span className={`cpr-hside ${b.side === "over" ? "cpr-hside--up" : "cpr-hside--dn"}`} aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">{b.side === "over" ? <path d="M12 19V5M5 12l7-7 7 7" /> : <path d="M12 5v14M19 12l-7 7-7-7" />}</svg>
+                    </span>
+                    <span className="cpr-hmain">
+                      <b>{b.coin} {b.side === "over" ? "Over" : "Under"} {fmtPrice(b.beat)}</b>
+                      <small>{len}m round · {fmtPrice(b.stake)} at {b.mult.toFixed(1)}x · {fmtWhen(b.id)}</small>
+                    </span>
+                    {result}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="cpr-sheet-note">Practice money only — no real funds.</p>
+        </div>
+      </BottomSheet>
+
       {/* Rules */}
       <BottomSheet open={rulesOpen} onClose={() => setRulesOpen(false)} title={<>How it works</>} ariaLabel="Rules">
         <div className="cpr-sheet cpr-rules-body">
-          <p>Each round lasts 15 minutes (:00, :15, :30, :45). <b>Price to beat</b> is {name}'s price when the round opened.</p>
+          <p>Pick a round length: 1, 5 or 15 minutes. This round lasts {mins} minute{mins === 1 ? "" : "s"}{mins === 15 ? " (:00, :15, :30, :45)" : ""}. <b>Price to beat</b> is {name}'s price when the round opened.</p>
           <p>Pick <b className="cpr-up">Over</b> if you think it closes above that price, <b className="cpr-dn">Under</b> if below. The % is the live chance of each, from how far the price is from the target, the time left and recent volatility; the multiplier is what $1 pays if you're right.</p>
           <p>Predictions close {LOCK_SEC} seconds before the round ends and settle on the round's closing price. An exact tie returns your stake.</p>
           <p>You play with a {fmtPrice(START_BALANCE)} practice wallet — no real money is involved.</p>

@@ -538,14 +538,15 @@ html:not([data-theme="light"]) .cnw-meta { color: #6188ff; }
 .sgd-area--dn { fill: color-mix(in srgb, #dc2626 22%, transparent); }
 .sgd-line { fill: none; stroke: var(--color-text); stroke-width: 1.8; stroke-linejoin: round; }
 /* Indicator heatmap. */
+/* Tile dividers are the tiles' own edges (not a grey grid background), so
+   the empty space after the last tile stays the card's own colour. */
 .sgd-heat {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 1px;
-  background: var(--sgd-line);
+  gap: 0;
   border-top: 1px solid var(--sgd-line);
 }
-.sgd-tile { display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; background: var(--color-background, #fff); box-shadow: inset 3px 0 0 transparent; }
+.sgd-tile { display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; background: var(--color-background, #fff); box-shadow: inset 3px 0 0 transparent; border-right: 1px solid var(--sgd-line); border-bottom: 1px solid var(--sgd-line); }
 .sgd-tile-k { font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sgd-tile-v { font-size: 13px; font-weight: 700; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sgd-tile--buy { background: color-mix(in srgb, #16a34a 12%, var(--color-background, #fff)); box-shadow: inset 3px 0 0 #16a34a; }

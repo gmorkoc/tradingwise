@@ -13,6 +13,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:www.coinhintz.io</string>
+		<string>applinks:www.coinhintz.io</string>
 	</array>
 </dict>
 </plist>

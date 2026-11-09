@@ -5339,8 +5339,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         if (!isPaid) { onOpenUpgrade?.("pro"); return; }
         setShowCompactView(true);
       }}
-      title={showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}
-      data-tooltip={showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}
+      title={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
+      data-tooltip={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
     >
       {/* Shape-based, not another set of lines (grid/depth/chart-style
           nearby already are) — represents the CURRENT view, not the
@@ -5423,7 +5423,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   });
   // Trial over / locked → the banner on the chart becomes the renewal
   // prompt (its ✕ snoozes it for a day).
-  const pvPillShown = pvRenew ? !pvRenewSnoozed : !pvPillGone;
+  // Phones: the "Analyze" pitch is only for people without ProVision —
+  // anyone who has it uses the ✦ in the interval row instead.
+  const pvPillShown = pvRenew ? !pvRenewSnoozed : !pvPillGone && !(phoneCmc && pvGate.access.mode !== "locked");
   // (Desktop: hidden once ProVision is running on this chart.)
   // Every case (Analyze or Renew): hidden while the chart loads, then it
   // takes the "Loading chart data" pill's spot — never two pills at once.
@@ -5819,7 +5821,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="10" x2="9" y2="20" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Compact view{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
+              <span className="date-range-sheet-label">Predict{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
               <span className="date-range-sheet-sub">Simple live price line, no indicators</span>
             </span>
             {toolsSwitch(showCompactView)}
@@ -7104,6 +7106,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           <span className="cmch-sym">{coin}</span>
           <svg className="cmch-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
         </button>
+        {/* Share. (Compact view sits beside the chart title; ProVision is
+            in the interval row.) */}
         <div className="cmch-acts">
           <button type="button" className="cmch-act" onClick={() => setStatsSheetOpen(true)} aria-label="All stats">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></svg>
@@ -7113,9 +7117,20 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             className="cmch-act"
             aria-label="Share"
             onClick={() => {
-              const url = window.location.href;
+              hapticTap();
+              // Always the public page (the app's own address is
+              // capacitor://… and means nothing to anyone else).
+              const name = COIN_FULL_NAME[coin] ?? coin;
+              const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+              const url = `https://www.coinhintz.io/chart/${slug}`;
+              const title = `${name} (${coin}) price chart`;
+              // iOS app: the native share sheet (the web view has none).
+              if (Capacitor.isNativePlatform()) {
+                Share.share({ title, text: title, url, dialogTitle: "Share" }).catch(() => {});
+                return;
+              }
               const nav = navigator as Navigator & { share?: (d: { title?: string; url?: string }) => Promise<void> };
-              if (nav.share) nav.share({ title: `${COIN_FULL_NAME[coin] ?? coin} price`, url }).catch(() => {});
+              if (nav.share) nav.share({ title, url }).catch(() => {});
               else navigator.clipboard?.writeText(url).catch(() => {});
             }}
           >
@@ -7675,7 +7690,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                 <span className="cmct-menu-ic" aria-hidden="true">
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 10v10" /></svg>
                                 </span>
-                                {showCompactView ? "Full chart view" : "Compact view"}
+                                {showCompactView ? "Back to chart" : "Predict"}
                                 {!isPaid && !showCompactView && <span className="cmct-menu-pro">PRO</span>}
                               </button>
                               <button
@@ -7722,6 +7737,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             )}
             {phoneHeaderEl}
             {/* Phones, Chart tab: "Bitcoin to USD Chart" title (CMC app). */}
+            {/* (Predict / ProVision / ⚙ live in the interval row.) */}
             {phoneCmc && <h3 className="cmct-title">{COIN_FULL_NAME[coin] ?? coin} to USD Chart</h3>}
             {/* Phones, line view: range chips above the chart (CMC app). */}
             {phoneCmc && cmcLineView && (
@@ -7785,6 +7801,44 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   );
                 })}
                 <span className="cmct-ivdiv" aria-hidden="true" />
+                {/* Predict (15-min Over/Under rounds) — same toggle as the
+                    one beside the chart title. */}
+                <button
+                  type="button"
+                  className={`cmct-rbtn cmct-rbtn--icon cmct-rbtn--predict${showCompactView ? " cmct-rbtn--on" : ""}`}
+                  aria-label="Predict"
+                  aria-pressed={showCompactView}
+                  onClick={() => {
+                    hapticTap();
+                    if (showCompactView) { setShowCompactView(false); return; }
+                    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
+                    setShowCompactView(true);
+                  }}
+                >
+                  {/* Lightning bolt (fast 15-min rounds), green. */}
+                  <svg className="cmct-predict-ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="cmctPredictGradRow" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stopColor="#34d399" />
+                        <stop offset="1" stopColor="#16a34a" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M13.5 2 4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.2 7.1c-.1.7.8 1.1 1.2.5l8.6-11.3c.4-.5 0-1.3-.6-1.3H13l1.6-6.6c.2-.8-.7-1.3-1.1-.9z" fill="url(#cmctPredictGradRow)" />
+                  </svg>
+                </button>
+                {/* ProVision — only when the user can use it (trial, Pro,
+                    Elite or the ProVision plan). */}
+                {pvGate.access.mode !== "locked" && (
+                  <button
+                    type="button"
+                    className={`cmct-rbtn cmct-rbtn--icon cmct-rbtn--pv${pvGate.on ? " cmct-rbtn--on" : ""}`}
+                    aria-label={pvGate.on ? "Turn ProVision off" : "Turn ProVision on"}
+                    aria-pressed={pvGate.on}
+                    onClick={() => { hapticTap(); pvGate.toggle(coin); }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="cmct-rbtn cmct-rbtn--icon"
@@ -8277,7 +8331,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         <path d="M4.93 3.57 A11 11 0 0 0 4.93 20.43" />
                       </svg>
                     )}
-                    <span>{showCompactView ? t("chart.switchToFull", "Switch to Full Chart") : t("chart.switchToCompact", "Switch to Compact View")}</span>
+                    <span>{showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}</span>
                   </button>
                 )}
               </div>

@@ -601,6 +601,17 @@ html:not([data-theme="light"]) .pv-renew-cta { background: #262241; color: #fff;
 }
 /* In the loading overlay's own slot: centred by the overlay, clickable. */
 .chart-loading-overlay.chart-pv-renew-slot { z-index: 30; }
+/* Phones: centred on the whole chart (not just the plot) and on top of
+   the drawing tools rail, so the pill never sits half under it. */
+html .price-chart-container.price-chart-container--phonecmc .chart-dblclick-wrap > .chart-loading-overlay.chart-pv-renew-slot {
+  left: 0;
+  right: 0;
+  z-index: 1003; /* drawing tools rail is 1002 */
+  /* Near the bottom of the plot, off the latest candles and price tag. */
+  align-items: flex-end;
+  padding-bottom: 20px;
+  box-sizing: border-box;
+}
 .chart-pv-renew-slot .pv-pill,
 .chart-pv-renew-slot .pv-pill.pv-pill--renew {
   position: static;
@@ -780,14 +791,18 @@ html:not([data-theme="light"]) .cmct-btn--on .pv-toggle-label-accent { color: #a
 /* CMC's exact segmented look (overrides the above): #eff2f5 track,
    #58667e semibold labels, white active pill with near-black text,
    #cfd6e4 dividers. Dark theme: CMC's dark equivalents. */
-.cmct {
+/* (Also on the title row above the chart, so its ProVision / Compact view
+   buttons get the same grey track background as Indicators.) */
+.cmct,
+.cmct-title-row {
   --cmct-track: #eff2f5;
   --cmct-text: #58667e;
   --cmct-on-bg: #ffffff;
   --cmct-on-text: #0d1421;
   --cmct-div: #cfd6e4;
 }
-html:not([data-theme="light"]) .cmct {
+html:not([data-theme="light"]) .cmct,
+html:not([data-theme="light"]) .cmct-title-row {
   --cmct-track: #222531;
   --cmct-text: #a1a7bb;
   --cmct-on-bg: #323546;
@@ -859,6 +874,29 @@ html:not([data-theme="light"]) .cmct {
   -webkit-tap-highlight-color: transparent;
 }
 .cmct-phone-ind:active { opacity: 0.7; }
+/* Indicators fills the row; Compact view / ProVision are small squares. */
+.cmct-phone-icon,
+.cmct-phone-icon:hover {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cmct-track);
+  color: var(--cmct-on-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmct-phone-icon:active { opacity: 0.7; }
+.cmct-phone-icon--on { background: color-mix(in srgb, #3861fb 18%, var(--cmct-track)); color: #3861fb; }
+.cmct-phone-icon--pv { color: #7c3aed; }
+.cmct-phone-icon--pv.cmct-phone-icon--on { background: color-mix(in srgb, #7c3aed 20%, var(--cmct-track)); color: #7c3aed; }
+html:not([data-theme="light"]) .cmct-phone-icon--pv { color: #a78bfa; }
+html:not([data-theme="light"]) .cmct-phone-icon--on { color: #7b9bff; }
+html:not([data-theme="light"]) .cmct-phone-icon--pv.cmct-phone-icon--on { color: #c4b5fd; }
 /* Phone header (CMC app): "Bitcoin price BTC" + actions, big price. */
 .cmch { display: flex; flex-direction: column; gap: 4px; padding: 4px 0 10px; }
 .cmch-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -900,6 +938,13 @@ html:not([data-theme="light"]) .cmct {
 }
 html:not([data-theme="light"]) .cmch-act { background: #222531; color: #a1a7bb; }
 .cmch-act:active { opacity: 0.7; }
+/* ProVision: purple sparkle; on = purple tint. Compact view on = blue tint. */
+.cmch-act--pv, .cmch-act--pv:hover { color: #7c3aed; }
+html:not([data-theme="light"]) .cmch-act--pv { color: #a78bfa; }
+.cmch-act--on, .cmch-act--on:hover { background: color-mix(in srgb, #3861fb 16%, #eff2f5); color: #3861fb; }
+.cmch-act--pv.cmch-act--on, .cmch-act--pv.cmch-act--on:hover { background: color-mix(in srgb, #7c3aed 18%, #eff2f5); color: #7c3aed; }
+html:not([data-theme="light"]) .cmch-act--on { background: color-mix(in srgb, #3861fb 26%, #222531); color: #9db4ff; }
+html:not([data-theme="light"]) .cmch-act--pv.cmch-act--on { background: color-mix(in srgb, #7c3aed 30%, #222531); color: #c4b5fd; }
 .cmch-price { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .cmch-price strong { font-size: 25px; font-weight: 700; letter-spacing: -0.02em; color: var(--color-text); font-variant-numeric: tabular-nums; }
 .cmch-chg { font-size: 13px; font-weight: 600; }
@@ -980,7 +1025,19 @@ html .price-chart-container--phonecmc .chart-bar-toolbar { display: none !import
 html:not([data-theme="light"]) .cmct-ivdiv { background: #3a3f52; }
 /* Last slot: ⚙ (opens Chart tools), or the interval picked there (e.g.
    "1m") shown selected in its place — always fully visible. */
-html .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 38px; display: inline-flex; align-items: center; justify-content: center; }
+html .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 30px; display: inline-flex; align-items: center; justify-content: center; }
+/* ProVision sparkle beside ⚙: purple; on = white pill like a picked interval. */
+html .cmct-rbtn.cmct-rbtn--pv { color: #7c3aed; }
+/* Tighter track: the icons (Predict, ProVision, ⚙) share the row. */
+html .cmct-ivrow { gap: 0; padding: 3px 2px; }
+html .cmct-ivrow .cmct-ivdiv { margin: 0 2px; }
+html .cmct-ivrow .cmct-rbtn { font-size: 12.5px; }
+/* Icon buttons wide enough to tap easily; the intervals give up the room. */
+html .cmct-ivrow .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 36px; }
+/* Intervals sized to their text (small side padding) instead of stretching,
+   so ProVision + ⚙ always have room on the right. */
+html .cmct-ivrow .cmct-rbtn:not(.cmct-rbtn--icon) { flex: 1 1 auto; padding: 0 5px; }
+html:not([data-theme="light"]) .cmct-rbtn.cmct-rbtn--pv { color: #a78bfa; }
 /* Section label inside the Chart settings sheet. */
 .cmct-sheet-label { display: block; padding: 14px 4px 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 
@@ -1203,6 +1260,39 @@ html:not([data-theme="light"]) .chart-tv-pvbar-cta { border-color: color-mix(in 
 
 /* "Bitcoin to USD Chart" title above the chart. */
 .cmct-title { margin: 16px 0 10px; font-size: 15px; font-weight: 700; color: var(--color-text); letter-spacing: -0.01em; }
+/* Title on the left, Compact view button on the right. */
+.cmct-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 10px; }
+.cmct-title-row .cmct-title { margin: 0; }
+/* Plain icon + label, no background or border. */
+.cmct-title-actions {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.cmct-title-actions .cmct-title-compact,
+.cmct-title-actions .cmct-title-compact:hover {
+  flex: 0 0 auto;
+  width: auto;
+  height: 28px;
+  gap: 6px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  color: var(--cmct-text);
+}
+/* Predict icon: a little bounce on tap. */
+.cmct-predict-ic { flex-shrink: 0; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.cmct-rbtn--predict:active .cmct-predict-ic { transform: scale(1.18) rotate(-8deg); }
+/* On: just the blue text/icon, still no background. */
+.cmct-title-actions .cmct-phone-icon--on,
+.cmct-title-actions .cmct-phone-icon--on:hover { background: none; box-shadow: none; color: #3861fb; }
+html:not([data-theme="light"]) .cmct-title-actions .cmct-phone-icon--on { color: #7b9bff; }
+/* Real widths (not just flex-basis): the row sizes the button group from
+   these, so both fit inside the container's padding. */
 .cmct--phone .cmct-btn,
 .cmct--phone .cmct-btn:hover { padding: 0 11px; font-size: 12px; }
 .cmct--phone .cmct-btn--icon,

@@ -3,6 +3,7 @@ import { CoinUnavailableSheet } from "./components/CoinUnavailableSheet";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { Keyboard } from "@capacitor/keyboard";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
@@ -733,6 +734,21 @@ function AppDashboard({
   const openChartCoinRef = useRef(openChartCoin);
   openChartCoinRef.current = openChartCoin;
   const openStoryCoin = useCallback((s: string) => { openChartCoinRef.current(s, { recent: true, navigate: true }); }, []);
+  // iOS app: a shared coinhintz.io/chart/<coin> link (Universal Link — see
+  // public/.well-known/apple-app-site-association) opens the app here; go
+  // straight to that coin's chart.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = CapacitorApp.addListener("appUrlOpen", ({ url }) => {
+      let u: URL;
+      try { u = new URL(url); } catch { return; }
+      if (!/(^|\.)coinhintz\.io$/i.test(u.hostname)) return;
+      const m = u.pathname.replace(/\/+$/, "").match(/^\/chart\/([^/]+)$/);
+      const sym = m ? slugToCoin(m[1]) : null;
+      if (sym) openChartCoinRef.current(sym, { recent: true, navigate: true });
+    });
+    return () => { sub.then((s) => s.remove()); };
+  }, []);
 
   // Follows the selected coin (not hardcoded to BTC) so the toast is
   // relevant to whatever chart is actually open.
@@ -1812,8 +1828,14 @@ function AppDashboard({
   const [guestMenu, setGuestMenu] = useState<NavCategoryId | null>(null);
   // Signed-out header on smaller desktops: the ☰ menu.
   const [guestBurger, setGuestBurger] = useState(false);
+  // Sign-up banner: stays until closed; ✕ hides it for 24 hours, then it
+  // comes back — until they sign up (signed-in users never see it).
+  const PROMO_SNOOZE_MS = 24 * 60 * 60 * 1000;
   const [promoHidden, setPromoHidden] = useState(() => {
-    try { return localStorage.getItem("ch:signupPromoHidden") === "1"; } catch { return false; }
+    try {
+      const at = Number(localStorage.getItem("ch:signupPromoClosedAt"));
+      return Number.isFinite(at) && at > 0 && Date.now() - at < PROMO_SNOOZE_MS;
+    } catch { return false; }
   });
   const [guestBurgerCat, setGuestBurgerCat] = useState<NavCategoryId | null>(null);
   // Phones: the page and its scrolling area must never sit shifted
@@ -3441,37 +3463,8 @@ function AppDashboard({
                 />
               </div>
 
-              {/* ProVision switch — phones have no top bar, so it lives
-                  here (same shared setting as desktop's top-bar switch). */}
-              <button
-                type="button"
-                className={`icon-strip-btn icon-strip-pv${proVision ? " icon-strip-pv--on" : ""}`}
-                role="switch"
-                aria-checked={proVision}
-                aria-label="ProVision"
-                onClick={() => {
-                  hapticTap();
-                  // Locked → the gate opens the ProVision sheet; close the menu either way.
-                  const locked = !proVision && pvGate.access.lockReason(coin) !== null;
-                  pvGate.toggle(coin);
-                  // Let the knob slide first, then close the menu.
-                  window.setTimeout(() => setMobileNavOpen(false), locked ? 0 : 280);
-                }}
-              >
-                <span className="nav-icon-wrap">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
-                  </svg>
-                </span>
-                <span className="icon-strip-label">Pro<span className="pv-toggle-label-accent">Vision</span></span>
-                <span className="pv-toggle pv-toggle--nav" aria-hidden="true">
-                  <span className="pv-toggle-track">
-                    <span className="pv-toggle-knob">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-                    </span>
-                  </span>
-                </span>
-              </button>
+              {/* ProVision switch removed from the menu — on phones it's the
+                  sparkle button next to Indicators under the chart. */}
 
               <button
                 type="button"
@@ -3561,16 +3554,20 @@ function AppDashboard({
           {/* Desktop top bar, CoinMarketCap style: global stats strip, then
               logo · section links · Portfolio · Watchlist · search · icons. */}
           {/* Signed-out promo strip above the header (Coinbase style). */}
-          {!Capacitor.isNativePlatform() && isDesktopWidth && !user && !promoHidden && (
-            <div className="top-nav-promo">
+          {/* Website only (never the iOS app): desktop on every page,
+              mobile web on the Markets page only. */}
+          {!Capacitor.isNativePlatform() && !user && !promoHidden && (isDesktopWidth || activeSection === "markets") && (
+            <div className={`top-nav-promo${isDesktopWidth ? "" : " top-nav-promo--phone"}`}>
               <button type="button" className="top-nav-promo-link" onClick={() => onOpenAuth("signup")}>
-                Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices
+                {isDesktopWidth
+                  ? <>Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices</>
+                  : <>Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict</>}
               </button>
               <button
                 type="button"
                 className="top-nav-promo-x"
                 aria-label="Dismiss"
-                onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoHidden", "1"); } catch { /* ignore */ } }}
+                onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoClosedAt", String(Date.now())); } catch { /* ignore */ } }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
@@ -5115,17 +5112,13 @@ function AppGate() {
     return () => window.removeEventListener("open-upgrade-modal", onOpenUpgradeEvent);
   }, [openUpgrade]);
 
-  // Theme: phones / native always follow the device (light/dark), live.
-  // Desktop web follows the system too, until the user picks a theme in the
-  // app — that choice is saved and kept across refreshes (even against the
-  // system setting).
-  const themeChoiceAllowed = () =>
-    !Capacitor.isNativePlatform() && window.matchMedia("(min-width: 641px)").matches;
+  // Theme, everywhere (desktop, mobile web, iOS app): "System" (nothing
+  // saved) follows the device live; picking Light or Dark is saved and kept
+  // — across refreshes and app restarts — until they choose again.
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
     try {
       const saved = localStorage.getItem("theme");
-      if (themeChoiceAllowed() && (saved === "dark" || saved === "light")) return saved;
-      if (!themeChoiceAllowed()) localStorage.removeItem("theme");
+      if (saved === "dark" || saved === "light") return saved;
     } catch { /* ignore */ }
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
@@ -5141,9 +5134,9 @@ function AppGate() {
   // foreground, in case the change happened while it was in the background.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    // Desktop with a saved choice: the user's pick wins over the system.
+    // A saved Light/Dark pick wins over the system.
     const hasChoice = () => {
-      try { return themeChoiceAllowed() && !!localStorage.getItem("theme"); } catch { return false; }
+      try { return !!localStorage.getItem("theme"); } catch { return false; }
     };
     const sync = () => { if (!hasChoice()) setThemeState(mq.matches ? "dark" : "light"); };
     const handleChange = (e: MediaQueryListEvent) => { if (!hasChoice()) setThemeState(e.matches ? "dark" : "light"); };
@@ -5164,8 +5157,8 @@ function AppGate() {
       return;
     }
     setThemeState(t);
-    // Desktop: remember the pick (survives refresh, overrides the system).
-    if (themeChoiceAllowed()) { try { localStorage.setItem("theme", t); } catch { /* ignore */ } }
+    // Remember the pick (survives refresh / app restart, overrides the system).
+    try { localStorage.setItem("theme", t); } catch { /* ignore */ }
   };
 
   // Sync pending terms agreement to DB once user is authenticated

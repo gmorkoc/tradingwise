@@ -4187,6 +4187,15 @@ html:not([data-theme="light"]) .top-nav-search-kbd { background: color-mix(in sr
 .top-nav-promo-x:hover { background: rgba(10, 11, 13, 0.06); color: #0a0b0d; }
 .top-nav-promo-x:focus-visible { outline: 2px solid #0052ff; }
 html:not([data-theme="light"]) .top-nav-promo { background: #1c1d23; }
+/* Mobile web: compact, one line, ✕ tucked in on the right. */
+/* Text centred; equal side padding so the ✕ on the right doesn't shift it. */
+.top-nav-promo--phone { height: 38px; padding: 0 40px; justify-content: center; text-align: center; }
+.top-nav-promo--phone .top-nav-promo-link,
+.top-nav-promo--phone .top-nav-promo-link:hover { font-size: 13px; }
+.top-nav-promo--phone .top-nav-promo-x,
+.top-nav-promo--phone .top-nav-promo-x:hover { right: 8px; }
+@keyframes top-nav-promo-open-phone { from { height: 0; opacity: 0; } to { height: 38px; opacity: 1; } }
+.top-nav-promo--phone { animation-name: top-nav-promo-open-phone; }
 html:not([data-theme="light"]) .top-nav-promo-link { color: #ffffff; }
 html:not([data-theme="light"]) .top-nav-promo-link b { color: #6b9bff; }
 html:not([data-theme="light"]) .top-nav-promo-x { color: #8a919e; }
@@ -5788,7 +5797,17 @@ html:not([data-theme="light"]) .mch-search-btn:hover {
   .icon-strip:not(.mobile-open) * {
     pointer-events: none !important;
   }
+  /* Closed menu is invisible outright — on iOS app start the status-bar
+     inset arrives a beat late, and until then the menu's profile row
+     (avatar · Account · FREE) sat in the uncovered status-bar strip.
+     Hiding waits out the 0.3s close slide so closing still looks right;
+     opening shows it instantly. */
+  .icon-strip:not(.mobile-open) {
+    visibility: hidden;
+    transition: visibility 0s linear 0.32s !important;
+  }
   .icon-strip.mobile-open {
+    visibility: visible;
     z-index: 300001;
     background: var(--color-surface) !important;
     backdrop-filter: none;

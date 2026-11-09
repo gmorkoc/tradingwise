@@ -157,31 +157,3 @@ textarea {
   .price-chart-container { overflow-x: clip; }
 }
 
-/* Portrait-only on phones (mobile web): a touch phone held sideways gets a
-   "turn your phone upright" screen over the app (browsers can't lock
-   rotation; the native app is locked in Info.plist). Desktop windows and
-   tablets never match (fine pointer / taller than 500px). */
-.rotate-lock { display: none; }
-@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  .rotate-lock {
-    position: fixed;
-    inset: 0;
-    z-index: 2147483647;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 24px;
-    text-align: center;
-    background: var(--color-background, #fff);
-    color: var(--color-text, #0d1421);
-    font-family: inherit;
-  }
-  .rotate-lock svg { color: var(--color-text-muted, #58667e); animation: rotate-lock-tilt 1.6s ease-in-out infinite; }
-  .rotate-lock strong { font-size: 17px; font-weight: 700; }
-  .rotate-lock span { font-size: 13px; color: var(--color-text-muted, #58667e); }
-  #root { visibility: hidden; }
-}
-@keyframes rotate-lock-tilt { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0deg); } }
-@media (prefers-reduced-motion: reduce) { .rotate-lock svg { animation: none; } }

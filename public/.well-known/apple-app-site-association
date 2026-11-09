@@ -1,4 +1,14 @@
 {
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["R4WU895Q9L.io.coinhintz.app"],
+        "components": [
+          { "/": "/chart/*", "comment": "Coin chart pages (shared links) open in the app when installed" }
+        ]
+      }
+    ]
+  },
   "webcredentials": {
     "apps": ["R4WU895Q9L.io.coinhintz.app"]
   }

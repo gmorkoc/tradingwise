@@ -69,7 +69,8 @@ const openLink = (url: string) => {
   else window.open(url, "_blank", "noopener,noreferrer");
 };
 const usd = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-const AUTO_MS = 6000;
+// Time on each card before auto-play moves on — long enough to read.
+const AUTO_MS = 10000;
 const ago = (ts: number) => {
   const m = Math.max(1, Math.round((Date.now() - ts) / 60_000));
   return m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`;
@@ -183,7 +184,7 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
   }, [series]);
   const color = up ? "#16a34a" : "#e5484d";
   return (
-    <div className="mkst-coin">
+    <div className={`mkst-coin mkst-coin--${up ? "up" : "down"}`}>
       <div className="mkst-eyebrow">{eyebrow}</div>
       <div className="mkst-coin-head">
         <img src={coin.image} alt="" />
@@ -290,15 +291,15 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
     const pushOdds = (i: number) => {
       const o = oddsStories[i];
       if (!o) return;
-      // Phones: no room side by side — the odds card, then its story.
-      const pair = o.story && !isPhone;
+      // Every card is the same width (so the centred card leaves equal
+      // peeks on both sides): the odds card, then its matching story as
+      // the next card.
       list.push({
         key: `o:${o.ev.url}`,
-        size: pair ? "wide" : "odds",
-        el: pair ? <div className="mkst-pair"><OddsBlock ev={o.ev} /><NewsBlock item={o.story!} own tickers={coinTickers} /></div> : <OddsBlock ev={o.ev} />,
+        el: <OddsBlock ev={o.ev} />,
         open: () => openLink(o.ev.url),
       });
-      if (o.story && isPhone) pushNews(o.story);
+      if (o.story) pushNews(o.story);
     };
     pushOdds(0);
     if (gainer) pushCoin(gainer, "Top gainer · 24h");
@@ -360,12 +361,11 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
     const b = el?.children[panels.length] as HTMLElement | undefined;
     return a && b ? b.offsetLeft - a.offsetLeft : 0;
   };
-  // How far the "current" card sits from the track's left edge: desktop
-  // leaves 140px for the previous card to peek in; phones centre the card.
+  // How far the "current" card sits from the track's left edge: it's
+  // centred (desktop and phones), so the neighbours peek in equally.
   const edgeOffset = () => {
     const el = trackRef.current;
     if (!el) return 0;
-    if (!isPhone) return 140;
     const cw = (el.children[0] as HTMLElement | undefined)?.offsetWidth ?? 0;
     return Math.max(0, (el.clientWidth - cw) / 2);
   };
@@ -451,8 +451,10 @@ export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (sy
     <section
       className="mkst"
       aria-label="Market stories"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      // Hover-pause is desktop only; on phones a tap fires these too and
+      // would re-render the whole carousel for nothing.
+      onMouseEnter={isPhone ? undefined : () => setHovered(true)}
+      onMouseLeave={isPhone ? undefined : () => setHovered(false)}
     >
       <div className="mkst-track" ref={trackRef} onScroll={onScroll}>
         {[0, 1, 2].flatMap((copy) => panels.map((p, i) => (

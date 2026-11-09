@@ -78,14 +78,6 @@
       </div>
     </noscript>
     <div id="root"></div>
-    <!-- Phones held sideways (mobile web): the app is portrait-only, and
-         browsers don't let a page lock rotation — so cover it with a
-         "turn your phone upright" screen (CSS in index.css). -->
-    <div class="rotate-lock" aria-hidden="true">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
-      <strong>Turn your phone upright</strong>
-      <span>coinhintz works in portrait mode.</span>
-    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ("serviceWorker" in navigator) {

@@ -14,11 +14,10 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
-  /* Coinbase-style: the previous item peeks in on the left, faded out,
-     and the next one fades out on the right. */
-  scroll-padding-left: 140px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 150px, #000 calc(100% - 90px), transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 150px, #000 calc(100% - 90px), transparent 100%);
+  /* The current card snaps to the centre, so the previous and next cards
+     peek in equally on both sides, with the same fade on each edge. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 120px, #000 calc(100% - 120px), rgba(0,0,0,0.25) calc(100% - 40px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 120px, #000 calc(100% - 120px), rgba(0,0,0,0.25) calc(100% - 40px), transparent 100%);
 }
 .mkst-track::-webkit-scrollbar { display: none; }
 .mkst-panel {
@@ -28,13 +27,19 @@
   padding: 32px 48px 28px;
   transition: background 0.18s ease;
   cursor: pointer;
-  scroll-snap-align: start;
+  scroll-snap-align: center;
   border-right: 1px solid var(--mkst-line);
   display: flex;
   /* Every card's content sits in the vertical middle of the row. */
   align-items: center;
 }
 .mkst-panel:last-child { border-right: none; }
+/* Performance (iOS especially): the loop renders 3 copies of every card —
+   the browser skips layout, paint and animations for the off-screen ones. */
+/* Placeholder HEIGHT only — a placeholder width (the old "auto 400px" set
+   both) made skipped cards 400px wide, wider than a 390px iPhone, so iOS
+   briefly zoomed out on load and showed the off-screen side menu. */
+.mkst-panel { content-visibility: auto; contain-intrinsic-width: none; contain-intrinsic-height: auto 400px; }
 .mkst-panel--wide { flex-basis: 824px; }
 .mkst-panel--odds { flex-basis: 490px; }
 /* Super light grey behind the item you're pointing at. */
@@ -165,11 +170,10 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
 .mkst-chips .db-chip--ticker.down { background: color-mix(in srgb, var(--color-danger, #dc2626) 10%, var(--color-card-bg)); border-color: transparent; }
 .mkst-chips .db-chip--ticker.up { background: color-mix(in srgb, var(--color-success, #16a34a) 10%, var(--color-card-bg)); border-color: transparent; }
 /* On the full-photo cards: frosted chips that read over the photo. */
+/* (No backdrop blur — too costly on iOS with dozens of chips.) */
 .mkst-panel > .mkst-news .mkst-chips .db-chip {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(20, 20, 24, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
   color: #fff;
 }
 .mkst-panel > .mkst-news .mkst-chips .db-chip-symbol,
@@ -297,6 +301,45 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
 .mkst-cat--geopolitics { background: #a855f7; }
 @media (prefers-reduced-motion: reduce) {
   .mkst-panel, .mkst-draw, .mkst-area, .mkst-enddot, .mkst-live i { animation: none; opacity: 1; stroke-dashoffset: 0; }
+}
+
+/* Gainer / loser cards: a soft green / red wash. Desktop: fills the whole
+   card, square. Phones: inset 8px with 16px corners like the photo cards. */
+.mkst-panel:has(> .mkst-coin) { position: relative; }
+.mkst-panel:has(> .mkst-coin)::before {
+  content: "";
+  position: absolute;
+  inset: 0 4px; /* desktop: 4px clear of each side, square corners */
+  z-index: 0;
+  pointer-events: none;
+}
+@media (max-width: 960px) {
+  .mkst-panel:has(> .mkst-coin)::before { inset: 0 8px; border-radius: 16px; }
+}
+/* Desktop: a much lighter wash, no edge line. */
+@media (min-width: 961px) {
+  .mkst-panel:has(> .mkst-coin--up)::before {
+    background: linear-gradient(180deg, color-mix(in srgb, #16a34a 2.5%, transparent), color-mix(in srgb, #16a34a 0.8%, transparent));
+    box-shadow: none;
+  }
+  .mkst-panel:has(> .mkst-coin--down)::before {
+    background: linear-gradient(180deg, color-mix(in srgb, #dc2626 2.2%, transparent), color-mix(in srgb, #dc2626 0.8%, transparent));
+    box-shadow: none;
+  }
+}
+.mkst-panel:has(> .mkst-coin) > .mkst-coin { position: relative; z-index: 1; }
+.mkst-panel:has(> .mkst-coin--up)::before {
+  background: linear-gradient(180deg, color-mix(in srgb, #16a34a 6%, transparent), color-mix(in srgb, #16a34a 2%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #16a34a 12%, transparent);
+}
+.mkst-panel:has(> .mkst-coin--down)::before {
+  background: linear-gradient(180deg, color-mix(in srgb, #dc2626 5.5%, transparent), color-mix(in srgb, #dc2626 1.5%, transparent));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #dc2626 12%, transparent);
+}
+
+/* Desktop: chart-only cards (odds, coin — no photo) get 28px sides. */
+@media (min-width: 961px) {
+  .mkst-panel:not(:has(> .mkst-news)) { padding-left: 28px; padding-right: 28px; }
 }
 
 /* ── Under the carousel: dots + Auto-play switch ─────────────────────── */
@@ -438,6 +481,13 @@ html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 25
   .mkst-panel > .mkst-news > .mkst-news-img:hover { inset: 0 8px; border-radius: 16px; }
   .mkst-panel:has(> .mkst-news)::after { inset: 0 8px; border-radius: 16px; }
   .mkst-panel:hover { background: none; }
+  /* Phones: no card border; content 16px inside the wash (wash is 8px in). */
+  .mkst-panel:has(> .mkst-coin) {
+    border: none;
+    background: none;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
   .mkst-arrow { display: none; }
   .mkst-title,
   .mkst-title:hover { font-size: 21px; }
