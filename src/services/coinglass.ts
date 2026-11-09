@@ -809,8 +809,11 @@ export const coinglass = {
         // whenever CoinGlass's plan blocks these endpoints, which always
         // scores as neutral in the Confluence Engine regardless of real
         // market conditions.
-        fetch(`/bnf-api/fapi/v1/premiumIndex?symbol=${symbol}`).then(r => r.json()).catch(() => null),
-        fetch(`/bnf-api/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=4h&limit=1`).then(r => r.json()).catch(() => null),
+        // Direct Binance Futures (premiumIndex / L-S ratio) disabled: it
+        // answers 451 "restricted location" everywhere we've run it, just
+        // adding console errors — Coinalyze below covers both.
+        Promise.resolve<{ lastFundingRate?: string } | null>(null),
+        Promise.resolve<{ longShortRatio?: string }[] | null>(null),
         // Binance Futures (fapi.binance.com, via /bnf-api) is geo-blocked
         // from this app's hosting region entirely ("restricted location"
         // per Binance's own error) — confirmed dead for OI specifically, so
@@ -1125,7 +1128,8 @@ export const coinglass = {
       // endpoint currently 401s ("Upgrade plan") for every exchange it's
       // asked for, so without these, Binance/Bybit silently rendered as a
       // fake "0.0000% Neutral" instead of failing loudly or falling back.
-      fetch(`/bnf-api/fapi/v1/premiumIndex?symbol=${sym}`).then(r => r.json()).catch(() => null),
+      // Binance direct disabled (451 "restricted location") — Coinalyze below.
+      Promise.resolve<{ lastFundingRate?: string } | null>(null),
       fetch(`/bybit-api/v5/market/tickers?category=linear&symbol=${sym}`).then(r => r.json()).catch(() => null),
       // Coinalyze: neutral aggregator, not region-restricted the way Binance/
       // Bybit's own APIs are (they block US-based requests, which is what
@@ -1746,7 +1750,17 @@ export async function getCoinGeckoId(symbol: string): Promise<string | null> {
   return marketsRawCache?.find((c) => c.symbol.toLowerCase() === s)?.id ?? null;
 }
 
-export interface TopMarketCoin { symbol: string; name: string; image: string | null; marketCap: number; volume24h: number }
+export interface TopMarketCoin { symbol: string; name: string; image: string | null; marketCap: number; volume24h: number; price: number; change24h: number }
+
+const toTopCoin = (c: CoinGeckoMarket): TopMarketCoin => ({
+  symbol: c.symbol.toUpperCase(),
+  name: c.name ?? c.symbol.toUpperCase(),
+  image: c.image ?? null,
+  marketCap: c.market_cap ?? 0,
+  volume24h: c.total_volume ?? 0,
+  price: c.current_price ?? 0,
+  change24h: c.price_change_percentage_24h ?? 0,
+});
 
 /** Top coins by market cap (CoinGecko order), skipping `skip` symbols. Uses the same 5-min cache. */
 export async function fetchTopMarketCoins(count: number, skip: Set<string> = new Set()): Promise<TopMarketCoin[]> {
@@ -1756,13 +1770,20 @@ export async function fetchTopMarketCoins(count: number, skip: Set<string> = new
   return (marketsRawCache ?? [])
     .filter((c) => !skip.has(c.symbol.toUpperCase()))
     .slice(0, count)
-    .map((c) => ({
-      symbol: c.symbol.toUpperCase(),
-      name: c.name ?? c.symbol.toUpperCase(),
-      image: c.image ?? null,
-      marketCap: c.market_cap ?? 0,
-      volume24h: c.total_volume ?? 0,
-    }));
+    .map(toTopCoin);
+}
+
+/** Biggest 24h gainers among the top 100 by market cap (same cache). */
+export async function fetchTopGainers(count: number, skip: Set<string> = new Set()): Promise<TopMarketCoin[]> {
+  if (!marketsRawCache || Date.now() - marketCapFetchedAt >= MARKET_CAP_TTL) {
+    try { populateCoinGeckoCaches(await fetchCoinGeckoMarkets()); } catch { /* use what we have */ }
+  }
+  return (marketsRawCache ?? [])
+    .slice(0, 100)
+    .filter((c) => !skip.has(c.symbol.toUpperCase()) && (c.price_change_percentage_24h ?? 0) > 0)
+    .sort((a, b) => (b.price_change_percentage_24h ?? 0) - (a.price_change_percentage_24h ?? 0))
+    .slice(0, count)
+    .map(toTopCoin);
 }
 
 async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarket[]> {

@@ -54,6 +54,18 @@ html .bg-root.bg-root--promo .bg-overlay .bg-elite-card > * {
   color: var(--color-text-muted);
 }
 .bg-elite-card--pro .bg-elite-eyebrow { color: #0ea5e9; }
+/* ProVision: same card in ProVision's purple → blue. */
+.bg-elite-cta.bg-elite-cta--pv { background: linear-gradient(90deg, #7c3aed, #3b82f6); }
+.bg-elite-card--pv .bg-elite-eyebrow { color: #7c3aed; }
+.bg-elite-card--pv .bg-elite-feat-icon { color: #7c3aed; }
+html:not([data-theme="light"]) .bg-elite-card--pv :is(.bg-elite-eyebrow, .bg-elite-feat-icon) { color: #a78bfa; }
+.bg-elite-card--pv .bg-elite-price {
+  background: linear-gradient(100deg, #7c3aed, #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bg-pv-error { margin: 8px 0 0; text-align: center; font-size: 12.5px; color: #dc2626; }
 .bg-elite-card:not(.bg-elite-card--pro) .bg-elite-eyebrow { color: #8b5cf6; }
 
 /* ── Desktop popup: bigger, and the whole popup is the card ─────────────

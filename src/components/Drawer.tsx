@@ -10,7 +10,7 @@ interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   theme: "dark" | "light";
-  setTheme: (t: "dark" | "light") => void;
+  setTheme: (t: "dark" | "light" | "system") => void;
   autoRefresh: boolean;
   setAutoRefresh: (v: boolean) => void;
   onOpenLeverage: () => void;
@@ -21,6 +21,10 @@ interface DrawerProps {
   onOpenContact: () => void;
   onOpenAssetCalc: () => void;
   traderLevel: string | null;
+  // Desktop web: the cards that used to sit at the bottom of the sidebar
+  // (invite a friend, AI usage, account row), now that the sidebar is gone.
+  // When given, it replaces the drawer's own AI Requests row.
+  accountExtras?: React.ReactNode;
 }
 
 const LANGUAGES = [
@@ -68,7 +72,7 @@ function Chevron({ open }: { open?: boolean }) {
 
 export const Drawer: React.FC<DrawerProps> = ({
   isOpen, onClose, theme, setTheme, autoRefresh, setAutoRefresh,
-  onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, onOpenAssetCalc, traderLevel,
+  onOpenLeverage, onOpenLearn, onOpenProfile, onOpenWizard, onOpenTutorials, onOpenContact, onOpenAssetCalc, traderLevel, accountExtras,
 }) => {
   const { t } = useTranslation();
   const { tier, user, signOut } = useAuth();
@@ -76,6 +80,19 @@ export const Drawer: React.FC<DrawerProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [openDoc, setOpenDoc]     = useState<number | null>(null);
+  // Which option is picked: a saved "theme" means Light/Dark; none means System.
+  const readMode = (): "light" | "dark" | "system" => {
+    try {
+      const s = localStorage.getItem("theme");
+      if (s === "light" || s === "dark") return s;
+    } catch { /* ignore */ }
+    // Nothing saved (phones never save): System unless the current theme
+    // differs from the device's, i.e. picked this session.
+    const sys = window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return theme === sys ? "system" : theme;
+  };
+  const [themeMode, setThemeMode] = useState(readMode);
+  useEffect(() => { if (isOpen) setThemeMode(readMode()); }, [isOpen, theme]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -125,7 +142,7 @@ export const Drawer: React.FC<DrawerProps> = ({
             </div>
             )}
 
-            {user && (
+            {user && !accountExtras && (
               <div className="drawer-ai-usage">
                 <div className="drawer-ai-usage-top">
                   <span className="drawer-row-lead"><Ico name="ai" /><span className="drawer-row-label">AI Requests</span></span>
@@ -156,9 +173,27 @@ export const Drawer: React.FC<DrawerProps> = ({
 
             <div className="drawer-row">
               <span className="drawer-row-lead"><Ico name="theme" /><span className="drawer-row-label">{t("drawer.theme")}</span></span>
-              <button className="drawer-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? "☀ Light" : "☽ Dark"}
-              </button>
+              {/* Light · Dark · System ("System" = no saved pick, follow the device). */}
+              <div className="drawer-seg" role="radiogroup" aria-label={t("drawer.theme")}>
+                {(["light", "dark", "system"] as const).map((opt) => {
+                  const on = opt === "system" ? themeMode === "system" : themeMode === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`drawer-seg-btn${on ? " drawer-seg-btn--on" : ""}`}
+                      onClick={() => {
+                        setTheme(opt);
+                        setThemeMode(opt);
+                      }}
+                    >
+                      {opt === "light" ? "Light" : opt === "dark" ? "Dark" : "System"}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="drawer-row">
@@ -239,9 +274,14 @@ export const Drawer: React.FC<DrawerProps> = ({
             <h4 className="drawer-section-title">Support</h4>
             <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenContact(); }}>
               <span className="drawer-row-lead"><Ico name="contact" /><span className="drawer-row-label">Contact / Feedback</span></span>
-              <Chevron />
+              <div className="drawer-row-right">
+                <span className="drawer-online"><span className="drawer-online-dot" />{t("nav.online", "Online")}</span>
+                <Chevron />
+              </div>
             </div>
           </section>
+
+          {accountExtras && <section className="drawer-section drawer-extras">{accountExtras}</section>}
 
           {/* ── Account ───────────────────────────────────── */}
           {user && (

@@ -4005,7 +4005,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
   );
 
   return (
-    <BlurGate requiredTier="pro" featureName="Inside the AI Candle" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
+    <BlurGate requiredTier="pro" featureName="Candle Insights" onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} previewSrc="/previews/cw-preview.jpg" className="bg-root--top">
       <div className="cw-page">
 
         {/* ── AI Scan Overlay ── */}

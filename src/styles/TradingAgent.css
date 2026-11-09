@@ -1622,6 +1622,105 @@ html[data-theme="light"] .ta-msg-text.ta-typing {
 @keyframes ta-skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ta-coin-scan-spin, .ta-coin-skel { animation: none; } }
 .ta-coin-pick-cap { margin: 0 0 8px; font-size: 0.86rem; font-weight: 600; color: var(--ta-agent-text); opacity: 0.85; }
+
+/* ── New-chat opener: tabs + sideways coin cards + headline cards ────── */
+/* Minimal: plain text tabs, bare coin items (logo · symbol · change),
+   text-only headlines — no boxes. */
+.ta-op-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.ta-op-tabs { display: inline-flex; gap: 14px; }
+.ta-op-tab,
+.ta-op-tab:hover {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ta-agent-text);
+  opacity: 0.45;
+}
+.ta-op-tab:hover { opacity: 0.8; }
+.ta-op-tab--on, .ta-op-tab--on:hover { opacity: 1; font-weight: 800; }
+.ta-op-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  padding-bottom: 2px;
+  overscroll-behavior-x: contain;
+}
+.ta-op-row::-webkit-scrollbar { display: none; }
+.ta-op-card,
+.ta-op-card:hover {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  /* Horizontal: logo, then symbol over change. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--ta-agent-text);
+  cursor: pointer;
+  animation: ta-chip-in 0.35s ease both;
+}
+/* One line: logo · symbol · change. */
+.ta-op-text { display: flex; flex-direction: row; align-items: baseline; gap: 6px; line-height: 1.15; white-space: nowrap; }
+.ta-op-card:hover .ta-coin-chip-logo { transform: translateY(-2px); }
+.ta-op-card:focus-visible { outline: 2px solid var(--ta-accent); outline-offset: 3px; border-radius: 8px; }
+.ta-op-card .ta-coin-chip-logo, .ta-op-card .ta-coin-chip-logo img { width: 22px; height: 22px; }
+.ta-op-sym { font-size: 0.78rem; font-weight: 700; }
+.ta-op-chg { font-size: 0.7rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ta-op-chg--up { color: #22c55e; }
+.ta-op-chg--down { color: #ef4444; }
+.ta-op-more,
+.ta-op-more:hover {
+  all: unset;
+  flex: 0 0 auto;
+  align-self: center;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ta-agent-text);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+.ta-op-more:hover { opacity: 1; }
+.ta-op-row:not(:has(.ta-op-news)) { align-items: center; }
+.ta-op-card--skel { cursor: default; animation: ta-skel 1.2s ease-in-out infinite; }
+.ta-op-card--skel .ta-op-text { gap: 6px; align-items: center; }
+.ta-op-card--skel .ta-coin-skel-logo { width: 26px; height: 26px; }
+.ta-op-label { margin: 16px 0 6px; font-size: 0.74rem; font-weight: 700; opacity: 0.5; color: var(--ta-agent-text); }
+.ta-op-row:has(.ta-op-news) { gap: 16px; }
+.ta-op-news,
+.ta-op-news:hover {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--ta-agent-text);
+  cursor: pointer;
+  animation: ta-chip-in 0.35s ease both;
+}
+.ta-op-news:hover .ta-op-news-title { text-decoration: underline; text-underline-offset: 2px; }
+.ta-op-news-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.32;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ta-op-news-meta { font-size: 0.68rem; font-weight: 600; opacity: 0.5; }
+.ta-op-news-img { width: 100%; height: 96px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 4px; }
+/* Headline placeholders while the stories load. */
+.ta-op-news--skel { cursor: default; animation: ta-skel 1.2s ease-in-out infinite; gap: 6px; }
+.ta-op-news-skel-img { display: block; width: 100%; height: 96px; border-radius: 10px; background: rgba(127, 127, 127, 0.16); margin-bottom: 2px; }
+.ta-op-news--skel .ta-coin-skel-line { width: 90%; height: 8px; }
+.ta-op-news--skel .ta-coin-skel-line--short { width: 55%; }
 .ta-coin-pick-sub { display: block; margin-top: 2px; font-size: 0.76rem; font-weight: 500; opacity: 0.7; }
 .ta-coin-chips {
   display: flex;

@@ -700,7 +700,8 @@ function CmcChartInner({ coin, theme, metric, range, log, onAnalyze, moments, ov
           </div>
         ) : null}
         <div ref={boxRef} className="cmcc-box" />
-        {overlay}
+        {/* (Only once the line is loaded — never next to "Loading…".) */}
+        {pts && overlay}
         {frame && pts && (
           <span className="cmcc-frame" aria-hidden="true" style={{ right: frame.right, bottom: frame.bottom }} />
         )}

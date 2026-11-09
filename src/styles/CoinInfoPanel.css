@@ -1,4 +1,16 @@
 /* ── Chart page desktop layout: info (left) · chart · trade tabs (right) ── */
+/* Height of everything above the page: the 66px header, plus the 44px
+   sign-up banner while it's showing (signed out). */
+/* Registered as a length so it can animate: while the banner slides open
+   (4s after load, 0.55s, same easing as .top-nav-promo in App.css), the
+   side columns shrink with it — no empty strip before, no cut-off after. */
+@property --top-chrome { syntax: "<length>"; inherits: true; initial-value: 66px; }
+:root { --top-chrome: 66px; }
+:root:has(.top-nav-promo) { animation: top-chrome-promo 0.55s cubic-bezier(0.22, 1, 0.36, 1) 4s both; }
+@keyframes top-chrome-promo { from { --top-chrome: 66px; } to { --top-chrome: 110px; } }
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.top-nav-promo) { animation: none; --top-chrome: 110px; }
+}
 .chart-layout--cmc { align-items: flex-start; }
 .chart-cmc-left {
   flex: 0 0 clamp(360px, 27vw, 470px);
@@ -8,7 +20,24 @@
   flex-direction: column;
   padding: 18px 20px 28px;
   border-right: 1px solid color-mix(in srgb, var(--color-text) 9%, transparent);
-  align-self: stretch;
+  /* Stays put while the middle column (chart + sections) scrolls, like
+     the right column; its own content scrolls inside if it's taller. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100vh - var(--top-chrome) - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+/* Laptops (≤1512px, e.g. 14" MacBook): a bit narrower, so the chart gets
+   the room. */
+@media (max-width: 1512px) {
+  .chart-cmc-left {
+    flex-basis: clamp(310px, 23vw, 350px);
+    width: clamp(310px, 23vw, 350px);
+    padding: 16px 16px 24px;
+  }
 }
 .chart-layout--cmc > .chart-column { flex: 1; min-width: 0; }
 
@@ -23,7 +52,7 @@
   align-self: flex-start;
   flex: 0 0 clamp(320px, 24vw, 400px);
   width: clamp(320px, 24vw, 400px);
-  height: calc(100vh - 64px - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
+  height: calc(100vh - var(--top-chrome) - var(--native-safe-area-top, env(safe-area-inset-top, 0px)));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -34,6 +63,12 @@ html:not([data-theme="light"]) .cmc-rcol { --cmc-blue: #60a5fa; }
 .cmc-rtabs {
   display: flex;
   flex-shrink: 0;
+  /* Lines up with the chart column's tab row (Chart · Market Cycles · …):
+     same 16px from the top, same 40px row. */
+  margin-top: 16px;
+  height: 40px;
+  align-items: center;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--cmc-hair);
   overflow-x: auto;
   overflow-y: hidden;
@@ -51,7 +86,7 @@ html:not([data-theme="light"]) .cmc-rcol { --cmc-blue: #60a5fa; }
   display: inline-flex;
   align-items: center;
   gap: 0;
-  height: 46px;
+  height: 39px;
   padding: 0 14px;
   border-right: 1px solid var(--cmc-hair);
   font-size: 14px;

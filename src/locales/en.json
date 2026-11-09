@@ -656,7 +656,7 @@
       "features": [
         {
           "icon": "🕯️",
-          "title": "Inside the AI Candle — Full Chart Analysis",
+          "title": "Candle Insights — Full Chart Analysis",
           "desc": "Elliott Wave, ICT/SMC, Wyckoff patterns — GPT-4o reads your chart and explains every move in plain language."
         },
         {
@@ -764,8 +764,8 @@
         "features": [
           "Everything in Free",
           "Buy & Sell Signals with push alerts",
-          "Inside the AI Candle",
-          "Analyze a Chart from a screenshot",
+          "Candle Insights",
+          "Chart Analyzer for any screenshot",
           "AI-built custom indicators",
           "Alt Analysis, Options & Correlation Matrix",
           "Strategy Alerts",
@@ -860,7 +860,7 @@
     "lf": {
       "elitePro": "Unlimited AI requests",
       "agentReady": "Agent Ready — AI Trading Chat",
-      "candleai": "Inside the AI Candle",
+      "candleai": "Candle Insights",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Early access to new features",
       "aiMkt": "AI Market Intelligence",
@@ -889,7 +889,7 @@
       "word2": "signal.",
       "word3": "candle.",
       "closer": "Every signal. One AI.",
-      "screen1": "Inside the AI Candle",
+      "screen1": "Candle Insights",
       "screen2": "Strategy Builder",
       "screen3": "Live Tape",
       "tag1": "Pattern Recognition",
@@ -1006,7 +1006,7 @@
       "pillWyckoff": "Wyckoff Phases",
       "pillElliott": "Elliott Wave",
       "pillTradePlan": "Trade Plan",
-      "cta": "Unlock Inside the AI Candle"
+      "cta": "Unlock Candle Insights"
     },
     "heatmap": {
       "label": "Liquidation Heatmap",
@@ -1051,7 +1051,7 @@
             "Price Prediction with scenarios",
             "Liquidation Heatmap AI",
             "Custom Strategy Alerts",
-            "Inside the AI Candle",
+            "Candle Insights",
             "Coinbase Premium AI",
             "100 AI requests / week"
           ]
@@ -1440,7 +1440,7 @@
     "loading": "Loading top movers…"
   },
   "chartAnalyze": {
-    "title": "Analyze a Chart",
+    "title": "Chart Analyzer",
     "subtitle": "Snap or upload a chart and get a real technical read, powered by AI.",
     "gateDesc": "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take.",
     "aiRead": "AI Read",
@@ -1506,7 +1506,7 @@
     "heatmap": "Heatmap",
     "alerts": "Alerts",
     "watchlist": "Watchlist",
-    "analyzeChart": "Analyze a Chart",
+    "analyzeChart": "Chart Analyzer",
     "gann": "Gann",
     "live": "LIVE",
     "positions": "Traders",
@@ -1514,7 +1514,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluence",
     "fundingbot": "Funding Bot",
-    "candleai": "Inside the AI Candle",
+    "candleai": "Candle Insights",
     "markets": "Markets",
     "marketheatmap": "Market Heatmap",
     "altanalysis": "Alt Analysis",
@@ -1522,9 +1522,9 @@
     "options": "Options",
     "correlation": "Correlation",
     "strategyalerts": "Strategy Alerts",
-    "catMarketData": "Market Data",
-    "catTechnical": "Technical Analysis",
-    "catTradingTools": "Trading Tools",
+    "catMarketData": "Data",
+    "catTechnical": "Analysis",
+    "catTradingTools": "Tools",
     "settings": "Settings",
     "signOut": "Sign Out",
     "focusMode": "Focus",
@@ -2142,7 +2142,7 @@
       ]
     },
     "candleai": {
-      "title": "Inside the AI Candle",
+      "title": "Candle Insights",
       "desc": "AI reads candles via Elliott Wave, ICT, Wyckoff.",
       "tags": [
         "Elliott Wave",

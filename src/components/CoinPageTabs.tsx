@@ -2,12 +2,41 @@
 // Overview (the chart page itself) · News · Technicals · Seasonals ·
 // Markets · Fundamentals. Everything except Overview
 // renders its own panel in place of the chart (the chart stays mounted).
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { coinglass, fetchBn, getCoinGeckoId, COINS, type CandleDataPoint } from "../services/coinglass";
-import { calcEMA, calcRSIArray } from "../services/indicators";
+import { calcEMA, calcRSIArray, calcBB, calcATR } from "../services/indicators";
 import { fetchBrief, type BriefItem } from "./DailyBrief";
 import { BottomSheet } from "./BottomSheet";
+import { cgFetch } from "./GlobalMarkets";
 import "../styles/CoinPageTabs.css";
+
+// CoinGecko, made dependable: the shared keyed fetch (higher rate limit),
+// retried with back-off on 429 / network errors, and the last good copy
+// kept on the device — shown instantly next time, and used as a fallback
+// whenever CoinGecko is busy. Throws only if there's nothing at all.
+async function cgResilient<T>(url: string, lsKey: string, ttlMs: number, trim?: (d: T) => T): Promise<T> {
+  let stale: T | null = null;
+  try {
+    const raw = localStorage.getItem(lsKey);
+    if (raw) {
+      const { t, d } = JSON.parse(raw) as { t: number; d: T };
+      if (Date.now() - t < ttlMs) return d;
+      stale = d;
+    }
+  } catch { /* no cache */ }
+  const waits = [0, 1500, 4000, 9000];
+  for (const w of waits) {
+    if (w) await new Promise((r) => setTimeout(r, w));
+    try {
+      const d = await cgFetch<T>(url, ttlMs, 12000);
+      const keep = trim ? trim(d) : d;
+      try { localStorage.setItem(lsKey, JSON.stringify({ t: Date.now(), d: keep })); } catch { /* full */ }
+      return keep;
+    } catch { /* retry */ }
+  }
+  if (stale) return stale;
+  throw new Error("coingecko unavailable");
+}
 
 export type CoinPageTab = "overview" | "news" | "technicals" | "seasonals" | "markets" | "fundamentals";
 
@@ -38,21 +67,55 @@ const fmtNum = (v: number | null | undefined): string => {
   return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
 };
 
+// Desktop tab bar: the phone's "More" sections, in page order — minus
+// Statistics, which desktop always shows in its side column.
+export type DeskTab = CoinPageTab | "cycles" | "traders";
+export const DESK_ANCHORS = ["cycles", "news", "technicals", "seasonals", "markets", "fundamentals", "traders"] as const;
+const DESK_TABS: { id: DeskTab; label: string }[] = [
+  { id: "overview", label: "Chart" },
+  { id: "cycles", label: "Market Cycles" },
+  ...COIN_PAGE_TABS.filter((t) => t.id !== "overview"),
+  { id: "traders", label: "Top Traders" },
+];
+
 // ── Tab bar ─────────────────────────────────────────────────────────────
-export function CoinPageTabBar({ tab, onChange }: { tab: CoinPageTab; onChange: (t: CoinPageTab) => void }) {
+export function CoinPageTabBar({ tab, onChange, onProVision, proVisionOn, hasCycles }: {
+  tab: DeskTab;
+  onChange: (t: DeskTab) => void;
+  /** Desktop: a "ProVision" toggle after Chart — draws it on this chart. */
+  onProVision?: () => void;
+  proVisionOn?: boolean;
+  /** Market Cycles only exists for Bitcoin. */
+  hasCycles?: boolean;
+}) {
   return (
     <div className="cpt-bar" role="tablist" aria-label="Coin sections">
-      {COIN_PAGE_TABS.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          role="tab"
-          aria-selected={tab === t.id}
-          className={`cpt-tab${tab === t.id ? " cpt-tab--active" : ""}`}
-          onClick={() => onChange(t.id)}
-        >
-          {t.label}
-        </button>
+      {DESK_TABS.filter((t) => t.id !== "cycles" || hasCycles).map((t) => (
+        <Fragment key={t.id}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`cpt-tab${tab === t.id ? " cpt-tab--active" : ""}`}
+            onClick={() => onChange(t.id)}
+          >
+            {t.label}
+          </button>
+          {/* ProVision right after Chart: it's the chart's analysis layer. */}
+          {t.id === "overview" && onProVision && (
+            <button
+              type="button"
+              className={`cpt-tab cpt-tab--pv${proVisionOn ? " cpt-tab--pv-on" : ""}`}
+              aria-pressed={!!proVisionOn}
+              title={proVisionOn ? "Turn ProVision off" : "Turn ProVision on — draws on this chart"}
+              onClick={onProVision}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+              ProVision
+              <span className="cpt-pv-switch" aria-hidden="true"><i /></span>
+            </button>
+          )}
+        </Fragment>
       ))}
     </div>
   );
@@ -87,11 +150,12 @@ function CoinSheetTitle({ coin, text }: { coin: string; text: string }) {
 // Phones: every section lives on the page itself (CoinPageSections, the
 // news / stats / cycles sections, ids "coin-sec-<id>"); the "More" list
 // just scrolls to it.
-type PageOnlySection = "chart" | "stats" | "cycles";
+type PageOnlySection = "chart" | "stats" | "cycles" | "traders";
 const PAGE_ONLY_ROWS: { id: PageOnlySection; label: string; sub: string; icon: React.ReactNode }[] = [
   { id: "chart", label: "Chart", sub: "Price, intervals and drawing tools", icon: <><path d="M3 3v18h18" /><path d="m7 15 4-5 3 3 5-7" /></> },
   { id: "stats", label: "Statistics", sub: "Market cap, volume, supply and links", icon: <><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></> },
   { id: "cycles", label: "Market Cycles", sub: "Puell Multiple, Pi Cycle Top, Rainbow", icon: <><path d="M3 12a9 9 0 0 1 15.5-6.2" /><path d="M21 12a9 9 0 0 1-15.5 6.2" /><path d="M18 2v4h-4M6 22v-4h4" /></> },
+  { id: "traders", label: "Top Traders", sub: "Biggest positions, winners and losers", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5" /></> },
 ];
 
 export function CoinPageSections({ coin }: { coin: string }) {
@@ -99,6 +163,22 @@ export function CoinPageSections({ coin }: { coin: string }) {
     <div className="cps-inline">
       {(["technicals", "seasonals", "markets", "fundamentals"] as CoinPageTab[]).map((t) => (
         <section key={t} id={`coin-sec-${t}`} className="cps-inline-sec">
+          <CoinPageTabContent tab={t} coin={coin} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// Desktop: every tab's content lives on the page, one section after another
+// below the chart; the tab bar scrolls to them. Each has an anchor —
+// /chart/bitcoin#technicals opens straight at Technicals.
+export const COIN_SECTION_ANCHORS = ["news", "technicals", "seasonals", "markets", "fundamentals"] as const;
+export function CoinPageDesktopSections({ coin }: { coin: string }) {
+  return (
+    <div className="cps-desk">
+      {COIN_SECTION_ANCHORS.map((t) => (
+        <section key={t} id={`coin-sec-${t}`} className="cps-desk-sec">
           <CoinPageTabContent tab={t} coin={coin} />
         </section>
       ))}
@@ -128,7 +208,7 @@ export function CoinPagePicker({ coin }: { coin: string }) {
       window.setTimeout(() => document.getElementById(`coin-sec-${t}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 260);
       return;
     }
-    if (t === "stats" || t === "cycles") return;
+    if (t === "stats" || t === "cycles" || t === "traders") return;
     // Not on the page (e.g. another layout): show it inside the sheet.
     setSection(t);
     setListOpen(true);
@@ -172,11 +252,12 @@ export function CoinPagePicker({ coin }: { coin: string }) {
           </div>
         ) : (
         <div className="cps-list" role="listbox" aria-label="Coin sections">
-          {/* Page order: Statistics, Market Cycles (when on the page), then
-              News … Fundamentals. */}
+          {/* Page order: Statistics, Market Cycles (when on the page), News …
+              Fundamentals, then Top Traders. */}
           {[
-            ...PAGE_ONLY_ROWS.filter((r) => r.id !== "chart" && !!document.getElementById(`coin-sec-${r.id}`)),
+            ...PAGE_ONLY_ROWS.filter((r) => (r.id === "stats" || r.id === "cycles") && !!document.getElementById(`coin-sec-${r.id}`)),
             ...COIN_PAGE_TABS.filter((t) => t.id !== "overview").map((t) => ({ id: t.id as CoinPageTab | PageOnlySection, label: t.label, ...SECTION_META[t.id] })),
+            ...PAGE_ONLY_ROWS.filter((r) => r.id === "traders" && !!document.getElementById("coin-sec-traders")),
           ].map((t, i) => {
             const meta = t;
             return (
@@ -259,23 +340,47 @@ function NewsTab({ coin }: { coin: string }) {
     const m = list.filter((i) => re.test(i.title));
     return { matched: m, others: list.filter((i) => !m.includes(i)).slice(0, 12) };
   }, [items, coin, name]);
+  // CoinMarketCap layout: Top (this coin's stories first) / Latest (newest
+  // crypto stories); a big featured story with its photo on the left, a
+  // headline list on the right.
+  const [mode, setMode] = useState<"top" | "latest">("top");
   if (!items) return <Loading label={`Loading ${name} news…`} />;
-  const rows = matched.length ? matched : others;
+  const crypto = (items ?? []).filter((i) => i.category === "crypto");
+  const rows = mode === "top"
+    ? [...matched, ...others]
+    : [...crypto].sort((a, b) => b.pubDate - a.pubDate);
   if (!rows.length) return <Empty title="No news right now" text="Check back in a bit — headlines refresh every few minutes." />;
+  const lead = rows.find((r) => r.thumbnail) ?? rows[0];
+  const list = rows.filter((r) => r !== lead).slice(0, 6);
   return (
-    <div className="cpt-section">
-      <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} News`} /></h2>
-      {!matched.length && <p className="cpt-note">No {name}-specific headlines right now — here's the latest across crypto.</p>}
-      <div className="cpt-news">
-        {rows.map((n) => (
-          <a key={n.url} className="cpt-news-item" href={n.url} target="_blank" rel="noreferrer">
-            {n.thumbnail ? <img src={n.thumbnail} alt="" loading="lazy" /> : <span className="cpt-news-thumb" aria-hidden="true" />}
-            <span className="cpt-news-text">
+    <div className="cpt-section cnw">
+      <div className="cnw-head">
+        <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${name} News`} /></h2>
+        <div className="cnw-seg" role="tablist" aria-label="Sort news">
+          {(["top", "latest"] as const).map((m) => (
+            <button key={m} type="button" role="tab" aria-selected={mode === m} className={`cnw-seg-btn${mode === m ? " cnw-seg-btn--on" : ""}`} onClick={() => setMode(m)}>
+              {m === "top" ? "Top" : "Latest"}
+            </button>
+          ))}
+        </div>
+      </div>
+      {mode === "top" && !matched.length && <p className="cpt-note">No {name}-specific headlines right now — here's the latest across crypto.</p>}
+      <div className="cnw-body">
+        <a className="cnw-lead" href={lead.url} target="_blank" rel="noreferrer">
+          <span className="cnw-lead-img">
+            {lead.thumbnail ? <img src={lead.thumbnail} alt="" loading="lazy" /> : <span className="cpt-news-thumb" aria-hidden="true" />}
+          </span>
+          <strong className="cnw-lead-title">{lead.title}</strong>
+          <span className="cnw-meta">{lead.source} · {timeAgo(lead.pubDate)}</span>
+        </a>
+        <div className="cnw-list">
+          {list.map((n) => (
+            <a key={n.url} className="cnw-item" href={n.url} target="_blank" rel="noreferrer">
               <strong>{n.title}</strong>
-              <span>{n.source} · {timeAgo(n.pubDate)}</span>
-            </span>
-          </a>
-        ))}
+              <span className="cnw-meta">{n.source} · {timeAgo(n.pubDate)}</span>
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -296,10 +401,50 @@ interface TechData {
   px: number;
   oscillators: TechRow[];
   mas: MaRow[];
+  /** Volatility / band readings shown in the table but not voted. */
+  extras: TechRow[];
   rsi: { v: number | null; series: number[] };
   stoch: { k: number; hi: number; lo: number };
   macd: { line: number | null; signal: number | null; hist: number[] };
   mom: { pct: number; closes: number[] };
+  atr: number | null;
+  /** Classic pivots from the last completed bar. */
+  pivots: { name: string; v: number }[];
+}
+
+// Wilder's smoothing (RMA), as TradingView uses for ADX / DI.
+function rma(vals: number[], n: number): number[] {
+  const out: number[] = [];
+  let prev = NaN;
+  vals.forEach((v, i) => {
+    if (i < n - 1) { out.push(NaN); return; }
+    if (i === n - 1) { prev = vals.slice(0, n).reduce((a, b) => a + b, 0) / n; out.push(prev); return; }
+    prev = (prev * (n - 1) + v) / n;
+    out.push(prev);
+  });
+  return out;
+}
+function adxOf(c: CandleDataPoint[], n = 14): { adx: number; pdi: number; mdi: number } | null {
+  if (c.length < n * 2 + 2) return null;
+  const tr: number[] = [], pdm: number[] = [], mdm: number[] = [];
+  for (let i = 1; i < c.length; i++) {
+    const up = c[i].high - c[i - 1].high, dn = c[i - 1].low - c[i].low;
+    pdm.push(up > dn && up > 0 ? up : 0);
+    mdm.push(dn > up && dn > 0 ? dn : 0);
+    tr.push(Math.max(c[i].high - c[i].low, Math.abs(c[i].high - c[i - 1].close), Math.abs(c[i].low - c[i - 1].close)));
+  }
+  const atr = rma(tr, n), sp = rma(pdm, n), sm = rma(mdm, n);
+  const dx: number[] = [];
+  const pdiA: number[] = [], mdiA: number[] = [];
+  for (let i = 0; i < tr.length; i++) {
+    const p = (100 * sp[i]) / atr[i], m = (100 * sm[i]) / atr[i];
+    pdiA.push(p); mdiA.push(m);
+    dx.push(Number.isFinite(p) && Number.isFinite(m) && p + m > 0 ? (100 * Math.abs(p - m)) / (p + m) : NaN);
+  }
+  const adxA = rma(dx.filter(Number.isFinite), n);
+  const adx = adxA[adxA.length - 1];
+  const pdi = pdiA[pdiA.length - 1], mdi = mdiA[mdiA.length - 1];
+  return Number.isFinite(adx) && Number.isFinite(pdi) && Number.isFinite(mdi) ? { adx, pdi, mdi } : null;
 }
 const SPARK_N = 48;
 const sigOf = (px: number, lvl: number): Signal => (px > lvl ? "buy" : px < lvl ? "sell" : "neutral");
@@ -324,11 +469,54 @@ function technicalsFor(c: CandleDataPoint[]): TechData {
   // Momentum (10) as % change
   const ref = close.length > 10 ? close[close.length - 11] : px;
   const momPct = ref ? ((px - ref) / ref) * 100 : 0;
+  // CCI (20): typical price vs its 20-bar mean, scaled by mean deviation.
+  const tp = c.slice(-20).map((x) => (x.high + x.low + x.close) / 3);
+  const tpMean = tp.reduce((a, b) => a + b, 0) / (tp.length || 1);
+  const meanDev = tp.reduce((a, b) => a + Math.abs(b - tpMean), 0) / (tp.length || 1);
+  const cci = meanDev ? (tp[tp.length - 1] - tpMean) / (0.015 * meanDev) : 0;
+  // Williams %R (14)
+  const wr = hi > lo ? ((hi - px) / (hi - lo)) * -100 : -50;
+  const dmi = adxOf(c);
+  const bb = calcBB(c, 20);
+  const atr = calcATR(c, 14);
+  // The first four stay in this order (the oscillator cards use them).
   const oscillators: TechRow[] = [
     { name: "RSI (14)", value: rsi === null ? "—" : rsi.toFixed(1), signal: rsi === null ? "neutral" : rsi < 30 ? "buy" : rsi > 70 ? "sell" : rsi > 55 ? "buy" : rsi < 45 ? "sell" : "neutral" },
     { name: "Stochastic %K (14)", value: k.toFixed(1), signal: k < 20 ? "buy" : k > 80 ? "sell" : "neutral" },
     { name: "MACD (12, 26)", value: macdLine === null ? "—" : macdLine.toFixed(2), signal: macdLine === null || macdSig === null ? "neutral" : macdLine > macdSig ? "buy" : "sell" },
     { name: "Momentum (10)", value: `${momPct >= 0 ? "+" : ""}${momPct.toFixed(2)}%`, signal: momPct > 0 ? "buy" : momPct < 0 ? "sell" : "neutral" },
+    { name: "CCI (20)", value: cci.toFixed(1), signal: cci < -100 ? "buy" : cci > 100 ? "sell" : "neutral" },
+    { name: "Williams %R (14)", value: wr.toFixed(1), signal: wr < -80 ? "buy" : wr > -20 ? "sell" : "neutral" },
+    ...(dmi ? [{
+      name: "ADX (14) · DI",
+      value: `${dmi.adx.toFixed(1)} · +${dmi.pdi.toFixed(0)} / −${dmi.mdi.toFixed(0)}`,
+      signal: (dmi.adx > 25 ? (dmi.pdi > dmi.mdi ? "buy" : "sell") : "neutral") as Signal,
+    }] : []),
+  ];
+  const extras: TechRow[] = [
+    ...(bb ? [{
+      name: "Bollinger %B (20, 2)",
+      value: bb.pct.toFixed(2),
+      signal: (bb.pct < 0 ? "buy" : bb.pct > 1 ? "sell" : "neutral") as Signal,
+    }, {
+      name: "Bollinger width",
+      value: `${(((bb.upper - bb.lower) / bb.middle) * 100).toFixed(2)}%`,
+      signal: "neutral" as Signal,
+    }] : []),
+    ...(atr ? [{ name: "ATR (14)", value: `${fmtUsd(atr)} · ${((atr / px) * 100).toFixed(2)}%`, signal: "neutral" as Signal }] : []),
+  ];
+  // Classic floor pivots from the last completed bar.
+  const pb = c[c.length - 2] ?? c[c.length - 1];
+  const P = (pb.high + pb.low + pb.close) / 3;
+  const rng = pb.high - pb.low;
+  const pivots = [
+    { name: "R3", v: pb.high + 2 * (P - pb.low) },
+    { name: "R2", v: P + rng },
+    { name: "R1", v: 2 * P - pb.low },
+    { name: "Pivot", v: P },
+    { name: "S1", v: 2 * P - pb.high },
+    { name: "S2", v: P - rng },
+    { name: "S3", v: pb.low - 2 * (pb.high - P) },
   ];
   const mas: MaRow[] = [10, 20, 30, 50, 100, 200].flatMap((n) => {
     if (close.length < n) return [];
@@ -341,11 +529,13 @@ function technicalsFor(c: CandleDataPoint[]): TechData {
     ];
   });
   return {
-    px, oscillators, mas,
+    px, oscillators, mas, extras,
     rsi: { v: rsi, series: rsiSeries },
     stoch: { k, hi, lo },
     macd: { line: macdLine, signal: macdSig, hist },
     mom: { pct: momPct, closes: close.slice(-SPARK_N) },
+    atr,
+    pivots,
   };
 }
 function verdictOf(rows: TechRow[]) {
@@ -373,68 +563,81 @@ export function technicalsLean(c: CandleDataPoint[]): { score: number; tone: "bu
 }
 const sigLabel = (s: Signal) => (s === "buy" ? "Buy" : s === "sell" ? "Sell" : "Neutral");
 
-// Overall verdict on a 5-step sell→buy scale, a plain-language read, and
-// a sell/neutral/buy split for each indicator group.
-function TechSummary({ data }: { data: TechData }) {
+// ── Signal desk: score + its history, group read-outs, indicator heatmap ──
+function SignalDesk({ data, history }: { data: TechData; history: number[] }) {
   const all = verdictOf([...data.oscillators, ...data.mas]);
-  const pos = ((all.score + 1) / 2) * 100;
-  const above = data.mas.filter((m) => m.signal === "buy").length;
-  const below = data.mas.filter((m) => m.signal === "sell").length;
+  const osc = verdictOf(data.oscillators), ma = verdictOf(data.mas);
+  const tone = toneOfScore(all.score);
+  const sc = (s: number) => { const n = Math.round(s * 100); return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n)}`; };
   const r = data.rsi.v;
   const rsiWord = r === null ? "unavailable" : r < 30 ? `oversold (${r.toFixed(0)})` : r > 70 ? `overbought (${r.toFixed(0)})` : `neutral (${r.toFixed(0)})`;
-  const macdWord = data.macd.line === null || data.macd.signal === null ? "" : data.macd.line > data.macd.signal ? " and MACD is above its signal line" : " and MACD is below its signal line";
-  const maWord = above >= below ? `above ${above} of ${data.mas.length}` : `below ${below} of ${data.mas.length}`;
+  const above = data.mas.filter((m) => m.signal === "buy").length;
+  // History chart: −1…1 → y; split fill above / below zero.
+  const W = 400, H = 120, n = history.length;
+  const x = (i: number) => (n > 1 ? (i / (n - 1)) * W : 0);
+  const y = (v: number) => H / 2 - v * (H / 2 - 6);
+  const line = history.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+  const area = n > 1 ? `${line} L${W} ${H / 2} L0 ${H / 2} Z` : "";
+  const prev = history.length > 10 ? history[history.length - 11] : null;
+  const delta = prev === null ? null : Math.round((all.score - prev) * 100);
+  const tiles = [
+    ...data.oscillators.map((o) => ({ k: o.name.replace(/ \(.*\)| · DI/g, ""), v: o.value.split(" · ")[0], s: o.signal })),
+    ...data.mas.map((m) => ({ k: m.name.replace(/[()]/g, "").replace("  ", " "), v: `${m.distPct >= 0 ? "+" : ""}${m.distPct.toFixed(1)}%`, s: m.signal })),
+  ];
   return (
-    <div className="tch-hero">
-      <div className="tch-hero-main">
-        <span className="tch-kicker">Overall signal</span>
-        <strong className={`tch-verdict cpt-tone--${toneOfScore(all.score)}`}>{all.label}</strong>
-        <p className="tch-read">
-          Price is {maWord} moving averages, RSI is {rsiWord}{macdWord}. Momentum is {data.mom.pct >= 0 ? "up" : "down"} {Math.abs(data.mom.pct).toFixed(1)}% over 10 bars.
-        </p>
-      </div>
-      <div className="tch-hero-side">
-        <div className="tch-scale" aria-label={`Overall: ${all.label}`}>
-          <div className="tch-scale-track">
-            <span className="tch-scale-seg tch-scale-seg--ss" />
-            <span className="tch-scale-seg tch-scale-seg--s" />
-            <span className="tch-scale-seg tch-scale-seg--n" />
-            <span className="tch-scale-seg tch-scale-seg--b" />
-            <span className="tch-scale-seg tch-scale-seg--bb" />
-            <span className="tch-scale-marker" style={{ left: `${pos}%` }} />
+    <div className="sgd">
+      <div className="sgd-top">
+        <div className="sgd-score">
+          <span className="sgd-kicker">Technical signal</span>
+          <div className="sgd-score-row">
+            <strong className={`sgd-num cpt-tone--${tone}`}>{sc(all.score)}</strong>
+            <span className={`sgd-verdict sgd-verdict--${tone}`}>{all.label}</span>
           </div>
-          <div className="tch-scale-labels">
-            <span>Strong sell</span><span>Sell</span><span>Neutral</span><span>Buy</span><span>Strong buy</span>
+          <div className="sgd-votes">
+            <span><b className="cpt-tone--buy">{all.b}</b> buy</span>
+            <span><b>{all.n}</b> neutral</span>
+            <span><b className="cpt-tone--sell">{all.s}</b> sell</span>
+            {delta !== null && (
+              <span className="sgd-delta">
+                <b className={delta > 0 ? "cpt-tone--buy" : delta < 0 ? "cpt-tone--sell" : ""}>{delta > 0 ? "▲" : delta < 0 ? "▼" : "•"} {Math.abs(delta)}</b> vs 10 bars ago
+              </span>
+            )}
+          </div>
+          <div className="sgd-groups">
+            <div><span>Oscillators</span><strong className={`cpt-tone--${toneOfScore(osc.score)}`}>{sc(osc.score)}</strong><em>{osc.label}</em></div>
+            <div><span>Moving averages</span><strong className={`cpt-tone--${toneOfScore(ma.score)}`}>{sc(ma.score)}</strong><em>{ma.label}</em></div>
           </div>
         </div>
-        <TechSplit title="Oscillators" rows={data.oscillators} />
-        <TechSplit title="Moving averages" rows={data.mas} />
+        <div className="sgd-hist">
+          <div className="sgd-hist-head"><span>Signal history · last {n} bars</span><span>+100 buy / −100 sell</span></div>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="sgd-hist-svg" aria-hidden="true">
+            <defs>
+              <clipPath id="sgd-up"><rect x="0" y="0" width={W} height={H / 2} /></clipPath>
+              <clipPath id="sgd-dn"><rect x="0" y={H / 2} width={W} height={H / 2} /></clipPath>
+            </defs>
+            {[0.5, -0.5].map((g) => <line key={g} x1="0" x2={W} y1={y(g)} y2={y(g)} className="sgd-grid" />)}
+            <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="sgd-zero" />
+            <path d={area} clipPath="url(#sgd-up)" className="sgd-area sgd-area--up" />
+            <path d={area} clipPath="url(#sgd-dn)" className="sgd-area sgd-area--dn" />
+            <path d={line} className="sgd-line" vectorEffect="non-scaling-stroke" />
+          </svg>
+        </div>
       </div>
+      <div className="sgd-heat" aria-label="Every indicator">
+        {tiles.map((t) => (
+          <div key={t.k} className={`sgd-tile sgd-tile--${t.s}`} title={`${t.k}: ${t.v} — ${sigLabel(t.s)}`}>
+            <span className="sgd-tile-k">{t.k}</span>
+            <span className="sgd-tile-v">{t.v}</span>
+          </div>
+        ))}
+      </div>
+      <p className="sgd-read">
+        Price is {above >= data.mas.length - above ? `above ${above}` : `below ${data.mas.length - above}`} of {data.mas.length} moving averages · RSI {rsiWord} · MACD {data.macd.line !== null && data.macd.signal !== null && data.macd.line > data.macd.signal ? "above" : "below"} signal · momentum {data.mom.pct >= 0 ? "+" : "−"}{Math.abs(data.mom.pct).toFixed(1)}% over 10 bars.
+      </p>
     </div>
   );
 }
-function TechSplit({ title, rows }: { title: string; rows: TechRow[] }) {
-  const v = verdictOf(rows);
-  const t = rows.length || 1;
-  return (
-    <div className="tch-split">
-      <div className="tch-split-head">
-        <span>{title}</span>
-        <strong className={`cpt-tone--${toneOfScore(v.score)}`}>{v.label}</strong>
-      </div>
-      <div className="tch-split-bar" aria-hidden="true">
-        <span className="tch-split-s" style={{ width: `${(v.s / t) * 100}%` }} />
-        <span className="tch-split-n" style={{ width: `${(v.n / t) * 100}%` }} />
-        <span className="tch-split-b" style={{ width: `${(v.b / t) * 100}%` }} />
-      </div>
-      <div className="tch-split-counts">
-        <span className="cpt-tone--sell">{v.s} sell</span>
-        <span>{v.n} neutral</span>
-        <span className="cpt-tone--buy">{v.b} buy</span>
-      </div>
-    </div>
-  );
-}
+
 
 // Tiny line chart. `zones` shade value bands; `lines` draw dashed guides.
 function Spark({ values, min, max, cls, zones = [], lines = [], dots = [] }: {
@@ -558,18 +761,138 @@ function MaLadder({ px, rows }: { px: number; rows: MaRow[] }) {
     </div>
   );
 }
-const TECH_FRAMES: { id: "1h" | "4h" | "1day" | "1week"; label: string }[] = [
-  { id: "1h", label: "1 hour" }, { id: "4h", label: "4 hours" }, { id: "1day", label: "1 day" }, { id: "1week", label: "1 week" },
+// ── Pro views ───────────────────────────────────────────────────────────
+type TechFrame = "15min" | "1h" | "4h" | "1day" | "1week";
+const MTF: { id: TechFrame; label: string }[] = [
+  { id: "15min", label: "15m" }, { id: "1h", label: "1H" }, { id: "4h", label: "4H" }, { id: "1day", label: "1D" }, { id: "1week", label: "1W" },
+];
+function Pill({ rows }: { rows: TechRow[] }) {
+  const v = verdictOf(rows);
+  return <span className={`tch-pill tch-pill--${toneOfScore(v.score)}${Math.abs(v.score) > 0.5 ? " tch-pill--strong" : ""}`}>{v.label}</span>;
+}
+// Every timeframe at a glance: oscillators, moving averages, overall, plus
+// RSI and where price sits vs the 20 / 50 EMA. Click a row to open it.
+function MtfMatrix({ coin, frame, onPick }: { coin: string; frame: TechFrame; onPick: (f: TechFrame) => void }) {
+  const [rows, setRows] = useState<Partial<Record<TechFrame, TechData | null>>>({});
+  useEffect(() => {
+    let alive = true;
+    setRows({});
+    MTF.forEach((f) => {
+      coinglass.getHistoricalCandles(f.id, coin)
+        .then((c) => { if (alive) setRows((r) => ({ ...r, [f.id]: c.length >= 30 ? technicalsFor(c) : null })); })
+        .catch(() => { if (alive) setRows((r) => ({ ...r, [f.id]: null })); });
+    });
+    return () => { alive = false; };
+  }, [coin]);
+  const emaPos = (d: TechData, n: number) => {
+    const m = d.mas.find((x) => x.name === `EMA (${n})`);
+    return m ? <span className={`cpt-tone--${m.signal}`}>{m.distPct >= 0 ? "▲" : "▼"} {Math.abs(m.distPct).toFixed(1)}%</span> : <span className="tch-mtf-na">—</span>;
+  };
+  return (
+    <div className="tch-mtf">
+      <div className="tch-mtf-row tch-mtf-row--head">
+        <span>Timeframe</span><span>Oscillators</span><span>Moving avgs</span><span>Summary</span><span>RSI</span><span>vs EMA 20</span><span>vs EMA 50</span>
+      </div>
+      {MTF.map((f) => {
+        const d = rows[f.id];
+        return (
+          <button key={f.id} type="button" className={`tch-mtf-row${frame === f.id ? " tch-mtf-row--on" : ""}`} onClick={() => onPick(f.id)}>
+            <span className="tch-mtf-tf">{f.label}</span>
+            {d === undefined ? (
+              <span className="tch-mtf-load">Loading…</span>
+            ) : d === null ? (
+              <span className="tch-mtf-load">Not enough data</span>
+            ) : (
+              <>
+                <Pill rows={d.oscillators} />
+                <Pill rows={d.mas} />
+                <Pill rows={[...d.oscillators, ...d.mas]} />
+                <span className="tch-mtf-num">{d.rsi.v === null ? "—" : d.rsi.v.toFixed(1)}</span>
+                <span className="tch-mtf-num">{emaPos(d, 20)}</span>
+                <span className="tch-mtf-num">{emaPos(d, 50)}</span>
+              </>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+// Dense TradingView-style table: every indicator, its value, its action.
+function TechTable({ data }: { data: TechData }) {
+  const all = [...data.oscillators, ...data.extras];
+  return (
+    <div className="tch-table">
+      <div className="tch-table-row tch-table-row--head"><span>Indicator</span><span>Value</span><span>Action</span></div>
+      {all.map((r) => (
+        <div key={r.name} className="tch-table-row">
+          <span className="tch-table-name">{r.name}</span>
+          <span className="tch-table-val">{r.value}</span>
+          {/* Volatility readings have no direction — no action. */}
+          {r.name.startsWith("ATR") || r.name === "Bollinger width"
+            ? <span className="tch-table-act tch-mtf-na">—</span>
+            : <span className={`tch-table-act cpt-tone--${r.signal}`}>{sigLabel(r.signal)}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+// Pivot ladder (R3 … S3) with the current price slotted in, plus ATR-based
+// stop distances for a long and a short.
+function KeyLevels({ data }: { data: TechData }) {
+  const px = data.px;
+  const lv = [...data.pivots, { name: "Price", v: px }].sort((a, b) => b.v - a.v);
+  const atr = data.atr;
+  return (
+    <div className="tch-levels">
+      <div className="tch-levels-list">
+        {lv.map((l) => {
+          const isPx = l.name === "Price";
+          const tone = l.name.startsWith("R") ? "sell" : l.name.startsWith("S") ? "buy" : "neutral";
+          const dist = ((l.v - px) / px) * 100;
+          return (
+            <div key={l.name} className={`tch-level${isPx ? " tch-level--px" : ""}`}>
+              <span className={`tch-level-name${isPx ? "" : ` cpt-tone--${tone}`}`}>{isPx ? "● Price" : l.name}</span>
+              <span className="tch-level-v">{fmtUsd(l.v)}</span>
+              <span className="tch-level-d">{isPx ? "" : `${dist >= 0 ? "+" : ""}${dist.toFixed(2)}%`}</span>
+            </div>
+          );
+        })}
+      </div>
+      {atr ? (
+        <div className="tch-stops">
+          <div><span>Long stop · 1.5 ATR</span><strong className="cpt-tone--sell">{fmtUsd(px - 1.5 * atr)}</strong></div>
+          <div><span>Short stop · 1.5 ATR</span><strong className="cpt-tone--buy">{fmtUsd(px + 1.5 * atr)}</strong></div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const TECH_FRAMES: { id: TechFrame; label: string }[] = [
+  { id: "15min", label: "15 min" }, { id: "1h", label: "1 hour" }, { id: "4h", label: "4 hours" }, { id: "1day", label: "1 day" }, { id: "1week", label: "1 week" },
 ];
 function TechnicalsTab({ coin }: { coin: string }) {
   const [frame, setFrame] = useState<(typeof TECH_FRAMES)[number]["id"]>("1day");
   const [data, setData] = useState<ReturnType<typeof technicalsFor> | null>(null);
+  const [history, setHistory] = useState<number[]>([]);
   const [err, setErr] = useState(false);
   useEffect(() => {
     let alive = true;
-    setData(null); setErr(false);
+    setData(null); setErr(false); setHistory([]);
     coinglass.getHistoricalCandles(frame, coin)
-      .then((c) => { if (alive) { if (c.length < 30) setErr(true); else setData(technicalsFor(c)); } })
+      .then((c) => {
+        if (!alive) return;
+        if (c.length < 30) { setErr(true); return; }
+        setData(technicalsFor(c));
+        // The overall score as it stood at each of the last 40 bars.
+        const h: number[] = [];
+        for (let k = Math.min(39, c.length - 30); k >= 0; k--) {
+          const d = technicalsFor(c.slice(0, c.length - k));
+          h.push(verdictOf([...d.oscillators, ...d.mas]).score);
+        }
+        setHistory(h);
+      })
       .catch(() => { if (alive) setErr(true); });
     return () => { alive = false; };
   }, [coin, frame]);
@@ -585,9 +908,21 @@ function TechnicalsTab({ coin }: { coin: string }) {
       </div>
       {err ? <Empty title="Not enough data" text="This coin doesn't have enough candles on this timeframe yet." /> : !data ? <Loading label="Reading indicators…" /> : (
         <>
-          <TechSummary data={data} />
+          <SignalDesk data={data} history={history} />
+          <span className="cpt-table-title">Across timeframes</span>
+          <MtfMatrix coin={coin} frame={frame} onPick={setFrame} />
           <span className="cpt-table-title">Oscillators</span>
           <Oscillators data={data} />
+          <div className="tch-pro-grid">
+            <div>
+              <span className="cpt-table-title">All indicators</span>
+              <TechTable data={data} />
+            </div>
+            <div>
+              <span className="cpt-table-title">Key levels · classic pivots</span>
+              <KeyLevels data={data} />
+            </div>
+          </div>
           <MaLadder px={data.px} rows={data.mas} />
           <p className="cpt-note">Indicator readings, not financial advice.</p>
         </>
@@ -666,22 +1001,28 @@ function heatStyle(v: number | null): React.CSSProperties | undefined {
 interface Ticker { market: { name: string; logo?: string }; base: string; target: string; last: number; converted_volume?: { usd?: number }; trust_score?: string | null; trade_url?: string | null }
 function MarketsTab({ coin }: { coin: string }) {
   const [rows, setRows] = useState<Ticker[] | null>(null);
-  const [err, setErr] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
-    setRows(null); setErr(false);
+    let retry = 0;
+    if (tries === 0) setRows(null);
     (async () => {
       const id = await getCoinGeckoId(coin);
       if (!id) throw new Error("no id");
-      const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/tickers?include_exchange_logo=true&order=volume_desc`);
-      if (!res.ok) throw new Error("tickers");
-      const j = await res.json();
+      const j = await cgResilient<{ tickers?: Ticker[] }>(
+        `https://api.coingecko.com/api/v3/coins/${id}/tickers?include_exchange_logo=true&order=volume_desc`,
+        `cgTickers:${id}`, 10 * 60_000,
+        (d) => ({ tickers: (d.tickers ?? []).slice(0, 25) }),
+      );
       if (alive) setRows((j.tickers ?? []).slice(0, 25));
-    })().catch(() => { if (alive) setErr(true); });
-    return () => { alive = false; };
-  }, [coin]);
-  if (err) return <Empty title="Markets unavailable" text="Couldn't load exchange data right now. Try again in a minute." />;
-  if (!rows) return <Loading label="Finding where it trades…" />;
+    })().catch(() => {
+      // Never "unavailable": keep the loader and try again shortly.
+      if (alive) retry = window.setTimeout(() => setTries((n) => n + 1), 30_000);
+    });
+    return () => { alive = false; window.clearTimeout(retry); };
+  }, [coin, tries]);
+  useEffect(() => setTries(0), [coin]);
+  if (!rows) return <Loading label={tries ? "Still loading exchange data…" : "Finding where it trades…"} />;
   return (
     <div className="cpt-section">
       <h2 className="cpt-h"><CoinSheetTitle coin={coin} text={`${coinName(coin)} Markets`} /></h2>
@@ -731,22 +1072,27 @@ interface GeckoCoin {
 }
 function FundamentalsTab({ coin }: { coin: string }) {
   const [data, setData] = useState<GeckoCoin | null>(null);
-  const [err, setErr] = useState(false);
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     let alive = true;
-    setData(null); setErr(false);
+    let retry = 0;
+    if (tries === 0) setData(null);
     (async () => {
       const id = await getCoinGeckoId(coin);
       if (!id) throw new Error("no id");
-      const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`);
-      if (!res.ok) throw new Error("coin");
-      const j = await res.json();
+      const j = await cgResilient<GeckoCoin>(
+        `https://api.coingecko.com/api/v3/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`,
+        `cgCoin:${id}`, 15 * 60_000,
+      );
       if (alive) setData(j);
-    })().catch(() => { if (alive) setErr(true); });
-    return () => { alive = false; };
-  }, [coin]);
-  if (err) return <Empty title="Fundamentals unavailable" text="Couldn't load this coin's data right now. Try again in a minute." />;
-  if (!data) return <Loading label="Loading fundamentals…" />;
+    })().catch(() => {
+      // Never "unavailable": keep the loader and try again shortly.
+      if (alive) retry = window.setTimeout(() => setTries((n) => n + 1), 30_000);
+    });
+    return () => { alive = false; window.clearTimeout(retry); };
+  }, [coin, tries]);
+  useEffect(() => setTries(0), [coin]);
+  if (!data) return <Loading label={tries ? "Still loading fundamentals…" : "Loading fundamentals…"} />;
   const m = data.market_data ?? {};
   const circ = m.circulating_supply ?? null, max = m.max_supply ?? m.total_supply ?? null;
   const pct = circ && max ? Math.min(100, (circ / max) * 100) : null;

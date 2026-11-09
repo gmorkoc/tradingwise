@@ -53,6 +53,7 @@ import { Avatar } from "./components/Avatar";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 // import { WhatsNewModal } from "./components/WhatsNewModal"; — paused, see its commented render block below
 import { DailyBrief } from "./components/DailyBrief";
+import { MarketStories } from "./components/MarketStories";
 import { PushToast } from "./components/PushToast";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { FloatingNavBar } from "./components/FloatingNavBar";
@@ -68,7 +69,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useAIQuota } from "./hooks/useAIQuota";
 import { useProVisionGate } from "./hooks/useProVisionGate";
 import { fetchPortfolio } from "./services/paperTrading";
-import { CoinPageTabBar, CoinPageTabContent, CoinPagePicker, CoinPageSections, type CoinPageTab } from "./components/CoinPageTabs";
+import { CoinPageTabBar, CoinPagePicker, CoinPageSections, CoinPageDesktopSections, DESK_ANCHORS, type CoinPageTab, type DeskTab } from "./components/CoinPageTabs";
 import { ProVisionPaywallHost } from "./components/ProVisionPaywall";
 import { PriceTickerFullscreen } from "./components/PriceTickerFullscreen";
 import { PositionIntelligence } from "./components/PositionIntelligence";
@@ -213,6 +214,12 @@ const NAV_CATEGORIES: { id: NavCategoryId; labelKey: string; d: string | string[
 
 // Old #hash links: the chart page used to be #trade (and before that
 // #chart); both still map to section "chart".
+// A coin-page section anchor in the address the app opened with
+// (/chart/bitcoin#seasonals) — read once at startup, before anything
+// rewrites the address.
+const INITIAL_COIN_ANCHOR = /^\/chart(\/|$)/.test(window.location.pathname) ? window.location.hash.slice(1) : "";
+let initialCoinAnchorUsed = false;
+
 function hashToSection(hash: string): SectionId {
   return (hash === "trade" ? "chart" : hash) as SectionId;
 }
@@ -236,7 +243,10 @@ const isSection = (s: string): s is SectionId => NAV_ITEMS.some((n) => n.id === 
  *  be rewritten), then the path. */
 function readLocation(): { section: SectionId | null; coin: string | null } {
   const raw = window.location.hash.slice(1);
-  if (raw) {
+  // On a coin page, #news / #technicals / #markets … are section anchors
+  // there, not old page links (#markets would otherwise open Markets).
+  const onCoinPage = /^\/chart(\/|$)/.test(window.location.pathname);
+  if (raw && !(onCoinPage && ["cycles", "news", "technicals", "seasonals", "markets", "fundamentals", "traders"].includes(raw))) {
     const hashSec = hashToSection(raw);
     if (isSection(hashSec)) return { section: hashSec, coin: null };
   }
@@ -245,12 +255,15 @@ function readLocation(): { section: SectionId | null; coin: string | null } {
   if (m) return { section: "chart", coin: slugToCoin(m[1]) };
   const seg = path.slice(1);
   if (seg === "chart" || seg === "trade") return { section: "chart", coin: null };
+  // Candle Insights lives at /candleinsights (old /candleai still opens it).
+  if (seg === "candleinsights") return { section: "candleai", coin: null };
   if (seg && !seg.includes("/") && isSection(seg)) return { section: seg, coin: null };
   return { section: null, coin: null };
 }
 function pathFor(section: SectionId, coin: string): string {
   if (section === "markets") return "/";
   if (section === "chart") return `/chart/${coinSlug(coin)}`;
+  if (section === "candleai") return "/candleinsights";
   return `/${section}`;
 }
 function urlFor(section: SectionId, coin: string): string {
@@ -262,7 +275,7 @@ function urlFor(section: SectionId, coin: string): string {
 // (PaywallPromo) instead of navigating; opening the URL directly still
 // lands on the page's own full-page paywall.
 const PAYWALLED_PAGES: Partial<Record<SectionId, { tier: Tier; name: string }>> = {
-  candleai: { tier: "pro", name: "Inside the AI Candle" },
+  candleai: { tier: "pro", name: "Candle Insights" },
   altanalysis: { tier: "pro", name: "Alt Analysis" },
   options: { tier: "pro", name: "Options Analytics" },
   correlation: { tier: "pro", name: "Correlation Matrix" },
@@ -521,7 +534,8 @@ function toggleStarredCoin(symbol: string): string[] {
 
 /* ── Authenticated dashboard — only mounts when user is logged in ── */
 interface DashboardProps {
-  onOpenAuth: () => void;
+  /** Opens the sign-in window; "login" / "signup" pick its first screen. */
+  onOpenAuth: (view?: "login" | "signup") => void;
   onOpenUpgrade: () => void;
   theme: "dark" | "light";
   setTheme: (t: "dark" | "light" | "system") => void;
@@ -714,6 +728,11 @@ function AppDashboard({
     if (opts.navigate) setActiveSection("chart");
     return true;
   };
+  // Stable version for the Markets stories carousel (its panel list is
+  // memoized on this callback).
+  const openChartCoinRef = useRef(openChartCoin);
+  openChartCoinRef.current = openChartCoin;
+  const openStoryCoin = useCallback((s: string) => { openChartCoinRef.current(s, { recent: true, navigate: true }); }, []);
 
   // Follows the selected coin (not hardcoded to BTC) so the toast is
   // relevant to whatever chart is actually open.
@@ -1118,19 +1137,8 @@ function AppDashboard({
   // trial / Pro's 3 coins a day). `proVision` = actually running here.
   const pvGate = useProVisionGate();
   const proVision = pvGate.activeFor(coin);
-  // Desktop: switching ProVision on while on the chart page jumps to the
-  // Advance Chart page (only on the off → on change).
-  // Keyed on the switch itself (not activeFor), so changing coins never
-  // triggers the jump.
-  const pvPrevRef = useRef(pvGate.on);
-  useEffect(() => {
-    const was = pvPrevRef.current;
-    pvPrevRef.current = pvGate.on;
-    if (!was && pvGate.on && activeSection === "chart" && window.matchMedia("(min-width: 641px)").matches) {
-      setActiveSection("advance-chart");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pvGate.on]);
+  // (ProVision now draws on the chart page itself — turning it on there no
+  // longer jumps to Advance Chart.)
   // Desktop callout under the top-bar ProVision switch (signed-out / free).
   // Closing it snoozes it for 2 hours (remembered across reloads); it comes
   // back after that until the user has ProVision (trial / plan / Elite).
@@ -1355,10 +1363,23 @@ function AppDashboard({
   // not a centered modal — this is that button's measured position/width,
   // fed to GlobalSearch's "anchored" variant below.
   const topNavSearchRef = useRef<HTMLButtonElement>(null);
-  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number; rowH?: number } | null>(null);
   const openGlobalSearch = () => {
-    const rect = topNavSearchRef.current?.getBoundingClientRect();
-    if (rect) setSearchAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    // Coinbase-style: the panel's search field sits where the round search
+    // button is and grows right → left to a wide bar (to the header's right
+    // edge), results dropping down below it (see .gs-anchored in CSS).
+    const btn = topNavSearchRef.current;
+    const rect = btn?.getBoundingClientRect();
+    const bar = btn?.closest(".top-nav-bar")?.getBoundingClientRect();
+    if (rect && bar) {
+      // Field sits in the header row (over the icons, out to the header's
+      // right padding); results drop right under the header (Coinbase).
+      const right = bar.right - 32;
+      const width = Math.min(680, Math.max(360, right - bar.left - 240));
+      setSearchAnchor({ top: bar.top, left: right - width, width, rowH: bar.height });
+    } else if (rect) {
+      setSearchAnchor({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    }
     setGlobalSearch(true);
   };
   const [coinTickers, setCoinTickers] = useState<Map<string, Ticker24h>>(
@@ -1524,20 +1545,36 @@ function AppDashboard({
   const [paperTabSpinKey, setPaperTabSpinKey] = useState(0);
   // Trade page section tab (Overview · News · Community · …). Always opens on
   // Overview (the chart); kept while you browse within the visit.
-  const [coinTab, setCoinTab] = useState<CoinPageTab>("overview");
+  const [coinTab, setCoinTab] = useState<DeskTab>("overview");
   // Desktop: other parts of the page (the Consensus meter) can switch the
   // Trade page's section tab. Phones handle the same event in their sheet.
+  // Desktop: every section is on the page; a tab scrolls to it and puts its
+  // anchor in the address (/chart/bitcoin#technicals). "Chart" goes back up
+  // and clears the anchor. While that smooth scroll runs, the scroll-follow
+  // below holds off so the highlight doesn't flick through each section.
+  const coinSpyLockRef = useRef(0);
+  const goCoinSection = useCallback((tab: DeskTab) => {
+    setCoinTab(tab);
+    coinSpyLockRef.current = Date.now() + 1000;
+    const base = `${window.location.pathname}${window.location.search}`;
+    if (tab === "overview") {
+      window.history.replaceState(window.history.state, "", base);
+      document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    window.history.replaceState(window.history.state, "", `${base}#${tab}`);
+    document.getElementById(`coin-sec-${tab}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
   useEffect(() => {
     const onOpen = (e: Event) => {
       if (!window.matchMedia("(min-width: 641px)").matches) return;
       const tab = (e as CustomEvent<{ tab?: CoinPageTab }>).detail?.tab;
       if (!tab) return;
-      setCoinTab(tab);
-      requestAnimationFrame(() => document.querySelector(".price-chart-container")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      goCoinSection(tab);
     };
     window.addEventListener("open-coin-section", onOpen);
     return () => window.removeEventListener("open-coin-section", onOpen);
-  }, []);
+  }, [goCoinSection]);
   // Header mode menu + the paper balance it shows (loaded when it opens).
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const [paperSummary, setPaperSummary] = useState<{ cash: number; open: number } | null>(null);
@@ -1771,6 +1808,14 @@ function AppDashboard({
   const coinPickerBtnRef = useRef<HTMLButtonElement>(null);
   const [coinPickerPos, setCoinPickerPos] = useState({ top: 0, left: 0 });
   const mainContentRef = useRef<HTMLDivElement>(null);
+  // Signed-out header menu: which group's dropdown is open.
+  const [guestMenu, setGuestMenu] = useState<NavCategoryId | null>(null);
+  // Signed-out header on smaller desktops: the ☰ menu.
+  const [guestBurger, setGuestBurger] = useState(false);
+  const [promoHidden, setPromoHidden] = useState(() => {
+    try { return localStorage.getItem("ch:signupPromoHidden") === "1"; } catch { return false; }
+  });
+  const [guestBurgerCat, setGuestBurgerCat] = useState<NavCategoryId | null>(null);
   // Phones: the page and its scrolling area must never sit shifted
   // sideways (iOS could pan .main-content horizontally despite
   // overflow-x: hidden) — snap any horizontal offset straight back to 0.
@@ -1969,10 +2014,9 @@ function AppDashboard({
   // Persisted so the choice survives a reload (an old saved "2row" falls
   // back to 2col).
   // Layout pickers removed (top-bar icons gone): the chart page always uses
-  // the CoinMarketCap layout ("2col" branch), Markets always shows Daily
-  // Brief beside it.
+  // the CoinMarketCap layout ("2col" branch); Markets is one column with
+  // the stories carousel on top.
   const chartLayoutMode = "2col" as "2col" | "3col";
-  const marketsSingleColumn = false as boolean;
   // Shared mount point for both Paper Trading's column (rendered directly
   // below) and Buy Signals' own portaled column (BuySignals.tsx's
   // columnTarget prop) — :empty in CSS collapses this to nothing when
@@ -2363,7 +2407,10 @@ function AppDashboard({
       // Leave sign-in callbacks alone (Supabase reads its tokens from the
       // #fragment itself and cleans the URL afterwards).
       if (/access_token|refresh_token|error_description|type=/.test(window.location.hash)) return;
-      if (here !== want) window.history.replaceState({ appIdx: 0 }, "", want);
+      // Keep a coin-page section anchor (/chart/bitcoin#technicals).
+      const anchor = window.location.hash.slice(1);
+      const keep = activeSection === "chart" && (DESK_ANCHORS as readonly string[]).includes(anchor) ? `#${anchor}` : "";
+      if (here !== want + keep) window.history.replaceState({ appIdx: 0 }, "", want + keep);
       return;
     }
     const sectionChanged = lastHistorySectionRef.current !== activeSection;
@@ -2400,6 +2447,61 @@ function AppDashboard({
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Every page switch starts at the top — the scroll area is shared, so
+  // without this, opening a coin from halfway down Markets landed halfway
+  // down the chart page. (A coin-page #anchor still jumps afterwards.)
+  const firstSectionRef = useRef(true);
+  useLayoutEffect(() => {
+    if (firstSectionRef.current) { firstSectionRef.current = false; return; }
+    mainContentRef.current?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+  }, [activeSection]);
+
+  // Desktop coin page: the tab highlight (and the #anchor) follow whichever
+  // section is in the middle of the screen; back above them → "Chart".
+  // Opening a link with an anchor (e.g. #seasonals) lands on that section.
+  useEffect(() => {
+    if (activeSection !== "chart" || !isDesktopWidth) return;
+    const ids = ["overview", ...DESK_ANCHORS] as DeskTab[];
+    const els = ids
+      .map((id) => (id === "overview" ? document.querySelector(".price-chart-container") : document.getElementById(`coin-sec-${id}`)))
+      .filter(Boolean) as Element[];
+    if (!els.length) return;
+    const io = new IntersectionObserver((entries) => {
+      if (Date.now() < coinSpyLockRef.current) return;
+      const hit = entries.find((e) => e.isIntersecting);
+      if (!hit) return;
+      const id = hit.target.classList.contains("price-chart-container")
+        ? "overview"
+        : (hit.target.id.replace("coin-sec-", "") as DeskTab);
+      setCoinTab(id);
+      const base = `${window.location.pathname}${window.location.search}`;
+      const want = id === "overview" ? base : `${base}#${id}`;
+      if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== want) {
+        window.history.replaceState(window.history.state, "", want);
+      }
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    els.forEach((el) => io.observe(el));
+    // Landing with an anchor: jump to it once the sections have laid out
+    // (held so the scroll-follow doesn't reset it to Chart meanwhile).
+    const anchor = (initialCoinAnchorUsed ? "" : INITIAL_COIN_ANCHOR) as DeskTab;
+    let t = 0;
+    let t2 = 0;
+    if ((DESK_ANCHORS as readonly string[]).includes(anchor)) {
+      coinSpyLockRef.current = Date.now() + 3500;
+      setCoinTab(anchor);
+      // Marked used only once it actually runs (a re-run of this effect
+      // cancels the timer and tries again). Sections above keep loading and
+      // growing, so it re-aligns once more a moment later.
+      t = window.setTimeout(() => { initialCoinAnchorUsed = true; goCoinSection(anchor); }, 900);
+      t2 = window.setTimeout(() => {
+        coinSpyLockRef.current = Date.now() + 800;
+        document.getElementById(`coin-sec-${anchor}`)?.scrollIntoView({ block: "start" });
+      }, 2600);
+    }
+    return () => { io.disconnect(); window.clearTimeout(t); window.clearTimeout(t2); };
+  }, [activeSection, isDesktopWidth, coin, goCoinSection]);
 
   // Per-page title + description, so each coin's chart page reads well in
   // search results and browser tabs.
@@ -2689,8 +2791,17 @@ function AppDashboard({
   // In-app navigation to a page (menu, search). A paywalled page the user
   // can't open shows its upgrade promo where they are instead of
   // navigating; returns whether it actually navigated.
+  // Every Pro/Elite page is gated this way: the explicit list above, plus
+  // any nav item with a requiredTier (the chart page stays open — it's
+  // reached from Markets for everyone).
+  const gateFor = (id: SectionId): { tier: Tier; name: string } | undefined => {
+    if (PAYWALLED_PAGES[id]) return PAYWALLED_PAGES[id];
+    const item = NAV_ITEMS.find((n) => n.id === id);
+    if (!item?.requiredTier || id === "chart") return undefined;
+    return { tier: item.requiredTier, name: t(item.labelKey) };
+  };
   const openSection = (id: SectionId): boolean => {
-    const gate = PAYWALLED_PAGES[id];
+    const gate = gateFor(id);
     if (gate && !(user && hasAccess(tier, gate.tier))) {
       setPromoSection(id);
       setMobileNavOpen(false);
@@ -3060,6 +3171,72 @@ function AppDashboard({
         <Drawer
           isOpen={drawerOpen}
           onClose={() => setDrawerOpen(false)}
+          accountExtras={!Capacitor.isNativePlatform() && isDesktopWidth ? (
+            <>
+              {user && inviteCardOpen && (
+                <div className="icon-strip-invite-card">
+                  <button type="button" className="icon-strip-invite-close" onClick={() => setInviteCardOpen(false)} aria-label="Dismiss">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                  <div className="icon-strip-invite-title">{t("nav.inviteTitle", "Invite a friend")}</div>
+                  <p className="icon-strip-invite-sub">
+                    {t("nav.inviteSub", "Invite a friend — when they sign up, you get $10,000 in free paper trading cash.")}
+                  </p>
+                  <input
+                    type="email"
+                    className="icon-strip-invite-input"
+                    placeholder="friend@email.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") sendInvite(); }}
+                    disabled={inviteStatus === "sending"}
+                  />
+                  <button
+                    type="button"
+                    className={`icon-strip-invite-send${inviteStatus === "sent" ? " icon-strip-invite-send--sent" : ""}${inviteStatus === "error" ? " icon-strip-invite-send--error" : ""}`}
+                    onClick={sendInvite}
+                    disabled={!inviteEmail.trim() || inviteStatus === "sending"}
+                  >
+                    {inviteStatus === "sending"
+                      ? t("nav.inviteSending", "Sending…")
+                      : inviteStatus === "sent"
+                        ? t("nav.inviteSent", "Invite sent ✓")
+                        : inviteStatus === "error"
+                          ? t("nav.inviteError", "Couldn't send — try again")
+                          : t("nav.inviteSend", "Send invite")}
+                  </button>
+                </div>
+              )}
+              {user && aiUsageCardEl}
+              <button
+                type="button"
+                className="icon-strip-profile-row"
+                onClick={() => { setDrawerOpen(false); if (user) setProfileOpen(true); else onOpenAuth(); }}
+              >
+                <Avatar
+                  url={profile?.avatar_url}
+                  fallback={
+                    !user ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+                      </svg>
+                    ) : profile?.full_name
+                      ? profile.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+                      : (user?.email?.[0] ?? "?").toUpperCase()
+                  }
+                  className="icon-strip-profile-avatar"
+                />
+                <span className="icon-strip-profile-info">
+                  <span className="icon-strip-profile-name">{profile?.full_name || t("nav.guest", "Guest")}</span>
+                  <span className="icon-strip-profile-email">{user?.email ?? t("nav.signInPrompt", "Sign in")}</span>
+                </span>
+              </button>
+            </>
+          ) : undefined}
           theme={theme}
           setTheme={setTheme}
           autoRefresh={autoRefresh}
@@ -3084,7 +3261,7 @@ function AppDashboard({
           onClose={() => setContactOpen(false)}
         />
         {(() => {
-          const gate = promoSection ? PAYWALLED_PAGES[promoSection] : undefined;
+          const gate = promoSection ? gateFor(promoSection) : undefined;
           return (
             <PaywallPromo
               open={!!gate}
@@ -3122,7 +3299,7 @@ function AppDashboard({
           />
         )}
         <nav
-          className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed && !navPeek ? " nav-collapsed" : ""}${navCollapsed && navPeek ? " nav-peek" : ""}`}
+          className={`icon-strip${mobileNavOpen ? " mobile-open" : ""}${navCollapsed && !navPeek ? " nav-collapsed" : ""}${navCollapsed && navPeek ? " nav-peek" : ""}${!Capacitor.isNativePlatform() ? " icon-strip--guest" : ""}`}
           // Mobile: closed menu is out of the tap/focus order entirely.
           {...(!isDesktopWidth && !mobileNavOpen ? { inert: "" } : {})}
           // Collapsed (icon-only) rail: hovering opens the full labeled
@@ -3373,149 +3550,167 @@ function AppDashboard({
             </div>
           )}
 
-          {/* Desktop web only — the wide labeled sidebar (>=961px,
-              App.css) has room for this; the narrow rail/tablet flyout
-              doesn't. Settings/sign-out above still cover mobile+native;
-              this isn't a duplicate of those, it's the desktop-web
-              equivalent that was missing entirely before (that platform
-              had no bottom section at all). */}
-          {!Capacitor.isNativePlatform() && isWideDesktop && (
-            <div className="icon-strip-bottom-web">
-              <button type="button" className="icon-strip-btn" onClick={() => setDrawerOpen(true)} title={t("drawer.settings")}>
-                <span className="nav-icon-wrap">
-                  <NavIcon
-                    d={[
-                      "M12 15a3 3 0 100-6 3 3 0 000 6z",
-                      "M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
-                    ]}
-                  />
-                </span>
-                <span className="icon-strip-label">{t("nav.settings")}</span>
-              </button>
-
-              <button type="button" className="icon-strip-btn icon-strip-support" onClick={() => setContactOpen(true)}>
-                <span className="nav-icon-wrap">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                </span>
-                <span className="icon-strip-label">{t("nav.support", "Support")}</span>
-                <span className="icon-strip-support-badge">
-                  <span className="icon-strip-support-dot" />
-                  {t("nav.online", "Online")}
-                </span>
-              </button>
-
-              {inviteCardOpen && (
-                <div className="icon-strip-invite-card">
-                  <button type="button" className="icon-strip-invite-close" onClick={() => setInviteCardOpen(false)} aria-label="Dismiss">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                  <div className="icon-strip-invite-title">{t("nav.inviteTitle", "Invite a friend")}</div>
-                  <p className="icon-strip-invite-sub">
-                    {t("nav.inviteSub", "Invite a friend — when they sign up, you get $10,000 in free paper trading cash.")}
-                  </p>
-                  <input
-                    type="email"
-                    className="icon-strip-invite-input"
-                    placeholder="friend@email.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") sendInvite(); }}
-                    disabled={inviteStatus === "sending"}
-                  />
-                  <button
-                    type="button"
-                    className={`icon-strip-invite-send${inviteStatus === "sent" ? " icon-strip-invite-send--sent" : ""}${inviteStatus === "error" ? " icon-strip-invite-send--error" : ""}`}
-                    onClick={sendInvite}
-                    disabled={!inviteEmail.trim() || inviteStatus === "sending"}
-                  >
-                    {inviteStatus === "sending"
-                      ? t("nav.inviteSending", "Sending…")
-                      : inviteStatus === "sent"
-                        ? t("nav.inviteSent", "Invite sent ✓")
-                        : inviteStatus === "error"
-                          ? t("nav.inviteError", "Couldn't send — try again")
-                          : t("nav.inviteSend", "Send invite")}
-                  </button>
-                </div>
-              )}
-
-              {/* Right above the account row, not after Support. Shared
-                  with the phone menu (aiUsageCardEl). */}
-              {aiUsageCardEl}
-
-              <button
-                type="button"
-                className="icon-strip-profile-row"
-                onClick={() => { if (user) setProfileOpen(true); else onOpenAuth(); }}
-              >
-                <Avatar
-                  url={profile?.avatar_url}
-                  fallback={
-                    !user ? (
-                      // Signed out: account icon instead of a "?".
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="8" r="4" />
-                        <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
-                      </svg>
-                    ) : profile?.full_name
-                      ? profile.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                      : (user?.email?.[0] ?? "?").toUpperCase()
-                  }
-                  className="icon-strip-profile-avatar"
-                />
-                <span className="icon-strip-profile-info">
-                  <span className="icon-strip-profile-name">{profile?.full_name || t("nav.guest", "Guest")}</span>
-                  <span className="icon-strip-profile-email">{user?.email ?? t("nav.signInPrompt", "Sign in")}</span>
-                </span>
-              </button>
-
-              {/* Expand / collapse the sidebar (desktop). Collapsed: icon
-                  only; it also expands on hover (nav-peek). */}
-              <button
-                type="button"
-                className="icon-strip-btn icon-strip-expand-btn"
-                onClick={() => { setNavPeek(false); setNavCollapsed((v) => !v); }}
-                title={navCollapsed ? "Expand menu" : "Collapse menu"}
-                aria-label={navCollapsed ? "Expand menu" : "Collapse menu"}
-              >
-                <span className="nav-icon-wrap">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="16" rx="2" />
-                    <path d="M9 4v16" />
-                    {navCollapsed ? <path d="M13 10l2 2-2 2" /> : <path d="M15 10l-2 2 2 2" />}
-                  </svg>
-                </span>
-                <span className="icon-strip-label">{navCollapsed ? "Expand menu" : "Collapse menu"}</span>
-              </button>
-            </div>
-          )}
+          {/* Desktop web: the sidebar is hidden for everyone (top header
+              nav instead); its old bottom cards — invite, AI usage,
+              account row — live in the Settings drawer (accountExtras). */}
 
         </nav>
 
 
         <div className="main-panel">
+          {/* Desktop top bar, CoinMarketCap style: global stats strip, then
+              logo · section links · Portfolio · Watchlist · search · icons. */}
+          {/* Signed-out promo strip above the header (Coinbase style). */}
+          {!Capacitor.isNativePlatform() && isDesktopWidth && !user && !promoHidden && (
+            <div className="top-nav-promo">
+              <button type="button" className="top-nav-promo-link" onClick={() => onOpenAuth("signup")}>
+                Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices
+              </button>
+              <button
+                type="button"
+                className="top-nav-promo-x"
+                aria-label="Dismiss"
+                onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoHidden", "1"); } catch { /* ignore */ } }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+          )}
           {!Capacitor.isNativePlatform() && isDesktopWidth && (
-            <div className="top-nav-bar">
+            <div className={`top-nav-bar top-nav-bar--guest${user ? " top-nav-bar--signed" : ""}`}>
               {/* Logo beside the search bar while the side menu is collapsed
                   (the expanded menu shows its own logo). Click → Markets. */}
-              {navCollapsed && !navPeek && (
+              {(
                 <button
                   type="button"
                   className="top-nav-logo"
                   onClick={() => setActiveSection("markets")}
-                  aria-label="coinhintz — Markets"
-                  title="Markets"
+                  aria-label="coinhintz — Home"
+                  title="Home"
                 >
-                  {/* Wordmark only (no icon). */}
-                  <span className="top-nav-logo-text">coinhint<span className="top-nav-logo-z">z</span></span>
+                  {/* Just the C: spins on load and on every data refresh
+                      (re-keyed so the spin replays), and nonstop on hover. */}
+                  <span key={`logo-spin:${refreshTrigger}`} className="top-nav-logo-ic chart-tab-logo-spin" aria-hidden="true">
+                    <span className="top-nav-logo-hover"><LogoIcon size={38} /></span>
+                  </span>
                 </button>
+              )}
+              {/* Signed out (Coinbase style): the side menu lives in the
+                  header — its items, the three groups as dropdowns, and
+                  Analyze a Chart. */}
+              {/* Smaller desktops: the same menu behind a ☰ button. */}
+              {(
+                <div className="top-nav-burger-wrap">
+                  <button
+                    type="button"
+                    className="top-nav-burger"
+                    aria-label="Menu"
+                    aria-expanded={guestBurger}
+                    onClick={() => setGuestBurger((v) => !v)}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                      {guestBurger ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                    </svg>
+                  </button>
+                  {/* Coinbase-style: a full-width panel sliding down under the
+                      header — big items; groups expand in place (›). */}
+                  {guestBurger && (
+                    <div
+                      className="top-nav-sheet"
+                      role="menu"
+                      style={{ top: document.querySelector(".top-nav-bar")?.getBoundingClientRect().bottom ?? 72 }}
+                    >
+                      {NAV_ITEMS.filter((i) => !i.hidden && !i.category).map((i) => (
+                        <button key={i.id} type="button" role="menuitem" className={`top-nav-sheet-item${activeSection === i.id ? " top-nav-sheet-item--on" : ""}`} onClick={() => { setGuestBurger(false); openSection(i.id); }}>
+                          {t(i.labelKey)}
+                        </button>
+                      ))}
+                      {NAV_CATEGORIES.map((cat) => {
+                        const open = guestBurgerCat === cat.id;
+                        return (
+                          <div key={cat.id} className="top-nav-sheet-group">
+                            <button
+                              type="button"
+                              className={`top-nav-sheet-item${open ? " top-nav-sheet-item--open" : ""}`}
+                              aria-expanded={open}
+                              onClick={() => setGuestBurgerCat((c) => (c === cat.id ? null : cat.id))}
+                            >
+                              {t(cat.labelKey)}
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+                            </button>
+                            {open && (
+                              <div className="top-nav-sheet-sub">
+                                {NAV_ITEMS.filter((i) => !i.hidden && i.category === cat.id).map((i) => (
+                                  <button key={i.id} type="button" role="menuitem" className={`top-nav-sheet-subitem${activeSection === i.id ? " top-nav-sheet-item--on" : ""}`} onClick={() => { setGuestBurger(false); openSection(i.id); }}>
+                                    {t(i.labelKey)}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <button type="button" role="menuitem" className="top-nav-sheet-item" onClick={() => { setGuestBurger(false); setChartAnalyzeOpen(true); }}>
+                        {t("nav.analyzeChart")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {(
+                <nav className="top-nav-guest" aria-label="Main menu">
+                  {NAV_ITEMS.filter((i) => !i.hidden && !i.category).map((i) => (
+                    <button
+                      key={i.id}
+                      type="button"
+                      className={`top-nav-gl${activeSection === i.id ? " top-nav-gl--on" : ""}`}
+                      onClick={() => openSection(i.id)}
+                    >
+                      {t(i.labelKey)}{i.id === "candleai" && <span className="top-nav-gl-ai">ai</span>}
+                    </button>
+                  ))}
+                  {NAV_CATEGORIES.map((cat) => {
+                    const items = NAV_ITEMS.filter((i) => !i.hidden && i.category === cat.id);
+                    const open = guestMenu === cat.id;
+                    return (
+                      <div
+                        key={cat.id}
+                        className="top-nav-gdd"
+                        onMouseEnter={() => setGuestMenu(cat.id)}
+                        onMouseLeave={() => setGuestMenu((m) => (m === cat.id ? null : m))}
+                      >
+                        <button
+                          type="button"
+                          className={`top-nav-gl${items.some((i) => i.id === activeSection) ? " top-nav-gl--on" : ""}`}
+                          aria-expanded={open}
+                          onClick={() => setGuestMenu((m) => (m === cat.id ? null : cat.id))}
+                        >
+                          {t(cat.labelKey)}
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                        </button>
+                        {open && (
+                          <div className="top-nav-gmenu" role="menu">
+                            {items.map((i) => (
+                              <button
+                                key={i.id}
+                                type="button"
+                                role="menuitem"
+                                className={`top-nav-gitem${activeSection === i.id ? " top-nav-gitem--on" : ""}`}
+                                onClick={() => { setGuestMenu(null); openSection(i.id); }}
+                              >
+                                <span className="top-nav-gitem-ic" aria-hidden="true"><NavIcon d={i.d} size={18} /></span>
+                                {t(i.labelKey)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button type="button" className="top-nav-gl" onClick={() => setChartAnalyzeOpen(true)}>
+                    {t("nav.analyzeChart")}<span className="top-nav-gl-ai">ai</span>
+                  </button>
+                </nav>
               )}
               {/* Portfolio → the asset calculator (CMC's "Portfolio" link). */}
               <button
@@ -3560,7 +3755,7 @@ function AppDashboard({
                   </svg>
                 </span>
                 <span className="top-nav-search-text">
-                  {t("search.placeholder", "Search coins, sections, features…")}
+                  {t("search.short", "Search")}
                 </span>
                 <kbd className="top-nav-search-kbd" aria-hidden="true">⌘K</kbd>
               </button>
@@ -3727,28 +3922,30 @@ function AppDashboard({
                     className="top-nav-icon-btn top-nav-icon-btn--settings"
                     onClick={() => setDrawerOpen(true)}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="5" cy="5" r="2" />
-                      <circle cx="12" cy="5" r="2" />
-                      <circle cx="19" cy="5" r="2" />
-                      <circle cx="5" cy="12" r="2" />
-                      <circle cx="12" cy="12" r="2" />
-                      <circle cx="19" cy="12" r="2" />
-                      <circle cx="5" cy="19" r="2" />
-                      <circle cx="12" cy="19" r="2" />
-                      <circle cx="19" cy="19" r="2" />
+                    {/* Gear — same outline weight as the search glyph. */}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
                   </button>
                 </HoverTip>
-                <AccountMenu
-                  onOpenAuth={onOpenAuth}
-                  onOpenUpgrade={onOpenUpgrade}
-                  onOpenProfile={() => setProfileOpen(true)}
-                  onOpenSettings={() => setDrawerOpen(true)}
-                  onSetTheme={setTheme}
-                  iconFallback
-                  dropdown
-                />
+                {user ? (
+                  <AccountMenu
+                    onOpenAuth={onOpenAuth}
+                    onOpenUpgrade={onOpenUpgrade}
+                    onOpenProfile={() => setProfileOpen(true)}
+                    onOpenSettings={() => setDrawerOpen(true)}
+                    onSetTheme={setTheme}
+                    iconFallback
+                    dropdown
+                  />
+                ) : (
+                  /* Signed out: Log in + Sign up pills (Coinbase / Kraken). */
+                  <span className="top-nav-auth">
+                    <button type="button" className="top-nav-login" onClick={() => onOpenAuth("login")}>Sign in</button>
+                    <button type="button" className="top-nav-signup" onClick={() => onOpenAuth("signup")}>Sign up</button>
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -3950,7 +4147,6 @@ function AppDashboard({
               // Order Book as one flat tab row, "2col" layout only) is now
               // ALSO hoisted to component scope, same place/reasoning as
               // chartRightColEl right above it — reused here unchanged.
-              const dailyBriefEl = <DailyBrief coinTickers={coinTickers} variant="page" />;
               // Markets keeps the exact same right-column sidebar (Paper
               // Trading/Order Flow/Daily Brief) and layout-mode machinery
               // below as the Chart page — just a much simpler left column
@@ -3969,6 +4165,9 @@ function AppDashboard({
                       scroll position/live polling intact across toggles
                       instead of refetching every time. */}
                   <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
+                    {/* Every platform: desktop arrows, phones swipe. */}
+                    <MarketStories onSelectCoin={openStoryCoin} />
+
                     <GlobalMarkets
                       onOpenAuth={onOpenAuth}
                       onTradeCoin={(symbol) => {
@@ -4031,11 +4230,22 @@ function AppDashboard({
                         // column (same compact row) instead of the chart header.
                         headerStats={isWideDesktop && !distractionFree && chartLayoutMode === "2col" ? undefined : mchBodyEl}
                         pageTabBar={activeSection !== "chart" ? undefined : isDesktopWidth
-                          ? <CoinPageTabBar tab={coinTab} onChange={setCoinTab} />
+                          ? <CoinPageTabBar
+                              tab={coinTab}
+                              onChange={goCoinSection}
+                              hasCycles={coin === "BTC"}
+                              // ProVision on / off right here on the chart
+                              // (on also switches to the Chart tab + candles).
+                              proVisionOn={pvGate.on}
+                              // Signed in only, and only while ProVision is
+                              // usable — signed out, trial ended or locked,
+                              // the banner on the chart is the one way in.
+                              onProVision={user && !["trial-ended", "pro-limit"].includes(pvGate.access.lockReason(coin) ?? "") ? () => {
+                                if (!pvGate.on) setCoinTab("overview");
+                                pvGate.toggle(coin);
+                              } : undefined}
+                            />
                           : <CoinPagePicker coin={coin} />}
-                        pageTabContent={activeSection === "chart" && isDesktopWidth && coinTab !== "overview" ? (
-                          <CoinPageTabContent tab={coinTab} coin={coin} onOpenAuth={onOpenAuth} onOpenUpgrade={onOpenUpgrade} />
-                        ) : undefined}
                         onOpenDrawingTools={() => {
                           advanceChartPushedRef.current = true;
                           setActiveSection("advance-chart");
@@ -4080,8 +4290,21 @@ function AppDashboard({
                             <CoinPageSections coin={coin} />
                           </>
                         )}
+                        {/* Desktop: News · Technicals · Seasonals · Markets ·
+                            Fundamentals on the page; the tabs scroll here. */}
+                        {activeSection === "chart" && isDesktopWidth && (
+                          <>
+                            {/* Bitcoin only (renders nothing otherwise). */}
+                            <MarketCycles coin={coin} theme={theme} />
+                            <CoinPageDesktopSections coin={coin} />
+                          </>
+                        )}
                         {!distractionFree ? (
-                          <div className="chart-below-full">
+                          <div className="chart-below-full" id={activeSection === "chart" ? "coin-sec-traders" : undefined}>
+                            {/* Phones: titled like every other section on the page. */}
+                            {activeSection === "chart" && !isDesktopWidth && (
+                              <h2 className="cbp-sec-h">{COINS.find((c) => c.symbol === coin)?.name ?? coin} Top Traders</h2>
+                            )}
                             <ChartBottomPanel
                               coin={coin}
                               onSelectCoin={(symbol) => {
@@ -4145,14 +4368,9 @@ function AppDashboard({
                     // entirely), or Daily Brief closed outright via the
                     // single-column toggle (marketsSingleColumn, its own
                     // icon next to where that picker would be).
-                    marketsSingleColumn ? (
-                      <div className="chart-page-row">{chartColumnEl}</div>
-                    ) : (
-                      <div className="chart-layout chart-layout--3col">
-                        {chartColumnEl}
-                        <div className="chart-three-col-right">{dailyBriefEl}</div>
-                      </div>
-                    )
+                    // Daily Brief's column is replaced by the stories
+                    // carousel at the top of the page (MarketStories).
+                    <div className="chart-page-row">{chartColumnEl}</div>
                   ) : chartLayoutMode === "3col" ? (
                     <div className="chart-layout chart-layout--3col">
                       {chartColumnEl}
@@ -4866,6 +5084,8 @@ function AppGate() {
     if (!user) initialLoadDoneFor.current = null;
   }, [user, profileLoading]);
   const [showAuth, setShowAuth] = useState(false);
+  // Which screen the sign-in window opens on (null = its welcome screen).
+  const [authView, setAuthView] = useState<"login" | "signup" | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   // The plan picker ("Choose your plan") is only for signed-in users —
   // anyone not signed in gets the sign in / sign up screen instead, from
@@ -5018,12 +5238,12 @@ function AppGate() {
   return (
     <>
       <AppDashboard
-        onOpenAuth={() => setShowAuth(true)}
+        onOpenAuth={(view) => { setAuthView(view ?? null); setShowAuth(true); }}
         onOpenUpgrade={openUpgrade}
         theme={theme}
         setTheme={setTheme}
       />
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {showAuth && <AuthModal initialView={authView ?? undefined} onClose={() => { setShowAuth(false); setAuthView(null); }} />}
       {showUpgrade && user && (
         <UpgradeModal
           onClose={() => setShowUpgrade(false)}

@@ -88,12 +88,15 @@ export async function fetchCoinMeta(coin: string): Promise<CoinMeta | null> {
 
 // Raw contract count (coin units), not USD — the caller already has a live
 // price to multiply by, so this avoids a second redundant price fetch.
+// Coinalyze (Binance USDT perp, in coin units) — Binance's own futures API
+// answers 451 "restricted location" from our hosting region and from many
+// users' networks, so it's not used.
 export async function fetchOpenInterestCoins(coin: string): Promise<number | null> {
   try {
-    const res = await fetch(`/bnf-api/fapi/v1/openInterest?symbol=${coin}USDT`);
+    const res = await fetch(`/coinalyze-api/v1/open-interest?symbols=${coin}USDT_PERP.A`);
     if (!res.ok) return null;
     const d = await res.json();
-    const oi = parseFloat(d?.openInterest ?? "");
+    const oi = Array.isArray(d) && typeof d[0]?.value === "number" ? d[0].value : NaN;
     return isFinite(oi) ? oi : null;
   } catch {
     return null;

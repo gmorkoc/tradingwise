@@ -11,6 +11,9 @@
   padding: 0 16px 4px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  /* Snap cards 16px in (the row bleeds 16px past the page), so the first
+     card — Puell Multiple Status — keeps the page's 16px left inset. */
+  scroll-padding-left: 16px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }

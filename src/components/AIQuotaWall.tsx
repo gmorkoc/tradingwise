@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { redirectToCheckout, PRICE_IDS } from "../services/stripeService";
+import { isIAPAvailable } from "../services/revenuecat";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/AIQuotaWall.css";
 
@@ -33,11 +34,11 @@ const PLANS = [
     color: "#a78bfa",
     popular: false,
     priceId: () => PRICE_IDS.elite,
-    features: ["Everything in Pro — unlimited", "Buy & Sell Signals", "Inside the AI Candle", "Coinbase Premium AI", "Early access to features"],
+    features: ["Everything in Pro — unlimited", "Buy & Sell Signals", "Candle Insights", "Coinbase Premium AI", "Early access to features"],
   },
 ];
 
-export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, featureTitle, featureDesc }) => {
+export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUpgrade, planId, featureTitle, featureDesc }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -46,6 +47,8 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, planId, 
 
   const handleUpgrade = async (plan: typeof PLANS[number]) => {
     if (!user) { onOpenAuth(); return; }
+    // iOS app: App Store purchase via the upgrade modal, never Stripe.
+    if (isIAPAvailable()) { onOpenUpgrade(); return; }
     setLoadingPlan(plan.id);
     await redirectToCheckout(plan.priceId());
     setLoadingPlan(null);

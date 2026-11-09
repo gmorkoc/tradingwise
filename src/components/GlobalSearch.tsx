@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from "react";
 import ReactDOM from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { COINS, CoinSymbol } from "../services/coinglass";
@@ -37,7 +37,7 @@ const COIN_ICONS: Record<string, string> = {
 const SECTIONS: { id: SectionId; label: string; desc: string; icon: string; keywords: string[] }[] = [
   { id: "chart", label: "Price Chart", desc: "Live candlestick chart with indicators", icon: "📈",
     keywords: ["candles", "candlestick", "live chart", "technical chart", "price action", "tradingview"] },
-  { id: "candleai", label: "Inside the AI Candle", desc: "AI pattern analysis, smart money, forecasts", icon: "✦",
+  { id: "candleai", label: "Candle Insights", desc: "AI pattern analysis, smart money, forecasts", icon: "✦",
     keywords: ["pattern recognition", "market maker", "smart money", "candle reading", "ai candle", "order blocks", "fair value gap", "wyckoff", "elliott wave"] },
   { id: "heatmap", label: "Liquidation Heatmap", desc: "Futures liquidation zones and stop-hunt levels", icon: "🔥",
     keywords: ["liquidation map", "liquidity zones", "stop hunt", "liq levels", "long liquidations", "short liquidations", "leverage liquidations", "liquidation clusters"] },
@@ -101,7 +101,9 @@ interface Props {
   // Required for "anchored" — .top-nav-search's own measured position/
   // width (App.tsx), so the dropdown lines up under it exactly instead of
   // floating at some guessed position.
-  anchorRect?: { top: number; left: number; width: number } | null;
+  // rowH: the header's height — the field sits centred in that row and
+  // the results card starts right under it.
+  anchorRect?: { top: number; left: number; width: number; rowH?: number } | null;
 }
 
 /* ── Component ─────────────────────────────────────────────────────────────── */
@@ -357,7 +359,7 @@ export function GlobalSearch({ open, onClose, onCoinSelect, onSectionSelect, var
       <div className="gs-anchored-catcher" onMouseDown={onClose} />
       <div
         className="gs-anchored"
-        style={anchorRect ? { top: anchorRect.top, left: anchorRect.left, width: Math.max(anchorRect.width, 360) } : undefined}
+        style={anchorRect ? ({ top: anchorRect.top, left: anchorRect.left, width: Math.max(anchorRect.width, 360), ...(anchorRect.rowH ? { "--gs-row-h": `${anchorRect.rowH}px` } : null) } as CSSProperties) : undefined}
       >
         {content}
       </div>

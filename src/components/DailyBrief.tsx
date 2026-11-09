@@ -46,9 +46,14 @@ const FEEDS: FeedDef[] = [
   { url: "https://cointelegraph.com/rss", source: "CoinTelegraph", category: "crypto" },
   { url: "https://coindesk.com/arc/outboundfeeds/rss/", source: "CoinDesk", category: "crypto" },
   { url: "https://decrypt.co/feed", source: "Decrypt", category: "crypto" },
+  { url: "https://www.theblock.co/rss.xml", source: "The Block", category: "crypto" },
+  { url: "https://bitcoinmagazine.com/.rss/full/", source: "Bitcoin Magazine", category: "crypto" },
+  { url: "https://cryptoslate.com/feed/", source: "CryptoSlate", category: "crypto" },
+  { url: "https://cryptonews.com/news/feed/", source: "Cryptonews", category: "crypto" },
   // Stock market — filtered for crypto/macro relevance
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html", source: "CNBC Markets", category: "markets" },
   { url: "https://feeds.marketwatch.com/marketwatch/topstories/", source: "MarketWatch", category: "markets" },
+  { url: "https://www.investing.com/rss/news_301.rss", source: "Investing.com", category: "markets" },
   // Government / geopolitics — filtered for crypto/macro relevance
   { url: "https://feeds.bbci.co.uk/news/world/rss.xml", source: "BBC World", category: "geopolitics" },
   { url: "https://www.aljazeera.com/xml/rss/all.xml", source: "Al Jazeera", category: "geopolitics" },
@@ -173,7 +178,11 @@ async function fetchFeed(feed: FeedDef): Promise<BriefItem[]> {
         url: item.link,
         source: feed.source,
         category: feed.category,
-        pubDate: item.pubDate ? new Date(item.pubDate).getTime() : Date.now(),
+        // rss2json sends "YYYY-MM-DD HH:mm:ss" in UTC with no zone — read
+        // it as UTC (as local time it lands in the future → always "1m").
+        pubDate: item.pubDate
+          ? new Date(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(item.pubDate) ? `${item.pubDate.replace(" ", "T")}Z` : item.pubDate).getTime()
+          : Date.now(),
         thumbnail:
           item.thumbnail ||
           item.enclosure?.link ||
@@ -200,7 +209,7 @@ export async function fetchBrief(): Promise<BriefItem[]> {
     return true;
   });
 
-  return deduped.sort((a, b) => b.pubDate - a.pubDate).slice(0, 25);
+  return deduped.sort((a, b) => b.pubDate - a.pubDate).slice(0, 40);
 }
 
 // ── Featured video ────────────────────────────────────────────────────────────
@@ -325,6 +334,9 @@ interface Props {
 export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", onDismiss, initialState = "collapsed" }) => {
   const { t } = useTranslation();
   const [items, setItems] = useState<BriefItem[]>([]);
+  // First fetch finished (even with nothing) — until then the sheet shows
+  // placeholder rows instead of staying hidden.
+  const [briefDone, setBriefDone] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   // Forces a re-render every 30s purely so the "Updated Xm ago" label
   // next to the title keeps advancing between actual data refreshes —
@@ -429,7 +441,8 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
   // skipped on the very first load (knownUrlsRef starts null) so the whole
   // initial 25-item list doesn't animate in at once.
   const load = useCallback(async (cancelledRef?: { current: boolean }) => {
-    const brief = await fetchBrief();
+    const brief = await fetchBrief().catch(() => [] as BriefItem[]);
+    if (!cancelledRef?.current) setBriefDone(true);
     if (cancelledRef?.current || brief.length === 0) return;
     const freshUrls = new Set(brief.map((i) => i.url));
     if (knownUrlsRef.current) {
@@ -924,7 +937,10 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
     );
   }
 
-  if (items.length === 0 || chatActive) return null;
+  // Hidden only once the brief has genuinely come back empty; while it's
+  // still loading the sheet shows placeholder rows.
+  if (chatActive || (items.length === 0 && briefDone)) return null;
+  const briefLoading = items.length === 0;
 
   return (
     <>
@@ -1003,6 +1019,17 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
             "collapsed"/"minimized" is the actual fix, not a tighter clip. */}
         {sheetState !== "collapsed" && sheetState !== "minimized" && (
           <div className="db-card">
+            {briefLoading ? (
+              <div className="db-skel" aria-busy="true" aria-label="Loading the brief">
+                <span className="db-skel-hero" />
+                {[0, 1, 2, 3].map((i) => (
+                  <span key={i} className="db-skel-row" style={{ animationDelay: `${i * 0.1}s` }}>
+                    <span className="db-skel-thumb" />
+                    <span className="db-skel-lines"><i /><i /></span>
+                  </span>
+                ))}
+              </div>
+            ) : (
             <div className="db-card-list">
               {featuredCard}
               {latestRows.length > 0 && <div className="db-section-label">{t("dailyBrief.latest", "Your latest")}</div>}
@@ -1010,6 +1037,7 @@ export const DailyBrief: React.FC<Props> = ({ coinTickers, variant = "sheet", on
                 {latestRows}
               </div>
             </div>
+            )}
           </div>
         )}
       </div>

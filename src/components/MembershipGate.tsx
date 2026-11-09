@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Tier, hasAccess } from "../services/supabase";
 import { redirectToCheckout, previewUpgrade, upgradePlan, PRICE_IDS } from "../services/stripeService";
+import { isIAPAvailable } from "../services/revenuecat";
 import "../styles/AIQuotaWall.css";
 import "../styles/MembershipGate.css";
 
@@ -202,6 +203,9 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
   const priceId = isProGate ? PRICE_IDS.pro : PRICE_IDS.elite;
 
   const handleUpgrade = async () => {
+    // iOS app: purchases go through the App Store (UpgradeModal → IAP),
+    // never the Stripe web checkout (App Review guideline 3.1.1).
+    if (isIAPAvailable()) { onOpenUpgrade(); return; }
     if (needsProration) {
       // Existing subscriber → fetch prorated amount, show inline confirm
       setLoadingPlan(true);

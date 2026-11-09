@@ -1398,3 +1398,14 @@ html:not([data-theme="light"]) .db-sheet .db-card {
   background: #000;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
+
+/* Loading: a hero block + a few story rows, shimmering. */
+.db-skel { display: flex; flex-direction: column; gap: 14px; padding: 14px 16px 18px; }
+.db-skel-hero { display: block; height: 150px; border-radius: 14px; background: rgba(127, 127, 127, 0.14); animation: db-skel 1.3s ease-in-out infinite; }
+.db-skel-row { display: flex; align-items: center; gap: 12px; animation: db-skel 1.3s ease-in-out infinite; }
+.db-skel-thumb { flex: 0 0 56px; height: 56px; border-radius: 10px; background: rgba(127, 127, 127, 0.14); }
+.db-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.db-skel-lines i { display: block; height: 9px; border-radius: 5px; background: rgba(127, 127, 127, 0.16); }
+.db-skel-lines i:last-child { width: 55%; }
+@keyframes db-skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .db-skel-hero, .db-skel-row { animation: none; } }

@@ -1,0 +1,437 @@
+/* Markets page (desktop): Coinbase-style stories carousel. */
+.mkst {
+  --mkst-line: color-mix(in srgb, var(--color-text) 5%, transparent);
+  --mkst-muted: color-mix(in srgb, var(--color-text) 62%, transparent);
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  margin: 0 0 20px;
+  border-bottom: 1px solid var(--mkst-line);
+}
+.mkst-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Coinbase-style: the previous item peeks in on the left, faded out,
+     and the next one fades out on the right. */
+  scroll-padding-left: 140px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 150px, #000 calc(100% - 90px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, rgba(0,0,0,0.25) 40px, #000 150px, #000 calc(100% - 90px), transparent 100%);
+}
+.mkst-track::-webkit-scrollbar { display: none; }
+.mkst-panel {
+  /* 340px content → photos ~340×234, same as Coinbase's. */
+  flex: 0 0 436px;
+  box-sizing: border-box;
+  padding: 32px 48px 28px;
+  transition: background 0.18s ease;
+  cursor: pointer;
+  scroll-snap-align: start;
+  border-right: 1px solid var(--mkst-line);
+  display: flex;
+  /* Every card's content sits in the vertical middle of the row. */
+  align-items: center;
+}
+.mkst-panel:last-child { border-right: none; }
+.mkst-panel--wide { flex-basis: 824px; }
+.mkst-panel--odds { flex-basis: 490px; }
+/* Super light grey behind the item you're pointing at. */
+.mkst-panel:hover { background: color-mix(in srgb, var(--color-text) 1.2%, transparent); }
+/* Dark backgrounds need a stronger tint to read at all. */
+html:not([data-theme="light"]) .mkst-panel:hover { background: rgba(255, 255, 255, 0.045); }
+.mkst-pair { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 48px; width: 100%; }
+.mkst-panel > * { width: 100%; }
+
+/* Shared text */
+.mkst-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mkst-muted);
+  margin-bottom: 14px;
+}
+.mkst-title,
+.mkst-title:hover {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  margin-bottom: 14px;
+}
+.mkst-title:hover { opacity: 0.8; }
+.mkst-foot { margin-top: 14px; font-size: 15px; color: var(--color-text); }
+
+/* News */
+.mkst-news { display: flex; flex-direction: column; }
+.mkst-news-img,
+.mkst-news-img:hover {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  /* Coinbase's story photos: ~1.45:1 with a hairline edge. */
+  aspect-ratio: 1.45;
+  border-radius: 16px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+  outline-offset: -1px;
+}
+.mkst-news-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.2s ease; }
+/* Single story card: the photo fills the whole card (full width and
+   height), a dark fade at the bottom, white text on top. The image is
+   positioned against the panel itself, so panel padding doesn't matter;
+   :hover is listed so the reset above can't undo it. */
+.mkst-panel:has(> .mkst-news) { position: relative; overflow: hidden; align-items: flex-end; min-height: 380px; padding: 40px 56px 40px; }
+@media (max-width: 1512px) {
+  .mkst-panel:has(> .mkst-news) { padding: 34px 46px 34px; }
+}
+.mkst-panel > .mkst-news > .mkst-news-img,
+.mkst-panel > .mkst-news > .mkst-news-img:hover {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  border-radius: 0;
+  outline: none;
+  z-index: 0;
+}
+.mkst-panel:has(> .mkst-news)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.5) 62%, rgba(0, 0, 0, 0.86) 100%);
+}
+.mkst-panel > .mkst-news > :not(.mkst-news-img) { position: relative; z-index: 1; }
+.mkst-panel > .mkst-news .mkst-news-meta { color: rgba(255, 255, 255, 0.8); }
+.mkst-panel > .mkst-news .mkst-news-text { color: #fff; font-weight: 600; font-size: 16px; }
+.mkst-panel > .mkst-news .mkst-more { color: rgba(255, 255, 255, 0.85); }
+.mkst-panel:has(> .mkst-news):hover { background: none; }
+.mkst-panel:has(> .mkst-news):hover .mkst-news-img img { opacity: 0.9; }
+.mkst-news-img:hover img { opacity: 0.92; }
+/* Generic cover (story without a photo). */
+.mkst-cover { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: flex-end; overflow: hidden; }
+.mkst-news-img { position: relative; }
+.mkst-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 14px 14px;
+  -webkit-mask-image: linear-gradient(200deg, #000, transparent 70%);
+  mask-image: linear-gradient(200deg, #000, transparent 70%);
+}
+.mkst-cover-mark {
+  position: relative;
+  margin: 18px 22px 0 0;
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.22);
+}
+.mkst-news-text {
+  margin: 16px 0 10px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--mkst-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mkst-more,
+.mkst-more:hover {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--mkst-muted);
+}
+.mkst-more:hover { color: var(--color-text); }
+
+/* Odds */
+.mkst-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-bottom: 18px; font-size: 14.5px; color: var(--mkst-muted); }
+.mkst-legend-item { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.mkst-legend-item i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.mkst-legend-item b { color: var(--color-text); font-weight: 700; margin-left: 2px; }
+
+/* Chart box: plot + right axis labels */
+.mkst-chart { display: flex; gap: 10px; height: 150px; padding: 8px 0; }
+.mkst-chart--coin { height: 170px; margin-top: 18px; }
+.mkst-plot { position: relative; flex: 1; min-width: 0; }
+.mkst-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mkst-grid { position: absolute; left: 0; right: 0; border-top: 1px dotted color-mix(in srgb, var(--color-text) 22%, transparent); }
+.mkst-axis { display: flex; flex-direction: column; justify-content: space-between; margin: -8px 0; font-size: 12px; color: var(--mkst-muted); font-variant-numeric: tabular-nums; }
+.mkst-enddot {
+  position: absolute;
+  right: 0;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px -4.5px 0 0;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* Coin */
+.mkst-coin-head,
+.mkst-coin-head:hover {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mkst-coin-head img { width: 34px; height: 34px; border-radius: 9px; }
+.mkst-coin-sym { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; color: var(--color-text); }
+.mkst-coin-name { font-size: 20px; color: var(--mkst-muted); }
+.mkst-coin-rank {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+}
+.mkst-coin-price { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; font-size: 20px; font-weight: 600; color: var(--color-text); }
+.mkst-coin-price span { font-size: 16px; font-weight: 500; }
+
+/* Arrows */
+.mkst-arrow,
+.mkst-arrow:hover {
+  all: unset;
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  margin-top: -23px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text);
+  /* Always there, but see-through until hovered. */
+  background: color-mix(in srgb, var(--color-background, #fff) 55%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, transparent);
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.mkst-arrow:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-background, #fff) 85%, transparent);
+}
+/* Same specificity as the :hover reset above, so hover never moves them. */
+.mkst-arrow.mkst-arrow--prev { left: 14px; }
+.mkst-arrow.mkst-arrow--next { right: 14px; }
+
+/* ── Motion ──────────────────────────────────────────────────────────── */
+/* Panels fade up one after another on first load. */
+.mkst-panel { animation: mkst-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes mkst-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* Chart lines draw themselves in; the coin's area fades in after. */
+.mkst-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: mkst-draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards; }
+@keyframes mkst-draw { to { stroke-dashoffset: 0; } }
+.mkst-area { opacity: 0; animation: mkst-fade 0.8s ease 1.2s forwards; }
+@keyframes mkst-fade { to { opacity: 1; } }
+/* "Now" dots pulse like a live feed (after the line arrives). */
+.mkst-enddot { opacity: 0; animation: mkst-fade 0.3s ease 1.7s forwards, mkst-pulse 2s ease-out 2s infinite; }
+@keyframes mkst-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+  70% { box-shadow: 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+/* LIVE tag on odds. */
+.mkst-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #16a34a;
+  background: color-mix(in srgb, #16a34a 10%, transparent);
+  vertical-align: 1px;
+}
+.mkst-live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: mkst-blink 1.4s ease-in-out infinite; }
+@keyframes mkst-blink { 50% { opacity: 0.25; } }
+/* News: source · time with a category dot. */
+.mkst-news-meta { display: flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 12.5px; font-weight: 600; color: var(--mkst-muted); }
+.mkst-news-meta span { opacity: 0.5; }
+.mkst-news-meta + .mkst-news-text { margin-top: 6px; }
+.mkst-cat { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; }
+.mkst-cat--markets { background: #3b82f6; }
+.mkst-cat--geopolitics { background: #a855f7; }
+@media (prefers-reduced-motion: reduce) {
+  .mkst-panel, .mkst-draw, .mkst-area, .mkst-enddot, .mkst-live i { animation: none; opacity: 1; stroke-dashoffset: 0; }
+}
+
+/* ── Under the carousel: dots + Auto-play switch ─────────────────────── */
+.mkst-wrap { margin: 0 0 20px; }
+.mkst-wrap > .mkst { margin-bottom: 0; }
+.mkst-ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 6px 16px 0;
+}
+.mkst-dots { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* Phones: just the dots, centred. */
+.mkst-ctrl--phone { justify-content: center; min-height: 0; padding: 10px 0 0; }
+@media (max-width: 960px) {
+  .mkst-wrap { margin-bottom: 6px; }
+}
+.mkst-dot,
+.mkst-dot:hover {
+  all: unset;
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  transition: width 0.25s ease, background 0.2s ease;
+}
+.mkst-dot:hover { background: color-mix(in srgb, var(--color-text) 35%, transparent); }
+/* Outer dots of the window shrink — there's more beyond. */
+.mkst-dot--sm, .mkst-dot--sm:hover { width: 5px; height: 5px; }
+.mkst-dot--xs, .mkst-dot--xs:hover { width: 3px; height: 3px; }
+/* Current position: a longer pill that fills up until the next slide. */
+.mkst-dot--on,
+.mkst-dot--on:hover { width: 26px; background: color-mix(in srgb, var(--color-text) 18%, transparent); }
+.mkst-dot--on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #3861fb;
+  transform-origin: left;
+}
+.mkst-dot--run::after { animation: mkst-dot-fill var(--mkst-auto, 6000ms) linear both; }
+@keyframes mkst-dot-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.mkst-auto,
+.mkst-auto:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--mkst-muted, var(--color-text-muted));
+}
+.mkst-auto:hover { color: var(--color-text); }
+.mkst-auto-sw {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 18%, transparent);
+  transition: background 0.2s ease;
+}
+.mkst-auto-sw i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+.mkst-auto--on .mkst-auto-sw { background: #3861fb; }
+.mkst-auto--on .mkst-auto-sw i { transform: translateX(12px); }
+.mkst-auto:focus-visible { outline: 2px solid #3861fb; outline-offset: 3px; border-radius: 6px; }
+
+/* Loading */
+.mkst--loading .mkst-panel { height: 380px; }
+.mkst-skel {
+  width: 100%;
+  border-radius: 16px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-text) 5%, transparent), color-mix(in srgb, var(--color-text) 10%, transparent), color-mix(in srgb, var(--color-text) 5%, transparent));
+  background-size: 200% 100%;
+  animation: mkst-shimmer 1.4s linear infinite;
+}
+@keyframes mkst-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (max-width: 1512px) {
+  .mkst-panel { flex-basis: 384px; padding: 26px 38px 22px; }
+  .mkst-panel--wide { flex-basis: 760px; }
+  .mkst-panel--odds { flex-basis: 430px; }
+  .mkst-pair { gap: 38px; }
+  .mkst-title,
+  .mkst-title:hover { font-size: 24px; }
+}
+
+/* ── Phones (mobile web + iOS app): swipe through cards that take most of
+   the screen, the next one peeking in; no arrows, smaller type. ──────── */
+@media (max-width: 960px) {
+  /* Stays inside the page's own padding — nothing wider than the screen
+     (a wider row lets the whole page drag sideways on iOS). */
+  .mkst { margin: 0 0 16px; border-bottom: none; }
+  /* One card centred at a time; the neighbours peek in on both sides and
+     fade out toward the edges. */
+  .mkst-track {
+    scroll-padding-left: 0;
+    gap: 10px;
+    /* No edge fade on phones. */
+    -webkit-mask-image: none;
+    mask-image: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .mkst-panel,
+  .mkst-panel--odds,
+  .mkst-panel--wide {
+    /* Full width of the row; the faded edges stay (mask on the track). */
+    flex-basis: 100%;
+    max-width: none;
+    scroll-snap-align: center;
+    padding: 20px 20px 18px;
+    border-right: none;
+    border-radius: 0;
+    border: 1px solid var(--mkst-line);
+  }
+  /* Only the photo cards are rounded. */
+  /* The photo sits 8px in from each side (same card width as the rest, so
+     swiping stays even); the photo and its fade carry the rounded corners. */
+  .mkst-panel:has(> .mkst-news) { min-height: 360px; padding: 22px 30px 20px; border: none; border-radius: 0; }
+  .mkst-panel > .mkst-news > .mkst-news-img,
+  .mkst-panel > .mkst-news > .mkst-news-img:hover { inset: 0 8px; border-radius: 16px; }
+  .mkst-panel:has(> .mkst-news)::after { inset: 0 8px; border-radius: 16px; }
+  .mkst-panel:hover { background: none; }
+  .mkst-arrow { display: none; }
+  .mkst-title,
+  .mkst-title:hover { font-size: 21px; }
+  .mkst-legend { font-size: 13px; gap: 4px 14px; margin-bottom: 12px; }
+  .mkst-chart { height: 120px; }
+  .mkst-chart--coin { height: 130px; margin-top: 12px; }
+  .mkst-coin-sym { font-size: 24px; }
+  .mkst-coin-name { font-size: 16px; }
+  .mkst-coin-head img { width: 28px; height: 28px; }
+  .mkst-coin-price { font-size: 17px; margin-top: 10px; }
+  .mkst-foot { font-size: 13.5px; margin-top: 10px; }
+  .mkst-panel > .mkst-news .mkst-news-text { font-size: 15px; }
+  .mkst--loading .mkst-panel { height: 300px; }
+}

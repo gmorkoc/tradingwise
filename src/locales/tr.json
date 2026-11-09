@@ -708,7 +708,7 @@
           "Zincir Üzeri YZ Analizi",
           "Fiyat Tahmin Grafiği",
           "Tasfiye Isı Haritası YZ",
-          "Mum İçi Analiz",
+          "Mum Analizi",
           "Coinbase Premium YZ",
           "Haftada 100 YZ isteği"
         ]
@@ -787,7 +787,7 @@
     "lf": {
       "elitePro": "Sınırsız YZ isteği",
       "agentReady": "Agent Ready — YZ Trading Sohbeti",
-      "candleai": "Mum İçi Analiz",
+      "candleai": "Mum Analizi",
       "coinbase": "Coinbase Premium YZ",
       "earlyAccess": "Yeni özelliklere erken erişim",
       "aiMkt": "YZ Piyasa İstihbaratı",
@@ -917,7 +917,7 @@
             "Senaryolu fiyat tahmini",
             "Tasfiye ısı haritası YZ",
             "Özel Strateji Uyarıları",
-            "Mum İçi Analiz",
+            "Mum Analizi",
             "Coinbase Premium YZ",
             "Haftada 100 YZ isteği"
           ]
@@ -1302,7 +1302,7 @@
     "loading": "En çok yükselenler yükleniyor…"
   },
   "chartAnalyze": {
-    "title": "Grafik Analiz Et",
+    "title": "Grafik Analizörü",
     "subtitle": "Bir grafik yükle veya fotoğrafını çek, YZ ile gerçek bir teknik analiz al.",
     "gateDesc": "Bir grafik ekran görüntüsü yükle ve tam bir YZ teknik analizi al — formasyonlar, seviyeler ve gerçek bir değerlendirme.",
     "aiRead": "YZ Okuması",
@@ -1369,7 +1369,7 @@
     "heatmap": "Isı Haritası",
     "alerts": "Uyarılar",
     "watchlist": "İzleme Listesi",
-    "analyzeChart": "Grafik Analiz Et",
+    "analyzeChart": "Grafik Analizörü",
     "gann": "Gann",
     "live": "CANLI",
     "etf": "ETF Akışları",
@@ -1378,7 +1378,7 @@
     "orderflow": "Akıllı Para",
     "signals": "Uyum",
     "fundingbot": "Fonlama Botu",
-    "candleai": "Mumun İçi YZ",
+    "candleai": "Mum Analizi",
     "markets": "Küresel Piyasalar",
     "riskcalc": "Pozisyon Hesaplayıcı",
     "settings": "Ayarlar",

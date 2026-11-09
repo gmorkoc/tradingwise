@@ -1680,6 +1680,10 @@ html:not([data-theme="light"]) .gmh-pill--ask { color: #bfdbfe; }
 /* Cards keep roughly the reference size (~400px+): 4 across only when the
    Markets column is wide enough, otherwise a 2×2 grid. */
 .gmh-block { container-type: inline-size; container-name: gmh; display: flex; flex-direction: column; gap: 12px; }
+/* Desktop: a bit more air between the cards, the pills and the coin table. */
+@media (min-width: 961px) {
+  .gmh-block { gap: 18px; margin-bottom: 8px; }
+}
 .gmh { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 0; }
 /* Four across from 1000px of column width — 14" MacBooks (1512px screen)
    included — with tighter cards between 1000 and 1559px. */

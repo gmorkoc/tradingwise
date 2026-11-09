@@ -7,19 +7,69 @@
   position: fixed;
   inset: 0;
   z-index: 300000;
+  /* Dimmed backdrop while searching (Coinbase), fading in. */
+  background: rgba(10, 11, 13, 0.32);
+  animation: gs-dim-in 0.25s ease both;
 }
+@keyframes gs-dim-in { from { opacity: 0; } to { opacity: 1; } }
+/* Coinbase layout: the field sits in the header row itself (over the
+   icons), and the results are a separate card starting right under the
+   header. The wrapper is only a positioning shell. */
 .gs-anchored {
   position: fixed;
   z-index: 300001;
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  animation: gs-slide-in 0.15s ease;
+  background: none;
 }
+.gs-anchored .gs-input-row { height: var(--gs-row-h, 72px); }
+/* The field: Coinbase's blue-outlined grey pill, growing right → left out
+   of the round search button. */
+.gs-anchored .gs-input-wrap {
+  height: 46px;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 0 4px 0 16px;
+  border: 2px solid #0052ff;
+  background: #eef0f3;
+  animation: gs-grow-rtl 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes gs-grow-rtl {
+  from { clip-path: inset(0 0 0 calc(100% - 46px) round 23px); }
+  to { clip-path: inset(0 0 0 0 round 23px); }
+}
+/* Results card: solid, squared-off top flush with the header's bottom. */
+.gs-anchored .gs-list,
+.gs-anchored .gs-footer {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  animation: gs-results-in 0.28s ease 0.14s both;
+}
+.gs-anchored .gs-list {
+  max-height: min(520px, calc(100vh - var(--gs-row-h, 72px) - 60px));
+  border-bottom: none;
+  border-radius: 20px 0 0 0;
+  padding-top: 8px;
+}
+.gs-anchored .gs-footer {
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 20px 20px;
+  opacity: 1;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+@keyframes gs-results-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gs-anchored .gs-input-wrap, .gs-anchored .gs-list, .gs-anchored .gs-footer { animation: none; }
+}
+html:not([data-theme="light"]) .gs-anchored .gs-list,
+html:not([data-theme="light"]) .gs-anchored .gs-footer { background: #15161b; }
+html:not([data-theme="light"]) .gs-anchored-catcher { background: rgba(0, 0, 0, 0.5); }
+.gs-anchored .gs-input-wrap:focus-within { border-color: #0052ff; }
+.gs-anchored .gs-input-icon { color: #0052ff; }
+html:not([data-theme="light"]) .gs-anchored .gs-input-wrap { background: #1f2026; }
 
 @keyframes gs-slide-in {
   from { opacity: 0; transform: translateY(-8px); }

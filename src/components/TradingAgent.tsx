@@ -9,15 +9,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { supabase, hasAccess } from "../services/supabase";
 import { CoinSymbol } from "../services/coinglass";
 import type { Ticker24h } from "../services/coinglass";
-import { fetchTopMarketCoins } from "../services/coinglass";
+import { fetchTopMarketCoins, fetchTopGainers, type TopMarketCoin } from "../services/coinglass";
+import { fetchBrief, type BriefItem } from "./DailyBrief";
 
-/** $1.52T / $84.3B / $912M — compact dollar amounts for the coin row. */
-function fmtUsdCompact(v: number): string {
-  if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
-  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
-  return `$${Math.round(v).toLocaleString()}`;
-}
 import { AgentChartModal } from "./AgentChartModal";
 import { LiquidationGauge } from "./LiquidationGauge";
 import { formatLivePrice } from "./PriceChart";
@@ -1207,14 +1201,16 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
   // Loaded live from CoinGecko (ranked by market cap, cached 5 min),
   // skipping stablecoins and wrapped/staked tokens; this list is only the
   // fallback if that fetch fails.
-  const [openerCoins, setOpenerCoins] = useState<{ symbol: string; name: string; image?: string | null; marketCap?: number; volume24h?: number }[]>([
-    { symbol: "BTC", name: "Bitcoin" },
-    { symbol: "ETH", name: "Ethereum" },
-    { symbol: "XRP", name: "XRP" },
-    { symbol: "BNB", name: "BNB" },
-    { symbol: "SOL", name: "Solana" },
-  ]);
+  // Live data only (no built-in list) — empty until CoinGecko answers.
+  const [openerCoins, setOpenerCoins] = useState<TopMarketCoin[]>([]);
   const [openerCoinsLoading, setOpenerCoinsLoading] = useState(true);
+  // New-chat opener extras: Market cap / Top gainers tabs (10 each, 5
+  // shown until "more"), plus a row of the latest crypto headlines.
+  const [openerGainers, setOpenerGainers] = useState<TopMarketCoin[]>([]);
+  const [openerTab, setOpenerTab] = useState<"cap" | "gainers">("cap");
+  const [openerMore, setOpenerMore] = useState(false);
+  const [openerNews, setOpenerNews] = useState<BriefItem[]>([]);
+  const [openerNewsLoading, setOpenerNewsLoading] = useState(true);
   // "Thinking…" shown for a beat before the opener greeting appears.
   const [openerThinking, setOpenerThinking] = useState(false);
   // The coin row shows under the greeting of a brand-new chat only.
@@ -1231,14 +1227,28 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
     ]);
     // Short "scanning" moment even when the data is cached, so the row
     // reads as freshly picked rather than popping in.
+    setOpenerMore(false);
     Promise.all([
-      fetchTopMarketCoins(5, SKIP).catch(() => [] as Awaited<ReturnType<typeof fetchTopMarketCoins>>),
+      fetchTopMarketCoins(10, SKIP).catch(() => [] as TopMarketCoin[]),
+      fetchTopGainers(10, SKIP).catch(() => [] as TopMarketCoin[]),
       new Promise((r) => setTimeout(r, 2000)),
-    ]).then(([top]) => {
+    ]).then(([top, gainers]) => {
       if (!alive) return;
-      if (top.length === 5) setOpenerCoins(top);
+      setOpenerCoins(top);
+      setOpenerGainers(gainers);
       setOpenerCoinsLoading(false);
     });
+    // Latest crypto headlines (same feed as the Daily Brief).
+    setOpenerNewsLoading(true);
+    fetchBrief()
+      .finally(() => { if (alive) setOpenerNewsLoading(false); })
+      .then((all) => {
+        if (!alive) return;
+        // Newest crypto stories, ones with a photo first.
+        const crypto = all.filter((n) => n.category === "crypto");
+        setOpenerNews([...crypto.filter((n) => n.thumbnail), ...crypto.filter((n) => !n.thumbnail)].slice(0, 6));
+      })
+      .catch(() => {});
     return () => { alive = false; };
   }, [coinRowVisible]);
   // Fires once per brand-new, zero-message conversation (after consent is
@@ -3052,60 +3062,125 @@ export function TradingAgent({ selectedCoin, hideTrigger, isMobile, coinTickers,
                     I'm checking the market for the best options for ya
                     <span className="ta-dots" aria-hidden="true"><i /><i /><i /></span>
                   </p>
-                  <div className="ta-coin-list" aria-hidden="true">
+                  <div className="ta-op-row" aria-hidden="true">
                     {Array.from({ length: 5 }, (_, i) => (
-                      <span key={i} className="ta-coin-row ta-coin-row--skel" style={{ animationDelay: `${i * 0.12}s` }}>
+                      <span key={i} className="ta-op-card ta-op-card--skel" style={{ animationDelay: `${i * 0.12}s` }}>
                         <span className="ta-coin-skel-logo" />
-                        <span className="ta-coin-row-id">
+                        <span className="ta-op-text">
                           <span className="ta-coin-skel-line" />
                           <span className="ta-coin-skel-line ta-coin-skel-line--short" />
                         </span>
-                        <span className="ta-coin-skel-line ta-coin-skel-line--stat" />
                       </span>
                     ))}
                   </div>
                 </div>
               ) : (
               <>
-              <p className="ta-coin-pick-cap">
-                Top 5 by market cap right now · tap one to start
-                <span className="ta-coin-pick-sub">Looking for something else? Just tell me which coin.</span>
-              </p>
-              <div className="ta-coin-list" role="list" aria-label="Top 5 coins by market cap">
-                {openerCoins.map((c, i) => (
-                  <button
-                    key={c.symbol}
-                    type="button"
-                    role="listitem"
-                    className="ta-coin-row"
-                    style={{ animationDelay: `${i * 0.06}s` }}
-                    aria-label={`Start with ${c.name}`}
-                    onClick={() => handleSend(c.name !== c.symbol ? `Let's look at ${c.name} (${c.symbol}). What's your read right now?` : `Let's look at ${c.symbol}. What's your read right now?`)}
-                  >
-                    <span className="ta-coin-row-rank">{i + 1}</span>
-                    <span className="ta-coin-chip-logo">
-                      <img
-                        src={c.image ?? `https://assets.coincap.io/assets/icons/${c.symbol.toLowerCase()}@2x.png`}
-                        alt=""
-                        loading="lazy"
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                      <span className="ta-coin-chip-fallback" aria-hidden="true">{c.symbol[0]}</span>
-                    </span>
-                    <span className="ta-coin-row-id">
-                      <span className="ta-coin-row-sym">{c.symbol}</span>
-                      <span className="ta-coin-row-name">{c.name}</span>
-                    </span>
-                    {c.marketCap ? (
-                      <span className="ta-coin-row-stats">
-                        <span className="ta-coin-row-cap">{fmtUsdCompact(c.marketCap)}</span>
-                        {c.volume24h ? <span className="ta-coin-row-vol">Vol {fmtUsdCompact(c.volume24h)}</span> : null}
-                      </span>
-                    ) : null}
-                    <svg className="ta-coin-row-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-                  </button>
-                ))}
+              {/* Market cap / Top gainers — a sideways row of coin cards
+                  (5, then "+5 more"); tap a card to start with that coin. */}
+              <div className="ta-op-head">
+                <div className="ta-op-tabs" role="tablist" aria-label="Coin list">
+                  {([["cap", "Market cap"], ["gainers", "Top gainers"]] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={openerTab === id}
+                      className={`ta-op-tab${openerTab === id ? " ta-op-tab--on" : ""}`}
+                      onClick={() => { setOpenerTab(id); setOpenerMore(false); }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <span className="ta-coin-pick-sub">Tap one to start — or just tell me a coin.</span>
               </div>
+              {(() => {
+                const all = openerTab === "cap" ? openerCoins : openerGainers;
+                const shown = openerMore ? all : all.slice(0, 5);
+                if (!all.length) return (
+                  <p className="ta-coin-pick-sub">
+                    {openerTab === "gainers" && openerCoins.length ? "No gainers in the top 100 right now." : "Market data isn't loading right now — just tell me which coin."}
+                  </p>
+                );
+                return (
+                  <div className="ta-op-row" role="list" aria-label={openerTab === "cap" ? "Top coins by market cap" : "Top gainers, 24h"}>
+                    {shown.map((c, i) => {
+                      const chg = c.change24h;
+                      return (
+                        <button
+                          key={`${openerTab}:${c.symbol}`}
+                          type="button"
+                          role="listitem"
+                          className="ta-op-card"
+                          style={{ animationDelay: `${(i % 5) * 0.05}s` }}
+                          aria-label={`Start with ${c.name}`}
+                          onClick={() => handleSend(c.name !== c.symbol ? `Let's look at ${c.name} (${c.symbol}). What's your read right now?` : `Let's look at ${c.symbol}. What's your read right now?`)}
+                        >
+                          <span className="ta-coin-chip-logo">
+                            <img
+                              src={c.image ?? `https://assets.coincap.io/assets/icons/${c.symbol.toLowerCase()}@2x.png`}
+                              alt=""
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = "none"; }}
+                            />
+                            <span className="ta-coin-chip-fallback" aria-hidden="true">{c.symbol[0]}</span>
+                          </span>
+                          <span className="ta-op-text">
+                            <span className="ta-op-sym">{c.symbol}</span>
+                            <span className={`ta-op-chg ta-op-chg--${chg >= 0 ? "up" : "down"}`}>{chg >= 0 ? "+" : "−"}{Math.abs(chg).toFixed(1)}%</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {!openerMore && all.length > 5 && (
+                      <button type="button" className="ta-op-more" onClick={() => setOpenerMore(true)}>
+                        +{all.length - 5} more
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+              {/* Headlines still loading: a row of placeholder cards. */}
+              {openerNewsLoading && openerNews.length === 0 && (
+                <>
+                  <p className="ta-op-label">Headlines</p>
+                  <div className="ta-op-row" aria-hidden="true">
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="ta-op-news ta-op-news--skel" style={{ animationDelay: `${i * 0.12}s` }}>
+                        <span className="ta-op-news-skel-img" />
+                        <span className="ta-coin-skel-line" />
+                        <span className="ta-coin-skel-line ta-coin-skel-line--short" />
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              {/* Latest crypto headlines — tap to ask the agent about it. */}
+              {openerNews.length > 0 && (
+                <>
+                  <p className="ta-op-label">Headlines</p>
+                  <div className="ta-op-row" role="list" aria-label="Latest crypto headlines">
+                    {openerNews.map((n, i) => (
+                      <button
+                        key={n.url}
+                        type="button"
+                        role="listitem"
+                        className="ta-op-news"
+                        style={{ animationDelay: `${i * 0.05}s` }}
+                        onClick={() => handleSend(`What does this headline mean for the market: "${n.title}" (${n.source})?`)}
+                      >
+                        {/* Photo when the story has one (hidden if it fails to load). */}
+                        {n.thumbnail ? (
+                          <img className="ta-op-news-img" src={n.thumbnail} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                        ) : null}
+                        <span className="ta-op-news-title">{n.title}</span>
+                        <span className="ta-op-news-meta">{n.source}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               </>
               )}
               </div>

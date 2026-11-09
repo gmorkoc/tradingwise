@@ -13,16 +13,18 @@ import { useAuth } from "../contexts/AuthContext";
 import { startProVisionTrial } from "../services/supabase";
 import { PROVISION_PRICE_ID, redirectToCheckout } from "../services/stripeService";
 import { getProVisionIAPPackage, isIAPAvailable, purchaseProVisionIAP, syncIAPEntitlement } from "../services/revenuecat";
+import "../styles/MembershipGate.css";
+import "../styles/PaywallPromo.css";
 
 export const PV_PLAN_PRICE = "$99";
 
-const FEATURES: { title: string; text: string }[] = [
-  { title: "Trend-painted chart", text: "Candles and an EMA ribbon coloured by trend, so direction is obvious at a glance." },
-  { title: "Buy / Sell signals", text: "Labels where the trend flips, STRONG signals when every check agrees, take-profit marks." },
-  { title: "Invalidation zone", text: "Where a signal is proven wrong, with real buy-vs-sell volume." },
-  { title: "Live Signal Check", text: "Seven indicators, buyers vs sellers and five timeframes, updating every few seconds." },
-  { title: "Safeguards", text: "Sideways-market detection, news-spike guard and macro-event pauses." },
-  { title: "Honest track record", text: "Every past signal on the chart, scored after fees." },
+const FEATURES: { title: string; text: string; icon: React.ReactNode }[] = [
+  { title: "Trend-painted chart", text: "Candles and an EMA ribbon coloured by trend, so direction is obvious at a glance.", icon: <><path d="M3 17l5-5 4 3 8-8" /><path d="M15 7h5v5" /></> },
+  { title: "Buy / Sell signals", text: "Labels where the trend flips, STRONG signals when every check agrees, take-profit marks.", icon: <><path d="M7 17V7M17 7v10" /><path d="m4 10 3-3 3 3M14 14l3 3 3-3" /></> },
+  { title: "Invalidation zone", text: "Where a signal is proven wrong, with real buy-vs-sell volume.", icon: <><rect x="3" y="8" width="18" height="8" rx="2" /><path d="M7 12h10" /></> },
+  { title: "Live Signal Check", text: "Seven indicators, buyers vs sellers and five timeframes, updating every few seconds.", icon: <><path d="M12 20a8 8 0 1 1 8-8" /><path d="M12 12l4-4" /></> },
+  { title: "Safeguards", text: "Sideways-market detection, news-spike guard and macro-event pauses.", icon: <><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></> },
+  { title: "Honest track record", text: "Every past signal on the chart, scored after fees.", icon: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></> },
 ];
 
 interface Props {
@@ -69,60 +71,91 @@ export function ProVisionPaywall({
         : `Full ProVision on every coin and timeframe for ${PV_TRIAL_DAYS} days. No card needed.`;
 
   return (
+    // Same card as the Pro / Elite upgrade popup (BlurGate's .bg-elite-card,
+    // laid out by PaywallPromo.css), in ProVision purple.
     <BottomSheet
       open={open}
       onClose={onClose}
       ariaLabel="ProVision"
-      className="pvp-sheet"
+      className="paywall-promo-sheet paywall-promo-sheet--pv"
       desktopModal
     >
-      <div className="pvp">
-        <div className="pvp-hero">
-          <span className="pvp-orb" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
-          </span>
-          <span className="pvp-kicker">{head.kicker}</span>
-          <h2 className="pvp-title">{head.title}</h2>
-          <p className="pvp-sub">{sub}</p>
-        </div>
+      <div className="bg-root bg-root--promo">
+        <div className="bg-overlay">
+          <div className="bg-elite-card bg-elite-card--pv">
+            {/* Top bar: badge + price */}
+            <div className="bg-elite-top">
+              <div className="bg-elite-badge">✦ PROVISION</div>
+              <div className="bg-elite-price-wrap">
+                <span className="bg-elite-price">{PV_PLAN_PRICE}</span>
+                <span className="bg-elite-per">/yr</span>
+              </div>
+            </div>
 
-        <ul className="pvp-list">
-          {FEATURES.map((f) => (
-            <li key={f.title} className="pvp-item">
-              <span className="pvp-check" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+            {/* Headline */}
+            <div className="bg-elite-headline">
+              <span className="bg-elite-eyebrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="4" y="11" width="16" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                {head.kicker}
               </span>
-              <span><strong>{f.title}.</strong> {f.text}</span>
-            </li>
-          ))}
-        </ul>
+              <h3>{head.title}</h3>
+              <p>{sub}</p>
+            </div>
 
-        <div className="pvp-actions">
-          {reason === "signin" && (
-            <button type="button" className="pvp-cta" onClick={onSignIn} disabled={busy}>
-              Sign up to start your free trial
-            </button>
-          )}
-          {reason === "trial-available" && (
-            <button type="button" className="pvp-cta" onClick={onStartTrial} disabled={busy}>
-              {busy ? "Starting…" : `Start ${PV_TRIAL_DAYS}-day free trial`}
-            </button>
-          )}
-          {(reason === "trial-ended" || reason === "trial-active" || reason === "pro-limit") && (
-            <button type="button" className="pvp-cta" onClick={onBuyPlan} disabled={busy}>
-              {busy ? "Opening…" : <>Get ProVision · {PV_PLAN_PRICE}/year</>}
-            </button>
-          )}
-          {reason === "pro-limit" && (
-            <button type="button" className="pvp-alt" onClick={onUpgradeElite} disabled={busy}>
-              Or go Elite: ProVision included
-            </button>
-          )}
-          {(reason === "signin" || reason === "trial-available") && (
-            <span className="pvp-fine">Then {PV_PLAN_PRICE}/year if you keep it. Cancel anytime.</span>
-          )}
-          {error && <span className="pvp-error" role="alert">{error}</span>}
-          <span className="pvp-fine">Signals are tools, not financial advice.</span>
+            {/* Feature grid */}
+            <div className="bg-elite-features">
+              {FEATURES.map((f) => (
+                <div key={f.title} className="bg-elite-feature">
+                  <span className="bg-elite-feat-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{f.icon}</svg>
+                  </span>
+                  <div>
+                    <p className="bg-elite-feat-title">{f.title}</p>
+                    <p className="bg-elite-feat-desc">{f.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            {reason === "signin" && (
+              <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onSignIn} disabled={busy}>
+                Sign up to start your free trial
+              </button>
+            )}
+            {reason === "trial-available" && (
+              <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onStartTrial} disabled={busy}>
+                {busy ? "Starting…" : `Start ${PV_TRIAL_DAYS}-day free trial`}
+              </button>
+            )}
+            {(reason === "trial-ended" || reason === "trial-active" || reason === "pro-limit") && (
+              <button type="button" className="bg-elite-cta bg-elite-cta--pv" onClick={onBuyPlan} disabled={busy}>
+                {busy ? "Opening…" : <>{reason === "trial-ended" ? "Keep ProVision" : "Get ProVision"} — {PV_PLAN_PRICE}/year</>}
+              </button>
+            )}
+            {error && <p className="bg-pv-error" role="alert">{error}</p>}
+
+            <p className="bg-card-trust bg-card-trust--split">
+              <span>
+                {reason === "signin" || reason === "trial-available"
+                  ? `${PV_TRIAL_DAYS} days free · then ${PV_PLAN_PRICE}/year`
+                  : isIAPAvailable()
+                    // App Store: Apple handles billing and refunds.
+                    ? "Billed yearly via your Apple ID · cancel anytime in Settings"
+                    : "Billed once a year · non-refundable"}
+              </span>
+              {reason === "pro-limit" ? (
+                <button type="button" className="bg-elite-link" onClick={onUpgradeElite} disabled={busy}>
+                  Or go <span className="bg-elite-link-word">Elite</span>: ProVision included
+                </button>
+              ) : (
+                <span>Signals are tools, not financial advice.</span>
+              )}
+            </p>
+          </div>
         </div>
       </div>
     </BottomSheet>

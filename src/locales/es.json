@@ -703,7 +703,7 @@
           "Análisis IA on-chain",
           "Gráfico de predicción de precio",
           "IA de mapa de calor de liquidaciones",
-          "Dentro de la Vela",
+          "Análisis de Velas",
           "Coinbase Premium IA",
           "100 solicitudes IA / semana"
         ]
@@ -782,7 +782,7 @@
     "lf": {
       "elitePro": "Solicitudes IA ilimitadas",
       "agentReady": "Agent Ready — Chat IA de Trading",
-      "candleai": "Dentro de la Vela",
+      "candleai": "Análisis de Velas",
       "coinbase": "Coinbase Premium IA",
       "earlyAccess": "Acceso anticipado a nuevas funciones",
       "aiMkt": "Inteligencia de Mercado IA",
@@ -912,7 +912,7 @@
             "Predicción de precio con escenarios",
             "IA de mapa de calor de liquidaciones",
             "Alertas de Estrategia Personalizadas",
-            "Dentro de la Vela",
+            "Análisis de Velas",
             "IA de Prima Coinbase",
             "100 peticiones IA / semana"
           ]
@@ -1297,7 +1297,7 @@
     "loading": "Cargando los más activos…"
   },
   "chartAnalyze": {
-    "title": "Analizar un Gráfico",
+    "title": "Analizador de Gráficos",
     "subtitle": "Sube o toma una foto de un gráfico y obtén un análisis técnico real con IA.",
     "gateDesc": "Sube una captura del gráfico y obtén un análisis técnico completo con IA: patrones, niveles y una lectura real.",
     "aiRead": "Lectura de IA",
@@ -1364,7 +1364,7 @@
     "heatmap": "Mapa de Calor",
     "alerts": "Alertas",
     "watchlist": "Lista de Seguimiento",
-    "analyzeChart": "Analizar un Gráfico",
+    "analyzeChart": "Analizador de Gráficos",
     "gann": "Gann",
     "live": "EN VIVO",
     "etf": "Flujos ETF",
@@ -1373,7 +1373,7 @@
     "orderflow": "Dinero Inteligente",
     "signals": "Confluencia",
     "fundingbot": "Bot Funding",
-    "candleai": "Dentro de la Vela IA",
+    "candleai": "Análisis de Velas",
     "markets": "Mercados Globales",
     "riskcalc": "Calc. Posición",
     "settings": "Configuración",

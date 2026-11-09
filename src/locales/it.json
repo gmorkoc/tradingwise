@@ -708,7 +708,7 @@
           "Analisi IA On-Chain",
           "Grafico Previsione Prezzo",
           "Mappa di Calore Liquidazioni IA",
-          "Dentro la Candela",
+          "Analisi Candele",
           "Coinbase Premium IA",
           "100 richieste IA / settimana"
         ]
@@ -787,7 +787,7 @@
     "lf": {
       "elitePro": "Richieste IA illimitate",
       "agentReady": "Agent Ready — Chat AI di Trading",
-      "candleai": "Dentro la Candela",
+      "candleai": "Analisi Candele",
       "coinbase": "Coinbase Premium AI",
       "earlyAccess": "Accesso anticipato alle nuove funzionalità",
       "aiMkt": "Intelligenza di Mercato AI",
@@ -917,7 +917,7 @@
             "Previsione prezzo con scenari",
             "Mappa calore liquidazioni IA",
             "Alert di Strategia Personalizzati",
-            "Dentro la Candela",
+            "Analisi Candele",
             "Coinbase Premium IA",
             "100 richieste IA / settimana"
           ]
@@ -1302,7 +1302,7 @@
     "loading": "Caricamento dei più attivi…"
   },
   "chartAnalyze": {
-    "title": "Analizza un Grafico",
+    "title": "Analizzatore Grafici",
     "subtitle": "Scatta o carica un grafico e ottieni una vera analisi tecnica con l'IA.",
     "gateDesc": "Carica uno screenshot del grafico e ottieni un'analisi tecnica completa con IA — pattern, livelli e un giudizio reale.",
     "aiRead": "Lettura IA",
@@ -1369,7 +1369,7 @@
     "heatmap": "Mappa di Calore",
     "alerts": "Avvisi",
     "watchlist": "Lista Osservazione",
-    "analyzeChart": "Analizza un Grafico",
+    "analyzeChart": "Analizzatore Grafici",
     "gann": "Gann",
     "live": "LIVE",
     "etf": "Flussi ETF",
@@ -1378,7 +1378,7 @@
     "orderflow": "Smart Money",
     "signals": "Confluenza",
     "fundingbot": "Bot Funding",
-    "candleai": "Dentro la Candela AI",
+    "candleai": "Analisi Candele",
     "markets": "Mercati Globali",
     "riskcalc": "Calc. Posizione",
     "settings": "Impostazioni",

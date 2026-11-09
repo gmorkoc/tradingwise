@@ -36,7 +36,9 @@ const add = (path, priority, freq) => {
 };
 add("/", "1.0", "hourly");
 coins.forEach((c, i) => add(`/chart/${slug(c.name)}`, i < 20 ? "0.9" : "0.7", "hourly"));
-pages.forEach((p) => add(`/${p}`, "0.6", "daily"));
+// Pages whose address differs from their id (App.tsx pathFor).
+const PATH_ALIAS = { candleai: "candleinsights" };
+pages.forEach((p) => add(`/${PATH_ALIAS[p] ?? p}`, "0.6", "daily"));
 
 writeFileSync(
   join(root, "public/sitemap.xml"),

@@ -85,7 +85,7 @@ const FEATURE_ICONS: { match: RegExp; d: string[] }[] = [
   { match: /early access/i,             d: ["M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 00-2.9-.1z", "M12 15l-3-3a22 22 0 012-3.9A12.9 12.9 0 0122 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 01-4 2z", "M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0", "M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"] },
   { match: /signals/i,                  d: ["M3 17l6-6 4 4 8-8", "M14 7h7v7"] },
   { match: /candle/i,                   d: ["M8 4v16", "M16 4v16", "M6 8h4v7H6z", "M14 6h4v9h-4z"] },
-  { match: /analyze a chart|screenshot/i, d: ["M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z", "M12 17a4 4 0 100-8 4 4 0 000 8z"] },
+  { match: /analyze a chart|chart analyzer|screenshot/i, d: ["M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z", "M12 17a4 4 0 100-8 4 4 0 000 8z"] },
   { match: /charts|drawing/i,           d: ["M3 3v18h18", "M7 14l4-4 4 4 5-6"] },
   { match: /indicator/i,                d: ["M15 4V2", "M15 16v-2", "M8 9h2", "M20 9h2", "M17.8 11.8L19 13", "M15 9h.01", "M17.8 6.2L19 5", "M3 21l9-9", "M12.2 6.2L11 5"] },
   { match: /alt analysis|options|correlation/i, d: ["M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z"] },

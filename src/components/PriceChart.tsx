@@ -1932,6 +1932,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // compute to the same value as before (a same-value setState is a no-op
   // in React, so color alone isn't a reliable trigger here).
   const [chartGeneration, setChartGeneration] = useState(0);
+  // True while lastCandlesRef holds the first-load placeholder candles.
+  const placeholderCandlesRef = useRef(false);
   // Mirrors chartStyle for the fetch effect to read without depending on
   // it directly (same ref-mirror pattern as showFibRef) — switching style
   // should redraw from already-fetched data, not re-fetch candles.
@@ -2437,10 +2439,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   // Who may run it on this coin: ProVision plan / Elite (unlimited), free
   // trial, or Pro's 3 coins a day — see useProVisionGate.
   const pvGate = useProVisionGate();
-  // Desktop chart page shows the plain (non-ProVision) chart always —
-  // ProVision lives on Advance Chart there. Phones' trade chart and the
-  // Advance page keep it.
-  const pvScope = (prefsScope === "trade" && !(isDesktopWidth && !pageMode)) || prefsScope === "advance";
+  // ProVision draws on the chart page too (desktop and phones) and on the
+  // Advance page — turned on from the chart page's ProVision tab / banner.
+  const pvScope = prefsScope === "trade" || prefsScope === "advance";
   const pvActive = pvGate.activeFor(coin) && pvScope;
   // Desktop chart page: turning ProVision on jumps to the candle chart
   // ("TradingView"), where ProVision is drawn. Only on the off → on switch,
@@ -3467,16 +3468,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({
           // coin/interval combos ever fall back to the synthetic one.
           const fake =
             readChartCandleCache(coin, interval) ?? makeFakeFirstLoadCandles();
-          // Force the Line series specifically, regardless of whatever
-          // chartStyleRef/candle series visibility happens to be at this
-          // exact point in the mount sequence — this placeholder only
-          // ever draws once, on the very first load, before fullscreen or
-          // any style toggle is reachable, so always-line is correct here.
-          lineCloseRef.current?.setData(
-            fake.map((c) => ({ time: c.time, value: c.close })),
-          );
-          lineCloseRef.current?.applyOptions({ visible: true, color: "#818cf8" });
-          candleRef.current?.applyOptions({ visible: false });
+          // Drawn in the chart's own style — candles (the default now), or a
+          // line only when the line style is picked — so the blurred
+          // loading backdrop looks like the chart that's about to appear.
+          if ((chartStyleRef.current as ChartStyle) === "line") {
+            lineCloseRef.current?.setData(
+              fake.map((c) => ({ time: c.time, value: c.close })),
+            );
+            lineCloseRef.current?.applyOptions({ visible: true, color: "#818cf8" });
+            candleRef.current?.applyOptions({ visible: false });
+          } else {
+            // The candles are painted by RoundedCandleOverlay from
+            // lastCandlesRef — give it the placeholder (flagged, so it's
+            // never mistaken for real data below) and make it repaint.
+            lastCandlesRef.current = fake;
+            placeholderCandlesRef.current = true;
+            redrawCandleSeries(fake);
+            candleRef.current?.applyOptions({ visible: true });
+            lineCloseRef.current?.applyOptions({ visible: false });
+            setChartGeneration((g) => g + 1);
+          }
           volumeRef.current?.setData(
             fake.map((c) => ({
               time: c.time,
@@ -3492,7 +3503,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         const rangeSpan = rangeSecondsRef.current?.interval === interval ? rangeSecondsRef.current.seconds : undefined;
         const fresh = await coinglass.getHistoricalCandles(interval, coin, rangeSpan);
         if (cancelled) return;
-        const data = fresh.length > 0 ? fresh : lastCandlesRef.current;
+        // (The candle placeholder is never "data" — only real candles are.)
+        const data = fresh.length > 0 ? fresh : placeholderCandlesRef.current ? [] : lastCandlesRef.current;
+        placeholderCandlesRef.current = false;
         if (data.length === 0) {
           setError("No chart data available");
           // Nothing real ever came in for this coin/interval, so whatever
@@ -5400,20 +5413,44 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [pvPillGone, setPvPillGone] = useState(() => {
     try { return localStorage.getItem("pvPromoPillDismissed") === "1"; } catch { return false; }
   });
-  const pvPromoPill = (tradeDesktopLean || phoneCmc) && !pvPillGone ? (
-    <div className="pv-pill" role="region" aria-label="ProVision">
+  // Trial over (or Pro's daily coins used up): the banner turns into the
+  // renewal prompt instead of the "Analyze" pitch. Its ✕ snoozes it for a day
+  // (separately from the pitch's permanent dismiss).
+  const pvPillLock = pvGate.access.lockReason(coin);
+  const pvRenew = pvPillLock === "trial-ended" || pvPillLock === "pro-limit" ? pvPillLock : null;
+  const [pvRenewSnoozed, setPvRenewSnoozed] = useState(() => {
+    try { return Date.now() < Number(localStorage.getItem("pvRenewPillSnoozeUntil") ?? 0); } catch { return false; }
+  });
+  // Trial over / locked → the banner on the chart becomes the renewal
+  // prompt (its ✕ snoozes it for a day).
+  const pvPillShown = pvRenew ? !pvRenewSnoozed : !pvPillGone;
+  // (Desktop: hidden once ProVision is running on this chart.)
+  // Every case (Analyze or Renew): hidden while the chart loads, then it
+  // takes the "Loading chart data" pill's spot — never two pills at once.
+  const pvPromoPill = (tradeDesktopLean || phoneCmc) && pvPillShown && !(isDesktopWidth && pvActive) && !loading ? (
+    <div className={`pv-pill${pvRenew ? " pv-pill--renew" : ""}`} role="region" aria-label="ProVision">
       <button
         type="button"
         className="pv-pill-main"
-        // Off → turn it on (the app then opens Advance Chart); already on →
-        // straight to Advance Chart, where ProVision is drawn.
-        // Phones: always straight to the Advance Chart page.
-        onClick={() => (pvGate.on || !isDesktopWidth ? onOpenDrawingTools?.() : pvGate.toggle(coin))}
+        // Renewal → the upgrade. Otherwise desktop turns ProVision on right
+        // here (drawn on this chart); phones go to the Advance Chart page.
+        onClick={() => (pvRenew ? openProVisionPaywall({ reason: pvRenew, coin })
+          : !isDesktopWidth ? onOpenDrawingTools?.() : !pvGate.on ? pvGate.toggle(coin) : undefined)}
       >
         <span className="pv-pill-ic" aria-hidden="true">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+          {pvRenew ? (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+          ) : (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+          )}
         </span>
-        <span>Analyze this chart with <b className="pv-pill-brand">ProVision</b></span>
+        {pvRenew === "trial-ended" ? (
+          <span>Your <b className="pv-pill-brand">ProVision</b> trial ended · <b className="pv-pill-renew">Renew</b></span>
+        ) : pvRenew === "pro-limit" ? (
+          <span><b className="pv-pill-brand">ProVision</b> locked on {coin} · <b className="pv-pill-renew">Unlock</b></span>
+        ) : (
+          <span>Analyze this chart with <b className="pv-pill-brand">ProVision</b></span>
+        )}
         <svg className="pv-pill-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
       </button>
       <span className="pv-pill-sep" aria-hidden="true" />
@@ -5422,6 +5459,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         className="pv-pill-x"
         aria-label="Dismiss"
         onClick={() => {
+          if (pvRenew) {
+            setPvRenewSnoozed(true);
+            try { localStorage.setItem("pvRenewPillSnoozeUntil", String(Date.now() + 24 * 3600_000)); } catch { /* ignore */ }
+            return;
+          }
           setPvPillGone(true);
           try { localStorage.setItem("pvPromoPillDismissed", "1"); } catch { /* ignore */ }
         }}
@@ -7181,6 +7223,31 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             indicatorsControl components the old .chart-legend-actions row
             used (now excluded from that row in this exact scope, above,
             so there's no duplicate-ref/duplicate-menu collision). */}
+        {/* Advance Chart (desktop): ProVision trial / lock notice — a
+            full-width bar above the toolbar that slides down on load. */}
+        {pageMode && isDesktopWidth && pvBannerReason && (
+          <button
+            type="button"
+            className="chart-tv-pvbar"
+            onClick={() => openProVisionPaywall({ reason: pvBannerReason, coin })}
+          >
+            <span className="chart-tv-pvbar-ic" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            </span>
+            <strong>
+              {pvBannerReason === "pro-limit" ? `ProVision is locked on ${coin}` : pvBannerReason === "trial-ended" ? "Your ProVision trial has ended" : "Try ProVision free for 3 days"}
+            </strong>
+            <span className="chart-tv-pvbar-sub">
+              {pvBannerReason === "pro-limit"
+                ? `You've used today's ${pvGate.access.usedCoins.length} coins. Go unlimited.`
+                : pvBannerReason === "trial-ended" ? "Keep every coin and timeframe for $99/year." : "Every coin and timeframe. No card needed."}
+            </span>
+            <span className="chart-tv-pvbar-cta">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+              {pvBannerReason === "trial-available" || pvBannerReason === "signin" ? "Try ProVision" : "Unlock ProVision"}
+            </span>
+          </button>
+        )}
         {pageMode && isDesktopWidth && (
           <div className="chart-tv-toolbar">
             <div className="chart-tv-toolbar-left">
@@ -7222,7 +7289,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 </svg>
                 {t("priceAlerts.title", "Alert")}
               </button>
-              {/* Pro Vision switch (same shared setting as the top bar's). */}
+              {/* Pro Vision switch (same shared setting as the top bar's).
+                  Hidden when there's no access (trial ended / locked / not
+                  started) — the Unlock / Start pill on the right covers it. */}
+              {!(pvBannerReason && !pvActive) && (
               <button
                 type="button"
                 className={`pv-toggle pv-toggle--toolbar${pvActive ? " pv-toggle--on" : ""}`}
@@ -7239,6 +7309,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </span>
                 </span>
               </button>
+              )}
             </div>
             <div className="chart-tv-toolbar-right">
               <div className="chart-tv-segmented-group">
@@ -8268,7 +8339,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
         >
             {/* Desktop chart page (TradingView view): OHLC line, top-left. */}
             {tradeDesktopLean && !isFullscreen && <div className="chart-ohlc" ref={ohlcRef} aria-live="off" />}
-            {!isFullscreen && !cmcHidesCandles && pvPromoPill}
             {/* ↺ reset view — after the user moves / zooms the chart. */}
             {viewMoved && (tvDrawRail || phoneCmc) && !isFullscreen && (
               <button type="button" className="chart-view-reset" onClick={resetMovedView} aria-label="Reset chart view" title="Reset chart view">
@@ -8500,6 +8570,11 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             <div className="chart-loading-overlay">
               <span className="cmch-spinner" role="status" aria-label="Loading chart" />
             </div>
+          )}
+          {/* Once loading is done, the ProVision pill (Analyze or Renew) sits
+              exactly where "Loading chart data" was (same centred overlay). */}
+          {!loading && pvPromoPill && !cmcHidesCandles && !isFullscreen && (
+            <div className="chart-loading-overlay chart-pv-renew-slot">{pvPromoPill}</div>
           )}
           {loading && !phoneCmc && (
             <div className="chart-loading-overlay">
@@ -9402,7 +9477,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             </span>
           </button>
         )}
-        {pvBannerReason && (
+        {/* Advance Chart only — the chart page uses the banner on the chart. */}
+        {pvBannerReason && pageMode && (
           <button
             type="button"
             className={`pv-locked${pvBannerReason === "signin" || pvBannerReason === "trial-available" ? " pv-locked--promo" : ""}`}

@@ -4,8 +4,9 @@
    the open tab underlined in blue across its full width; Trade button on
    the right of the same row. Desktop only (phones use the picker). */
 @media (min-width: 641px) {
-  div.cpt-row { gap: 12px; margin: 0; min-height: 46px; }
-  .cpt-row .cpt-bar { gap: 0; align-self: stretch; }
+  /* 40px row — the right column's Paper Trading tabs match it. */
+  div.cpt-row { gap: 12px; margin: 0; min-height: 40px; height: 40px; align-items: center; }
+  .cpt-row .cpt-bar { gap: 0; align-self: stretch; align-items: stretch; }
   .cpt-row .cpt-tab,
   .cpt-row .cpt-tab:hover {
     display: inline-flex;
@@ -438,7 +439,7 @@ html body .cmct .chart-hero-icon-row .chart-depth-btn--active {
    Charts pill): white, soft shadow, near the top of the chart, centred. */
 .pv-pill {
   position: absolute;
-  top: 38%;
+  top: 65%;
   left: 50%;
   /* Above the candle canvas (.drawing-overlay is z-index 10) and the
      chart's other overlays. */
@@ -507,6 +508,115 @@ html:not([data-theme="light"]) .pv-pill {
   color: transparent;
 }
 .pv-pill-chev { color: var(--color-text-muted); }
+/* Trial ended / locked: renewal card in the page (not on the chart) —
+   soft lavender card, line icon, bold title + one line, white pill CTA, ✕. */
+.pv-renew {
+  /* Pinned to the bottom of the screen, centred, slides up on load. */
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 1200;
+  width: max-content;
+  max-width: min(960px, calc(100vw - 48px));
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 44px 12px 18px;
+  border-radius: 14px;
+  background: #f5f4fd;
+  border: 1px solid color-mix(in srgb, #6d5dfc 10%, transparent);
+  box-shadow: 0 10px 30px rgba(30, 27, 75, 0.12);
+  animation: pv-renew-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+}
+@keyframes pv-renew-in { from { opacity: 0; transform: translate(-50%, 24px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .pv-renew { animation: none; } }
+html:not([data-theme="light"]) .pv-renew { background: #1b1830; border-color: rgba(167, 139, 250, 0.18); }
+.pv-renew-ic { flex-shrink: 0; display: inline-flex; color: #6d5dfc; }
+html:not([data-theme="light"]) .pv-renew-ic { color: #a78bfa; }
+/* One row: bold title, then the short line beside it. */
+.pv-renew-text { flex: 0 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; white-space: nowrap; overflow: hidden; }
+.pv-renew-text span { overflow: hidden; text-overflow: ellipsis; }
+.pv-renew-text strong { font-size: 15px; font-weight: 700; color: var(--color-text); }
+.pv-renew-text span { font-size: 14px; color: var(--color-text-secondary, var(--color-text-muted)); }
+.pv-renew-cta,
+.pv-renew-cta:hover {
+  all: unset;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  color: #0d1421;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pv-renew-cta:hover { border-color: color-mix(in srgb, #6d5dfc 45%, transparent); box-shadow: 0 2px 8px rgba(109, 93, 252, 0.15); }
+html:not([data-theme="light"]) .pv-renew-cta { background: #262241; color: #fff; border-color: rgba(167, 139, 250, 0.3); }
+.pv-renew-x,
+.pv-renew-x:hover {
+  all: unset;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  padding: 4px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.pv-renew-x:hover { color: var(--color-text); }
+/* Phones: stacked — icon + text, then a full-width button. */
+@media (max-width: 640px) {
+  /* Just above the floating nav (20px offset + 62px bar + gap). */
+  .pv-renew {
+    bottom: calc(20px + 62px + 10px + var(--native-safe-area-bottom, env(safe-area-inset-bottom)) * 0);
+    width: calc(100vw - 32px);
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 14px 40px 14px 14px;
+    gap: 12px;
+  }
+  .pv-renew-text { flex-direction: column; align-items: flex-start; gap: 3px; flex: 1 1 calc(100% - 50px); white-space: normal; }
+  .pv-renew-text strong { font-size: 14.5px; }
+  .pv-renew-text span { font-size: 13px; }
+  .pv-renew-cta { flex: 1 1 100%; justify-content: center; height: 40px; }
+}
+/* Trial ended: takes the "Loading chart data" pill's place (centred on the
+   chart) and morphs in from it as soon as loading finishes. */
+.pv-pill.pv-pill--renew {
+  top: 50%;
+  animation: pv-pill-morph 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pv-pill-morph {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.86); filter: blur(3px); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: none; }
+}
+/* In the loading overlay's own slot: centred by the overlay, clickable. */
+.chart-loading-overlay.chart-pv-renew-slot { z-index: 30; }
+.chart-pv-renew-slot .pv-pill,
+.chart-pv-renew-slot .pv-pill.pv-pill--renew {
+  position: static;
+  transform: none;
+  pointer-events: auto;
+  animation: pv-pill-morph-static 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes pv-pill-morph-static {
+  from { opacity: 0; transform: scale(0.86); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pv-pill.pv-pill--renew { animation: none; } }
+/* Trial ended / locked: the call to action is "Renew" / "Unlock". */
+.pv-pill-renew { font-weight: 700; color: #7c3aed; }
+html:not([data-theme="light"]) .pv-pill-renew { color: #a78bfa; }
+.pv-pill--renew .pv-pill-chev { color: #7c3aed; }
 .pv-pill-sep { width: 1px; height: 18px; margin: 0 4px; background: color-mix(in srgb, var(--color-text) 12%, transparent); }
 .pv-pill-x,
 .pv-pill-x:hover {
@@ -957,6 +1067,139 @@ html .price-chart-container--phonecmc .pv-locked-cta {
   font-weight: 700;
   box-shadow: none !important;
 }
+
+/* Desktop chart page: the ProVision trial / locked strip under the chart —
+   a quiet row, not a purple slab: hairline above, tinted lock, title and
+   price on one line, slim pill CTA. */
+@media (min-width: 641px) {
+  html .price-chart-container .pv-locked,
+  html .price-chart-container .pv-locked:hover {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin: 4px 0 0;
+    padding: 12px 2px;
+    box-sizing: border-box;
+    border: none !important;
+    border-top: 1px solid color-mix(in srgb, var(--color-text) 7%, transparent) !important;
+    border-radius: 0;
+    background: none !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-align: left;
+    cursor: pointer;
+  }
+  html .price-chart-container .pv-locked-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, #7c3aed 9%, transparent) !important;
+    background-image: none !important;
+    color: #7c3aed !important;
+    box-shadow: none !important;
+  }
+  html .price-chart-container .pv-locked-icon svg { width: 14px; height: 14px; }
+  html .price-chart-container .pv-locked-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  html .price-chart-container .pv-locked-text strong { font-size: 13.5px; font-weight: 600; color: var(--color-text); }
+  html .price-chart-container .pv-locked-text > span { font-size: 12.5px; font-weight: 400; color: var(--color-text-muted); }
+  html .price-chart-container .pv-locked-cta {
+    flex-shrink: 0;
+    height: 30px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 999px;
+    background: none !important;
+    background-image: none !important;
+    border: 1px solid color-mix(in srgb, #7c3aed 35%, transparent);
+    color: #7c3aed !important;
+    font-size: 12.5px;
+    font-weight: 600;
+    box-shadow: none !important;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  html .price-chart-container .pv-locked:hover .pv-locked-cta {
+    background: color-mix(in srgb, #7c3aed 8%, transparent) !important;
+    border-color: #7c3aed;
+  }
+  html:not([data-theme="light"]) .price-chart-container :is(.pv-locked-icon, .pv-locked-cta) { color: #a78bfa !important; }
+  html:not([data-theme="light"]) .price-chart-container .pv-locked-cta { border-color: color-mix(in srgb, #a78bfa 40%, transparent); }
+  /* Advance Chart: this notice lives in the top toolbar instead
+     (.chart-tv-pv) — no strip at the bottom of the page. */
+  html .price-chart-container--page .pv-locked,
+  html .price-chart-container--page .pv-locked:hover { display: none !important; }
+}
+
+/* Advance Chart (desktop): full-width ProVision notice above the toolbar —
+   soft purple → blue wash, hairline below, message centred, slim pill CTA.
+   Slides open on load (height 0 → 44px) so the toolbar eases down. */
+.chart-tv-pvbar,
+.chart-tv-pvbar:hover {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 100%;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  overflow: hidden;
+  background: linear-gradient(90deg, color-mix(in srgb, #7c3aed 7%, transparent), color-mix(in srgb, #3b82f6 6%, transparent));
+  border-bottom: 1px solid color-mix(in srgb, #7c3aed 14%, transparent);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  animation: chart-tv-pvbar-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+}
+@keyframes chart-tv-pvbar-in {
+  from { height: 0; opacity: 0; transform: translateY(-8px); }
+  to { height: 44px; opacity: 1; transform: none; }
+}
+.chart-tv-pvbar-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: color-mix(in srgb, #7c3aed 12%, transparent);
+  color: #7c3aed;
+}
+.chart-tv-pvbar strong { font-weight: 600; color: var(--color-text); }
+.chart-tv-pvbar-sub { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; }
+.chart-tv-pvbar-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin-left: 6px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #7c3aed 35%, transparent);
+  color: #7c3aed;
+  font-weight: 700;
+  font-size: 12.5px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.chart-tv-pvbar:hover .chart-tv-pvbar-cta { background: color-mix(in srgb, #7c3aed 9%, transparent); border-color: #7c3aed; }
+html:not([data-theme="light"]) :is(.chart-tv-pvbar-ic, .chart-tv-pvbar-cta) { color: #a78bfa; }
+html:not([data-theme="light"]) .chart-tv-pvbar-cta { border-color: color-mix(in srgb, #a78bfa 40%, transparent); }
+@media (prefers-reduced-motion: reduce) { .chart-tv-pvbar { animation: none; } }
 
 /* "Bitcoin to USD Chart" title above the chart. */
 .cmct-title { margin: 16px 0 10px; font-size: 15px; font-weight: 700; color: var(--color-text); letter-spacing: -0.01em; }

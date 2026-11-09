@@ -345,12 +345,13 @@ export function MarketSignalTable({ coins, onSelectCoin, onOpenAuth, onTradeCoin
   const flex = [{ w: "200px", fr: 1.6 }, { w: "100px", fr: 1 }, ...visible.map((c) => ({ w: c.w, fr: 1 }))];
   // Number columns keep fixed widths (packed close together); any spare
   // width goes to the Name column, as on CoinMarketCap.
-  const gridCols = ["72px", "minmax(200px, 1fr)", "72px", ...flex.slice(1).map((c) => `${parseInt(c.w, 10) + 12}px`)].join(" ");
+  // Price sits close to Trade (88px, not the flex 112px).
+  const gridCols = ["72px", "minmax(200px, 1fr)", "72px", "88px", ...flex.slice(2).map((c) => `${parseInt(c.w, 10) + 12}px`)].join(" ");
   const GAP = 16;
   const minW = fixed.reduce((a, n) => a + n, 0) + flex.reduce((a, c) => a + parseInt(c.w, 10), 0) + GAP * (fixed.length + flex.length - 1) + 24;
   // Phones: same table, tighter fixed columns; it scrolls sideways with
   // star · # · Name pinned on the left (CoinMarketCap's mobile table).
-  const gridColsM = ["58px", "128px", "56px", "76px", ...visible.map((c) => c.w)].join(" ");
+  const gridColsM = ["58px", "128px", "56px", "70px", ...visible.map((c) => c.w)].join(" ");
   const has = (k: ColKey) => cols.includes(k);
   const extraFilters = (sigF !== "any" ? 1 : 0) + (chgF !== "any" ? 1 : 0) + (hideStables ? 1 : 0);
   const anyFilter = capIdx > 0 || volIdx > 0 || extraFilters > 0;

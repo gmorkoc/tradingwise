@@ -26,7 +26,7 @@ const SLIDES: Slide[] = [
     screenshot: `/whats-new/inside-the-candle.png?v=${IMG_V}`,
     title: "Institutional-grade chart reading",
     desc: "Elliott Wave with invalidation levels, ICT smart money concepts, Wyckoff phases, and Volume Profile — all in one AI-powered read.",
-    ctaLabel: "Open Inside the AI Candle",
+    ctaLabel: "Open Candle Insights",
     section: "candleai",
   },
   {
@@ -35,7 +35,7 @@ const SLIDES: Slide[] = [
     screenshot: `/whats-new/analyze-chart.png?v=${IMG_V}`,
     title: "Any chart, any platform, one AI read",
     desc: "Snap or upload a chart from TradingView, your broker, anywhere — get a full technical breakdown: patterns, levels, and a real take.",
-    ctaLabel: "Analyze a Chart",
+    ctaLabel: "Open Chart Analyzer",
     section: "analyze-chart",
   },
   {

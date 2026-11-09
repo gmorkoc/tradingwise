@@ -3,6 +3,7 @@ import { aiRateLimit, limitResponse } from "../_shared/aiLimits.ts";
 import { fetchCryptoNews, NewsItem } from "../_shared/news.ts";
 import { MarketContext, getMarketContext } from "../_shared/market.ts";
 import { fetchPositioning, Positioning } from "../_shared/positioning.ts";
+import { fetchMarketOverview } from "../_shared/marketOverview.ts";
 
 // Invoked synchronously from TradingAgent.tsx (request/response, not
 // fire-and-forget like market-pulse-reply) — this is a private 1:1
@@ -543,7 +544,7 @@ async function streamReply(
   message: string, history: HistoryTurn[], markets: MarketContext[], portfolio: PortfolioSnapshot,
   marketByCoin: Map<string, MarketContext>, news: NewsItem[], resolvedCoins: string[], viaVoice: boolean,
   positioningByCoin: Map<string, Positioning>, coinsFromCurrentMessage: boolean, tradeHistory: TradeHistoryRow[],
-  safeImageDataUrl: string | null
+  safeImageDataUrl: string | null, marketOverview: string | null = null
 ): Promise<ReadableStream<Uint8Array>> {
   const encoder = new TextEncoder();
   if (!OPENAI_API_KEY) {
@@ -662,6 +663,11 @@ Daily risk guardrail — a real prop-desk discipline, not optional color: a losi
 Two more concrete discipline rules, same tier as the above: (1) never suggest widening/loosening a stop-loss on an existing position to avoid taking a loss — if asked to do exactly that, say plainly that moving a stop further away after entry defeats its purpose and is a well-known way to turn a small loss into a large one, and decline; closing or reducing the position is always on the table, moving the stop to accommodate a bad trade is not. (2) don't chase a move that's already extended — if price is already well beyond where a clean entry would have been (e.g. RSI already deep overbought/oversold in the direction of the ask, or the move has clearly run without a pullback), say so and frame it as a worse risk/reward than it would have been earlier, factoring that into whether you'd take the trade at all or at what size, rather than treating every momentum signal as equally good regardless of how far price has already moved.
 
 Live market data: ${marketLine}
+
+Market overview (live CoinGecko, this run):
+${marketOverview ?? "Market overview unavailable this run — if asked for a ranking/top list, say the live list couldn't load and suggest trying again; never make one up."}
+
+RANKING / LIST REQUESTS — check this before the screening rules below: when the user asks for a market-wide list ("top 10 coins", "biggest coins", "top gainers", "what's pumping/dumping today", "top losers", "show me the market"), answer straight from the market overview above. "reply" IS the list here (the 1-3 sentence limit doesn't apply): a compact numbered list, one line per coin, in the overview's order — "1. BTC $75,012 · −1.8% · $1.5T" — using exactly the numbers given, as many as asked for (default 10), followed by at most one short sentence of read on the overall picture (e.g. what's leading, broad red or green). Keep the narration to one short line (no indicator walkthrough, no "let's screen a few plays"), set every action/basket/watch/question/balanceUpdate field to null, and don't turn it into a screening or a budget question unless they ask for picks.
 
 Recent crypto headlines (index — source: "title"), freshest first:
 ${newsLine}
@@ -1126,7 +1132,7 @@ Deno.serve(async (req) => {
     // no reason to pay for any of it sequentially. A positioning fetch
     // failure never blocks the rest of the reply: fetchPositioning itself
     // resolves nulls rather than throwing on a bad/missing API response.
-    const [marketResults, news, positioningResults] = await Promise.all([
+    const [marketResults, news, positioningResults, marketOverview] = await Promise.all([
       // NOT coins.map(getMarketContext) — Array.map passes (element, index,
       // array) to its callback, and getMarketContext's second parameter is
       // "interval", not an index. That silently fed the array index in as
@@ -1137,6 +1143,8 @@ Deno.serve(async (req) => {
       Promise.all(coins.map((c) => getMarketContext(c))),
       fetchCryptoNews(),
       Promise.all(coins.map((c) => fetchPositioning(c).catch(() => null))),
+      // Market-wide list (top 10 by cap, top gainers/losers) for ranking asks.
+      fetchMarketOverview(),
     ]);
     const markets = marketResults.filter((m): m is MarketContext => m !== null);
 
@@ -1146,7 +1154,7 @@ Deno.serve(async (req) => {
         .map((c, i) => [c.toUpperCase(), positioningResults[i]] as const)
         .filter((entry): entry is [string, Positioning] => entry[1] !== null),
     );
-    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage, tradeHistoryRows, safeImageDataUrl);
+    const stream = await streamReply(message, safeHistory, markets, portfolio, marketByCoin, news, coins, viaVoice === true, positioningByCoin, coinsFromCurrentMessage, tradeHistoryRows, safeImageDataUrl, marketOverview);
 
     // Plain line-based protocol, not real SSE framing — but served as
     // text/event-stream with no-buffering headers anyway, since that's the

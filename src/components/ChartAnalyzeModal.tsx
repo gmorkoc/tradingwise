@@ -142,7 +142,7 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
         open
         onClose={onClose}
         requiredTier="pro"
-        featureName={t("chartAnalyze.title", "Analyze a Chart")}
+        featureName={t("chartAnalyze.title", "Chart Analyzer")}
         onOpenAuth={onOpenAuth}
         onOpenUpgrade={onOpenUpgrade}
         extraFeature={{
@@ -152,7 +152,7 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
               <circle cx="12" cy="13" r="4" />
             </svg>
           ),
-          title: t("chartAnalyze.title", "Analyze a Chart"),
+          title: t("chartAnalyze.title", "Chart Analyzer"),
           desc: t("chartAnalyze.gateDesc", "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take."),
         }}
       />
@@ -286,7 +286,7 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
         {isPaid ? (
           <div className="caz-header">
             <div>
-              <h2 className="caz-title">{t("chartAnalyze.title", "Analyze a Chart")}</h2>
+              <h2 className="caz-title">{t("chartAnalyze.title", "Chart Analyzer")}</h2>
               <p className="caz-subtitle">{t("chartAnalyze.subtitle", "Snap or upload a chart and get a real technical read, powered by AI.")}</p>
             </div>
             <button className="caz-close" onClick={onClose} aria-label="Close">✕</button>
@@ -309,7 +309,7 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
             used={used} limit={limit}
             onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth}
             planId="pro"
-            featureTitle={t("chartAnalyze.title", "Analyze a Chart")}
+            featureTitle={t("chartAnalyze.title", "Chart Analyzer")}
             featureDesc={t("chartAnalyze.gateDesc", "Upload a chart screenshot and get a full AI technical breakdown — patterns, levels, and a real take.")}
           />
         ) : analysis ? (

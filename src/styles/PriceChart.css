@@ -2586,53 +2586,8 @@ html:not([data-theme="light"]) .chart-watermark { opacity: 0.1; }
   z-index: 20;
 }
 
-.chart-dblclick-wrap::after {
-  content: "⛶  Double-click for fullscreen";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(28, 28, 30, 0.82);
-  color: #94a3b8;
-  font-size: 0.68rem;
-  font-weight: 600;
-  white-space: nowrap;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  z-index: 5;
-}
-/* Shows when the mouse enters the chart, then fades out after ~2s (each
-   new hover replays it) instead of staying up the whole time. */
-.chart-dblclick-wrap:hover::after {
-  animation: chart-dbl-hint 2.4s ease forwards;
-}
-@keyframes chart-dbl-hint {
-  0% { opacity: 0; }
-  8% { opacity: 1; }
-  83% { opacity: 1; }
-  100% { opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chart-dblclick-wrap:hover::after { animation: none; opacity: 0; }
-}
-.price-chart-container--fs .chart-dblclick-wrap::after,
-.price-chart-container:fullscreen .chart-dblclick-wrap::after {
-  display: none;
-}
-/* Touch screens have no hover state to reveal the hint on, so show it
-   permanently instead (still hidden once already fullscreen, via the
-   rule above) — "tap" since that's the actual gesture. Same pill box as
-   desktop, just dimmer (0.7 vs the full 1) since it sits over live
-   candles the whole time rather than flashing in briefly on hover. */
-/* No double-tap gesture on mobile (touch screens / mobile widths), so no
-   hint either — desktop keeps double-click + its hover hint. */
-@media (hover: none), (max-width: 640px) {
-  .chart-dblclick-wrap::after { display: none; }
-}
+/* (The "Double-click for fullscreen" hover hint was removed — double-click
+   still toggles fullscreen on desktop, it just isn't advertised.) */
 
 .day-hl-badge {
   display: inline-flex;
@@ -3884,10 +3839,23 @@ html[data-theme="light"] .interval-pill--active.interval-pill--active-bear {
 .price-chart-container--loading .chart-header,
 .price-chart-container--loading .interval-banner,
 .price-chart-container--loading .chart-canvas-wrap,
+.price-chart-container--loading .drawing-overlay,
 .price-chart-container--loading .pattern-insight {
   filter: blur(6px);
   transition: filter 0.2s ease;
   pointer-events: none;
+}
+/* Loading: the candle layer sits under the "Loading chart data" pill, and
+   the OHLC line (placeholder numbers) is hidden. */
+.price-chart-container--loading .drawing-overlay { z-index: 1 !important; }
+.price-chart-container--loading .chart-ohlc { visibility: hidden; }
+.chart-loading-overlay { z-index: 40; }
+/* Chart page (desktop + phones): centre the loading / ProVision pill on the
+   plot itself — inside the drawing rail (left), the price axis (right)
+   and above the time axis — not on the whole chart block. */
+.price-chart-container:not(.price-chart-container--page):not(.price-chart-container--fs) .chart-loading-overlay {
+  inset: 0 64px auto 40px;
+  height: calc(400px - 28px);
 }
 
 .chart-loading-overlay {
@@ -11416,6 +11384,174 @@ html:not([data-theme="light"]) .pv-float-title { background-image: linear-gradie
 .pvp-alt:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 3px; }
 .pvp-fine { font-size: 11.5px; color: var(--color-text-muted); }
 .pvp-error { font-size: 12.5px; color: #dc2626; }
+
+/* ── ProVision paywall: fancy + interactive ───────────────────────────── */
+.pvp.pvp--fancy { position: relative; isolation: isolate; }
+/* Soft aurora drifting behind the hero. */
+.pvp-aurora {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  z-index: -1;
+  width: 440px;
+  height: 260px;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(closest-side at 35% 45%, rgba(139, 92, 246, 0.28), transparent),
+    radial-gradient(closest-side at 68% 40%, rgba(59, 130, 246, 0.22), transparent),
+    radial-gradient(closest-side at 50% 70%, rgba(236, 72, 153, 0.12), transparent);
+  filter: blur(18px);
+  pointer-events: none;
+  animation: pvp-aurora 9s ease-in-out infinite alternate;
+}
+@keyframes pvp-aurora {
+  from { transform: translateX(-52%) scale(1); opacity: 0.85; }
+  to { transform: translateX(-48%) scale(1.08); opacity: 1; }
+}
+/* Orb: a slowly turning light ring around it. */
+.pvp--fancy .pvp-orb { position: relative; }
+.pvp-orb-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 55%, rgba(196, 181, 253, 0.95) 75%, transparent 92%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: pvp-spin 3.6s linear infinite;
+}
+@keyframes pvp-spin { to { transform: rotate(360deg); } }
+/* Entrance: hero pieces, then the features, fade up in turn. */
+.pvp--fancy .pvp-hero > * { animation: pvp-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pvp--fancy .pvp-hero > :nth-child(2) { animation-delay: 40ms; }
+.pvp--fancy .pvp-hero > :nth-child(3) { animation-delay: 80ms; }
+.pvp--fancy .pvp-hero > :nth-child(4) { animation-delay: 120ms; }
+@keyframes pvp-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Features: titles with icons; the spotlit one expands its description. */
+.pvp-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pvp-feat,
+.pvp-feat:hover {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+  animation: pvp-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  -webkit-tap-highlight-color: transparent;
+}
+.pvp-feat--on,
+.pvp-feat--on:hover {
+  background: color-mix(in srgb, #7c3aed 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #7c3aed 16%, transparent);
+}
+.pvp-feat-ic {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 10%, transparent);
+  transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+.pvp-feat--on .pvp-feat-ic { color: #fff; background: linear-gradient(135deg, #7c3aed, #3b82f6); transform: scale(1.04); }
+html:not([data-theme="light"]) .pvp-feat-ic { color: #a78bfa; }
+html:not([data-theme="light"]) .pvp-feat--on .pvp-feat-ic { color: #fff; }
+.pvp-feat-body { display: flex; flex-direction: column; min-width: 0; padding-top: 1px; }
+.pvp-feat-body strong { font-size: 14px; font-weight: 600; color: var(--color-text); }
+/* Descriptions always visible; the spotlit row just reads a touch stronger. */
+.pvp-feat-text {
+  margin: 2px 0 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  transition: color 0.25s ease;
+}
+.pvp-feat--on .pvp-feat-text { color: var(--color-text-secondary, var(--color-text)); }
+/* Thin timer under the spotlit feature while it auto-advances. */
+.pvp-feat-timer {
+  position: absolute;
+  left: 56px;
+  right: 14px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, #7c3aed 14%, transparent);
+  overflow: hidden;
+}
+.pvp-feat-timer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6);
+  transform-origin: left;
+  animation: pvp-timer 3.2s linear both;
+}
+@keyframes pvp-timer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Price line */
+.pvp-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  animation: pvp-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+.pvp-price b { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--color-text); }
+.pvp-price i { font-style: normal; opacity: 0.6; }
+
+/* CTA: lifts on hover, a sheen sweeps across now and then. */
+.pvp--fancy .pvp-cta { position: relative; overflow: hidden; transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.pvp--fancy .pvp-cta:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(124, 58, 237, 0.45); }
+.pvp--fancy .pvp-cta::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  animation: pvp-sheen 3.6s ease-in-out 1s infinite;
+  pointer-events: none;
+}
+@keyframes pvp-sheen { 0% { left: -40%; } 45%, 100% { left: 130%; } }
+/* Desktop: horizontal — hero + button on the left, features on the right.
+   Phones keep the vertical stack (hero → features → button). */
+@media (min-width: 641px) {
+  .bs-sheet.pvp-sheet { max-width: 860px; }
+  .pvp.pvp--fancy {
+    display: grid;
+    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    grid-template-areas:
+      "hero feats"
+      "actions feats";
+    grid-template-rows: auto 1fr;
+    column-gap: 32px;
+    row-gap: 18px;
+    align-items: start;
+    padding: 8px 24px 16px;
+  }
+  .pvp--fancy .pvp-hero { grid-area: hero; align-items: flex-start; text-align: left; padding-top: 6px; }
+  .pvp--fancy .pvp-feats { grid-area: feats; align-self: center; }
+  .pvp--fancy .pvp-actions { grid-area: actions; align-self: end; text-align: left; }
+  .pvp--fancy .pvp-actions .pvp-fine { text-align: left; }
+  .pvp--fancy .pvp-aurora { left: 0; transform: none; width: 360px; animation: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pvp-aurora, .pvp-orb-ring, .pvp--fancy .pvp-cta::after, .pvp-feat-timer::after { animation: none; }
+  .pvp--fancy .pvp-hero > *, .pvp-feat, .pvp-price { animation: none; }
+}
 html[data-theme="light"] .pvp-kicker { color: #6d28d9; }
 
 /* ══ Signal Check, collapsed — desktop: one refined line. Gradient icon
