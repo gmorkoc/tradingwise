@@ -17,6 +17,7 @@ const ENTITLEMENT_TIER: Record<string, string> = {
 };
 
 const TIER_RANK: Record<string, number> = { pro: 1, elite: 2 };
+const rank = (t: string | null | undefined) => (t ? TIER_RANK[t] ?? 0 : 0);
 
 // Prefer the highest-ranked entitlement rather than whichever comes first
 // in the array — a subscriber can briefly hold more than one active
@@ -26,7 +27,7 @@ function tierFromEntitlements(entitlementIds: string[] | undefined): string | nu
   let best: string | null = null;
   for (const id of entitlementIds) {
     const tier = ENTITLEMENT_TIER[id];
-    if (tier && (TIER_RANK[tier] ?? 0) > (best ? TIER_RANK[best] : -1)) best = tier;
+    if (tier && rank(tier) > (best ? rank(best) : -1)) best = tier;
   }
   return best;
 }
@@ -36,22 +37,19 @@ interface RevenueCatEvent {
   app_user_id: string;
   entitlement_ids?: string[];
   product_id?: string;
+  new_product_id?: string;
   expiration_at_ms?: number | null;
+  cancel_reason?: string;
+  transferred_from?: string[];
+  transferred_to?: string[];
   environment?: "SANDBOX" | "PRODUCTION";
 }
 
-async function currentTier(userId: string): Promise<string> {
-  const { data } = await supabaseAdmin.from("profiles").select("tier").eq("id", userId).single();
-  return (data?.tier as string) ?? "free";
-}
+interface TierRow { tier: string; apple_tier: string | null }
 
-// Apple only ever RAISES a tier here. Someone who is Elite through the web
-// (Stripe / granted) but whose Apple ID also holds a Pro subscription — a
-// TestFlight test purchase renews every few minutes — was being set back
-// to Pro on every renewal.
-async function tierUpgradeOnly(userId: string, tier: string | null): Promise<string | null> {
-  if (!tier) return null;
-  return (TIER_RANK[tier] ?? 0) > (TIER_RANK[await currentTier(userId)] ?? 0) ? tier : null;
+async function tierRow(userId: string): Promise<TierRow> {
+  const { data } = await supabaseAdmin.from("profiles").select("tier, apple_tier").eq("id", userId).single();
+  return { tier: (data?.tier as string) ?? "free", apple_tier: (data?.apple_tier as string | null) ?? null };
 }
 
 async function updateProfile(userId: string, fields: Record<string, unknown>) {
@@ -60,6 +58,57 @@ async function updateProfile(userId: string, fields: Record<string, unknown>) {
   // *is* the RevenueCat app_user_id, no separate mapping table needed.
   await supabaseAdmin.from("profiles").update(fields).eq("id", userId);
 }
+
+// ── The rules ────────────────────────────────────────────────────────────
+// profiles.apple_tier remembers which tier the Apple subscription gives.
+// Apple can always RAISE a tier. It can only LOWER or REMOVE one when the
+// user's current tier came from Apple (tier === apple_tier) — so a web
+// (Stripe) or admin-granted Elite is never touched by an Apple Pro plan,
+// e.g. a TestFlight test purchase that renews every few minutes.
+
+/** An active Apple plan for `tier` (purchase, renewal, uncancel, upgrade). */
+async function applyAppleTier(userId: string, tier: string, expirationMs?: number | null) {
+  const before = await tierRow(userId);
+  const fromApple = before.tier === before.apple_tier;
+  const raise = rank(tier) > rank(before.tier);
+  const lower = rank(tier) < rank(before.tier) && fromApple;
+  const fields: Record<string, unknown> = { apple_tier: tier };
+  if (raise || lower) fields.tier = tier;
+  // Billing fields describe the plan behind the tier — only touch them when
+  // that plan is (now) the Apple one.
+  if (raise || lower || fromApple || before.tier === tier) {
+    fields.subscription_status = "active";
+    if (expirationMs) fields.subscription_end_at = new Date(expirationMs).toISOString();
+  }
+  await updateProfile(userId, fields);
+  if ((raise || lower) && before.tier !== tier) {
+    await logAccountEvent(supabaseAdmin, userId,
+      before.tier === "free" ? "subscription_started" : "tier_changed",
+      before.tier === "free" ? { tier, provider: "apple" } : { from: before.tier, to: tier, provider: "apple" });
+  }
+}
+
+/** The Apple plan ended (expiry, refund, moved to another account). */
+async function endAppleTier(userId: string, ended: string | null, reason: string) {
+  const before = await tierRow(userId);
+  // Apple-backed: tier came from Apple. Older rows (no apple_tier yet):
+  // fall back to "the ending plan is at least as high as the current tier".
+  const fromApple = before.apple_tier
+    ? before.tier === before.apple_tier
+    : !ended || rank(ended) >= rank(before.tier);
+  if (!fromApple) {
+    await updateProfile(userId, { apple_tier: null });
+    await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { tier: ended, provider: "apple", reason, kept_higher_tier: true });
+    return;
+  }
+  await updateProfile(userId, { tier: "free", apple_tier: null, subscription_status: "canceled", subscription_end_at: null });
+  await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { tier: ended ?? before.tier, provider: "apple", reason });
+}
+
+// A refund arrives as CANCELLATION (cancel_reason CUSTOMER_SUPPORT) with
+// access already over — not as an EXPIRATION.
+const isRefundOrEnded = (e: RevenueCatEvent) =>
+  e.cancel_reason === "CUSTOMER_SUPPORT" || (!!e.expiration_at_ms && e.expiration_at_ms <= Date.now());
 
 Deno.serve(async (req) => {
   const auth = req.headers.get("authorization") ?? "";
@@ -76,6 +125,25 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const event = body.event as RevenueCatEvent;
   const userId = event.app_user_id;
+  const ok = () => new Response(JSON.stringify({ received: true }), { headers: { "Content-Type": "application/json" } });
+
+  // ── Purchase moved between accounts (restore on another login) ────────
+  // The old account(s) lose the Apple plan; the new one gets it.
+  if (event.type === "TRANSFER") {
+    const tier = tierFromEntitlements(event.entitlement_ids);
+    const hasPv = (event.entitlement_ids ?? []).includes(PROVISION_ENTITLEMENT);
+    for (const from of event.transferred_from ?? []) {
+      if (!from || from.startsWith("$RCAnonymousID")) continue;
+      await endAppleTier(from, tier, "transferred");
+      if (hasPv) await updateProfile(from, { provision_status: "canceled", provision_end_at: null });
+    }
+    for (const to of event.transferred_to ?? []) {
+      if (!to || to.startsWith("$RCAnonymousID")) continue;
+      if (tier) await applyAppleTier(to, tier, event.expiration_at_ms);
+      if (hasPv) await updateProfile(to, { provision_status: "active" });
+    }
+    return ok();
+  }
 
   // ProVision plan events (its own product + entitlement) only ever touch
   // the provision_* columns — never tier / subscription_*. Without this an
@@ -96,7 +164,13 @@ Deno.serve(async (req) => {
           { tier: "provision", provider: "apple" });
         break;
       case "CANCELLATION":
-        await updateProfile(userId, { provision_status: "canceling" });
+        if (isRefundOrEnded(event)) {
+          // Refunded: access ends now.
+          await updateProfile(userId, { provision_status: "canceled", provision_end_at: null });
+          await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { tier: "provision", provider: "apple", reason: "refund" });
+        } else {
+          await updateProfile(userId, { provision_status: "canceling" });
+        }
         break;
       case "EXPIRATION":
         await updateProfile(userId, { provision_status: "canceled", provision_end_at: null });
@@ -106,97 +180,66 @@ Deno.serve(async (req) => {
         await updateProfile(userId, { provision_status: "past_due" });
         break;
     }
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return ok();
   }
 
-  switch (event.type) {
-    case "INITIAL_PURCHASE": {
-      const tier = await tierUpgradeOnly(userId, tierFromEntitlements(event.entitlement_ids));
-      const fields: Record<string, unknown> = { subscription_status: "active" };
-      if (tier) fields.tier = tier;
-      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
-      await updateProfile(userId, fields);
-      await logAccountEvent(supabaseAdmin, userId, "subscription_started", { tier, provider: "apple" });
-      break;
-    }
+  const tier = tierFromEntitlements(event.entitlement_ids);
 
-    case "RENEWAL": {
-      const tier = await tierUpgradeOnly(userId, tierFromEntitlements(event.entitlement_ids));
-      const fields: Record<string, unknown> = { subscription_status: "active" };
-      if (tier) fields.tier = tier;
-      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
-      await updateProfile(userId, fields);
-      await logAccountEvent(supabaseAdmin, userId, "payment_succeeded", { tier, provider: "apple" });
+  switch (event.type) {
+    case "INITIAL_PURCHASE":
+    case "RENEWAL":
+    case "UNCANCELLATION": {
+      // A renewal on a lower product after an Apple downgrade lowers the
+      // tier here (only if the tier came from Apple).
+      if (tier) await applyAppleTier(userId, tier, event.expiration_at_ms);
+      if (event.type === "RENEWAL") await logAccountEvent(supabaseAdmin, userId, "payment_succeeded", { tier, provider: "apple" });
+      if (event.type === "UNCANCELLATION") await logAccountEvent(supabaseAdmin, userId, "subscription_reactivated", { provider: "apple" });
       break;
     }
 
     case "PRODUCT_CHANGE": {
-      const { data: before } = await supabaseAdmin.from("profiles").select("tier").eq("id", userId).single();
-      const tier = tierFromEntitlements(event.entitlement_ids);
-      const fields: Record<string, unknown> = { subscription_status: "active" };
-      if (tier) fields.tier = tier;
-      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
-      await updateProfile(userId, fields);
-      if (tier && before && tier !== before.tier) {
-        await logAccountEvent(supabaseAdmin, userId, "tier_changed", { from: before.tier, to: tier, provider: "apple" });
-      }
-      break;
-    }
-
-    case "UNCANCELLATION": {
-      const tier = await tierUpgradeOnly(userId, tierFromEntitlements(event.entitlement_ids));
-      const fields: Record<string, unknown> = { subscription_status: "active" };
-      if (tier) fields.tier = tier;
-      if (event.expiration_at_ms) fields.subscription_end_at = new Date(event.expiration_at_ms).toISOString();
-      await updateProfile(userId, fields);
-      await logAccountEvent(supabaseAdmin, userId, "subscription_reactivated", { provider: "apple" });
+      // Upgrades apply right away. Downgrades (Elite → Pro) only take
+      // effect at the next renewal on Apple's side, so the user keeps what
+      // they paid for until then — the RENEWAL above applies the lower tier.
+      const before = await tierRow(userId);
+      if (tier && rank(tier) > rank(before.tier)) await applyAppleTier(userId, tier, event.expiration_at_ms);
       break;
     }
 
     case "CANCELLATION": {
+      if (isRefundOrEnded(event)) {
+        // Refund: access ends now (RevenueCat sends no EXPIRATION for it).
+        await endAppleTier(userId, tier, "refund");
+        break;
+      }
       // Auto-renew turned off — access continues until expiration_at_ms,
-      // the EXPIRATION event (below) is what actually downgrades the tier.
-      await updateProfile(userId, { subscription_status: "canceling" });
+      // the EXPIRATION event is what actually ends it.
+      const before = await tierRow(userId);
+      if (before.tier === before.apple_tier) await updateProfile(userId, { subscription_status: "canceling" });
       await logAccountEvent(supabaseAdmin, userId, "subscription_cancel_scheduled", { provider: "apple" });
       break;
     }
 
     case "EXPIRATION": {
-      // Only drop to free if this Apple plan is what the user's tier came
-      // from — an expiring Apple Pro must not remove a web Elite plan.
-      const expired = tierFromEntitlements(event.entitlement_ids);
-      if (expired && (TIER_RANK[await currentTier(userId)] ?? 0) > (TIER_RANK[expired] ?? 0)) {
-        await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { tier: expired, provider: "apple", kept_higher_tier: true });
-        break;
-      }
-      await updateProfile(userId, {
-        tier: "free",
-        subscription_status: "canceled",
-        subscription_end_at: null,
-      });
-      await logAccountEvent(supabaseAdmin, userId, "subscription_canceled", { provider: "apple" });
+      await endAppleTier(userId, tier, "expired");
       break;
     }
 
     case "BILLING_ISSUE": {
-      await updateProfile(userId, { subscription_status: "past_due" });
+      const before = await tierRow(userId);
+      if (before.tier === before.apple_tier) await updateProfile(userId, { subscription_status: "past_due" });
       await logAccountEvent(supabaseAdmin, userId, "payment_failed", { provider: "apple" });
       break;
     }
 
     case "SUBSCRIPTION_PAUSED": {
-      await updateProfile(userId, { subscription_status: "canceling" });
+      const before = await tierRow(userId);
+      if (before.tier === before.apple_tier) await updateProfile(userId, { subscription_status: "canceling" });
       break;
     }
 
-    // TRANSFER (purchase moved to a different app_user_id) and TEST events
-    // are intentionally unhandled — TRANSFER is rare enough for this app's
-    // single-Apple-ID-per-account model to not be worth the complexity yet.
+    // TEST events: nothing to do.
   }
 
-  return new Response(JSON.stringify({ received: true }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return ok();
 });

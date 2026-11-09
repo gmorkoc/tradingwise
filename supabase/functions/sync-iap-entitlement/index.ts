@@ -120,6 +120,8 @@ Deno.serve(async (req) => {
     // (e.g. a TestFlight test purchase) was being dropped to Pro on every
     // app open. Apple downgrades/expiries arrive via the RevenueCat webhook.
     if (before && (TIER_RANK[before.tier] ?? 0) >= (TIER_RANK[tier] ?? 0)) {
+      // Still remember what Apple gives (see profiles.apple_tier).
+      await supabaseAdmin.from("profiles").update({ apple_tier: tier }).eq("id", user.id);
       return new Response(JSON.stringify({ tier: before.tier, provision }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -129,6 +131,7 @@ Deno.serve(async (req) => {
       .from("profiles")
       .update({
         tier,
+        apple_tier: tier,
         subscription_status: "active",
         subscription_end_at: expiresAtMs ? new Date(expiresAtMs).toISOString() : null,
       })
