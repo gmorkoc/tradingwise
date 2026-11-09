@@ -99,11 +99,15 @@ function isRelevant(title: string): boolean {
   return RELEVANCE_KEYWORDS.some((kw) => t.includes(kw));
 }
 
-function extractChips(title: string): string[] {
-  const t = title.toLowerCase();
+// Whole words only — "eth" must not match "Hegseth", "war" not "warn".
+const CHIP_RES: [RegExp, string][] = CHIP_MAP.map(([kw, chip]) => [
+  new RegExp(`\\b${kw.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"),
+  chip,
+]);
+export function extractChips(title: string): string[] {
   const chips: string[] = [];
-  for (const [kw, chip] of CHIP_MAP) {
-    if (t.includes(kw) && !chips.includes(chip)) chips.push(chip);
+  for (const [re, chip] of CHIP_RES) {
+    if (re.test(title) && !chips.includes(chip)) chips.push(chip);
     if (chips.length >= 3) break;
   }
   return chips;
@@ -113,7 +117,7 @@ function extractChips(title: string): string[] {
 // ticker for (coinTickers, fetched once at the App.tsx level for the coin
 // picker — no extra API call here) gets the real price instead of a plain
 // static tag.
-function renderChip(label: string, _category: Category, coinTickers?: Map<string, Ticker24h>) {
+export function renderChip(label: string, _category: Category, coinTickers?: Map<string, Ticker24h>) {
   const ticker = coinTickers?.get(label);
   if (ticker) {
     const up = ticker.change >= 0;
@@ -197,7 +201,27 @@ async function fetchFeed(feed: FeedDef): Promise<BriefItem[]> {
   }
 }
 
+// One shared copy for everything that shows the brief (Daily Brief sheet,
+// Markets carousel, coin page News, Agent Ready opener): reused for 5 min,
+// and simultaneous callers share the same in-flight fetch — so the feeds
+// are hit once, not once per component.
+let briefCache: { at: number; items: BriefItem[] } | null = null;
+let briefInFlight: Promise<BriefItem[]> | null = null;
+const BRIEF_TTL = 5 * 60_000;
+
 export async function fetchBrief(): Promise<BriefItem[]> {
+  if (briefCache && Date.now() - briefCache.at < BRIEF_TTL) return briefCache.items;
+  if (briefInFlight) return briefInFlight;
+  briefInFlight = fetchBriefFresh()
+    .then((items) => {
+      if (items.length) briefCache = { at: Date.now(), items };
+      return items.length ? items : briefCache?.items ?? items;
+    })
+    .finally(() => { briefInFlight = null; });
+  return briefInFlight;
+}
+
+async function fetchBriefFresh(): Promise<BriefItem[]> {
   const results = await Promise.allSettled(FEEDS.map(fetchFeed));
   const all = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 

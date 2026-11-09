@@ -7,7 +7,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
-import { fetchBrief, type BriefItem } from "./DailyBrief";
+import { fetchBrief, extractChips, renderChip, type BriefItem } from "./DailyBrief";
+import type { Ticker24h } from "../services/coinglass";
 import { cgFetch, COINS_MARKETS_URL, TTL } from "./GlobalMarkets";
 import "../styles/MarketStories.css";
 
@@ -98,7 +99,10 @@ function GenericCover({ item }: { item: BriefItem }) {
 
 // The whole panel is the click target (see `open` in the panel list). A
 // story paired with an odds chart opens its own article instead (`own`).
-function NewsBlock({ item, own }: { item: BriefItem; own?: boolean }) {
+function NewsBlock({ item, own, tickers }: { item: BriefItem; own?: boolean; tickers?: Map<string, Ticker24h> }) {
+  // Same chips as the Daily Brief: a live price for coins it mentions,
+  // topic tags (CPI, FED, ETF…) for the rest.
+  const chips = extractChips(item.title);
   const [broken, setBroken] = useState(false);
   return (
     <div className="mkst-news" onClick={own ? (e) => { e.stopPropagation(); openLink(item.url); } : undefined}>
@@ -112,6 +116,9 @@ function NewsBlock({ item, own }: { item: BriefItem; own?: boolean }) {
         {item.source}<span>·</span>{ago(item.pubDate)}
       </div>
       <p className="mkst-news-text">{item.title}</p>
+      {chips.length > 0 && (
+        <div className="mkst-chips">{chips.map((c) => renderChip(c, item.category, tickers))}</div>
+      )}
       <span className="mkst-more">
         Read more
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -212,7 +219,7 @@ function CoinBlock({ coin, eyebrow }: { coin: CgCoin; eyebrow: string }) {
 }
 
 // ── Carousel ──────────────────────────────────────────────────────────────────
-export function MarketStories({ onSelectCoin }: { onSelectCoin: (symbol: string) => void }) {
+export function MarketStories({ onSelectCoin, coinTickers }: { onSelectCoin: (symbol: string) => void; coinTickers?: Map<string, Ticker24h> }) {
   const [news, setNews] = useState<BriefItem[]>([]);
   // The first news fetch has finished (or timed out) — until then the
   // placeholders stay, so cards don't arrive in two waves.
@@ -273,7 +280,7 @@ export function MarketStories({ onSelectCoin }: { onSelectCoin: (symbol: string)
     }
     // `open` = what clicking anywhere on the panel does.
     const list: { key: string; el: React.ReactNode; size?: "wide" | "odds"; open: () => void }[] = [];
-    const pushNews = (n: BriefItem) => list.push({ key: `n:${n.url}`, el: <NewsBlock item={n} />, open: () => openLink(n.url) });
+    const pushNews = (n: BriefItem) => list.push({ key: `n:${n.url}`, el: <NewsBlock item={n} tickers={coinTickers} />, open: () => openLink(n.url) });
     const pushCoin = (c: CgCoin, label: string) =>
       list.push({ key: `c:${c.id}`, el: <CoinBlock coin={c} eyebrow={label} />, open: () => onSelectCoin(c.symbol.toUpperCase()) });
     // Odds stories pick their matching news first so the generic ones don't take it.
@@ -288,7 +295,7 @@ export function MarketStories({ onSelectCoin }: { onSelectCoin: (symbol: string)
       list.push({
         key: `o:${o.ev.url}`,
         size: pair ? "wide" : "odds",
-        el: pair ? <div className="mkst-pair"><OddsBlock ev={o.ev} /><NewsBlock item={o.story!} own /></div> : <OddsBlock ev={o.ev} />,
+        el: pair ? <div className="mkst-pair"><OddsBlock ev={o.ev} /><NewsBlock item={o.story!} own tickers={coinTickers} /></div> : <OddsBlock ev={o.ev} />,
         open: () => openLink(o.ev.url),
       });
       if (o.story && isPhone) pushNews(o.story);
@@ -340,7 +347,7 @@ export function MarketStories({ onSelectCoin }: { onSelectCoin: (symbol: string)
       pushCoin(m.coin, m.label);
     }
     return list;
-  }, [news, odds, coins, onSelectCoin, isPhone]);
+  }, [news, odds, coins, onSelectCoin, isPhone, coinTickers]);
 
   // Endless loop: the panels are rendered three times and the track sits on
   // the middle copy; once scrolling settles in an outer copy it jumps back

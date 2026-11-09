@@ -4166,7 +4166,7 @@ function AppDashboard({
                       instead of refetching every time. */}
                   <div style={!isWideDesktop ? { display: mobileChartTab === "orderbook" ? "none" : "contents" } : undefined}>
                     {/* Every platform: desktop arrows, phones swipe. */}
-                    <MarketStories onSelectCoin={openStoryCoin} />
+                    <MarketStories onSelectCoin={openStoryCoin} coinTickers={coinTickers} />
 
                     <GlobalMarkets
                       onOpenAuth={onOpenAuth}
