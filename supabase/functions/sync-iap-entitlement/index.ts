@@ -115,6 +115,16 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
+    // Grant only: never lower a tier. A user who is Elite through the web
+    // (Stripe or granted) but whose Apple ID also holds a Pro subscription
+    // (e.g. a TestFlight test purchase) was being dropped to Pro on every
+    // app open. Apple downgrades/expiries arrive via the RevenueCat webhook.
+    if (before && (TIER_RANK[before.tier] ?? 0) >= (TIER_RANK[tier] ?? 0)) {
+      return new Response(JSON.stringify({ tier: before.tier, provision }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     await supabaseAdmin
       .from("profiles")
       .update({

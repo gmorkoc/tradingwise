@@ -63,8 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (u: User) => {
     setProfileLoading(true);
-    const p = await fetchProfile(u.id);
-    setProfile(p);
+    const p = await fetchProfile(u.id).catch(() => null);
+    // A failed reload (network blip, app resuming on iOS, token refresh)
+    // keeps the profile we already have for this user — wiping it made
+    // tier fall back to "free" and showed Pro/Elite users upgrade prompts.
+    setProfile((prev) => p ?? (prev?.id === u.id ? prev : null));
     setProfileLoading(false);
   };
 

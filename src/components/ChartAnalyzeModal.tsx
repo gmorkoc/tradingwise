@@ -4,6 +4,7 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../services/supabase";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { useAuth } from "../contexts/AuthContext";
 import { AIQuotaWall } from "./AIQuotaWall";
 import { PaywallPromo } from "./PaywallPromo";
 import "../styles/ChartAnalyzeModal.css";
@@ -96,6 +97,7 @@ function renderAnalysis(text: string): React.ReactNode[] {
 export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgrade, onOpenAuth, coin }) => {
   const { t } = useTranslation();
   const { isPaid, used, limit } = useAIQuota();
+  const { user, profile, profileLoading } = useAuth();
   const backdropRef = useRef<HTMLDivElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +134,10 @@ export const ChartAnalyzeModal: React.FC<Props> = ({ isOpen, onClose, onOpenUpgr
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  // Signed in but the profile (and so the tier) hasn't loaded yet: wait
+  // instead of showing a paying user the upgrade promo.
+  if (!isPaid && user && (!profile || profileLoading)) return null;
 
   // Free/signed-out: the same upgrade promo every locked page shows from
   // the menu (bottom sheet on phones, popup on desktop), with Analyze a
