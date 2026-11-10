@@ -1,0 +1,94 @@
+{
+  "heatmapPro": {
+    "title": "Tasfiye Isı Haritası",
+    "pair": "{{coin}}USDT · Perp",
+    "ticker": {
+      "mark": "Mark",
+      "nearestLong": "En yakın long tasfiyeleri",
+      "nearestShort": "En yakın short tasfiyeleri",
+      "bias": "Tasfiye eğilimi",
+      "biasShorts": "Short %{{pct}}",
+      "biasLongs": "Long %{{pct}}",
+      "balanced": "Dengeli"
+    },
+    "ranges": {
+      "12h": "12 saat",
+      "1d": "24 saat",
+      "2d": "48 saat",
+      "3d": "3 gün",
+      "1w": "1 hafta",
+      "1m": "1 ay",
+      "3m": "3 ay"
+    },
+    "timeRange": "Zaman aralığı",
+    "refresh": "Yenile",
+    "downloadPng": "PNG olarak indir",
+    "signInDownloadPng": "PNG olarak indirmek için giriş yap",
+    "regenerate": "Yeniden oluştur",
+    "months": "Oca,Şub,Mar,Nis,May,Haz,Tem,Ağu,Eyl,Eki,Kas,Ara",
+    "settings": {
+      "title": "Isı haritası ayarları",
+      "close": "Ayarları kapat",
+      "colors": "Isı haritası renkleri",
+      "palette": "Renk paleti {{n}}",
+      "sensitivity": "Hassasiyet",
+      "reset": "Sıfırla",
+      "hideBelow": "Bundan zayıf seviyeleri gizle",
+      "fullFrom": "Tam parlaklık başlangıcı",
+      "weak": "Zayıf",
+      "strong": "Güçlü",
+      "presetsLabel": "Hassasiyet ön ayarları",
+      "sensNote": "Çubuklar her güç seviyesinde kaç fiyat seviyesi olduğunu gösterir. İlk tutamacın solundaki seviyeler gizlenir; ikincisinin sağındakiler tam parlaklıkta çizilir. Daha yüksek hassasiyet daha zayıf seviyeleri de görünür kılar.",
+      "merge": "Y eksenini birleştir",
+      "fewer": "Daha az",
+      "more": "Daha fazla",
+      "mergeRows": "Birleştirilecek fiyat satırı",
+      "mergeNote": "Komşu her {{n}} fiyat satırını toplar, böylece yakın seviyeler tek bir bant olarak görünür. 1 tüm ayrıntıyı korur.",
+      "show": "Isı haritasını göster"
+    },
+    "presets": {
+      "high": "Yüksek",
+      "medium": "Orta",
+      "low": "Düşük"
+    },
+    "tooltip": {
+      "intensity": "Tasfiye yoğunluğu",
+      "estLiq": "Tahmini tasfiye",
+      "signIn": "Giriş yap"
+    },
+    "usd": {
+      "lockTitle": "Tahmini $ tasfiyeleri görmek için giriş yap",
+      "est": "$ tahmini",
+      "retry": "$ tahmini · tekrar dene",
+      "retryTitle": "Açık pozisyon (OI) yüklenemedi — tekrar denemek için dokun",
+      "calculating": "Tahmini $ hesaplanıyor…",
+      "estTitle": "Tahmini: açık seviyeler güncel açık pozisyona (OI) göre kalibre edildi",
+      "approx": "≈ {{usd}} tahmini"
+    },
+    "book": {
+      "label": "Tasfiye defteri",
+      "shorts": "Short",
+      "above": "yukarıda",
+      "longs": "Long",
+      "below": "aşağıda",
+      "signIn": "$ tahminleri için giriş yap",
+      "imbalance": "%{{short}} short tasfiyesi, %{{long}} long tasfiyesi"
+    },
+    "summary": {
+      "shortDominant": "Short tarafı tasfiye baskısı baskın. ${{above}} üzerine çıkış zincirleme tasfiyeleri tetikleyebilir.",
+      "longDominant": "Long tarafı tasfiye baskısı baskın. ${{below}} altına düşüş zincirleme tasfiyeleri tetikleyebilir.",
+      "balanced": "Dengeli baskı. Kilit mıknatıslar: aşağıda ${{below}}, yukarıda ${{above}}."
+    },
+    "sentiment": {
+      "bullish": "Yükseliş",
+      "bearish": "Düşüş",
+      "neutral": "Nötr"
+    },
+    "action": {
+      "buy": "AL",
+      "sell": "SAT",
+      "hold": "TUT",
+      "watch": "İZLE"
+    }
+  }
+}

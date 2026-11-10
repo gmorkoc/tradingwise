@@ -7,9 +7,14 @@ import { CandleDataPoint } from "../services/coinglass";
  * page uses. Shared so other features (e.g. zone AI analysis) can reuse the
  * exact same cluster math instead of re-deriving it. */
 
-export const PRICE_ROWS = 700;
-const DECAY = 0.968; // slow decay → long persistent bands like CoinGlass
-const BLUR_R = 1;    // minimal blur → thin CoinGlass-style lines
+export const PRICE_ROWS = 400;
+// Levels build up as more positions open there and persist until price
+// trades through them (then they're cleared — "liquidated"). That gives
+// bands that brighten left→right and end exactly where price crossed them.
+// Positions get closed over time: fade with a real-time half-life (not per
+// candle), so a 3-month view doesn't let stale far-away levels dominate.
+const HALF_LIFE_SEC = 14 * 86400;
+const BLUR_R: number = 2;    // soft few-row bands instead of hairlines
 
 export const LEVERAGES_ALL = [10, 25, 50, 100, 125, 200] as const;
 export type Lev = typeof LEVERAGES_ALL[number];
@@ -24,6 +29,7 @@ function makeGaussKernel(r: number) {
 const GAUSS = makeGaussKernel(BLUR_R);
 
 function blurCol(col: Float32Array): Float32Array {
+  if (BLUR_R === 0) return col.slice();
   const out = new Float32Array(PRICE_ROWS);
   for (let r = 0; r < PRICE_ROWS; r++) {
     let v = 0;
@@ -53,12 +59,27 @@ export function buildMatrix(candles: CandleDataPoint[], activeLevs: Lev[]) {
     if (row >= 0 && row < PRICE_ROWS) acc[row] += w;
   };
 
+  // Weight new positions by traded volume (relative to the typical candle),
+  // falling back to candle size when volume isn't available.
+  const vols = candles.map(c => c.volume ?? 0).filter(v => v > 0).sort((a, b) => a - b);
+  const medVol = vols.length ? vols[Math.floor(vols.length / 2)] : 0;
+  const span   = cols > 1 ? Math.max(1, candles[1].time - candles[0].time) : 3600;
+  const DECAY  = Math.pow(0.5, span / HALF_LIFE_SEC);
+
   for (let col = 0; col < cols; col++) {
     const c   = candles[col];
     const mid = (c.open + c.close) / 2;
-    const vol = Math.max((c.high - c.low) / pRange, 0.002);
+    const vol = medVol > 0 && c.volume
+      ? Math.min(c.volume / medVol, 6) * 0.01
+      : Math.max((c.high - c.low) / pRange, 0.002);
 
     for (let r = 0; r < PRICE_ROWS; r++) acc[r] *= DECAY;
+
+    // Price traded through these rows this candle → the positions whose
+    // liquidation price sat there are now liquidated: clear them (before
+    // adding this candle's new positions).
+    const lo = toRow(c.low), hi = toRow(c.high);
+    for (let r = lo; r <= hi; r++) acc[r] = 0;
 
     for (const lev of activeLevs) {
       const w = LEV_WEIGHTS[lev] * vol * 28;
@@ -83,11 +104,24 @@ export function buildMatrix(candles: CandleDataPoint[], activeLevs: Lev[]) {
 export interface ClusterInfo {
   priceLo: number; priceHi: number; priceCenter: number;
   strength: number; label: "extreme" | "high" | "moderate"; distancePct: number;
+  /** Fraction of all still-open liquidation levels that sit in this zone.
+   *  Every contract has a long and a short side, so all levels together
+   *  ≙ 2 × open interest: est. $ here = share × 2 × OI. */
+  share: number;
 }
 export interface LiqAnalysis {
   longClusters: ClusterInfo[]; shortClusters: ClusterInfo[];
+  /** Closest meaningful zone below / above price (not just among the top 3). */
+  nearLong: ClusterInfo | null; nearShort: ClusterInfo | null;
   dominantSide: "long" | "short" | "balanced";
-  currentPrice: number; summary: string;
+  currentPrice: number;
+  /** English summary sentence (kept for callers that don't translate). */
+  summary: string;
+  /** Language-agnostic form of `summary`: which sentence applies (null = none)
+   *  plus the key prices it mentions, so the UI can render a translation. */
+  summaryKey: "shortDominant" | "longDominant" | "balanced" | null;
+  summaryAbove: number | null;
+  summaryBelow: number | null;
 }
 
 export function analyseLiquidations(candles: CandleDataPoint[], activeLevs: Lev[]): LiqAnalysis | null {
@@ -103,35 +137,64 @@ export function analyseLiquidations(candles: CandleDataPoint[], activeLevs: Lev[
   const cellSize     = (pMax - pMin) / PRICE_ROWS;
   const rowToPrice   = (r: number) => pMin + (r + 0.5) * cellSize;
 
-  const THRESHOLD = 0.20;
+  // Strength is measured against the strong levels of *today's* column (98th
+  // percentile of non-empty rows), the same way the chart scales colour —
+  // not against one all-time spike, which made every nearby band look weak.
+  const nz = Array.from(lastCol).filter(v => v > 0).sort((a, b) => a - b);
+  if (!nz.length) return null;
+  const ref = nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.98))] || nz[nz.length - 1];
+
+  // Zones = local peaks, widened while the level stays ≥ 70% of the peak.
+  const MIN_STRENGTH = 0.15, PEAK_R = 3;
   const bands: { rowStart: number; rowEnd: number; peakHeat: number }[] = [];
-  let open = false, start = 0, peak = 0;
   for (let r = 0; r < PRICE_ROWS; r++) {
-    const v = lastCol[r] / maxVal;
-    if (v >= THRESHOLD) {
-      if (!open) { open = true; start = r; peak = 0; }
-      if (lastCol[r] > peak) peak = lastCol[r];
-    } else if (open) {
-      bands.push({ rowStart: start, rowEnd: r - 1, peakHeat: peak });
-      open = false;
+    const v = lastCol[r];
+    if (v / ref < MIN_STRENGTH) continue;
+    let isPeak = true;
+    for (let k = -PEAK_R; k <= PEAK_R && isPeak; k++) {
+      const j = r + k;
+      if (k !== 0 && j >= 0 && j < PRICE_ROWS && (lastCol[j] > v || (lastCol[j] === v && k < 0))) isPeak = false;
     }
+    if (!isPeak) continue;
+    // …but never wider than ~0.4% of price either side, so a dense plateau
+    // isn't reported as one giant zone.
+    const maxHalf = Math.max(1, Math.ceil((currentPrice * 0.002) / cellSize));
+    let s = r, e = r;
+    while (s > 0 && r - s < maxHalf && lastCol[s - 1] >= v * 0.7) s--;
+    while (e < PRICE_ROWS - 1 && e - r < maxHalf && lastCol[e + 1] >= v * 0.7) e++;
+    const prev = bands[bands.length - 1];
+    if (prev && s <= prev.rowEnd) { prev.rowEnd = Math.max(prev.rowEnd, e); prev.peakHeat = Math.max(prev.peakHeat, v); }
+    else bands.push({ rowStart: s, rowEnd: e, peakHeat: v });
   }
-  if (open) bands.push({ rowStart: start, rowEnd: PRICE_ROWS - 1, peakHeat: peak });
+
+  let lastSum = 0;
+  for (let r = 0; r < PRICE_ROWS; r++) lastSum += lastCol[r];
 
   const toInfo = (b: typeof bands[0]): ClusterInfo => {
     const center   = rowToPrice(Math.round((b.rowStart + b.rowEnd) / 2));
-    const strength = b.peakHeat / maxVal;
+    const strength = Math.min(1, b.peakHeat / ref);
+    let bandSum = 0;
+    for (let r = b.rowStart; r <= b.rowEnd; r++) bandSum += lastCol[r];
     return {
       priceLo: rowToPrice(b.rowStart), priceHi: rowToPrice(b.rowEnd),
-      priceCenter: center, strength,
+      priceCenter: center, strength, share: lastSum > 0 ? bandSum / lastSum : 0,
       label: strength >= 0.65 ? "extreme" : strength >= 0.38 ? "high" : "moderate",
       distancePct: ((center - currentPrice) / currentPrice) * 100,
     };
   };
 
   const all           = bands.map(toInfo);
-  const longClusters  = all.filter(c => c.priceCenter < currentPrice * 0.9998).sort((a, b) => b.strength - a.strength).slice(0, 3);
-  const shortClusters = all.filter(c => c.priceCenter > currentPrice * 1.0002).sort((a, b) => b.strength - a.strength).slice(0, 3);
+  const below         = all.filter(c => c.priceCenter < currentPrice * 0.9998);
+  const above         = all.filter(c => c.priceCenter > currentPrice * 1.0002);
+  const longClusters  = [...below].sort((a, b) => b.strength - a.strength).slice(0, 3);
+  const shortClusters = [...above].sort((a, b) => b.strength - a.strength).slice(0, 3);
+  // Nearest zone that's at least "moderate+" (a real band, not a faint line).
+  const closest = (xs: ClusterInfo[]) => {
+    const strong = xs.filter(c => c.strength >= 0.35);
+    const pool = strong.length ? strong : xs;
+    return pool.length ? pool.reduce((a, b) => (Math.abs(b.distancePct) < Math.abs(a.distancePct) ? b : a)) : null;
+  };
+  const nearLong = closest(below), nearShort = closest(above);
 
   const ls = longClusters.reduce((s, c) => s + c.strength, 0);
   const ss = shortClusters.reduce((s, c) => s + c.strength, 0);
@@ -141,9 +204,19 @@ export function analyseLiquidations(candles: CandleDataPoint[], activeLevs: Lev[
   const fmt = (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const tS  = shortClusters[0], tL = longClusters[0];
   let summary = "";
-  if (dominantSide === "short" && tS) summary = `Short-side liquidation pressure is dominant. Breaking above $${fmt(tS.priceCenter)} could trigger a cascade.`;
-  else if (dominantSide === "long" && tL) summary = `Long-side liquidation pressure is dominant. A drop below $${fmt(tL.priceCenter)} could trigger cascading liquidations.`;
-  else if (tS && tL) summary = `Balanced pressure. Key magnets: $${fmt(tL.priceCenter)} below and $${fmt(tS.priceCenter)} above.`;
+  let summaryKey: LiqAnalysis["summaryKey"] = null;
+  if (dominantSide === "short" && tS) {
+    summaryKey = "shortDominant";
+    summary = `Short-side liquidation pressure is dominant. Breaking above $${fmt(tS.priceCenter)} could trigger a cascade.`;
+  } else if (dominantSide === "long" && tL) {
+    summaryKey = "longDominant";
+    summary = `Long-side liquidation pressure is dominant. A drop below $${fmt(tL.priceCenter)} could trigger cascading liquidations.`;
+  } else if (tS && tL) {
+    summaryKey = "balanced";
+    summary = `Balanced pressure. Key magnets: $${fmt(tL.priceCenter)} below and $${fmt(tS.priceCenter)} above.`;
+  }
+  const summaryAbove = tS ? tS.priceCenter : null;
+  const summaryBelow = tL ? tL.priceCenter : null;
 
-  return { longClusters, shortClusters, dominantSide, currentPrice, summary };
+  return { longClusters, shortClusters, nearLong, nearShort, dominantSide, currentPrice, summary, summaryKey, summaryAbove, summaryBelow };
 }

@@ -1,0 +1,14 @@
+{
+  "peerCompare": {
+    "title": "Karşılaştırılacak coinler",
+    "clear": "Karşılaştırmayı temizle",
+    "select": "Karşılaştırmak için seç",
+    "scrollLeft": "Sola kaydır",
+    "scrollRight": "Sağa kaydır",
+    "maxCoins": "En fazla {{n}} coin",
+    "remove": "Karşılaştırmadan çıkar",
+    "add": "Karşılaştırmaya ekle",
+    "rangeAria": "Karşılaştırma aralığı",
+    "loading": "Yükleniyor…"
+  }
+}

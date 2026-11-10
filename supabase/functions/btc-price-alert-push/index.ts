@@ -1,5 +1,6 @@
 import { supabaseAdmin, getAccessToken, sendPush, getSoundsByUser } from "../_shared/fcm.ts";
 import { logNotifications } from "../_shared/notificationLog.ts";
+import { sendWebPush, getWebPushSubscriptions } from "../_shared/webpush.ts";
 
 // Server-side twin of useBtcMoveAlert.ts's anchor/threshold logic, but with
 // a much larger threshold since this fires a push notification (interrupts
@@ -10,22 +11,41 @@ const THRESHOLD = 250;
 
 const CRON_SECRET = Deno.env.get("CRON_SECRET")!;
 
-// Binance's REST API 451s from some cloud regions (including, apparently,
-// wherever Supabase runs edge functions) — Coinbase's public spot price
-// endpoint doesn't have that restriction, and works for any coin ticker.
+// Prices: Binance (matches the chart), then Coinbase, then OKX — see getPrice.
 const priceCache = new Map<string, number>();
 async function getPrice(coin: string): Promise<number | null> {
   if (priceCache.has(coin)) return priceCache.get(coin)!;
+  // Binance first — the chart and every alert level are Binance USDT
+  // prices, so this fires exactly when the chart crosses the level. The
+  // cron job pins this function to Frankfurt (x-region header) because
+  // Binance refuses US requests; the public data mirror is tried first.
+  for (const host of ["https://data-api.binance.vision", "https://api.binance.com"]) {
+    try {
+      const res = await fetch(`${host}/api/v3/ticker/price?symbol=${coin}USDT`);
+      if (!res.ok) continue;
+      const price = parseFloat((await res.json())?.price);
+      if (Number.isFinite(price) && price > 0) { priceCache.set(coin, price); return price; }
+    } catch { /* next source */ }
+  }
+  // Fallbacks: Coinbase (USD), then OKX (USDT) for coins Coinbase doesn't list.
   try {
     const res = await fetch(`https://api.coinbase.com/v2/prices/${coin}-USD/spot`);
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    const price = parseFloat(data.amount);
-    priceCache.set(coin, price);
-    return price;
-  } catch {
-    return null;
-  }
+    if (res.ok) {
+      const { data } = await res.json();
+      const price = parseFloat(data?.amount);
+      if (Number.isFinite(price) && price > 0) { priceCache.set(coin, price); return price; }
+    }
+  } catch { /* fall through */ }
+  // Coins Coinbase doesn't list: OKX spot (USDT), so their alerts still fire.
+  try {
+    const res = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${coin}-USDT`);
+    if (res.ok) {
+      const j = await res.json();
+      const price = parseFloat(j?.data?.[0]?.last);
+      if (Number.isFinite(price) && price > 0) { priceCache.set(coin, price); return price; }
+    }
+  } catch { /* no price */ }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -101,14 +121,20 @@ Deno.serve(async (req) => {
     const { data: userProfile } = await supabaseAdmin.from("profiles").select("alert_sound, notify_price_alerts").eq("id", alert.user_id).single();
     if (userProfile?.notify_price_alerts === false) continue;
 
+    // Every device the user has: the iOS app (FCM → APNs, works with the
+    // app closed or killed) and any browsers with web push turned on.
     const { data: userTokens } = await supabaseAdmin.from("device_push_tokens").select("token").eq("user_id", alert.user_id);
-    if (!userTokens || userTokens.length === 0) continue;
+    const webSubs = await getWebPushSubscriptions(alert.user_id);
+    if ((!userTokens || userTokens.length === 0) && webSubs.length === 0) continue;
 
     const title = `${alert.coin} ${alert.direction === "above" ? "▲" : "▼"} $${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
     const body = `${alert.direction === "above" ? "Went above" : "Dropped below"} your $${alert.target_price.toLocaleString("en-US", { maximumFractionDigits: 2 })} alert`;
     const pushData = { type: "price_alert", coin: alert.coin };
-    const token = await ensureAccessToken();
-    await Promise.all(userTokens.map(({ token: t }) => sendPush(token, t, title, body, userProfile?.alert_sound ?? "bell", pushData)));
+    if (userTokens && userTokens.length > 0) {
+      const token = await ensureAccessToken();
+      await Promise.all(userTokens.map(({ token: t }) => sendPush(token, t, title, body, userProfile?.alert_sound ?? "bell", pushData)));
+    }
+    await Promise.all(webSubs.map((s) => sendWebPush(s, title, body, pushData)));
     await logNotifications([{ userId: alert.user_id, type: "price_alert", title, body, data: pushData }]);
     userAlertsFired++;
   }

@@ -1,0 +1,19 @@
+{
+  "cwAlerts": {
+    "getNotified": "Bildirim al",
+    "above": "Üstü",
+    "below": "Altı",
+    "aboveAt": "{{price}} üstü",
+    "belowAt": "{{price}} altı",
+    "alertSet": "alarm kuruldu",
+    "alertAbove": "{{price}} üstünde beni uyar",
+    "alertBelow": "{{price}} altında beni uyar",
+    "cancelAbove": "{{price}} üstü alarmını iptal et",
+    "cancelBelow": "{{price}} altı alarmını iptal et",
+    "hintSignIn": "Bunları uygulama kapalıyken bile anlık bildirim olarak almak için giriş yapın.",
+    "hintProfileOff": "Fiyat alarmı bildirimleri profilinizde kapalı, bu yüzden telefonunuza bildirim gelmeyecek.",
+    "hintDeviceOff": "Bu cihazda bildirimler kapalı, bu yüzden bu alarmlar size ulaşamaz.",
+    "turnOn": "Bildirimleri aç",
+    "hintOn": "Fiyat seviyeyi geçtiğinde, uygulama kapalı veya tamamen sonlandırılmış olsa bile anlık bildirim alırsınız. İptal etmek için kurulu bir alarma dokunun."
+  }
+}

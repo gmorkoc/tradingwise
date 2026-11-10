@@ -1,0 +1,23 @@
+{
+  "chartGoTo": {
+    "title": "Tarihe git",
+    "go": "Git",
+    "close": "Kapat",
+    "cancel": "İptal",
+    "tabDate": "Tarih",
+    "tabRange": "Özel aralık",
+    "from": "Başlangıç",
+    "to": "Bitiş",
+    "prevMonth": "Önceki ay",
+    "nextMonth": "Sonraki ay",
+    "errDateFormat": "Tarihi YYYY-MM-DD biçiminde gir.",
+    "errFuture": "Bu tarih gelecekte.",
+    "errBothFormat": "Her iki tarihi de YYYY-MM-DD biçiminde gir.",
+    "errEndBeforeStart": "Bitiş, başlangıçtan sonra olmalı.",
+    "weekdays": { "mo": "Pt", "tu": "Sa", "we": "Ça", "th": "Pe", "fr": "Cu", "sa": "Ct", "su": "Pz" },
+    "months": {
+      "jan": "Ocak", "feb": "Şubat", "mar": "Mart", "apr": "Nisan", "may": "Mayıs", "jun": "Haziran",
+      "jul": "Temmuz", "aug": "Ağustos", "sep": "Eylül", "oct": "Ekim", "nov": "Kasım", "dec": "Aralık"
+    }
+  }
+}

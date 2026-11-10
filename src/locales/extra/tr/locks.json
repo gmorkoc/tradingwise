@@ -1,0 +1,20 @@
+{
+  "locks": {
+    "featureFallback": "Bu özellik",
+    "featureAria": "Özellik",
+    "lockedAria": "{{name}} kilitli",
+    "rowSubPlan": "Görmek için giriş yapın — {{plan}} planına dahildir. Yeni misiniz? Önce ücretsiz bir hesap oluşturun, sonra istediğiniz zaman yükseltin.",
+    "rowSubFree": "Hesapla ücretsiz — görmek için giriş yapın veya birkaç saniyede ücretsiz bir hesap oluşturun.",
+    "panelSub": "Kullanmak için giriş yapın — yeni misiniz? Önce ücretsiz bir hesap oluşturun.",
+    "signIn": "Giriş yap",
+    "createFreeAccount": "Ücretsiz hesap oluştur",
+    "aiTitle": "Yapay zekâ analizi",
+    "aiDesc": "Yapay zekâ bu verileri sizin için okur ve ne anlama geldiğini açıklar.",
+    "proCallout": "<b>Pro</b> planındasınız — mevcut tüm özellikleriniz korunur",
+    "proBanner": "<b>Pro</b> planındasınız · {{price}}/ay — tüm özellikler korunur",
+    "upgradedReloading": "Artık <b>Elite</b> planındasınız. Yeniden yükleniyor…",
+    "prorationBody": "Bugün fatura döneminizin kalanı için orantılı olarak <b>{{amount}}</b> ücretlendirileceksiniz. Ardından normal yenileme tarihinizde <b>{{renewal}}/ay</b>.",
+    "payUpgrade": "{{amount}} öde ve Elite'e yükselt",
+    "goBack": "← Geri dön"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "cwAlerts": {
+    "getNotified": "Get notified",
+    "above": "Above",
+    "below": "Below",
+    "aboveAt": "Above {{price}}",
+    "belowAt": "Below {{price}}",
+    "alertSet": "alert set",
+    "alertAbove": "Alert me above {{price}}",
+    "alertBelow": "Alert me below {{price}}",
+    "cancelAbove": "Cancel alert above {{price}}",
+    "cancelBelow": "Cancel alert below {{price}}",
+    "hintSignIn": "Sign in to get these as push notifications — even with the app closed.",
+    "hintProfileOff": "Price-alert notifications are turned off in your profile, so these won't push to your phone.",
+    "hintDeviceOff": "Notifications are off on this device, so these alerts can't reach you.",
+    "turnOn": "Turn on notifications",
+    "hintOn": "You'll get a push notification when price crosses the level — even with the app closed or killed. Tap a set alert to cancel it."
+  }
+}

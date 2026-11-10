@@ -1,0 +1,24 @@
+{
+  "signupPromo": {
+    "dialogLabel": "Create a free account",
+    "close": "Close",
+    "cta": "Join for free",
+    "v0": {
+      "title": "Practice first. Then trade.",
+      "text": "Create a free account and get $100k in paper trading cash, so every real move is one you've already tested."
+    },
+    "v1": {
+      "title": "Your edge starts here.",
+      "text": "Sign up free and try ProVision for 3 days: trend-painted candles, buy and sell signals, and where each one is proven wrong."
+    },
+    "v2": {
+      "title": "Catch the next big candle.",
+      "text": "A free account gets you $100k of paper money to trade live markets, plus a 3-day ProVision trial to spot the move."
+    }
+  },
+  "promoStrip": {
+    "desktop": "Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices",
+    "phone": "Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict",
+    "dismiss": "Dismiss"
+  }
+}

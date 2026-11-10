@@ -7,6 +7,7 @@ import { coinglass, CandleDataPoint, CoinSymbol, getMacroContext, MacroContextDa
 import { calcEMA, calcRSI, calcRSIArray, calcMACD, calcTEMA, calcBB, calcATR, calcVolRatio } from "../services/indicators";
 import { openai, callOpenAI, PredictionResponse } from "../services/openai";
 import { fetchFearGreed } from "../services/feargreed";
+import { useTranslation } from "react-i18next";
 import { BlurGate } from "./MembershipGate";
 import { useAuth } from "../contexts/AuthContext";
 import { hasAccess } from "../services/supabase";
@@ -20,7 +21,10 @@ import { getIndicatorDef } from "../services/customIndicators";
 import { RoundedCandleOverlay } from "./DrawingOverlay";
 import { PatternHighlight } from "./PatternHighlight";
 import { ChartPatternOverlay } from "./ChartPatternOverlay";
-import { addPriceAlert, hasPriceAlert, removePriceAlert, PRICE_ALERTS_EVENT } from "../services/priceAlertStore";
+import { addPriceAlert, hasPriceAlert, removePriceAlert, pruneServerTriggered, PRICE_ALERTS_EVENT } from "../services/priceAlertStore";
+import { isPushAvailable, completePushPriming } from "../services/pushNotifications";
+import { isWebPushAvailable, isWebPushSubscribed, subscribeWebPush } from "../services/webPush";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { detectChartPatterns, type PBar, type ChartPattern } from "../utils/chartPatterns";
 import { ChartDrawingTools, Drawing } from "./ChartDrawingTools";
 import "../styles/CandleWatcher.css";
@@ -2505,6 +2509,8 @@ function IndicatorStat({
 
 export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpenUpgrade, onReady, visible = true, ticker, onOpenCoinPicker }) => {
   const { tier, user, profile } = useAuth();
+  // Named tA (not t): this component uses `t` for local timers/counters.
+  const { t: tA } = useTranslation();
   // Re-render "Today's read" alert buttons after one is added/removed.
   const [, setAlertTick] = useState(0);
   useEffect(() => {
@@ -2512,6 +2518,30 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
     window.addEventListener(PRICE_ALERTS_EVENT, bump);
     return () => window.removeEventListener(PRICE_ALERTS_EVENT, bump);
   }, []);
+  // Clear chips for alerts the server already pushed.
+  useEffect(() => { pruneServerTriggered(user?.id); }, [user?.id]);
+
+  // Can this device actually receive a push? iOS app: notification
+  // permission. Website: a browser push subscription. "na" = can't tell /
+  // not supported (e.g. Android, unsupported browser).
+  const [pushState, setPushState] = useState<"on" | "off" | "na">("na");
+  const refreshPushState = useCallback(async () => {
+    try {
+      if (isPushAvailable()) {
+        const { receive } = await FirebaseMessaging.checkPermissions();
+        setPushState(receive === "granted" ? "on" : "off");
+      } else if (isWebPushAvailable()) {
+        setPushState((await isWebPushSubscribed()) ? "on" : "off");
+      } else setPushState("na");
+    } catch { setPushState("na"); }
+  }, []);
+  useEffect(() => { if (user) refreshPushState(); }, [user?.id, refreshPushState]);
+  const turnOnPush = async () => {
+    if (!user) { onOpenAuth(); return; }
+    if (isPushAvailable()) await completePushPriming(user.id);
+    else if (isWebPushAvailable()) await subscribeWebPush(user.id);
+    refreshPushState();
+  };
   const isPaid = hasAccess(tier, "pro");
   const [intervalIdx, setIntervalIdx] = useState(2);  // default 4h
   // Candle Patterns card tapped → highlight the pattern on the chart.
@@ -4373,7 +4403,7 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
             )}
             {read.alerts.length > 0 && (
               <div className="cw-read-alerts">
-                <span className="cw-read-sub">Get notified</span>
+                <span className="cw-read-sub">{tA("cwAlerts.getNotified")}</span>
                 <div className="cw-read-alert-row">
                   {read.alerts.map(a => {
                     const set = hasPriceAlert(coin as string, a.price, a.direction);
@@ -4383,8 +4413,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         type="button"
                         className={`cw-read-alert${set ? " cw-read-alert--set" : ""}`}
                         aria-pressed={set}
-                        aria-label={set ? `Cancel alert ${a.direction} ${ewFmt(a.price)}` : `Alert me ${a.direction} ${ewFmt(a.price)}`}
+                        aria-label={set
+                          ? tA(a.direction === "above" ? "cwAlerts.cancelAbove" : "cwAlerts.cancelBelow", { price: ewFmt(a.price) })
+                          : tA(a.direction === "above" ? "cwAlerts.alertAbove" : "cwAlerts.alertBelow", { price: ewFmt(a.price) })}
                         onClick={() => {
+                          // Alerts are push notifications, which need an account.
+                          if (!user) { onOpenAuth(); return; }
                           // Tap again to cancel (removes the server copy too, so no push).
                           if (set) removePriceAlert(coin as string, a.price, a.direction, user?.id);
                           else addPriceAlert(coin as CoinSymbol, a.price, a.direction, user?.id);
@@ -4392,8 +4426,9 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                         }}
                       >
                         <span aria-hidden="true">{set ? "✓" : "🔔"}</span>
-                        {a.direction === "above" ? "Above" : "Below"} {ewFmt(a.price)}
-                        <em>{set ? "alert set" : a.why}</em>
+                        {/* Word order per language (Turkish puts the price first). */}
+                        {tA(a.direction === "above" ? "cwAlerts.aboveAt" : "cwAlerts.belowAt", { price: ewFmt(a.price) })}
+                        <em>{set ? tA("cwAlerts.alertSet") : a.why}</em>
                         {set && <span className="cw-read-alert-x" aria-hidden="true">✕</span>}
                       </button>
                     );
@@ -4401,10 +4436,12 @@ export const CandleWatcher: React.FC<Props> = ({ coin, theme, onOpenAuth, onOpen
                 </div>
                 <p className="cw-read-alert-hint">
                   {!user
-                    ? "Alerts work while the app is open. Sign in to also get them as push notifications when it's closed."
+                    ? tA("cwAlerts.hintSignIn")
                     : profile?.notify_price_alerts === false
-                      ? "Price-alert notifications are turned off in your profile, so these won't push to your phone."
-                      : "You'll get a push notification when price crosses the level — even with the app closed. Tap a set alert to cancel it."}
+                      ? tA("cwAlerts.hintProfileOff")
+                      : pushState === "off"
+                        ? <>{tA("cwAlerts.hintDeviceOff")} <button type="button" className="cw-read-alert-enable" onClick={turnOnPush}>{tA("cwAlerts.turnOn")}</button></>
+                        : tA("cwAlerts.hintOn")}
                 </p>
               </div>
             )}

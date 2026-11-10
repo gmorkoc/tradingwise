@@ -443,14 +443,18 @@ export const MAX_RANGE_CANDLES = 3000;
 
 export type HeatmapRange = '12h' | '1d' | '2d' | '3d' | '1w' | '1m' | '3m';
 
+const oiCache = new Map<string, { units: number; at: number }>();
+
 const HEATMAP_RANGE: Record<HeatmapRange, { interval: string; limit: number }> = {
-  '12h': { interval: '4h', limit: 3  },
-  '1d':  { interval: '4h', limit: 6  },
-  '2d':  { interval: '4h', limit: 12 },
-  '3d':  { interval: '4h', limit: 18 },
-  '1w':  { interval: '4h', limit: 42 },
-  '1m':  { interval: '1d', limit: 30 },
-  '3m':  { interval: '1d', limit: 90 },
+  // Fine candles (~150–360 columns) so the heatmap reads as smooth bands
+  // instead of a handful of fat blocks.
+  '12h': { interval: '5m',  limit: 144 },
+  '1d':  { interval: '5m',  limit: 288 },
+  '2d':  { interval: '15m', limit: 192 },
+  '3d':  { interval: '15m', limit: 288 },
+  '1w':  { interval: '30m', limit: 336 },
+  '1m':  { interval: '2h',  limit: 360 },
+  '3m':  { interval: '6h',  limit: 360 },
 };
 
 
@@ -1013,6 +1017,29 @@ export const coinglass = {
     }
   },
 
+  /** Current open interest of the coin's USDT perpetual, in USD. OKX first
+   *  (public, CORS-enabled, reports USD directly), then Coinalyze (Binance,
+   *  base-asset units × price). Cached 60s per coin. NaN if both fail. */
+  getOpenInterestUSD: async (coin: CoinSymbol | string, price: number): Promise<number> => {
+    const hit = oiCache.get(String(coin));
+    if (hit && Date.now() - hit.at < 60_000) return price > 0 ? hit.units * price : NaN;
+    const save = (units: number) => { oiCache.set(String(coin), { units, at: Date.now() }); return price > 0 ? units * price : NaN; };
+    try {
+      const r = await fetch(`https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId=${coin}-USDT-SWAP`);
+      const j = await r.json();
+      const row = j?.code === '0' ? j.data?.[0] : null;
+      const units = parseFloat(row?.oiCcy ?? '');
+      if (isFinite(units) && units > 0) return save(units);
+    } catch { /* fall through */ }
+    try {
+      const r = await fetch(`/coinalyze-api/v1/open-interest?symbols=${coin}USDT_PERP.A`);
+      const j = await r.json();
+      const units = Array.isArray(j) && typeof j[0]?.value === 'number' ? j[0].value : NaN;
+      if (isFinite(units) && units > 0) return save(units);
+    } catch { /* fall through */ }
+    return NaN;
+  },
+
   getHeatmapCandles: async (range: HeatmapRange, coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint[]> => {
     const { interval, limit } = HEATMAP_RANGE[range];
     return fetchBinanceKlines(coin, interval, limit);
@@ -1053,7 +1080,10 @@ export const coinglass = {
   },
 
   getHTFCandles: async (coin: CoinSymbol | string = 'BTC'): Promise<CandleDataPoint[]> => {
-    return fetchBinanceKlines(coin, '1w', 260);
+    // Full weekly history (Binance BTC starts Aug 2017, ~480 weeks). 260
+    // weeks only reached back to late 2021, so the 2020 halving was missing
+    // and Cycle Compare silently used the Nov 2021 top as its "2020" start.
+    return fetchBinanceKlines(coin, '1w', 600);
   },
 
   getCandles: async (coin: CoinSymbol | string, interval: string, limit = 100): Promise<CandleDataPoint[]> => {
@@ -1447,6 +1477,11 @@ export async function getLSRatioByExchange(coin: CoinSymbol | string = 'BTC'): P
   return snapshots;
 }
 
+/** Binance public klines (no CoinGlass) — reachable from the browser. */
+export async function getBinanceCandles(coin: CoinSymbol | string, interval: string, limit: number): Promise<CandleDataPoint[]> {
+  return fetchBinanceKlines(coin, interval, limit);
+}
+
 export async function getPriceCandles(
   coin: CoinSymbol | string,
   interval: string,
@@ -1591,6 +1626,48 @@ export async function getPriceLSHistory(
   return points.sort((a, b) => a.time - b.time);
 }
 
+// ── Long/short bundle from exchanges' own APIs (long-short server function) ──
+// CoinGlass's long/short + taker endpoints aren't on our plan (they all fail),
+// so the Positions page reads Binance / OKX / Bybit / Bitget / Gate directly
+// through our `long-short` function, run outside the US so Binance futures
+// and Bybit answer.
+
+export interface LongShortBundle {
+  ratios: Record<string, { retail: ExchangeRatioRow | null; whaleAccount: ExchangeRatioRow | null; whalePosition: ExchangeRatioRow | null }>;
+  taker: { exchange: string; buyUsd: number; sellUsd: number }[];
+  history: { time: number; ratio: number }[];
+  historySource: string | null;
+  multi?: Record<string, { longPct: number; shortPct: number }>;
+}
+
+export async function getLongShortBundle(
+  coin: CoinSymbol | string,
+  hours: 1 | 4 | 12 | 24,
+  period: '1h' | '4h' | '12h' | '1d',
+  historyLimit: number,
+  coins?: string[],
+): Promise<LongShortBundle | null> {
+  const score = (b: LongShortBundle | null) =>
+    !b ? -1 : Object.values(b.ratios).reduce((s, r) => s + [r.retail, r.whaleAccount, r.whalePosition].filter(Boolean).length, 0) + b.taker.length;
+  try {
+    const { supabase } = await import('./supabase');
+    const { FunctionRegion } = await import('@supabase/supabase-js');
+    let best: LongShortBundle | null = null;
+    // Frankfurt first; Tokyo if Binance (the main source) didn't answer.
+    for (const region of [FunctionRegion.EuCentral1, FunctionRegion.ApNortheast1]) {
+      const { data } = await supabase.functions.invoke('long-short', {
+        body: { coin: String(coin).toUpperCase(), hours, period, historyLimit, coins }, region,
+      });
+      const b = (data && typeof data === 'object' && 'ratios' in data) ? data as LongShortBundle : null;
+      if (score(b) > score(best)) best = b;
+      if (best?.ratios?.Binance?.retail) break;
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
 // ── Multi-coin L/S snapshot (for futures table) ──────────────────────────────
 
 export interface CoinLSSnapshot {
@@ -1603,8 +1680,11 @@ export interface CoinLSSnapshot {
   lsRatio: number;
 }
 
+/** Prices from Binance + long/short from `lsMap` (exchange data). Coins
+ *  without real long/short data are left out — never shown as a fake 50/50. */
 export async function getMultiCoinLSSnapshot(
   coins: readonly { symbol: string; name: string }[],
+  lsMap: Record<string, { longPct: number; shortPct: number }>,
 ): Promise<CoinLSSnapshot[]> {
   // Binance 24h ticker — all coins in one request
   const symbols = JSON.stringify(coins.map(c => `${c.symbol}USDT`));
@@ -1621,31 +1701,19 @@ export async function getMultiCoinLSSnapshot(
     }
   }
 
-  // CoinGlass global L/S ratio per coin — parallel
-  const lsResults = await Promise.allSettled(
-    coins.map(c =>
-      api.get('futures/global-long-short-account-ratio/history', {
-        params: { symbol: toCgSymbol(c.symbol), interval: '4h', limit: 1, exchange: 'Binance' },
-      }).catch(() => null)
-    )
-  );
-
-  return coins.map((c, i) => {
-    const lsRes  = lsResults[i].status === 'fulfilled' ? lsResults[i].value : null;
-    const lsData = lsRes?.data?.code === '0' ? lsRes.data.data?.[0] : null;
-    const longPct  = lsData ? parseFloat(lsData.global_account_long_percent  ?? '50') : 50;
-    const shortPct = lsData ? parseFloat(lsData.global_account_short_percent ?? '50') : 50;
-    const pd = priceMap.get(c.symbol) ?? { price: 0, change: 0 };
-
-    return {
-      coin:     c.symbol,
-      name:     c.name,
-      price:    pd.price,
+  return coins.flatMap((c) => {
+    const ls = lsMap[c.symbol];
+    const pd = priceMap.get(c.symbol);
+    if (!ls || !pd) return [];
+    return [{
+      coin:      c.symbol,
+      name:      c.name,
+      price:     pd.price,
       change24h: pd.change,
-      longPct,
-      shortPct,
-      lsRatio: shortPct > 0 ? longPct / shortPct : 1,
-    };
+      longPct:   ls.longPct,
+      shortPct:  ls.shortPct,
+      lsRatio:   ls.shortPct > 0 ? ls.longPct / ls.shortPct : 1,
+    }];
   });
 }
 

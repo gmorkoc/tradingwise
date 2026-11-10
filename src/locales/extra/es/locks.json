@@ -1,0 +1,20 @@
+{
+  "locks": {
+    "featureFallback": "Esta función",
+    "featureAria": "Función",
+    "lockedAria": "{{name}} bloqueado",
+    "rowSubPlan": "Inicia sesión para verlo — forma parte de {{plan}}. ¿Eres nuevo? Crea primero una cuenta gratuita y mejora cuando quieras.",
+    "rowSubFree": "Gratis con una cuenta — inicia sesión para verlo o crea una cuenta gratuita en unos segundos.",
+    "panelSub": "Inicia sesión para usarlo — ¿eres nuevo? Crea primero una cuenta gratuita.",
+    "signIn": "Iniciar sesión",
+    "createFreeAccount": "Crear cuenta gratuita",
+    "aiTitle": "Análisis con IA",
+    "aiDesc": "La IA lee estos datos por ti y te explica lo que significan.",
+    "proCallout": "Estás en <b>Pro</b> — todas tus funciones actuales se mantienen",
+    "proBanner": "Estás en <b>Pro</b> · {{price}}/mes — todas las funciones se mantienen",
+    "upgradedReloading": "Ya estás en <b>Elite</b>. Recargando…",
+    "prorationBody": "Hoy se te cobrará <b>{{amount}}</b>, prorrateado por el resto de tu periodo de facturación. Después, <b>{{renewal}}/mes</b> en tu fecha de renovación habitual.",
+    "payUpgrade": "Pagar {{amount}} y mejorar a Elite",
+    "goBack": "← Volver"
+  }
+}

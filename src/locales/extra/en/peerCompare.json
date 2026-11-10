@@ -1,0 +1,14 @@
+{
+  "peerCompare": {
+    "title": "Peers for comparison",
+    "clear": "Clear comparison",
+    "select": "Select to compare",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "maxCoins": "Up to {{n}} coins",
+    "remove": "Remove from comparison",
+    "add": "Add to comparison",
+    "rangeAria": "Comparison range",
+    "loading": "Loading…"
+  }
+}

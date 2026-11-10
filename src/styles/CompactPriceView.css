@@ -48,9 +48,16 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cpr-circle { width: 46px; height: 46px; border-radius: 50%; background: var(--cpr-chip); }
+/* Size + fill must also apply in :hover — the reset above (all: unset) is
+   repeated for :hover, which otherwise wiped them and made the button
+   collapse/jump under the cursor on desktop. */
+.cpr-circle,
+.cpr-circle:hover { width: 46px; height: 46px; border-radius: 50%; background: var(--cpr-chip); transition: filter 0.15s ease; }
+@media (hover: hover) { .cpr-circle:hover { filter: brightness(0.94); } }
 .cpr-pair { display: inline-flex; align-items: center; gap: 0; height: 46px; padding: 0 6px; border-radius: 999px; background: var(--cpr-chip); }
-.cpr-pair button { width: 34px; height: 38px; }
+.cpr-pair button,
+.cpr-pair button:hover { width: 34px; height: 38px; border-radius: 999px; }
+@media (hover: hover) { .cpr-pair button:hover { opacity: 0.7; } }
 .cpr-pair button.cpr-on { color: #f5a623; }
 /* Countdown pill with a progress ring drawn as its border. */
 .cpr-clock {

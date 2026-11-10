@@ -1,0 +1,28 @@
+{
+  "orderFlowGuide": {
+    "guideAria": "{{tab}} guide",
+    "rowWhat": "What",
+    "rowHow": "How",
+    "rowUse": "Read it",
+    "flow": {
+      "what": "Every trade as it prints on six major exchanges at once — Binance, Coinbase, OKX, Bybit, Bitget and Kraken (spot) — with its size in USD and which side was aggressive.",
+      "how": "A trade is a BUY when a buyer paid the ask and a SELL when a seller hit the bid. Buy volume, sell volume and the Cumulative Delta (buy minus sell) add up all six exchanges from the moment you open this tab; each exchange card shows its share and its own delta.",
+      "use": "Price rising with a rising delta means real buying is behind the move; price rising while delta falls means the move is thin and may fade. When one exchange's delta runs against the others, a large player is usually working there."
+    },
+    "profile": {
+      "what": "How much volume traded at each price over the loaded candles — the levels the market has cared about most for the interval you choose.",
+      "how": "Volume is grouped into price buckets and split into buys and sells. The POC (Point of Control) is the single busiest price; the Value Area is the band holding 70% of all volume, from VAL at the bottom to VAH at the top.",
+      "use": "Price tends to get pulled back toward the POC. A move outside VAH or VAL either gets rejected back into the value area or turns into a trend — watch how price reacts when it reaches those edges."
+    },
+    "planner": {
+      "what": "Plans an entry in two legs (Duplet) or three legs (Triplet) instead of all at once, or finds a Convergence zone where several of your own levels line up.",
+      "how": "Enter each leg's price and size plus your stop and target, and it works out the average entry, total position, risk per leg, total dollar risk and reward-to-risk. In Convergence you add levels (support, Fibonacci, moving average…) with a strength of 1–5 and get their weighted average zone.",
+      "use": "Scaling in spreads your entry so one bad fill doesn't decide the whole trade. A zone where several strong levels meet is usually a better entry than any single line."
+    },
+    "manager": {
+      "what": "Sizes a trade from your account and the risk you choose, and keeps its entry, stop and targets in one place.",
+      "how": "Set account size, risk %, entry and stop, and it calculates the exact position size so a stop-out costs exactly that risk, shows the dollar amount at risk, and lays your take-profit levels out on a price ladder. It warns if the stop is on the wrong side of the entry.",
+      "use": "Decide the risk first and let the size follow. That keeps every loss the same small slice of your account, however near or far the stop is."
+    }
+  }
+}

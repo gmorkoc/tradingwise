@@ -1,0 +1,28 @@
+{
+  "orderFlowGuide": {
+    "guideAria": "{{tab}} rehberi",
+    "rowWhat": "Ne",
+    "rowHow": "Nasıl",
+    "rowUse": "Nasıl okunur",
+    "flow": {
+      "what": "Altı büyük borsada aynı anda gerçekleşen her işlem — Binance, Coinbase, OKX, Bybit, Bitget ve Kraken (spot) — USD cinsinden büyüklüğü ve agresif tarafın hangisi olduğuyla birlikte.",
+      "how": "Alıcı ask fiyatını ödediğinde işlem ALIŞ, satıcı bid fiyatına vurduğunda SATIŞ sayılır. Alış hacmi, satış hacmi ve Kümülatif Delta (alış eksi satış), bu sekmeyi açtığın andan itibaren altı borsanın toplamını gösterir; her borsa kartı kendi payını ve kendi delta'sını gösterir.",
+      "use": "Fiyat yükselirken delta da yükseliyorsa hareketin arkasında gerçek alım vardır; fiyat yükselirken delta düşüyorsa hareket zayıftır ve sönebilir. Bir borsanın delta'sı diğerlerine ters gidiyorsa, genellikle orada büyük bir oyuncu çalışıyordur."
+    },
+    "profile": {
+      "what": "Yüklenen mumlar boyunca her fiyat seviyesinde ne kadar hacim işlem gördüğü — seçtiğin zaman aralığında piyasanın en çok önem verdiği seviyeler.",
+      "how": "Hacim fiyat aralıklarına gruplanır ve alış ile satış olarak ayrılır. POC (Point of Control) en yoğun işlem gören fiyattır; Değer Alanı ise tüm hacmin %70'ini barındıran banttır, altta VAL'den üstte VAH'a kadar uzanır.",
+      "use": "Fiyat POC'a doğru geri çekilme eğilimindedir. VAH ya da VAL dışına çıkan bir hareket ya reddedilip değer alanına geri döner ya da trende dönüşür — fiyat bu kenarlara geldiğinde nasıl tepki verdiğini izle."
+    },
+    "planner": {
+      "what": "Girişi tek seferde yapmak yerine iki parçada (Duplet) ya da üç parçada (Triplet) planlar veya kendi seviyelerinden birkaçının çakıştığı bir Yakınsama bölgesi bulur.",
+      "how": "Her parçanın fiyatını ve büyüklüğünü, stop ve hedefini gir; ortalama giriş, toplam pozisyon, parça başına risk, toplam dolar riski ve ödül/risk oranını hesaplar. Yakınsama modunda 1–5 arası güç vererek seviyeler (destek, Fibonacci, hareketli ortalama…) eklersin ve ağırlıklı ortalama bölgelerini elde edersin.",
+      "use": "Kademeli giriş, girişini yayar; böylece tek bir kötü dolum tüm işlemi belirlemez. Birkaç güçlü seviyenin buluştuğu bölge, genellikle tek bir çizgiden daha iyi bir giriş noktasıdır."
+    },
+    "manager": {
+      "what": "Hesabına ve seçtiğin riske göre işlem büyüklüğünü belirler; giriş, stop ve hedefleri tek bir yerde tutar.",
+      "how": "Hesap büyüklüğü, risk %, giriş ve stop'u gir; stop olduğunda tam olarak o risk kadar kaybedeceğin pozisyon büyüklüğünü hesaplar, risk altındaki dolar tutarını gösterir ve take profit seviyelerini bir fiyat merdiveninde dizer. Stop girişin yanlış tarafındaysa uyarır.",
+      "use": "Önce riske karar ver, büyüklük ona göre gelsin. Böylece stop yakın da olsa uzak da olsa her kayıp hesabının aynı küçük dilimi olur."
+    }
+  }
+}

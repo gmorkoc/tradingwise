@@ -259,9 +259,9 @@
   <url><loc>https://www.coinhintz.io/chart/bounce</loc><lastmod>2026-11-10</lastmod><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://www.coinhintz.io/chart/osmosis</loc><lastmod>2026-11-10</lastmod><changefreq>hourly</changefreq><priority>0.7</priority></url>
   <url><loc>https://www.coinhintz.io/candleinsights</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.coinhintz.io/heatmap</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.coinhintz.io/liquidationheatmap</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.coinhintz.io/onchain</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.coinhintz.io/positions</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.coinhintz.io/long-short-ratio</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.coinhintz.io/htf</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.coinhintz.io/orderflow</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>
   <url><loc>https://www.coinhintz.io/signals</loc><lastmod>2026-11-10</lastmod><changefreq>daily</changefreq><priority>0.6</priority></url>

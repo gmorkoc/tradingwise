@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createChart, ColorType, LineSeries, LineStyle, PriceScaleMode, type IChartApi, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import { coinglass, COINS, fetchCoin24hTickers, type Ticker24h } from "../services/coinglass";
 import type { TimeInterval } from "./PriceChart";
@@ -61,6 +62,7 @@ function TickPrice({ price }: { price: number }) {
 }
 
 export function PeerCompare({ coin, theme = "light" }: Props) {
+  const { t } = useTranslation();
   const peers = useMemo(
     () => COINS.filter(c => c.symbol !== coin && !NO_SPOT.has(c.symbol)).slice(0, PEER_COUNT),
     [coin],
@@ -96,23 +98,23 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
   const scrollBy = (dir: 1 | -1) => rowRef.current?.scrollBy({ left: dir * rowRef.current.clientWidth * 0.8, behavior: "smooth" });
 
   return (
-    <section className={`pc pc--${theme}`} aria-label="Peers for comparison">
+    <section className={`pc pc--${theme}`} aria-label={t("peerCompare.title")}>
       <div className="pc-head">
-        <h2 className="pc-title">Peers for comparison</h2>
+        <h2 className="pc-title">{t("peerCompare.title")}</h2>
         <button
           type="button"
           className={`pc-head-btn${selected.length ? " pc-head-btn--clear" : ""}`}
           onClick={() => setSelected(selected.length ? [] : peers.slice(0, 2).map(p => p.symbol))}
         >
-          {selected.length ? "✕ Clear comparison" : "⊕ Select to compare"}
+          {selected.length ? `✕ ${t("peerCompare.clear")}` : `⊕ ${t("peerCompare.select")}`}
         </button>
       </div>
 
       <div className="pc-row-wrap">
-        {edge.left && <button type="button" className="pc-arrow pc-arrow--left" aria-label="Scroll left" onClick={() => scrollBy(-1)}>‹</button>}
+        {edge.left && <button type="button" className="pc-arrow pc-arrow--left" aria-label={t("peerCompare.scrollLeft")} onClick={() => scrollBy(-1)}>‹</button>}
         <div className="pc-row" ref={rowRef} onScroll={updateEdges}>
           {peers.map(p => {
-            const t = tickers.get(p.symbol);
+            const tk = tickers.get(p.symbol);
             const on = selected.includes(p.symbol);
             const color = on ? PEER_COLORS[selected.indexOf(p.symbol)] : undefined;
             const full = !on && selected.length >= MAX_SELECTED;
@@ -140,26 +142,26 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
                     className={`pc-toggle${on ? " pc-toggle--on" : ""}`}
                     aria-pressed={on}
                     disabled={full}
-                    title={full ? `Up to ${MAX_SELECTED} coins` : on ? "Remove from comparison" : "Add to comparison"}
+                    title={full ? t("peerCompare.maxCoins", { n: MAX_SELECTED }) : on ? t("peerCompare.remove") : t("peerCompare.add")}
                     onClick={e => { e.stopPropagation(); toggle(p.symbol); }}
                   >
                     {on ? "✓" : "+"}
                   </button>
                 </div>
                 <div className="pc-card-price">
-                  {t ? <><TickPrice price={t.price} /><span className="pc-ccy">USD</span></> : <span className="pc-skel" />}
+                  {tk ? <><TickPrice price={tk.price} /><span className="pc-ccy">USD</span></> : <span className="pc-skel" />}
                 </div>
-                <div className={`pc-card-chg${t ? (t.change >= 0 ? " up" : " down") : ""}`}>{t ? fmtPct(t.change) : " "}</div>
+                <div className={`pc-card-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : " "}</div>
               </div>
             );
           })}
         </div>
-        {edge.right && <button type="button" className="pc-arrow pc-arrow--right" aria-label="Scroll right" onClick={() => scrollBy(1)}>›</button>}
+        {edge.right && <button type="button" className="pc-arrow pc-arrow--right" aria-label={t("peerCompare.scrollRight")} onClick={() => scrollBy(1)}>›</button>}
       </div>
 
       {selected.length > 0 && (
         <CompareChart coin={coin} peers={selected} range={range} theme={theme}>
-          <div className="pc-ranges" role="tablist" aria-label="Comparison range">
+          <div className="pc-ranges" role="tablist" aria-label={t("peerCompare.rangeAria")}>
             {RANGES.map(r => (
               <button key={r.key} type="button" role="tab" aria-selected={r.key === range.key}
                 className={`pc-range${r.key === range.key ? " on" : ""}`} onClick={() => setRange(r)}>{r.label}</button>
@@ -179,6 +181,7 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
 function CompareChart({ coin, peers, range, theme, children }: {
   coin: string; peers: string[]; range: (typeof RANGES)[number]; theme: "dark" | "light"; children?: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   const boxRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const linesRef = useRef<ISeriesApi<"Line">[]>([]);
@@ -257,7 +260,7 @@ function CompareChart({ coin, peers, range, theme, children }: {
         {children}
       </div>
       <div className="pc-chart-box" ref={boxRef}>
-        {loading && <div className="pc-chart-loading">Loading…</div>}
+        {loading && <div className="pc-chart-loading">{t("peerCompare.loading")}</div>}
       </div>
     </div>
   );

@@ -1,0 +1,19 @@
+{
+  "drawer2": {
+    "close": "Cerrar",
+    "preferences": "Preferencias",
+    "aiRequests": "Solicitudes de IA",
+    "upgradeToPro": "Mejora a Pro",
+    "tradingLevel": "Nivel de trading",
+    "notSet": "Sin definir",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema",
+    "tools": "Herramientas",
+    "assetCalculator": "Calculadora de activos",
+    "tradingTutorials": "Tutoriales de trading",
+    "tradingGuide": "Guía de trading",
+    "support": "Soporte",
+    "contactFeedback": "Contacto / Comentarios"
+  }
+}

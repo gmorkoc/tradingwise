@@ -1,0 +1,19 @@
+{
+  "drawer2": {
+    "close": "Close",
+    "preferences": "Preferences",
+    "aiRequests": "AI Requests",
+    "upgradeToPro": "Upgrade to Pro",
+    "tradingLevel": "Trading Level",
+    "notSet": "Not set",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "tools": "Tools",
+    "assetCalculator": "Asset Calculator",
+    "tradingTutorials": "Trading Tutorials",
+    "tradingGuide": "Trading Guide",
+    "support": "Support",
+    "contactFeedback": "Contact / Feedback"
+  }
+}

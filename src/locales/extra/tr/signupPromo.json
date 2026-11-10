@@ -1,0 +1,24 @@
+{
+  "signupPromo": {
+    "dialogLabel": "Ücretsiz hesap oluştur",
+    "close": "Kapat",
+    "cta": "Ücretsiz katıl",
+    "v0": {
+      "title": "Önce pratik yap. Sonra işlem yap.",
+      "text": "Ücretsiz bir hesap oluştur ve $100k sanal işlem bakiyesi al; böylece attığın her gerçek adımı önceden test etmiş olursun."
+    },
+    "v1": {
+      "title": "Avantajın burada başlıyor.",
+      "text": "Ücretsiz kaydol ve ProVision'ı 3 gün dene: trende göre renklenen mumlar, al ve sat sinyalleri ve her birinin nerede geçersiz olduğu."
+    },
+    "v2": {
+      "title": "Bir sonraki büyük mumu yakala.",
+      "text": "Ücretsiz hesapla canlı piyasalarda işlem yapmak için $100k sanal para, ayrıca hareketi yakalaman için 3 günlük ProVision denemesi kazanırsın."
+    }
+  },
+  "promoStrip": {
+    "desktop": "Ücretsiz kaydol, <b>$100k</b> sanal işlem bakiyesi + fiyat tahmini için <b>$1k</b> kazan",
+    "phone": "Ücretsiz kaydol: <b>$100k</b> sanal bakiye + tahmin için <b>$1k</b>",
+    "dismiss": "Kapat"
+  }
+}

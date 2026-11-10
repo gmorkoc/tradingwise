@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { coinglass, CandleDataPoint, CoinSymbol, HeatmapRange } from "../services/coinglass";
 import { openaiLiq, LiqAIResponse } from "../services/openai";
 import { useAIQuota } from "../hooks/useAIQuota";
+import { useAuth } from "../contexts/AuthContext";
 import { AIQuotaWall } from "./AIQuotaWall";
+import { BottomSheet } from "./BottomSheet";
 import { PRICE_ROWS, LEVERAGES_ALL, Lev, LiqAnalysis, buildMatrix, analyseLiquidations } from "../utils/liquidationClusters";
 import "../styles/LiquidationHeatmap.css";
 
@@ -14,26 +16,29 @@ const TOTAL_PAD_R = PAD_RIGHT;
 const PAD_BOTTOM  = 30;
 
 const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+/** Translated short month names ("Jan,Feb,…"), falling back to English. */
+const monthNames = (csv: string): string[] => {
+  const m = csv.split(",").map(s => s.trim());
+  return m.length === 12 ? m : MONTH_SHORT;
+};
 
 /* ── Color palettes ─────────────────────────────────────────────────────────── */
 type ColorStop = [number, [number, number, number]];
 
 const PALETTES: { stops: ColorStop[]; css: string }[] = [
   {
-    // CoinGlass exact: near-black purple → dark purple → blue-teal → teal → green → lime → yellow
-    css: "linear-gradient(135deg,#0d0221 0%,#1a0050 20%,#004480 38%,#007890 52%,#00b060 68%,#80d800 84%,#ffff00 100%)",
+    // Viridis: purple background → blue → teal → green → yellow (hot levels).
+    css: "linear-gradient(135deg,#440154 0%,#3b528b 25%,#21918c 50%,#5ec962 75%,#fde725 100%)",
     stops: [
-      [0.00, [ 13,   2,  33]],
-      [0.07, [ 22,   4,  65]],
-      [0.16, [ 30,   0, 100]],
-      [0.26, [  0,  40, 110]],
-      [0.37, [  0,  90, 130]],
-      [0.49, [  0, 140, 120]],
-      [0.60, [  0, 185,  80]],
-      [0.72, [ 60, 210,  20]],
-      [0.83, [140, 225,   0]],
-      [0.92, [220, 235,   0]],
-      [1.00, [255, 245,   0]],
+      [0.00, [ 68,   1,  84]],
+      [0.13, [ 72,  36, 117]],
+      [0.25, [ 59,  82, 139]],
+      [0.38, [ 44, 114, 142]],
+      [0.50, [ 33, 145, 140]],
+      [0.63, [ 40, 174, 128]],
+      [0.75, [ 94, 201,  98]],
+      [0.88, [170, 220,  50]],
+      [1.00, [253, 231,  37]],
     ],
   },
   {
@@ -71,14 +76,15 @@ const PALETTES: { stops: ColorStop[]; css: string }[] = [
 ];
 
 /* ── Range definitions ──────────────────────────────────────────────────────── */
-const RANGES: { key: HeatmapRange; label: string }[] = [
-  { key: "12h", label: "12H" },
-  { key: "1d",  label: "1D"  },
-  { key: "2d",  label: "2D"  },
-  { key: "3d",  label: "3D"  },
-  { key: "1w",  label: "1W"  },
-  { key: "1m",  label: "1M"  },
-  { key: "3m",  label: "3M"  },
+// `long` is the English name; the UI shows t(`heatmapPro.ranges.${key}`).
+const RANGES: { key: HeatmapRange; label: string; long: string }[] = [
+  { key: "12h", label: "12H", long: "12 hour"  },
+  { key: "1d",  label: "1D",  long: "24 hour"  },
+  { key: "2d",  label: "2D",  long: "48 hour"  },
+  { key: "3d",  label: "3D",  long: "3 day"    },
+  { key: "1w",  label: "1W",  long: "1 week"   },
+  { key: "1m",  label: "1M",  long: "1 month"  },
+  { key: "3m",  label: "3M",  long: "3 month"  },
 ];
 
 interface Props {
@@ -95,8 +101,58 @@ interface TooltipData {
 
 interface RenderStore {
   pMin: number; pMax: number; maxVal: number;
+  /** Total heat of the latest column = all still-open levels (≙ open interest). */
+  lastSum: number;
   matrix: Float32Array;
   visibleCandles: CandleDataPoint[];
+}
+
+/* ── Heatmap settings ───────────────────────────────────────────────────────── */
+interface Sensitivity { lo: number; hi: number }
+const SENS_DEFAULT: Sensitivity = { lo: 0, hi: 1 };
+// `label` is the English name; the UI shows t(`heatmapPro.presets.${key}`).
+const SENS_PRESETS: { key: string; label: string; value: Sensitivity }[] = [
+  { key: "high",   label: "High",   value: { lo: 0,    hi: 0.35 } },
+  { key: "medium", label: "Medium", value: { lo: 0,    hi: 0.6  } },
+  { key: "low",    label: "Low",    value: { lo: 0.05, hi: 1    } },
+];
+const HIST_BINS = 48;
+const MERGE_MAX = 20;
+
+/** Sum every `n` neighbouring price rows so nearby levels read as one band. */
+function mergeMatrixRows(matrix: Float32Array, cols: number, n: number) {
+  const out = new Float32Array(matrix.length);
+  let maxVal = 0;
+  for (let c = 0; c < cols; c++) {
+    const b = c * PRICE_ROWS;
+    for (let r0 = 0; r0 < PRICE_ROWS; r0 += n) {
+      const r1 = Math.min(PRICE_ROWS, r0 + n);
+      let s = 0;
+      for (let r = r0; r < r1; r++) s += matrix[b + r];
+      for (let r = r0; r < r1; r++) out[b + r] = s;
+      if (s > maxVal) maxVal = s;
+    }
+  }
+  return { matrix: out, maxVal };
+}
+
+/** How many cells sit at each strength (0…1 of the strongest), empty cells skipped. */
+function intensityHistogram(matrix: Float32Array, maxVal: number): number[] {
+  const h = new Array<number>(HIST_BINS).fill(0);
+  if (!maxVal) return h;
+  for (let i = 0; i < matrix.length; i++) {
+    const v = matrix[i];
+    if (v <= 0) continue;
+    h[Math.min(HIST_BINS - 1, Math.floor((v / maxVal) * HIST_BINS))]++;
+  }
+  return h;
+}
+
+function fmtUsd(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
 }
 
 /* ── Colour interpolation ───────────────────────────────────────────────────── */
@@ -124,9 +180,11 @@ function renderCanvas(
   activeLevs: Lev[],
   theme: "dark" | "light",
   palette: number,
-  threshold: number,
+  sens: Sensitivity,
+  mergeRows: number,
   showLiqMap: boolean,
   storeRef?: { current: RenderStore | null },
+  months: string[] = MONTH_SHORT,
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx || !candles.length) return;
@@ -136,10 +194,25 @@ function renderCanvas(
   const isDark = theme !== "light";
   const stops  = PALETTES[palette].stops;
 
-  const { matrix, pMin, pMax, maxVal, cols } = buildMatrix(candles, activeLevs);
+  const built = buildMatrix(candles, activeLevs);
+  const { pMin, pMax, cols } = built;
+  let { matrix, maxVal } = built;
+  if (mergeRows > 1) ({ matrix, maxVal } = mergeMatrixRows(matrix, cols, mergeRows));
   if (maxVal === 0) return;
+  // Scale to the 99.5th percentile of non-empty cells, not the one hottest
+  // cell — otherwise a single spike makes every real band look dim.
+  {
+    const nz: number[] = [];
+    for (let i = 0; i < matrix.length; i++) if (matrix[i] > 0) nz.push(matrix[i]);
+    if (nz.length > 20) {
+      nz.sort((a, b) => a - b);
+      maxVal = Math.max(nz[Math.floor(nz.length * 0.995)], maxVal * 0.05);
+    }
+  }
 
-  if (storeRef) storeRef.current = { pMin, pMax, maxVal, matrix, visibleCandles: candles };
+  let lastSum = 0;
+  for (let r = 0, b = (cols - 1) * PRICE_ROWS; r < PRICE_ROWS; r++) lastSum += built.matrix[b + r];
+  if (storeRef) storeRef.current = { pMin, pMax, maxVal, lastSum, matrix, visibleCandles: candles };
 
   // Background — dark purple matching CoinGlass
   const BG = isDark ? "#0d0221" : "#ffffff";
@@ -148,20 +221,19 @@ function renderCanvas(
 
   /* ── Heatmap ────────────────────────────────────────────────────────────── */
   if (showLiqMap) {
-    // Pre-fill imgData with the background colour so skipped pixels aren't black
+    // Empty area = the palette's base colour (e.g. viridis purple) in both
+    // themes, so quiet prices read as "no liquidations" on one continuous
+    // field and only real levels light up.
     const imgData = ctx.createImageData(W, H);
     const data    = imgData.data;
-    if (isDark) {
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = 13; data[i + 1] = 2; data[i + 2] = 33; data[i + 3] = 255;
-      }
-    } else {
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255;
-      }
+    const [br, bgc, bb] = stops[0][1];
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = br; data[i + 1] = bgc; data[i + 2] = bb; data[i + 3] = 255;
     }
 
-    const minDisplay = (1 - threshold) * 0.04;
+    // Sensitivity: levels below `lo` stay hidden, anything at or above `hi`
+    // is drawn at full brightness, and the range in between is stretched.
+    const span = Math.max(0.01, sens.hi - sens.lo);
 
     for (let col = 0; col < cols; col++) {
       const xStart = Math.floor((col / cols) * W);
@@ -170,9 +242,11 @@ function renderCanvas(
 
       for (let row = 0; row < PRICE_ROWS; row++) {
         const raw = matrix[base + row] / maxVal;
-        if (raw < minDisplay) continue;
+        if (raw <= 0 || raw < sens.lo) continue;
 
-        const v         = Math.pow(raw, 0.38);
+        // Gentle curve so mid levels don't wash the whole field green —
+        // quiet stays purple, strong levels go yellow.
+        const v         = Math.pow(Math.min(1, (raw - sens.lo) / span), 0.7);
         const [r, g, b] = heatRgb(v, stops);
 
         const yTop    = Math.floor(H - ((row + 1) / PRICE_ROWS) * H);
@@ -222,7 +296,7 @@ function renderCanvas(
     // Body — narrow, ~35% of column width
     const bodyTop = Math.min(pToY(c.open), pToY(c.close));
     const bodyH   = Math.max(Math.abs(pToY(c.close) - pToY(c.open)), 1);
-    const halfW   = Math.min(3, Math.max(0.5, cw * 0.175));
+    const halfW   = Math.min(3, Math.max(0.75, cw * 0.3));
     ctx.fillStyle = bodyColor;
     ctx.fillRect(Math.round(cx - halfW), bodyTop, Math.round(halfW * 2), bodyH);
   }
@@ -287,7 +361,7 @@ function renderCanvas(
     const x = ((ci + 0.5) / cols) * W;
     const d = new Date(candles[ci].time * 1000);
     const label = showDate
-      ? `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`
+      ? `${d.getDate()} ${months[d.getMonth()]}`
       : `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
     ctx.fillText(label, Math.max(0, Math.min(x - 18, W - 70)), H + 20);
   }
@@ -316,6 +390,9 @@ export const LiquidationHeatmap: React.FC<Props> = ({
   const pinchRef      = useRef<number | null>(null);
   const lastRenderRef = useRef<RenderStore | null>(null);
   const rafRef        = useRef<number | null>(null);
+  const months        = monthNames(t("heatmapPro.months"));
+  const monthsRef     = useRef(months);
+  monthsRef.current   = months;
 
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState("");
@@ -328,11 +405,25 @@ export const LiquidationHeatmap: React.FC<Props> = ({
   const [aiError,    setAiError]    = useState("");
   const [tooltip,    setTooltip]    = useState<TooltipData | null>(null);
   const [palette,    setPalette]    = useState(0);
-  const [threshold,  setThreshold]  = useState(1);
+  const [sens,       setSens]       = useState<Sensitivity>(SENS_DEFAULT);
+  const [mergeRows,  setMergeRows]  = useState(1);
   const [showLiqMap, setShowLiqMap] = useState(true);
+  const [hist,       setHist]       = useState<number[]>([]);
+  const isPhone = () => typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches;
+  const [phone,        setPhone]        = useState(isPhone);
+  const [settingsOpen, setSettingsOpen] = useState(() => !isPhone());
   const { exceeded, used, limit, consume } = useAIQuota();
+  const { user } = useAuth();
+  const [oiUsd, setOiUsd] = useState(NaN);
+  const [oiFailed, setOiFailed] = useState(false);
+  const [oiRetry, setOiRetry] = useState(0);
+  const oiRef = useRef(NaN);
+  useEffect(() => { oiRef.current = oiUsd; }, [oiUsd]);
+  // All open levels ≙ 2 × OI (each contract has a long and a short side).
+  const usd = (share: number) => (user && isFinite(oiUsd) && share > 0 ? fmtUsd(share * 2 * oiUsd) : null);
 
   const range = RANGES[rangeIdx];
+  const rangeName = (r: typeof RANGES[number]) => t(`heatmapPro.ranges.${r.key}`);
 
   const barGradient = useMemo(() => paletteCssBar(PALETTES[palette].stops), [palette]);
 
@@ -361,9 +452,10 @@ export const LiquidationHeatmap: React.FC<Props> = ({
     if (!canvas || !candlesRef.current.length) return;
     if (canvas.width < 10 && wrapRef.current) {
       canvas.width  = wrapRef.current.clientWidth;
-      canvas.height = CANVAS_H;
+      canvas.height = Math.max(CANVAS_H, wrapRef.current.clientHeight);
     }
-    renderCanvas(canvas, cb.current.getVisible(), levsRef.current, theme, palette, threshold, showLiqMap, lastRenderRef);
+    // The chart + settings panel is always one dark card, in both themes.
+    renderCanvas(canvas, cb.current.getVisible(), levsRef.current, "dark", palette, sens, mergeRows, showLiqMap, lastRenderRef, monthsRef.current);
   };
   // Deduplicated RAF-scheduled redraw — cancels any pending frame before scheduling a new one
   cb.current.schedRedraw = () => {
@@ -411,7 +503,44 @@ export const LiquidationHeatmap: React.FC<Props> = ({
   };
 
   useEffect(() => { levsRef.current = activeLevs; cb.current.redraw(); }, [activeLevs]);
-  useEffect(() => { cb.current.redraw(); }, [palette, threshold, showLiqMap]);
+  useEffect(() => { cb.current.redraw(); }, [palette, sens, showLiqMap]);
+  // Canvas date labels follow the UI language.
+  const monthsKey = months.join(",");
+  useEffect(() => { cb.current.redraw(); }, [monthsKey]);
+  // Histogram follows the data (range, leverage, merge, zoom) — not the
+  // sensitivity handles themselves, so dragging them stays smooth.
+  useEffect(() => {
+    cb.current.redraw();
+    const rd = lastRenderRef.current;
+    setHist(rd && !loading ? intensityHistogram(rd.matrix, rd.maxVal) : []);
+  }, [mergeRows, activeLevs, loading, zoomLevel]);
+
+  // Open interest anchors the $ estimates — only needed for signed-in users.
+  useEffect(() => {
+    const all = candlesRef.current;
+    if (!user || loading || !all.length) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    setOiUsd(NaN); setOiFailed(false);
+    // Retry a few times (rate limits / flaky networks) before giving up.
+    const attempt = (n: number) => {
+      coinglass.getOpenInterestUSD(coin, all[all.length - 1].close).then(v => {
+        if (cancelled) return;
+        if (isFinite(v)) setOiUsd(v);
+        else if (n < 4) timer = setTimeout(() => attempt(n + 1), 2500 * (n + 1));
+        else setOiFailed(true);
+      });
+    };
+    attempt(0);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [coin, loading, user?.id, oiRetry]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 760px)");
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -445,7 +574,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
 
     const ro = new ResizeObserver(() => {
       canvas.width  = wrap.clientWidth;
-      canvas.height = CANVAS_H;
+      canvas.height = Math.max(CANVAS_H, wrap.clientHeight);
       cb.current.redraw();
     });
     ro.observe(wrap);
@@ -492,11 +621,12 @@ export const LiquidationHeatmap: React.FC<Props> = ({
       const candle  = rd.visibleCandles[colIdx];
       const price   = rd.pMin + ((rowIdx + 0.5) / PRICE_ROWS) * (rd.pMax - rd.pMin);
       const rawHeat = rd.matrix[colIdx * PRICE_ROWS + rowIdx];
-      const heatVal = rd.maxVal > 0 ? rawHeat / rd.maxVal : 0;
-      const liqUSD  = rawHeat * 320 * 1_000_000;
+      const heatVal = rd.maxVal > 0 ? Math.min(1, rawHeat / rd.maxVal) : 0;
+      // Calibrated so all still-open levels add up to today's open interest.
+      const liqUSD  = rd.lastSum > 0 ? rawHeat * (2 * oiRef.current / rd.lastSum) : NaN;
 
       const d       = new Date(candle.time * 1000);
-      const dateStr = `${d.getDate()} ${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+      const dateStr = `${d.getDate()} ${monthsRef.current[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 
       setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, dateStr, price, heatVal, liqUSD });
     };
@@ -588,116 +718,272 @@ export const LiquidationHeatmap: React.FC<Props> = ({
     transform: tooltip.x > canvasW * 0.70 ? "translateX(-110%)" : undefined,
   } : {};
 
-  return (
-    <div className="lhm-card">
+  // ── Page helpers ─────────────────────────────────────────────────────────
+  const fmtP = (p: number) => "$" + p.toLocaleString("en-US", { maximumFractionDigits: p >= 1000 ? 0 : 4 });
+  // Same number format the util's English summary uses ("$" is in the sentence).
+  const fmtSummary = (p: number) => p.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  // A zone whose ends round to the same price is just one price.
+  const zoneText = (c: { priceLo: number; priceHi: number; priceCenter: number }) =>
+    fmtP(c.priceLo) === fmtP(c.priceHi) ? fmtP(c.priceCenter) : `${fmtP(c.priceLo)} – ${fmtP(c.priceHi)}`;
+  const refresh = () => {
+    candlesRef.current = []; setLoading(true);
+    coinglass.getHeatmapCandles(range.key, coin).then(data => {
+      candlesRef.current = data; setLoading(false);
+    }).catch(() => setLoading(false));
+  };
+  // Camera button: download the heatmap as a PNG (it used to do nothing).
+  const downloadPng = () => {
+    if (!user) { onOpenAuth(); return; } // download needs a free account
+    const cv = canvasRef.current;
+    if (!cv) return;
+    try {
+      const a = document.createElement("a");
+      a.href = cv.toDataURL("image/png");
+      a.download = `liquidation-heatmap-${coin}-${range.label}.png`;
+      a.click();
+    } catch { /* tainted canvas / blocked — nothing to save */ }
+  };
 
-      {/* ── Top header row ─────────────────────────────────────────────────── */}
-      <div className="lhm-top-bar">
-        <h2 className="lhm-top-title">
-          Binance {coin}/USDT Liquidation Heatmap
-        </h2>
-        <div className="lhm-top-controls">
-          <div className="lhm-pair-selector">
-            <span>Binance {coin}/USDT Perpetual</span>
-            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
-              <path d="M0 0l5 6 5-6z"/>
-            </svg>
+  // Estimated $ at a zone: signed-in users see the amount, guests a sign-in lock.
+  const usdTag = (share: number, plain = false) => {
+    if (user && plain && isFinite(oiUsd)) return <span className="lhx-usd-plain">{usd(Math.max(share, 0)) ?? fmtUsd(0)}</span>;
+    if (!user) return (
+      <button type="button" className="lhx-usd lhx-usd--lock" onClick={() => onOpenAuth()} title={t("heatmapPro.usd.lockTitle")}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+        </svg>
+        {t("heatmapPro.usd.est")}
+      </button>
+    );
+    if (oiFailed) return (
+      <button type="button" className="lhx-usd lhx-usd--lock" onClick={() => setOiRetry(n => n + 1)} title={t("heatmapPro.usd.retryTitle")}>
+        {t("heatmapPro.usd.retry")}
+      </button>
+    );
+    if (!isFinite(oiUsd)) return (
+      <span className="lhx-usd lhx-usd--loading"><i className="lhx-usd-spin" aria-hidden="true" />{t("heatmapPro.usd.calculating")}</span>
+    );
+    return <span className="lhx-usd" title={t("heatmapPro.usd.estTitle")}>{t("heatmapPro.usd.approx", { usd: usd(Math.max(share, 0)) ?? fmtUsd(0) })}</span>;
+  };
+
+  // ── Key numbers (under the chart) ─────────────────────────────────────────
+  // ── Ladder: shorts above (far → near), mark price, longs below (near → far)
+  type Zone = NonNullable<LiqAnalysis["nearLong"]>;
+  const uniqZones = (xs: (Zone | null | undefined)[]) => {
+    const seen = new Set<number>();
+    return xs.filter((z): z is Zone => !!z && !seen.has(z.priceCenter) && !!seen.add(z.priceCenter));
+  };
+  const ladder = analysis ? {
+    shorts: uniqZones([...analysis.shortClusters, analysis.nearShort]).sort((a, b) => b.priceCenter - a.priceCenter),
+    longs:  uniqZones([...analysis.longClusters,  analysis.nearLong]).sort((a, b) => b.priceCenter - a.priceCenter),
+  } : { shorts: [], longs: [] };
+  const ladderMax = Math.max(0.0001, ...[...ladder.shorts, ...ladder.longs].map(z => z.share));
+  const sumShare = (xs: Zone[]) => xs.reduce((s, z) => s + z.share, 0);
+  const shortSum = sumShare(ladder.shorts), longSum = sumShare(ladder.longs);
+  const shortPct = shortSum + longSum > 0 ? Math.round((shortSum / (shortSum + longSum)) * 100) : 50;
+  // Mirrored book: both sides nearest-to-price first; depth bars grow out
+  // from the centre (shorts leftwards, longs rightwards).
+  const book = {
+    shorts: [...ladder.shorts].sort((a, b) => a.priceCenter - b.priceCenter),
+    longs:  [...ladder.longs].sort((a, b) => b.priceCenter - a.priceCenter),
+  };
+  const bookCell = (c: Zone | undefined, side: "long" | "short") => (
+    <div className={`lhx-book-cell lhx-book-cell--${side}`}>
+      {c && <>
+        <i className="lhx-book-depth" style={{ width: `${Math.max(3, Math.round((c.share / ladderMax) * 100))}%` }} />
+        {/* Guests get one sign-in prompt in the header, not a lock per row. */}
+        <span className="lhx-book-usd">{user ? usdTag(c.share, true) : null}</span>
+        <span className="lhx-book-zone">
+          {zoneText(c)}
+          <em>{side === "short" ? "+" : "−"}{Math.abs(c.distancePct).toFixed(2)}%</em>
+        </span>
+      </>}
+    </div>
+  );
+
+
+  // ── Heatmap settings (side panel on desktop, bottom sheet on phones) ─────
+  const histMax = Math.max(1, ...hist.map(n => Math.log1p(n)));
+  const activePreset = SENS_PRESETS.find(p => p.value.lo === sens.lo && p.value.hi === sens.hi)?.key;
+  const setLo = (v: number) => setSens(s => ({ ...s, lo: Math.min(v, s.hi - 0.02) }));
+  const setHi = (v: number) => setSens(s => ({ ...s, hi: Math.max(v, s.lo + 0.02) }));
+  const stepMerge = (d: number) => setMergeRows(m => Math.max(1, Math.min(MERGE_MAX, m + d)));
+  const settingsBody = (
+    <div className="lhs-body">
+      <section className="lhs-sec">
+        <h4 className="lhs-h">{t("heatmapPro.settings.colors")}</h4>
+        <div className="lhs-pal">
+          {PALETTES.map((p, i) => (
+            <button key={i} type="button" className={`lhs-pal-btn${palette === i ? " on" : ""}`}
+              onClick={() => setPalette(i)} aria-label={t("heatmapPro.settings.palette", { n: i + 1 })} aria-pressed={palette === i}>
+              <i style={{ background: p.css.replace("135deg", "90deg") }} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="lhs-sec">
+        <div className="lhs-sec-head">
+          <h4 className="lhs-h">{t("heatmapPro.settings.sensitivity")}</h4>
+          <button type="button" className="lhs-reset" onClick={() => setSens(SENS_DEFAULT)}
+            disabled={sens.lo === SENS_DEFAULT.lo && sens.hi === SENS_DEFAULT.hi}>{t("heatmapPro.settings.reset")}</button>
+        </div>
+        <div className="lhs-hist">
+          <div className="lhs-bars" aria-hidden="true">
+            {(hist.length ? hist : new Array<number>(HIST_BINS).fill(0)).map((n, i) => {
+              const pos = (i + 0.5) / HIST_BINS;
+              const inside = pos >= sens.lo && pos <= sens.hi;
+              const v = Math.pow(Math.min(1, Math.max(0, (pos - sens.lo) / Math.max(0.01, sens.hi - sens.lo))), 0.55);
+              const [r, g, b] = heatRgb(Math.max(0.12, v), PALETTES[palette].stops);
+              return (
+                <i key={i} style={{
+                  height: `${n ? Math.max(6, (Math.log1p(n) / histMax) * 100) : 2}%`,
+                  background: inside ? `rgb(${r},${g},${b})` : undefined,
+                }} />
+              );
+            })}
           </div>
-          <div className="lhm-range-stepper">
-            <button
-              className="lhm-range-arrow"
-              onClick={() => setRangeIdx(i => Math.max(0, i - 1))}
-              disabled={rangeIdx === 0}
-            >‹</button>
-            <span className="lhm-range-label">{range.label}</span>
-            <button
-              className="lhm-range-arrow"
-              onClick={() => setRangeIdx(i => Math.min(RANGES.length - 1, i + 1))}
-              disabled={rangeIdx === RANGES.length - 1}
-            >›</button>
+          <div className="lhs-shade" style={{ left: 0, width: `${sens.lo * 100}%` }} />
+          <div className="lhs-shade" style={{ left: `${sens.hi * 100}%`, right: 0 }} />
+          <input className="lhs-range" type="range" min="0" max="1" step="0.01" value={sens.lo}
+            onChange={e => setLo(+e.target.value)} aria-label={t("heatmapPro.settings.hideBelow")} />
+          <input className="lhs-range" type="range" min="0" max="1" step="0.01" value={sens.hi}
+            onChange={e => setHi(+e.target.value)} aria-label={t("heatmapPro.settings.fullFrom")} />
+        </div>
+        <div className="lhs-axis"><span>{t("heatmapPro.settings.weak")}</span><span>{Math.round(sens.lo * 100)}% – {Math.round(sens.hi * 100)}%</span><span>{t("heatmapPro.settings.strong")}</span></div>
+        <div className="lhs-presets" role="group" aria-label={t("heatmapPro.settings.presetsLabel")}>
+          {SENS_PRESETS.map(p => (
+            <button key={p.key} type="button" className={`lhs-preset${activePreset === p.key ? " on" : ""}`}
+              onClick={() => setSens(p.value)}>{t(`heatmapPro.presets.${p.key}`)}</button>
+          ))}
+        </div>
+        <p className="lhs-note">{t("heatmapPro.settings.sensNote")}</p>
+      </section>
+
+      <section className="lhs-sec">
+        <h4 className="lhs-h">{t("heatmapPro.settings.merge")}</h4>
+        <div className="lhs-num">
+          <button type="button" onClick={() => stepMerge(-1)} disabled={mergeRows <= 1} aria-label={t("heatmapPro.settings.fewer")}>−</button>
+          <input type="number" min={1} max={MERGE_MAX} value={mergeRows} inputMode="numeric"
+            onChange={e => { const n = Math.round(+e.target.value); if (n >= 1) setMergeRows(Math.min(MERGE_MAX, n)); }}
+            aria-label={t("heatmapPro.settings.mergeRows")} />
+          <button type="button" onClick={() => stepMerge(1)} disabled={mergeRows >= MERGE_MAX} aria-label={t("heatmapPro.settings.more")}>+</button>
+        </div>
+        <p className="lhs-note">{t("heatmapPro.settings.mergeNote", { n: mergeRows > 1 ? mergeRows : "N" })}</p>
+      </section>
+
+      <section className="lhs-sec">
+        <h4 className="lhs-h">{t("heatmap.leverageLabel")}</h4>
+        <div className="lhs-chips">
+          {LEVERAGES_ALL.map(lev => (
+            <button key={lev} type="button" className={`lhs-chip${activeLevs.includes(lev) ? " on" : ""}`}
+              aria-pressed={activeLevs.includes(lev)} onClick={() => toggleLev(lev)}>{lev}×</button>
+          ))}
+        </div>
+      </section>
+
+      <section className="lhs-sec lhs-sec--row">
+        <h4 className="lhs-h">{t("heatmapPro.settings.show")}</h4>
+        <label className="lhx-switch">
+          <input type="checkbox" checked={showLiqMap} onChange={e => setShowLiqMap(e.target.checked)} aria-label={t("heatmapPro.settings.show")} />
+          <span className="lhx-switch-track" aria-hidden="true"><i /></span>
+        </label>
+      </section>
+    </div>
+  );
+
+  return (
+    <div className="lhm-card lhx">
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header className="lhx-head lhx-bar">
+        <div className="lhx-bar-id">
+          <h2 className="lhx-title">{t("heatmapPro.title")}</h2>
+          <span className="lhx-pair">{t("heatmapPro.pair", { coin })}</span>
+        </div>
+
+        {/* Live ticker strip — the numbers a trader checks first. */}
+        <div className="lhx-ticker" aria-live="polite">
+          <div className="lhx-tk">
+            <span>{t("heatmapPro.ticker.mark")}</span>
+            <b>{analysis && !loading ? fmtP(analysis.currentPrice) : "—"}</b>
           </div>
-          <button className="lhm-icon-btn" title="Refresh" onClick={() => {
-            candlesRef.current = []; setLoading(true);
-            coinglass.getHeatmapCandles(range.key, coin).then(data => {
-              candlesRef.current = data; setLoading(false);
-            }).catch(() => setLoading(false));
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="lhx-tk">
+            <span>{t("heatmapPro.ticker.nearestLong")}</span>
+            {analysis?.nearLong && !loading
+              ? <b className="lhx-tk-long">{zoneText(analysis.nearLong)} <em>−{Math.abs(analysis.nearLong.distancePct).toFixed(2)}%</em></b>
+              : <b className="lhx-tk-muted">—</b>}
+          </div>
+          <div className="lhx-tk">
+            <span>{t("heatmapPro.ticker.nearestShort")}</span>
+            {analysis?.nearShort && !loading
+              ? <b className="lhx-tk-short">{zoneText(analysis.nearShort)} <em>+{analysis.nearShort.distancePct.toFixed(2)}%</em></b>
+              : <b className="lhx-tk-muted">—</b>}
+          </div>
+          <div className="lhx-tk">
+            <span>{t("heatmapPro.ticker.bias")}</span>
+            {analysis && !loading
+              ? <b className={shortPct > 55 ? "lhx-tk-short" : shortPct < 45 ? "lhx-tk-long" : ""}>
+                  {shortPct > 55 ? t("heatmapPro.ticker.biasShorts", { pct: shortPct })
+                    : shortPct < 45 ? t("heatmapPro.ticker.biasLongs", { pct: 100 - shortPct })
+                    : t("heatmapPro.ticker.balanced")}
+                </b>
+              : <b className="lhx-tk-muted">—</b>}
+          </div>
+        </div>
+
+        <div className="lhx-head-actions">
+          <label className="lhx-select-wrap">
+            <select className="lhx-select" value={rangeIdx} onChange={e => setRangeIdx(+e.target.value)} aria-label={t("heatmapPro.timeRange")}>
+              {RANGES.map((r, i) => <option key={r.key} value={i}>{rangeName(r)}</option>)}
+            </select>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </label>
+          <button type="button" className="lhx-icon" title={t("heatmapPro.refresh")} aria-label={t("heatmapPro.refresh")} onClick={refresh}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
             </svg>
           </button>
-          <button className="lhm-icon-btn" title="Screenshot">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
+          <button type="button" className={`lhx-icon${user ? "" : " lhx-icon--locked"}`}
+            title={user ? t("heatmapPro.downloadPng") : t("heatmapPro.signInDownloadPng")}
+            aria-label={user ? t("heatmapPro.downloadPng") : t("heatmapPro.signInDownloadPng")} onClick={downloadPng}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
             </svg>
           </button>
+          <button type="button" className={`lhx-settings-btn${settingsOpen ? " on" : ""}`} aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen(o => !o)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>
+            </svg>
+            {t("heatmapPro.settings.title")}
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* ── Controls row 2 ─────────────────────────────────────────────────── */}
-      <div className="lhm-controls-bar">
-        <div className="lhm-palette-row">
-          {PALETTES.map((p, i) => (
-            <button
-              key={i}
-              className={`lhm-palette-btn${palette === i ? " active" : ""}`}
-              style={{ background: p.css }}
-              onClick={() => setPalette(i)}
-              title={`Color palette ${i + 1}`}
-            />
-          ))}
-        </div>
-        <div className="lhm-threshold-row">
-          <span className="lhm-threshold-label">Liquidity Threshold = {threshold.toFixed(2)}</span>
-          <input
-            className="lhm-threshold-slider"
-            type="range" min="0" max="1" step="0.01"
-            value={threshold}
-            onChange={e => setThreshold(+e.target.value)}
-          />
-        </div>
-        <label className="lhm-liq-map-check">
-          <input type="checkbox" checked={showLiqMap} onChange={e => setShowLiqMap(e.target.checked)} />
-          <span>Liquidation Map</span>
-        </label>
-      </div>
+      {/* ── Chart + settings panel ─────────────────────────────────────────── */}
+      <div className={`lhx-stage${settingsOpen && !phone ? " lhx-stage--panel" : ""}`}>
+      <section className="lhx-chart-card">
 
-      {/* ── Chart area ─────────────────────────────────────────────────────── */}
       <div className="lhm-chart-outer">
 
-        {/* Left scale bar */}
+        {/* Left scale bar: relative intensity (the old "$xxxxM" top label
+            was an internal number ×320, not real dollars). */}
         <div className="lhm-scale-bar-wrap">
-          <div className="lhm-scale-max">
-            {lastRenderRef.current
-              ? `${(lastRenderRef.current.maxVal * 320).toFixed(2)}M`
-              : "—"}
-          </div>
+          <div className="lhm-scale-max">{t("heatmap.high")}</div>
           <div className="lhm-scale-bar" style={{ background: barGradient }} />
-          <div className="lhm-scale-zero">0</div>
+          <div className="lhm-scale-zero">{t("heatmap.low")}</div>
         </div>
 
         {/* Canvas wrapper */}
         <div ref={wrapRef} className="lhm-canvas-wrap">
-
-          {/* Chart series legend */}
-          <div className="lhm-series-legend">
-            <span className="lhm-series-item">
-              <span className="lhm-series-dot lhm-series-dot--purple" />
-              {t("heatmap.seriesLiqLev")}
-            </span>
-            <span className="lhm-series-item">
-              <span className="lhm-series-dot lhm-series-dot--green" />
-              {t("heatmap.seriesSupercharts")}
-            </span>
-          </div>
 
           {loading && <div className="lhm-overlay">{t("heatmap.loading")}</div>}
           {error   && <div className="lhm-overlay lhm-error">⚠ {error}</div>}
 
           <canvas
             ref={canvasRef}
-            style={{ display: "block", width: "100%", height: CANVAS_H, cursor: "grab" }}
+            style={{ position: "absolute", inset: 0, display: "block", width: "100%", height: "100%", cursor: "grab" }}
           />
 
           {/* Hover tooltip */}
@@ -715,19 +1001,22 @@ export const LiquidationHeatmap: React.FC<Props> = ({
               </div>
               <div className="lhm-tooltip-row">
                 <span className="lhm-tooltip-circle" />
-                <span className="lhm-tooltip-lbl">{t("heatmap.tooltipEstLiq")}</span>
+                <span className="lhm-tooltip-lbl">{t("heatmapPro.tooltip.intensity")}</span>
+                <span className="lhm-tooltip-val">{Math.round(tooltip.heatVal * 100)}%</span>
+              </div>
+              <div className="lhm-tooltip-row">
+                <span className="lhm-tooltip-circle" />
+                <span className="lhm-tooltip-lbl">{t("heatmapPro.tooltip.estLiq")}</span>
                 <span className="lhm-tooltip-val">
-                  {tooltip.liqUSD >= 1e9
-                    ? `$${(tooltip.liqUSD / 1e9).toFixed(2)}B`
-                    : tooltip.liqUSD >= 1e6
-                    ? `$${(tooltip.liqUSD / 1e6).toFixed(2)}M`
-                    : tooltip.liqUSD >= 1e3
-                    ? `$${(tooltip.liqUSD / 1e3).toFixed(1)}K`
-                    : `$${tooltip.liqUSD.toFixed(0)}`}
+                  {!user ? t("heatmapPro.tooltip.signIn") : isFinite(tooltip.liqUSD) && isFinite(oiUsd) ? fmtUsd(tooltip.liqUSD) : "—"}
                 </span>
               </div>
             </div>
           )}
+          {tooltip && (<>
+            <div className="lhx-cross lhx-cross--x" style={{ top: tooltip.y }} />
+            <div className="lhx-cross lhx-cross--y" style={{ left: tooltip.x }} />
+          </>)}
 
           {/* Zoom controls */}
           <div className="lhm-zoom-controls">
@@ -741,108 +1030,81 @@ export const LiquidationHeatmap: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      </section>
 
-      {/* ── Leverage filter ─────────────────────────────────────────────────── */}
-      <div className="lhm-lev-row">
-        <span className="lhm-lev-label">{t("heatmap.leverageLabel")}</span>
-        <div className="lhm-lev-pills">
-          {LEVERAGES_ALL.map(lev => (
-            <button
-              key={lev}
-              className={`lhm-lev-pill${activeLevs.includes(lev) ? " active" : ""}`}
-              onClick={() => toggleLev(lev)}
-            >{lev}×</button>
-          ))}
-        </div>
+      {settingsOpen && !phone && (
+        <aside className="lhs-panel" aria-label={t("heatmapPro.settings.title")}>
+          <div className="lhs-head">
+            <h3>{t("heatmapPro.settings.title")}</h3>
+            <button type="button" className="lhs-close" aria-label={t("heatmapPro.settings.close")} onClick={() => setSettingsOpen(false)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+          {settingsBody}
+        </aside>
+      )}
       </div>
 
-      <p className="lhm-disclaimer">{t("heatmap.disclaimer")}</p>
+      {phone && (
+        <BottomSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t("heatmapPro.settings.title")}>
+          {settingsBody}
+        </BottomSheet>
+      )}
 
-      {/* ── Analysis ────────────────────────────────────────────────────────── */}
+      {/* ── Liquidation book + AI ───────────────────────────────────────────── */}
       {analysis && !loading && (<>
-        <div className="lhm-bottom-row">
-          <div className="lhm-analysis">
-            <div className="lhm-analysis-header">
-              <span className="lhm-analysis-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                  <rect x="2" y="12" width="4" height="10" rx="1"/>
-                  <rect x="9" y="8" width="4" height="14" rx="1"/>
-                  <rect x="16" y="4" width="4" height="18" rx="1"/>
-                </svg>
-                {t("heatmap.clusterAnalysis")}
+        <div className="lhm-bottom-row lhx-grid">
+          <section className="lhx-term lhx-book" aria-label={t("heatmapPro.book.label")}>
+            <div className="lhx-book-head">
+              <span className="lhx-short">{t("heatmapPro.book.shorts")} <em>{t("heatmapPro.book.above")}</em></span>
+              <span className="lhx-book-mark">
+                <b>{fmtP(analysis.currentPrice)}</b>
+                <em>{rangeName(range)}</em>
+                {!user && (
+                  <button type="button" className="lhx-book-unlock" onClick={() => onOpenAuth()}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                    </svg>
+                    {t("heatmapPro.book.signIn")}
+                  </button>
+                )}
               </span>
-              <span className="lhm-analysis-badge">
-                {t("heatmap.rangeView", { range: range.label, price: analysis.currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 }) })}
-              </span>
+              <span className="lhx-long"><em>{t("heatmapPro.book.below")}</em> {t("heatmapPro.book.longs")}</span>
             </div>
 
-            <div className="lhm-analysis-grid">
-              <div className="lhm-analysis-col">
-                <div className="lhm-col-header lhm-col-header--long">
-                  <span className="lhm-col-dot lhm-col-dot--long" /> {t("heatmap.longZones")}
-                  <span className="lhm-col-sub">{t("heatmap.longBelow")}</span>
+            <div className="lhx-book-body">
+              {Array.from({ length: Math.max(book.shorts.length, book.longs.length, 1) }).map((_, i) => (
+                <div key={i} className="lhx-book-row">
+                  {bookCell(book.shorts[i], "short")}
+                  {bookCell(book.longs[i], "long")}
                 </div>
-                {analysis.longClusters.length === 0
-                  ? <div className="lhm-no-cluster">{t("heatmap.noClusters")}</div>
-                  : analysis.longClusters.map((c, i) => (
-                    <div key={i} className="lhm-cluster-row">
-                      <div className="lhm-cluster-price">
-                        ${c.priceLo.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                        <span className="lhm-cluster-sep"> – </span>
-                        ${c.priceHi.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                      </div>
-                      <div className="lhm-cluster-meta">
-                        <span className={`lhm-cluster-label lhm-cluster-label--${c.label}`}>{c.label}</span>
-                        <span className="lhm-cluster-dist lhm-cluster-dist--neg">{c.distancePct.toFixed(1)}%</span>
-                      </div>
-                      <div className="lhm-cluster-bar-track">
-                        <div className="lhm-cluster-bar-fill lhm-cluster-bar-fill--long" style={{ width: `${Math.round(c.strength * 100)}%` }} />
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-
-              <div className="lhm-analysis-col">
-                <div className="lhm-col-header lhm-col-header--short">
-                  <span className="lhm-col-dot lhm-col-dot--short" /> {t("heatmap.shortZones")}
-                  <span className="lhm-col-sub">{t("heatmap.shortAbove")}</span>
-                </div>
-                {analysis.shortClusters.length === 0
-                  ? <div className="lhm-no-cluster">{t("heatmap.noClusters")}</div>
-                  : analysis.shortClusters.map((c, i) => (
-                    <div key={i} className="lhm-cluster-row">
-                      <div className="lhm-cluster-price">
-                        ${c.priceLo.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                        <span className="lhm-cluster-sep"> – </span>
-                        ${c.priceHi.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                      </div>
-                      <div className="lhm-cluster-meta">
-                        <span className={`lhm-cluster-label lhm-cluster-label--${c.label}`}>{c.label}</span>
-                        <span className="lhm-cluster-dist lhm-cluster-dist--pos">+{c.distancePct.toFixed(1)}%</span>
-                      </div>
-                      <div className="lhm-cluster-bar-track">
-                        <div className="lhm-cluster-bar-fill lhm-cluster-bar-fill--short" style={{ width: `${Math.round(c.strength * 100)}%` }} />
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
+              ))}
             </div>
 
-            {analysis.summary && (
-              <div className={`lhm-summary lhm-summary--${analysis.dominantSide}`}>
-                💡 {analysis.summary}
+            <div className="lhx-book-foot">
+              <span className="lhx-short">{shortPct}%</span>
+              <div className="lhx-imb" role="img" aria-label={t("heatmapPro.book.imbalance", { short: shortPct, long: 100 - shortPct })}>
+                <i className="lhx-imb-short" style={{ width: `${shortPct}%` }} />
+                <i className="lhx-imb-long" style={{ width: `${100 - shortPct}%` }} />
               </div>
+              <span className="lhx-long">{100 - shortPct}%</span>
+            </div>
+            {analysis.summaryKey && (
+              <p className="lhx-book-note">
+                {t(`heatmapPro.summary.${analysis.summaryKey}`, {
+                  above: analysis.summaryAbove != null ? fmtSummary(analysis.summaryAbove) : "",
+                  below: analysis.summaryBelow != null ? fmtSummary(analysis.summaryBelow) : "",
+                })}
+              </p>
             )}
-          </div>
+          </section>
 
           {exceeded ? (
-            <div className="lhm-ai-section lhm-ai-section--quota">
+            <div className="lhm-ai-section lhm-ai-section--quota lhx-card lhx-card--ai">
               <AIQuotaWall used={used} limit={limit} onOpenUpgrade={onOpenUpgrade} onOpenAuth={onOpenAuth} />
             </div>
           ) : (
-            <div className="lhm-ai-section">
+            <div className="lhm-ai-section lhx-card lhx-card--ai">
               <div className="lhm-ai-header">
                 <div className="lhm-ai-title">
                   <span className="lhm-ai-star">✦</span>
@@ -850,7 +1112,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
                   <span className="lhm-ai-badge">{t("heatmap.aiPowered")}</span>
                 </div>
                 {!aiLoading && (
-                  <button className="lhm-ai-refresh-btn" onClick={() => fetchAIAnalysis()} title="Regenerate">↺</button>
+                  <button className="lhm-ai-refresh-btn" onClick={() => fetchAIAnalysis()} title={t("heatmapPro.regenerate")}>↺</button>
                 )}
               </div>
 
@@ -865,7 +1127,9 @@ export const LiquidationHeatmap: React.FC<Props> = ({
                 <div className="lhm-ai-result">
                   <div className={`lhm-ai-sentiment lhm-ai-sentiment--${aiResult.sentiment ?? "neutral"}`}>
                     <span className="lhm-ai-sentiment-dot" />
-                    {aiResult.sentiment?.charAt(0).toUpperCase()}{aiResult.sentiment?.slice(1)}
+                    {aiResult.sentiment && t(`heatmapPro.sentiment.${aiResult.sentiment}`, {
+                      defaultValue: aiResult.sentiment.charAt(0).toUpperCase() + aiResult.sentiment.slice(1),
+                    })}
                   </div>
                   {aiResult.analysis && <p className="lhm-ai-analysis">{aiResult.analysis}</p>}
                   {aiResult.ourTake && (
@@ -877,7 +1141,7 @@ export const LiquidationHeatmap: React.FC<Props> = ({
                         {t("heatmap.aiOurTake")}
                         {aiResult.ourTakeAction && (
                           <span className={`lhm-ai-action-badge lhm-ai-action-badge--${aiResult.ourTakeAction}`}>
-                            {aiResult.ourTakeAction.toUpperCase()}
+                            {t(`heatmapPro.action.${aiResult.ourTakeAction}`, { defaultValue: aiResult.ourTakeAction.toUpperCase() })}
                           </span>
                         )}
                       </div>
@@ -890,6 +1154,8 @@ export const LiquidationHeatmap: React.FC<Props> = ({
           )}
         </div>
       </>)}
+
+      <p className="lhx-foot">{t("heatmap.disclaimer")}</p>
     </div>
   );
 };

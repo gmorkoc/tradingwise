@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../contexts/AuthContext";
+import { LockCard } from "./MembershipGate";
 import "../styles/FundingBot.css";
+
+/** Small lock pill shown to guests in place of a signal badge. */
+function SignalLock({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
+  const { t } = useTranslation();
+  return (
+    <button type="button" className="fb-lock-pill" onClick={onClick} title={t("fundingBot2.signInSignal")} aria-label={t("fundingBot2.signInSignal")}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+      {t("fundingBot2.signIn")}
+    </button>
+  );
+}
 
 /* ── Types ──────────────────────────────────────────────────────────────────── */
 interface OkxFundingRate {
@@ -27,7 +42,7 @@ interface CoinRow {
 interface Props {
   coin: string;
   theme: string;
-  onOpenAuth: () => void;
+  onOpenAuth: (view?: "login" | "signup") => void;
   onOpenUpgrade: () => void;
 }
 
@@ -110,9 +125,9 @@ function fmtPrice(p: number): string {
   return "$" + p.toLocaleString("en-US", { maximumFractionDigits: 4 });
 }
 
-function timeUntil(ms: number): string {
+function timeUntil(ms: number, nowLabel: string): string {
   const diff = ms - Date.now();
-  if (diff <= 0) return "Now";
+  if (diff <= 0) return nowLabel;
   const h = Math.floor(diff / 3_600_000);
   const m = Math.floor((diff % 3_600_000) / 60_000);
   const s = Math.floor((diff % 60_000) / 1_000);
@@ -124,6 +139,7 @@ function timeUntil(ms: number): string {
 /* ── Pure-data funding insight ───────────────────────────────────────────────── */
 
 function FundingInsight({ row, signal, history }: { row: CoinRow; signal: Signal; history: FundingRateEntry[] }) {
+  const { t } = useTranslation();
   const rate    = row.fundingRate;
   const absRate = Math.abs(rate);
   const annual  = (absRate * 3 * 365 * 100).toFixed(1);
@@ -142,42 +158,42 @@ function FundingInsight({ row, signal, history }: { row: CoinRow; signal: Signal
 
   // Derived plain-English lines
   const whoPayWho = isPos
-    ? `Longs are paying shorts ${fmtRate(rate)} every 8h (${annual}% annualized).`
-    : `Shorts are paying longs ${fmtRate(absRate)} every 8h (${annual}% annualized).`;
+    ? t("fundingBot2.whoPaysLongs", { rate: fmtRate(rate), annual })
+    : t("fundingBot2.whoPaysShorts", { rate: fmtRate(absRate), annual });
 
   const crowding = isPos
     ? rate >= 0.0005
-      ? "Market is heavily long — longs are overcrowded and paying a high premium to stay in."
-      : "More longs than shorts — mild long bias in perpetuals."
+      ? t("fundingBot2.crowdHeavyLong")
+      : t("fundingBot2.crowdMildLong")
     : absRate >= 0.0005
-      ? "Market is heavily short — shorts are overcrowded and paying a high premium to stay in."
-      : "More shorts than longs — mild short bias in perpetuals.";
+      ? t("fundingBot2.crowdHeavyShort")
+      : t("fundingBot2.crowdMildShort");
 
   const trendLine = trend === "rising"
-    ? `Funding has been rising over the last ${rates.length} periods — pressure is building${isPos ? " on longs" : " on shorts"}.`
+    ? t(isPos ? "fundingBot2.trendRisingLongs" : "fundingBot2.trendRisingShorts", { n: rates.length })
     : trend === "falling"
-      ? `Funding has been falling — ${isPos ? "long crowding is easing" : "short pressure is easing"}.`
-      : "Funding has been stable — no major positioning shift recently.";
+      ? t(isPos ? "fundingBot2.trendFallingLongs" : "fundingBot2.trendFallingShorts")
+      : t("fundingBot2.trendStable");
 
   const implication = isPos
     ? rate >= 0.0005
-      ? "High positive funding often precedes a flush — watch for a long squeeze if price drops."
-      : "Mildly positive — holding shorts here earns funding; not extreme enough to call a squeeze."
+      ? t("fundingBot2.implHighPos")
+      : t("fundingBot2.implMildPos")
     : absRate >= 0.0005
-      ? "High negative funding often precedes a short squeeze — watch for a sharp move up."
-      : "Mildly negative — holding longs here earns funding; positioning not extreme.";
+      ? t("fundingBot2.implHighNeg")
+      : t("fundingBot2.implMildNeg");
 
   const rows2: { label: string; value: string; color?: string }[] = [
-    { label: "Who pays",    value: whoPayWho },
-    { label: "Positioning", value: crowding },
-    { label: "Trend",       value: trendLine },
-    { label: "Implication", value: implication },
+    { label: t("fundingBot2.whoPays"),     value: whoPayWho },
+    { label: t("fundingBot2.positioning"), value: crowding },
+    { label: t("fundingBot2.trend"),       value: trendLine },
+    { label: t("fundingBot2.implication"), value: implication },
   ];
 
   return (
     <div className="fb-insight">
       <div className="fb-insight-header">
-        <span className="fb-insight-title">Funding Insight</span>
+        <span className="fb-insight-title">{t("fundingBot2.insightTitle")}</span>
         <span className={`fb-signal-badge ${signal.colorClass}`}>{signal.label}</span>
       </div>
       <div className="fb-insight-rows">
@@ -193,8 +209,11 @@ function FundingInsight({ row, signal, history }: { row: CoinRow; signal: Signal
 }
 
 /* ── Component ──────────────────────────────────────────────────────────────── */
-export const FundingBot: React.FC<Props> = ({ coin }) => {
+export const FundingBot: React.FC<Props> = ({ coin, onOpenAuth }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  // Signals, tips, insight and the watchlist need a free account.
+  const askSignIn = (e?: React.MouseEvent) => { e?.stopPropagation(); onOpenAuth(); };
   const PAGE_SIZE = 10;
   const [rows, setRows]           = useState<CoinRow[]>([]);
   const [page, setPage]           = useState(0);
@@ -303,15 +322,16 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
   useEffect(() => {
     const updateCountdown = () => {
       const row = rows.find(r => r.symbol === selectedCoin);
-      if (row) setCountdown(timeUntil(row.nextFundingTime));
+      if (row) setCountdown(timeUntil(row.nextFundingTime, t("fundingBot2.now")));
     };
     updateCountdown();
     countdownTimerRef.current = setInterval(updateCountdown, 1000);
     return () => { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); };
-  }, [rows, selectedCoin]);
+  }, [rows, selectedCoin, t]);
 
   const toggleWatch = (sym: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!user) { onOpenAuth(); return; }
     setWatchlist(prev => {
       const next = new Set(prev);
       next.has(sym) ? next.delete(sym) : next.add(sym);
@@ -324,7 +344,7 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
   const selectedRow    = rows.find(r => r.symbol === selectedCoin);
   const selectedSignal = selectedRow ? getSignal(selectedRow.fundingRate, t) : null;
   const maxAbsRate     = Math.max(...rows.map(r => Math.abs(r.fundingRate)), 0.0001);
-  const visibleRows    = viewMode === "watchlist" ? rows.filter(r => watchlist.has(r.symbol)) : rows;
+  const visibleRows    = viewMode === "watchlist" && user ? rows.filter(r => watchlist.has(r.symbol)) : rows;
   const totalPages     = Math.ceil(visibleRows.length / PAGE_SIZE);
   const pageRows       = visibleRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -360,11 +380,11 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
           <div className="fb-live-dot" />
           <span className="fb-live-label">{t("fundingBot.live")}</span>
           {selectedRow && (
-            <span className="fb-countdown" title="Next funding payment">
+            <span className="fb-countdown" title={t("fundingBot2.nextFundingTitle")}>
               {t("fundingBot.nextFunding")} <strong>{countdown}</strong>
             </span>
           )}
-          <button className="fb-refresh-btn" onClick={fetchScanner} title="Refresh now">{t("fundingBot.refresh")}</button>
+          <button className="fb-refresh-btn" onClick={fetchScanner} title={t("fundingBot2.refreshTitle")}>{t("fundingBot.refresh")}</button>
         </div>
       </div>
 
@@ -373,21 +393,23 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
         <div className="fb-scanner-topbar">
           <div className="fb-scanner-title">{t("fundingBot.scanner")}</div>
           <div className="fb-view-tabs">
-            <button className={`fb-view-tab${viewMode === "all" ? " fb-view-tab--active" : ""}`} onClick={() => { setViewMode("all"); setPage(0); }}>All</button>
-            <button className={`fb-view-tab${viewMode === "watchlist" ? " fb-view-tab--active" : ""}`} onClick={() => { setViewMode("watchlist"); setPage(0); }}>
-              ★ Watchlist {watchlist.size > 0 && <span className="fb-wl-count">{watchlist.size}</span>}
+            <button className={`fb-view-tab${viewMode === "all" ? " fb-view-tab--active" : ""}`} onClick={() => { setViewMode("all"); setPage(0); }}>{t("fundingBot2.all")}</button>
+            <button className={`fb-view-tab${viewMode === "watchlist" && user ? " fb-view-tab--active" : ""}`}
+              onClick={() => { if (!user) { onOpenAuth(); return; } setViewMode("watchlist"); setPage(0); }}
+              title={user ? undefined : t("fundingBot2.watchlistSignIn")}>
+              {user ? "★" : "🔒"} {t("fundingBot2.watchlist")} {user && watchlist.size > 0 && <span className="fb-wl-count">{watchlist.size}</span>}
             </button>
           </div>
         </div>
         {loading && <div className="fb-loading">{t("fundingBot.loading")}</div>}
         {error && <div className="fb-error">{error}</div>}
-        {!loading && !error && viewMode === "watchlist" && watchlist.size === 0 && (
+        {!loading && !error && user && viewMode === "watchlist" && watchlist.size === 0 && (
           <div className="fb-wl-empty">
             <span>★</span>
-            <p>No coins in your watchlist yet.<br />Click the star on any row to add it.</p>
+            <p>{t("fundingBot2.wlEmpty")}<br />{t("fundingBot2.wlEmptyHint")}</p>
           </div>
         )}
-        {!loading && !error && !(viewMode === "watchlist" && watchlist.size === 0) && (
+        {!loading && !error && !(user && viewMode === "watchlist" && watchlist.size === 0) && (
           <div className="fb-table-scroll">
             <table className="fb-table">
               <thead>
@@ -413,16 +435,16 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
                       key={row.symbol}
                       className={`fb-row${isSelected ? " fb-row--selected" : ""}`}
                       onClick={() => setSelectedCoin(row.symbol)}
-                      onMouseEnter={e => setHoveredTip({ tip: getTip(row.fundingRate, row.symbol, t), x: e.clientX, y: e.clientY })}
+                      onMouseEnter={e => { if (user) setHoveredTip({ tip: getTip(row.fundingRate, row.symbol, t), x: e.clientX, y: e.clientY }); }}
                       onMouseMove={e  => setHoveredTip(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
                       onMouseLeave={() => setHoveredTip(null)}
                     >
                       {/* Star */}
                       <td className="fb-td-star">
                         <button
-                          className={`fb-star-btn${watchlist.has(row.symbol) ? " fb-star-btn--on" : ""}`}
+                          className={`fb-star-btn${user && watchlist.has(row.symbol) ? " fb-star-btn--on" : ""}`}
                           onClick={e => toggleWatch(row.symbol, e)}
-                          title={watchlist.has(row.symbol) ? "Remove from watchlist" : "Add to watchlist"}
+                          title={!user ? t("fundingBot2.starSignIn") : watchlist.has(row.symbol) ? t("fundingBot2.removeWatch") : t("fundingBot2.addWatch")}
                         >★</button>
                       </td>
 
@@ -453,11 +475,13 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
 
                       {/* Signal */}
                       <td className="fb-td-signal">
-                        <span className={`fb-signal-badge ${sig.colorClass}`}>{sig.label}</span>
+                        {user
+                          ? <span className={`fb-signal-badge ${sig.colorClass}`}>{sig.label}</span>
+                          : <SignalLock onClick={askSignIn} />}
                       </td>
 
                       {/* Next Funding */}
-                      <td className="fb-td-next">{timeUntil(row.nextFundingTime)}</td>
+                      <td className="fb-td-next">{timeUntil(row.nextFundingTime, t("fundingBot2.now"))}</td>
 
                       {/* Mark Price */}
                       <td className="fb-td-price">{fmtPrice(row.markPrice)}</td>
@@ -485,7 +509,7 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
             ))}
             <button className="fb-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}>›</button>
             <button className="fb-page-btn" onClick={() => setPage(totalPages - 1)} disabled={page === totalPages - 1}>»</button>
-            <span className="fb-page-info">{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, rows.length)} of {rows.length}</span>
+            <span className="fb-page-info">{t("fundingBot2.pageInfo", { from: page * PAGE_SIZE + 1, to: Math.min((page + 1) * PAGE_SIZE, rows.length), total: rows.length })}</span>
           </div>
         )}
       </div>
@@ -513,9 +537,9 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
               </div>
               <div className="fb-detail-stat">
                 <span className="fb-stat-label">{t("fundingBot.signal")}</span>
-                <span className={`fb-signal-badge fb-signal-badge--lg ${selectedSignal.colorClass}`}>
-                  {selectedSignal.label}
-                </span>
+                {user
+                  ? <span className={`fb-signal-badge fb-signal-badge--lg ${selectedSignal.colorClass}`}>{selectedSignal.label}</span>
+                  : <SignalLock onClick={askSignIn} />}
               </div>
             </div>
           </div>
@@ -523,7 +547,7 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
           {/* Funding history mini chart */}
           <div className="fb-history-section">
             <div className="fb-history-title">{t("fundingBot.historyTitle")}</div>
-            {histLoading && <div className="fb-history-loading">Loading history…</div>}
+            {histLoading && <div className="fb-history-loading">{t("fundingBot2.loadingHistory")}</div>}
             {!histLoading && history.length > 0 && (() => {
               const rates    = history.map(h => parseFloat(h.fundingRate));
               const maxAbs   = Math.max(...rates.map(Math.abs), 0.0001);
@@ -554,12 +578,16 @@ export const FundingBot: React.FC<Props> = ({ coin }) => {
               );
             })()}
             {!histLoading && history.length === 0 && (
-              <div className="fb-history-loading">No history data</div>
+              <div className="fb-history-loading">{t("fundingBot2.noHistory")}</div>
             )}
           </div>
 
           {/* Funding Insight — pure data, no AI */}
-          <FundingInsight row={selectedRow} signal={selectedSignal} history={history} />
+          {user
+            ? <FundingInsight row={selectedRow} signal={selectedSignal} history={history} />
+            : <LockCard plan="free" featureName={t("fundingBot2.insightLockName")}
+                description={t("fundingBot2.insightLockDesc")}
+                onOpenAuth={onOpenAuth} className="fb-insight-lock" />}
 
         </div>
       )}

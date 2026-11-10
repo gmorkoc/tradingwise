@@ -380,6 +380,17 @@ button.cmct-indbtn:hover {
 button.cmct-indbtn:hover,
 button.cmct-indbtn--on { background: color-mix(in srgb, var(--cmct-track) 75%, var(--color-text) 8%); }
 button.cmct-indbtn:focus-visible { outline: 2px solid #3861fb; outline-offset: 2px; }
+/* Full-width variant under the range bar (desktop chart page). */
+button.cmct-indbtn--full,
+button.cmct-indbtn--full:hover {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 38px;
+  margin-top: 8px;
+  border-radius: 9px;
+  font-size: 13px;
+}
 .cmct-indcount {
   display: inline-grid;
   place-items: center;
@@ -794,7 +805,8 @@ html:not([data-theme="light"]) .cmct-btn--on .pv-toggle-label-accent { color: #a
 /* (Also on the title row above the chart, so its ProVision / Compact view
    buttons get the same grey track background as Indicators.) */
 .cmct,
-.cmct-title-row {
+.cmct-title-row,
+.cmct-indbtn--full {
   --cmct-track: #eff2f5;
   --cmct-text: #58667e;
   --cmct-on-bg: #ffffff;
@@ -802,7 +814,8 @@ html:not([data-theme="light"]) .cmct-btn--on .pv-toggle-label-accent { color: #a
   --cmct-div: #cfd6e4;
 }
 html:not([data-theme="light"]) .cmct,
-html:not([data-theme="light"]) .cmct-title-row {
+html:not([data-theme="light"]) .cmct-title-row,
+html:not([data-theme="light"]) .cmct-indbtn--full {
   --cmct-track: #222531;
   --cmct-text: #a1a7bb;
   --cmct-on-bg: #323546;
@@ -1038,6 +1051,15 @@ html .cmct-ivrow .cmct-rbtn.cmct-rbtn--icon { flex: 0 0 36px; }
    so ProVision + ⚙ always have room on the right. */
 html .cmct-ivrow .cmct-rbtn:not(.cmct-rbtn--icon) { flex: 1 1 auto; padding: 0 5px; }
 html:not([data-theme="light"]) .cmct-rbtn.cmct-rbtn--pv { color: #a78bfa; }
+/* Desktop interval bar: same ProVision sparkle + Predict bolt as phones. */
+html .cmct-btn.cmct-btn--pv { color: #7c3aed; }
+html:not([data-theme="light"]) .cmct-btn.cmct-btn--pv { color: #a78bfa; }
+.cmct-btn--predict:active .cmct-predict-ic { transform: scale(1.18) rotate(-8deg); }
+/* 4th interval slot = selector: label + small chevron. */
+html .cmct-btn.cmct-btn--ivsel { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+html .cmct-btn.cmct-btn--ivsel svg { opacity: 0.6; }
+/* Indicators with its label inside the desktop interval bar. */
+html .cmct-btn.cmct-btn--ind { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; white-space: nowrap; }
 /* Section label inside the Chart settings sheet. */
 .cmct-sheet-label { display: block; padding: 14px 4px 6px; font-size: 12px; font-weight: 600; color: var(--color-text-muted); }
 

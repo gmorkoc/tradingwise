@@ -5,12 +5,13 @@ import { isIAPAvailable } from "../services/revenuecat";
 import { useStorePrices } from "../hooks/useStorePrices";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/AIQuotaWall.css";
+import { LockCard } from "./MembershipGate";
 
 interface Props {
   used: number;
   limit: number;
   onOpenUpgrade: () => void;
-  onOpenAuth: () => void;
+  onOpenAuth: (view?: "login" | "signup") => void;
   planId?: "pro" | "elite";
   featureTitle?: string;
   featureDesc?: string;
@@ -57,6 +58,20 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUp
     await redirectToCheckout(plan.priceId());
     setLoadingPlan(null);
   };
+
+  /* ── Signed out: the same lock card as every locked section — sign in /
+     create account first; plans and prices only once signed in. ── */
+  if (!user) {
+    return (
+      <LockCard
+        variant="panel"
+        featureName={featureTitle ?? t("locks.aiTitle")}
+        description={featureDesc ?? t("locks.aiDesc")}
+        plan={planId ?? "pro"}
+        onOpenAuth={onOpenAuth}
+      />
+    );
+  }
 
   /* ── Gate mode: single horizontal banner ── */
   if (planId) {
@@ -179,7 +194,7 @@ export const AIQuotaWall: React.FC<Props> = ({ used, limit, onOpenAuth, onOpenUp
           ))}
         </div>
 
-        <button className="aiqw-signin" onClick={onOpenAuth}>
+        <button className="aiqw-signin" onClick={() => onOpenAuth()}>
           {t("quotaWall.signin")}
         </button>
       </div>

@@ -7,6 +7,7 @@
 // use, no attribution required): unsplash.com/photos/N__BnvQ_w18
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
+import { useTranslation } from "react-i18next";
 import "../styles/SignupPromoCard.css";
 
 const SNOOZE_KEY = "ch:advSignupCardClosedAt";
@@ -31,8 +32,10 @@ function snoozed(): boolean {
 }
 
 export function SignupPromoCard({ onSignUp }: { onSignUp: () => void }) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [variant] = useState(() => VARIANTS[Math.floor(Math.random() * VARIANTS.length)]);
+  const [variantIdx] = useState(() => Math.floor(Math.random() * VARIANTS.length));
+  const variant = VARIANTS[variantIdx];
 
   // Once per visit, at a random moment 8–20s in — unless snoozed.
   useEffect(() => {
@@ -58,18 +61,18 @@ export function SignupPromoCard({ onSignUp }: { onSignUp: () => void }) {
   };
 
   return ReactDOM.createPortal(
-    <div className="spc" role="dialog" aria-label="Create a free account">
+    <div className="spc" role="dialog" aria-label={t("signupPromo.dialogLabel", "Create a free account")}>
       <div className="spc-media">
         <img className="spc-photo" src={PHOTO} alt="" draggable={false} />
-        <button type="button" className="spc-close" onClick={close} aria-label="Close">
+        <button type="button" className="spc-close" onClick={close} aria-label={t("signupPromo.close", "Close")}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>
       <div className="spc-body">
-        <h3 className="spc-title">{variant.title}</h3>
-        <p className="spc-text">{variant.text}</p>
+        <h3 className="spc-title">{t(`signupPromo.v${variantIdx}.title`, variant.title)}</h3>
+        <p className="spc-text">{t(`signupPromo.v${variantIdx}.text`, variant.text)}</p>
         <button type="button" className="spc-cta" onClick={() => { setVisible(false); onSignUp(); }}>
-          Join for free
+          {t("signupPromo.cta", "Join for free")}
         </button>
       </div>
     </div>,

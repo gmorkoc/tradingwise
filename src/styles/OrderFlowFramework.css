@@ -80,6 +80,32 @@
   border-bottom-color: var(--color-primary);
   background: none;
 }
+/* Tab guide under the tabs, always shown: no box, three rows (What / How /
+   Read it) with a small label column and hairlines between rows. */
+.off-info { flex-shrink: 0; padding: 10px 24px 0; }
+/* One row per part: small label column + text, hairline between rows. */
+.off-guide {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--color-text-secondary, var(--color-text-muted));
+}
+.off-guide-row { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 7px 0; }
+.off-guide-row + .off-guide-row { border-top: 1px solid var(--color-border); }
+.off-guide-row dt {
+  padding-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.off-guide-row dd { margin: 0; max-width: 980px; }
+@media (max-width: 640px) {
+  .off-info { padding: 10px 0 0; }
+  .off-guide-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
 .off-body {
   flex: 1;
   overflow-y: auto;
@@ -182,6 +208,38 @@
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
+/* All-exchange tape: extra Exchange column. */
+.oft-tape-header.oft-tape-header--ex,
+.oft-row.oft-row--ex { grid-template-columns: 1.3fr 0.9fr 0.9fr 0.8fr 0.9fr; }
+.oft-col-ex { font-size: 0.72rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oft-note { margin: 2px 0 0; font-size: 0.66rem; color: var(--color-text-muted); }
+
+/* Per-exchange breakdown under the pressure bar. */
+.oft-ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 6px; }
+/* Two lines: name on top; share + delta below. Nothing wraps. */
+.oft-ex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 2px;
+  white-space: nowrap;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--color-border);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+.oft-ex-name { display: flex; align-items: center; gap: 6px; flex-basis: 100%; font-weight: 700; color: var(--color-text); }
+.oft-ex-dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+.oft-ex-dot--live { background: #22c55e; }
+.oft-ex-dot--waiting, .oft-ex-dot--connecting { background: #f59e0b; }
+.oft-ex-dot--unavailable { background: #cbd5e1; }
+.oft-ex-share { color: var(--color-text-muted); font-size: 0.68rem; }
+.oft-ex-delta { font-weight: 700; }
+.oft-ex-na { font-size: 0.68rem; color: var(--color-text-muted); }
+@media (max-width: 640px) { .oft-ex-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 .oft-row {
   display: grid;
   grid-template-columns: 1.4fr 1fr 0.8fr 1fr;
@@ -607,5 +665,25 @@
 }
 
 @media (max-width: 640px) {
-  .oft-root { padding: 0; }
+  /* Top room + a small left inset for the LIVE row: the body clips its
+     edges, which cut off the badge and the dot's pulsing ring (6px). */
+  .oft-root { padding: 14px 0 0; }
+  .oft-status { padding-left: 7px; }
+  /* The page already has a 16px side gutter — no extra 24px here. */
+  .off-header { padding: 12px 0 0; }
+  .off-header-top { margin-bottom: 12px; }
+  /* Tabs scroll sideways only: no vertical wiggle (the row was 1px taller
+     than its box), no scrollbar, no wrapping. */
+  .off-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .off-tabs::-webkit-scrollbar { display: none; }
+  .off-tab { flex-shrink: 0; white-space: nowrap; padding: 10px 14px; }
+  .off-tab:first-child { padding-left: 0; }
 }

@@ -1,0 +1,44 @@
+{
+  "chartBar": {
+    "indicators": "Indicadores",
+    "intervalChoose": "Intervalo: {{name}} — elige otro",
+    "interval": "Intervalo",
+    "range": "Rango",
+    "predict": "Predecir",
+    "pvOn": "Activar ProVision",
+    "pvOff": "Desactivar ProVision",
+    "chartSettings": "Ajustes del gráfico",
+    "chartType": "Tipo de gráfico",
+    "chartTools": "Herramientas del gráfico",
+    "lineChart": "Gráfico de líneas",
+    "fullScreen": "Pantalla completa",
+    "switchToTv": "Cambiar a velas de TradingView",
+    "toUsdChart": "Gráfico {{name}} a USD",
+    "dateRange": "Rango de fechas",
+    "goTo": "Ir a una fecha o rango personalizado",
+    "pctScale": "Escala porcentual",
+    "logScale": "Escala logarítmica",
+    "autoFit": "Ajustar el eje de precios a las velas visibles",
+    "ivName": {
+      "1sec": "1 segundo",
+      "1min": "1 minuto",
+      "5min": "5 minutos",
+      "15min": "15 minutos",
+      "1h": "1 hora",
+      "4h": "4 horas",
+      "6h": "6 horas",
+      "1day": "1 día",
+      "1week": "1 semana",
+      "1month": "1 mes",
+      "all": "Todo el historial"
+    },
+    "rangeTip": {
+      "1h": "1 hora en intervalos de 5 minutos",
+      "4h": "4 horas en intervalos de 15 minutos",
+      "1d": "1 día en intervalos de 1 hora",
+      "1w": "1 semana en intervalos de 4 horas",
+      "1m": "1 mes en intervalos de 1 día",
+      "1y": "1 año en intervalos de 1 semana"
+    }
+  }
+}

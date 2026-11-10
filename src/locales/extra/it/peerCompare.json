@@ -1,0 +1,14 @@
+{
+  "peerCompare": {
+    "title": "Coin a confronto",
+    "clear": "Cancella confronto",
+    "select": "Seleziona per confrontare",
+    "scrollLeft": "Scorri a sinistra",
+    "scrollRight": "Scorri a destra",
+    "maxCoins": "Fino a {{n}} coin",
+    "remove": "Rimuovi dal confronto",
+    "add": "Aggiungi al confronto",
+    "rangeAria": "Intervallo di confronto",
+    "loading": "Caricamento…"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "signupPromo": {
+    "dialogLabel": "Crea un account gratuito",
+    "close": "Chiudi",
+    "cta": "Iscriviti gratis",
+    "v0": {
+      "title": "Prima fai pratica. Poi fai trading.",
+      "text": "Crea un account gratuito e ricevi $100k di liquidità per il paper trading, così ogni mossa reale sarà una che hai già testato."
+    },
+    "v1": {
+      "title": "Il tuo vantaggio inizia qui.",
+      "text": "Iscriviti gratis e prova ProVision per 3 giorni: candele colorate in base al trend, segnali di acquisto e vendita, e il punto in cui ciascuno viene smentito."
+    },
+    "v2": {
+      "title": "Cogli la prossima grande candela.",
+      "text": "Con un account gratuito ottieni $100k di denaro virtuale per fare trading sui mercati reali, più una prova di ProVision di 3 giorni per individuare il movimento."
+    }
+  },
+  "promoStrip": {
+    "desktop": "Iscriviti gratis e ricevi <b>$100k</b> di liquidità per il paper trading + <b>$1k</b> per prevedere i prezzi",
+    "phone": "Iscriviti gratis: <b>$100k</b> di liquidità virtuale + <b>$1k</b> per le previsioni",
+    "dismiss": "Ignora"
+  }
+}

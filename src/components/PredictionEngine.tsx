@@ -349,9 +349,9 @@ export function PredictionEngine({ btcData, coin, livePrice, onOpenAuth, onOpenU
         <div className="pe-targets-col">
           <div className="pe-targets-label">
             {t("predEngine.priceTargets")}
-            <span className="pe-pro-badge">PRO</span>
           </div>
-          <BlurGate requiredTier="pro" featureName="Price Targets" onOpenAuth={onOpenAuth ?? (() => {})} onOpenUpgrade={onOpenUpgrade ?? (() => {})}>
+          {/* Needs an account only (any plan, Free included). */}
+          <BlurGate requiredTier="free" featureName="Price Targets" onOpenAuth={onOpenAuth ?? (() => {})} onOpenUpgrade={onOpenUpgrade ?? (() => {})}>
             <div className="pe-targets-note">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <span>These are <strong>not AI predictions</strong>. Targets are calculated using <strong>ATR (Average True Range)</strong> — a volatility measure derived from the last 14 periods of 4H candle data. Bull &amp; bear levels are set at 1×–1.5× ATR from the current price, scaled to 4H, Daily, and Weekly timeframes.</span>

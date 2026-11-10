@@ -267,6 +267,25 @@
   white-space: nowrap;
 }
 
+/* Guest lock in place of a signal badge */
+.fb-lock-pill,
+.fb-lock-pill:hover {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.1);
+  cursor: pointer;
+}
+html:not([data-theme="light"]) .fb-lock-pill { color: #a5b4fc; background: rgba(129, 140, 248, 0.14); }
+.fb-insight-lock { margin-top: 12px; }
+
 .fb-signal-badge--lg {
   padding: 4px 12px;
   font-size: 0.8rem;

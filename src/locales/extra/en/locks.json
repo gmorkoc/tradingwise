@@ -1,0 +1,20 @@
+{
+  "locks": {
+    "featureFallback": "This feature",
+    "featureAria": "Feature",
+    "lockedAria": "{{name}} locked",
+    "rowSubPlan": "Sign in to see it — it's part of {{plan}}. New here? Create a free account first, then upgrade anytime.",
+    "rowSubFree": "Free with an account — sign in to see it, or create a free account in a few seconds.",
+    "panelSub": "Sign in to use it — new here? Create a free account first.",
+    "signIn": "Sign in",
+    "createFreeAccount": "Create free account",
+    "aiTitle": "AI analysis",
+    "aiDesc": "AI reads this data for you and explains what it means.",
+    "proCallout": "You're on <b>Pro</b> — all your current features carry over",
+    "proBanner": "You're on <b>Pro</b> · {{price}}/mo — all features carry over",
+    "upgradedReloading": "You're now on <b>Elite</b>. Reloading…",
+    "prorationBody": "You'll be charged <b>{{amount}}</b> today — prorated for the rest of your billing period. Then <b>{{renewal}}/mo</b> on your normal renewal date.",
+    "payUpgrade": "Pay {{amount}} & Upgrade to Elite",
+    "goBack": "← Go back"
+  }
+}

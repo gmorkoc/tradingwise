@@ -1139,7 +1139,7 @@
         "support": "Supporto attuale: {{label}} a {{price}}. ",
         "resistance": "Resistenza successiva: {{label}} a {{price}}. ",
         "aboveATH": "Il prezzo è sopra l'ATH — in territorio di estensione. I livelli 1.618 ({{ext1618}}) e 2.618 ({{ext2618}}) sono le principali zone target del picco ciclo nei precedenti mercati bull di Bitcoin.",
-        "belowATH": "Il prezzo è del {{pct}}% sotto l'ATH ({{ath}}). Una rottura confermata al rialzo apre i target di estensione a 1.618 ({{ext1618}}) e 2.618 ({{ext2618}})."
+        "belowATH": "Il prezzo è del {{pct}}% sotto l'ATH ({{ath}}) — servirebbe un +{{back}}% per tornarci. Una rottura confermata al rialzo apre i target di estensione a 1.618 ({{ext1618}}) e 2.618 ({{ext2618}})."
       },
       "scenario": {
         "how": "Tre percorsi di prezzo futuri sono proiettati dalla settimana di ciclo corrente: Bull (nuovo ATH trainato dalla domanda istituzionale e dai flussi ETF), Base (accumulo costante senza un grande catalizzatore macro), e Bear (shock macro o ritracciamento di distribuzione al supporto Fibonacci). I percorsi sono modellati da analogie storiche del ciclo e dagli attuali target Fibonacci.",
@@ -1366,14 +1366,14 @@
     "market": "Dati di Mercato",
     "onchain": "On-Chain",
     "chart": "Grafico",
-    "heatmap": "Mappa di Calore",
+    "heatmap": "Mappa delle Liquidazioni",
     "alerts": "Avvisi",
     "watchlist": "Lista Osservazione",
     "analyzeChart": "Analizzatore Grafici",
     "gann": "Gann",
     "live": "LIVE",
     "etf": "Flussi ETF",
-    "positions": "Trader",
+    "positions": "Rapporto Long/Short",
     "htf": "Analisi HTF",
     "orderflow": "Smart Money",
     "signals": "Confluenza",

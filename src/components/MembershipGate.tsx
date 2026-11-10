@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { useAuth } from "../contexts/AuthContext";
 import { Tier, hasAccess } from "../services/supabase";
 import { redirectToCheckout, previewUpgrade, upgradePlan, PRICE_IDS } from "../services/stripeService";
@@ -18,7 +18,8 @@ const TIER_COLOR: Record<Tier, string> = {
 interface Props {
   requiredTier: Tier;
   children: ReactNode;
-  onOpenAuth: () => void;
+  /** Opens the sign-in window; BlurGate passes which screen to start on. */
+  onOpenAuth: (view?: "login" | "signup") => void;
   onOpenUpgrade: () => void;
   featureName?: string;
   previewSrc?: string;
@@ -75,7 +76,7 @@ export const MembershipGate: React.FC<Props> = ({
               </div>
             ))}
           </div>
-          <button className="mg-cta mg-cta--neutral" onClick={onOpenAuth}>
+          <button className="mg-cta mg-cta--neutral" onClick={() => onOpenAuth()}>
             {t("membershipGate.signin.cta")}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </button>
@@ -111,7 +112,7 @@ export const MembershipGate: React.FC<Props> = ({
           {isPro && (
             <div className="mg-pro-callout">
               <CheckIcon color="#38bdf8" />
-              <span>You're on <strong>Pro</strong> — all your current features carry over</span>
+              <span><Trans i18nKey="locks.proCallout" components={{ b: <strong /> }} /></span>
             </div>
           )}
 
@@ -160,6 +161,74 @@ function formatAmount(cents: number, currency: string) {
 }
 
 /* ── BlurGate: shows static preview image blurred + upgrade card overlay ──── */
+/**
+ * Signed-out lock card: what's locked, which plan it's part of, and
+ * Sign in / Create free account. Used by BlurGate and AIQuotaWall so every
+ * locked section looks the same; plans and prices only show once signed in.
+ */
+export function LockCard({ featureName, plan = "pro", onOpenAuth, className, variant = "row", description }: {
+  featureName?: string;
+  /** "free" = only needs an account (no plan badge, free-account wording). */
+  plan?: "free" | "pro" | "elite";
+  onOpenAuth: (view?: "login" | "signup") => void;
+  className?: string;
+  /** "row": a strip inside a page section. "panel": fills and centers in a
+   *  whole panel (e.g. an AI side panel). */
+  variant?: "row" | "panel";
+  /** Optional one line on what the feature does (panel variant). */
+  description?: string;
+}) {
+  const { t } = useTranslation();
+  const planName = plan === "elite" ? "Elite" : plan === "pro" ? "Pro" : null;
+  const badge = planName ? <span className={`bg-lock-badge bg-lock-badge--${plan}`}>{planName}</span> : null;
+  const rowSub = planName
+    ? t("locks.rowSubPlan", { plan: planName })
+    : t("locks.rowSubFree");
+  const lockedLabel = t("locks.lockedAria", { name: featureName ?? t("locks.featureAria") });
+  if (variant === "panel") {
+    return (
+      <div className={`bg-lock-panel${className ? ` ${className}` : ""}`} role="region" aria-label={lockedLabel}>
+        <span className="bg-lock-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </span>
+        <div className="bg-lock-title">
+          {featureName ?? t("locks.featureFallback")}
+          {badge}
+        </div>
+        <p className="bg-lock-panel-sub">{description ? `${description} ` : ""}{t("locks.panelSub")}</p>
+        <div className="bg-lock-panel-actions">
+          <button type="button" className="bg-lock-primary" onClick={() => onOpenAuth("login")}>{t("locks.signIn")}</button>
+          <button type="button" className="bg-lock-ghost" onClick={() => onOpenAuth("signup")}>{t("locks.createFreeAccount")}</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`bg-root bg-root--signin${className ? ` ${className}` : ""}`}>
+      <div className="bg-lock" role="region" aria-label={lockedLabel}>
+        <span className="bg-lock-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </span>
+        <div className="bg-lock-text">
+          <div className="bg-lock-title">
+            {featureName ?? t("locks.featureFallback")}
+            {badge}
+          </div>
+          <p className="bg-lock-sub">{rowSub}</p>
+        </div>
+        <div className="bg-lock-actions">
+          <button type="button" className="bg-lock-primary" onClick={() => onOpenAuth("login")}>{t("locks.signIn")}</button>
+          <button type="button" className="bg-lock-ghost" onClick={() => onOpenAuth("signup")}>{t("locks.createFreeAccount")}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, onOpenUpgrade, previewSrc, className, extraFeature, eyebrow, featureName, autoAuth }) => {
   const { t } = useTranslation();
   const { user, tier, loading } = useAuth();
@@ -208,21 +277,14 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
   if (loading) return <>{children}</>;
   if (user && hasAccess(tier, requiredTier)) return <>{children}</>;
   if (!user) {
-    // Closed the sign-in window? A compact faded placeholder (not the real,
-    // often very tall, content) with the sign-in button on it.
+    // Signed out: a compact locked-section card in place of the content.
     return (
-      <div className={`bg-root bg-root--signin${className ? ` ${className}` : ""}`}>
-        <div className="bg-signin-skel" aria-hidden="true">
-          {[72, 100, 88, 64, 94].map((w, i) => (
-            <span key={i} className="bg-signin-skel-row" style={{ width: `${w}%` }} />
-          ))}
-        </div>
-        <div className="bg-overlay bg-overlay--signin">
-          <button type="button" className="bg-signin-btn" onClick={() => onOpenAuth()}>
-            Sign in to unlock{featureName ? ` ${featureName}` : ""}
-          </button>
-        </div>
-      </div>
+      <LockCard
+        className={className}
+        featureName={featureName}
+        plan={requiredTier}
+        onOpenAuth={onOpenAuth}
+      />
     );
   }
 
@@ -345,7 +407,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
-              <span>You're on <strong>Pro</strong> · {prices.pro}/mo — all features carry over</span>
+              <span><Trans i18nKey="locks.proBanner" values={{ price: prices.pro }} components={{ b: <strong /> }} /></span>
             </div>
           )}
 
@@ -355,15 +417,16 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               {upgraded ? (
                 <div className="bg-proration-success">
                   <span className="bg-proration-check">✓</span>
-                  <p>You're now on <strong>Elite</strong>. Reloading…</p>
+                  <p><Trans i18nKey="locks.upgradedReloading" components={{ b: <strong /> }} /></p>
                 </div>
               ) : (
                 <>
                   <p className="bg-proration-body">
-                    You'll be charged{" "}
-                    <strong>{formatAmount(prorationData.amountDue, prorationData.currency)}</strong>{" "}
-                    today — prorated for the rest of your billing period. Then{" "}
-                    <strong>$59.99/mo</strong> on your normal renewal date.
+                    <Trans
+                      i18nKey="locks.prorationBody"
+                      values={{ amount: formatAmount(prorationData.amountDue, prorationData.currency), renewal: "$59.99" }}
+                      components={{ b: <strong /> }}
+                    />
                   </p>
                   <button
                     className="bg-elite-cta"
@@ -372,7 +435,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                   >
                     {upgrading
                       ? t("membershipGate.blurGate.redirecting")
-                      : `Pay ${formatAmount(prorationData.amountDue, prorationData.currency)} & Upgrade to Elite`}
+                      : t("locks.payUpgrade", { amount: formatAmount(prorationData.amountDue, prorationData.currency) })}
                     {!upgrading && (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -384,7 +447,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                     onClick={() => setProrationData(null)}
                     disabled={upgrading}
                   >
-                    ← Go back
+                    {t("locks.goBack")}
                   </button>
                 </>
               )}
@@ -409,7 +472,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
               {/* CTA button */}
               <button
                 className={`bg-elite-cta${isProGate ? " bg-elite-cta--pro" : ""}`}
-                onClick={!user ? onOpenAuth : handleUpgrade}
+                onClick={!user ? () => onOpenAuth() : handleUpgrade}
                 disabled={loadingPlan}
               >
                 {!user
@@ -430,7 +493,7 @@ export const BlurGate: React.FC<Props> = ({ requiredTier, children, onOpenAuth, 
                     <button
                       type="button"
                       className="bg-elite-link"
-                      onClick={!user ? onOpenAuth : onOpenUpgrade}
+                      onClick={!user ? () => onOpenAuth() : onOpenUpgrade}
                     >
                       {t("membershipGate.pro.eliteLinkPre", "Go")}{" "}
                       <span className="bg-elite-link-word">Elite</span>{" "}

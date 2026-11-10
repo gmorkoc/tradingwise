@@ -1,0 +1,12 @@
+{
+  "orderFlowTape2": {
+    "exchangesLive": "{{live}}/{{total}} borsa",
+    "lockName": "Canlı alım / satım hacmi ve delta",
+    "noMarket": "{{coin}} piyasası yok",
+    "volShare": "%{{pct}} hacim",
+    "waitingTrades": "işlem bekleniyor",
+    "connecting": "bağlanıyor…",
+    "colExchange": "Borsa",
+    "note": "Liste {{min}}+ işlemleri gösterir; toplamlar her işlemi sayar."
+  }
+}

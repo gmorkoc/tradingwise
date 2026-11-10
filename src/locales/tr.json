@@ -1139,7 +1139,7 @@
         "support": "Güncel destek: {{label}} at {{price}}. ",
         "resistance": "Sonraki direnç: {{label}} at {{price}}. ",
         "aboveATH": "Fiyat ATH'nın üzerinde — uzantı bölgesinde. 1.618 ({{ext1618}}) ve 2.618 ({{ext2618}}) seviyeleri önceki Bitcoin boğa piyasalarındaki birincil döngü tepe hedef bölgeleridir.",
-        "belowATH": "Fiyat ATH'nın ({{ath}}) %{{pct}} altında. Onaylı bir kırılma, 1.618 ({{ext1618}}) ve 2.618 ({{ext2618}}) uzantı hedeflerini açar."
+        "belowATH": "Fiyat ATH'nın ({{ath}}) %{{pct}} altında — oraya dönmesi için +%{{back}} yükselmesi gerekir. Onaylı bir kırılma, 1.618 ({{ext1618}}) ve 2.618 ({{ext2618}}) uzantı hedeflerini açar."
       },
       "scenario": {
         "how": "Mevcut döngü haftasından üç ileriye dönük fiyat yolu yansıtılır: Boğa (kurumsal talep ve ETF akışlarıyla yeni ATH), Temel (büyük makro katalizör olmaksızın istikrarlı birikim) ve Ayı (makro şok veya Fibonacci desteğine dağıtım geri çekilmesi). Yollar tarihsel döngü analogları ve mevcut Fibonacci hedefleriyle şekillendirilir.",
@@ -1366,14 +1366,14 @@
     "market": "Piyasa Verileri",
     "onchain": "On-Chain",
     "chart": "Grafik",
-    "heatmap": "Isı Haritası",
+    "heatmap": "Tasfiye Isı Haritası",
     "alerts": "Uyarılar",
     "watchlist": "İzleme Listesi",
     "analyzeChart": "Grafik Analizörü",
     "gann": "Gann",
     "live": "CANLI",
     "etf": "ETF Akışları",
-    "positions": "Yatırımcılar",
+    "positions": "Long/Short Oranı",
     "htf": "HTF Analizi",
     "orderflow": "Akıllı Para",
     "signals": "Uyum",
@@ -1660,7 +1660,7 @@
       },
       {
         "title": "Tipik pozisyon büyüklüğünüz nedir?",
-        "subtitle": "Likidasyonu ve risk verilerini yorumlamamıza yardımcı olur.",
+        "subtitle": "Tasfiye ve risk verilerini yorumlamamıza yardımcı olur.",
         "options": [
           {
             "label": "$1.000 altı",

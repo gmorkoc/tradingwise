@@ -78,6 +78,26 @@ export function removePriceAlert(coin: string, price: number, direction: "above"
 }
 
 /**
+ * Drops local alerts the server already fired (it pushed the notification
+ * and marked them triggered), so their "alert set" chips don't linger.
+ */
+export async function pruneServerTriggered(userId: string | null | undefined): Promise<void> {
+  if (!userId) return;
+  const list = loadPriceAlerts();
+  if (!list.length) return;
+  const { data, error } = await supabase
+    .from("price_alerts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("triggered", true)
+    .in("id", list.map((a) => a.id));
+  if (error || !data?.length) return;
+  const fired = new Set(data.map((r: { id: string }) => r.id));
+  savePriceAlerts(list.filter((a) => !fired.has(a.id)));
+  window.dispatchEvent(new Event(PRICE_ALERTS_EVENT));
+}
+
+/**
  * Adds an alert from outside the Price Alerts panel. Skips duplicates.
  * Returns false if an identical alert already existed.
  */

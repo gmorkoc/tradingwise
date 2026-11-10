@@ -458,41 +458,44 @@ html:not([data-theme="light"]) .drawer-seg-btn--on { background: rgba(255, 255, 
 }
 
 /* ── Trading docs accordion ───────────────────────────────────────────────── */
-.drawer-docs { display: flex; flex-direction: column; gap: 4px; }
+.drawer-docs { display: flex; flex-direction: column; gap: 0; }
 
-.doc-item { border-radius: 10px; overflow: hidden; }
+/* Guide rows look like the drawer's other rows: line icon, label, chevron —
+   no grey blocks. The open topic gets a soft fill around row + text. */
+.doc-item { border-radius: 10px; transition: background 0.15s ease; }
+.doc-item--open { background: var(--color-input-bg); }
 
-.doc-trigger {
+.doc-trigger,
+.doc-trigger:hover {
+  all: unset;
+  box-sizing: border-box;
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
-  background: var(--color-input-bg);
-  border: none;
+  gap: 10px;
+  padding: 10px;
   border-radius: 10px;
-  color: var(--color-text);
-  font-size: 0.84rem;
-  font-weight: 600;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
+@media (hover: hover) {
+  .doc-item:not(.doc-item--open) .doc-trigger:hover { background: var(--color-input-bg); }
+}
+.doc-trigger:focus-visible { outline: 2px solid #6366f1; outline-offset: -2px; }
+.doc-trigger .drawer-row-label { font-weight: 500; }
+.doc-item--open .doc-trigger .drawer-row-label { font-weight: 600; }
+.doc-item--open .drawer-ico { color: #6366f1; }
 
-.doc-trigger:hover,
-.doc-trigger.open { background: var(--color-msg-assistant-bg); }
-
-.doc-chevron { font-size: 0.65rem; opacity: 0.6; flex-shrink: 0; margin-left: 8px; }
+.doc-chev { flex-shrink: 0; color: var(--color-text-muted); transition: transform 0.2s ease; }
+.doc-chev--open { transform: rotate(180deg); }
 
 .doc-body {
   margin: 0;
-  padding: 10px 12px 12px;
+  padding: 0 12px 12px 40px; /* lines up under the label, past the icon */
   font-size: 0.8rem;
   line-height: 1.65;
   color: var(--color-text-secondary);
-  background: var(--color-input-bg);
-  border-top: 1px solid var(--color-border);
-  border-radius: 0 0 10px 10px;
 }
 
 /* ── Footer note ──────────────────────────────────────────────────────────── */

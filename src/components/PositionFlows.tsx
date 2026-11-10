@@ -1,22 +1,35 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-  getTakerBuySellVol, getExchangeLSData, getPriceLSHistory, getMultiCoinLSSnapshot,
-  getAllExchangeTakerVol, getRecentLargeTrades,
-  TakerVolData, ExchangeLSData, PriceLSPoint, CoinLSSnapshot,
+  getLongShortBundle, getMultiCoinLSSnapshot, getRecentLargeTrades, getBinanceCandles,
+  LongShortBundle, ExchangeLSData, PriceLSPoint, CoinLSSnapshot,
   ExchangeTakerRow, LargeTradeItem, CoinSymbol, COINS,
 } from "../services/coinglass";
+import { useAuth } from "../contexts/AuthContext";
+import { LockCard } from "./MembershipGate";
 import "../styles/PositionFlows.css";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// hours = taker-volume window; period/limit = ratio-chart buckets.
 const INTERVALS = [
-  { label: "1 hour",  short: "1H",  cg: "1h", limit: 24 },
-  { label: "4 hour",  short: "4H",  cg: "4h", limit: 90 },
-  { label: "12 hour", short: "12H", cg: "4h", limit: 180 },
-  { label: "24 hour", short: "24H", cg: "1d", limit: 30  },
-];
+  { label: "1 hour",  labelKey: "h1",  short: "1H",  hours: 1,  period: "1h",  limit: 72 },
+  { label: "4 hour",  labelKey: "h4",  short: "4H",  hours: 4,  period: "4h",  limit: 90 },
+  { label: "12 hour", labelKey: "h12", short: "12H", hours: 12, period: "12h", limit: 60 },
+  { label: "24 hour", labelKey: "h24", short: "24H", hours: 24, period: "1d",  limit: 30 },
+] as const;
+const CARD_EXCHANGES = ["Binance", "OKX", "Bybit", "Bitget", "Gate"] as const;
 
 type Sentiment = "Very Bullish" | "Bullish" | "Neutral" | "Bearish" | "Extremely Bearish";
+
+// Sentiment (internal value) → translation key, resolved at render time.
+const SENTIMENT_KEY: Record<Sentiment, string> = {
+  "Very Bullish":      "veryBullish",
+  "Bullish":           "bullish",
+  "Neutral":           "neutral",
+  "Bearish":           "bearish",
+  "Extremely Bearish": "extremelyBearish",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -68,6 +81,7 @@ function CircleRing({ pct, color, track }: { pct: number; color: string; track: 
 // ── Sentiment badge ───────────────────────────────────────────────────────────
 
 function SentimentBadge({ s }: { s: Sentiment }) {
+  const { t } = useTranslation();
   const cls =
     s === "Very Bullish"       ? "sen--vbull" :
     s === "Bullish"            ? "sen--bull" :
@@ -76,36 +90,52 @@ function SentimentBadge({ s }: { s: Sentiment }) {
     /* Extremely Bearish */      "sen--xbear";
   return (
     <span className={`sen-badge ${cls}`}>
-      {s === "Extremely Bearish" && <span className="sen-flame">🔥</span>}{s}
+      {s === "Extremely Bearish" && <span className="sen-flame">🔥</span>}{t(`positionFlows.sentiment.${SENTIMENT_KEY[s]}`)}
     </span>
   );
 }
 
 // ── Exchange card ─────────────────────────────────────────────────────────────
 
-function ExchangeCard({ data }: { data: ExchangeLSData }) {
-  const smSent: Sentiment = data.retail ? smartMoneySentiment(data.retail.ratio) : "Neutral";
-  type Row = { label: string; ratio: number | null; sentiment: Sentiment };
+function ExchangeCard({ data, coin, locked, onUnlock }: { data: ExchangeLSData; coin: string; locked: boolean; onUnlock: () => void }) {
+  // Smart money reads the crowd contrarian: lots of retail longs → bearish.
+  const { t } = useTranslation();
+  const smSent: Sentiment | null = data.retail ? smartMoneySentiment(data.retail.ratio) : null;
+  type RowId = "retail" | "whaleAccount" | "whalePosition" | "smartMoney";
+  type Row = { id: RowId; ratio: number | null; sentiment: Sentiment | null };
   const rows: Row[] = [
-    { label: "Retail",         ratio: data.retail?.ratio       ?? null, sentiment: data.retail       ? ratioToSentiment(data.retail.ratio)       : "Neutral" },
-    { label: "Whale Account",  ratio: data.whaleAccount?.ratio ?? null, sentiment: data.whaleAccount ? ratioToSentiment(data.whaleAccount.ratio) : "Neutral" },
-    { label: "Whale Position", ratio: data.whalePosition?.ratio ?? null, sentiment: data.whalePosition ? ratioToSentiment(data.whalePosition.ratio) : "Neutral" },
-    { label: "Smart Money Sentiment", ratio: null, sentiment: smSent },
+    { id: "retail",        ratio: data.retail?.ratio       ?? null, sentiment: data.retail       ? ratioToSentiment(data.retail.ratio)       : null },
+    { id: "whaleAccount",  ratio: data.whaleAccount?.ratio ?? null, sentiment: data.whaleAccount ? ratioToSentiment(data.whaleAccount.ratio) : null },
+    { id: "whalePosition", ratio: data.whalePosition?.ratio ?? null, sentiment: data.whalePosition ? ratioToSentiment(data.whalePosition.ratio) : null },
+    { id: "smartMoney",    ratio: null, sentiment: smSent },
   ];
   return (
     <div className="ls2-ex-card">
-      <div className="ls2-ex-card-title">{data.exchange} Bitcoin Long/Short Ratio</div>
+      <div className="ls2-ex-card-title">{t("positionFlows.exchangeCardTitle", { exchange: data.exchange, coin })}</div>
       <div className="ls2-ex-table">
         <div className="ls2-ex-thead">
-          <span>Type</span><span>Long/Short</span><span>Sentiment</span>
+          <span>{t("positionFlows.colType")}</span><span>{t("positionFlows.colLongShort")}</span><span>{t("positionFlows.colSentiment")}</span>
         </div>
-        {rows.map(({ label, ratio, sentiment }) => (
-          <div key={label} className={`ls2-ex-trow${label === "Smart Money Sentiment" ? " ls2-ex-trow--smart" : ""}`}>
-            <span className="ls2-trow-type">{label}</span>
+        {rows.map(({ id, ratio, sentiment }) => (id !== "retail" && locked) ? (
+          // Whale + smart-money rows need a free account.
+          <div key={id} className={`ls2-ex-trow ls2-ex-trow--locked${id === "smartMoney" ? " ls2-ex-trow--smart" : ""}`}>
+            <span className="ls2-trow-type">{t(`positionFlows.rows.${id}`)}</span>
+            <button type="button" className="ls2-row-lock" onClick={onUnlock}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+              </svg>
+              {t("positionFlows.signInToSee")}
+            </button>
+          </div>
+        ) : (
+          <div key={id} className={`ls2-ex-trow${id === "smartMoney" ? " ls2-ex-trow--smart" : ""}`}>
+            <span className="ls2-trow-type">{t(`positionFlows.rows.${id}`)}</span>
             <span className={`ls2-trow-ratio${ratio !== null ? (ratio >= 1 ? " ls2-ratio-up" : " ls2-ratio-down") : ""}`}>
-              {ratio !== null ? `${ratio >= 1 ? "↑" : "↓"} ${ratio.toFixed(2)}` : "—"}
+              {ratio !== null ? `${ratio >= 1 ? "↑" : "↓"} ${ratio.toFixed(2)}` : id === "smartMoney" ? "" : "—"}
             </span>
-            <span className="ls2-trow-sent"><SentimentBadge s={sentiment} /></span>
+            <span className="ls2-trow-sent">
+              {sentiment ? <SentimentBadge s={sentiment} /> : <span className="ls2-nodata">{t("positionFlows.notPublished")}</span>}
+            </span>
           </div>
         ))}
       </div>
@@ -118,8 +148,13 @@ function ExchangeCard({ data }: { data: ExchangeLSData }) {
 const PW = 900, PH = 200, ML = 70, MR = 46, MT = 16, MB = 28;
 const CW = PW - ML - MR, CH = PH - MT - MB;
 
-function PriceLSChart({ data, title }: { data: PriceLSPoint[]; title: string }) {
-  if (data.length < 2) return <div className="ls2-chart-placeholder">Loading chart…</div>;
+function PriceLSChart({ data, title, sub, state }: { data: PriceLSPoint[]; title: string; sub: string; state: "loading" | "ready" | "empty" }) {
+  const { t } = useTranslation();
+  if (data.length < 2) return (
+    <div className="ls2-chart-placeholder">
+      {state === "empty" ? t("positionFlows.chartEmpty") : t("positionFlows.chartLoading")}
+    </div>
+  );
 
   const prices = data.map(d => d.price);
   const ratios = data.map(d => d.lsRatio);
@@ -165,11 +200,11 @@ function PriceLSChart({ data, title }: { data: PriceLSPoint[]; title: string }) 
     <div className="ls2-chart-section">
       <div className="ls2-chart-header">
         <span className="ls2-chart-title">{title}</span>
-        <span className="ls2-chart-sub">Taker Buy/Sell Volume</span>
+        <span className="ls2-chart-sub">{sub}</span>
       </div>
       <div className="ls2-chart-legend-row">
-        <span className="ls2-legend-item"><span className="ls2-legend-line ls2-legend-line--price" /> Price</span>
-        <span className="ls2-legend-item"><span className="ls2-legend-dot ls2-legend-dot--bull" /> Long/Short</span>
+        <span className="ls2-legend-item"><span className="ls2-legend-line ls2-legend-line--price" /> {t("positionFlows.legendPrice")}</span>
+        <span className="ls2-legend-item"><span className="ls2-legend-dot ls2-legend-dot--bull" /> {t("positionFlows.legendLongShort")}</span>
       </div>
       <div className="ls2-chart-svg-wrap">
         <svg viewBox={`0 0 ${PW} ${PH}`} className="ls2-ratio-svg" preserveAspectRatio="none">
@@ -232,14 +267,15 @@ function PriceLSChart({ data, title }: { data: PriceLSPoint[]; title: string }) 
 
 // ── Exchange taker volume table ───────────────────────────────────────────────
 
-function ExchangeVolumeTable({ rows, interval }: { rows: ExchangeTakerRow[]; interval: string }) {
+function ExchangeVolumeTable({ rows, interval, coin }: { rows: ExchangeTakerRow[]; interval: string; coin: string }) {
+  const { t } = useTranslation();
   if (!rows.length) return (
     <div className="ls2-ev-wrap">
       <div className="ls2-ev-header">
-        <span className="ls2-chart-title">Exchanges BTC Long/Short Ratio</span>
-        <span className="ls2-chart-sub">Taker Buy/Sell Volume · {interval}</span>
+        <span className="ls2-chart-title">{t("positionFlows.evTitle", { coin })}</span>
+        <span className="ls2-chart-sub">{t("positionFlows.evSub", { interval })}</span>
       </div>
-      <div className="ls2-ev-empty">Loading exchange data…</div>
+      <div className="ls2-ev-empty">{t("positionFlows.evEmpty")}</div>
     </div>
   );
 
@@ -252,14 +288,14 @@ function ExchangeVolumeTable({ rows, interval }: { rows: ExchangeTakerRow[]; int
   return (
     <div className="ls2-ev-wrap">
       <div className="ls2-ev-header">
-        <span className="ls2-chart-title">Exchanges BTC Long/Short Ratio</span>
-        <span className="ls2-chart-sub">Taker Buy/Sell Volume · {interval}</span>
+        <span className="ls2-chart-title">{t("positionFlows.evTitle", { coin })}</span>
+        <span className="ls2-chart-sub">{t("positionFlows.evSub", { interval })}</span>
       </div>
 
       {/* Aggregate row */}
       <div className="ls2-ev-row ls2-ev-row--agg">
         <span className="ls2-ev-rank" />
-        <span className="ls2-ev-name ls2-ev-name--agg">BTC</span>
+        <span className="ls2-ev-name ls2-ev-name--agg">{t("positionFlows.evAll")}</span>
         <div className="ls2-ev-bar-cell">
           <div className="ls2-ev-bar">
             <div className="ls2-ev-bar-long"  style={{ width: `${aggLong}%` }}>
@@ -270,9 +306,9 @@ function ExchangeVolumeTable({ rows, interval }: { rows: ExchangeTakerRow[]; int
             </div>
           </div>
         </div>
-        <span className="ls2-ev-label">Long</span>
+        <span className="ls2-ev-label">{t("positionFlows.long")}</span>
         <span className="ls2-ev-vol ls2-ratio-up">{fmtVol(totalLong)}</span>
-        <span className="ls2-ev-label">Short</span>
+        <span className="ls2-ev-label">{t("positionFlows.short")}</span>
         <span className="ls2-ev-vol ls2-ratio-down">{fmtVol(totalShort)}</span>
       </div>
 
@@ -290,9 +326,9 @@ function ExchangeVolumeTable({ rows, interval }: { rows: ExchangeTakerRow[]; int
               </div>
             </div>
           </div>
-          <span className="ls2-ev-label">Long</span>
+          <span className="ls2-ev-label">{t("positionFlows.long")}</span>
           <span className="ls2-ev-vol ls2-ratio-up">{fmtVol(row.longVolUsd)}</span>
-          <span className="ls2-ev-label">Short</span>
+          <span className="ls2-ev-label">{t("positionFlows.short")}</span>
           <span className="ls2-ev-vol ls2-ratio-down">{fmtVol(row.shortVolUsd)}</span>
         </div>
       ))}
@@ -313,32 +349,33 @@ function fmtTradeTime(ms: number): string {
 }
 
 function LargeTradesPanel({ trades }: { trades: LargeTradeItem[] }) {
+  const { t } = useTranslation();
   return (
     <div className="ls2-lt-wrap">
       <div className="ls2-lt-header">
-        <span className="ls2-chart-title">Large Trades (Real-Time)</span>
+        <span className="ls2-chart-title">{t("positionFlows.ltTitle")}</span>
       </div>
       <div className="ls2-lt-thead">
-        <span>Pair</span>
-        <span>Price</span>
-        <span>Value</span>
-        <span>Time</span>
+        <span>{t("positionFlows.ltPair")}</span>
+        <span>{t("positionFlows.ltPrice")}</span>
+        <span>{t("positionFlows.ltValue")}</span>
+        <span>{t("positionFlows.ltTime")}</span>
       </div>
       <div className="ls2-lt-body">
         {trades.length === 0 && (
-          <div className="ls2-lt-empty">Fetching trades…</div>
+          <div className="ls2-lt-empty">{t("positionFlows.ltFetching")}</div>
         )}
-        {trades.map((t, i) => (
-          <div key={i} className={`ls2-lt-row${t.isBuy ? " ls2-lt-row--buy" : " ls2-lt-row--sell"}`}>
+        {trades.map((tr, i) => (
+          <div key={i} className={`ls2-lt-row${tr.isBuy ? " ls2-lt-row--buy" : " ls2-lt-row--sell"}`}>
             <span className="ls2-lt-pair">
-              <span className="ls2-lt-arrow">{t.isBuy ? "→" : "←"}</span>
-              {t.pair}
+              <span className="ls2-lt-arrow">{tr.isBuy ? "→" : "←"}</span>
+              {tr.pair}
             </span>
-            <span className="ls2-lt-price">${t.price.toLocaleString()}</span>
-            <span className={`ls2-lt-val ${t.isBuy ? "ls2-ratio-up" : "ls2-ratio-down"}`}>
-              {fmtVol(t.valueUsd)}
+            <span className="ls2-lt-price">${tr.price.toLocaleString()}</span>
+            <span className={`ls2-lt-val ${tr.isBuy ? "ls2-ratio-up" : "ls2-ratio-down"}`}>
+              {fmtVol(tr.valueUsd)}
             </span>
-            <span className="ls2-lt-time">{fmtTradeTime(t.time)}</span>
+            <span className="ls2-lt-time">{fmtTradeTime(tr.time)}</span>
           </div>
         ))}
       </div>
@@ -349,20 +386,21 @@ function LargeTradesPanel({ trades }: { trades: LargeTradeItem[] }) {
 // ── Multi-coin futures table ──────────────────────────────────────────────────
 
 function MultiCoinTable({ rows }: { rows: CoinLSSnapshot[] }) {
+  const { t } = useTranslation();
   if (!rows.length) return null;
   return (
     <div className="ls2-mc-wrap">
       <div className="ls2-chart-header" style={{ padding: "14px 16px 12px" }}>
-        <span className="ls2-chart-title">Cryptocurrency Futures Longs vs Shorts</span>
+        <span className="ls2-chart-title">{t("positionFlows.mcTitle")}</span>
       </div>
       <div className="ls2-mc-thead">
         <span>#</span>
-        <span>Symbol</span>
-        <span>Price</span>
-        <span>24h %</span>
-        <span>Long / Short</span>
-        <span>L/S Ratio</span>
-        <span>Sentiment</span>
+        <span>{t("positionFlows.mcSymbol")}</span>
+        <span>{t("positionFlows.mcPrice")}</span>
+        <span>{t("positionFlows.mc24h")}</span>
+        <span>{t("positionFlows.mcLongShort")}</span>
+        <span>{t("positionFlows.mcRatio")}</span>
+        <span>{t("positionFlows.colSentiment")}</span>
       </div>
       <div className="ls2-mc-body">
         {rows.map((r, i) => {
@@ -403,105 +441,118 @@ function MultiCoinTable({ rows }: { rows: CoinLSSnapshot[] }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-interface Props { coin?: CoinSymbol | string; }
+interface Props { coin?: CoinSymbol | string; onOpenAuth?: (view?: "login" | "signup") => void; }
 
-export function PositionFlows({ coin = "BTC" }: Props) {
+export function PositionFlows({ coin = "BTC", onOpenAuth = () => {} }: Props) {
+  const { t } = useTranslation();
+  const { user } = useAuth();
   const [intervalIdx,  setIntervalIdx]  = useState(2);
-  const [takerVol,     setTakerVol]     = useState<TakerVolData | null>(null);
-  const [exchanges,    setExchanges]    = useState<ExchangeLSData[]>([]);
+  const [bundle,       setBundle]       = useState<LongShortBundle | null>(null);
   const [chartData,    setChartData]    = useState<PriceLSPoint[]>([]);
+  const [chartState,   setChartState]   = useState<"loading" | "ready" | "empty">("loading");
   const [multiCoin,    setMultiCoin]    = useState<CoinLSSnapshot[]>([]);
-  const [exVol,        setExVol]        = useState<ExchangeTakerRow[]>([]);
   const [largeTrades,  setLargeTrades]  = useState<LargeTradeItem[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState("");
 
   const iv = INTERVALS[intervalIdx];
+  const coinU = String(coin).toUpperCase();
 
-  // Primary load: vol cards + exchange breakdown
+  // One call to our long-short function: ratios, taker volume, history and
+  // the multi-coin table — all from the exchanges' own APIs.
   useEffect(() => {
     let dead = false;
-    setLoading(true);
-    setError("");
+    setLoading(true); setError(""); setChartData([]); setChartState("loading");
 
-    Promise.all([
-      getTakerBuySellVol(coin, iv.cg, 1),
-      getExchangeLSData(coin),
-    ])
-      .then(([vol, exs]) => {
+    const load = () => getLongShortBundle(coinU, iv.hours, iv.period, iv.limit, COINS.map(c => c.symbol));
+    load().then(async b => {
+      if (dead) return;
+      setBundle(b);
+      setLoading(false);
+      // Stores a translation key; translated at render time.
+      if (!b) { setError("positionFlows.errorUnreachable"); return; }
+
+      // Chart: exchange L/S history matched to price candles (nearest time).
+      if (!b.history.length) { setChartState("empty"); }
+      else {
+        const candles = await getBinanceCandles(coinU, iv.period, iv.limit + 5).catch(() => []);
         if (dead) return;
-        setTakerVol(vol);
-        setExchanges(exs);
-        setLoading(false);
-      })
-      .catch(err => {
-        if (dead) return;
-        setError(err?.message ?? "Failed to load");
-        setLoading(false);
-      });
+        if (!candles.length) { setChartState("empty"); return; }
+        const pts: PriceLSPoint[] = [];
+        for (const h of b.history) {
+          let best = candles[0];
+          for (const c of candles) if (Math.abs(c.time - h.time) < Math.abs(best.time - h.time)) best = c;
+          pts.push({ time: h.time, price: best.close, lsRatio: h.ratio });
+        }
+        setChartData(pts);
+        setChartState(pts.length >= 2 ? "ready" : "empty");
+      }
+      if (b.multi) getMultiCoinLSSnapshot(COINS, b.multi).then(d => { if (!dead) setMultiCoin(d); }).catch(() => {});
+    });
 
-    return () => { dead = true; };
-  }, [coin, intervalIdx]);
-
-  // Secondary load: chart + multi-coin table + exchange vol + large trades (lazy)
-  useEffect(() => {
-    let dead = false;
-    setChartData([]);
-
-    getPriceLSHistory(coin, iv.cg, iv.limit).then(d => {
-      if (!dead) setChartData(d);
-    }).catch(() => {});
-
-    getMultiCoinLSSnapshot(COINS).then(d => {
-      if (!dead) setMultiCoin(d);
-    }).catch(() => {});
-
-    getAllExchangeTakerVol(coin, iv.cg).then(d => {
-      if (!dead) setExVol(d);
-    }).catch(() => {});
-
-    getRecentLargeTrades(coin).then(d => {
-      if (!dead) setLargeTrades(d);
-    }).catch(() => {});
-
-    // Poll large trades every 15 s
-    const poll = setInterval(() => {
-      getRecentLargeTrades(coin).then(d => { if (!dead) setLargeTrades(d); }).catch(() => {});
-    }, 15_000);
-
+    // Refresh every 60 s (the function caches 30 s).
+    const poll = setInterval(() => { load().then(b => { if (!dead && b) setBundle(b); }); }, 60_000);
     return () => { dead = true; clearInterval(poll); };
-  }, [coin, intervalIdx]);
+  }, [coinU, intervalIdx]);
+
+  // Large trades: poll every 15 s.
+  useEffect(() => {
+    let dead = false;
+    const get = () => getRecentLargeTrades(coinU).then(d => { if (!dead) setLargeTrades(d); }).catch(() => {});
+    get();
+    const poll = setInterval(get, 15_000);
+    return () => { dead = true; clearInterval(poll); };
+  }, [coinU]);
+
+  // ── Derived views ───────────────────────────────────────────────────────
+  const exchanges: ExchangeLSData[] = bundle
+    ? CARD_EXCHANGES.flatMap(ex => {
+        const r = bundle.ratios[ex];
+        return r && (r.retail || r.whaleAccount || r.whalePosition) ? [{ exchange: ex, ...r }] : [];
+      })
+    : [];
+  const exVol: ExchangeTakerRow[] = (bundle?.taker ?? [])
+    .map(t => {
+      const tot = t.buyUsd + t.sellUsd;
+      return { exchange: t.exchange, longPct: (t.buyUsd / tot) * 100, shortPct: (t.sellUsd / tot) * 100, longVolUsd: t.buyUsd, shortVolUsd: t.sellUsd };
+    })
+    .sort((a, b) => (b.longVolUsd + b.shortVolUsd) - (a.longVolUsd + a.shortVolUsd));
+  const buyVolUsd  = exVol.reduce((s, r) => s + r.longVolUsd, 0);
+  const sellVolUsd = exVol.reduce((s, r) => s + r.shortVolUsd, 0);
+  const takerVol = buyVolUsd + sellVolUsd > 0
+    ? { buyVolUsd, sellVolUsd, buyRatio: buyVolUsd / (buyVolUsd + sellVolUsd), sellRatio: sellVolUsd / (buyVolUsd + sellVolUsd) }
+    : null;
 
   if (loading) return (
     <div className="ls2-wrap">
-      <div className="ls2-state"><div className="pf-spinner" />Loading Long/Short data…</div>
+      <div className="ls2-state"><div className="pf-spinner" />{t("positionFlows.loadingData")}</div>
     </div>
   );
   if (error) return (
     <div className="ls2-wrap">
-      <div className="ls2-state ls2-state--error">{error}</div>
+      <div className="ls2-state ls2-state--error">{t(error)}</div>
     </div>
   );
 
-  const avgRetailRatio = exchanges.length
-    ? exchanges.reduce((s, ex) => s + (ex.retail?.ratio ?? 1), 0) / exchanges.length : 1;
-  const longPct  = takerVol ? takerVol.buyRatio  * 100 : (avgRetailRatio / (1 + avgRetailRatio)) * 100;
-  const shortPct = takerVol ? takerVol.sellRatio * 100 : 100 - longPct;
+  // No fake 50/50: without taker data the cards say so.
+  const longPct  = takerVol ? takerVol.buyRatio  * 100 : 0;
+  const shortPct = takerVol ? takerVol.sellRatio * 100 : 0;
+  const takerSources = exVol.map(r => r.exchange).join(", ");
 
   return (
     <div className="ls2-wrap">
 
       {/* ── Section 1: Taker Vol ── */}
       <div className="ls2-vol-wrap">
-        <h2 className="ls2-title">Cryptocurrency Longs vs Shorts</h2>
+        <h2 className="ls2-title">{t("positionFlows.pageTitle")}</h2>
         <div className="ls2-vol-controls">
-          <span className="ls2-vol-ctrl-label">Taker Buy/Sell Volume</span>
+          <span className="ls2-vol-ctrl-label">{t("positionFlows.takerVolumeLabel")}</span>
           <div className="ls2-iv-tabs">
             {INTERVALS.map((iv, i) => (
               <button key={iv.label}
                 className={`ls2-iv-btn${intervalIdx === i ? " active" : ""}`}
                 onClick={() => setIntervalIdx(i)}>
-                {iv.label}
+                {t(`positionFlows.intervals.${iv.labelKey}`)}
               </button>
             ))}
           </div>
@@ -510,19 +561,17 @@ export function PositionFlows({ coin = "BTC" }: Props) {
           <div className="ls2-vc ls2-vc--long">
             <CircleRing pct={longPct}  color="#22c55e" track="rgba(34,197,94,0.2)" />
             <div className="ls2-vc-info">
-              <div className="ls2-vc-label">{iv.short} Long Volume</div>
-              <div className="ls2-vc-amount">
-                {takerVol && takerVol.buyVolUsd > 0 ? fmtVol(takerVol.buyVolUsd) : `${longPct.toFixed(2)}%`}
-              </div>
+              <div className="ls2-vc-label">{t("positionFlows.takerBuyVolume", { interval: iv.short })}</div>
+              <div className="ls2-vc-amount">{takerVol ? fmtVol(takerVol.buyVolUsd) : t("positionFlows.noData")}</div>
+              {takerSources && <div className="ls2-vc-src">{takerSources}</div>}
             </div>
           </div>
           <div className="ls2-vc ls2-vc--short">
             <CircleRing pct={shortPct} color="#ef4444" track="rgba(239,68,68,0.2)" />
             <div className="ls2-vc-info">
-              <div className="ls2-vc-label">{iv.short} Short Volume</div>
-              <div className="ls2-vc-amount">
-                {takerVol && takerVol.sellVolUsd > 0 ? fmtVol(takerVol.sellVolUsd) : `${shortPct.toFixed(2)}%`}
-              </div>
+              <div className="ls2-vc-label">{t("positionFlows.takerSellVolume", { interval: iv.short })}</div>
+              <div className="ls2-vc-amount">{takerVol ? fmtVol(takerVol.sellVolUsd) : t("positionFlows.noData")}</div>
+              {takerSources && <div className="ls2-vc-src">{takerSources}</div>}
             </div>
           </div>
         </div>
@@ -531,26 +580,35 @@ export function PositionFlows({ coin = "BTC" }: Props) {
       {/* ── Section 2: Exchange breakdown ── */}
       {exchanges.length > 0 && (
         <div className="ls2-ex-grid">
-          {exchanges.map(ex => <ExchangeCard key={ex.exchange} data={ex} />)}
+          {exchanges.map(ex => <ExchangeCard key={ex.exchange} data={ex} coin={coinU} locked={!user} onUnlock={() => onOpenAuth()} />)}
         </div>
       )}
 
       {/* ── Section 3: Exchange taker vol table + Large trades ── */}
       <div className="ls2-ev-lt-row">
-        <ExchangeVolumeTable rows={exVol} interval={iv.label} />
-        <LargeTradesPanel trades={largeTrades} />
+        <ExchangeVolumeTable rows={exVol} interval={t(`positionFlows.intervals.${iv.labelKey}`)} coin={coinU} />
+        {user ? <LargeTradesPanel trades={largeTrades} /> : (
+          <div className="ls2-lt-wrap ls2-lock-wrap">
+            <LockCard variant="panel" plan="free" featureName={t("positionFlows.lockLargeTradesName")}
+              description={t("positionFlows.lockLargeTradesDesc")} onOpenAuth={onOpenAuth} />
+          </div>
+        )}
       </div>
 
       {/* ── Section 4: BTC L/S Ratio Chart ── */}
       <PriceLSChart
         data={chartData}
-        title={`${String(coin).toUpperCase()} Long/Short Ratio Chart`}
+        title={t("positionFlows.chartTitle", { coin: coinU })}
+        sub={t("positionFlows.chartSub", { source: bundle?.historySource ?? "—", interval: t(`positionFlows.intervals.${iv.labelKey}`) })}
+        state={chartState}
       />
 
       {/* ── Section 5: Multi-coin futures table ── */}
-      {multiCoin.length > 0 && <MultiCoinTable rows={multiCoin} />}
+      {multiCoin.length > 0 && (user ? <MultiCoinTable rows={multiCoin} /> : (
+        <LockCard plan="free" featureName={t("positionFlows.lockMultiCoinName")} onOpenAuth={onOpenAuth} />
+      ))}
 
-      <p className="ls2-disclaimer">Data · Binance / OKX / Bybit Futures · Educational only</p>
+      <p className="ls2-disclaimer">{t("positionFlows.disclaimer")}</p>
     </div>
   );
 }

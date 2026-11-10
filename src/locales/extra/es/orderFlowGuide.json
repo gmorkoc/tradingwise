@@ -1,0 +1,28 @@
+{
+  "orderFlowGuide": {
+    "guideAria": "Guía de {{tab}}",
+    "rowWhat": "Qué",
+    "rowHow": "Cómo",
+    "rowUse": "Cómo leerlo",
+    "flow": {
+      "what": "Cada operación en el momento en que se ejecuta en seis grandes exchanges a la vez — Binance, Coinbase, OKX, Bybit, Bitget y Kraken (spot) — con su tamaño en USD y qué lado fue el agresor.",
+      "how": "Una operación es una COMPRA cuando un comprador pagó el ask y una VENTA cuando un vendedor golpeó el bid. El volumen de compra, el volumen de venta y el Delta Acumulado (compras menos ventas) suman los seis exchanges desde el momento en que abres esta pestaña; cada tarjeta de exchange muestra su participación y su propio delta.",
+      "use": "Si el precio sube con un delta creciente, hay compras reales detrás del movimiento; si el precio sube mientras el delta cae, el movimiento es débil y puede desvanecerse. Cuando el delta de un exchange va en contra del resto, normalmente hay un gran jugador operando allí."
+    },
+    "profile": {
+      "what": "Cuánto volumen se negoció en cada precio durante las velas cargadas — los niveles que más le han importado al mercado en el intervalo que elijas.",
+      "how": "El volumen se agrupa en tramos de precio y se divide en compras y ventas. El POC (Point of Control) es el precio con más actividad; el Área de Valor es la franja que concentra el 70% de todo el volumen, desde el VAL abajo hasta el VAH arriba.",
+      "use": "El precio tiende a volver hacia el POC. Una salida por encima del VAH o por debajo del VAL o bien es rechazada de vuelta al área de valor o bien se convierte en tendencia — observa cómo reacciona el precio cuando llega a esos bordes."
+    },
+    "planner": {
+      "what": "Planifica una entrada en dos tramos (Duplet) o tres tramos (Triplet) en lugar de todo de golpe, o encuentra una zona de Convergencia donde se alinean varios de tus propios niveles.",
+      "how": "Introduce el precio y el tamaño de cada tramo, además de tu stop y tu objetivo, y calcula la entrada media, la posición total, el riesgo por tramo, el riesgo total en dólares y la relación beneficio/riesgo. En Convergencia añades niveles (soporte, Fibonacci, media móvil…) con una fuerza de 1 a 5 y obtienes su zona media ponderada.",
+      "use": "Entrar escalonadamente reparte tu entrada para que un mal fill no decida toda la operación. Una zona donde coinciden varios niveles fuertes suele ser mejor entrada que cualquier línea aislada."
+    },
+    "manager": {
+      "what": "Calcula el tamaño de una operación a partir de tu cuenta y el riesgo que elijas, y reúne su entrada, stop y objetivos en un solo lugar.",
+      "how": "Indica el tamaño de la cuenta, el % de riesgo, la entrada y el stop, y calcula el tamaño exacto de la posición para que, si salta el stop, pierdas exactamente ese riesgo; muestra la cantidad en dólares en riesgo y coloca tus niveles de take profit en una escalera de precios. Te avisa si el stop está en el lado equivocado de la entrada.",
+      "use": "Decide primero el riesgo y deja que el tamaño se ajuste. Así cada pérdida es la misma pequeña porción de tu cuenta, esté el stop cerca o lejos."
+    }
+  }
+}

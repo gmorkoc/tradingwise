@@ -1,0 +1,19 @@
+{
+  "drawer2": {
+    "close": "Kapat",
+    "preferences": "Tercihler",
+    "aiRequests": "Yapay Zekâ İstekleri",
+    "upgradeToPro": "Pro'ya Yükselt",
+    "tradingLevel": "Trading Seviyesi",
+    "notSet": "Belirlenmedi",
+    "light": "Açık",
+    "dark": "Koyu",
+    "system": "Sistem",
+    "tools": "Araçlar",
+    "assetCalculator": "Varlık Hesaplayıcı",
+    "tradingTutorials": "Trading Eğitimleri",
+    "tradingGuide": "Trading Rehberi",
+    "support": "Destek",
+    "contactFeedback": "İletişim / Geri Bildirim"
+  }
+}

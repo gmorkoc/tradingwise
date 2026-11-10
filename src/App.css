@@ -4181,7 +4181,7 @@ html:not([data-theme="light"]) .top-nav-search-kbd { background: color-mix(in sr
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.top-nav-promo-link b { color: #0052ff; font-weight: 700; }
+.top-nav-promo-link b { color: #0052ff; font-weight: 600; }
 .top-nav-promo-link:focus-visible { outline: 2px solid #0052ff; outline-offset: 3px; border-radius: 4px; }
 .top-nav-promo-x,
 .top-nav-promo-x:hover {

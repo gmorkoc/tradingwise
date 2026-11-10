@@ -1,0 +1,14 @@
+{
+  "peerCompare": {
+    "title": "Pares para comparar",
+    "clear": "Borrar comparación",
+    "select": "Seleccionar para comparar",
+    "scrollLeft": "Desplazar a la izquierda",
+    "scrollRight": "Desplazar a la derecha",
+    "maxCoins": "Hasta {{n}} monedas",
+    "remove": "Quitar de la comparación",
+    "add": "Añadir a la comparación",
+    "rangeAria": "Rango de comparación",
+    "loading": "Cargando…"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "orderFlowGuide": {
+    "guideAria": "Guida {{tab}}",
+    "rowWhat": "Cosa",
+    "rowHow": "Come",
+    "rowUse": "Come leggerlo",
+    "flow": {
+      "what": "Ogni trade nel momento in cui viene eseguito su sei grandi exchange contemporaneamente — Binance, Coinbase, OKX, Bybit, Bitget e Kraken (spot) — con la sua dimensione in USD e il lato aggressore.",
+      "how": "Un trade è un ACQUISTO quando un compratore ha pagato l'ask e una VENDITA quando un venditore ha colpito il bid. Volume in acquisto, volume in vendita e Delta Cumulativo (acquisti meno vendite) sommano tutti e sei gli exchange dal momento in cui apri questa scheda; ogni card dell'exchange mostra la sua quota e il suo delta.",
+      "use": "Prezzo in salita con delta in salita significa che dietro il movimento ci sono acquisti reali; prezzo in salita con delta in calo significa che il movimento è debole e può esaurirsi. Quando il delta di un exchange va in direzione opposta agli altri, di solito lì sta operando un grosso player."
+    },
+    "profile": {
+      "what": "Quanto volume è stato scambiato a ogni prezzo sulle candele caricate — i livelli a cui il mercato ha dato più importanza nell'intervallo che scegli.",
+      "how": "Il volume viene raggruppato in fasce di prezzo e diviso tra acquisti e vendite. Il POC (Point of Control) è il prezzo più scambiato; l'Area di Valore è la fascia che contiene il 70% di tutto il volume, dal VAL in basso al VAH in alto.",
+      "use": "Il prezzo tende a tornare verso il POC. Un movimento oltre il VAH o il VAL viene respinto dentro l'area di valore oppure si trasforma in trend — osserva come reagisce il prezzo quando raggiunge quei bordi."
+    },
+    "planner": {
+      "what": "Pianifica un ingresso in due tranche (Duplet) o tre tranche (Triplet) invece che tutto in una volta, oppure trova una zona di Convergenza dove si allineano diversi tuoi livelli.",
+      "how": "Inserisci prezzo e dimensione di ogni tranche più stop e target, e calcola ingresso medio, posizione totale, rischio per tranche, rischio totale in dollari e rapporto rendimento/rischio. In Convergenza aggiungi livelli (supporto, Fibonacci, media mobile…) con una forza da 1 a 5 e ottieni la loro zona media ponderata.",
+      "use": "Entrare a scaglioni distribuisce l'ingresso, così un fill sfavorevole non decide l'intero trade. Una zona dove si incontrano più livelli forti è di solito un ingresso migliore di una singola linea."
+    },
+    "manager": {
+      "what": "Dimensiona un trade in base al tuo conto e al rischio che scegli, e tiene ingresso, stop e target in un unico posto.",
+      "how": "Imposta dimensione del conto, % di rischio, ingresso e stop: calcola la dimensione esatta della posizione in modo che uno stop costi esattamente quel rischio, mostra l'importo in dollari a rischio e dispone i tuoi livelli di take profit su una scala di prezzi. Ti avvisa se lo stop è dal lato sbagliato dell'ingresso.",
+      "use": "Decidi prima il rischio e lascia che la dimensione si adegui. Così ogni perdita è sempre la stessa piccola fetta del tuo conto, che lo stop sia vicino o lontano."
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "heatmapPro": {
+    "title": "Liquidation Heatmap",
+    "pair": "{{coin}}USDT · Perp",
+    "ticker": {
+      "mark": "Mark",
+      "nearestLong": "Nearest long liqs",
+      "nearestShort": "Nearest short liqs",
+      "bias": "Liq. bias",
+      "biasShorts": "Shorts {{pct}}%",
+      "biasLongs": "Longs {{pct}}%",
+      "balanced": "Balanced"
+    },
+    "ranges": {
+      "12h": "12 hour",
+      "1d": "24 hour",
+      "2d": "48 hour",
+      "3d": "3 day",
+      "1w": "1 week",
+      "1m": "1 month",
+      "3m": "3 month"
+    },
+    "timeRange": "Time range",
+    "refresh": "Refresh",
+    "downloadPng": "Download as PNG",
+    "signInDownloadPng": "Sign in to download as PNG",
+    "regenerate": "Regenerate",
+    "months": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+    "settings": {
+      "title": "Heatmap settings",
+      "close": "Close settings",
+      "colors": "Heatmap colors",
+      "palette": "Color palette {{n}}",
+      "sensitivity": "Sensitivity",
+      "reset": "Reset",
+      "hideBelow": "Hide levels weaker than",
+      "fullFrom": "Full brightness from",
+      "weak": "Weak",
+      "strong": "Strong",
+      "presetsLabel": "Sensitivity presets",
+      "sensNote": "The bars show how many price levels sit at each strength. Levels left of the first handle are hidden; levels right of the second are drawn at full brightness. Higher sensitivity lights up weaker levels.",
+      "merge": "Merge Y ticks",
+      "fewer": "Fewer",
+      "more": "More",
+      "mergeRows": "Price rows to merge",
+      "mergeNote": "Adds up every {{n}} neighbouring price rows so nearby levels read as one band. 1 keeps full detail.",
+      "show": "Show heatmap"
+    },
+    "presets": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "tooltip": {
+      "intensity": "Liquidation intensity",
+      "estLiq": "Est. liquidations",
+      "signIn": "Sign in"
+    },
+    "usd": {
+      "lockTitle": "Sign in to see estimated $ liquidations",
+      "est": "$ est.",
+      "retry": "$ est. · retry",
+      "retryTitle": "Couldn't load open interest — tap to retry",
+      "calculating": "Calculating est. $…",
+      "estTitle": "Estimated: open levels calibrated to current open interest",
+      "approx": "≈ {{usd}} est."
+    },
+    "book": {
+      "label": "Liquidation book",
+      "shorts": "Shorts",
+      "above": "above",
+      "longs": "Longs",
+      "below": "below",
+      "signIn": "Sign in for $ estimates",
+      "imbalance": "{{short}}% short liquidations, {{long}}% long liquidations"
+    },
+    "summary": {
+      "shortDominant": "Short-side liquidation pressure is dominant. Breaking above ${{above}} could trigger a cascade.",
+      "longDominant": "Long-side liquidation pressure is dominant. A drop below ${{below}} could trigger cascading liquidations.",
+      "balanced": "Balanced pressure. Key magnets: ${{below}} below and ${{above}} above."
+    },
+    "sentiment": {
+      "bullish": "Bullish",
+      "bearish": "Bearish",
+      "neutral": "Neutral"
+    },
+    "action": {
+      "buy": "BUY",
+      "sell": "SELL",
+      "hold": "HOLD",
+      "watch": "WATCH"
+    }
+  }
+}

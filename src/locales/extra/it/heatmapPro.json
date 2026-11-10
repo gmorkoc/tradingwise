@@ -1,0 +1,94 @@
+{
+  "heatmapPro": {
+    "title": "Mappa di Calore Liquidazioni",
+    "pair": "{{coin}}USDT · Perpetuo",
+    "ticker": {
+      "mark": "Mark",
+      "nearestLong": "Liq. long più vicine",
+      "nearestShort": "Liq. short più vicine",
+      "bias": "Bias liq.",
+      "biasShorts": "Short {{pct}}%",
+      "biasLongs": "Long {{pct}}%",
+      "balanced": "Bilanciato"
+    },
+    "ranges": {
+      "12h": "12 ore",
+      "1d": "24 ore",
+      "2d": "48 ore",
+      "3d": "3 giorni",
+      "1w": "1 settimana",
+      "1m": "1 mese",
+      "3m": "3 mesi"
+    },
+    "timeRange": "Intervallo di tempo",
+    "refresh": "Aggiorna",
+    "downloadPng": "Scarica come PNG",
+    "signInDownloadPng": "Accedi per scaricare come PNG",
+    "regenerate": "Rigenera",
+    "months": "gen,feb,mar,apr,mag,giu,lug,ago,set,ott,nov,dic",
+    "settings": {
+      "title": "Impostazioni mappa di calore",
+      "close": "Chiudi impostazioni",
+      "colors": "Colori mappa di calore",
+      "palette": "Tavolozza colori {{n}}",
+      "sensitivity": "Sensibilità",
+      "reset": "Ripristina",
+      "hideBelow": "Nascondi livelli più deboli di",
+      "fullFrom": "Luminosità piena da",
+      "weak": "Debole",
+      "strong": "Forte",
+      "presetsLabel": "Preimpostazioni di sensibilità",
+      "sensNote": "Le barre mostrano quanti livelli di prezzo ci sono per ogni intensità. I livelli a sinistra del primo cursore sono nascosti; quelli a destra del secondo sono disegnati a piena luminosità. Una sensibilità più alta illumina i livelli più deboli.",
+      "merge": "Unisci tick asse Y",
+      "fewer": "Meno",
+      "more": "Più",
+      "mergeRows": "Righe di prezzo da unire",
+      "mergeNote": "Somma ogni {{n}} righe di prezzo vicine così i livelli adiacenti si leggono come un'unica banda. 1 mantiene il dettaglio completo.",
+      "show": "Mostra mappa di calore"
+    },
+    "presets": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Bassa"
+    },
+    "tooltip": {
+      "intensity": "Intensità liquidazioni",
+      "estLiq": "Liq. stimate",
+      "signIn": "Accedi"
+    },
+    "usd": {
+      "lockTitle": "Accedi per vedere le liquidazioni stimate in $",
+      "est": "$ stim.",
+      "retry": "$ stim. · riprova",
+      "retryTitle": "Impossibile caricare l'open interest — tocca per riprovare",
+      "calculating": "Calcolo $ stim.…",
+      "estTitle": "Stima: livelli aperti calibrati sull'open interest attuale",
+      "approx": "≈ {{usd}} stim."
+    },
+    "book": {
+      "label": "Book delle liquidazioni",
+      "shorts": "Short",
+      "above": "sopra",
+      "longs": "Long",
+      "below": "sotto",
+      "signIn": "Accedi per le stime in $",
+      "imbalance": "{{short}}% liquidazioni short, {{long}}% liquidazioni long"
+    },
+    "summary": {
+      "shortDominant": "Prevale la pressione di liquidazione sugli short. Una rottura sopra ${{above}} potrebbe innescare una cascata.",
+      "longDominant": "Prevale la pressione di liquidazione sui long. Un calo sotto ${{below}} potrebbe innescare liquidazioni a cascata.",
+      "balanced": "Pressione bilanciata. Magneti chiave: ${{below}} sotto e ${{above}} sopra."
+    },
+    "sentiment": {
+      "bullish": "Rialzista",
+      "bearish": "Ribassista",
+      "neutral": "Neutrale"
+    },
+    "action": {
+      "buy": "COMPRA",
+      "sell": "VENDI",
+      "hold": "MANTIENI",
+      "watch": "OSSERVA"
+    }
+  }
+}

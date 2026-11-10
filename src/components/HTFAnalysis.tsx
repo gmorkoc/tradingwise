@@ -94,32 +94,45 @@ function calcSMA(data: CandleDataPoint[], period: number): { time: number; value
 }
 
 interface FibLevel { label: string; price: number; color: string; lineStyle: number }
+// Retracements are measured DOWN from the all-time high (how far a pullback
+// from the top has gone): 0.618 = ATH − 61.8% of the low→ATH range. They
+// used to be measured up from the cycle low, which put every label on its
+// mirror level (e.g. "0.618 Golden Ratio" sat on the real 0.382). The
+// extensions project the whole low→ATH leg above the ATH (low + range × r).
 function computeFibLevels(low: number, high: number): FibLevel[] {
   const range = high - low;
+  const retr = (r: number) => high - range * r;
+  const ext = (r: number) => low + range * r;
   return [
-    { label: "0 — Cycle Low",        ratio: 0,     color: "#ef4444", lineStyle: 2 },
-    { label: "0.236",                ratio: 0.236, color: "#f97316", lineStyle: 0 },
-    { label: "0.382",                ratio: 0.382, color: "#eab308", lineStyle: 0 },
-    { label: "0.5 — Mid Range",      ratio: 0.5,   color: "#94a3b8", lineStyle: 0 },
-    { label: "0.618 — Golden Ratio", ratio: 0.618, color: "#22c55e", lineStyle: 2 },
-    { label: "0.786",                ratio: 0.786, color: "#3b82f6", lineStyle: 0 },
-    { label: "1.0 — ATH",            ratio: 1.0,   color: "#a78bfa", lineStyle: 2 },
-    { label: "1.618 — Extension",    ratio: 1.618, color: "#f59e0b", lineStyle: 1 },
-    { label: "2.618 — Extension",    ratio: 2.618, color: "#ec4899", lineStyle: 1 },
-  ].map(r => ({
-    label: r.label,
-    price: r.ratio <= 1 ? low + range * r.ratio : high + range * (r.ratio - 1),
-    color: r.color,
-    lineStyle: r.lineStyle,
-  }));
+    { label: "1.0 — Cycle Low",      price: low,         color: "#ef4444", lineStyle: 2 },
+    { label: "0.786",                price: retr(0.786), color: "#3b82f6", lineStyle: 0 },
+    { label: "0.618 — Golden Ratio", price: retr(0.618), color: "#22c55e", lineStyle: 2 },
+    { label: "0.5 — Mid Range",      price: retr(0.5),   color: "#94a3b8", lineStyle: 0 },
+    { label: "0.382",                price: retr(0.382), color: "#eab308", lineStyle: 0 },
+    { label: "0.236",                price: retr(0.236), color: "#f97316", lineStyle: 0 },
+    { label: "0 — ATH",              price: high,        color: "#a78bfa", lineStyle: 2 },
+    { label: "1.618 — Extension",    price: ext(1.618),  color: "#f59e0b", lineStyle: 1 },
+    { label: "2.618 — Extension",    price: ext(2.618),  color: "#ec4899", lineStyle: 1 },
+  ];
 }
 
 interface ScenarioPath { label: string; color: string; target: number; timeline: string; description: string; path: LineData[] }
 function computeScenarios(price: number, ath: number, cycleLow: number, lastTs: number): ScenarioPath[] {
   const FORWARD = 52;
-  const bullTarget = Math.max(ath * 1.8, price * 2.5);
+  // Targets come from the same Fibonacci map as the Fibonacci tab (they
+  // used to be arbitrary multipliers, and the "Fibonacci support" bear case
+  // used a 0.4 ratio that isn't a Fibonacci level):
+  //   Bull = 1.618 extension of the cycle-low → ATH move (cycle-top zone)
+  //   Bear = 0.618 retracement from the ATH (the Golden Ratio support)
+  //   Base = a steady +35% from here (no level needed — a drift scenario)
+  // If price is already beyond a level, fall back to a sensible next one.
+  const range = ath - cycleLow;
+  const ext1618 = cycleLow + range * 1.618;
+  const retr618 = ath - range * 0.618;
+  const retr786 = ath - range * 0.786;
+  const bullTarget = price < ext1618 ? ext1618 : cycleLow + range * 2.618;
   const baseTarget = price * 1.35;
-  const bearTarget = Math.max(cycleLow + (ath - cycleLow) * 0.4, price * 0.52);
+  const bearTarget = price > retr618 ? retr618 : retr786;
   function path(target: number, shape: "bull" | "base" | "bear"): LineData[] {
     return Array.from({ length: FORWARD + 1 }, (_, w) => {
       const pct = w / FORWARD;
@@ -132,11 +145,11 @@ function computeScenarios(price: number, ath: number, cycleLow: number, lastTs: 
   }
   return [
     { label: "Bull", color: "#22c55e", target: bullTarget, timeline: "12–18 months",
-      description: `New ATH scenario. Institutional inflows and ETF demand drive price past ${fmtK(ath)}. Target: ${fmtK(bullTarget)}.`, path: path(bullTarget, "bull") },
+      description: `New ATH: price breaks ${fmtK(ath)} and runs to the ${price < ext1618 ? "1.618" : "2.618"} Fibonacci extension, ${fmtK(bullTarget)} — a commonly watched cycle-top target zone. Illustrative path, not a forecast.`, path: path(bullTarget, "bull") },
     { label: "Base", color: "#3b82f6", target: baseTarget, timeline: "6–12 months",
-      description: `Steady accumulation with periodic corrections. No major macro catalyst needed. Target: ${fmtK(baseTarget)}.`, path: path(baseTarget, "base") },
+      description: `Steady accumulation with periodic pullbacks: about +35% from here, to ${fmtK(baseTarget)}. Illustrative path, not a forecast.`, path: path(baseTarget, "base") },
     { label: "Bear", color: "#ef4444", target: bearTarget, timeline: "3–6 months",
-      description: `Distribution or macro shock triggers a major retracement toward Fibonacci support. Target: ${fmtK(bearTarget)}.`, path: path(bearTarget, "bear") },
+      description: `A macro shock or more selling takes price to the ${price > retr618 ? "0.618 (Golden Ratio)" : "0.786"} Fibonacci support at ${fmtK(bearTarget)}. Illustrative path, not a forecast.`, path: path(bearTarget, "bear") },
   ];
 }
 
@@ -242,7 +255,7 @@ function fibNowText(fibLevels: FibLevel[], currentPrice: number, t: TFunction): 
   const below = sorted.filter(f => f.price <= currentPrice);
   const nearestRes = above[0];
   const nearestSup = below[below.length - 1];
-  const athLevel = fibLevels.find(f => f.label.includes("ATH") || f.label.includes("1.0"));
+  const athLevel = fibLevels.find(f => f.label.includes("ATH"));
   const ext1618  = fibLevels.find(f => f.label.includes("1.618"));
   const ext2618  = fibLevels.find(f => f.label.includes("2.618"));
   const aboveATH = athLevel && currentPrice > athLevel.price;
@@ -253,8 +266,11 @@ function fibNowText(fibLevels: FibLevel[], currentPrice: number, t: TFunction): 
   if (aboveATH) {
     text += t("htf.explainer.fib.aboveATH", { ext1618: ext1618 ? fmtPrice(ext1618.price) : "—", ext2618: ext2618 ? fmtPrice(ext2618.price) : "—" });
   } else if (athLevel) {
-    const pctToATH = ((athLevel.price - currentPrice) / currentPrice * 100).toFixed(1);
-    text += t("htf.explainer.fib.belowATH", { pct: pctToATH, ath: fmtPrice(athLevel.price), ext1618: ext1618 ? fmtPrice(ext1618.price) : "—", ext2618: ext2618 ? fmtPrice(ext2618.price) : "—" });
+    // % below = drop from the ATH (matches the header's Drawdown); the old
+    // number was the % gain needed to get back, mislabeled as "below".
+    const pctBelow = ((athLevel.price - currentPrice) / athLevel.price * 100).toFixed(1);
+    const pctBack  = ((athLevel.price - currentPrice) / currentPrice * 100).toFixed(1);
+    text += t("htf.explainer.fib.belowATH", { pct: pctBelow, back: pctBack, ath: fmtPrice(athLevel.price), ext1618: ext1618 ? fmtPrice(ext1618.price) : "—", ext2618: ext2618 ? fmtPrice(ext2618.price) : "—" });
   }
   return text.trim();
 }
@@ -356,25 +372,28 @@ function PanelCycle({
     const chart = mkChart(el, 340, false);
     const baseTs = LAST_HALVING_TS;
     const h3ts = HALVINGS[2].ts;
-    let b2020 = 0, b2024 = 0;
+    // Week that contains each halving. No fallback to the first candle: if a
+    // halving isn't in the data, that cycle's line is simply not drawn
+    // (the old fallback drew a fake "2020" line from the Nov 2021 top).
+    let b2020 = 0, b2024 = 0, w2020 = 0, w2024 = 0;   // close + start time of the halving week
     for (const c of candles) {
-      if (Math.abs(c.time - h3ts) < WEEK_SEC * 3 && !b2020) b2020 = c.close;
-      if (Math.abs(c.time - baseTs) < WEEK_SEC * 3 && !b2024) b2024 = c.close;
+      if (!b2020 && c.time <= h3ts && h3ts < c.time + WEEK_SEC) { b2020 = c.close; w2020 = c.time; }
+      if (!b2024 && c.time <= baseTs && baseTs < c.time + WEEK_SEC) { b2024 = c.close; w2024 = c.time; }
     }
-    if (!b2020) b2020 = candles[0]?.close ?? 1;
-    if (!b2024) b2024 = candles[0]?.close ?? 1;
     const dedup = (arr: LineData[]) => {
       const map = new Map<number, number>();
       arr.forEach(d => map.set(d.time as number, d.value as number));
       return Array.from(map.entries()).sort((a, b) => a[0] - b[0]).map(([t, v]) => ({ time: t as Time, value: v }));
     };
     const cy20: LineData[] = [], cy24: LineData[] = [];
+    // Both lines start at 100% on their halving week; the 2020 line is laid
+    // onto the 2024 timeline week-for-week.
     for (const c of candles) {
-      if (c.time >= h3ts && b2020) {
-        const w = Math.floor((c.time - h3ts) / WEEK_SEC);
-        if (w >= 0 && w <= 156) cy20.push({ time: (baseTs + w * WEEK_SEC) as Time, value: +(c.close / b2020 * 100).toFixed(2) });
+      if (b2020 && c.time >= w2020) {
+        const w = Math.round((c.time - w2020) / WEEK_SEC);
+        if (w <= 156 && w2024) cy20.push({ time: (w2024 + w * WEEK_SEC) as Time, value: +(c.close / b2020 * 100).toFixed(2) });
       }
-      if (c.time >= baseTs && b2024) cy24.push({ time: c.time as Time, value: +(c.close / b2024 * 100).toFixed(2) });
+      if (b2024 && c.time >= w2024) cy24.push({ time: c.time as Time, value: +(c.close / b2024 * 100).toFixed(2) });
     }
     if (cy20.length > 0) { const s = chart.addSeries(LineSeries, { color: "#8b5cf6", lineWidth: 2, title: "2020" }); s.setData(dedup(cy20)); }
     if (cy24.length > 0) { const s = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 2, title: "2024" }); s.setData(dedup(cy24)); }
@@ -629,7 +648,11 @@ export const HTFAnalysis: React.FC<Props> = ({
     if (candles.length === 0) return null;
     const price = propPrice || candles[candles.length - 1].close;
     const ath = Math.max(...candles.map(c => c.high));
-    const cycleLow = Math.min(...candles.map(c => c.low));
+    // This cycle's low = the bear-market bottom before the latest halving:
+    // lowest low in the 104 weeks leading into it (Nov 2022 $15,476 for the
+    // 2024 halving; Dec 2018 for 2020). Not the all-history minimum.
+    const preHalving = candles.filter(c => c.time >= LAST_HALVING_TS - 104 * WEEK_SEC && c.time < LAST_HALVING_TS);
+    const cycleLow = Math.min(...(preHalving.length ? preHalving : candles).map(c => c.low));
     const ma200arr = calcSMA(candles, 200);
     const ma200 = ma200arr.length > 0 ? ma200arr[ma200arr.length - 1].value : null;
     const ratio = ma200 ? price / ma200 : null;
@@ -637,7 +660,16 @@ export const HTFAnalysis: React.FC<Props> = ({
     const wksSince = Math.floor((Date.now() / 1000 - LAST_HALVING_TS) / WEEK_SEC);
     const rc = candles.slice(-4).map(c => c.close);
     const recentTrend = rc.length >= 2 ? (rc[rc.length - 1] > rc[0] ? "bullish" : rc[rc.length - 1] < rc[0] ? "bearish" : "neutral") : "neutral";
-    const phase = wksSince < 52 ? "Early Accumulation" : wksSince < 104 ? "Mid Expansion" : wksSince < 130 ? "Late Expansion" : wksSince < 160 ? "Distribution" : "Bear Market";
+    // Phase by cycle timing, matched to history: in the 2016 and 2020 cycles
+    // the top came ~75–78 weeks after the halving (this cycle's ATH: week
+    // 76) and the bear-market bottom ~127–131 weeks after it. The old map
+    // called weeks 104–130 "Late Expansion" and 130–160 "Distribution".
+    const phase = wksSince < 26 ? "Early Accumulation"
+      : wksSince < 60 ? "Mid Expansion"
+      : wksSince < 80 ? "Late Expansion"
+      : wksSince < 92 ? "Distribution"
+      : wksSince < 130 ? "Bear Market"
+      : "Recovery";
     const lastTs = candles[candles.length - 1].time;
     const sma16 = calcSMA(candles, 16);
     const sma50 = calcSMA(candles, 50);
@@ -652,10 +684,13 @@ export const HTFAnalysis: React.FC<Props> = ({
     if (!candles.length || !stats) return null;
     const h3ts = HALVINGS[2].ts;
     const h4ts = LAST_HALVING_TS;
+    // The weekly candle that CONTAINS each halving (the old "within 3 weeks"
+    // match could pick a candle up to 3 weeks early).
     let b2020Price = 0, b2024Price = 0, idx2020 = -1;
     for (let i = 0; i < candles.length; i++) {
-      if (!b2020Price && Math.abs(candles[i].time - h3ts) < WEEK_SEC * 3) { b2020Price = candles[i].close; idx2020 = i; }
-      if (!b2024Price && Math.abs(candles[i].time - h4ts) < WEEK_SEC * 3) { b2024Price = candles[i].close; }
+      const t0 = candles[i].time;
+      if (!b2020Price && t0 <= h3ts && h3ts < t0 + WEEK_SEC) { b2020Price = candles[i].close; idx2020 = i; }
+      if (!b2024Price && t0 <= h4ts && h4ts < t0 + WEEK_SEC) { b2024Price = candles[i].close; }
     }
     const idx2020Now = idx2020 >= 0 ? idx2020 + stats.wksSince : -1;
     const cy2020PriceAtNow = (idx2020Now >= 0 && idx2020Now < candles.length) ? candles[idx2020Now].close : null;

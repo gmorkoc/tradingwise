@@ -1134,7 +1134,7 @@
         "support": "Soporte actual: {{label}} en {{price}}. ",
         "resistance": "Próxima resistencia: {{label}} en {{price}}. ",
         "aboveATH": "El precio está por encima del ATH — en territorio de extensión. Los niveles 1.618 ({{ext1618}}) y 2.618 ({{ext2618}}) son las principales zonas objetivo de techo de ciclo.",
-        "belowATH": "El precio está {{pct}}% por debajo del ATH ({{ath}}). Una ruptura confirmada al alza abre objetivos de extensión en 1.618 ({{ext1618}}) y 2.618 ({{ext2618}})."
+        "belowATH": "El precio está {{pct}}% por debajo del ATH ({{ath}}) — necesitaría +{{back}}% para volver allí. Una ruptura confirmada al alza abre objetivos de extensión en 1.618 ({{ext1618}}) y 2.618 ({{ext2618}})."
       },
       "scenario": {
         "how": "Se proyectan tres caminos de precio desde la semana de ciclo actual: Alcista (nuevo ATH impulsado por demanda institucional y flujos de ETF), Base (acumulación constante sin catalizador macro importante), y Bajista (shock macro o retroceso de distribución al soporte Fibonacci). Los caminos están moldeados por análogos históricos de ciclos y objetivos Fibonacci actuales.",
@@ -1361,14 +1361,14 @@
     "market": "Datos de Mercado",
     "onchain": "On-Chain",
     "chart": "Gráfico",
-    "heatmap": "Mapa de Calor",
+    "heatmap": "Mapa de Liquidaciones",
     "alerts": "Alertas",
     "watchlist": "Lista de Seguimiento",
     "analyzeChart": "Analizador de Gráficos",
     "gann": "Gann",
     "live": "EN VIVO",
     "etf": "Flujos ETF",
-    "positions": "Traders",
+    "positions": "Ratio Long/Short",
     "htf": "Análisis HTF",
     "orderflow": "Dinero Inteligente",
     "signals": "Confluencia",

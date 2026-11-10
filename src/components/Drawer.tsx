@@ -39,6 +39,22 @@ const DOC_KEYS = [
   "openInterest","fundingRate","longShort","liquidations","leverage","buySell","riskReward",
 ] as const;
 
+// Trading Guide topic icons (same line style as ICONS below).
+const DOC_ICONS: Record<(typeof DOC_KEYS)[number], string[]> = {
+  candlesticks:      ["M7 3v18", "M5 7h4v8H5z", "M17 3v18", "M15 9h4v6h-4z"],
+  bollingerBands:    ["M3 8c4-4 6 2 9-1s5-3 9 0", "M3 16c4-4 6 2 9-1s5-3 9 0", "M3 12c4-3 6 1.5 9-1s5-2 9 0"],
+  rsi:               ["M3 12h3l3-7 4 14 3-7h5"],
+  macd:              ["M3 3v18h18", "M7 14v3", "M11 11v6", "M15 8v9", "M19 12v5"],
+  supportResistance: ["M3 6h18", "M3 18h18", "M5 15l4-6 4 4 4-7"],
+  openInterest:      ["M12 2v20", "M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"],
+  fundingRate:       ["M12 22a10 10 0 100-20 10 10 0 000 20z", "M12 6v6l4 2"],
+  longShort:         ["M12 3v18", "M5 21h14", "M5 7l-3 6h6z", "M19 7l-3 6h6z", "M5 7h14"],
+  liquidations:      ["M12 2c1 3-2 5-2 8a2 2 0 004 0c0-1-.5-2-1-3 3 2 4 5 4 7a6 6 0 01-12 0c0-5 5-7 7-12z"],
+  leverage:          ["M13 2L3 14h9l-1 8 10-12h-9l1-8z"],
+  buySell:           ["M7 17V7", "M3 11l4-4 4 4", "M17 7v10", "M13 13l4 4 4-4"],
+  riskReward:        ["M3 21L21 3", "M6.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5z", "M17.5 20a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"],
+};
+
 // Line icons (24px grid, stroke) — same style as the side nav's NavIcon.
 const ICONS: Record<string, string[]> = {
   profile: ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 11a4 4 0 100-8 4 4 0 000 8z"],
@@ -115,7 +131,7 @@ export const Drawer: React.FC<DrawerProps> = ({
         {/* Header */}
         <div className="drawer-header">
           <CoinHintzLogo variant="nav" />
-          <button className="drawer-close" onClick={onClose} aria-label="Close">
+          <button className="drawer-close" onClick={onClose} aria-label={t("drawer2.close", "Close")}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -126,7 +142,7 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* ── Preferences ───────────────────────────────── */}
           <section className="drawer-section">
-            <h4 className="drawer-section-title">Preferences</h4>
+            <h4 className="drawer-section-title">{t("drawer2.preferences", "Preferences")}</h4>
 
             {/* Profile and Trading Level belong to an account — signed-out
                 users don't see them. */}
@@ -145,10 +161,10 @@ export const Drawer: React.FC<DrawerProps> = ({
             {user && !accountExtras && (
               <div className="drawer-ai-usage">
                 <div className="drawer-ai-usage-top">
-                  <span className="drawer-row-lead"><Ico name="ai" /><span className="drawer-row-label">AI Requests</span></span>
+                  <span className="drawer-row-lead"><Ico name="ai" /><span className="drawer-row-label">{t("drawer2.aiRequests", "AI Requests")}</span></span>
                   <span className="drawer-ai-usage-count">
                     {tier === "free"
-                      ? <span className="drawer-ai-usage-locked">Upgrade to Pro</span>
+                      ? <span className="drawer-ai-usage-locked">{t("drawer2.upgradeToPro", "Upgrade to Pro")}</span>
                       : <>{used}<span className="drawer-ai-usage-limit"> / {tier === "elite" ? "∞" : limit}</span></>
                     }
                   </span>
@@ -166,8 +182,8 @@ export const Drawer: React.FC<DrawerProps> = ({
 
             {user && (
             <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenWizard(); }}>
-              <span className="drawer-row-lead"><Ico name="level" /><span className="drawer-row-label">Trading Level</span></span>
-              <span className="drawer-badge">{traderLevel ?? "Not set"}</span>
+              <span className="drawer-row-lead"><Ico name="level" /><span className="drawer-row-label">{t("drawer2.tradingLevel", "Trading Level")}</span></span>
+              <span className="drawer-badge">{traderLevel ?? t("drawer2.notSet", "Not set")}</span>
             </div>
             )}
 
@@ -189,7 +205,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                         setThemeMode(opt);
                       }}
                     >
-                      {opt === "light" ? "Light" : opt === "dark" ? "Dark" : "System"}
+                      {opt === "light" ? t("drawer2.light", "Light") : opt === "dark" ? t("drawer2.dark", "Dark") : t("drawer2.system", "System")}
                     </button>
                   );
                 })}
@@ -215,14 +231,14 @@ export const Drawer: React.FC<DrawerProps> = ({
           {/* ── Tools ─────────────────────────────────────── */}
           <section className="drawer-section">
             <button className="drawer-guide-toggle" onClick={() => setToolsOpen(!toolsOpen)} aria-expanded={toolsOpen}>
-              <span>Tools</span>
+              <span>{t("drawer2.tools", "Tools")}</span>
               <Chevron open={toolsOpen} />
             </button>
 
             {toolsOpen && (
               <div className="drawer-docs">
                 <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenAssetCalc(); }}>
-                  <span className="drawer-row-lead"><Ico name="calc" /><span className="drawer-row-label">Asset Calculator</span></span>
+                  <span className="drawer-row-lead"><Ico name="calc" /><span className="drawer-row-label">{t("drawer2.assetCalculator", "Asset Calculator")}</span></span>
                   <Chevron />
                 </div>
 
@@ -237,7 +253,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                 </div>
 
                 <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenTutorials(); }}>
-                  <span className="drawer-row-lead"><Ico name="tutorials" /><span className="drawer-row-label">Trading Tutorials</span></span>
+                  <span className="drawer-row-lead"><Ico name="tutorials" /><span className="drawer-row-label">{t("drawer2.tradingTutorials", "Trading Tutorials")}</span></span>
                   <Chevron />
                 </div>
               </div>
@@ -247,20 +263,29 @@ export const Drawer: React.FC<DrawerProps> = ({
           {/* ── Trading Guide (collapsible) ────────────────── */}
           <section className="drawer-section">
             <button className="drawer-guide-toggle" onClick={() => setGuideOpen(!guideOpen)} aria-expanded={guideOpen}>
-              <span>Trading Guide</span>
+              <span>{t("drawer2.tradingGuide", "Trading Guide")}</span>
               <Chevron open={guideOpen} />
             </button>
 
             {guideOpen && (
               <div className="drawer-docs">
                 {DOC_KEYS.map((key, i) => (
-                  <div key={key} className="doc-item">
+                  <div key={key} className={`doc-item${openDoc === i ? " doc-item--open" : ""}`}>
                     <button
                       className={`doc-trigger${openDoc === i ? " open" : ""}`}
                       onClick={() => setOpenDoc(openDoc === i ? null : i)}
+                      aria-expanded={openDoc === i}
                     >
-                      <span>{t(`drawer.docs.${key}.title`)}</span>
-                      <span className="doc-chevron">{openDoc === i ? "▲" : "▼"}</span>
+                      <span className="drawer-row-lead">
+                        <svg className="drawer-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          {DOC_ICONS[key].map((d) => <path key={d} d={d} />)}
+                        </svg>
+                        {/* Titles in the locale files start with an emoji — the line icon replaces it. */}
+                        <span className="drawer-row-label">{t(`drawer.docs.${key}.title`).replace(/^[^\p{L}\p{N}]+/u, "")}</span>
+                      </span>
+                      <svg className={`doc-chev${openDoc === i ? " doc-chev--open" : ""}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
                     </button>
                     {openDoc === i && <p className="doc-body">{t(`drawer.docs.${key}.body`)}</p>}
                   </div>
@@ -271,9 +296,9 @@ export const Drawer: React.FC<DrawerProps> = ({
 
           {/* ── Support ───────────────────────────────────── */}
           <section className="drawer-section">
-            <h4 className="drawer-section-title">Support</h4>
+            <h4 className="drawer-section-title">{t("drawer2.support", "Support")}</h4>
             <div className="drawer-row drawer-row--clickable" onClick={() => { onClose(); onOpenContact(); }}>
-              <span className="drawer-row-lead"><Ico name="contact" /><span className="drawer-row-label">Contact / Feedback</span></span>
+              <span className="drawer-row-lead"><Ico name="contact" /><span className="drawer-row-label">{t("drawer2.contactFeedback", "Contact / Feedback")}</span></span>
               <div className="drawer-row-right">
                 <span className="drawer-online"><span className="drawer-online-dot" />{t("nav.online", "Online")}</span>
                 <Chevron />

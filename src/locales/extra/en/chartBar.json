@@ -1,0 +1,44 @@
+{
+  "chartBar": {
+    "indicators": "Indicators",
+    "intervalChoose": "Interval: {{name}} — choose another",
+    "interval": "Interval",
+    "range": "Range",
+    "predict": "Predict",
+    "pvOn": "Turn ProVision on",
+    "pvOff": "Turn ProVision off",
+    "chartSettings": "Chart settings",
+    "chartType": "Chart type",
+    "chartTools": "Chart tools",
+    "lineChart": "Line chart",
+    "fullScreen": "Full screen",
+    "switchToTv": "Switch to TradingView candles",
+    "toUsdChart": "{{name}} to USD Chart",
+    "dateRange": "Date Range",
+    "goTo": "Go to date or custom range",
+    "pctScale": "Percentage scale",
+    "logScale": "Logarithmic scale",
+    "autoFit": "Auto-fit price axis to visible candles",
+    "ivName": {
+      "1sec": "1 second",
+      "1min": "1 minute",
+      "5min": "5 minutes",
+      "15min": "15 minutes",
+      "1h": "1 hour",
+      "4h": "4 hours",
+      "6h": "6 hours",
+      "1day": "1 day",
+      "1week": "1 week",
+      "1month": "1 month",
+      "all": "All time"
+    },
+    "rangeTip": {
+      "1h": "1 hour in 5 minute intervals",
+      "4h": "4 hours in 15 minute intervals",
+      "1d": "1 day in 1 hour intervals",
+      "1w": "1 week in 4 hour intervals",
+      "1m": "1 month in 1 day intervals",
+      "1y": "1 year in 1 week intervals"
+    }
+  }
+}

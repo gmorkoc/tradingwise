@@ -6456,6 +6456,17 @@ html[data-theme="light"] .pattern-insight {
   color: #22c55e;
   font-weight: 700;
 }
+/* Same hover fill as the day ranges, also while a scale is on. */
+.chart-range-btn--scale.active:hover { background: var(--color-input-bg, rgba(148, 163, 184, 0.12)); }
+/* Indicators at the right end of the range bar: a plain range-bar button
+   (icon + label), same hover as the day ranges. */
+.chart-range-btn--ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chart-range-btn--ind-on { background: var(--color-input-bg, rgba(148, 163, 184, 0.12)); color: var(--color-text); }
+.chart-range-btn--ind .cmct-indcount { margin-left: 0; }
 /* Right-hand buttons: anchor tooltips to the right edge so they don't
    run off the chart. */
 .chart-range-btn--scale::after {

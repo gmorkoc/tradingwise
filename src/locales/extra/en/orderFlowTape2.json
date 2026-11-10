@@ -1,0 +1,12 @@
+{
+  "orderFlowTape2": {
+    "exchangesLive": "{{live}}/{{total}} exchanges",
+    "lockName": "Live buy / sell volume & delta",
+    "noMarket": "no {{coin}} market",
+    "volShare": "{{pct}}% vol",
+    "waitingTrades": "waiting for trades",
+    "connecting": "connecting…",
+    "colExchange": "Exchange",
+    "note": "List shows trades of {{min}}+; totals count every trade."
+  }
+}

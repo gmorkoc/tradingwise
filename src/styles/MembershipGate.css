@@ -332,67 +332,93 @@ html[data-theme="light"] .bg-modal-close:hover {
   padding-top: 24px;
 }
 
-/* Signed out: a single button over the blur (no sales card) — opens the
-   sign-in window. Stays inside its own section on every screen size (the
-   sales overlay goes full-screen on phones; a sign-in button must not). */
-.bg-root .bg-overlay.bg-overlay--signin,
-.bg-root.bg-root--top .bg-overlay.bg-overlay--signin {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
+/* Signed out: a compact locked-section card in place of the content (no
+   sales card, no placeholder). Stays in its own section on every screen
+   size — never the phone full-screen takeover the upgrade card uses. */
+.bg-root.bg-root--signin { display: block; height: auto; min-height: 0; container-type: inline-size; }
+.bg-lock {
+  box-sizing: border-box;
+  width: 100%;
+  /* Some sections lay the gate out as a grid (e.g. 3 price-target cards) —
+     the lock card spans the whole row. */
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: none;
-  backdrop-filter: none;
-}
-.bg-root.bg-root--top .bg-overlay.bg-overlay--signin { align-items: center; padding-top: 16px; }
-/* Compact placeholder instead of the real content: a few faded rows. */
-.bg-root.bg-root--signin { display: block; height: auto; min-height: 0; }
-.bg-root.bg-root--signin > .bg-signin-skel { width: 100%; box-sizing: border-box; }
-.bg-signin-skel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 22px 20px;
+  gap: 16px;
+  padding: 18px 20px;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
-  opacity: 0.55;
+  border: 1px dashed color-mix(in srgb, #4f46e5 35%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #4f46e5 7%, transparent), color-mix(in srgb, #0ea5e9 5%, transparent));
 }
-.bg-signin-skel-row {
-  display: block;
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(90deg,
-    color-mix(in srgb, var(--color-text) 7%, transparent) 25%,
-    color-mix(in srgb, var(--color-text) 13%, transparent) 50%,
-    color-mix(in srgb, var(--color-text) 7%, transparent) 75%);
-  background-size: 200% 100%;
-  animation: bg-signin-shimmer 1.6s ease-in-out infinite;
-}
-.bg-signin-skel-row:first-child { height: 16px; }
-@keyframes bg-signin-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .bg-signin-skel-row { animation: none; } }
-.bg-signin-btn,
-.bg-signin-btn:hover {
-  all: unset;
-  flex: none;
-  align-self: center;
-  width: max-content;
-  max-width: 100%;
-  height: auto;
-  box-sizing: border-box;
-  text-align: center;
-  padding: 13px 22px;
+.bg-lock-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 700;
   color: #fff;
-  background: linear-gradient(90deg, #4338ca, #0070f3);
-  box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.55);
+  background: linear-gradient(135deg, #4338ca, #0070f3);
+}
+.bg-lock-text { flex: 1; min-width: 0; }
+.bg-lock-title { display: flex; align-items: center; gap: 8px; font-size: 0.98rem; font-weight: 800; color: var(--color-text); }
+.bg-lock-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: #2563eb;
+}
+.bg-lock-badge--elite { background: #7c3aed; }
+.bg-lock-sub { margin: 4px 0 0; font-size: 0.8rem; line-height: 1.45; color: var(--color-text-muted); }
+.bg-lock-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.bg-lock-primary,
+.bg-lock-primary:hover,
+.bg-lock-ghost,
+.bg-lock-ghost:hover {
+  all: unset;
+  box-sizing: border-box;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.bg-lock-primary { color: #fff; background: linear-gradient(90deg, #4338ca, #0070f3); }
+.bg-lock-ghost { color: var(--color-text); border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent); background: var(--color-surface, #fff); }
+html:not([data-theme="light"]) .bg-lock-ghost { background: transparent; }
+/* Panel variant: fills a whole panel, everything centered. */
+.bg-lock-panel {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 240px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 24px;
+  text-align: center;
+}
+.bg-lock-panel .bg-lock-title { justify-content: center; font-size: 1.05rem; }
+.bg-lock-panel-sub { margin: 0; max-width: 360px; font-size: 0.82rem; line-height: 1.5; color: var(--color-text-muted); }
+.bg-lock-panel-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+
+/* Narrow spot (phone, or a narrow column on desktop): buttons go below. */
+@container (max-width: 620px) {
+  .bg-lock { flex-wrap: wrap; padding: 16px; }
+  .bg-lock-text { flex-basis: calc(100% - 60px); }
+  .bg-lock-actions { width: 100%; }
+  .bg-lock-actions > button { flex: 1; }
 }
 
 .bg-card {

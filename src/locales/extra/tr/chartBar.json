@@ -1,0 +1,44 @@
+{
+  "chartBar": {
+    "indicators": "İndikatörler",
+    "intervalChoose": "Zaman aralığı: {{name}} — başka birini seç",
+    "interval": "Zaman aralığı",
+    "range": "Aralık",
+    "predict": "Tahmin Et",
+    "pvOn": "ProVision'ı aç",
+    "pvOff": "ProVision'ı kapat",
+    "chartSettings": "Grafik ayarları",
+    "chartType": "Grafik türü",
+    "chartTools": "Grafik araçları",
+    "lineChart": "Çizgi grafik",
+    "fullScreen": "Tam ekran",
+    "switchToTv": "TradingView mumlarına geç",
+    "toUsdChart": "{{name}} / USD Grafiği",
+    "dateRange": "Tarih Aralığı",
+    "goTo": "Tarihe veya özel aralığa git",
+    "pctScale": "Yüzde ölçeği",
+    "logScale": "Logaritmik ölçek",
+    "autoFit": "Fiyat eksenini görünen mumlara otomatik sığdır",
+    "ivName": {
+      "1sec": "1 saniye",
+      "1min": "1 dakika",
+      "5min": "5 dakika",
+      "15min": "15 dakika",
+      "1h": "1 saat",
+      "4h": "4 saat",
+      "6h": "6 saat",
+      "1day": "1 gün",
+      "1week": "1 hafta",
+      "1month": "1 ay",
+      "all": "Tüm zamanlar"
+    },
+    "rangeTip": {
+      "1h": "5 dakikalık aralıklarla 1 saat",
+      "4h": "15 dakikalık aralıklarla 4 saat",
+      "1d": "1 saatlik aralıklarla 1 gün",
+      "1w": "4 saatlik aralıklarla 1 hafta",
+      "1m": "1 günlük aralıklarla 1 ay",
+      "1y": "1 haftalık aralıklarla 1 yıl"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import "../styles/ChartGoTo.css";
 
 // "Go to" popover for the chart's range bar (calendar button). Two tabs:
@@ -19,8 +20,9 @@ interface Props {
 type Tab = "date" | "range";
 type Field = "date" | "from" | "to";
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// Translation keys under chartGoTo.weekdays / chartGoTo.months.
+const WEEKDAYS = ["mo", "tu", "we", "th", "fr", "sa", "su"];
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function toYmd(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
@@ -57,6 +59,7 @@ const ClockIcon = (
 );
 
 export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
+  const { t } = useTranslation();
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const [tab, setTab] = useState<Tab>("date");
   const [date, setDate] = useState(toYmd(today));
@@ -149,16 +152,16 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
   const submit = () => {
     if (tab === "date") {
       const ts = toTs(date, time);
-      if (ts === null) { setError("Enter a date as YYYY-MM-DD."); return; }
-      if (ts > Date.now() / 1000) { setError("That date is in the future."); return; }
+      if (ts === null) { setError(t("chartGoTo.errDateFormat")); return; }
+      if (ts > Date.now() / 1000) { setError(t("chartGoTo.errFuture")); return; }
       const err = onGoToDate(ts);
       if (err) setError(err); else onClose();
     } else {
       const f = toTs(from, fromTime);
-      const t = toTs(to, toTime, true);
-      if (f === null || t === null) { setError("Enter both dates as YYYY-MM-DD."); return; }
-      if (t <= f) { setError("The end has to be after the start."); return; }
-      const err = onGoToRange(f, Math.min(t, Math.floor(Date.now() / 1000)));
+      const end = toTs(to, toTime, true);
+      if (f === null || end === null) { setError(t("chartGoTo.errBothFormat")); return; }
+      if (end <= f) { setError(t("chartGoTo.errEndBeforeStart")); return; }
+      const err = onGoToRange(f, Math.min(end, Math.floor(Date.now() / 1000)));
       if (err) setError(err); else onClose();
     }
   };
@@ -189,17 +192,17 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
   );
 
   const dialog = (
-    <div className={`cgt${centered ? " cgt--centered" : ""}`} ref={rootRef} role="dialog" aria-label="Go to">
+    <div className={`cgt${centered ? " cgt--centered" : ""}`} ref={rootRef} role="dialog" aria-label={t("chartGoTo.title")}>
       <div className="cgt-head">
-        <span className="cgt-title">Go to</span>
-        <button type="button" className="cgt-close" onClick={onClose} aria-label="Close">
+        <span className="cgt-title">{t("chartGoTo.title")}</span>
+        <button type="button" className="cgt-close" onClick={onClose} aria-label={t("chartGoTo.close")}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
         </button>
       </div>
 
       <div className="cgt-tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === "date"} className={`cgt-tab${tab === "date" ? " active" : ""}`} onClick={() => setTab("date")}>Date</button>
-        <button type="button" role="tab" aria-selected={tab === "range"} className={`cgt-tab${tab === "range" ? " active" : ""}`} onClick={() => setTab("range")}>Custom range</button>
+        <button type="button" role="tab" aria-selected={tab === "date"} className={`cgt-tab${tab === "date" ? " active" : ""}`} onClick={() => setTab("date")}>{t("chartGoTo.tabDate")}</button>
+        <button type="button" role="tab" aria-selected={tab === "range"} className={`cgt-tab${tab === "range" ? " active" : ""}`} onClick={() => setTab("range")}>{t("chartGoTo.tabRange")}</button>
         <span className={`cgt-tab-bar cgt-tab-bar--${tab}`} />
       </div>
 
@@ -211,11 +214,11 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
       ) : (
         <div className="cgt-fields cgt-fields--range">
           <div className="cgt-fields-row">
-            {dateInput("from", from, setFrom, "From")}
+            {dateInput("from", from, setFrom, t("chartGoTo.from"))}
             {timeInput(fromTime, setFromTime)}
           </div>
           <div className="cgt-fields-row">
-            {dateInput("to", to, setTo, "To")}
+            {dateInput("to", to, setTo, t("chartGoTo.to"))}
             {timeInput(toTime, setToTime)}
           </div>
         </div>
@@ -223,16 +226,16 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
 
       <div className="cgt-cal">
         <div className="cgt-cal-head">
-          <button type="button" className="cgt-cal-nav" onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))} aria-label="Previous month">
+          <button type="button" className="cgt-cal-nav" onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))} aria-label={t("chartGoTo.prevMonth")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
-          <span className="cgt-cal-month">{MONTHS[view.getMonth()]} {view.getFullYear()}</span>
-          <button type="button" className="cgt-cal-nav" disabled={nextMonthDisabled} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))} aria-label="Next month">
+          <span className="cgt-cal-month">{t(`chartGoTo.months.${MONTHS[view.getMonth()]}`)} {view.getFullYear()}</span>
+          <button type="button" className="cgt-cal-nav" disabled={nextMonthDisabled} onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))} aria-label={t("chartGoTo.nextMonth")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
           </button>
         </div>
         <div className="cgt-cal-grid cgt-cal-weekdays">
-          {WEEKDAYS.map((w) => <span key={w}>{w}</span>)}
+          {WEEKDAYS.map((w) => <span key={w}>{t(`chartGoTo.weekdays.${w}`)}</span>)}
         </div>
         <div className="cgt-cal-grid">
           {cells.map((d, i) => {
@@ -261,8 +264,8 @@ export function ChartGoTo({ onClose, onGoToDate, onGoToRange }: Props) {
       {error && <p className="cgt-error">{error}</p>}
 
       <div className="cgt-foot">
-        <button type="button" className="cgt-btn cgt-btn--ghost" onClick={onClose}>Cancel</button>
-        <button type="button" className="cgt-btn cgt-btn--primary" onClick={submit}>Go to</button>
+        <button type="button" className="cgt-btn cgt-btn--ghost" onClick={onClose}>{t("chartGoTo.cancel")}</button>
+        <button type="button" className="cgt-btn cgt-btn--primary" onClick={submit}>{t("chartGoTo.go")}</button>
       </div>
     </div>
   );

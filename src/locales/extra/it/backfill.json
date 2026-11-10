@@ -1,0 +1,272 @@
+{
+  "buySignals": {
+    "title": "Segnali di acquisto e vendita",
+    "subtitle": "Scansione di confluenza tecnica a 4h",
+    "loading": "Scansione…",
+    "empty": "Al momento nessuna moneta è in zona di acquisto o vendita. Ricontrolla dopo la prossima scansione.",
+    "disclaimer": "Non è una previsione di prezzo — è una confluenza documentata di condizioni di ipercomprato, ipervenduto e inversione. Il prezzo reale può continuare, e spesso continua, a muoversi contro il segnale.",
+    "buy": "ACQUISTO",
+    "sell": "VENDITA",
+    "low": "Bassa",
+    "medium": "Media",
+    "high": "Alta",
+    "mute": "Silenzia {{coin}}",
+    "unmute": "Riattiva {{coin}}"
+  },
+  "marketHeatmap": {
+    "loading": "Caricamento…",
+    "error": "Impossibile caricare i dati di mercato.",
+    "dominance": "Dominanza",
+    "interval": "Intervallo"
+  },
+  "assetCalc": {
+    "cashLabel": "Importo in contanti (USD)",
+    "cashNote": "Contanti"
+  },
+  "chart": {
+    "tabLabel": "Grafico",
+    "compactView": "Prevedi",
+    "compactSubtitle": "Prezzo in tempo reale, aggiornato ogni secondo"
+  },
+  "profile": {
+    "alertSound": {
+      "title": "Suono degli avvisi",
+      "hint": "Viene riprodotto per gli avvisi di prezzo — sia nell'app che nelle notifiche push.",
+      "bell": "Campana",
+      "chime": "Rintocco",
+      "alert": "Allarme",
+      "classic": "Classico"
+    },
+    "notifications": {
+      "breakingNews": {
+        "label": "Ultime notizie",
+        "desc": "Un avviso urgente solo per le notizie importanti che muovono il mercato — non per i titoli di routine."
+      },
+      "buySignals": {
+        "label": "Segnali di acquisto",
+        "desc": "Un avviso quando una moneta entra in una confluenza di zona di acquisto."
+      },
+      "sellSignals": {
+        "label": "Segnali di vendita",
+        "desc": "Un avviso quando una moneta entra in una confluenza di zona di vendita."
+      }
+    },
+    "signalConfidence": {
+      "title": "Affidabilità minima del segnale",
+      "hint": "Notifica solo i segnali di acquisto/vendita con questa affidabilità o superiore.",
+      "low": "Bassa+",
+      "medium": "Media+",
+      "high": "Solo alta"
+    },
+    "mutedCoins": {
+      "title": "Monete silenziate",
+      "hint": "Nessun avviso di segnali di acquisto/vendita per queste, anche sopra la tua soglia di affidabilità."
+    }
+  },
+  "membershipGate": {
+    "pro": {
+      "eliteLinkPre": "Passa a",
+      "eliteLinkPost": "per IA illimitata e l'accesso ad Agent Ready"
+    }
+  },
+  "billing": {
+    "pastDue": {
+      "message": "Il pagamento non è andato a buon fine. Aggiorna il metodo di pagamento per mantenere l'accesso.",
+      "cta": "Risolvi pagamento"
+    }
+  },
+  "upgradeModal": {
+    "success": {
+      "reactivateMessage": "Abbonamento riattivato",
+      "reactivateSub": "Il tuo abbonamento proseguirà automaticamente. Nessuna modifica al ciclo di fatturazione."
+    },
+    "pastDue": {
+      "message": "Il pagamento non è andato a buon fine. Aggiorna il metodo di pagamento per mantenere l'accesso.",
+      "cta": "Risolvi pagamento"
+    },
+    "canceling": {
+      "note": "Il tuo abbonamento termina alla fine del periodo di fatturazione — l'accesso resta attivo fino ad allora.",
+      "reactivate": "Riattiva"
+    }
+  },
+  "positions": {
+    "summary": {
+      "dir": {
+        "netLong": "long netto",
+        "netShort": "short netto"
+      }
+    }
+  },
+  "htf": {
+    "legend": {
+      "bull": "Rialzista",
+      "bear": "Ribassista"
+    },
+    "sections": {
+      "etf": {
+        "title": "Flussi ETF",
+        "sub": "Afflussi/deflussi degli ETF spot"
+      }
+    }
+  },
+  "landing": {
+    "morph": {
+      "title": "Leggi ogni",
+      "word1": "pattern.",
+      "word2": "segnale.",
+      "word3": "candela.",
+      "closer": "Ogni segnale. Un'unica IA.",
+      "screen1": "Analisi Candele",
+      "screen2": "Costruttore di strategie",
+      "screen3": "Tape live",
+      "tag1": "Riconoscimento pattern",
+      "tag2": "Avvisi personalizzati",
+      "tag3": "Dati in tempo reale",
+      "tag4": "Monitoraggio Smart Money"
+    },
+    "strategyAlertsPromo": {
+      "label": "Novità · Motore di regole",
+      "title": "Imposta la condizione una volta. Ricevi un avviso nell'istante in cui si verifica.",
+      "desc": "Combina indicatori con logica AND/OR, su qualsiasi moneta e timeframe — valutati lato server ogni minuto, così l'avviso scatta anche ad app chiusa.",
+      "builderKicker": "Costruttore",
+      "builderTitle": "Qualsiasi indicatore. Qualsiasi confronto.",
+      "builderDesc": "RSI, MACD, incroci EMA, picchi di volume, breakout di Bollinger — scegli un modello o parti da zero con righe di condizione strutturate e facili da leggere.",
+      "previewLine": "Sarebbe scattato 3× negli ultimi 7 giorni",
+      "firesLabel": "Attivazioni recenti — live",
+      "fire1": "RSI(1h) sceso sotto 30 — BTC",
+      "fire2": "EMA(9) incrocia sopra EMA(21) — ETH",
+      "fire3": "Volume > 2,3× media — SOL",
+      "coverageKicker": "Copertura",
+      "coverageTitle": "9 indicatori oggi, sempre di più a ogni release",
+      "coverageDesc": "Condizioni di soglia e di incrocio, valutazione lato server, consegna push e in-app.",
+      "morePills": "+4 altri",
+      "cta": "Crea la tua prima strategia"
+    },
+    "candleAI": {
+      "label": "Di punta · Elite",
+      "title": "Ogni candela, decifrata. Lo scenario rialzista, quello ribassista e il livello esatto che li ribalta.",
+      "desc": "Order block, fair value gap, struttura CHoCH/BOS e fase di Wyckoff — letti insieme in un unico bias direzionale con un punteggio di affidabilità, non un'ipotesi da scatola nera.",
+      "forecastPill": "Rialzista · Moderato",
+      "readKicker": "Lettura IA",
+      "bullishBias": "Bias rialzista",
+      "mediumConf": "Affidabilità media",
+      "bullCase": "Scenario rialzista",
+      "bullCaseText": "Se i compratori prendono il controllo, il prezzo punta a",
+      "bearCase": "Scenario ribassista",
+      "bearCaseText": "Se i venditori prendono il controllo, il prezzo punta a",
+      "bullsFavored": "Tori favoriti",
+      "liveTape": "Tape live",
+      "tape1Title": "Dentro la candela",
+      "tape1Desc": "Prezzo in compressione — compressione prima dell'espansione",
+      "tape2Title": "Engulfing rialzista",
+      "tape2Desc": "I compratori hanno sopraffatto i venditori, il momentum si è invertito",
+      "tape3Title": "CHoCH ↓ confermato",
+      "tape3Desc": "Change of character — il trend potrebbe cambiare",
+      "tapeNow": "ora",
+      "pillPattern": "Riconoscimento pattern",
+      "pillMarketMaker": "Lettura del market maker",
+      "pillSmartMoney": "Smart Money (OB / FVG)",
+      "pillWyckoff": "Fasi di Wyckoff",
+      "pillElliott": "Onde di Elliott",
+      "pillTradePlan": "Piano di trading",
+      "cta": "Sblocca Analisi Candele"
+    }
+  },
+  "nav": {
+    "marketheatmap": "Heatmap di mercato",
+    "altanalysis": "Analisi altcoin",
+    "options": "Opzioni",
+    "correlation": "Correlazione",
+    "strategyalerts": "Avvisi strategia",
+    "catMarketData": "Dati",
+    "catTechnical": "Analisi",
+    "catTradingTools": "Strumenti"
+  },
+  "optionsAnalytics": {
+    "loading": "Caricamento dati opzioni…",
+    "error": "Impossibile caricare i dati delle opzioni",
+    "subtitle": "Dove hanno i loro soldi in questo momento i trader di opzioni BTC/ETH, in diretta da Deribit. Scegli una scadenza qui sotto per vedere come sono posizionati.",
+    "whyTitle": "Perché è importante",
+    "whyPoints": [
+      "Un grande open interest su uno strike spesso agisce come una calamita o un muro — i market maker che coprono quelle posizioni possono rallentare o accelerare il prezzo man mano che si avvicina la scadenza.",
+      "Un Put/Call Ratio in salita mentre il prezzo è piatto è spesso il primo segno che i trader si stanno coprendo in silenzio o diventano ribassisti, prima che si veda sul grafico.",
+      "Un'ATM IV in aumento significa che il mercato paga di più per la protezione — un segnale per aspettarsi oscillazioni più ampie e dimensionare le posizioni di conseguenza, anche se ora il prezzo sembra calmo.",
+      "Confrontare le scadenze ti fa capire se i grandi capitali sono posizionati per un movimento questa settimana o guardano a mesi di distanza — contesto utile prima di scegliere il tuo timeframe."
+    ],
+    "maxPain": "Max Pain",
+    "maxPainDesc": "Il prezzo al quale gli acquirenti di opzioni, nel complesso, perderebbero più soldi se la scadenza arrivasse lì adesso. A volte il prezzo tende verso questo livello avvicinandosi alla scadenza, ma è una calamita, non una garanzia.",
+    "putCallRatio": "Put/Call Ratio",
+    "putCallRatioDesc": "Contratti put (scommesse sul ribasso) divisi per contratti call (scommesse sul rialzo) per questa scadenza. Sopra 1,00 = più scommesse ribassiste aperte. Sotto 1,00 = più scommesse rialziste aperte.",
+    "atmIv": "ATM IV",
+    "atmIvDesc": "Volatilità implicita at-the-money — quanto ampia è l'oscillazione di prezzo (al rialzo o al ribasso, annualizzata) che il mercato delle opzioni sta prezzando. % più alta = i trader si aspettano movimenti più grandi.",
+    "totalOI": "OI totale",
+    "totalOIDesc": "Open interest totale — il numero di contratti di opzioni (call + put) attualmente aperti per questa scadenza, su tutti gli strike.",
+    "calls": "Call (scommesse sul rialzo)",
+    "puts": "Put (scommesse sul ribasso)",
+    "chartCaption": "Ogni barra è l'open interest a quello strike. La linea tratteggiata è il Max Pain; la linea continua è il prezzo spot attuale."
+  },
+  "correlationMatrix": {
+    "loading": "Caricamento dati di correlazione…",
+    "error": "Impossibile caricare i dati di correlazione",
+    "subtitle": "Quanto i movimenti di prezzo giornalieri di ogni asset seguono quelli degli altri. Passa sopra una cella per il valore esatto — non indica quale causa l'altro, solo quanto spesso si muovono insieme.",
+    "whyTitle": "Perché è importante",
+    "whyPoints": [
+      "Quando la correlazione di BTC con l'S&P 500 sale, le crypto si muovono come un asset di rischio — un crollo della borsa ha più probabilità di trascinarle giù, non solo le notizie specifiche del settore.",
+      "Una correlazione negativa sempre più forte con il Dollar Index è il classico scenario di 'fuga verso asset alternativi' — da seguire da vicino attorno alle riunioni della Fed e alle decisioni sui tassi.",
+      "Se la correlazione di un'altcoin con BTC cala all'improvviso, spesso è il primo segno dell'inizio di una rotazione — capitali che entrano proprio in quella moneta, o ne escono indipendentemente dal mercato.",
+      "Detenere più asset che si muovono tutti insieme non diversifica davvero il rischio — questa tabella ti mostra dove il tuo portafoglio è più concentrato di quanto sembri."
+    ],
+    "unavailable": "Non disponibile al momento: {{assets}}",
+    "legendNeg": "-1,0 (opposti)",
+    "legendPos": "+1,0 (insieme)",
+    "legendCaption": "+1,00 = si muovono sempre insieme · 0,00 = nessuna relazione · -1,00 = si muovono sempre in direzioni opposte."
+  },
+  "coinChat": {
+    "hide": "Nascondi"
+  },
+  "stats": {
+    "liqAboveDesc": "Totale delle posizioni short a leva che verrebbero liquidate forzatamente se il prezzo salisse a questo livello. Un grosso cluster qui può fare da calamita — e spesso diventa una resistenza di breve periodo.",
+    "liqBelowDesc": "Totale delle posizioni long a leva che verrebbero liquidate forzatamente se il prezzo scendesse a questo livello. Un grosso cluster qui può fare da calamita — e spesso diventa un supporto di breve periodo.",
+    "openInterestDesc": "Il valore totale in dollari di tutti i contratti futures/perpetui aperti in questo momento. Un open interest in crescita insieme a un prezzo in salita di solito significa che nuovo denaro — non solo i trader già presenti — sta alimentando il movimento.",
+    "fundingRateDesc": "La commissione pagata ogni poche ore tra trader long e short sui futures perpetui. Fortemente positivo significa che il mercato è affollato di long (e paga per questo) — spesso un segnale d'allarme di un trade surriscaldato.",
+    "rsi14Desc": "Relative Strength Index — un indicatore da 0 a 100 di quanto velocemente e quanto lontano si è mosso il prezzo di recente. Sopra 70 è di solito considerato 'ipercomprato', sotto 30 'ipervenduto'.",
+    "macdDesc": "Moving Average Convergence Divergence — confronta due medie mobili per misurare il momentum. Positivo significa momentum rialzista in costruzione, negativo momentum ribassista.",
+    "lsRatioDesc": "Rapporto Long/Short — la ripartizione tra trader che scommettono sul rialzo (long) e sul ribasso (short). Sopra 1,00 significa che ora più trader sono posizionati long.",
+    "cmeAboveDesc": "Un gap di prezzo non colmato sul grafico dei futures Bitcoin del CME sopra il prezzo attuale, creato quando il prezzo è saltato durante un weekend a CME chiuso. Il prezzo spesso finisce per 'colmare' questi gap.",
+    "cmeBelowDesc": "Un gap di prezzo non colmato sul grafico dei futures Bitcoin del CME sotto il prezzo attuale, creato quando il prezzo è saltato durante un weekend a CME chiuso. Il prezzo spesso finisce per 'colmare' questi gap."
+  },
+  "sectionBanner": {
+    "chart": {
+      "title": "Grafico",
+      "desc": "Candele live, indicatori e letture IA per ogni moneta.",
+      "tags": ["Prezzo live", "Indicatori", "Analisi IA"]
+    },
+    "options": {
+      "title": "Analisi opzioni",
+      "desc": "Opzioni BTC/ETH: OI, max pain, IV.",
+      "tags": ["Max Pain", "Open Interest", "Volatilità implicita"]
+    },
+    "correlation": {
+      "title": "Matrice di correlazione",
+      "desc": "Come si muovono insieme BTC, ETH e altcoin.",
+      "tags": ["Cross-asset", "Macro", "Rilevamento del regime"]
+    },
+    "strategyalerts": {
+      "title": "Avvisi strategia",
+      "desc": "Crea una regola, ricevi un avviso quando scatta.",
+      "tags": ["Motore di regole", "Multi-moneta", "Lato server"]
+    },
+    "marketheatmap": {
+      "title": "Heatmap di mercato",
+      "desc": "Le prime 120 monete, per dimensione e colore in base alla variazione.",
+      "tags": ["Capitalizzazione", "Variazione 24h", "Dominanza di mercato"]
+    }
+  },
+  "dailyBrief": {
+    "sectionTopStories": "Notizie principali",
+    "sectionMarkets": "Mercati ed economia",
+    "sectionGeopolitics": "Geopolitica",
+    "blogBrandSub": "blog sul mercato crypto",
+    "latest": "Le tue novità"
+  }
+}

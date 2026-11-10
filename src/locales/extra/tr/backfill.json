@@ -1,0 +1,263 @@
+{
+  "common": {
+    "na": "Yok"
+  },
+  "buySignals": {
+    "title": "Al & Sat Sinyalleri",
+    "subtitle": "4s teknik uyum taraması",
+    "loading": "Taranıyor…",
+    "empty": "Şu anda alım veya satım bölgesinde olan coin yok. Bir sonraki taramadan sonra tekrar bakın.",
+    "disclaimer": "Bu bir fiyat tahmini değildir — aşırı alım/aşırı satım/dönüş ile ilişkili koşulların belgelenmiş bir uyumudur. Gerçek fiyat sinyalin tersine hareket etmeye devam edebilir ve sıklıkla eder.",
+    "buy": "AL",
+    "sell": "SAT",
+    "low": "Düşük",
+    "medium": "Orta",
+    "high": "Yüksek",
+    "mute": "{{coin}} sessize al",
+    "unmute": "{{coin}} sesini aç"
+  },
+  "marketHeatmap": {
+    "loading": "Yükleniyor…",
+    "error": "Piyasa verileri yüklenemedi.",
+    "dominance": "Dominans",
+    "interval": "Aralık"
+  },
+  "assetCalc": {
+    "cashLabel": "Nakit Tutarı (USD)",
+    "cashNote": "Nakit"
+  },
+  "chart": {
+    "tabLabel": "Grafik",
+    "compactView": "Tahmin Et",
+    "compactSubtitle": "Gerçek zamanlı fiyat, her saniye güncellenir"
+  },
+  "profile": {
+    "alertSound": {
+      "title": "Uyarı Sesi",
+      "hint": "Fiyat uyarılarında çalar — hem uygulamada hem de push bildirimlerinde.",
+      "bell": "Zil",
+      "chime": "Çan",
+      "alert": "Alarm",
+      "classic": "Klasik"
+    },
+    "notifications": {
+      "breakingNews": {
+        "label": "Son Dakika Haberleri",
+        "desc": "Yalnızca piyasayı etkileyen önemli haberler için acil bildirim — rutin başlıklar için değil."
+      },
+      "buySignals": {
+        "label": "Alım Sinyalleri",
+        "desc": "Bir coin yeni bir alım bölgesi uyumuna girdiğinde bildirim."
+      },
+      "sellSignals": {
+        "label": "Satım Sinyalleri",
+        "desc": "Bir coin yeni bir satım bölgesi uyumuna girdiğinde bildirim."
+      }
+    },
+    "signalConfidence": {
+      "title": "Minimum Sinyal Güveni",
+      "hint": "Yalnızca bu güven düzeyinde veya üzerindeki al/sat sinyalleri için bildirim gönder.",
+      "low": "Düşük+",
+      "medium": "Orta+",
+      "high": "Yalnızca yüksek"
+    },
+    "mutedCoins": {
+      "title": "Sessize Alınan Coinler",
+      "hint": "Güven eşiğinizin üzerinde olsa bile bu coinler için al/sat sinyali uyarısı gönderilmez."
+    }
+  },
+  "membershipGate": {
+    "pro": {
+      "eliteLinkPre": "Sınırsız YZ ve Agent Ready erişimi için",
+      "eliteLinkPost": "planına geçin"
+    }
+  },
+  "billing": {
+    "pastDue": {
+      "message": "Ödemeniz başarısız oldu. Erişiminizi korumak için ödeme yönteminizi güncelleyin.",
+      "cta": "Ödemeyi düzelt"
+    }
+  },
+  "upgradeModal": {
+    "success": {
+      "reactivateMessage": "Abonelik Yeniden Etkinleştirildi",
+      "reactivateSub": "Aboneliğiniz otomatik olarak devam edecek. Fatura döneminizde değişiklik yok."
+    },
+    "pastDue": {
+      "message": "Ödemeniz başarısız oldu. Erişiminizi korumak için ödeme yönteminizi güncelleyin.",
+      "cta": "Ödemeyi düzelt"
+    },
+    "canceling": {
+      "note": "Aboneliğiniz fatura döneminin sonunda bitiyor — o zamana kadar erişiminiz devam eder.",
+      "reactivate": "Yeniden etkinleştir"
+    }
+  },
+  "landing": {
+    "morph": {
+      "title": "Her",
+      "word1": "formasyonu okuyun.",
+      "word2": "sinyali okuyun.",
+      "word3": "mumu okuyun.",
+      "closer": "Tüm sinyaller. Tek bir YZ.",
+      "screen1": "Mum Analizi",
+      "screen2": "Strateji Oluşturucu",
+      "screen3": "Canlı Akış",
+      "tag1": "Formasyon Tanıma",
+      "tag2": "Özel Uyarılar",
+      "tag3": "Gerçek Zamanlı Veri",
+      "tag4": "Akıllı Para Takibi"
+    },
+    "strategyAlertsPromo": {
+      "label": "Yeni · Kural Motoru",
+      "title": "Koşulu bir kez belirleyin. Gerçekleştiği anda bildirim alın.",
+      "desc": "İndikatörleri VE/VEYA mantığıyla birleştirin, her coin ve zaman diliminde — her dakika sunucu tarafında değerlendirilir, böylece uygulama kapalıyken bile tetiklenir.",
+      "builderKicker": "Oluşturucu",
+      "builderTitle": "Her indikatör. Her karşılaştırma.",
+      "builderDesc": "RSI, MACD, EMA kesişimleri, hacim sıçramaları, Bollinger kırılımları — bir şablon seçin ya da yapılandırılmış, kolay okunan koşul satırlarıyla sıfırdan oluşturun.",
+      "previewLine": "Son 7 günde 3× tetiklenirdi",
+      "firesLabel": "Son Tetiklenenler — canlı",
+      "fire1": "RSI(1s) 30'un altına indi — BTC",
+      "fire2": "EMA(9), EMA(21)'i yukarı kesti — ETH",
+      "fire3": "Hacim > ort. 2,3× — SOL",
+      "coverageKicker": "Kapsam",
+      "coverageTitle": "Bugün 9 indikatör, her sürümde daha fazlası",
+      "coverageDesc": "Eşik ve kesişim koşulları, sunucu tarafında değerlendirme, push + uygulama içi bildirim.",
+      "morePills": "+4 daha",
+      "cta": "İlk Stratejinizi Oluşturun"
+    },
+    "candleAI": {
+      "label": "Amiral Gemisi · Elite",
+      "title": "Her mum, çözümlendi. Boğa senaryosu, ayı senaryosu ve dengeyi değiştiren tam seviye.",
+      "desc": "Order block'lar, fair value gap'ler, CHoCH/BOS yapısı ve Wyckoff fazı — birlikte okunarak güven puanlı tek bir yön eğilimine dönüşür, kara kutu tahmini değil.",
+      "forecastPill": "Yükseliş · Orta",
+      "readKicker": "YZ Yorumu",
+      "bullishBias": "Yükseliş Eğilimi",
+      "mediumConf": "Orta Güven",
+      "bullCase": "Boğa Senaryosu",
+      "bullCaseText": "Alıcılar kontrolü ele alırsa fiyat hedefi",
+      "bearCase": "Ayı Senaryosu",
+      "bearCaseText": "Satıcılar kontrolü ele alırsa fiyat hedefi",
+      "bullsFavored": "Boğalar Önde",
+      "liveTape": "Canlı Akış",
+      "tape1Title": "Mumun İçinde",
+      "tape1Desc": "Fiyat sıkışıyor — genişleme öncesi sıkışma",
+      "tape2Title": "Yükseliş Yutan Mumu",
+      "tape2Desc": "Alıcılar satıcıları ezdi, momentum döndü",
+      "tape3Title": "CHoCH ↓ onaylandı",
+      "tape3Desc": "Karakter değişimi — trend dönüyor olabilir",
+      "tapeNow": "şimdi",
+      "pillPattern": "Formasyon Tanıma",
+      "pillMarketMaker": "Piyasa Yapıcı Analizi",
+      "pillSmartMoney": "Akıllı Para (OB / FVG)",
+      "pillWyckoff": "Wyckoff Fazları",
+      "pillElliott": "Elliott Dalgası",
+      "pillTradePlan": "İşlem Planı",
+      "cta": "Mum Analizinin Kilidini Aç"
+    }
+  },
+  "htf": {
+    "sections": {
+      "etf": {
+        "title": "ETF Akışları",
+        "sub": "Spot ETF giriş/çıkışları"
+      }
+    }
+  },
+  "nav": {
+    "marketheatmap": "Piyasa Isı Haritası",
+    "altanalysis": "Altcoin Analizi",
+    "options": "Opsiyonlar",
+    "correlation": "Korelasyon",
+    "strategyalerts": "Strateji Uyarıları",
+    "catMarketData": "Veri",
+    "catTechnical": "Analiz",
+    "catTradingTools": "Araçlar"
+  },
+  "optionsAnalytics": {
+    "loading": "Opsiyon verileri yükleniyor…",
+    "error": "Opsiyon verileri yüklenemedi",
+    "subtitle": "BTC/ETH opsiyon yatırımcılarının parası şu anda nerede, Deribit'ten canlı. Nasıl konumlandığını görmek için aşağıdan bir vade tarihi seçin.",
+    "whyTitle": "Neden önemli",
+    "whyPoints": [
+      "Bir kullanım fiyatındaki büyük açık pozisyon genellikle mıknatıs ya da duvar gibi davranır — bu pozisyonları hedge eden piyasa yapıcılar vade yaklaştıkça fiyatı yavaşlatabilir veya hızlandırabilir.",
+      "Fiyat yatayken yükselen bir Put/Call Oranı, genellikle yatırımcıların sessizce hedge yaptığının veya düşüşe döndüğünün ilk işaretidir — grafikte görünmeden önce.",
+      "Yükselen ATM IV, piyasanın korunma için daha fazla ödediği anlamına gelir — fiyat şu an sakin görünse bile daha büyük dalgalanmalar beklemek ve pozisyon büyüklüğünü buna göre ayarlamak için bir sinyal.",
+      "Vadeleri karşılaştırmak, büyük paranın bu haftaki bir harekete mi yoksa aylar sonrasına mı konumlandığını görmenizi sağlar — kendi zaman diliminizi seçmeden önce faydalı bir bağlam."
+    ],
+    "maxPain": "Max Pain",
+    "maxPainDesc": "Vade şu anda bu seviyede gerçekleşseydi opsiyon alıcılarının topluca en çok para kaybedeceği fiyat. Fiyat vade yaklaştıkça bazen bu seviyeye doğru kayar, ama bu bir mıknatıstır, garanti değil.",
+    "putCallRatio": "Put/Call Oranı",
+    "putCallRatioDesc": "Bu vade için put kontratlarının (fiyatın düşeceğine yönelik bahisler) call kontratlarına (yükseleceğine yönelik bahisler) oranı. 1,00'ın üzeri = daha fazla düşüş bahsi açık. 1,00'ın altı = daha fazla yükseliş bahsi açık.",
+    "atmIv": "ATM IV",
+    "atmIvDesc": "At-the-money örtük volatilite — opsiyon piyasasının şu anda fiyatladığı (yukarı veya aşağı, yıllıklandırılmış) fiyat dalgalanmasının büyüklüğü. Daha yüksek % = yatırımcılar daha büyük hareketler bekliyor.",
+    "totalOI": "Toplam OI",
+    "totalOIDesc": "Toplam Açık Pozisyon — bu vade için tüm kullanım fiyatlarında şu anda açık olan opsiyon kontratı (call + put) sayısı.",
+    "calls": "Call (fiyat yükselir bahsi)",
+    "puts": "Put (fiyat düşer bahsi)",
+    "chartCaption": "Her çubuk o kullanım fiyatındaki açık pozisyondur. Kesikli çizgi Max Pain; düz çizgi güncel spot fiyattır."
+  },
+  "correlationMatrix": {
+    "loading": "Korelasyon verileri yükleniyor…",
+    "error": "Korelasyon verileri yüklenemedi",
+    "subtitle": "Her varlığın günlük fiyat hareketlerinin diğerlerini ne kadar yakından takip ettiği. Tam değer için bir hücrenin üzerine gelin — bu hangisinin diğerine neden olduğunu söylemez, yalnızca ne sıklıkla birlikte hareket ettiklerini gösterir.",
+    "whyTitle": "Neden önemli",
+    "whyPoints": [
+      "BTC'nin S&P 500 ile korelasyonu yükseldiğinde kripto bir risk varlığı gibi işlem görür — yalnızca kriptoya özgü haberler değil, borsadaki bir satış dalgası da onu aşağı çekebilir.",
+      "ABD Doları Endeksi ile güçlenen negatif korelasyon, klasik 'alternatif varlıklara kaçış' kurulumudur — Fed toplantıları ve faiz kararları civarında yakından izlemeye değer.",
+      "Bir altcoinin BTC ile korelasyonu aniden düşerse, bu genellikle bir rotasyonun başladığının ilk işaretidir — ya özellikle o coine para giriyor ya da piyasadan bağımsız olarak çıkıyor.",
+      "Hepsi birlikte hareket eden birkaç varlık tutmak riskinizi gerçekten dağıtmaz — bu tablo portföyünüzün hissettiğinizden daha yoğunlaştığı yerleri gösterir."
+    ],
+    "unavailable": "Şu anda kullanılamıyor: {{assets}}",
+    "legendNeg": "-1,0 (zıt)",
+    "legendPos": "+1,0 (birlikte)",
+    "legendCaption": "+1,00 = her zaman birlikte hareket ederler · 0,00 = ilişki yok · -1,00 = her zaman zıt yönlerde hareket ederler."
+  },
+  "coinChat": {
+    "hide": "Gizle"
+  },
+  "stats": {
+    "liqAboveDesc": "Fiyat bu seviyeye yükselirse zorla tasfiye edilecek toplam kaldıraçlı short pozisyonlar. Buradaki büyük bir küme mıknatıs gibi davranabilir — ve sıklıkla kısa vadeli dirence dönüşür.",
+    "liqBelowDesc": "Fiyat bu seviyeye düşerse zorla tasfiye edilecek toplam kaldıraçlı long pozisyonlar. Buradaki büyük bir küme mıknatıs gibi davranabilir — ve sıklıkla kısa vadeli desteğe dönüşür.",
+    "openInterestDesc": "Şu anda açık olan tüm vadeli/sürekli kontratların toplam dolar değeri. Yükselen fiyatla birlikte artan açık pozisyon genellikle hareketi yalnızca mevcut yatırımcıların değil, yeni paranın beslediği anlamına gelir.",
+    "fundingRateDesc": "Sürekli vadeli işlemlerde long ve short yatırımcılar arasında birkaç saatte bir ödenen ücret. Güçlü pozitif değer piyasanın long tarafta kalabalık olduğunu (ve bunun bedelini ödediğini) gösterir — genellikle aşırı ısınmış bir işlemin uyarı işaretidir.",
+    "rsi14Desc": "Göreceli Güç Endeksi — fiyatın son dönemde ne kadar hızlı ve ne kadar uzağa hareket ettiğini gösteren 0-100 arası bir gösterge. 70'in üzeri genellikle 'aşırı alım', 30'un altı 'aşırı satım' kabul edilir.",
+    "macdDesc": "Hareketli Ortalama Yakınsama Iraksama — momentumu ölçmek için iki hareketli ortalamayı karşılaştırır. Pozitif değer yükseliş momentumunun, negatif değer düşüş momentumunun güçlendiğini gösterir.",
+    "lsRatioDesc": "Long/Short Oranı — fiyatın yükseleceğine (long) ve düşeceğine (short) bahis yapan yatırımcılar arasındaki dağılım. 1,00'ın üzeri şu anda daha fazla yatırımcının long pozisyonda olduğu anlamına gelir.",
+    "cmeAboveDesc": "CME Bitcoin vadeli grafiğinde mevcut fiyatın üzerinde kalan, CME kapalıyken fiyatın hafta sonu sıçramasıyla oluşmuş doldurulmamış fiyat boşluğu. Fiyat bu boşlukları genellikle eninde sonunda 'doldurur'.",
+    "cmeBelowDesc": "CME Bitcoin vadeli grafiğinde mevcut fiyatın altında kalan, CME kapalıyken fiyatın hafta sonu sıçramasıyla oluşmuş doldurulmamış fiyat boşluğu. Fiyat bu boşlukları genellikle eninde sonunda 'doldurur'."
+  },
+  "sectionBanner": {
+    "chart": {
+      "title": "Grafik",
+      "desc": "Her coin için canlı mumlar, indikatörler ve YZ yorumları.",
+      "tags": ["Canlı Fiyat", "İndikatörler", "YZ Analizi"]
+    },
+    "options": {
+      "title": "Opsiyon Analitiği",
+      "desc": "BTC/ETH opsiyonları: OI, max pain, IV.",
+      "tags": ["Max Pain", "Açık Pozisyon", "Örtük Volatilite"]
+    },
+    "correlation": {
+      "title": "Korelasyon Matrisi",
+      "desc": "BTC, ETH ve altcoinler birlikte nasıl hareket ediyor.",
+      "tags": ["Varlıklar Arası", "Makro", "Rejim Tespiti"]
+    },
+    "strategyalerts": {
+      "title": "Strateji Uyarıları",
+      "desc": "Bir kural oluşturun, tetiklendiğinde bildirim alın.",
+      "tags": ["Kural Motoru", "Çoklu Coin", "Sunucu Tarafı"]
+    },
+    "marketheatmap": {
+      "title": "Piyasa Isı Haritası",
+      "desc": "İlk 120 coin, değişime göre boyutlandırılmış ve renklendirilmiş.",
+      "tags": ["Piyasa Değeri", "24s Değişim", "Piyasa Dominansı"]
+    }
+  },
+  "dailyBrief": {
+    "sectionTopStories": "Öne Çıkan Haberler",
+    "sectionMarkets": "Piyasalar ve Ekonomi",
+    "sectionGeopolitics": "Jeopolitik",
+    "blogBrandSub": "kripto piyasası blogu",
+    "latest": "Sizin için son haberler"
+  }
+}

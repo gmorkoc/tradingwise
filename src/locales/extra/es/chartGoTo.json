@@ -1,0 +1,23 @@
+{
+  "chartGoTo": {
+    "title": "Ir a",
+    "go": "Ir",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "tabDate": "Fecha",
+    "tabRange": "Rango personalizado",
+    "from": "Desde",
+    "to": "Hasta",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "errDateFormat": "Introduce una fecha con el formato YYYY-MM-DD.",
+    "errFuture": "Esa fecha está en el futuro.",
+    "errBothFormat": "Introduce ambas fechas con el formato YYYY-MM-DD.",
+    "errEndBeforeStart": "El final tiene que ser posterior al inicio.",
+    "weekdays": { "mo": "Lu", "tu": "Ma", "we": "Mi", "th": "Ju", "fr": "Vi", "sa": "Sá", "su": "Do" },
+    "months": {
+      "jan": "Enero", "feb": "Febrero", "mar": "Marzo", "apr": "Abril", "may": "Mayo", "jun": "Junio",
+      "jul": "Julio", "aug": "Agosto", "sep": "Septiembre", "oct": "Octubre", "nov": "Noviembre", "dec": "Diciembre"
+    }
+  }
+}

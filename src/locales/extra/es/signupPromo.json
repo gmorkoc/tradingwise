@@ -1,0 +1,24 @@
+{
+  "signupPromo": {
+    "dialogLabel": "Crea una cuenta gratis",
+    "close": "Cerrar",
+    "cta": "Únete gratis",
+    "v0": {
+      "title": "Primero practica. Luego opera.",
+      "text": "Crea una cuenta gratis y recibe $100k en efectivo de paper trading, para que cada movimiento real sea uno que ya has probado."
+    },
+    "v1": {
+      "title": "Tu ventaja empieza aquí.",
+      "text": "Regístrate gratis y prueba ProVision durante 3 días: velas coloreadas según la tendencia, señales de compra y venta, y dónde queda invalidada cada una."
+    },
+    "v2": {
+      "title": "Atrapa la próxima gran vela.",
+      "text": "Con una cuenta gratis obtienes $100k en dinero simulado para operar en mercados reales, además de una prueba de ProVision de 3 días para detectar el movimiento."
+    }
+  },
+  "promoStrip": {
+    "desktop": "Regístrate gratis y obtén <b>$100k</b> en efectivo de paper trading + <b>$1k</b> para predecir precios",
+    "phone": "Regístrate gratis: <b>$100k</b> en efectivo simulado + <b>$1k</b> para predecir",
+    "dismiss": "Descartar"
+  }
+}

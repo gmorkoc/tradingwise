@@ -1,0 +1,19 @@
+{
+  "cwAlerts": {
+    "getNotified": "Recibir avisos",
+    "above": "Por encima de",
+    "below": "Por debajo de",
+    "aboveAt": "Por encima de {{price}}",
+    "belowAt": "Por debajo de {{price}}",
+    "alertSet": "alerta activa",
+    "alertAbove": "Avisarme por encima de {{price}}",
+    "alertBelow": "Avisarme por debajo de {{price}}",
+    "cancelAbove": "Cancelar alerta por encima de {{price}}",
+    "cancelBelow": "Cancelar alerta por debajo de {{price}}",
+    "hintSignIn": "Inicia sesión para recibirlas como notificaciones push, incluso con la app cerrada.",
+    "hintProfileOff": "Las notificaciones de alertas de precio están desactivadas en tu perfil, así que no llegarán a tu teléfono.",
+    "hintDeviceOff": "Las notificaciones están desactivadas en este dispositivo, así que estas alertas no te llegarán.",
+    "turnOn": "Activar notificaciones",
+    "hintOn": "Recibirás una notificación push cuando el precio cruce el nivel, incluso con la app cerrada o forzada a salir. Toca una alerta activa para cancelarla."
+  }
+}

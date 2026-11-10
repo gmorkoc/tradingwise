@@ -1,0 +1,23 @@
+{
+  "chartGoTo": {
+    "title": "Vai a",
+    "go": "Vai",
+    "close": "Chiudi",
+    "cancel": "Annulla",
+    "tabDate": "Data",
+    "tabRange": "Intervallo personalizzato",
+    "from": "Da",
+    "to": "A",
+    "prevMonth": "Mese precedente",
+    "nextMonth": "Mese successivo",
+    "errDateFormat": "Inserisci una data nel formato YYYY-MM-DD.",
+    "errFuture": "Quella data è nel futuro.",
+    "errBothFormat": "Inserisci entrambe le date nel formato YYYY-MM-DD.",
+    "errEndBeforeStart": "La fine deve essere successiva all'inizio.",
+    "weekdays": { "mo": "Lu", "tu": "Ma", "we": "Me", "th": "Gi", "fr": "Ve", "sa": "Sa", "su": "Do" },
+    "months": {
+      "jan": "Gennaio", "feb": "Febbraio", "mar": "Marzo", "apr": "Aprile", "may": "Maggio", "jun": "Giugno",
+      "jul": "Luglio", "aug": "Agosto", "sep": "Settembre", "oct": "Ottobre", "nov": "Novembre", "dec": "Dicembre"
+    }
+  }
+}

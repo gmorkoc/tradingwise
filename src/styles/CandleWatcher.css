@@ -461,6 +461,9 @@
   color: var(--color-text-muted);
 }
 .cw-read-alert-hint { margin: 6px 0 0; font-size: 0.68rem; line-height: 1.4; color: var(--color-text-muted); }
+.cw-read-alert-enable,
+.cw-read-alert-enable:hover { all: unset; margin-left: 4px; font-weight: 700; color: #4f46e5; text-decoration: underline; cursor: pointer; }
+html:not([data-theme="light"]) .cw-read-alert-enable { color: #a5b4fc; }
 
 .cw-read-note {
   margin: 10px 0 0;

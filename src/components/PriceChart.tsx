@@ -1554,6 +1554,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   coin = "BTC",
   quoteVolume24h,
   onZoneChange,
+  onOpenAuth,
   onOpenUpgrade = () => {},
   onOpenCoinPicker,
   onSelectCoin,
@@ -1891,6 +1892,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
   const [priceOff, setPriceOff] = useState(false);
   useEffect(() => {
     if (!PHONE_IVS.slice(0, -1).includes(interval)) setPhoneExtraIv(interval === PHONE_IVS[PHONE_IVS.length - 1] ? null : interval);
+  }, [interval]);
+  // Desktop interval bar: 3 fixed intervals, then a 4th slot that is the
+  // interval selector — it shows (and keeps) whatever was picked from it.
+  const [deskIv4, setDeskIv4] = useState<TimeInterval>(TV_MAIN_INTERVALS[3]);
+  useEffect(() => {
+    if (!TV_MAIN_INTERVALS.slice(0, 3).includes(interval)) setDeskIv4(interval);
   }, [interval]);
   // "candle" default for a first-ever visit — reference-match request —
   // otherwise whatever the user last picked (readChartPrefs).
@@ -2488,7 +2495,13 @@ export const PriceChart: React.FC<PriceChartProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pvActive, isFullscreen, isDesktopWidth, chartGeneration, interval]);
   // ── coinhintz consensus (#trade only) ─────────────────────────────────
-  const { tier: authTier } = useAuth();
+  const { tier: authTier, user: authUser } = useAuth();
+  // Predict is free for every account (the $1k prediction balance comes
+  // with signing up) — guests are asked to sign in, nobody is upsold.
+  const openPredict = () => {
+    if (!authUser) { onOpenAuth?.(); return; }
+    setShowCompactView(true);
+  };
   const consensusOn = prefsScope === "trade" && !pageMode;
   // Buy & Sell scanner's current call for this coin (Pro+; RLS-readable).
   const [scanSignal, setScanSignal] = useState<{ direction: "buy" | "sell"; active: boolean } | null>(null);
@@ -5374,8 +5387,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       className={`chart-depth-btn${showCompactView ? " chart-depth-btn--active" : ""}`}
       onClick={() => {
         if (showCompactView) { setShowCompactView(false); return; }
-        if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-        setShowCompactView(true);
+        openPredict();
       }}
       title={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
       data-tooltip={showCompactView ? t("chart.switchToFull", "Back to chart") : t("chart.switchToCompact", "Predict")}
@@ -5851,15 +5863,14 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             onClick={() => {
               if (showCompactView) { setShowCompactView(false); return; }
               setToolsSheetOpen(false);
-              if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-              setShowCompactView(true);
+              openPredict();
             }}
           >
             <span className="cts-row-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="9" y1="10" x2="9" y2="20" /></svg>
             </span>
             <span className="cts-row-text">
-              <span className="date-range-sheet-label">Predict{!isPaid && <span className="interval-sheet-item-pro">PRO</span>}</span>
+              <span className="date-range-sheet-label">Predict</span>
               <span className="date-range-sheet-sub">Simple live price line, no indicators</span>
             </span>
             {toolsSwitch(showCompactView)}
@@ -7546,12 +7557,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                       </button>
                     ))}
                   </div>
-                  <div className="cmct-seg" role="tablist" aria-label="Chart type">
+                  <div className="cmct-seg" role="tablist" aria-label={t("chartBar.chartType", "Chart type")}>
                     <button
                       type="button"
                       role="tab"
                       aria-selected={cmcLineView}
-                      aria-label="Line chart"
+                      aria-label={t("chartBar.lineChart", "Line chart")}
                       className={`cmct-btn${cmcLineView ? " cmct-btn--on" : ""}`}
                       onClick={() => setCmcStyle("line")}
                     >
@@ -7572,7 +7583,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <div className="cmct-r">
                   {cmcLineView ? (
                     <>
-                      <div className="cmct-seg" role="tablist" aria-label="Range">
+                      <div className="cmct-seg" role="tablist" aria-label={t("chartBar.range", "Range")}>
                         {CMC_RANGES.map((r) => (
                           <button
                             key={r.id}
@@ -7611,25 +7622,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                     // TradingView (candle) view, CMC layout:
                     // [ProVision] [15m 1h 4h 24h 1W 1M | type · compact · fullscreen]
                     <>
-                      {/* Indicators (desktop): the chart's own indicator picker. */}
-                      <button
-                        type="button"
-                        className={`cmct-indbtn${toolsIndOpen ? " cmct-indbtn--on" : ""}`}
-                        onClick={() => setToolsIndOpen(true)}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d="M3 20h18" />
-                          <path d="M5 16l4-5 4 3 6-8" />
-                          <path d="M6 20v-3M10 20v-5M14 20v-4M18 20v-7" opacity="0.5" />
-                        </svg>
-                        Indicators
-                        {libIndicators.length > 0 && <span className="cmct-indcount">{libIndicators.length}</span>}
-                      </button>
+                      {/* Indicators moved under the range bar (full width). */}
                       {/* CMC: [15m 1h 4h 24h 1W 1M ⌄ | ⚙] — ⌄ = the other
                           intervals, ⚙ = chart type / compact / full screen
                           (each opens on hover or click). */}
-                      <div className="cmct-seg" aria-label="Interval">
-                        {TV_MAIN_INTERVALS.map((iv) => (
+                      {/* Order: Indicators | intervals | Predict · ProVision · ⚙ */}
+                      <div className="cmct-seg" aria-label={t("chartBar.interval", "Interval")}>
+                        <button
+                          type="button"
+                          className={`cmct-btn cmct-btn--ind${toolsIndOpen ? " cmct-btn--on" : ""}`}
+                          onClick={() => setToolsIndOpen(true)}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M3 20h18" />
+                            <path d="M5 16l4-5 4 3 6-8" />
+                            <path d="M6 20v-3M10 20v-5M14 20v-4M18 20v-7" opacity="0.5" />
+                          </svg>
+                          {t("chartBar.indicators", "Indicators")}
+                          {libIndicators.length > 0 && <span className="cmct-indcount">{libIndicators.length}</span>}
+                        </button>
+                        <span className="cmct-div" aria-hidden="true" />
+                        {TV_MAIN_INTERVALS.slice(0, 3).map((iv) => (
                           <button
                             key={iv}
                             type="button"
@@ -7640,6 +7653,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                             {TV_INTERVAL_LABEL[iv]}
                           </button>
                         ))}
+                        {/* 4th slot = the interval selector: shows the
+                            picked interval + ⌄; picking one puts it here. */}
                         <span
                           className="cmct-dd"
                           onMouseEnter={() => setTvMenu("int")}
@@ -7647,18 +7662,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                         >
                           <button
                             type="button"
-                            className={`cmct-btn cmct-btn--icon${TV_MORE_INTERVALS.includes(interval) ? " cmct-btn--on" : ""}`}
-                            aria-label="More intervals"
+                            className={`cmct-btn cmct-btn--ivsel${interval === deskIv4 ? " cmct-btn--on" : ""}`}
+                            aria-label={t("chartBar.intervalChoose", "Interval: {{name}} — choose another", { name: t(`chartBar.ivName.${deskIv4}`, TV_INTERVAL_NAME[deskIv4]) })}
                             aria-expanded={tvMenu === "int"}
                             onClick={() => setTvMenu((m) => (m === "int" ? null : "int"))}
                           >
-                            {TV_MORE_INTERVALS.includes(interval) ? TV_INTERVAL_LABEL[interval] : (
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-                            )}
+                            {TV_INTERVAL_LABEL[deskIv4]}
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                           </button>
                           {tvMenu === "int" && (
                             <div className="cmct-menu" role="menu">
-                              {TV_MORE_INTERVALS.map((iv) => {
+                              {[TV_MAIN_INTERVALS[3], ...TV_MORE_INTERVALS].map((iv) => {
                                 const pro = PRO_INTERVALS.has(iv) && !isPaid;
                                 return (
                                   <button
@@ -7672,7 +7686,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                       setInterval(iv);
                                     }}
                                   >
-                                    {TV_INTERVAL_NAME[iv]}
+                                    {t(`chartBar.ivName.${iv}`, TV_INTERVAL_NAME[iv])}
                                     {pro ? <span className="cmct-menu-pro">PRO</span> : interval === iv ? <span aria-hidden="true">✓</span> : null}
                                   </button>
                                 );
@@ -7681,6 +7695,41 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           )}
                         </span>
                         <span className="cmct-div" aria-hidden="true" />
+                        {/* Predict + ProVision in the interval bar, same as
+                            on phones. */}
+                        <button
+                          type="button"
+                          className={`cmct-btn cmct-btn--icon cmct-btn--predict${showCompactView ? " cmct-btn--on" : ""}`}
+                          aria-label={t("chartBar.predict", "Predict")}
+                          aria-pressed={showCompactView}
+                          data-tip={t("chartBar.predict", "Predict")}
+                          onClick={() => {
+                            if (showCompactView) { setShowCompactView(false); return; }
+                            openPredict();
+                          }}
+                        >
+                          <svg className="cmct-predict-ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                            <defs>
+                              <linearGradient id="cmctPredictGradDesk" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stopColor="#34d399" />
+                                <stop offset="1" stopColor="#16a34a" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M13.5 2 4.5 13.2c-.4.5 0 1.3.6 1.3H11l-1.2 7.1c-.1.7.8 1.1 1.2.5l8.6-11.3c.4-.5 0-1.3-.6-1.3H13l1.6-6.6c.2-.8-.7-1.3-1.1-.9z" fill="url(#cmctPredictGradDesk)" />
+                          </svg>
+                        </button>
+                        {pvGate.access.mode !== "locked" && (
+                          <button
+                            type="button"
+                            className={`cmct-btn cmct-btn--icon cmct-btn--pv${pvGate.on ? " cmct-btn--on" : ""}`}
+                            aria-label={pvGate.on ? t("chartBar.pvOff", "Turn ProVision off") : t("chartBar.pvOn", "Turn ProVision on")}
+                            aria-pressed={pvGate.on}
+                            data-tip="ProVision"
+                            onClick={() => pvGate.toggle(coin)}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" /></svg>
+                          </button>
+                        )}
                         <span
                           className="cmct-dd"
                           onMouseEnter={() => setTvMenu("set")}
@@ -7689,7 +7738,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           <button
                             type="button"
                             className={`cmct-btn cmct-btn--icon${tvMenu === "set" ? " cmct-btn--on" : ""}`}
-                            aria-label="Chart settings"
+                            aria-label={t("chartBar.chartSettings", "Chart settings")}
                             aria-expanded={tvMenu === "set"}
                             onClick={() => setTvMenu((m) => (m === "set" ? null : "set"))}
                           >
@@ -7700,7 +7749,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                           </button>
                           {tvMenu === "set" && (
                             <div className="cmct-menu cmct-menu--right" role="menu">
-                              <span className="cmct-menu-label">Chart type</span>
+                              <span className="cmct-menu-label">{t("chartBar.chartType", "Chart type")}</span>
                               {(Object.keys(CHART_STYLE_LABELS) as ChartStyle[]).map((s) => (
                                 <button
                                   key={s}
@@ -7718,24 +7767,6 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                               <span className="cmct-menu-sep" aria-hidden="true" />
                               <button
                                 type="button"
-                                role="menuitemcheckbox"
-                                aria-checked={showCompactView}
-                                className="cmct-menu-item"
-                                onClick={() => {
-                                  setTvMenu(null);
-                                  if (showCompactView) { setShowCompactView(false); return; }
-                                  if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                                  setShowCompactView(true);
-                                }}
-                              >
-                                <span className="cmct-menu-ic" aria-hidden="true">
-                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 10v10" /></svg>
-                                </span>
-                                {showCompactView ? "Back to chart" : "Predict"}
-                                {!isPaid && !showCompactView && <span className="cmct-menu-pro">PRO</span>}
-                              </button>
-                              <button
-                                type="button"
                                 role="menuitem"
                                 className="cmct-menu-item"
                                 onClick={() => { setTvMenu(null); toggleFullscreen(); }}
@@ -7743,7 +7774,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                                 <span className="cmct-menu-ic" aria-hidden="true">
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
                                 </span>
-                                Full screen
+                                {t("chartBar.fullScreen", "Full screen")}
                               </button>
                             </div>
                           )}
@@ -7779,10 +7810,10 @@ export const PriceChart: React.FC<PriceChartProps> = ({
             {phoneHeaderEl}
             {/* Phones, Chart tab: "Bitcoin to USD Chart" title (CMC app). */}
             {/* (Predict / ProVision / ⚙ live in the interval row.) */}
-            {phoneCmc && <h3 className="cmct-title">{COIN_FULL_NAME[coin] ?? coin} to USD Chart</h3>}
+            {phoneCmc && <h3 className="cmct-title">{t("chartBar.toUsdChart", "{{name}} to USD Chart", { name: COIN_FULL_NAME[coin] ?? coin })}</h3>}
             {/* Phones, line view: range chips above the chart (CMC app). */}
             {phoneCmc && cmcLineView && (
-              <div className="cmct-ranges" role="tablist" aria-label="Range">
+              <div className="cmct-ranges" role="tablist" aria-label={t("chartBar.range", "Range")}>
                 {CMC_RANGES.map((r) => (
                   <button
                     key={r.id}
@@ -7813,7 +7844,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <button
                   type="button"
                   className="cmct-tvjump"
-                  aria-label="Switch to TradingView candles"
+                  aria-label={t("chartBar.switchToTv", "Switch to TradingView candles")}
                   onClick={() => { setChartMetric("price"); setCmcStyle("candles"); }}
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v4M6 7h4v9H6zM8 16v5M16 4v5M14 9h4v6h-4zM16 15v4" /></svg>
@@ -7825,7 +7856,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 the last visible slot (1M) and stays until another is picked;
                 ⚙ always stays. */}
             {phoneCmc && !cmcLineView && (
-              <div className="cmct-ranges cmct-ivrow" role="tablist" aria-label="Interval">
+              <div className="cmct-ranges cmct-ivrow" role="tablist" aria-label={t("chartBar.interval", "Interval")}>
                 {[...PHONE_IVS.slice(0, -1), phoneExtraIv ?? PHONE_IVS[PHONE_IVS.length - 1]].map((iv) => {
                   const pro = PRO_INTERVALS.has(iv) && !isPaid;
                   return (
@@ -7847,13 +7878,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                 <button
                   type="button"
                   className={`cmct-rbtn cmct-rbtn--icon cmct-rbtn--predict${showCompactView ? " cmct-rbtn--on" : ""}`}
-                  aria-label="Predict"
+                  aria-label={t("chartBar.predict", "Predict")}
                   aria-pressed={showCompactView}
                   onClick={() => {
                     hapticTap();
                     if (showCompactView) { setShowCompactView(false); return; }
-                    if (!isPaid) { onOpenUpgrade?.("pro"); return; }
-                    setShowCompactView(true);
+                    openPredict();
                   }}
                 >
                   {/* Lightning bolt (fast 15-min rounds), green. */}
@@ -7873,7 +7903,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <button
                     type="button"
                     className={`cmct-rbtn cmct-rbtn--icon cmct-rbtn--pv${pvGate.on ? " cmct-rbtn--on" : ""}`}
-                    aria-label={pvGate.on ? "Turn ProVision off" : "Turn ProVision on"}
+                    aria-label={pvGate.on ? t("chartBar.pvOff", "Turn ProVision off") : t("chartBar.pvOn", "Turn ProVision on")}
                     aria-pressed={pvGate.on}
                     onClick={() => { hapticTap(); pvGate.toggle(coin); }}
                   >
@@ -7884,7 +7914,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   type="button"
                   className="cmct-rbtn cmct-rbtn--icon"
                   onClick={() => setToolsSheetOpen(true)}
-                  aria-label="Chart tools"
+                  aria-label={t("chartBar.chartTools", "Chart tools")}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true">
                     <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0" />
@@ -8739,7 +8769,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   "Date Range" dropdown (reference: Hyperliquid mobile). */}
               {!isDesktopWidth && (
                 <button type="button" className="chart-range-select" onClick={openDateRangeSheet}>
-                  <span>{activeRangePreset ? activeRangePreset.label : "Date Range"}</span>
+                  <span>{activeRangePreset ? activeRangePreset.label : t("chartBar.dateRange", "Date Range")}</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
               )}
@@ -8748,8 +8778,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   type="button"
                   key={p.key}
                   className={`chart-range-btn${activeRangePreset?.key === p.key ? " active" : ""}`}
-                  data-tip={p.tip}
-                  aria-label={p.tip}
+                  data-tip={t(`chartBar.rangeTip.${p.key}`, p.tip)}
+                  aria-label={t(`chartBar.rangeTip.${p.key}`, p.tip)}
                   onClick={() => applyRangePreset(p)}
                 >
                   {p.label}
@@ -8759,8 +8789,8 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <button
                 type="button"
                 className={`chart-range-btn chart-range-btn--icon${goToOpen ? " active" : ""}`}
-                data-tip="Go to date or custom range"
-                aria-label="Go to date or custom range"
+                data-tip={t("chartBar.goTo", "Go to date or custom range")}
+                aria-label={t("chartBar.goTo", "Go to date or custom range")}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setGoToOpen((o) => !o)}
               >
@@ -8783,7 +8813,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <button
                 type="button"
                 className={`chart-range-btn chart-range-btn--scale${scaleMode === "percent" ? " active" : ""}`}
-                data-tip="Percentage scale"
+                data-tip={t("chartBar.pctScale", "Percentage scale")}
                 aria-pressed={scaleMode === "percent"}
                 onClick={() => setScaleMode((m) => (m === "percent" ? "normal" : "percent"))}
               >
@@ -8792,7 +8822,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <button
                 type="button"
                 className={`chart-range-btn chart-range-btn--scale${scaleMode === "log" ? " active" : ""}`}
-                data-tip="Logarithmic scale"
+                data-tip={t("chartBar.logScale", "Logarithmic scale")}
                 aria-pressed={scaleMode === "log"}
                 onClick={() => setScaleMode((m) => (m === "log" ? "normal" : "log"))}
               >
@@ -8801,7 +8831,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
               <button
                 type="button"
                 className={`chart-range-btn chart-range-btn--scale${autoScale ? " active" : ""}`}
-                data-tip="Auto-fit price axis to visible candles"
+                data-tip={t("chartBar.autoFit", "Auto-fit price axis to visible candles")}
                 aria-pressed={autoScale}
                 onClick={() => setAutoScale((a) => !a)}
               >
@@ -9343,12 +9373,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   </button>
                 ))}
               </div>
-              <div className="cmct-seg" role="tablist" aria-label="Chart type">
+              <div className="cmct-seg" role="tablist" aria-label={t("chartBar.chartType", "Chart type")}>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={cmcLineView}
-                  aria-label="Line chart"
+                  aria-label={t("chartBar.lineChart", "Line chart")}
                   className={`cmct-btn cmct-btn--icon${cmcLineView ? " cmct-btn--on" : ""}`}
                   onClick={() => setCmcStyle("line")}
                 >
@@ -9373,7 +9403,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({
                   <path d="M5 16l4-5 4 3 6-8" />
                   <path d="M6 20v-3M10 20v-5M14 20v-4M18 20v-7" opacity="0.5" />
                 </svg>
-                Indicators
+                {t("chartBar.indicators", "Indicators")}
                 {libIndicators.length > 0 && <span className="cmct-indcount">{libIndicators.length}</span>}
               </button>
             )}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import { CoinUnavailableSheet } from "./components/CoinUnavailableSheet";
 import ReactDOM from "react-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Keyboard } from "@capacitor/keyboard";
@@ -261,6 +261,10 @@ function readLocation(): { section: SectionId | null; coin: string | null } {
   if (seg === "chart" || seg === "trade") return { section: "chart", coin: null };
   // Candle Insights lives at /candleinsights (old /candleai still opens it).
   if (seg === "candleinsights") return { section: "candleai", coin: null };
+  // Liquidation Heatmap lives at /liquidationheatmap (old /heatmap still opens it).
+  if (seg === "liquidationheatmap") return { section: "heatmap", coin: null };
+  // Long/Short Ratio lives at /long-short-ratio (old /positions still opens it).
+  if (seg === "long-short-ratio") return { section: "positions", coin: null };
   if (seg && !seg.includes("/") && isSection(seg)) return { section: seg, coin: null };
   return { section: null, coin: null };
 }
@@ -268,6 +272,8 @@ function pathFor(section: SectionId, coin: string): string {
   if (section === "markets") return "/";
   if (section === "chart") return `/chart/${coinSlug(coin)}`;
   if (section === "candleai") return "/candleinsights";
+  if (section === "heatmap") return "/liquidationheatmap";
+  if (section === "positions") return "/long-short-ratio";
   return `/${section}`;
 }
 function urlFor(section: SectionId, coin: string): string {
@@ -285,6 +291,12 @@ const PAYWALLED_PAGES: Partial<Record<SectionId, { tier: Tier; name: string }>> 
   correlation: { tier: "pro", name: "Correlation Matrix" },
   strategyalerts: { tier: "pro", name: "Strategy Alerts" },
 };
+
+// Pages that always open for everyone (they aren't Pro/Elite pages
+// themselves); anything on them that needs sign-in or a plan is locked in
+// place (sectional). Every Pro/Elite page instead never opens — menu or URL
+// — and shows its upgrade promo, like Candle Insights.
+const ALWAYS_OPEN_PAGES = new Set<SectionId>(["heatmap", "onchain", "marketheatmap", "htf"]);
 
 const NAV_ITEMS: {
   id: SectionId;
@@ -1163,7 +1175,7 @@ function AppDashboard({
     setTimeout(() => setImportStatus("idle"), 1800);
   }, []);
 
-  const { tier, user, profile, signOut } = useAuth();
+  const { tier, user, profile, signOut, loading: authLoading } = useAuth();
   const { used: aiUsed, limit: aiLimit } = useAIQuota();
   // ProVision: switch position + who may use it on which coin (plan /
   // trial / Pro's 3 coins a day). `proVision` = actually running here.
@@ -2831,8 +2843,11 @@ function AppDashboard({
   // navigating; returns whether it actually navigated.
   // Every Pro/Elite page is gated this way: the explicit list above, plus
   // any nav item with a requiredTier (the chart page stays open — it's
-  // reached from Markets for everyone).
+  // reached from Markets for everyone) — EXCEPT the Analysis pages in
+  // ALWAYS_OPEN_PAGES, which always open and lock only the parts that need
+  // sign-in or a plan, in place on the page.
   const gateFor = (id: SectionId): { tier: Tier; name: string } | undefined => {
+    if (ALWAYS_OPEN_PAGES.has(id)) return undefined;
     if (PAYWALLED_PAGES[id]) return PAYWALLED_PAGES[id];
     const item = NAV_ITEMS.find((n) => n.id === id);
     if (!item?.requiredTier || id === "chart") return undefined;
@@ -2848,6 +2863,19 @@ function AppDashboard({
     setActiveSection(id);
     return true;
   };
+  // Same rule for links / typed URLs / back-forward / signing out on a
+  // Pro page: a Pro/Elite page never shows without access — go to Markets
+  // and show its upgrade promo (sign-in first when signed out). Waits until
+  // this account's plan has loaded so paying users aren't bounced.
+  useEffect(() => {
+    const gate = gateFor(activeSection);
+    if (!gate || authLoading) return;
+    if (user && profile?.id !== user.id) return;     // plan still loading
+    if (user && hasAccess(tier, gate.tier)) return;
+    setPromoSection(activeSection);
+    setActiveSection("markets");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, user, profile, tier, authLoading]);
   const renderNavItem = (item: (typeof NAV_ITEMS)[number]) => (
     <button
       key={item.id}
@@ -3576,13 +3604,13 @@ function AppDashboard({
             <div className={`top-nav-promo${isDesktopWidth ? "" : " top-nav-promo--phone"}`}>
               <button type="button" className="top-nav-promo-link" onClick={() => onOpenAuth("signup")}>
                 {isDesktopWidth
-                  ? <>Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices</>
-                  : <>Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict</>}
+                  ? <Trans i18nKey="promoStrip.desktop" defaults="Sign up free and get <b>$100k</b> in paper trading cash + <b>$1k</b> to predict prices" components={{ b: <b /> }} />
+                  : <Trans i18nKey="promoStrip.phone" defaults="Sign up free: <b>$100k</b> paper cash + <b>$1k</b> to predict" components={{ b: <b /> }} />}
               </button>
               <button
                 type="button"
                 className="top-nav-promo-x"
-                aria-label="Dismiss"
+                aria-label={t("promoStrip.dismiss", "Dismiss")}
                 onClick={() => { setPromoHidden(true); try { localStorage.setItem("ch:signupPromoClosedAt", String(Date.now())); } catch { /* ignore */ } }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -4250,13 +4278,8 @@ function AppDashboard({
                               // ProVision on / off right here on the chart
                               // (on also switches to the Chart tab + candles).
                               proVisionOn={pvGate.on}
-                              // Signed in only, and only while ProVision is
-                              // usable — signed out, trial ended or locked,
-                              // the banner on the chart is the one way in.
-                              onProVision={user && !["trial-ended", "pro-limit"].includes(pvGate.access.lockReason(coin) ?? "") ? () => {
-                                if (!pvGate.on) setCoinTab("overview");
-                                pvGate.toggle(coin);
-                              } : undefined}
+                              // ProVision's toggle moved into the chart's
+                              // interval bar (next to Predict), like phones.
                             />
                           : <CoinPagePicker coin={coin} />}
                         onOpenDrawingTools={() => {
@@ -4497,9 +4520,9 @@ function AppDashboard({
                   onOpenUpgrade={onOpenUpgrade}
                 />
               )}
-              {activeSection === "positions" && <PositionFlows coin={coin} />}
+              {activeSection === "positions" && <PositionFlows coin={coin} onOpenAuth={onOpenAuth} />}
               {activeSection === "orderflow" && (
-                <OrderFlowFramework coin={coin} />
+                <OrderFlowFramework coin={coin} onOpenAuth={onOpenAuth} />
               )}
               {activeSection === "signals" && (
                 <PredictionEngine
@@ -4524,7 +4547,6 @@ function AppDashboard({
               {activeSection === "marketheatmap" && <MarketHeatmap />}
               {activeSection === "altanalysis" && (
                 <BlurGate
-                  autoAuth
                   requiredTier="pro"
                   featureName="Alt Analysis"
                   onOpenAuth={onOpenAuth}
@@ -4539,7 +4561,6 @@ function AppDashboard({
               )}
               {activeSection === "options" && (
                 <BlurGate
-                  autoAuth
                   requiredTier="pro"
                   featureName="Options Analytics"
                   onOpenAuth={onOpenAuth}
@@ -4551,7 +4572,6 @@ function AppDashboard({
               )}
               {activeSection === "correlation" && (
                 <BlurGate
-                  autoAuth
                   requiredTier="pro"
                   featureName="Correlation Matrix"
                   onOpenAuth={onOpenAuth}
