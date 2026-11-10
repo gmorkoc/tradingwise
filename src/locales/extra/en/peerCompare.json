@@ -11,6 +11,8 @@
     "rangeAria": "Comparison range",
     "loading": "Loading…",
     "hint": "Pick up to {{n}} to compare with {{coin}}",
+    "compare": "Compare",
+    "comparing": "Comparing",
     "vs": "{{pct}} vs {{coin}}",
     "vsTitle": "24h change compared with {{coin}}"
   }

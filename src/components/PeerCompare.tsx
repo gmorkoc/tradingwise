@@ -31,7 +31,7 @@ const RANGES: Array<{ key: string; label: string; interval: TimeInterval; span: 
 
 const logo = (s: string) => `https://assets.coincap.io/assets/icons/${s.toLowerCase()}@2x.png`;
 const fmtPrice = (p: number) =>
-  p.toLocaleString("en-US", { minimumFractionDigits: p >= 1000 ? 2 : p >= 1 ? 4 : 6, maximumFractionDigits: p >= 1000 ? 2 : p >= 1 ? 4 : 6 });
+  "$" + p.toLocaleString("en-US", { minimumFractionDigits: p >= 1000 ? 0 : p >= 1 ? 2 : 4, maximumFractionDigits: p >= 1000 ? 0 : p >= 1 ? 2 : 4 });
 const fmtPct = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(2)}%`;
 
 function CoinLogo({ symbol }: { symbol: string }) {
@@ -39,26 +39,6 @@ function CoinLogo({ symbol }: { symbol: string }) {
   return err
     ? <span className="pc-logo pc-logo--fallback">{symbol[0]}</span>
     : <img className="pc-logo" src={logo(symbol)} alt="" onError={() => setErr(true)} />;
-}
-
-/** Price with the digits that just changed tinted (like a ticking quote). */
-function TickPrice({ price }: { price: number }) {
-  const prev = useRef<number | null>(null);
-  const [flash, setFlash] = useState<{ from: number; dir: "up" | "down" } | null>(null);
-  const text = fmtPrice(price);
-  useEffect(() => {
-    const p = prev.current;
-    prev.current = price;
-    if (p == null || p === price) return;
-    const a = fmtPrice(p);
-    let i = 0;
-    while (i < text.length && a[i] === text[i]) i++;
-    setFlash({ from: i, dir: price > p ? "up" : "down" });
-    const t = setTimeout(() => setFlash(null), 1500);
-    return () => clearTimeout(t);
-  }, [price]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (!flash) return <>{text}</>;
-  return <>{text.slice(0, flash.from)}<span className={`pc-tick pc-tick--${flash.dir}`}>{text.slice(flash.from)}</span></>;
 }
 
 export function PeerCompare({ coin, theme = "light" }: Props) {
@@ -104,9 +84,13 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
         </button>
       </div>
 
-      {/* Compact peer list (no carousel): checkbox in the line colour ·
-          coin · price · 24h change · performance vs the coin you're on. */}
-      <div className="pc-list" role="list">
+      {/* One card, news-stories style: coin panels side by side (dividers,
+          faded edges, arrows). Tapping a panel adds/removes it from the
+          comparison — it never switches the main chart's coin. */}
+      {/* One slim row of chips: logo · ticker · 24h %. Tap to add/remove from
+          the comparison (a picked chip fills with its line colour) — never
+          switches the main chart's coin. */}
+      <div className="pc-chips" role="group" aria-label={t("peerCompare.title")}>
         {peers.map(p => {
           const tk = tickers.get(p.symbol);
           const on = selected.includes(p.symbol);
@@ -117,30 +101,20 @@ export function PeerCompare({ coin, theme = "light" }: Props) {
             <button
               key={p.symbol}
               type="button"
-              role="listitem"
-              className={`pc-item${on ? " pc-item--on" : ""}${full ? " pc-item--full" : ""}`}
+              className={`pc-chip${on ? " pc-chip--on" : ""}`}
               style={color ? ({ "--pc-c": color } as React.CSSProperties) : undefined}
               aria-pressed={on}
               disabled={full}
-              title={full ? t("peerCompare.maxCoins", { n: MAX_SELECTED }) : on ? t("peerCompare.remove") : t("peerCompare.add")}
-              // Adds/removes it from the comparison — never switches the main chart's coin.
+              title={full ? t("peerCompare.maxCoins", { n: MAX_SELECTED })
+                : `${p.name}${rel == null ? "" : ` · ${t("peerCompare.vs", { pct: fmtPct(rel), coin })}`}`}
               onClick={() => toggle(p.symbol)}
             >
-              <span className="pc-check" aria-hidden="true">
-                {on && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
-              </span>
-              <CoinLogo symbol={p.symbol} />
-              <span className="pc-id">
-                <b>{p.symbol}</b>
-                <em>{p.name}</em>
-              </span>
-              <span className="pc-nums">
-                <span className="pc-price">{tk ? <TickPrice price={tk.price} /> : <span className="pc-skel" />}</span>
-                <span className={`pc-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : " "}</span>
-              </span>
-              <span className={`pc-rel${rel == null ? "" : rel >= 0 ? " up" : " down"}`} title={t("peerCompare.vsTitle", { coin })}>
-                {rel == null ? "—" : t("peerCompare.vs", { pct: fmtPct(rel), coin })}
-              </span>
+              {on
+                ? <span className="pc-chip-check" aria-hidden="true">✓</span>
+                : <CoinLogo symbol={p.symbol} />}
+              <b>{p.symbol}</b>
+              {tk && <span className="pc-chip-price">{fmtPrice(tk.price)}</span>}
+              <span className={`pc-chip-chg${tk ? (tk.change >= 0 ? " up" : " down") : ""}`}>{tk ? fmtPct(tk.change) : "—"}</span>
             </button>
           );
         })}

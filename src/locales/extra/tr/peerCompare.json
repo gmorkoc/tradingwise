@@ -11,6 +11,8 @@
     "rangeAria": "Karşılaştırma aralığı",
     "loading": "Yükleniyor…",
     "hint": "{{coin}} ile karşılaştırmak için en fazla {{n}} tane seç",
+    "compare": "Karşılaştır",
+    "comparing": "Karşılaştırılıyor",
     "vs": "{{coin}} karşısında {{pct}}",
     "vsTitle": "{{coin}} ile karşılaştırmalı 24 saatlik değişim"
   }

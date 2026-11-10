@@ -11,6 +11,8 @@
     "rangeAria": "Intervallo di confronto",
     "loading": "Caricamento…",
     "hint": "Scegline fino a {{n}} da confrontare con {{coin}}",
+    "compare": "Confronta",
+    "comparing": "In confronto",
     "vs": "{{pct}} vs {{coin}}",
     "vsTitle": "Variazione 24h rispetto a {{coin}}"
   }

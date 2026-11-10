@@ -5239,10 +5239,17 @@ export const PriceChart: React.FC<PriceChartProps> = ({
       <button
         type="button"
         className="pv-pill-main"
-        // Renewal → the upgrade. Otherwise desktop turns ProVision on right
-        // here (drawn on this chart); phones go to the Advance Chart page.
-        onClick={() => (pvRenew ? openProVisionPaywall({ reason: pvRenew, coin })
-          : !isDesktopWidth ? onOpenDrawingTools?.() : !pvGate.on ? pvGate.toggle(coin) : undefined)}
+        // Renewal → the upgrade. Signed out → sign in first. Otherwise
+        // desktop turns ProVision on right here (drawn on this chart) or, if
+        // this account can't use it yet, opens the ProVision screen; phones
+        // go to the Advance Chart page.
+        onClick={() => {
+          if (pvRenew) { openProVisionPaywall({ reason: pvRenew, coin }); return; }
+          if (!authUser) { onOpenAuth?.(); return; }
+          if (!isDesktopWidth) { onOpenDrawingTools?.(); return; }
+          if (pvGate.access.mode === "locked" && pvBannerReason) { openProVisionPaywall({ reason: pvBannerReason, coin }); return; }
+          if (!pvGate.on) pvGate.toggle(coin);
+        }}
       >
         <span className="pv-pill-ic" aria-hidden="true">
           {pvRenew ? (
